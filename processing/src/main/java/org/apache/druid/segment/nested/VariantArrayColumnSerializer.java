@@ -261,9 +261,8 @@ public class VariantArrayColumnSerializer extends NestedCommonFormatColumnSerial
 
     ExprEval eval = ExprEval.bestEffortOf(StructuredData.unwrap(selector.getObject()));
     if (eval.isArray()) {
-      int[] globalIds = null;
       Object[] array = eval.asArray();
-      globalIds = new int[array.length];
+      int[] globalIds = new int[array.length];
       for (int i = 0; i < array.length; i++) {
         if (array[i] == null) {
           globalIds[i] = 0;
@@ -282,7 +281,7 @@ public class VariantArrayColumnSerializer extends NestedCommonFormatColumnSerial
             (id) -> indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap()
         ).add(rowCount);
       }
-      final int dictId = globalIds == null ? 0 : dictionaryIdLookup.lookupArray(globalIds);
+      final int dictId = dictionaryIdLookup.lookupArray(globalIds);
       encodedValueSerializer.addValue(dictId);
       bitmaps[dictId].add(rowCount);
     } else {

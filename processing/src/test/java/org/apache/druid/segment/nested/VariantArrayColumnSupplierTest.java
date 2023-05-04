@@ -382,7 +382,7 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
           Assert.assertArrayEquals(((List) row).toArray(), (Object[]) valueSelector.getObject());
         } else {
           Assert.assertEquals(row, valueSelector.getObject());
-          if (expectedLogicalType.isPrimitive()) {
+          if (dimensionSelector != null) {
             Assert.assertEquals(String.valueOf(row), dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
           }
         }
@@ -390,7 +390,7 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
 
       } else {
         Assert.assertNull(valueSelector.getObject());
-        if (expectedLogicalType.isPrimitive()) {
+        if (dimensionSelector != null) {
           Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
         }
         Assert.assertTrue(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));

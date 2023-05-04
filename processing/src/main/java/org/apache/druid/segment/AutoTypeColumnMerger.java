@@ -82,6 +82,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
 
   private ColumnType logicalType;
   private boolean isVariantType = false;
+  private boolean hasOnlyNulls = false;
 
   public AutoTypeColumnMerger(
       String name,
@@ -117,6 +118,9 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         final IndexableAdapter.NestedColumnMergable mergable = closer.register(
             adapter.getNestedColumnMergeables(name)
         );
+        if (mergable == null) {
+          continue;
+        }
         final SortedValueDictionary dimValues = mergable.getValueDictionary();
 
         boolean allNulls = dimValues == null || dimValues.allNull();
@@ -129,6 +133,12 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
           sortedArrayLookups[i] = dimValues.getSortedArrays();
           numMergeIndex++;
         }
+      }
+
+      // no data, we don't need to write this column
+      if (mergedFields.size() == 0) {
+        hasOnlyNulls = true;
+        return;
       }
 
       // check to see if we can specialize the serializer after merging all the adapters
@@ -297,7 +307,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   @Override
   public boolean hasOnlyNulls()
   {
-    return false;
+    return hasOnlyNulls;
   }
 
   @Override

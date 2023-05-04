@@ -609,7 +609,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       if (parts.isEmpty()) {
         if (theColumn instanceof DictionaryEncodedColumn) {
           final VectorObjectSelector delegate = theColumn.makeVectorObjectSelector(offset);
-          if (expectedType.is(ValueType.LONG)) {
+          if (expectedType != null && expectedType.is(ValueType.LONG)) {
             return new BaseLongVectorValueSelector(offset)
             {
               private int currentOffsetId = ReadableVectorInspector.NULL_ID;
@@ -652,7 +652,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
                 }
               }
             };
-          } else if (expectedType.is(ValueType.FLOAT)) {
+          } else if (expectedType != null && expectedType.is(ValueType.FLOAT)) {
             return new BaseFloatVectorValueSelector(offset)
             {
               private int currentOffsetId = ReadableVectorInspector.NULL_ID;
@@ -750,111 +750,212 @@ public class NestedFieldVirtualColumn implements VirtualColumn
           throw new IAE("Cannot make array element selector, negative array index not supported");
         }
 
-        return new VectorValueSelector()
-        {
-          private final long[] longs = new long[offset.getMaxVectorSize()];
-          private final double[] doubles = new double[offset.getMaxVectorSize()];
-          private final float[] floats = new float[offset.getMaxVectorSize()];
-          private final boolean[] nulls = new boolean[offset.getMaxVectorSize()];
-          private int id = ReadableVectorInspector.NULL_ID;
-
-          private void computeNumbers()
+        if (expectedType != null && expectedType.is(ValueType.LONG)) {
+          return new BaseLongVectorValueSelector(offset)
           {
-            if (offset.getId() != id) {
-              final Object[] maybeArrays = arraySelector.getObjectVector();
-              for (int i = 0; i < arraySelector.getCurrentVectorSize(); i++) {
-                Object maybeArray = maybeArrays[i];
-                if (maybeArray instanceof Object[]) {
-                  Object[] anArray = (Object[]) maybeArray;
-                  if (elementNumber < anArray.length) {
-                    if (anArray[elementNumber] instanceof Number) {
-                      Number n = (Number) anArray[elementNumber];
-                      longs[i] = n.longValue();
-                      doubles[i] = n.doubleValue();
-                      floats[i] = n.floatValue();
-                      nulls[i] = false;
-                    } else {
-                      Double d = anArray[elementNumber] instanceof String
-                                 ? Doubles.tryParse((String) anArray[elementNumber])
-                                 : null;
-                      if (d != null) {
-                        longs[i] = d.longValue();
-                        doubles[i] = d;
-                        floats[i] = d.floatValue();
+            private final long[] longs = new long[offset.getMaxVectorSize()];
+            private final boolean[] nulls = new boolean[offset.getMaxVectorSize()];
+            private int id = ReadableVectorInspector.NULL_ID;
+
+            private void computeNumbers()
+            {
+              if (offset.getId() != id) {
+                final Object[] maybeArrays = arraySelector.getObjectVector();
+                for (int i = 0; i < arraySelector.getCurrentVectorSize(); i++) {
+                  Object maybeArray = maybeArrays[i];
+                  if (maybeArray instanceof Object[]) {
+                    Object[] anArray = (Object[]) maybeArray;
+                    if (elementNumber < anArray.length) {
+                      if (anArray[elementNumber] instanceof Number) {
+                        Number n = (Number) anArray[elementNumber];
+                        longs[i] = n.longValue();
                         nulls[i] = false;
                       } else {
-                        nullElement(i);
+                        Double d = anArray[elementNumber] instanceof String
+                                   ? Doubles.tryParse((String) anArray[elementNumber])
+                                   : null;
+                        if (d != null) {
+                          longs[i] = d.longValue();
+                          nulls[i] = false;
+                        } else {
+                          longs[i] = 0L;
+                          nulls[i] = true;
+                        }
                       }
+                    } else {
+                      nullElement(i);
                     }
                   } else {
+                    // not an array?
                     nullElement(i);
                   }
-                } else {
-                  // not an array?
-                  nullElement(i);
                 }
+                id = offset.getId();
               }
-              id = offset.getId();
             }
-          }
 
-          private void nullElement(int i)
-          {
-            longs[i] = 0L;
-            doubles[i] = 0L;
-            floats[i] = 0L;
-            nulls[i] = true;
-          }
-
-          @Override
-          public long[] getLongVector()
-          {
-            if (offset.getId() != id) {
-              computeNumbers();
+            private void nullElement(int i)
+            {
+              longs[i] = 0L;
+              nulls[i] = true;
             }
-            return longs;
-          }
 
-          @Override
-          public float[] getFloatVector()
-          {
-            if (offset.getId() != id) {
-              computeNumbers();
+            @Override
+            public long[] getLongVector()
+            {
+              if (offset.getId() != id) {
+                computeNumbers();
+              }
+              return longs;
             }
-            return floats;
-          }
 
-          @Override
-          public double[] getDoubleVector()
-          {
-            if (offset.getId() != id) {
-              computeNumbers();
+            @Nullable
+            @Override
+            public boolean[] getNullVector()
+            {
+              if (offset.getId() != id) {
+                computeNumbers();
+              }
+              return nulls;
             }
-            return doubles;
-          }
-
-          @Nullable
-          @Override
-          public boolean[] getNullVector()
+          };
+        } else if (expectedType != null && expectedType.is(ValueType.FLOAT)) {
+          return new BaseFloatVectorValueSelector(offset)
           {
-            if (offset.getId() != id) {
-              computeNumbers();
+            private final float[] floats = new float[offset.getMaxVectorSize()];
+            private final boolean[] nulls = new boolean[offset.getMaxVectorSize()];
+            private int id = ReadableVectorInspector.NULL_ID;
+
+            private void computeNumbers()
+            {
+              if (offset.getId() != id) {
+                final Object[] maybeArrays = arraySelector.getObjectVector();
+                for (int i = 0; i < arraySelector.getCurrentVectorSize(); i++) {
+                  Object maybeArray = maybeArrays[i];
+                  if (maybeArray instanceof Object[]) {
+                    Object[] anArray = (Object[]) maybeArray;
+                    if (elementNumber < anArray.length) {
+                      if (anArray[elementNumber] instanceof Number) {
+                        Number n = (Number) anArray[elementNumber];
+                        floats[i] = n.floatValue();
+                        nulls[i] = false;
+                      } else {
+                        Double d = anArray[elementNumber] instanceof String
+                                   ? Doubles.tryParse((String) anArray[elementNumber])
+                                   : null;
+                        if (d != null) {
+                          floats[i] = d.floatValue();
+                          nulls[i] = false;
+                        } else {
+                          nullElement(i);
+                        }
+                      }
+                    } else {
+                      nullElement(i);
+                    }
+                  } else {
+                    // not an array?
+                    nullElement(i);
+                  }
+                }
+                id = offset.getId();
+              }
             }
-            return nulls;
-          }
 
-          @Override
-          public int getMaxVectorSize()
-          {
-            return arraySelector.getMaxVectorSize();
-          }
+            private void nullElement(int i)
+            {
+              floats[i] = 0f;
+              nulls[i] = true;
+            }
 
-          @Override
-          public int getCurrentVectorSize()
+            @Override
+            public float[] getFloatVector()
+            {
+              if (offset.getId() != id) {
+                computeNumbers();
+              }
+              return floats;
+            }
+
+            @Nullable
+            @Override
+            public boolean[] getNullVector()
+            {
+              if (offset.getId() != id) {
+                computeNumbers();
+              }
+              return nulls;
+            }
+          };
+        } else {
+          return new BaseDoubleVectorValueSelector(offset)
           {
-            return arraySelector.getCurrentVectorSize();
-          }
-        };
+            private final double[] doubles = new double[offset.getMaxVectorSize()];
+            private final boolean[] nulls = new boolean[offset.getMaxVectorSize()];
+            private int id = ReadableVectorInspector.NULL_ID;
+
+            private void computeNumbers()
+            {
+              if (offset.getId() != id) {
+                final Object[] maybeArrays = arraySelector.getObjectVector();
+                for (int i = 0; i < arraySelector.getCurrentVectorSize(); i++) {
+                  Object maybeArray = maybeArrays[i];
+                  if (maybeArray instanceof Object[]) {
+                    Object[] anArray = (Object[]) maybeArray;
+                    if (elementNumber < anArray.length) {
+                      if (anArray[elementNumber] instanceof Number) {
+                        Number n = (Number) anArray[elementNumber];
+                        doubles[i] = n.doubleValue();
+                        nulls[i] = false;
+                      } else {
+                        Double d = anArray[elementNumber] instanceof String
+                                   ? Doubles.tryParse((String) anArray[elementNumber])
+                                   : null;
+                        if (d != null) {
+                          doubles[i] = d;
+                          nulls[i] = false;
+                        } else {
+                          nullElement(i);
+                        }
+                      }
+                    } else {
+                      nullElement(i);
+                    }
+                  } else {
+                    // not an array?
+                    nullElement(i);
+                  }
+                }
+                id = offset.getId();
+              }
+            }
+
+            private void nullElement(int i)
+            {
+              doubles[i] = 0.0;
+              nulls[i] = true;
+            }
+
+            @Override
+            public double[] getDoubleVector()
+            {
+              if (offset.getId() != id) {
+                computeNumbers();
+              }
+              return doubles;
+            }
+
+            @Nullable
+            @Override
+            public boolean[] getNullVector()
+            {
+              if (offset.getId() != id) {
+                computeNumbers();
+              }
+              return nulls;
+            }
+          };
+        }
       }
       return NilVectorSelector.create(offset);
     }

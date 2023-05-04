@@ -369,6 +369,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                       schema.isRollup()
                                   )
                           );
+                          // if 1 row per segment some of the columns have null values for the row which causes 'auto'
+                          // typing default value coercion to be lost in default value mode, so make sure there is at
+                          // least one number in each segment for these tests to pass correctly because the column
+                          // is typeless and so doesn't write out zeros like regular numbers do
                           input.intermediaryPersistSize(3);
                           final QueryableIndex index = input.buildMMappedMergedIndex();
                           return Pair.of(new QueryableIndexStorageAdapter(index), index);

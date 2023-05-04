@@ -691,13 +691,13 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>>
     {
       private final int[] vector = new int[offset.getMaxVectorSize()];
       private final Object[] objects = new Object[offset.getMaxVectorSize()];
-      private int id = ReadableVectorInspector.NULL_ID;
+      private int offsetId = ReadableVectorInspector.NULL_ID;
 
       @Override
 
       public Object[] getObjectVector()
       {
-        if (id == offset.getId()) {
+        if (offsetId == offset.getId()) {
           return objects;
         }
 
@@ -707,11 +707,11 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>>
           encodedValueColumn.get(vector, offset.getOffsets(), offset.getCurrentVectorSize());
         }
         for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
-          final int id = vector[i];
-          if (id < adjustArrayId) {
-            objects[i] = lookupScalarValueStrict(id);
+          final int dictionaryId = vector[i];
+          if (dictionaryId < adjustArrayId) {
+            objects[i] = lookupScalarValueStrict(dictionaryId);
           } else {
-            int[] arr = arrayDictionary.get(id - adjustArrayId);
+            int[] arr = arrayDictionary.get(dictionaryId - adjustArrayId);
             if (arr == null) {
               objects[i] = null;
             } else {
@@ -723,7 +723,7 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>>
             }
           }
         }
-        id = offset.getId();
+        offsetId = offset.getId();
 
         return objects;
       }
