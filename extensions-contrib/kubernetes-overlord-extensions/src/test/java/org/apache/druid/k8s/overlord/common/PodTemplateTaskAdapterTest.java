@@ -330,6 +330,9 @@ public class PodTemplateTaskAdapterTest
     expected.getSpec().getTemplate().getMetadata().setAnnotations(expectedAnnotations);
 
     Assertions.assertEquals(actual, expected);
-    Assertions.assertEquals(Base64Compression.decompressBase64(actualTaskAnnotation), Base64Compression.decompressBase64(expectedTaskAnnotation));
+    Assertions.assertEquals(
+        Base64Compression.decompressBase64(actualTaskAnnotation),
+        Base64Compression.decompressBase64(expectedTaskAnnotation)
+    );
   }
 }
