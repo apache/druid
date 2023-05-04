@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
-import com.google.common.primitives.Doubles;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BitmapResultFactory;
@@ -107,21 +106,26 @@ public class BoundFilter implements Filter
       }
       final NumericRangeIndex rangeIndex = indexSupplier.as(NumericRangeIndex.class);
       if (rangeIndex != null) {
-        final Number lower = boundDimFilter.hasLowerBound() ? Doubles.tryParse(boundDimFilter.getLower()) : null;
-        final Number upper = boundDimFilter.hasUpperBound() ? Doubles.tryParse(boundDimFilter.getUpper()) : null;
-        final BitmapColumnIndex rangeBitmaps = rangeIndex.forRange(
-            lower,
-            boundDimFilter.isLowerStrict(),
-            upper,
-            boundDimFilter.isUpperStrict()
-        );
-        if (rangeBitmaps != null) {
-          // preserve sad backwards compatible behavior where bound filter matches 'null' if the lower bound is not set
-          if (boundDimFilter.hasLowerBound() && !NullHandling.isNullOrEquivalent(boundDimFilter.getLower())) {
-            return rangeBitmaps;
-          } else {
-            return wrapRangeIndexWithNullValueIndex(indexSupplier, rangeBitmaps);
+        try {
+          final Number lower = boundDimFilter.hasLowerBound() ? Double.parseDouble(boundDimFilter.getLower()) : null;
+          final Number upper = boundDimFilter.hasUpperBound() ? Double.parseDouble(boundDimFilter.getUpper()) : null;
+          final BitmapColumnIndex rangeBitmaps = rangeIndex.forRange(
+              lower,
+              boundDimFilter.isLowerStrict(),
+              upper,
+              boundDimFilter.isUpperStrict()
+          );
+          if (rangeBitmaps != null) {
+            // preserve sad backwards compatible behavior where bound filter matches 'null' if the lower bound is not set
+            if (boundDimFilter.hasLowerBound() && !NullHandling.isNullOrEquivalent(boundDimFilter.getLower())) {
+              return rangeBitmaps;
+            } else {
+              return wrapRangeIndexWithNullValueIndex(indexSupplier, rangeBitmaps);
+            }
           }
+        }
+        catch (NumberFormatException ignored) {
+          // bounds are not numeric?
         }
       }
     }
