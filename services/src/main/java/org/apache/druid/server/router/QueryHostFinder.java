@@ -97,7 +97,7 @@ public class QueryHostFinder
         "There are no available brokers for SQL query[%s]."
         + "Please check that your brokers are "
         + "running and healthy.",
-        query
+        sqlQuery
     );
     return server;
   }
