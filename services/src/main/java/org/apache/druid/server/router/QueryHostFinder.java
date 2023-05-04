@@ -92,7 +92,13 @@ public class QueryHostFinder
   public Server findServerSql(SqlQuery sqlQuery)
   {
     Server server = findServerInner(hostSelector.selectForSql(sqlQuery));
-    assertServerFound(server, "No server found for SQL Query [%s]", "SELECT IT");
+    assertServerFound(
+        server,
+        "There are no available brokers for SQL query[%s]."
+        + "Please check that your brokers are "
+        + "running and healthy.",
+        query
+    );
     return server;
   }
 
@@ -101,7 +107,7 @@ public class QueryHostFinder
     Server server = findServer(query);
     assertServerFound(
         server,
-        "There are no brokers to connect to for query[%s]."
+        "There are no available brokers for query[%s]."
         + "Please check that your brokers are "
         + "running and healthy.",
         query
@@ -114,7 +120,7 @@ public class QueryHostFinder
     Server server = findDefaultServer();
     assertServerFound(
         server,
-        "There are no available brokers. Please check that the brokers are running and " + " healthy."
+        "There are no available brokers. Please check that your brokers are running and " + " healthy."
     );
     return server;
   }
