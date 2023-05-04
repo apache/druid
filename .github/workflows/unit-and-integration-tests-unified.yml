@@ -48,7 +48,7 @@ env:
 
 jobs:
   build:
-    name: build (jdk${{ matrix.jdk }})
+    name: "build (jdk${{ matrix.jdk }})"
     strategy:
       fail-fast: false
       matrix:
@@ -107,7 +107,7 @@ jobs:
       fail-fast: false
       matrix:
         jdk: [ 11, 17 ]
-    name: unit tests (jdk${{ matrix.jdk }}, sql-compat=true)
+    name: "unit tests (jdk${{ matrix.jdk }}, sql-compat=true)"
     uses: ./.github/workflows/unit-tests.yml
     needs: unit-tests
     with:
@@ -119,12 +119,21 @@ jobs:
       fail-fast: false
       matrix:
         sql_compatibility: [ false, true ]
-    name: unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})
+    name: "unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})"
     uses: ./.github/workflows/unit-tests.yml
     needs: build
     with:
       jdk: 8
       sql_compatibility: ${{ matrix.sql_compatibility }}
+
+  test-job:
+    needs: unit-tests
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Print output"
+        run: |
+          echo "unit-tests output - ${{ needs.unit-tests.result }} - ${{ needs.unit-tests.outputs.coverage-failure }}"
 
   standard-its:
     needs: unit-tests
