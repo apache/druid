@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Properties;
 
 public class PodTemplateTaskAdapterTest
@@ -137,7 +138,7 @@ public class PodTemplateTaskAdapterTest
     Job actual = adapter.fromTask(task);
     Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
 
-    Assertions.assertEquals(expected, actual);
+    assertJobSpecsEqual(actual, expected);
   }
 
   @Test
@@ -179,7 +180,7 @@ public class PodTemplateTaskAdapterTest
     Job actual = adapter.fromTask(task);
     Job expected = K8sTestUtils.fileToResource("expectedNoopJobTlsEnabled.yaml", Job.class);
 
-    Assertions.assertEquals(expected, actual);
+    assertJobSpecsEqual(actual, expected);
   }
 
   @Test
@@ -234,7 +235,7 @@ public class PodTemplateTaskAdapterTest
     Job actual = adapter.fromTask(task);
     Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
 
-    Assertions.assertEquals(expected, actual);
+    assertJobSpecsEqual(actual, expected);
   }
 
   @Test
@@ -313,5 +314,22 @@ public class PodTemplateTaskAdapterTest
     Task expected = NoopTask.create("id", 1);
 
     Assertions.assertEquals(expected, actual);
+  }
+
+
+  private void assertJobSpecsEqual(Job actual, Job expected) throws IOException
+  {
+    Map<String, String> actualAnnotations = actual.getSpec().getTemplate().getMetadata().getAnnotations();
+    String actualTaskAnnotation = actualAnnotations.get(DruidK8sConstants.TASK);
+    actualAnnotations.remove(DruidK8sConstants.TASK);
+    actual.getSpec().getTemplate().getMetadata().setAnnotations(actualAnnotations);
+
+    Map<String, String> expectedAnnotations = expected.getSpec().getTemplate().getMetadata().getAnnotations();
+    String expectedTaskAnnotation = expectedAnnotations.get(DruidK8sConstants.TASK);
+    expectedAnnotations.remove(DruidK8sConstants.TASK);
+    expected.getSpec().getTemplate().getMetadata().setAnnotations(expectedAnnotations);
+
+    Assertions.assertEquals(actual, expected);
+    Assertions.assertEquals(Base64Compression.decompressBase64(actualTaskAnnotation), Base64Compression.decompressBase64(expectedTaskAnnotation));
   }
 }
