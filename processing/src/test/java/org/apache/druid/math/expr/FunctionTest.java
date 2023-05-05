@@ -63,9 +63,8 @@ public class FunctionTest extends InitializedNullHandlingTest
   @Before
   public void setup()
   {
-    ImmutableMap.Builder<String, ExpressionType> inputTypesBuilder =
-        ImmutableMap.builder();
-    inputTypesBuilder.put("x",ExpressionType.STRING)
+    ImmutableMap.Builder<String, ExpressionType> inputTypesBuilder = ImmutableMap.builder();
+    inputTypesBuilder.put("x", ExpressionType.STRING)
                      .put("y", ExpressionType.LONG)
                      .put("z", ExpressionType.DOUBLE)
                      .put("d", ExpressionType.DOUBLE)
@@ -78,13 +77,13 @@ public class FunctionTest extends InitializedNullHandlingTest
                      .put("o", ExpressionType.LONG)
                      .put("od", ExpressionType.DOUBLE)
                      .put("of", ExpressionType.DOUBLE)
-           .put("a", ExpressionType.STRING_ARRAY)
-           .put("b", ExpressionType.LONG_ARRAY)
-           .put("c", ExpressionType.DOUBLE_ARRAY)
-           .put("someComplex", ExpressionType.fromColumnType(TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE))
-           .put("str1", ExpressionType.STRING)
-           .put("str2", ExpressionType.STRING)
-           .put("nestedArray", ExpressionType.NESTED_DATA);
+                     .put("a", ExpressionType.STRING_ARRAY)
+                     .put("b", ExpressionType.LONG_ARRAY)
+                     .put("c", ExpressionType.DOUBLE_ARRAY)
+                     .put("someComplex", ExpressionType.fromColumnType(TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE))
+                     .put("str1", ExpressionType.STRING)
+                     .put("str2", ExpressionType.STRING)
+                     .put("nestedArray", ExpressionType.NESTED_DATA);
 
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     builder.put("x", "foo")
@@ -100,9 +99,9 @@ public class FunctionTest extends InitializedNullHandlingTest
            .put("o", 0)
            .put("od", 0D)
            .put("of", 0F)
-           .put("a", new String[] {"foo", "bar", "baz", "foobar"})
-           .put("b", new Long[] {1L, 2L, 3L, 4L, 5L})
-           .put("c", new Double[] {3.1, 4.2, 5.3})
+           .put("a", new String[]{"foo", "bar", "baz", "foobar"})
+           .put("b", new Long[]{1L, 2L, 3L, 4L, 5L})
+           .put("c", new Double[]{3.1, 4.2, 5.3})
            .put("someComplex", new TypeStrategiesTest.NullableLongPair(1L, 2L))
            .put("str1", "v1")
            .put("str2", "v2")
@@ -832,7 +831,8 @@ public class FunctionTest extends InitializedNullHandlingTest
         ExpressionValidationException.class,
         () -> Parser.parse(
             "human_readable_binary_byte_format(1024, 2, 3)",
-            ExprMacroTable.nil()).eval(bestEffortBindings)
+            ExprMacroTable.nil()
+        ).eval(bestEffortBindings)
     );
 
     Assert.assertEquals("Function[human_readable_binary_byte_format] requires 1 or 2 arguments", t.getMessage());
@@ -967,7 +967,6 @@ public class FunctionTest extends InitializedNullHandlingTest
         () -> assertExpr("complex_decode_base64(string)", null)
     );
     Assert.assertEquals("Function[complex_decode_base64] requires 2 arguments", t.getMessage());
-    ;
   }
 
   @Test
