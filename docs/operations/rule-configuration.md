@@ -178,7 +178,7 @@ Interval load rules have type `loadByInterval`. The following example places one
 
 Set the following properties:
 
-- `interval`: the load interval specified as an ISO-8601 [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
+- `interval`: the load interval specified as an [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
 - `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
 
 ## Drop rules
@@ -257,7 +257,7 @@ Interval drop rules have type `dropByInterval` and the following JSON structure:
 
 Set the following property:
 
-- `interval`: the drop interval specified as an ISO-8601 [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
+- `interval`: the drop interval specified as an [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
 
 ## Broadcast rules
 
@@ -313,7 +313,7 @@ Interval broadcast rules have type `broadcastByInterval` and the following JSON 
 
 Set the following property:
 
-- `interval`: the broadcast interval specified as an ISO-8601 [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
+- `interval`: the broadcast interval specified as an [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
 
 ## Permanently delete data
 
