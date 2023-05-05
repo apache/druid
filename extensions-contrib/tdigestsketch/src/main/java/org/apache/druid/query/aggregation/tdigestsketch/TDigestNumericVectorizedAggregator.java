@@ -62,8 +62,9 @@ public class TDigestNumericVectorizedAggregator implements VectorAggregator
     double[] vector = selector.getDoubleVector();
     boolean[] isNull = selector.getNullVector();
     for (int i = 0; i < numRows; i++) {
-      double other = toObject(vector, isNull, i);
       int position = positions[i] + positionOffset;
+      int index = rows != null ? rows[i] : i;
+      double other = toObject(vector, isNull, index);
       innerAggregator.aggregate(other, buf, position);
     }
   }
