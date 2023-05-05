@@ -171,7 +171,10 @@ export async function getProxyOverlordModules(): Promise<string[]> {
     throw new Error(getDruidErrorMessage(e));
   }
 
-  return statusResp.data.modules.map((m: any) => m.artifact);
+  const { modules } = statusResp.data;
+  if (!Array.isArray(modules)) throw new Error('unexpected result from overlord/status');
+
+  return modules.map((m: any) => m.artifact);
 }
 
 export async function postToSampler(
