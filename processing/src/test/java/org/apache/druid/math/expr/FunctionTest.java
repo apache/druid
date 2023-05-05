@@ -85,6 +85,12 @@ public class FunctionTest extends InitializedNullHandlingTest
                      .put("str2", ExpressionType.STRING)
                      .put("nestedArray", ExpressionType.NESTED_DATA);
 
+    final StructuredData nestedArray = StructuredData.wrap(
+        ImmutableList.of(
+            ImmutableMap.of("x", 2L, "y", 3.3),
+            ImmutableMap.of("x", 4L, "y", 6.6)
+        )
+    );
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     builder.put("x", "foo")
            .put("y", 2)
@@ -105,15 +111,7 @@ public class FunctionTest extends InitializedNullHandlingTest
            .put("someComplex", new TypeStrategiesTest.NullableLongPair(1L, 2L))
            .put("str1", "v1")
            .put("str2", "v2")
-           .put(
-               "nestedArray",
-               StructuredData.wrap(
-                   ImmutableList.of(
-                       ImmutableMap.of("x", 2L, "y", 3.3),
-                       ImmutableMap.of("x", 4L, "y", 6.6)
-                   )
-               )
-           );
+           .put("nestedArray", nestedArray);
     bestEffortBindings = InputBindings.forMap(builder.build());
     typedBindings = InputBindings.forMap(
         builder.build(), InputBindings.inspectorFromTypeMap(inputTypesBuilder.build())
