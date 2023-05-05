@@ -81,6 +81,10 @@ jobs:
           ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
+      - name: checkstyle
+        if: ${{ matrix.java == 'jdk8' }}
+        run: ${MVN} checkstyle:checkstyle --fail-at-end
+
       - name: license checks
         if: ${{ matrix.java == 'jdk8' }}
         run: ./.github/scripts/license_checks_script.sh
@@ -100,10 +104,6 @@ jobs:
       - name: animal sniffer checks
         if: ${{ matrix.java == 'jdk8' }}
         run: ${MVN} animal-sniffer:check --fail-at-end
-
-      - name: checkstyle
-        if: ${{ matrix.java == 'jdk8' }}
-        run: ${MVN} checkstyle:checkstyle --fail-at-end
 
       - name: enforcer checks
         if: ${{ matrix.java == 'jdk8' }}

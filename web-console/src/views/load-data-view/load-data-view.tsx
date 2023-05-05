@@ -56,7 +56,6 @@ import {
 } from '../../components';
 import { AsyncActionDialog } from '../../dialogs';
 import type {
-  DimensionMode,
   DimensionSpec,
   DruidFilter,
   FlattenField,
@@ -65,6 +64,7 @@ import type {
   InputFormat,
   IoConfig,
   MetricSpec,
+  SchemaMode,
   TimestampSpec,
   Transform,
   TuningConfig,
@@ -84,7 +84,6 @@ import {
   FILTER_FIELDS,
   FILTERS_FIELDS,
   FLATTEN_FIELD_FIELDS,
-  getDimensionMode,
   getDimensionSpecName,
   getIngestionComboType,
   getIngestionImage,
@@ -95,6 +94,7 @@ import {
   getMetricSpecName,
   getRequiredModule,
   getRollup,
+  getSchemaMode,
   getSecondaryPartitionRelatedFormFields,
   getSpecType,
   getTimestampExpressionFields,
@@ -367,7 +367,7 @@ export interface LoadDataViewState {
   continueToSpec: boolean;
   showResetConfirm: boolean;
   newRollup?: boolean;
-  newDimensionMode?: DimensionMode;
+  newSchemaMode?: SchemaMode;
 
   // welcome
   overlordModules?: string[];
@@ -414,6 +414,7 @@ export interface LoadDataViewState {
   selectedMetricSpec?: SelectedIndex<MetricSpec>;
 
   // for final step
+  existingDatasources?: string[];
   submitting: boolean;
 }
 
@@ -666,8 +667,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'partition':
       case 'publish':
       case 'tuning':
-      case 'spec':
         return;
+
+      case 'spec':
+        return this.queryForSpec();
     }
   }
 
@@ -1994,7 +1997,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               newSpec = updateSchemaWithSample(
                 newSpec,
                 transformQueryState.data,
-                'specific',
+                'fixed',
                 typeof currentRollup === 'boolean' ? currentRollup : DEFAULT_ROLLUP_SETTING,
               );
             }
@@ -2197,7 +2200,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               newSpec = updateSchemaWithSample(
                 newSpec,
                 filterQueryState.data,
-                'specific',
+                'fixed',
                 typeof currentRollup === 'boolean' ? currentRollup : DEFAULT_ROLLUP_SETTING,
               );
             }
@@ -2308,7 +2311,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const somethingSelected = Boolean(
       selectedAutoDimension || selectedDimensionSpec || selectedMetricSpec,
     );
-    const dimensionMode = getDimensionMode(spec);
+    const schemaMode = getSchemaMode(spec);
 
     let mainFill: JSX.Element | string;
     if (schemaQueryState.isInit()) {
@@ -2349,7 +2352,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       <>
         <div className="main">{mainFill}</div>
         <div className="control">
-          <SchemaMessage dimensionMode={dimensionMode} />
+          <SchemaMessage schemaMode={schemaMode} />
           {!somethingSelected && (
             <>
               <FormGroupWithInfo
@@ -2375,16 +2378,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 }
               >
                 <Switch
-                  checked={dimensionMode === 'specific'}
+                  checked={schemaMode === 'fixed'}
                   onChange={() =>
                     this.setState({
-                      newDimensionMode: dimensionMode === 'specific' ? 'auto-detect' : 'specific',
+                      newSchemaMode: schemaMode === 'fixed' ? 'string-only-discovery' : 'fixed',
                     })
                   }
-                  label="Explicitly specify dimension list"
+                  label="Explicitly specify schema"
                 />
               </FormGroupWithInfo>
-              {dimensionMode === 'auto-detect' && (
+              {schemaMode !== 'fixed' && (
                 <AutoForm
                   fields={[
                     {
@@ -2470,7 +2473,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               <FormGroup>
                 <Button
                   text="Add dimension"
-                  disabled={dimensionMode !== 'specific'}
+                  disabled={schemaMode !== 'fixed'}
                   onClick={() => {
                     this.setState({
                       selectedDimensionSpec: {
@@ -2606,7 +2609,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         action={async () => {
           const sampleResponse = await sampleForTransform(spec, cacheRows);
           this.updateSpec(
-            updateSchemaWithSample(spec, sampleResponse, getDimensionMode(spec), newRollup, true),
+            updateSchemaWithSample(spec, sampleResponse, getSchemaMode(spec), newRollup, true),
           );
         }}
         confirmButtonText={`Yes - ${newRollup ? 'enable' : 'disable'} rollup`}
@@ -2622,32 +2625,55 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderChangeDimensionModeAction() {
-    const { newDimensionMode, spec, cacheRows } = this.state;
-    if (typeof newDimensionMode === 'undefined' || !cacheRows) return;
-    const autoDetect = newDimensionMode === 'auto-detect';
+    const { newSchemaMode, spec, cacheRows } = this.state;
+    if (!newSchemaMode || !cacheRows) return;
+    const autoDetect = newSchemaMode !== 'fixed';
 
     return (
       <AsyncActionDialog
         action={async () => {
           const sampleResponse = await sampleForTransform(spec, cacheRows);
           this.updateSpec(
-            updateSchemaWithSample(spec, sampleResponse, newDimensionMode, getRollup(spec)),
+            updateSchemaWithSample(spec, sampleResponse, newSchemaMode, getRollup(spec)),
           );
         }}
-        confirmButtonText={`Yes - ${autoDetect ? 'auto detect' : 'explicitly set'} columns`}
-        successText={`Dimension mode changes to ${
-          autoDetect ? 'auto detect' : 'specific list'
-        }. Schema has been updated.`}
-        failText="Could change dimension mode"
+        confirmButtonText={`Yes - ${autoDetect ? 'auto detect' : 'explicitly define'} schema`}
+        successText={`Schema mode changed to ${autoDetect ? 'auto detect' : 'explicitly defined'}.`}
+        failText="Could not change schema mode"
         intent={Intent.WARNING}
-        onClose={() => this.setState({ newDimensionMode: undefined })}
+        onClose={() => this.setState({ newSchemaMode: undefined })}
       >
         <p>
           {autoDetect
-            ? `Are you sure you don't want to explicitly specify a dimension list?`
-            : `Are you sure you want to explicitly specify a dimension list?`}
+            ? `Are you sure you want Druid to auto detect the data schema?`
+            : `Are you sure you want to explicitly specify a schema?`}
         </p>
-        <p>Making this change will reset any work you have done in this section.</p>
+        <p>Making this change will reset all schema configuration done so far.</p>
+        {autoDetect && (
+          <Switch
+            checked={newSchemaMode === 'type-aware-discovery'}
+            onChange={() => {
+              this.setState({
+                newSchemaMode:
+                  newSchemaMode === 'string-only-discovery'
+                    ? 'type-aware-discovery'
+                    : 'string-only-discovery',
+              });
+            }}
+          >
+            Use the new type-aware schema discovery capability. Avoid this if you are appending to a
+            datasource created with string-only schema discovery of Druid and want to preserve
+            schema compatibility. For more information see the{' '}
+            <ExternalLink
+              href={`${getLink(
+                'DOCS',
+              )}/ingestion/schema-design.html#schema-auto-discovery-for-dimensions`}
+            >
+              documentation
+            </ExternalLink>
+            .
+          </Switch>
+        )}
       </AsyncActionDialog>
     );
   }
@@ -2688,7 +2714,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   renderDimensionSpecControls() {
     const { spec, selectedDimensionSpec } = this.state;
     if (!selectedDimensionSpec) return;
-    const dimensionMode = getDimensionMode(spec);
+    const schemaMode = getSchemaMode(spec);
 
     const dimensions = deepGet(spec, `spec.dataSchema.dimensionsSpec.dimensions`) || EMPTY_ARRAY;
 
@@ -2709,7 +2735,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     const convertToMetric = (type: string, prefix: string) => {
       const specWithoutDimension =
-        dimensionMode === 'specific'
+        schemaMode === 'fixed'
           ? deepDelete(
               spec,
               `spec.dataSchema.dimensionsSpec.dimensions.${selectedDimensionSpec.index}`,
@@ -2811,7 +2837,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   renderMetricSpecControls() {
     const { spec, selectedMetricSpec } = this.state;
     if (!selectedMetricSpec) return;
-    const dimensionMode = getDimensionMode(spec);
+    const schemaMode = getSchemaMode(spec);
     const selectedMetricSpecFieldName = selectedMetricSpec.value.fieldName;
 
     const convertToDimension = (type: string) => {
@@ -2862,7 +2888,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         }
       >
         {selectedMetricSpec.index !== -1 &&
-          dimensionMode === 'specific' &&
+          schemaMode === 'fixed' &&
           selectedMetricSpecFieldName && (
             <FormGroup>
               <Popover2 content={convertToDimensionMenu}>
@@ -3242,9 +3268,24 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
   };
 
+  async queryForSpec() {
+    let existingDatasources: string[];
+    try {
+      existingDatasources = (await Api.instance.get<string[]>('/druid/coordinator/v1/datasources'))
+        .data;
+    } catch {
+      return;
+    }
+
+    this.setState({
+      existingDatasources,
+    });
+  }
+
   renderSpecStep() {
-    const { spec, submitting } = this.state;
+    const { spec, existingDatasources, submitting } = this.state;
     const issueWithSpec = getIssueWithSpec(spec);
+    const datasource = deepGet(spec, 'spec.dataSchema.dataSource');
 
     return (
       <>
@@ -3267,6 +3308,34 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               >{`There is an issue with the spec: ${issueWithSpec}`}</Callout>
             </FormGroup>
           )}
+          {getSchemaMode(spec) === 'type-aware-discovery' &&
+            existingDatasources?.includes(datasource) && (
+              <FormGroup>
+                <Callout intent={Intent.WARNING}>
+                  <p>
+                    You have enabled type-aware schema discovery (
+                    <Code>useSchemaDiscovery: true</Code>) to ingest data into the existing
+                    datasource <Code>{datasource}</Code>.
+                  </p>
+                  <p>
+                    If you used string-based schema discovery when first ingesting data to{' '}
+                    <Code>{datasource}</Code>, using type-aware schema discovery now can cause
+                    problems with the values multi-value string dimensions.
+                  </p>
+                  <p>
+                    For more information see the{' '}
+                    <ExternalLink
+                      href={`${getLink(
+                        'DOCS',
+                      )}/ingestion/schema-design.html#schema-auto-discovery-for-dimensions`}
+                    >
+                      documentation
+                    </ExternalLink>
+                    .
+                  </p>
+                </Callout>
+              </FormGroup>
+            )}
           <AppendToExistingIssue spec={spec} onChangeSpec={this.updateSpec} />
         </div>
         <div className="next-bar">
@@ -3279,7 +3348,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             />
           )}
           <Button
-            text="Submit"
+            text={submitting ? 'Submitting...' : 'Submit'}
             rightIcon={IconNames.CLOUD_UPLOAD}
             intent={Intent.PRIMARY}
             disabled={submitting || Boolean(issueWithSpec)}
