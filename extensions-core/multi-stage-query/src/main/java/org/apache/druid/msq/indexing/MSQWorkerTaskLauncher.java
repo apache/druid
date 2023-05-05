@@ -58,6 +58,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
@@ -131,6 +132,8 @@ public class MSQWorkerTaskLauncher
 
   private final ConcurrentHashMap<Integer, List<String>> workerToTaskIds = new ConcurrentHashMap<>();
   private final RetryTask retryTask;
+
+  private final AtomicLong recentFullyStartedWorkerTimeInMs = new AtomicLong(System.currentTimeMillis());
 
   public MSQWorkerTaskLauncher(
       final String controllerTaskId,
@@ -493,7 +496,9 @@ public class MSQWorkerTaskLauncher
 
         if (tracker.status.getStatusCode() == TaskState.RUNNING && !tracker.unknownLocation()) {
           synchronized (taskIds) {
-            fullyStartedTasks.add(tracker.workerNumber);
+            if (fullyStartedTasks.add(tracker.workerNumber)) {
+              recentFullyStartedWorkerTimeInMs.set(System.currentTimeMillis());
+            }
             taskIds.notifyAll();
           }
         }
@@ -533,7 +538,11 @@ public class MSQWorkerTaskLauncher
 
       } else if (tracker.didRunTimeOut(maxTaskStartDelayMillis) && !canceledWorkerTasks.contains(taskId)) {
         removeWorkerFromFullyStartedWorkers(tracker);
-        throw new MSQException(new TaskStartTimeoutFault(numTasks + 1, maxTaskStartDelayMillis));
+        throw new MSQException(new TaskStartTimeoutFault(
+            this.getWorkerTaskCount().getPendingWorkerCount(),
+            numTasks + 1,
+            maxTaskStartDelayMillis
+        ));
       } else if (tracker.didFail() && !canceledWorkerTasks.contains(taskId)) {
         removeWorkerFromFullyStartedWorkers(tracker);
         log.info("Task[%s] failed because %s. Trying to relaunch the worker", taskId, tracker.status.getErrorMsg());
@@ -713,7 +722,7 @@ public class MSQWorkerTaskLauncher
   /**
    * Tracker for information about a worker. Mutable.
    */
-  private static class TaskTracker
+  private class TaskTracker
   {
     private final int workerNumber;
     private final long startTimeMs = System.currentTimeMillis();
@@ -744,11 +753,14 @@ public class MSQWorkerTaskLauncher
       return status != null && status.getStatusCode().isFailure();
     }
 
+    /**
+     * The timeout is checked from the recentFullyStartedWorkerTimeInMs. If it's more than maxTaskStartDelayMillis return true.
+     */
     public boolean didRunTimeOut(final long maxTaskStartDelayMillis)
     {
       return (status == null || status.getStatusCode() == TaskState.RUNNING)
              && unknownLocation()
-             && System.currentTimeMillis() - startTimeMs > maxTaskStartDelayMillis;
+             && System.currentTimeMillis() - recentFullyStartedWorkerTimeInMs.get() > maxTaskStartDelayMillis;
     }
 
     /**
