@@ -498,10 +498,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       overlordModules = await getProxyOverlordModules();
     } catch (e) {
       AppToaster.show({
-        message: `Failed to get overlord modules: ${e.message}`,
+        message: `Failed to get the list of loaded modules from the overlord: ${e.message}`,
         intent: Intent.DANGER,
       });
-      this.setState({ overlordModules: [] });
+      this.setState({ overlordModules: undefined });
       return;
     }
 
@@ -810,9 +810,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     disabled?: boolean,
   ): JSX.Element | undefined {
     const { overlordModules, selectedComboType, spec } = this.state;
-    if (!overlordModules) return;
     const requiredModule = getRequiredModule(comboType);
-    const goodToGo = !disabled && (!requiredModule || overlordModules.includes(requiredModule));
+    const goodToGo =
+      !disabled &&
+      (!requiredModule || !overlordModules || overlordModules.includes(requiredModule));
 
     return (
       <Card
@@ -1124,7 +1125,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         <p>
           Please make sure that the
           <Code>&quot;{requiredModule}&quot;</Code> extension is included in the{' '}
-          <Code>loadList</Code>.
+          <Code>druid.extensions.loadList</Code>.
         </p>
         <p>
           For more information please refer to the{' '}
