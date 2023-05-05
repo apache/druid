@@ -17,21 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.sql.calcite.planner;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.junit.Test;
 
-public class ColumnMappingTest
+public class ColumnMappingsTest
 {
-
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(ColumnMapping.class)
-                  .withNonnullFields("queryColumn", "outputColumn")
+    EqualsVerifier.simple().forClass(ColumnMappings.class)
                   .usingGetClass()
+                  .withIgnoredFields("outputColumnNameToPositionMap", "queryColumnNameToPositionMap")
                   .verify();
   }
 }
