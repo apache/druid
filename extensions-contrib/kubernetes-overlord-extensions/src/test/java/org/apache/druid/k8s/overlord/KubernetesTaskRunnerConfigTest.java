@@ -42,7 +42,6 @@ public class KubernetesTaskRunnerConfigTest
 
     Assert.assertEquals("namespace", config.getNamespace());
     Assert.assertFalse(config.isDebugJobs());
-    Assert.assertFalse(config.isSidecarSupport());
     Assert.assertEquals("name", config.getPrimaryContainerName());
     Assert.assertEquals("karlkfi/kubexit:v0.3.2", config.getKubexitImage());
     Assert.assertNull(config.getGraceTerminationPeriodSeconds());
@@ -68,7 +67,6 @@ public class KubernetesTaskRunnerConfigTest
 
     Assert.assertEquals("namespace", config.getNamespace());
     Assert.assertFalse(config.isDebugJobs());
-    Assert.assertFalse(config.isSidecarSupport());
     Assert.assertNull(config.getPrimaryContainerName());
     Assert.assertEquals("karlkfi/kubexit:v0.3.2", config.getKubexitImage());
     Assert.assertNull(config.getGraceTerminationPeriodSeconds());
@@ -108,7 +106,6 @@ public class KubernetesTaskRunnerConfigTest
 
     Assert.assertEquals("namespace", config.getNamespace());
     Assert.assertTrue(config.isDebugJobs());
-    Assert.assertTrue(config.isSidecarSupport());
     Assert.assertEquals("primary", config.getPrimaryContainerName());
     Assert.assertEquals("image", config.getKubexitImage());
     Assert.assertEquals(Long.valueOf(0), config.getGraceTerminationPeriodSeconds());

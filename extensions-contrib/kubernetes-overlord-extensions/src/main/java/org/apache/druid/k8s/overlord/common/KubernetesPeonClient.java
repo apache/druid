@@ -168,6 +168,8 @@ public class KubernetesPeonClient
                    .withName(x.getMetadata().getName())
                    .delete().isEmpty()) {
           numDeleted.incrementAndGet();
+        } else {
+          log.error("Failed to delete job %s", x.getMetadata().getName());
         }
       });
       return numDeleted.get();

@@ -46,6 +46,16 @@ import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * This class is a wrapper per Druid task responsible for managing the task lifecycle
+ * once it has been transformed into a K8s Job and submitted by the KubernetesTaskRunner.
+ *
+ * This includes actually submitting the waiting Job to K8s,
+ * waiting for the Job to report completion,
+ * joining an already running Job and waiting for it to report completion,
+ * shutting down a Job, including queued jobs that have not been submitted to K8s,
+ * streaming task logs for a running job
+ */
 public class KubernetesPeonLifecycle
 {
   private static final EmittingLogger log = new EmittingLogger(KubernetesPeonLifecycle.class);
@@ -203,6 +213,7 @@ public class KubernetesPeonLifecycle
   protected TaskLocation getTaskLocation()
   {
     if (!State.RUNNING.equals(state.get())) {
+      log.debug("Can't get task location for non-running job. [%s]", taskId.getOriginalTaskId());
       return TaskLocation.unknown();
     }
 
@@ -257,11 +268,13 @@ public class KubernetesPeonLifecycle
   private void saveLogs()
   {
     try {
-      Path file = Files.createTempFile(taskId.getOriginalTaskId(), "file");
+      Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
       try {
         Optional<InputStream> maybeLogStream = streamLogs();
         if (maybeLogStream.isPresent()) {
           FileUtils.copyInputStreamToFile(maybeLogStream.get(), file.toFile());
+        } else {
+          log.debug("Log stream not found for %s", taskId.getOriginalTaskId());
         }
         taskLogs.pushTaskLog(taskId.getOriginalTaskId(), file.toFile());
       }
