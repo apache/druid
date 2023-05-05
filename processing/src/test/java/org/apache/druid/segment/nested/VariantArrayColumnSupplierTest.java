@@ -416,6 +416,8 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
           }
           if (dimensionSelector != null) {
             Assert.assertEquals(String.valueOf(row), dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+            // null is always 0
+            Assert.assertTrue(dimensionSelector.idLookup().lookupId(String.valueOf(row)) > 0);
             if (dimensionVectorSelector != null) {
               int[] dim = dimensionVectorSelector.getRowVector();
               Assert.assertEquals(String.valueOf(row), dimensionVectorSelector.lookupName(dim[0]));
@@ -429,6 +431,7 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertNull(vectorObjectSelector.getObjectVector()[0]);
         if (dimensionSelector != null) {
           Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+          Assert.assertEquals(0, dimensionSelector.idLookup().lookupId(null));
           if (dimensionVectorSelector != null) {
             Assert.assertNull(dimensionVectorSelector.lookupName(dimensionVectorSelector.getRowVector()[0]));
           }
