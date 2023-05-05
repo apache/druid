@@ -849,7 +849,7 @@ public abstract class ExprEval<T>
           break;
         case COMPLEX:
           if (ExpressionType.NESTED_DATA.equals(castTo)) {
-            return ExprEval.ofComplex(castTo, value);
+            return new NestedDataExprEval(value);
           }
       }
       throw invalidCast(type(), castTo);
@@ -928,7 +928,7 @@ public abstract class ExprEval<T>
           break;
         case COMPLEX:
           if (ExpressionType.NESTED_DATA.equals(castTo)) {
-            return ExprEval.ofComplex(castTo, value);
+            return new NestedDataExprEval(value);
           }
       }
       throw invalidCast(type(), castTo);
@@ -1103,7 +1103,7 @@ public abstract class ExprEval<T>
           }
         case COMPLEX:
           if (ExpressionType.NESTED_DATA.equals(castTo)) {
-            return ExprEval.ofComplex(castTo, value);
+            return new NestedDataExprEval(value);
           }
       }
       throw invalidCast(type(), castTo);
@@ -1290,7 +1290,7 @@ public abstract class ExprEval<T>
           return ExprEval.ofArray(castTo, cast);
         case COMPLEX:
           if (ExpressionType.NESTED_DATA.equals(castTo)) {
-            return ExprEval.ofComplex(castTo, value);
+            return new NestedDataExprEval(value);
           }
       }
 
