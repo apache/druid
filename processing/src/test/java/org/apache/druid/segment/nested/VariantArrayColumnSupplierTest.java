@@ -31,6 +31,8 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.AutoTypeColumnMerger;
@@ -49,6 +51,9 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.vector.NoFilterVectorOffset;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -353,10 +358,16 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
   )
   {
     SimpleAscendingOffset offset = new SimpleAscendingOffset(data.size());
+    NoFilterVectorOffset vectorOffset = new NoFilterVectorOffset(1, 0, data.size());
     ColumnValueSelector<?> valueSelector = column.makeColumnValueSelector(offset);
     DimensionSelector dimensionSelector = expectedLogicalType.isPrimitive()
                                           ? column.makeDimensionSelector(offset, null)
                                           : null;
+    VectorObjectSelector vectorObjectSelector = column.makeVectorObjectSelector(vectorOffset);
+    SingleValueDimensionVectorSelector dimensionVectorSelector = expectedLogicalType.isPrimitive()
+                                                                 ? column.makeSingleValueDimensionVectorSelector(vectorOffset)
+                                                                 : null;
+
 
     StringValueSetIndex valueSetIndex = supplier.as(StringValueSetIndex.class);
     Assert.assertNull(valueSetIndex);
@@ -370,6 +381,7 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
         ImmutableMap.of(NestedPathFinder.JSON_PATH_ROOT, expectedType),
         fields
     );
+    final ExpressionType expressionType = ExpressionType.fromColumnTypeStrict(expectedLogicalType);
 
     for (int i = 0; i < data.size(); i++) {
       Object row = data.get(i);
@@ -380,23 +392,52 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
       if (row != null) {
         if (row instanceof List) {
           Assert.assertArrayEquals(((List) row).toArray(), (Object[]) valueSelector.getObject());
+          if (expectedType.getSingleType() != null) {
+            Assert.assertArrayEquals(((List) row).toArray(), (Object[]) vectorObjectSelector.getObjectVector()[0]);
+          } else {
+            // mixed type vector object selector coerces to the most common type
+            Assert.assertArrayEquals(ExprEval.ofType(expressionType, row).asArray(), (Object[]) vectorObjectSelector.getObjectVector()[0]);
+          }
         } else {
           Assert.assertEquals(row, valueSelector.getObject());
+          if (expectedType.getSingleType() != null) {
+            Assert.assertEquals(
+                row,
+                vectorObjectSelector.getObjectVector()[0]
+            );
+          } else {
+            // vector object selector always coerces to the most common type
+            ExprEval eval = ExprEval.ofType(expressionType, row);
+            if (expectedLogicalType.isArray()) {
+              Assert.assertArrayEquals(eval.asArray(), (Object[]) vectorObjectSelector.getObjectVector()[0]);
+            } else {
+              Assert.assertEquals(eval.value(), vectorObjectSelector.getObjectVector()[0]);
+            }
+          }
           if (dimensionSelector != null) {
             Assert.assertEquals(String.valueOf(row), dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+            if (dimensionVectorSelector != null) {
+              int[] dim = dimensionVectorSelector.getRowVector();
+              Assert.assertEquals(String.valueOf(row), dimensionVectorSelector.lookupName(dim[0]));
+            }
           }
         }
         Assert.assertFalse(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
 
       } else {
         Assert.assertNull(valueSelector.getObject());
+        Assert.assertNull(vectorObjectSelector.getObjectVector()[0]);
         if (dimensionSelector != null) {
           Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+          if (dimensionVectorSelector != null) {
+            Assert.assertNull(dimensionVectorSelector.lookupName(dimensionVectorSelector.getRowVector()[0]));
+          }
         }
         Assert.assertTrue(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
       }
 
       offset.increment();
+      vectorOffset.advance();
     }
   }
 }

@@ -717,9 +717,9 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>>
             } else {
               final Object[] array = new Object[arr.length];
               for (int j = 0; j < arr.length; j++) {
-                array[j] = lookupScalarValueStrict(arr[j]);
+                array[j] = lookupScalarValue(arr[j]);
               }
-              objects[i] = array;
+              objects[i] = ExprEval.ofType(logicalExpressionType, array).asArray();
             }
           }
         }
