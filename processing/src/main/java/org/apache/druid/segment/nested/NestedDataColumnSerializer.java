@@ -71,12 +71,11 @@ import java.util.SortedMap;
  * For each nested field, a {@link GlobalDictionaryEncodedFieldColumnWriter} will write a sub-column to specialize
  * fast reading and filtering of that path.
  *
- * @see ScalarDoubleFieldColumnWriter - single type double field of {@link NestedDataColumnSerializer}
- * @see ScalarLongFieldColumnWriter   - single type long field of {@link NestedDataColumnSerializer}
- * @see ScalarStringFieldColumnWriter - single type string field of {@link NestedDataColumnSerializer}
- * @see VariantArrayFieldColumnWriter - single type array of string, long, and double field of
- *                                      {@link NestedDataColumnSerializer}
- * @see VariantFieldColumnWriter      - mixed type field of {@link NestedDataColumnSerializer}
+ * @see ScalarDoubleFieldColumnWriter - single type double field
+ * @see ScalarLongFieldColumnWriter   - single type long field
+ * @see ScalarStringFieldColumnWriter - single type string field
+ * @see VariantArrayFieldColumnWriter - single type array of string, long, and double field
+ * @see VariantFieldColumnWriter      - mixed type field
  */
 public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializer
 {
