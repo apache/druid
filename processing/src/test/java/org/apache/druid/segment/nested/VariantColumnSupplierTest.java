@@ -83,7 +83,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 @RunWith(Parameterized.class)
-public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
+public class VariantColumnSupplierTest extends InitializedNullHandlingTest
 {
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
@@ -204,7 +204,7 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
   private final List<?> data;
   private final IndexSpec indexSpec;
 
-  public VariantArrayColumnSupplierTest(
+  public VariantColumnSupplierTest(
       @SuppressWarnings("unused") String name,
       List<?> data,
       IndexSpec indexSpec
@@ -247,7 +247,7 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
       for (ColumnType type : FieldTypeInfo.convertToSet(expectedTypes.getByteValue())) {
         expectedLogicalType = ColumnType.leastRestrictiveType(expectedLogicalType, type);
       }
-      VariantArrayColumnSerializer serializer = new VariantArrayColumnSerializer(
+      VariantColumnSerializer serializer = new VariantColumnSerializer(
           fileNameBase,
           expectedTypes.getSingleType() == null ? expectedTypes.getByteValue() : null,
           indexSpec,
@@ -292,7 +292,7 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
   {
     ColumnBuilder bob = new ColumnBuilder();
     bob.setFileMapper(fileMapper);
-    VariantArrayColumnAndIndexSupplier supplier = VariantArrayColumnAndIndexSupplier.read(
+    VariantColumnAndIndexSupplier supplier = VariantColumnAndIndexSupplier.read(
         expectedLogicalType,
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
@@ -300,7 +300,7 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
         bob,
         NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
     );
-    try (VariantArrayColumn column = (VariantArrayColumn) supplier.get()) {
+    try (VariantColumn<?> column = (VariantColumn<?>) supplier.get()) {
       smokeTest(supplier, column, data, expectedTypes);
     }
   }
@@ -311,7 +311,7 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
     // if this test ever starts being to be a flake, there might be thread safety issues
     ColumnBuilder bob = new ColumnBuilder();
     bob.setFileMapper(fileMapper);
-    VariantArrayColumnAndIndexSupplier supplier = VariantArrayColumnAndIndexSupplier.read(
+    VariantColumnAndIndexSupplier supplier = VariantColumnAndIndexSupplier.read(
         expectedLogicalType,
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
@@ -334,7 +334,7 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
             try {
               threadsStartLatch.await();
               for (int iter = 0; iter < 5000; iter++) {
-                try (VariantArrayColumn column = (VariantArrayColumn) supplier.get()) {
+                try (VariantColumn column = (VariantColumn) supplier.get()) {
                   smokeTest(supplier, column, data, expectedTypes);
                 }
               }
@@ -351,8 +351,8 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
   }
 
   private void smokeTest(
-      VariantArrayColumnAndIndexSupplier supplier,
-      VariantArrayColumn column,
+      VariantColumnAndIndexSupplier supplier,
+      VariantColumn<?> column,
       List<?> data,
       FieldTypeInfo.MutableTypeSet expectedType
   )
@@ -360,14 +360,11 @@ public class VariantArrayColumnSupplierTest extends InitializedNullHandlingTest
     SimpleAscendingOffset offset = new SimpleAscendingOffset(data.size());
     NoFilterVectorOffset vectorOffset = new NoFilterVectorOffset(1, 0, data.size());
     ColumnValueSelector<?> valueSelector = column.makeColumnValueSelector(offset);
-    DimensionSelector dimensionSelector = expectedLogicalType.isPrimitive()
-                                          ? column.makeDimensionSelector(offset, null)
-                                          : null;
+    DimensionSelector dimensionSelector =
+        expectedLogicalType.isPrimitive() ? column.makeDimensionSelector(offset, null) : null;
     VectorObjectSelector vectorObjectSelector = column.makeVectorObjectSelector(vectorOffset);
-    SingleValueDimensionVectorSelector dimensionVectorSelector = expectedLogicalType.isPrimitive()
-                                                                 ? column.makeSingleValueDimensionVectorSelector(vectorOffset)
-                                                                 : null;
-
+    SingleValueDimensionVectorSelector dimensionVectorSelector =
+        expectedLogicalType.isPrimitive() ? column.makeSingleValueDimensionVectorSelector(vectorOffset) : null;
 
     StringValueSetIndex valueSetIndex = supplier.as(StringValueSetIndex.class);
     Assert.assertNull(valueSetIndex);

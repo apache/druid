@@ -89,39 +89,39 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Implementation of {@link NestedDataComplexColumn} which uses a {@link CompressedVariableSizedBlobColumn} for the
- * 'raw' {@link StructuredData} values and provides selectors for nested 'literal' field columns.
+ * 'raw' {@link StructuredData} values and provides selectors for nested field columns specified by ordered lists of
+ * {@link NestedPathPart}.
+ * <p>
+ * The list of available nested paths is stored in {@link #fields}, and their associated types stored in
+ * {@link #fieldInfo} which can be accessed by the index of the field in {@link #fields}.
+ * <p>
+ * In the case that the nested column has only a single field, and that field is the 'root' path, specified by
+ * {@link #rootFieldPath}, the selectors created for the complex column itself will use the 'root' path selectors
+ * instead.
  */
 public abstract class CompressedNestedDataComplexColumn<TStringDictionary extends Indexed<ByteBuffer>>
     extends NestedDataComplexColumn implements NestedCommonFormatColumn
 {
+  private static final ObjectStrategy<Object> STRATEGY = NestedDataComplexTypeSerde.INSTANCE.getObjectStrategy();
   public static final IntTypeStrategy INT_TYPE_STRATEGY = new IntTypeStrategy();
   private final ColumnConfig columnConfig;
   private final Closer closer;
   private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
-  private CompressedVariableSizedBlobColumn compressedRawColumn;
   private final ImmutableBitmap nullValues;
-
   private final GenericIndexed<String> fields;
   private final FieldTypeInfo fieldInfo;
-
   private final Supplier<TStringDictionary> stringDictionarySupplier;
   private final Supplier<FixedIndexed<Long>> longDictionarySupplier;
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
   private final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
-
   private final SmooshedFileMapper fileMapper;
-
   private final String rootFieldPath;
-
-  private final ConcurrentHashMap<Integer, ColumnHolder> columns = new ConcurrentHashMap<>();
-
-  private static final ObjectStrategy<Object> STRATEGY = NestedDataComplexTypeSerde.INSTANCE.getObjectStrategy();
-
   private final ColumnType logicalType;
-
   private final String columnName;
   private final BitmapSerdeFactory bitmapSerdeFactory;
   private final ByteOrder byteOrder;
+  private final ConcurrentHashMap<Integer, ColumnHolder> columns = new ConcurrentHashMap<>();
+  private CompressedVariableSizedBlobColumn compressedRawColumn;
 
   public CompressedNestedDataComplexColumn(
       String columnName,

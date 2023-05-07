@@ -40,7 +40,7 @@ import org.apache.druid.segment.nested.ScalarDoubleColumnSerializer;
 import org.apache.druid.segment.nested.ScalarLongColumnSerializer;
 import org.apache.druid.segment.nested.ScalarStringColumnSerializer;
 import org.apache.druid.segment.nested.SortedValueDictionary;
-import org.apache.druid.segment.nested.VariantArrayColumnSerializer;
+import org.apache.druid.segment.nested.VariantColumnSerializer;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -172,7 +172,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
             );
             break;
           case ARRAY:
-            serializer = new VariantArrayColumnSerializer(
+            serializer = new VariantColumnSerializer(
                 name,
                 null,
                 indexSpec,
@@ -194,7 +194,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         for (ColumnType type : FieldTypeInfo.convertToSet(rootTypes.getByteValue())) {
           logicalType = ColumnType.leastRestrictiveType(logicalType, type);
         }
-        serializer = new VariantArrayColumnSerializer(
+        serializer = new VariantColumnSerializer(
             name,
             rootTypes.getByteValue(),
             indexSpec,

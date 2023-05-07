@@ -39,7 +39,14 @@ import java.util.TreeMap;
 /**
  * Base implementation for columns created with {@link AutoTypeColumnSchema} and handled with
  * {@link NestedCommonFormatColumnHandler} to allow ease of merge via
- * {@link AutoTypeColumnMerger}
+ * {@link AutoTypeColumnMerger} by providing a common implementation.
+ *
+ * @see ScalarDoubleColumn
+ * @see ScalarLongColumn
+ * @see ScalarStringDictionaryEncodedColumn
+ * @see org.apache.druid.segment.column.StringFrontCodedDictionaryEncodedColumn
+ * @see VariantColumn
+ * @see CompressedNestedDataComplexColumn
  */
 public interface NestedCommonFormatColumn extends BaseColumn
 {

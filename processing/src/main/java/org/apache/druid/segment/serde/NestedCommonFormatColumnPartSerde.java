@@ -33,7 +33,7 @@ import org.apache.druid.segment.nested.NestedDataColumnSupplier;
 import org.apache.druid.segment.nested.ScalarDoubleColumnAndIndexSupplier;
 import org.apache.druid.segment.nested.ScalarLongColumnAndIndexSupplier;
 import org.apache.druid.segment.nested.ScalarStringColumnAndIndexSupplier;
-import org.apache.druid.segment.nested.VariantArrayColumnAndIndexSupplier;
+import org.apache.druid.segment.nested.VariantColumnAndIndexSupplier;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -110,7 +110,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   {
     if (isVariantType || logicalType.isArray()) {
       return ((buffer, builder, columnConfig) -> {
-        VariantArrayColumnAndIndexSupplier supplier = VariantArrayColumnAndIndexSupplier.read(
+        VariantColumnAndIndexSupplier supplier = VariantColumnAndIndexSupplier.read(
             logicalType,
             byteOrder,
             bitmapSerdeFactory,

@@ -66,7 +66,7 @@ import org.apache.druid.segment.nested.NestedPathArrayElement;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.nested.StructuredData;
-import org.apache.druid.segment.nested.VariantArrayColumn;
+import org.apache.druid.segment.nested.VariantColumn;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
 import org.apache.druid.segment.vector.BaseFloatVectorValueSelector;
@@ -300,8 +300,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       );
     }
 
-    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantArrayColumn) {
-      final VariantArrayColumn<?> arrayColumn = (VariantArrayColumn<?>) theColumn;
+    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantColumn) {
+      final VariantColumn<?> arrayColumn = (VariantColumn<?>) theColumn;
       ColumnValueSelector<?> arraySelector = arrayColumn.makeColumnValueSelector(offset);
       final int elementNumber = ((NestedPathArrayElement) parts.get(0)).getIndex();
       if (elementNumber < 0) {
@@ -371,7 +371,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     if (parts.isEmpty()) {
       // dictionary encoded columns do not typically implement the value selector methods (getLong, getDouble, getFloat)
       // so we want to wrap their selector in a "best effort" casting selector to implement them
-      if (theColumn instanceof DictionaryEncodedColumn && !(theColumn instanceof VariantArrayColumn)) {
+      if (theColumn instanceof DictionaryEncodedColumn && !(theColumn instanceof VariantColumn)) {
         final DictionaryEncodedColumn<?> column = (DictionaryEncodedColumn<?>) theColumn;
         return new BestEffortCastingValueSelector(column.makeDimensionSelector(offset, null));
       }
@@ -380,8 +380,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return theColumn.makeColumnValueSelector(offset);
     }
 
-    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantArrayColumn) {
-      final VariantArrayColumn<?> arrayColumn = (VariantArrayColumn<?>) theColumn;
+    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantColumn) {
+      final VariantColumn<?> arrayColumn = (VariantColumn<?>) theColumn;
       ColumnValueSelector<?> arraySelector = arrayColumn.makeColumnValueSelector(offset);
       final int elementNumber = ((NestedPathArrayElement) parts.get(0)).getIndex();
       if (elementNumber < 0) {
@@ -538,8 +538,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return column.makeVectorObjectSelector(offset);
     }
 
-    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && column instanceof VariantArrayColumn) {
-      final VariantArrayColumn<?> arrayColumn = (VariantArrayColumn<?>) column;
+    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && column instanceof VariantColumn) {
+      final VariantColumn<?> arrayColumn = (VariantColumn<?>) column;
       VectorObjectSelector arraySelector = arrayColumn.makeVectorObjectSelector(offset);
       final int elementNumber = ((NestedPathArrayElement) parts.get(0)).getIndex();
       if (elementNumber < 0) {
@@ -747,8 +747,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         }
         return theColumn.makeVectorValueSelector(offset);
       }
-      if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantArrayColumn) {
-        final VariantArrayColumn<?> arrayColumn = (VariantArrayColumn<?>) theColumn;
+      if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantColumn) {
+        final VariantColumn<?> arrayColumn = (VariantColumn<?>) theColumn;
         VectorObjectSelector arraySelector = arrayColumn.makeVectorObjectSelector(offset);
         final int elementNumber = ((NestedPathArrayElement) parts.get(0)).getIndex();
         if (elementNumber < 0) {
@@ -1143,7 +1143,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       }
       return baseIndexSupplier;
     }
-    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantArrayColumn) {
+    if (parts.size() == 1 && parts.get(0) instanceof NestedPathArrayElement && theColumn instanceof VariantColumn) {
       // cannot use the array column index supplier directly, in the future array columns should expose a function
       // with a signature like 'getArrayElementIndexSupplier(int index)' to allow getting indexes for specific elements
       // if we want to support this stuff. Right now VariantArrayColumn doesn't actually retain enough information about

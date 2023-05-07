@@ -38,6 +38,9 @@ import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
 
+/**
+ * {@link NestedCommonFormatColumn} for {@link ColumnType#DOUBLE}
+ */
 public class ScalarDoubleColumn implements NestedCommonFormatColumn
 {
   private final FixedIndexed<Double> doubleDictionary;

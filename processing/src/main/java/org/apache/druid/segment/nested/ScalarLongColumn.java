@@ -38,6 +38,9 @@ import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
 
+/**
+ * {@link NestedCommonFormatColumn} for {@link ColumnType#LONG}
+ */
 public class ScalarLongColumn implements NestedCommonFormatColumn
 {
   private final FixedIndexed<Long> longDictionary;

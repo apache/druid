@@ -59,6 +59,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 
+/**
+ * Serializer for {@link NestedCommonFormatColumn} which can store nested data
+ */
 public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializer
 {
   private static final Logger log = new Logger(NestedDataColumnSerializer.class);

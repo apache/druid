@@ -51,9 +51,14 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
-public class VariantArrayColumnSerializer extends NestedCommonFormatColumnSerializer
+/**
+ * Serializer for a {@link NestedCommonFormatColumn} for single type arrays and mixed type columns, but not columns
+ * with nested data. If {@link #variantTypeSetByte} is set then the column has mixed types, which is added to the base
+ * metadata stored in the column file.
+ */
+public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
 {
-  private static final Logger log = new Logger(VariantArrayColumnSerializer.class);
+  private static final Logger log = new Logger(VariantColumnSerializer.class);
 
   private final String name;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
@@ -66,23 +71,19 @@ public class VariantArrayColumnSerializer extends NestedCommonFormatColumnSerial
   private FixedIndexedWriter<Double> doubleDictionaryWriter;
   private FrontCodedIntArrayIndexedWriter arrayDictionaryWriter;
   private FixedIndexedIntWriter arrayElementDictionaryWriter;
-
   private int rowCount = 0;
   private boolean closedForWrite = false;
-
   private boolean dictionarySerialized = false;
-
   private SingleValueColumnarIntsSerializer encodedValueSerializer;
   private GenericIndexedWriter<ImmutableBitmap> bitmapIndexWriter;
   private GenericIndexedWriter<ImmutableBitmap> arrayElementIndexWriter;
   private MutableBitmap[] bitmaps;
   private ByteBuffer columnNameBytes = null;
   private final Int2ObjectRBTreeMap<MutableBitmap> arrayElements = new Int2ObjectRBTreeMap<>();
-
   @Nullable
   private final Byte variantTypeSetByte;
 
-  public VariantArrayColumnSerializer(
+  public VariantColumnSerializer(
       String name,
       @Nullable Byte variantTypeSetByte,
       IndexSpec indexSpec,

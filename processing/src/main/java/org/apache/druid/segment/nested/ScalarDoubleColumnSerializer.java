@@ -45,6 +45,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
+/**
+ * Serializer for a {@link ScalarDoubleColumn}
+ */
 public class ScalarDoubleColumnSerializer extends NestedCommonFormatColumnSerializer
 {
   private static final Logger log = new Logger(ScalarDoubleColumnSerializer.class);

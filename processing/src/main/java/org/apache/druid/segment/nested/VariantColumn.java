@@ -65,7 +65,12 @@ import java.util.Iterator;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>>
+/**
+ * {@link NestedCommonFormatColumn} for single type array columns, and mixed type columns. If {@link #variantTypes}
+ * is non-null, the column is composed of all of the types defined there, otherwise all rows are consistently
+ * {@link #logicalType}. If mixed type, logical type is set by {@link ColumnType#leastRestrictiveType}.
+ */
+public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
     implements DictionaryEncodedColumn<String>, NestedCommonFormatColumn
 {
   private final TStringDictionary stringDictionary;
@@ -82,8 +87,7 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>>
   private final int adjustDoubleId;
   private final int adjustArrayId;
 
-
-  public VariantArrayColumn(
+  public VariantColumn(
       TStringDictionary stringDictionary,
       FixedIndexed<Long> longDictionary,
       FixedIndexed<Double> doubleDictionary,
@@ -135,47 +139,44 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>>
   @Override
   public Indexed<Object[]> getArrayDictionary()
   {
-    Iterable<Object[]> arrays = () -> {
+    Iterable<Object[]> arrays = () -> new Iterator<Object[]>()
+    {
+      final Iterator<int[]> delegate = arrayDictionary.iterator();
 
-      return new Iterator<Object[]>()
+      @Override
+      public boolean hasNext()
       {
-        final Iterator<int[]> delegate = arrayDictionary.iterator();
+        return delegate.hasNext();
+      }
 
-        @Override
-        public boolean hasNext()
-        {
-          return delegate.hasNext();
+      @Override
+      public Object[] next()
+      {
+        final int[] next = delegate.next();
+        final Object[] nextArray = new Object[next.length];
+        for (int i = 0; i < nextArray.length; i++) {
+          nextArray[i] = lookupId(next[i]);
         }
+        return nextArray;
+      }
 
-        @Override
-        public Object[] next()
-        {
-          final int[] next = delegate.next();
-          final Object[] nextArray = new Object[next.length];
-          for (int i = 0; i < nextArray.length; i++) {
-            nextArray[i] = lookupId(next[i]);
-          }
-          return nextArray;
+      @Nullable
+      private Object lookupId(int id)
+      {
+        if (id == 0) {
+          return null;
         }
-
-        @Nullable
-        private Object lookupId(int id)
-        {
-          if (id == 0) {
-            return null;
-          }
-          final int adjustLongId = stringDictionary.size();
-          final int adjustDoubleId = stringDictionary.size() + longDictionary.size();
-          if (id < adjustLongId) {
-            return StringUtils.fromUtf8Nullable(stringDictionary.get(id));
-          } else if (id < adjustDoubleId) {
-            return longDictionary.get(id - adjustLongId);
-          } else if (id < adjustDoubleId + doubleDictionary.size()) {
-            return doubleDictionary.get(id - adjustDoubleId);
-          }
-          throw new IAE("Unknown id [%s]", id);
+        final int adjustLongId = stringDictionary.size();
+        final int adjustDoubleId = stringDictionary.size() + longDictionary.size();
+        if (id < adjustLongId) {
+          return StringUtils.fromUtf8Nullable(stringDictionary.get(id));
+        } else if (id < adjustDoubleId) {
+          return longDictionary.get(id - adjustLongId);
+        } else if (id < adjustDoubleId + doubleDictionary.size()) {
+          return doubleDictionary.get(id - adjustDoubleId);
         }
-      };
+        throw new IAE("Unknown id [%s]", id);
+      }
     };
     return new Indexed<Object[]>()
     {
@@ -421,7 +422,7 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>>
               @Override
               public void inspectRuntimeShape(RuntimeShapeInspector inspector)
               {
-                inspector.visit("column", VariantArrayColumn.this);
+                inspector.visit("column", VariantColumn.this);
               }
             };
           } else {
@@ -462,7 +463,7 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>>
           @Override
           public void inspectRuntimeShape(RuntimeShapeInspector inspector)
           {
-            inspector.visit("column", VariantArrayColumn.this);
+            inspector.visit("column", VariantColumn.this);
           }
         };
       }
@@ -470,7 +471,7 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>>
       @Override
       public Object getObject()
       {
-        return VariantArrayColumn.this.lookupName(getRowValue());
+        return VariantColumn.this.lookupName(getRowValue());
       }
 
       @Override
@@ -496,7 +497,7 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>>
       @Override
       public String lookupName(int id)
       {
-        final String value = VariantArrayColumn.this.lookupName(id);
+        final String value = VariantColumn.this.lookupName(id);
         return extractionFn == null ? value : extractionFn.apply(value);
       }
 
@@ -517,7 +518,7 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>>
       public int lookupId(String name)
       {
         if (extractionFn == null) {
-          return VariantArrayColumn.this.lookupId(name);
+          return VariantColumn.this.lookupId(name);
         }
         throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
       }
@@ -665,13 +666,13 @@ public class VariantArrayColumn<TStringDictionary extends Indexed<ByteBuffer>>
       @Override
       public String lookupName(final int id)
       {
-        return VariantArrayColumn.this.lookupName(id);
+        return VariantColumn.this.lookupName(id);
       }
 
       @Override
       public int lookupId(@Nullable String name)
       {
-        return VariantArrayColumn.this.lookupId(name);
+        return VariantColumn.this.lookupId(name);
       }
     }
 

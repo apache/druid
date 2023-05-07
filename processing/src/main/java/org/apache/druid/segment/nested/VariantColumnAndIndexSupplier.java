@@ -50,9 +50,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
+public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
 {
-  public static VariantArrayColumnAndIndexSupplier read(
+  public static VariantColumnAndIndexSupplier read(
       ColumnType logicalType,
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
@@ -174,7 +174,7 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
         try (ColumnarInts throwAway = ints.get()) {
           size = throwAway.size();
         }
-        return new VariantArrayColumnAndIndexSupplier(
+        return new VariantColumnAndIndexSupplier(
             logicalType,
             variantTypeByte,
             stringDictionary,
@@ -212,7 +212,7 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
   private final GenericIndexed<ImmutableBitmap> valueIndexes;
   private final ImmutableBitmap nullValueBitmap;
 
-  public VariantArrayColumnAndIndexSupplier(
+  public VariantColumnAndIndexSupplier(
       ColumnType logicalType,
       @Nullable Byte variantTypeSetByte,
       GenericIndexed<ByteBuffer> stringDictionary,
@@ -243,7 +243,7 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
   public NestedCommonFormatColumn get()
   {
     if (frontCodedStringDictionarySupplier != null) {
-      return new VariantArrayColumn<>(
+      return new VariantColumn<>(
           frontCodedStringDictionarySupplier.get(),
           longDictionarySupplier.get(),
           doubleDictionarySupplier.get(),
@@ -254,7 +254,7 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
           variantTypeSetByte
       );
     }
-    return new VariantArrayColumn<>(
+    return new VariantColumn<>(
         stringDictionary.singleThreaded(),
         longDictionarySupplier.get(),
         doubleDictionarySupplier.get(),
