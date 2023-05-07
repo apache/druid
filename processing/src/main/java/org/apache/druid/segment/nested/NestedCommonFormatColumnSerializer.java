@@ -43,6 +43,7 @@ import java.util.SortedMap;
  * @see ScalarLongColumnSerializer    - single type long columns
  * @see ScalarStringColumnSerializer  - single type string columns
  * @see VariantColumnSerializer       - single type array columns of string, long, double, and mixed type columns
+ *
  * @see NestedDataColumnSerializer    - nested columns
  *
  * @see NestedDataColumnSerializerV4  - legacy nested column format created by
