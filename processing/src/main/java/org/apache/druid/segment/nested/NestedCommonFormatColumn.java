@@ -39,7 +39,8 @@ import java.util.TreeMap;
 /**
  * Base implementation for columns created with {@link AutoTypeColumnSchema} and handled with
  * {@link NestedCommonFormatColumnHandler} to allow ease of merge via
- * {@link AutoTypeColumnMerger} by providing a common implementation.
+ * {@link AutoTypeColumnMerger} by providing a common implementation. All columns are read with
+ * {@link NestedCommonFormatColumnPartSerde}
  *
  * @see ScalarDoubleColumn
  * @see ScalarLongColumn

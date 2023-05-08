@@ -40,6 +40,18 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+/**
+ * {@link ColumnPartSerde} shared by all {@link NestedCommonFormatColumn}. The {@link #logicalType} defines the native
+ * Druid type of the column to use for things like {@link org.apache.druid.segment.column.ColumnCapabilities} and
+ * {@link #hasNulls} if any null values are present. If {@link #isVariantType} is set, the column internally is
+ * composed of a mix of types, this is currently only used by {@link VariantColumnAndIndexSupplier}.
+ *
+ * @see ScalarDoubleColumnAndIndexSupplier
+ * @see ScalarLongColumnAndIndexSupplier
+ * @see ScalarStringColumnAndIndexSupplier
+ * @see VariantColumnAndIndexSupplier
+ * @see NestedDataColumnSupplier
+ */
 public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
 {
   public static SerializerBuilder serializerBuilder()

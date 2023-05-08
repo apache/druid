@@ -49,6 +49,7 @@ import java.util.SortedMap;
  * @see NestedDataColumnSerializerV4  - legacy nested column format created by
  *                                      {@link org.apache.druid.segment.NestedDataColumnIndexer} and
  *                                      {@link org.apache.druid.segment.NestedDataColumnMerger}
+ *
  */
 public abstract class NestedCommonFormatColumnSerializer implements GenericColumnSerializer<StructuredData>
 {
