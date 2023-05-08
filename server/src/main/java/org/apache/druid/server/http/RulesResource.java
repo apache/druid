@@ -114,11 +114,11 @@ public class RulesResource
       } else {
         return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
       }
-    } catch (IllegalArgumentException e)
-    {
+    }
+    catch (IllegalArgumentException e) {
       return Response.status(Response.Status.BAD_REQUEST)
-          .entity(ImmutableMap.of("error", e.getMessage()))
-          .build();
+                     .entity(ImmutableMap.of("error", e.getMessage()))
+                     .build();
     }
   }
 

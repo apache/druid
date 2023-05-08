@@ -42,20 +42,12 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
-import org.skife.jdbi.v2.FoldController;
-import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
-import org.skife.jdbi.v2.StatementContext;
-import org.skife.jdbi.v2.TransactionCallback;
-import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.Update;
 import org.skife.jdbi.v2.tweak.HandleCallback;
-import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
 import java.io.IOException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -351,7 +343,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     synchronized (lock) {
       try {
         dbi.inTransaction(
-            (TransactionCallback<Void>) (handle, transactionStatus) -> {
+            (handle, transactionStatus) -> {
               final DateTime auditTime = DateTimes.nowUtc();
               auditManager.doAudit(
                   AuditEntry.builder()
