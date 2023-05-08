@@ -73,8 +73,11 @@ public class VariantArrayFieldColumnWriter extends GlobalDictionaryEncodedFieldC
       }
       return globalIds;
     }
-    // this writer is only used for arrays so all values will have been coerced to Object[] at this point
-    throw new ISE("Value is not an array, got [%s] instead", value.getClass());
+    if (value != null) {
+      // this writer is only used for arrays so all values will have been coerced to Object[] at this point
+      throw new ISE("Value is not an array, got [%s] instead", value.getClass());
+    }
+    return null;
   }
 
   @Override
