@@ -140,7 +140,7 @@ export function convertSpecToSql(spec: any): QueryWithContext {
     switch (format) {
       case 'auto':
         timestampColumnType = SqlType.VARCHAR;
-        timeExpression = `CASE WHEN CAST(${timestampColumn} AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST(${timestampColumn} AS BIGINT)) ELSE TIME_PARSE(${timestampColumn}) END`;
+        timeExpression = `CASE WHEN CAST(${timestampColumn} AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST(${timestampColumn} AS BIGINT)) ELSE TIME_PARSE(TRIM(${timestampColumn})) END`;
         break;
 
       case 'iso':
