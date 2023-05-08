@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
@@ -37,10 +37,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Maps column names from {@link MSQSpec#getQuery()} to output names desired by the user, in the order
+ * Maps column names from the query to output names desired by the user, in the order
  * desired by the user.
  *
- * The {@link MSQSpec#getQuery()} is translated by {@link org.apache.druid.msq.querykit.QueryKit} into
+ * The query is translated by {@link org.apache.druid.msq.querykit.QueryKit} into
  * a {@link org.apache.druid.msq.kernel.QueryDefinition}. So, this class also represents mappings from
  * {@link org.apache.druid.msq.kernel.QueryDefinition#getFinalStageDefinition()} into the output names desired
  * by the user.
