@@ -388,7 +388,7 @@ public class HadoopTuningConfig implements TuningConfig
         maxParseExceptions,
         useYarnRMJobStatusFallback,
         awaitSegmentAvailabilityTimeoutMillis,
-            determinePartitionsSamplingFactor
+        determinePartitionsSamplingFactor
     );
   }
 
@@ -420,7 +420,7 @@ public class HadoopTuningConfig implements TuningConfig
         maxParseExceptions,
         useYarnRMJobStatusFallback,
         awaitSegmentAvailabilityTimeoutMillis,
-            determinePartitionsSamplingFactor
+        determinePartitionsSamplingFactor
     );
   }
 
@@ -452,7 +452,7 @@ public class HadoopTuningConfig implements TuningConfig
         maxParseExceptions,
         useYarnRMJobStatusFallback,
         awaitSegmentAvailabilityTimeoutMillis,
-            determinePartitionsSamplingFactor
+        determinePartitionsSamplingFactor
     );
   }
 }
