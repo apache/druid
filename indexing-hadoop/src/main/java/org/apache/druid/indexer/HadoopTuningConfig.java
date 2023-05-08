@@ -113,7 +113,7 @@ public class HadoopTuningConfig implements TuningConfig
   // For example, if we ingest 10,000,000,000 rows and the targetRowsPerSegment is 5,000,000,
   // we can sample by 500, so the mr job need only process 20,000,000 rows, this helps save
   // a lot of time.
-  private final int samplingFactor;
+  private final int determinePartitionsSamplingFactor;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -143,7 +143,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       final @JsonProperty("useYarnRMJobStatusFallback") @Nullable Boolean useYarnRMJobStatusFallback,
       final @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
-      final @JsonProperty("samplingFactor") int samplingFactor
+      final @JsonProperty("determinePartitionsSamplingFactor") @Nullable Integer determinePartitionsSamplingFactor
   )
   {
     this.workingPath = workingPath;
@@ -195,7 +195,11 @@ public class HadoopTuningConfig implements TuningConfig
     } else {
       this.awaitSegmentAvailabilityTimeoutMillis = awaitSegmentAvailabilityTimeoutMillis;
     }
-    this.samplingFactor = Math.max(samplingFactor, 1);
+    if (determinePartitionsSamplingFactor == null || determinePartitionsSamplingFactor < 1) {
+      this.determinePartitionsSamplingFactor = 1;
+    } else {
+      this.determinePartitionsSamplingFactor = determinePartitionsSamplingFactor;
+    }
   }
 
   @Nullable
@@ -351,9 +355,9 @@ public class HadoopTuningConfig implements TuningConfig
   }
 
   @JsonProperty
-  public int getSamplingFactor()
+  public int getDeterminePartitionsSamplingFactor()
   {
-    return samplingFactor;
+    return determinePartitionsSamplingFactor;
   }
 
   public HadoopTuningConfig withWorkingPath(String path)
@@ -384,7 +388,7 @@ public class HadoopTuningConfig implements TuningConfig
         maxParseExceptions,
         useYarnRMJobStatusFallback,
         awaitSegmentAvailabilityTimeoutMillis,
-        samplingFactor
+            determinePartitionsSamplingFactor
     );
   }
 
@@ -416,7 +420,7 @@ public class HadoopTuningConfig implements TuningConfig
         maxParseExceptions,
         useYarnRMJobStatusFallback,
         awaitSegmentAvailabilityTimeoutMillis,
-        samplingFactor
+            determinePartitionsSamplingFactor
     );
   }
 
@@ -448,7 +452,7 @@ public class HadoopTuningConfig implements TuningConfig
         maxParseExceptions,
         useYarnRMJobStatusFallback,
         awaitSegmentAvailabilityTimeoutMillis,
-        samplingFactor
+            determinePartitionsSamplingFactor
     );
   }
 }

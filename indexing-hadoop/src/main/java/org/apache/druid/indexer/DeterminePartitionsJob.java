@@ -337,7 +337,7 @@ public class DeterminePartitionsJob implements Jobby
     HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
     final DimensionRangePartitionsSpec partitionsSpec = (DimensionRangePartitionsSpec) config.getPartitionsSpec();
     return new DeterminePartitionsJobSampler(
-        tuningConfig.getSamplingFactor(),
+        tuningConfig.getDeterminePartitionsSamplingFactor(),
         config.getTargetPartitionSize(),
         partitionsSpec.getMaxRowsPerSegment()
     );
