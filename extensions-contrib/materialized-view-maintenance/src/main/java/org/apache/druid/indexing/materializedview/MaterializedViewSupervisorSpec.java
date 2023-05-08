@@ -200,7 +200,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.isUseYarnRMJobStatusFallback(),
         tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(),
-        HadoopTuningConfig.DEFAULT_SAMPLING_FACTOR
+        HadoopTuningConfig.DEFAULT_DETERMINE_PARTITIONS_SAMPLING_FACTOR
     );
 
     // generate granularity

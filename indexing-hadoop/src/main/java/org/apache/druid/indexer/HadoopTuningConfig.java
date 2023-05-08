@@ -41,7 +41,7 @@ import java.util.Map;
 @JsonTypeName("hadoop")
 public class HadoopTuningConfig implements TuningConfig
 {
-  public static final int DEFAULT_SAMPLING_FACTOR = 1;
+  public static final int DEFAULT_DETERMINE_PARTITIONS_SAMPLING_FACTOR = 1;
 
   private static final DimensionBasedPartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.defaultSpec();
   private static final Map<Long, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.of();
@@ -77,7 +77,7 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         null,
         null,
-        DEFAULT_SAMPLING_FACTOR
+        DEFAULT_DETERMINE_PARTITIONS_SAMPLING_FACTOR
     );
   }
   @Nullable
