@@ -247,7 +247,7 @@ Druid can infer the schema for your data in one of two ways:
 - [Type-aware schema discovery (experimental)](#type-aware-schema-discovery-experimental) where Druid infers the schema and type for your data. Type-aware schema discovery is experimental currently available for native batch and streaming ingestion.
 - [String-based schema discovery](#string-based-schema-discovery) where all the discovered columns are typed as either native string or multi-value string columns.
 
-#### Type-aware schema discovery (experimental)
+#### Type-aware schema discovery
 
 > Note that using type-aware schema discovery can impact downstream BI tools depending on how they handle ARRAY typed columns..
 
