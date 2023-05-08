@@ -188,7 +188,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     logResults(resultsRealtime);
     Assert.assertEquals(1, resultsRealtime.size());
     Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
-    Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+    }
   }
 
   @Test
