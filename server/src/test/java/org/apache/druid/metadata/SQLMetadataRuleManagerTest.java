@@ -31,6 +31,7 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
@@ -56,8 +57,10 @@ public class SQLMetadataRuleManagerTest
 {
   @org.junit.Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
+  private MetadataRuleManagerConfig managerConfig;
   private SQLMetadataRuleManager ruleManager;
   private AuditManager auditManager;
   private SQLMetadataSegmentPublisher publisher;
@@ -79,13 +82,8 @@ public class SQLMetadataRuleManagerTest
     );
 
     connector.createRulesTable();
-    ruleManager = new SQLMetadataRuleManager(
-        mapper,
-        new MetadataRuleManagerConfig(),
-        tablesConfig,
-        connector,
-        auditManager
-    );
+    managerConfig = new MetadataRuleManagerConfig();
+    ruleManager = new SQLMetadataRuleManager(mapper, managerConfig, tablesConfig, connector, auditManager);
     connector.createSegmentTable();
     publisher = new SQLMetadataSegmentPublisher(
         jsonMapper,
@@ -129,6 +127,41 @@ public class SQLMetadataRuleManagerTest
   }
 
   @Test
+  public void testOverrideRuleWithNull()
+  {
+    // Datasource level rules cannot be null
+    final AuditInfo auditInfo = new AuditInfo("test_author", "save null rule", "127.0.0.1");
+    IAE exception = Assert.assertThrows(
+        IAE.class,
+        () -> ruleManager.overrideRule("test_dataSource", null, auditInfo)
+    );
+    Assert.assertEquals("Rules cannot be null.", exception.getMessage());
+
+    // Cluster level rules cannot be null
+    exception = Assert.assertThrows(
+        IAE.class,
+        () -> ruleManager.overrideRule(managerConfig.getDefaultRule(), null, auditInfo)
+    );
+    Assert.assertEquals("Rules cannot be null.", exception.getMessage());
+  }
+
+  @Test
+  public void testOverrideRuleWithEmpty()
+  {
+    final AuditInfo auditInfo = new AuditInfo("test_author", "save empty rule", "127.0.0.1");
+
+    // Cluster level rules cannot be empty
+    IAE exception = Assert.assertThrows(
+        IAE.class,
+        () -> ruleManager.overrideRule(managerConfig.getDefaultRule(), Collections.emptyList(), auditInfo)
+    );
+    Assert.assertEquals("Cluster-level rules cannot be empty.", exception.getMessage());
+
+    // Datasource level rules can be empty
+    Assert.assertTrue(ruleManager.overrideRule("test_dataSource", Collections.emptyList(), auditInfo));
+  }
+
+  @Test
   public void testAuditEntryCreated() throws Exception
   {
     List<Rule> rules = Collections.singletonList(
@@ -140,11 +173,7 @@ public class SQLMetadataRuleManagerTest
         )
     );
     AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
-    ruleManager.overrideRule(
-        "test_dataSource",
-        rules,
-        auditInfo
-    );
+    ruleManager.overrideRule("test_dataSource", rules, auditInfo);
     // fetch rules from metadata storage
     ruleManager.poll();
 
@@ -157,12 +186,7 @@ public class SQLMetadataRuleManagerTest
 
     Assert.assertEquals(
         rules,
-        mapper.readValue(
-            entry.getPayload(),
-            new TypeReference<List<Rule>>()
-            {
-            }
-        )
+        mapper.readValue(entry.getPayload(), new TypeReference<List<Rule>>() {})
     );
     Assert.assertEquals(auditInfo, entry.getAuditInfo());
     Assert.assertEquals("test_dataSource", entry.getKey());
@@ -180,16 +204,8 @@ public class SQLMetadataRuleManagerTest
         )
     );
     AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
-    ruleManager.overrideRule(
-        "test_dataSource",
-        rules,
-        auditInfo
-    );
-    ruleManager.overrideRule(
-        "test_dataSource2",
-        rules,
-        auditInfo
-    );
+    ruleManager.overrideRule("test_dataSource", rules, auditInfo);
+    ruleManager.overrideRule("test_dataSource2", rules, auditInfo);
     // fetch rules from metadata storage
     ruleManager.poll();
 
@@ -202,12 +218,7 @@ public class SQLMetadataRuleManagerTest
     for (AuditEntry entry : auditEntries) {
       Assert.assertEquals(
           rules,
-          mapper.readValue(
-              entry.getPayload(),
-              new TypeReference<List<Rule>>()
-              {
-              }
-          )
+          mapper.readValue(entry.getPayload(), new TypeReference<List<Rule>>() {})
       );
       Assert.assertEquals(auditInfo, entry.getAuditInfo());
     }
@@ -218,19 +229,14 @@ public class SQLMetadataRuleManagerTest
   {
     List<Rule> rules = ImmutableList.of(
         new IntervalLoadRule(
-            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.of(
-            DruidServer.DEFAULT_TIER,
-            DruidServer.DEFAULT_NUM_REPLICANTS
-        )
+            Intervals.of("2015-01-01/2015-02-01"),
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS)
         )
     );
     AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
-    ruleManager.overrideRule(
-        "test_dataSource",
-        rules,
-        auditInfo
-    );
-    // Verify that rule was added
+    ruleManager.overrideRule("test_dataSource", rules, auditInfo);
+
+    // Verify that the rule was added
     ruleManager.poll();
     Map<String, List<Rule>> allRules = ruleManager.getAllRules();
     Assert.assertEquals(1, allRules.size());
@@ -257,11 +263,8 @@ public class SQLMetadataRuleManagerTest
         )
     );
     AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
-    ruleManager.overrideRule(
-        "test_dataSource",
-        rules,
-        auditInfo
-    );
+    ruleManager.overrideRule("test_dataSource", rules, auditInfo);
+
     // Verify that rule was added
     ruleManager.poll();
     Map<String, List<Rule>> allRules = ruleManager.getAllRules();
@@ -284,18 +287,12 @@ public class SQLMetadataRuleManagerTest
   {
     List<Rule> rules = ImmutableList.of(
         new IntervalLoadRule(
-            Intervals.of("2015-01-01/2015-02-01"), ImmutableMap.of(
-            DruidServer.DEFAULT_TIER,
-            DruidServer.DEFAULT_NUM_REPLICANTS
-        )
+            Intervals.of("2015-01-01/2015-02-01"),
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS)
         )
     );
     AuditInfo auditInfo = new AuditInfo("test_author", "test_comment", "127.0.0.1");
-    ruleManager.overrideRule(
-        "test_dataSource",
-        rules,
-        auditInfo
-    );
+    ruleManager.overrideRule("test_dataSource", rules, auditInfo);
 
     // Verify that rule was added
     ruleManager.poll();
