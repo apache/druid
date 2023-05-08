@@ -260,6 +260,18 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     testExpression("concat(s1,'-',s2,'-',l1,'-',d1)", types);
   }
 
+  @Test
+  public void testConstants()
+  {
+    testExpression("null", types);
+    testExpression("1", types);
+    testExpression("1.1", types);
+    testExpression("NaN", types);
+    testExpression("Infinity", types);
+    testExpression("-Infinity", types);
+    testExpression("'hello'", types);
+  }
+
   static void testFunctions(Map<String, ExpressionType> types, String[] templates, String[] args)
   {
     for (String template : templates) {

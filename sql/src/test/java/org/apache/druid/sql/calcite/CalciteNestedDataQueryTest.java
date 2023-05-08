@@ -109,6 +109,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       ImmutableMap.<String, Object>builder()
                   .put("t", "2000-01-01")
                   .put("string", "ccc")
+                  .put("string_sparse", "10")
                   .put("nest", ImmutableMap.of("x", 200L, "y", 3.03, "z", "abcdef", "mixed", 1.1, "mixed2", 1L))
                   .put("long", 3L)
                   .build(),
@@ -705,7 +706,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 10L},
+            new Object[]{NullHandling.defaultStringValue(), 8L},
+            new Object[]{"10", 2L},
             new Object[]{"yyy", 2L},
             new Object[]{"zzz", 2L}
         ),
@@ -811,7 +813,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 10L},
+            new Object[]{NullHandling.defaultStringValue(), 8L},
+            new Object[]{"10", 2L},
             new Object[]{"yyy", 2L},
             new Object[]{"zzz", 2L}
         ),
@@ -2705,7 +2708,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", 2L}
         ),
         RowSignature.builder()
@@ -2967,7 +2969,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"2.02", 2L}
         ),
         RowSignature.builder()
@@ -4559,6 +4560,287 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
               "Unsupported JSON_VALUE parameter 'ON EMPTY' defined - please re-issue this query without this argument"
           );
         }
+    );
+  }
+
+  @Test
+  public void testGroupByPathSelectorFilterVariantNull()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nest, '$.x'), "
+        + "JSON_VALUE(nester, '$.n.x' RETURNING BIGINT), "
+        + "SUM(cnt) "
+        + "FROM druid.nested WHERE JSON_VALUE(nester, '$.n.x' RETURNING BIGINT) IS NULL GROUP BY 1, 2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn("nester", "$.n.x", "v0", ColumnType.LONG),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v1", "d0"),
+                                new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                            )
+                        )
+                        .setDimFilter(selector("v0", null, null))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), NullHandling.defaultLongValue(), 4L},
+            new Object[]{"100", NullHandling.defaultLongValue(), 1L},
+            new Object[]{"200", NullHandling.defaultLongValue(), 1L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .add("EXPR$2", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testSelectPathSelectorFilterVariantNull()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nest, '$.x'), "
+        + "JSON_VALUE(nester, '$.n.x' RETURNING BIGINT) "
+        + "FROM druid.nested WHERE JSON_VALUE(nester, '$.n.x' RETURNING BIGINT) IS NULL",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      new NestedFieldVirtualColumn("nester", "$.n.x", "v0", ColumnType.LONG),
+                      new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
+                  )
+                  .columns(
+                      "v0", "v1"
+                  )
+                  .filters(selector("v0", null, null))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"100", null},
+            new Object[]{NullHandling.defaultStringValue(), null},
+            new Object[]{"200", null},
+            new Object[]{NullHandling.defaultStringValue(), null},
+            new Object[]{NullHandling.defaultStringValue(), null},
+            new Object[]{NullHandling.defaultStringValue(), null}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByPathSelectorFilterVariantNotNull()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nest, '$.x'), "
+        + "JSON_VALUE(nester, '$.n.x' RETURNING BIGINT), "
+        + "SUM(cnt) "
+        + "FROM druid.nested WHERE JSON_VALUE(nester, '$.n.x' RETURNING BIGINT) IS NOT NULL GROUP BY 1, 2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn("nester", "$.n.x", "v0", ColumnType.LONG),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v1", "d0"),
+                                new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                            )
+                        )
+                        .setDimFilter(not(selector("v0", null, null)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"100", 1L, 1L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .add("EXPR$2", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRegularLongLongMixed1FilterNotNull()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(long, '$' RETURNING BIGINT), "
+        + "SUM(cnt) "
+        + "FROM druid.nested_mix WHERE JSON_VALUE(long, '$' RETURNING BIGINT) IS NOT NULL GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_MIXED)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setVirtualColumns(new NestedFieldVirtualColumn("long", "$", "v0", ColumnType.LONG))
+                        .setDimFilter(not(selector("v0", null, null)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 2L},
+            new Object[]{2L, 4L},
+            new Object[]{3L, 2L},
+            new Object[]{4L, 2L},
+            new Object[]{5L, 4L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeStringMixed1SparseNotNull()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(string_sparse, '$' RETURNING BIGINT), "
+        + "SUM(cnt) "
+        + "FROM druid.nested_mix_2 WHERE JSON_VALUE(string_sparse, '$' RETURNING BIGINT) IS NOT NULL GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_MIXED_2)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setVirtualColumns(new NestedFieldVirtualColumn("string_sparse", "$", "v0", ColumnType.LONG))
+                        .setDimFilter(not(selector("v0", null, null)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{10L, 2L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testScanStringNotNullCast()
+  {
+    skipVectorize();
+    testQuery(
+        "SELECT "
+        + "CAST(string_sparse as BIGINT)"
+        + "FROM druid.nested_mix WHERE CAST(string_sparse as BIGINT) IS NOT NULL",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE_MIXED)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "CAST(\"string_sparse\", 'LONG')", ColumnType.LONG)
+                  )
+                  .filters(not(selector("v0", null, null)))
+                  .columns("v0")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        NullHandling.sqlCompatible() ?
+        ImmutableList.of(
+            new Object[]{10L},
+            new Object[]{10L}
+        ) :
+        ImmutableList.of(
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{10L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{10L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeStringMixed1SparseNotNullCast2()
+  {
+    testQuery(
+        "SELECT "
+        + "CAST(string_sparse as BIGINT), "
+        + "SUM(cnt) "
+        + "FROM druid.nested_mix WHERE CAST(string_sparse as BIGINT) IS NOT NULL GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_MIXED)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("string_sparse", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setVirtualColumns(expressionVirtualColumn("v0", "CAST(\"string_sparse\", 'LONG')", ColumnType.LONG))
+                        .setDimFilter(not(selector("v0", null, null)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible() ?
+        ImmutableList.of(
+            new Object[]{10L, 2L}
+        ) :
+        ImmutableList.of(
+            new Object[]{0L, 12L},
+            new Object[]{10L, 2L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
     );
   }
 }
