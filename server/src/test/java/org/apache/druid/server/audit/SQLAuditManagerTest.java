@@ -522,9 +522,10 @@ public class SQLAuditManagerTest
   @Test
   public void testAuditInfoEquality()
   {
-    final AuditInfo auditInfo = new AuditInfo("druid", "test equality", "127.0.0.1");
-    Assert.assertEquals(auditInfo, auditInfo);
-    Assert.assertEquals(auditInfo.hashCode(), auditInfo.hashCode());
+    final AuditInfo auditInfo1 = new AuditInfo("druid", "test equality", "127.0.0.1");
+    final AuditInfo auditInfo2 = new AuditInfo("druid", "test equality", "127.0.0.1");
+    Assert.assertEquals(auditInfo1, auditInfo2);
+    Assert.assertEquals(auditInfo1.hashCode(), auditInfo2.hashCode());
   }
 
   @After
@@ -535,9 +536,12 @@ public class SQLAuditManagerTest
 
   private void dropTable(final String tableName)
   {
-    Assert.assertNull(connector.getDBI().withHandle(
-        handle -> handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
+    Assert.assertEquals(
+        0,
+        connector.getDBI().withHandle(
+            handle -> handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
                         .execute()
-    ));
+        ).intValue()
+    );
   }
 }
