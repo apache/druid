@@ -17,14 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.helpers;
-
-import java.util.concurrent.ScheduledExecutorService;
+package org.apache.druid.indexing.overlord.duty;
 
 /**
+ * Schedule of an {@link OverlordDuty}.
  */
-public interface OverlordHelper
+public class Schedule
 {
-  boolean isEnabled();
-  void schedule(ScheduledExecutorService exec);
+  private final long periodMillis;
+  private final long initialDelayMillis;
+
+  public Schedule(long periodMillis, long initialDelayMillis)
+  {
+    this.initialDelayMillis = initialDelayMillis;
+    this.periodMillis = periodMillis;
+  }
+
+  public long getInitialDelayMillis()
+  {
+    return initialDelayMillis;
+  }
+
+  public long getPeriodMillis()
+  {
+    return periodMillis;
+  }
 }
