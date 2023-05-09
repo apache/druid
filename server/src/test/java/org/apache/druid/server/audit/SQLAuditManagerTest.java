@@ -42,8 +42,6 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -521,6 +519,14 @@ public class SQLAuditManagerTest
     Mockito.verify(mockConfigSerde).serializeToString(ArgumentMatchers.eq(entryPayload1WithNull), ArgumentMatchers.eq(true));
   }
 
+  @Test
+  public void testAuditInfoEquality()
+  {
+    final AuditInfo auditInfo = new AuditInfo("druid", "test equality", "127.0.0.1");
+    Assert.assertEquals(auditInfo, auditInfo);
+    Assert.assertEquals(auditInfo.hashCode(), auditInfo.hashCode());
+  }
+
   @After
   public void cleanup()
   {
@@ -530,16 +536,8 @@ public class SQLAuditManagerTest
   private void dropTable(final String tableName)
   {
     Assert.assertNull(connector.getDBI().withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
-                  .execute();
-            return null;
-          }
-        }
+        handle -> handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
+                        .execute()
     ));
   }
 }
