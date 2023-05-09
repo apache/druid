@@ -22,12 +22,12 @@ package org.apache.druid.indexing.overlord.duty;
 /**
  * Schedule of an {@link OverlordDuty}.
  */
-public class Schedule
+public class DutySchedule
 {
   private final long periodMillis;
   private final long initialDelayMillis;
 
-  public Schedule(long periodMillis, long initialDelayMillis)
+  public DutySchedule(long periodMillis, long initialDelayMillis)
   {
     this.initialDelayMillis = initialDelayMillis;
     this.periodMillis = periodMillis;

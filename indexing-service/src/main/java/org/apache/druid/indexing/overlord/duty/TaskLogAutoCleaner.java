@@ -69,8 +69,8 @@ public class TaskLogAutoCleaner implements OverlordDuty
   }
 
   @Override
-  public Schedule getSchedule()
+  public DutySchedule getSchedule()
   {
-    return new Schedule(config.getDelay(), config.getInitialDelay());
+    return new DutySchedule(config.getDelay(), config.getInitialDelay());
   }
 }

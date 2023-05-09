@@ -59,7 +59,7 @@ public class OverlordDutyExecutor
   {
     synchronized (startStopLock) {
       if (!started) {
-        log.info("Starting OverlordHelperManager.");
+        log.info("Starting OverlordDutyExecutor.");
         for (OverlordDuty helper : duties) {
           if (helper.isEnabled()) {
             schedule(helper);
@@ -67,7 +67,7 @@ public class OverlordDutyExecutor
         }
 
         started = true;
-        log.info("OverlordHelperManager is now running.");
+        log.info("OverlordDutyExecutor is now running.");
       }
     }
   }
@@ -77,14 +77,14 @@ public class OverlordDutyExecutor
   {
     synchronized (startStopLock) {
       if (started) {
-        log.info("Stopping OverlordHelperManager.");
+        log.info("Stopping OverlordDutyExecutor.");
         if (exec != null) {
           exec.shutdownNow();
           exec = null;
         }
         started = false;
 
-        log.info("OverlordHelperManager has been stopped.");
+        log.info("OverlordDutyExecutor has been stopped.");
       }
     }
   }
@@ -96,7 +96,7 @@ public class OverlordDutyExecutor
   {
     initExecutor();
 
-    final Schedule schedule = duty.getSchedule();
+    final DutySchedule schedule = duty.getSchedule();
     final String dutyName = duty.getClass().getName();
 
     ScheduledExecutors.scheduleWithFixedDelay(

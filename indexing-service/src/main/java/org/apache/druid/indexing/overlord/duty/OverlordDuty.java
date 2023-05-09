@@ -26,5 +26,5 @@ public interface OverlordDuty
 {
   boolean isEnabled();
   void run();
-  Schedule getSchedule();
+  DutySchedule getSchedule();
 }

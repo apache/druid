@@ -27,8 +27,8 @@ import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
+import org.apache.druid.indexing.overlord.duty.DutySchedule;
 import org.apache.druid.indexing.overlord.duty.OverlordDuty;
-import org.apache.druid.indexing.overlord.duty.Schedule;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.storage.StorageConnector;
@@ -121,9 +121,9 @@ public class DurableStorageCleaner implements OverlordDuty
   }
 
   @Override
-  public Schedule getSchedule()
+  public DutySchedule getSchedule()
   {
     final long delayMillis = config.getDelaySeconds() * 1000;
-    return new Schedule(delayMillis, delayMillis);
+    return new DutySchedule(delayMillis, delayMillis);
   }
 }
