@@ -40,8 +40,8 @@ public class CreateDataSegments
 
   private DateTime startTime;
   private Granularity granularity;
-  private int numPartitions;
-  private int numIntervals;
+  private int numPartitions = 1;
+  private int numIntervals = 1;
 
   public static CreateDataSegments ofDatasource(String datasource)
   {
@@ -63,6 +63,12 @@ public class CreateDataSegments
   public CreateDataSegments startingAt(String startOfFirstInterval)
   {
     this.startTime = DateTimes.of(startOfFirstInterval);
+    return this;
+  }
+
+  public CreateDataSegments startingAt(long startOfFirstInterval)
+  {
+    this.startTime = new DateTime(startOfFirstInterval);
     return this;
   }
 
