@@ -20,6 +20,8 @@
 package org.apache.druid.server.coordinator;
 
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.timeline.DataSegment;
@@ -30,6 +32,7 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Test utility to create {@link DataSegment}s for a given datasource.
@@ -68,7 +71,7 @@ public class CreateDataSegments
 
   public CreateDataSegments startingAt(long startOfFirstInterval)
   {
-    this.startTime = new DateTime(startOfFirstInterval);
+    this.startTime = DateTimes.utc(startOfFirstInterval);
     return this;
   }
 
@@ -80,12 +83,19 @@ public class CreateDataSegments
 
   public List<DataSegment> eachOfSizeInMb(long sizeMb)
   {
-    final List<DataSegment> segments = new ArrayList<>();
+    boolean isEternityInterval = Objects.equals(granularity, Granularities.ALL);
+    if (isEternityInterval) {
+      numIntervals = 1;
+    }
 
     int uniqueIdInInterval = 0;
     DateTime nextStart = startTime;
+
+    final List<DataSegment> segments = new ArrayList<>();
     for (int numInterval = 0; numInterval < numIntervals; ++numInterval) {
-      Interval nextInterval = new Interval(nextStart, granularity.increment(nextStart));
+      Interval nextInterval = isEternityInterval
+                              ? Intervals.ETERNITY
+                              : new Interval(nextStart, granularity.increment(nextStart));
       for (int numPartition = 0; numPartition < numPartitions; ++numPartition) {
         segments.add(
             new NumberedDataSegment(

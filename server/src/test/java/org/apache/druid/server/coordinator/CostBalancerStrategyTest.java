@@ -162,9 +162,11 @@ public class CostBalancerStrategyTest
   {
     final DataSegment wikiSegment = CreateDataSegments.ofDatasource(DS_WIKI)
                                                       .forIntervals(1, Granularities.DAY)
+                                                      .startingAt("2010-01-01")
                                                       .eachOfSizeInMb(100).get(0);
     final DataSegment koalaSegment = CreateDataSegments.ofDatasource("koala")
                                                        .forIntervals(1, Granularities.DAY)
+                                                       .startingAt("2010-01-01")
                                                        .eachOfSizeInMb(100).get(0);
 
     // Verify that cross datasource cost is twice that of same datasource cost
