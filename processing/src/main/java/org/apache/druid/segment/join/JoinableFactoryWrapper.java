@@ -28,12 +28,15 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.Filters;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -148,6 +151,7 @@ public class JoinableFactoryWrapper
         && clause.getCondition().getNonEquiConditions().isEmpty()
         && clause.getCondition().getEquiConditions().size() > 0) {
       final List<Filter> filters = new ArrayList<>();
+      final Map<Integer, List<Filter>> filterMap = new HashMap<>();
       int numValues = maxNumFilterValues;
       // if the right side columns are required, the clause cannot be fully converted
       boolean joinClauseFullyConverted = requiredColumns.stream().noneMatch(clause::includesColumn);
@@ -178,15 +182,35 @@ public class JoinableFactoryWrapper
         }
 
         numValues -= columnValuesWithUniqueFlag.getColumnValues().size();
-        filters.add(Filters.toFilter(new InDimFilter(leftColumn, columnValuesWithUniqueFlag.getColumnValues())));
+        int c = 0;
+        for (String val : columnValuesWithUniqueFlag.getColumnValues()) {
+          Filter f = Filters.toFilter(new SelectorDimFilter(leftColumn, val, null, null));
+          List<Filter> filterList = filterMap.get(c);
+          if (filterList == null) {
+            filterList = new ArrayList<Filter>();
+            filterList.add(f);
+            filterMap.put(c, filterList);
+          } else {
+            filterList.add(f);
+          }
+          c++;
+        }
+        if (clause.getCondition().getEquiConditions().size() == 1) {
+          filters.add(Filters.toFilter(new InDimFilter(leftColumn, columnValuesWithUniqueFlag.getColumnValues())));
+        }
         if (!columnValuesWithUniqueFlag.isAllUnique()) {
           joinClauseFullyConverted = false;
         }
       }
-
-      return new JoinClauseToFilterConversion(Filters.maybeAnd(filters).orElse(null), joinClauseFullyConverted);
+      if (clause.getCondition().getEquiConditions().size() == 1) {
+        return new JoinClauseToFilterConversion(Filters.maybeAnd(filters).orElse(null), joinClauseFullyConverted);
+      } else {
+        for (Integer i : filterMap.keySet()) {
+          filters.add(Filters.and(filterMap.get(i)));
+        }
+        return new JoinClauseToFilterConversion(Filters.maybeOr(filters).orElse(null), joinClauseFullyConverted);
+      }
     }
-
     return new JoinClauseToFilterConversion(null, false);
   }
 
