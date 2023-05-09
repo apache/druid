@@ -271,6 +271,7 @@ public class CostBalancerStrategyTest
         server -> new ServerHolder(server.toImmutableDruidServer(), new LoadQueuePeonTester())
     ).collect(Collectors.toList());
 
+    // Verify costs for DAY, MONTH and YEAR segments
     verifyServerCosts(
         daySegments.get(0),
         serverHolders,
@@ -285,6 +286,19 @@ public class CostBalancerStrategyTest
         yearSegments.get(0),
         serverHolders,
         8468764.380437, 12098919.896931, 14501440.169452
+    );
+
+    // Verify costs for an ALL granularity segment
+    DataSegment allGranularitySegment =
+        CreateDataSegments.ofDatasource(DS_WIKI)
+                          .forIntervals(1, Granularities.ALL)
+                          .eachOfSizeInMb(100).get(0);
+    verifyServerCosts(
+        allGranularitySegment,
+        serverHolders,
+        1.1534173737329768e7,
+        1.6340633534241956e7,
+        1.9026400521582970e7
     );
   }
 
