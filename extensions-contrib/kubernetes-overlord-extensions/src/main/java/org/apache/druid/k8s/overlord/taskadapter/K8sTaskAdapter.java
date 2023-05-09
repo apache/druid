@@ -37,6 +37,7 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.PodTemplateSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
@@ -60,6 +61,7 @@ import org.apache.druid.server.log.StartupLoggingConfig;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -272,13 +274,11 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     mainContainer.setArgs(Collections.singletonList(Joiner.on(" ").join(context.getComamnd())));
 
     mainContainer.setName("main");
-    ImmutableMap<String, Quantity> resources = ImmutableMap.of(
-        "cpu",
-        new Quantity("1000", "m"),
-        "memory",
-        new Quantity(String.valueOf(containerSize))
+    ResourceRequirements requirements = getResourceRequirements(
+        mainContainer.getResources(),
+        containerSize
     );
-    mainContainer.setResources(new ResourceRequirementsBuilder().withRequests(resources).withLimits(resources).build());
+    mainContainer.setResources(requirements);
     return mainContainer;
   }
 
@@ -362,13 +362,24 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     }
 
     javaOpts.add(org.apache.druid.java.util.common.StringUtils.format("-Ddruid.port=%d", DruidK8sConstants.PORT));
-    javaOpts.add(org.apache.druid.java.util.common.StringUtils.format("-Ddruid.plaintextPort=%d", DruidK8sConstants.PORT));
-    javaOpts.add(org.apache.druid.java.util.common.StringUtils.format("-Ddruid.tlsPort=%d", node.isEnableTlsPort() ? DruidK8sConstants.TLS_PORT : -1));
+    javaOpts.add(org.apache.druid.java.util.common.StringUtils.format(
+        "-Ddruid.plaintextPort=%d",
+        DruidK8sConstants.PORT
+    ));
+    javaOpts.add(org.apache.druid.java.util.common.StringUtils.format(
+        "-Ddruid.tlsPort=%d",
+        node.isEnableTlsPort()
+        ? DruidK8sConstants.TLS_PORT
+        : -1
+    ));
     javaOpts.add(org.apache.druid.java.util.common.StringUtils.format(
         "-Ddruid.task.executor.tlsPort=%d",
         node.isEnableTlsPort() ? DruidK8sConstants.TLS_PORT : -1
     ));
-    javaOpts.add(org.apache.druid.java.util.common.StringUtils.format("-Ddruid.task.executor.enableTlsPort=%s", node.isEnableTlsPort())
+    javaOpts.add(org.apache.druid.java.util.common.StringUtils.format(
+                     "-Ddruid.task.executor.enableTlsPort=%s",
+                     node.isEnableTlsPort()
+                 )
     );
     return javaOpts;
   }
@@ -398,4 +409,29 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     );
     return command;
   }
+
+  @VisibleForTesting
+  static ResourceRequirements getResourceRequirements(ResourceRequirements requirements, long containerSize)
+  {
+    Map<String, Quantity> resourceMap = new HashMap<>();
+    resourceMap.put("cpu", new Quantity("1000", "m"));
+    resourceMap.put("memory", new Quantity(String.valueOf(containerSize)));
+    ResourceRequirementsBuilder result = new ResourceRequirementsBuilder();
+    if (requirements != null) {
+      if (requirements.getRequests() == null || requirements.getRequests().isEmpty()) {
+        requirements.setRequests(resourceMap);
+      } else {
+        requirements.getRequests().putAll(resourceMap);
+      }
+      if (requirements.getLimits() == null || requirements.getLimits().isEmpty()) {
+        requirements.setLimits(resourceMap);
+      } else {
+        requirements.getLimits().putAll(resourceMap);
+      }
+    } else {
+      requirements = result.withRequests(resourceMap).withLimits(resourceMap).build();
+    }
+    return requirements;
+  }
 }
+

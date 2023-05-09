@@ -34,6 +34,8 @@ import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobList;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -44,6 +46,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
@@ -334,5 +337,93 @@ class K8sTaskAdapterTest
                    .findFirst()
                    .get();
     assertEquals(jsonMapper.writeValueAsString(config.getPeonMonitors()), env.getValue());
+  }
+
+  @Test
+  void testEphemeralStorageIsRespected() throws IOException
+  {
+    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    Pod pod = K8sTestUtils.fileToResource("ephemeralPodSpec.yaml", Pod.class);
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
+        .withNamespace("test")
+        .build();
+    SingleContainerTaskAdapter adapter =
+        new SingleContainerTaskAdapter(testClient,
+                                       config, taskConfig,
+                                       startupLoggingConfig,
+                                       node,
+                                       jsonMapper
+        );
+    NoopTask task = NoopTask.create("id", 1);
+    Job actual = adapter.createJobFromPodSpec(
+        pod.getSpec(),
+        task,
+        new PeonCommandContext(
+            Collections.singletonList("foo && bar"),
+            new ArrayList<>(),
+            new File("/tmp")
+        )
+    );
+    Job expected = K8sTestUtils.fileToResource("expectedEphemeralOutput.yaml", Job.class);
+    // something is up with jdk 17, where if you compress with jdk < 17 and try and decompress you get different results,
+    // this would never happen in real life, but for the jdk 17 tests this is a problem
+    // could be related to: https://bugs.openjdk.org/browse/JDK-8081450
+    actual.getSpec()
+          .getTemplate()
+          .getSpec()
+          .getContainers()
+          .get(0)
+          .getEnv()
+          .removeIf(x -> x.getName().equals("TASK_JSON"));
+    expected.getSpec()
+            .getTemplate()
+            .getSpec()
+            .getContainers()
+            .get(0)
+            .getEnv()
+            .removeIf(x -> x.getName().equals("TASK_JSON"));
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  void testEphemeralStorage()
+  {
+    // no resources set.
+    Container container = new ContainerBuilder().build();
+    ResourceRequirements result = K8sTaskAdapter.getResourceRequirements(
+        container.getResources(),
+        100
+    );
+    // requests and limits will only have 2 items, cpu / memory
+    assertEquals(2, result.getLimits().size());
+    assertEquals(2, result.getRequests().size());
+
+    // test with ephemeral storage
+    ImmutableMap<String, Quantity> requestMap = ImmutableMap.of("ephemeral-storage", new Quantity("1Gi"));
+    ImmutableMap<String, Quantity> limitMap = ImmutableMap.of("ephemeral-storage", new Quantity("10Gi"));
+    container.setResources(new ResourceRequirementsBuilder().withRequests(requestMap).withLimits(limitMap).build());
+    ResourceRequirements ephemeralResult = K8sTaskAdapter.getResourceRequirements(
+        container.getResources(),
+        100
+    );
+    // you will have ephemeral storage as well.
+    assertEquals(3, ephemeralResult.getLimits().size());
+    assertEquals(3, ephemeralResult.getRequests().size());
+    // cpu and memory should be fixed
+    assertEquals(result.getRequests().get("cpu"), ephemeralResult.getRequests().get("cpu"));
+    assertEquals(result.getRequests().get("memory"), ephemeralResult.getRequests().get("memory"));
+    assertEquals("1Gi", ephemeralResult.getRequests().get("ephemeral-storage").toString());
+
+    assertEquals(result.getLimits().get("cpu"), ephemeralResult.getLimits().get("cpu"));
+    assertEquals(result.getLimits().get("memory"), ephemeralResult.getLimits().get("memory"));
+    assertEquals("10Gi", ephemeralResult.getLimits().get("ephemeral-storage").toString());
+
+    // we should also preserve additional properties
+    container.getResources().setAdditionalProperty("additional", "some-value");
+    ResourceRequirements additionalProperties = K8sTaskAdapter.getResourceRequirements(
+        container.getResources(),
+        100
+    );
+    assertEquals(1, additionalProperties.getAdditionalProperties().size());
   }
 }
