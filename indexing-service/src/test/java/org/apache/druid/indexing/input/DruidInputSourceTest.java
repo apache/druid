@@ -299,4 +299,36 @@ public class DruidInputSourceTest
     Assert.assertTrue(columnsFilter.apply(column));
     Assert.assertFalse(columnsFilter.apply(metricName));
   }
+
+  @Test
+  public void testGetTypesEmpty()
+  {
+    String datasource = "foo";
+    Interval interval = Intervals.of("2000/2001");
+    String column = "c1";
+    String metricName = "m1";
+    ColumnsFilter originalColumnsFilter = ColumnsFilter.inclusionBased(ImmutableSet.of(column));
+    InputRowSchema inputRowSchema = new InputRowSchema(
+        new TimestampSpec("timestamp", "auto", null),
+        new DimensionsSpec(
+            DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b"))
+        ),
+        originalColumnsFilter,
+        ImmutableSet.of(metricName)
+    );
+    DruidInputSource druidInputSource = new DruidInputSource(
+        datasource,
+        interval,
+        null,
+        null,
+        ImmutableList.of("a"),
+        ImmutableList.of("b"),
+        indexIO,
+        coordinatorClient,
+        segmentCacheManagerFactory,
+        retryPolicyFactory,
+        taskConfig
+    );
+    Assert.assertTrue(druidInputSource.getTypes().isEmpty());
+  }
 }
