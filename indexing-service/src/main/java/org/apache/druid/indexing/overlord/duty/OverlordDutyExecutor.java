@@ -60,9 +60,9 @@ public class OverlordDutyExecutor
     synchronized (startStopLock) {
       if (!started) {
         log.info("Starting OverlordDutyExecutor.");
-        for (OverlordDuty helper : duties) {
-          if (helper.isEnabled()) {
-            schedule(helper);
+        for (OverlordDuty duty : duties) {
+          if (duty.isEnabled()) {
+            schedule(duty);
           }
         }
 
@@ -123,7 +123,7 @@ public class OverlordDutyExecutor
   {
     if (exec == null) {
       final int numThreads = 1;
-      exec = execFactory.create(numThreads, "Overlord-Helper-Manager-Exec--%d");
+      exec = execFactory.create(numThreads, "Overlord-Duty-Exec--%d");
       log.info("Initialized duty executor with [%d] threads", numThreads);
     }
   }

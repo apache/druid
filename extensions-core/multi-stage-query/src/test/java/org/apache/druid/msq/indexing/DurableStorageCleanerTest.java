@@ -26,6 +26,7 @@ import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
+import org.apache.druid.indexing.overlord.duty.DutySchedule;
 import org.apache.druid.storage.StorageConnector;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -38,7 +39,6 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-
 public class DurableStorageCleanerTest
 {
 
@@ -50,7 +50,7 @@ public class DurableStorageCleanerTest
   private static final String STRAY_DIR = "strayDirectory";
 
   @Test
-  public void testSchedule() throws IOException, InterruptedException
+  public void testRun() throws IOException
   {
     ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     try {
@@ -78,12 +78,24 @@ public class DurableStorageCleanerTest
       STORAGE_CONNECTOR.deleteFiles(EasyMock.capture(capturedArguments));
       EasyMock.expectLastCall().once();
       EasyMock.replay(TASK_MASTER, TASK_RUNNER, TASK_RUNNER_WORK_ITEM, STORAGE_CONNECTOR);
-      durableStorageCleaner.schedule(executor);
-      Thread.sleep(8000L);
+      durableStorageCleaner.run();
       Assert.assertEquals(Sets.newHashSet(STRAY_DIR), capturedArguments.getValue());
     }
     finally {
       executor.shutdownNow();
     }
+  }
+
+  @Test
+  public void testGetSchedule()
+  {
+    DurableStorageCleanerConfig cleanerConfig = new DurableStorageCleanerConfig();
+    cleanerConfig.delaySeconds = 10L;
+    cleanerConfig.enabled = true;
+    DurableStorageCleaner durableStorageCleaner = new DurableStorageCleaner(cleanerConfig, null, null);
+
+    DutySchedule schedule = durableStorageCleaner.getSchedule();
+    Assert.assertEquals(cleanerConfig.delaySeconds * 1000, schedule.getPeriodMillis());
+    Assert.assertEquals(cleanerConfig.delaySeconds * 1000, schedule.getInitialDelayMillis());
   }
 }
