@@ -26,6 +26,7 @@ import org.apache.calcite.plan.RelOptLattice;
 import org.apache.calcite.plan.RelOptMaterialization;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
@@ -74,11 +75,14 @@ import org.apache.calcite.rel.rules.TableScanRule;
 import org.apache.calcite.rel.rules.UnionPullUpConstantsRule;
 import org.apache.calcite.rel.rules.UnionToDistinctRule;
 import org.apache.calcite.rel.rules.ValuesReduceRule;
+import org.apache.calcite.sql.SqlExplainFormat;
+import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql2rel.RelDecorrelator;
 import org.apache.calcite.sql2rel.RelFieldTrimmer;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
@@ -88,6 +92,8 @@ import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
+import org.apache.druid.sql.calcite.rule.logical.DruidAggregateCaseToFilterRule;
+import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 
 import java.util.List;
@@ -95,8 +101,11 @@ import java.util.Set;
 
 public class CalciteRulesManager
 {
+  private static final Logger log = new Logger(CalciteRulesManager.class);
+
   public static final int DRUID_CONVENTION_RULES = 0;
   public static final int BINDABLE_CONVENTION_RULES = 1;
+  public static final int DRUID_DAG_CONVENTION_RULES = 2;
 
   // Due to Calcite bug (CALCITE-3845), ReduceExpressionsRule can considered expression which is the same as the
   // previous input expression as reduced. Basically, the expression is actually not reduced but is still considered as
@@ -249,10 +258,54 @@ public class CalciteRulesManager
             buildHepProgram(REDUCTION_RULES, true, DefaultRelMetadataProvider.INSTANCE, HEP_DEFAULT_MATCH_LIMIT)
         );
 
+    boolean isDebug = plannerContext.queryContext().isDebug();
     return ImmutableList.of(
         Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(plannerContext))),
-        Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext)))
+        Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext))),
+        Programs.sequence(
+            // currently, adding logging program after every stage for easier debugging
+            new LoggingProgram("Start", isDebug),
+            Programs.subQuery(DefaultRelMetadataProvider.INSTANCE),
+            new LoggingProgram("After subquery program", isDebug),
+            DecorrelateAndTrimFieldsProgram.INSTANCE,
+            new LoggingProgram("After trim fields and decorelate program", isDebug),
+            buildHepProgram(REDUCTION_RULES, true, DefaultRelMetadataProvider.INSTANCE, HEP_DEFAULT_MATCH_LIMIT),
+            new LoggingProgram("After hep planner program", isDebug),
+            Programs.ofRules(logicalConventionRuleSet(plannerContext)),
+            new LoggingProgram("After volcano planner program", isDebug)
+        )
     );
+  }
+
+  private static class LoggingProgram implements Program
+  {
+    private final String stage;
+    private final boolean isDebug;
+
+    public LoggingProgram(String stage, boolean isDebug)
+    {
+      this.stage = stage;
+      this.isDebug = isDebug;
+    }
+
+    @Override
+    public RelNode run(
+        RelOptPlanner planner,
+        RelNode rel,
+        RelTraitSet requiredOutputTraits,
+        List<RelOptMaterialization> materializations,
+        List<RelOptLattice> lattices
+    )
+    {
+      if (isDebug) {
+        log.info(
+            "%s%n%s",
+            stage,
+            RelOptUtil.dumpPlan("", rel, SqlExplainFormat.TEXT, SqlExplainLevel.ALL_ATTRIBUTES)
+        );
+      }
+      return rel;
+    }
   }
 
   public Program buildHepProgram(
@@ -284,6 +337,16 @@ public class CalciteRulesManager
     for (ExtensionCalciteRuleProvider extensionCalciteRuleProvider : extensionCalciteRuleProviderSet) {
       retVal.add(extensionCalciteRuleProvider.getRule(plannerContext));
     }
+    return retVal.build();
+  }
+
+  public List<RelOptRule> logicalConventionRuleSet(final PlannerContext plannerContext)
+  {
+    final ImmutableList.Builder<RelOptRule> retVal = ImmutableList
+        .<RelOptRule>builder()
+        .addAll(baseRuleSet(plannerContext))
+        .add(DruidAggregateCaseToFilterRule.INSTANCE)
+        .add(new DruidLogicalRules(plannerContext).rules().toArray(new RelOptRule[0]));
     return retVal.build();
   }
 

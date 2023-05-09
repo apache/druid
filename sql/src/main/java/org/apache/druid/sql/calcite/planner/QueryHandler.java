@@ -54,12 +54,14 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -68,6 +70,7 @@ import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.DruidUnionRel;
+import org.apache.druid.sql.calcite.rel.logical.DruidLogicalConvention;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.table.DruidTable;
@@ -512,42 +515,94 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     );
     QueryValidations.validateLogicalQueryForDruid(handlerContext.plannerContext(), parameterized);
     CalcitePlanner planner = handlerContext.planner();
-    final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
-        CalciteRulesManager.DRUID_CONVENTION_RULES,
-        planner.getEmptyTraitSet()
-               .replace(DruidConvention.instance())
-               .plus(rootQueryRel.collation),
-        parameterized
-    );
-    handlerContext.hook().captureDruidRel(druidRel);
 
-    if (explain != null) {
-      return planExplanation(possiblyLimitedRoot, druidRel, true);
-    } else {
-      // Compute row type.
-      final RelDataType rowType = prepareResult.getReturnedRowType();
-
-      // Start the query.
-      final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> {
-        // sanity check
-        final Set<ResourceAction> readResourceActions =
-            plannerContext.getResourceActions()
-                          .stream()
-                          .filter(action -> action.getAction() == Action.READ)
-                          .collect(Collectors.toSet());
-        Preconditions.checkState(
-            readResourceActions.isEmpty() == druidRel.getDataSourceNames().isEmpty()
-            // The resources found in the plannerContext can be less than the datasources in
-            // the query plan, because the query planner can eliminate empty tables by replacing
-            // them with InlineDataSource of empty rows.
-            || readResourceActions.size() >= druidRel.getDataSourceNames().size(),
-            "Authorization sanity check failed"
+    if (plannerContext.getPlannerConfig()
+                      .getNativeQuerySqlPlanningMode()
+                      .equals(PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
+    ) {
+      RelNode newRoot = parameterized;
+      newRoot = planner.transform(
+          CalciteRulesManager.DRUID_DAG_CONVENTION_RULES,
+          planner.getEmptyTraitSet()
+                 .plus(rootQueryRel.collation)
+                 .plus(DruidLogicalConvention.instance()),
+          newRoot
+      );
+      DruidQueryGenerator shuttle = new DruidQueryGenerator(plannerContext);
+      newRoot.accept(shuttle);
+      log.info("PartialDruidQuery : " + shuttle.getPartialDruidQuery());
+      shuttle.getQueryList().add(shuttle.getPartialDruidQuery()); // add topmost query to the list
+      shuttle.getQueryTables().add(shuttle.getCurrentTable());
+      assert !shuttle.getQueryList().isEmpty();
+      log.info("query list size " + shuttle.getQueryList().size());
+      log.info("query tables size " + shuttle.getQueryTables().size());
+      // build bottom-most query
+      DruidQuery baseQuery = shuttle.getQueryList().get(0).build(
+          shuttle.getQueryTables().get(0).getDataSource(),
+          shuttle.getQueryTables().get(0).getRowSignature(),
+          plannerContext,
+          rexBuilder,
+          shuttle.getQueryList().size() != 1,
+          null
+      );
+      // build outer queries
+      for (int i = 1; i < shuttle.getQueryList().size(); i++) {
+        baseQuery = shuttle.getQueryList().get(i).build(
+            new QueryDataSource(baseQuery.getQuery()),
+            baseQuery.getOutputRowSignature(),
+            plannerContext,
+            rexBuilder,
+            false
         );
+      }
+      try {
+        log.info("final query : " +
+                 new DefaultObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(baseQuery.getQuery()));
+      }
+      catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
+      DruidQuery finalBaseQuery = baseQuery;
+      final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> plannerContext.getQueryMaker().runQuery(finalBaseQuery);
 
-        return druidRel.runQuery();
-      };
+      return new PlannerResult(resultsSupplier, finalBaseQuery.getOutputRowType());
+    } else {
+      final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
+          CalciteRulesManager.DRUID_CONVENTION_RULES,
+          planner.getEmptyTraitSet()
+                 .replace(DruidConvention.instance())
+                 .plus(rootQueryRel.collation),
+          parameterized
+      );
+      handlerContext.hook().captureDruidRel(druidRel);
+      if (explain != null) {
+        return planExplanation(possiblyLimitedRoot, druidRel, true);
+      } else {
+        // Compute row type.
+        final RelDataType rowType = prepareResult.getReturnedRowType();
 
-      return new PlannerResult(resultsSupplier, rowType);
+        // Start the query.
+        final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> {
+          // sanity check
+          final Set<ResourceAction> readResourceActions =
+              plannerContext.getResourceActions()
+                            .stream()
+                            .filter(action -> action.getAction() == Action.READ)
+                            .collect(Collectors.toSet());
+          Preconditions.checkState(
+              readResourceActions.isEmpty() == druidRel.getDataSourceNames().isEmpty()
+              // The resources found in the plannerContext can be less than the datasources in
+              // the query plan, because the query planner can eliminate empty tables by replacing
+              // them with InlineDataSource of empty rows.
+              || readResourceActions.size() >= druidRel.getDataSourceNames().size(),
+              "Authorization sanity check failed"
+          );
+
+          return druidRel.runQuery();
+        };
+
+        return new PlannerResult(resultsSupplier, rowType);
+      }
     }
   }
 
