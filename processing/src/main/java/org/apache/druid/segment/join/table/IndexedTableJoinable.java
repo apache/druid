@@ -35,6 +35,7 @@ import org.apache.druid.segment.join.Joinable;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -105,7 +106,7 @@ public class IndexedTableJoinable implements Joinable
     try (final IndexedTable.Reader reader = table.columnReader(columnPosition)) {
       // Sorted set to encourage "in" filters that result from this method to do dictionary lookups in order.
       // The hopes are that this will improve locality and therefore improve performance.
-      final Set<String> allValues = createValuesSet();
+      final Set<String> allValues = createOrderedValuesSet();
       boolean allUnique = true;
 
       for (int i = 0; i < table.numRows(); i++) {
@@ -203,5 +204,10 @@ public class IndexedTableJoinable implements Joinable
   private static Set<String> createValuesSet()
   {
     return new TreeSet<>(Comparators.naturalNullsFirst());
+  }
+
+  private static Set<String> createOrderedValuesSet()
+  {
+    return new LinkedHashSet<>();
   }
 }

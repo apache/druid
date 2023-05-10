@@ -83,7 +83,6 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
           new Object[]{"El Salvador"},
           new Object[]{"United States"},
           new Object[]{"United States"}
-
       ),
       RowSignature.builder().add("country", ColumnType.STRING).build()
   );
@@ -91,10 +90,10 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
   private static final InlineDataSource INDEXED_TABLE_DS_THREE_COLS = InlineDataSource.fromIterable(
       ImmutableList.of(
           new Object[]{"El Salvador", 1, 1.0},
-          new Object[]{"India", 2, 2.0},
-          new Object[]{"Mexico", 3, 3.0},
+          new Object[]{"Mexico", 2, 2.0},
+          new Object[]{"United States", 3, 3.0},
           new Object[]{"Norway", 4, 4.0},
-          new Object[]{"United States", 5, 5.0}
+          new Object[]{"India", 5, 5.0}
       ),
       RowSignature.builder()
                   .add("country", ColumnType.STRING)
@@ -679,13 +678,13 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
                 ),
                 new AndFilter(
                     ImmutableList.of(
-                        new SelectorFilter("x", "India"),
+                        new SelectorFilter("x", "Mexico"),
                         new SelectorFilter("y", "2")
                     )
                 ),
                 new AndFilter(
                     ImmutableList.of(
-                        new SelectorFilter("x", "Mexico"),
+                        new SelectorFilter("x", "United States"),
                         new SelectorFilter("y", "3")
                     )
                 ),
@@ -697,7 +696,7 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
                 ),
                 new AndFilter(
                     ImmutableList.of(
-                        new SelectorFilter("x", "United States"),
+                        new SelectorFilter("x", "India"),
                         new SelectorFilter("y", "5")
                     )
                 )
