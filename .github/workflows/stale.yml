@@ -97,5 +97,4 @@ jobs:
             Incompatible
             Stable API
           exempt-milestones: true
-          exempt-projects: true
           exempt-assignees: true
