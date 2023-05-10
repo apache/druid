@@ -92,6 +92,8 @@ import java.util.stream.Stream;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class DruidInputSource extends AbstractInputSource implements SplittableInputSource<List<WindowedSegmentId>>
 {
+
+  public static final String TYPE_KEY = "druid";
   private static final Logger LOG = new Logger(DruidInputSource.class);
 
   /**
@@ -188,7 +190,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   @Override
   public Set<String> getTypes()
   {
-    return ImmutableSet.of();
+    return ImmutableSet.of(TYPE_KEY);
   }
 
   @JsonProperty
