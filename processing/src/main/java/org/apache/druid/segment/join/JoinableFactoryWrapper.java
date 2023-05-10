@@ -184,9 +184,7 @@ public class JoinableFactoryWrapper
         }
 
         numValues -= columnValuesWithUniqueFlag.getColumnValues().size();
-        if (clause.getCondition().getEquiConditions().size() == 1) {
-          filters.add(Filters.toFilter(new InDimFilter(leftColumn, columnValuesWithUniqueFlag.getColumnValues())));
-        }
+        filters.add(Filters.toFilter(new InDimFilter(leftColumn, columnValuesWithUniqueFlag.getColumnValues())));
         if (!columnValuesWithUniqueFlag.isAllUnique()) {
           joinClauseFullyConverted = false;
         }
