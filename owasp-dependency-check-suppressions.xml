@@ -247,6 +247,7 @@
     <cve>CVE-2022-40150</cve>
     <cve>CVE-2022-45685</cve>
     <cve>CVE-2022-45693</cve>
+    <cve>CVE-2023-1436</cve>
   </suppress>
   <suppress>
     <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
@@ -256,6 +257,8 @@
     <packageUrl regex="true">^pkg:maven/org\.yaml/snakeyaml@1.6$</packageUrl>
     <cve>CVE-2017-18640</cve>
     <cve>CVE-2022-25857</cve>
+    <cve>CVE-2023-2251</cve>
+    <cve>CVE-2022-3064</cve>
   </suppress>
   <suppress>
     <!-- We need to wait for 17.0.0 of https://github.com/kubernetes-client/java/releases -->
@@ -264,6 +267,9 @@
     ]]></notes>
     <cve>CVE-2022-25857</cve>
     <cve>CVE-2022-1471</cve>
+    <!-- false positive -->
+    <cve>CVE-2023-2251</cve>
+    <cve>CVE-2022-3064</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -343,6 +349,7 @@
     <packageUrl regex="true">^pkg:maven/org\.apache\.kafka/kafka-clients@2.0.0$</packageUrl>
     <cve>CVE-2019-12399</cve>
     <cve>CVE-2018-17196</cve>
+    <cve>CVE-2023-25194</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -353,7 +360,7 @@
   </suppress>
   <suppress>
     <!--
-      ~ TODO: Fix when Apache Ranger is released with updated log4j
+      ~ ambari-metrics-emitter, druid-ranger-security
       -->
     <notes><![CDATA[
     file name: log4j-1.2.17.jar
@@ -365,6 +372,7 @@
     <cve>CVE-2022-23307</cve>
     <cve>CVE-2022-23305</cve>
     <cve>CVE-2022-23302</cve>
+    <cve>CVE-2023-26464</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -392,6 +400,7 @@
     <cve>CVE-2022-23305</cve>
     <cve>CVE-2022-23302</cve>
     <cve>CVE-2022-41881</cve>
+    <cve>CVE-2020-11612</cve>
   </suppress>
   <suppress>
        <!--
@@ -789,4 +798,12 @@
      <vulnerabilityName>1070209</vulnerabilityName>
      <cve>CVE-2020-7774</cve>
    </suppress>
+  <suppress>
+    <!-- druid-ranger-security -->
+    <notes><![CDATA[
+     file name: ranger-plugins-common-2.0.0.jar
+     ]]></notes>
+    <!-- seems not applicable to plugin -->
+    <cve>CVE-2022-45048</cve>
+  </suppress>
 </suppressions>
