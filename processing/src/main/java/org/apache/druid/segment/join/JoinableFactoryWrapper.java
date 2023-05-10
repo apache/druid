@@ -123,7 +123,7 @@ public class JoinableFactoryWrapper
   }
 
   /**
-   * Converts a join clause into an "in" filter if possible.
+   * Converts a join clause into appropriate filter(s) if possible.
    * <p>
    * The requirements are:
    * <p>
@@ -151,6 +151,7 @@ public class JoinableFactoryWrapper
         && clause.getCondition().getNonEquiConditions().isEmpty()
         && clause.getCondition().getEquiConditions().size() > 0) {
       final List<Filter> filters = new ArrayList<>();
+      // Creating a map that will store for each index the filters that needs to be AND ed
       final Map<Integer, List<Filter>> filterMap = new HashMap<>();
       int numValues = maxNumFilterValues;
       // if the right side columns are required, the clause cannot be fully converted
@@ -182,16 +183,18 @@ public class JoinableFactoryWrapper
         }
 
         numValues -= columnValuesWithUniqueFlag.getColumnValues().size();
+        // For each column value which are received in order we increment the index
+        // and add it in the appropriate index in the map
         int c = 0;
         for (String val : columnValuesWithUniqueFlag.getColumnValues()) {
-          Filter f = Filters.toFilter(new SelectorDimFilter(leftColumn, val, null, null));
+          final Filter currentSelFilter = Filters.toFilter(new SelectorDimFilter(leftColumn, val, null, null));
           List<Filter> filterList = filterMap.get(c);
           if (filterList == null) {
             filterList = new ArrayList<Filter>();
-            filterList.add(f);
+            filterList.add(currentSelFilter);
             filterMap.put(c, filterList);
           } else {
-            filterList.add(f);
+            filterList.add(currentSelFilter);
           }
           c++;
         }
@@ -205,8 +208,8 @@ public class JoinableFactoryWrapper
       if (clause.getCondition().getEquiConditions().size() == 1) {
         return new JoinClauseToFilterConversion(Filters.maybeAnd(filters).orElse(null), joinClauseFullyConverted);
       } else {
-        for (Integer i : filterMap.keySet()) {
-          filters.add(Filters.and(filterMap.get(i)));
+        for (Map.Entry<Integer, List<Filter>> entry : filterMap.entrySet()) {
+          filters.add(Filters.and(entry.getValue()));
         }
         return new JoinClauseToFilterConversion(Filters.maybeOr(filters).orElse(null), joinClauseFullyConverted);
       }
