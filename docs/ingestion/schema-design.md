@@ -120,7 +120,7 @@ you must be more explicit. Druid columns have types specific upfront.
 
 Tips for modeling log data in Druid:
 
-* If you don't know ahead of time what columns you'll want to ingest, you can have Druid perform [schema auto-discovery](#schema-auto-discovery-for-dimensions).
+* If you don't know ahead of time what columns to ingest, you can have Druid perform [schema auto-discovery](#schema-auto-discovery-for-dimensions).
 * If you have nested data, you can ingest it using the [nested columns](../querying/nested-columns.md) feature or flatten it using a [`flattenSpec`](./ingestion-spec.md#flattenspec).
 * Consider enabling [rollup](./rollup.md) if you have mainly analytical use cases for your log data. This will
 mean you lose the ability to retrieve individual events from Druid, but you potentially gain substantial compression and
