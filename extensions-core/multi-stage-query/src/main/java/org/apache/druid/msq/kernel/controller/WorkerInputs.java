@@ -91,7 +91,12 @@ public class WorkerInputs
         }
       } else {
         // Non-broadcast case: split slices across workers.
-        final List<InputSlice> slices = assignmentStrategy.assign(stageDef, inputSpec, stageWorkerCountMap, slicer);
+        List<InputSlice> slices = assignmentStrategy.assign(stageDef, inputSpec, stageWorkerCountMap, slicer);
+
+        if (slices.isEmpty()) {
+          // Need at least one slice, so we can have at least one worker. It's OK if it has nothing to read.
+          slices = Collections.singletonList(NilInputSlice.INSTANCE);
+        }
 
         // Flip the slices, so it's worker number -> slices for that worker.
         for (int workerNumber = 0; workerNumber < slices.size(); workerNumber++) {
@@ -150,6 +155,11 @@ public class WorkerInputs
   public int workerCount()
   {
     return assignmentsMap.size();
+  }
+
+  public Int2ObjectMap<List<InputSlice>> assignmentsMap()
+  {
+    return assignmentsMap;
   }
 
   @Override

@@ -22,23 +22,30 @@ package org.apache.druid.k8s.overlord.common;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.collect.ImmutableList;
+import com.google.api.client.util.Joiner;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.api.model.batch.v1.JobList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
@@ -67,7 +74,7 @@ class K8sTaskAdapterTest
   private final StartupLoggingConfig startupLoggingConfig;
   private final TaskConfig taskConfig;
   private final DruidNode node;
-  private ObjectMapper jsonMapper;
+  private final ObjectMapper jsonMapper;
 
   public K8sTaskAdapterTest()
   {
@@ -90,29 +97,30 @@ class K8sTaskAdapterTest
         false
     );
     startupLoggingConfig = new StartupLoggingConfig();
-    taskConfig = new TaskConfig(
-        "src/test/resources",
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        false,
-        ImmutableList.of("src/test/resources")
-    );
+    taskConfig = new TaskConfigBuilder().setBaseDir("src/test/resources").build();
   }
 
   @Test
   void testAddingLabelsAndAnnotations() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    final PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
+    TestKubernetesClient testClient = new TestKubernetesClient(client)
+    {
+      @SuppressWarnings("unchecked")
+      @Override
+      public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
+      {
+        return (T) new Pod()
+        {
+          @Override
+          public PodSpec getSpec()
+          {
+            return podSpec;
+          }
+        };
+      }
+    };
+
     KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
     config.namespace = "test";
     config.annotations.put("annotation_key", "annotation_value");
@@ -126,11 +134,8 @@ class K8sTaskAdapterTest
         jsonMapper
     );
     Task task = K8sTestUtils.getTask();
-    Job jobFromSpec = adapter.createJobFromPodSpec(
-        K8sTestUtils.getDummyPodSpec(),
-        task,
-        new PeonCommandContext(new ArrayList<>(), new ArrayList<>(), new File("/tmp/"))
-    );
+    Job jobFromSpec = adapter.fromTask(task);
+
     assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey("annotation_key"));
     assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey(DruidK8sConstants.TASK_ID));
     assertFalse(jobFromSpec.getMetadata().getAnnotations().containsKey("label_key"));
@@ -160,22 +165,19 @@ class K8sTaskAdapterTest
         task,
         new PeonCommandContext(new ArrayList<>(), new ArrayList<>(), new File("/tmp/"))
     );
-
-    // cant launch jobs with test server, we have to hack around this.
-    Pod pod = K8sTestUtils.createPodFromJob(jobFromSpec);
-    client.pods().inNamespace("test").create(pod);
-    PodList podList = client.pods().inNamespace("test").list();
-    assertEquals(1, podList.getItems().size());
+    client.batch().v1().jobs().inNamespace("test").create(jobFromSpec);
+    JobList jobList = client.batch().v1().jobs().inNamespace("test").list();
+    assertEquals(1, jobList.getItems().size());
 
     // assert that the size of the pod is 1g
-    Pod myPod = Iterables.getOnlyElement(podList.getItems());
-    Quantity containerMemory = myPod.getSpec().getContainers().get(0).getResources().getLimits().get("memory");
+    Job myJob = Iterables.getOnlyElement(jobList.getItems());
+    Quantity containerMemory = myJob.getSpec().getTemplate().getSpec().getContainers().get(0).getResources().getLimits().get("memory");
     String amount = containerMemory.getAmount();
     assertEquals(2400000000L, Long.valueOf(amount));
     assertTrue(StringUtils.isBlank(containerMemory.getFormat())); // no units specified we talk in bytes
 
-    Task taskFromPod = adapter.toTask(Iterables.getOnlyElement(podList.getItems()));
-    assertEquals(task, taskFromPod);
+    Task taskFromJob = adapter.toTask(Iterables.getOnlyElement(jobList.getItems()));
+    assertEquals(task, taskFromJob);
   }
 
   @Test
@@ -253,4 +255,162 @@ class K8sTaskAdapterTest
     });
   }
 
+  @Test
+  void testAddingMonitors() throws IOException
+  {
+    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    PeonCommandContext context = new PeonCommandContext(
+        new ArrayList<>(),
+        new ArrayList<>(),
+        new File("/tmp/")
+    );
+    KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
+    config.namespace = "test";
+    K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
+        testClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        node,
+        jsonMapper
+    );
+    Task task = K8sTestUtils.getTask();
+    // no monitor in overlord, no monitor override
+    Container container = new ContainerBuilder()
+        .withName("container").build();
+    adapter.addEnvironmentVariables(container, context, task.toString());
+    assertFalse(
+        container.getEnv().stream().anyMatch(x -> x.getName().equals("druid_monitoring_monitors")),
+        "Didn't match, envs: " + Joiner.on(',').join(container.getEnv())
+    );
+
+    // we have an override, but nothing in the overlord
+    config.peonMonitors = jsonMapper.readValue("[\"org.apache.druid.java.util.metrics.JvmMonitor\"]", List.class);
+    adapter = new SingleContainerTaskAdapter(
+        testClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        node,
+        jsonMapper
+    );
+    adapter.addEnvironmentVariables(container, context, task.toString());
+    EnvVar env = container.getEnv()
+                          .stream()
+                          .filter(x -> x.getName().equals("druid_monitoring_monitors"))
+                          .findFirst()
+                          .get();
+    assertEquals(jsonMapper.writeValueAsString(config.peonMonitors), env.getValue());
+
+    // we override what is in the overlord
+    config.peonMonitors = jsonMapper.readValue("[\"org.apache.druid.java.util.metrics.JvmMonitor\"]", List.class);
+    adapter = new SingleContainerTaskAdapter(
+        testClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        node,
+        jsonMapper
+    );
+    container.getEnv().add(new EnvVarBuilder()
+                               .withName("druid_monitoring_monitors")
+                               .withValue(
+                                   "'[\"org.apache.druid.java.util.metrics.JvmMonitor\", "
+                                   + "\"org.apache.druid.server.metrics.TaskCountStatsMonitor\"]'")
+                               .build());
+    adapter.addEnvironmentVariables(container, context, task.toString());
+    env = container.getEnv()
+                   .stream()
+                   .filter(x -> x.getName().equals("druid_monitoring_monitors"))
+                   .findFirst()
+                   .get();
+    assertEquals(jsonMapper.writeValueAsString(config.peonMonitors), env.getValue());
+  }
+
+  @Test
+  void testEphemeralStorageIsRespected() throws IOException
+  {
+    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    Pod pod = K8sTestUtils.fileToResource("ephemeralPodSpec.yaml", Pod.class);
+    KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
+    config.namespace = "test";
+    SingleContainerTaskAdapter adapter =
+        new SingleContainerTaskAdapter(testClient,
+                                       config, taskConfig,
+                                       startupLoggingConfig,
+                                       node,
+                                       jsonMapper
+        );
+    NoopTask task = NoopTask.create("id", 1);
+    Job actual = adapter.createJobFromPodSpec(
+        pod.getSpec(),
+        task,
+        new PeonCommandContext(
+            Collections.singletonList("foo && bar"),
+            new ArrayList<>(),
+            new File("/tmp")
+        )
+    );
+    Job expected = K8sTestUtils.fileToResource("expectedEphemeralOutput.yaml", Job.class);
+    // something is up with jdk 17, where if you compress with jdk < 17 and try and decompress you get different results,
+    // this would never happen in real life, but for the jdk 17 tests this is a problem
+    // could be related to: https://bugs.openjdk.org/browse/JDK-8081450
+    actual.getSpec()
+          .getTemplate()
+          .getSpec()
+          .getContainers()
+          .get(0)
+          .getEnv()
+          .removeIf(x -> x.getName().equals("TASK_JSON"));
+    expected.getSpec()
+            .getTemplate()
+            .getSpec()
+            .getContainers()
+            .get(0)
+            .getEnv()
+            .removeIf(x -> x.getName().equals("TASK_JSON"));
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  void testEphemeralStorage()
+  {
+    // no resources set.
+    Container container = new ContainerBuilder().build();
+    ResourceRequirements result = K8sTaskAdapter.getResourceRequirements(
+        container.getResources(),
+        100
+    );
+    // requests and limits will only have 2 items, cpu / memory
+    assertEquals(2, result.getLimits().size());
+    assertEquals(2, result.getRequests().size());
+
+    // test with ephemeral storage
+    ImmutableMap<String, Quantity> requestMap = ImmutableMap.of("ephemeral-storage", new Quantity("1Gi"));
+    ImmutableMap<String, Quantity> limitMap = ImmutableMap.of("ephemeral-storage", new Quantity("10Gi"));
+    container.setResources(new ResourceRequirementsBuilder().withRequests(requestMap).withLimits(limitMap).build());
+    ResourceRequirements ephemeralResult = K8sTaskAdapter.getResourceRequirements(
+        container.getResources(),
+        100
+    );
+    // you will have ephemeral storage as well.
+    assertEquals(3, ephemeralResult.getLimits().size());
+    assertEquals(3, ephemeralResult.getRequests().size());
+    // cpu and memory should be fixed
+    assertEquals(result.getRequests().get("cpu"), ephemeralResult.getRequests().get("cpu"));
+    assertEquals(result.getRequests().get("memory"), ephemeralResult.getRequests().get("memory"));
+    assertEquals("1Gi", ephemeralResult.getRequests().get("ephemeral-storage").toString());
+
+    assertEquals(result.getLimits().get("cpu"), ephemeralResult.getLimits().get("cpu"));
+    assertEquals(result.getLimits().get("memory"), ephemeralResult.getLimits().get("memory"));
+    assertEquals("10Gi", ephemeralResult.getLimits().get("ephemeral-storage").toString());
+
+    // we should also preserve additional properties
+    container.getResources().setAdditionalProperty("additional", "some-value");
+    ResourceRequirements additionalProperties = K8sTaskAdapter.getResourceRequirements(
+        container.getResources(),
+        100
+    );
+    assertEquals(1, additionalProperties.getAdditionalProperties().size());
+  }
 }

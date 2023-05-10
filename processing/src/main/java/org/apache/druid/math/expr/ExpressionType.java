@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.BaseTypeSignature;
 import org.apache.druid.segment.column.ColumnType;
@@ -52,6 +51,8 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
       new ExpressionType(ExprType.ARRAY, null, LONG);
   public static final ExpressionType DOUBLE_ARRAY =
       new ExpressionType(ExprType.ARRAY, null, DOUBLE);
+  public static final ExpressionType NESTED_DATA =
+      ExpressionType.fromColumnTypeStrict(ColumnType.NESTED_DATA);
   public static final ExpressionType UNKNOWN_COMPLEX =
       new ExpressionType(ExprType.COMPLEX, null, null);
 
@@ -208,13 +209,6 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
         return ColumnType.ofComplex(exprType.getComplexTypeName());
       default:
         throw new ISE("Unsupported expression type[%s]", exprType);
-    }
-  }
-
-  public static void checkNestedArrayAllowed(ExpressionType outputType)
-  {
-    if (outputType.isArray() && outputType.getElementType().isArray() && !ExpressionProcessing.allowNestedArrays()) {
-      throw new IAE("Cannot create a nested array type [%s], 'druid.expressions.allowNestedArrays' must be set to true", outputType);
     }
   }
 }

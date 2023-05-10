@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -36,6 +35,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class MapInputRowParser implements InputRowParser<Map<String, Object>>
 {
@@ -77,22 +77,38 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
    * 3) If isIncludeAllDimensions is not set and {@link DimensionsSpec#getDimensionNames()} is empty,
    *    the dimensions in the given map is returned.
    *
-   * In any case, the returned list does not include any dimensions in {@link DimensionsSpec#getDimensionExclusions()}.
+   * In any case, the returned list does not include any dimensions in {@link DimensionsSpec#getDimensionExclusions()}
+   * or {@link TimestampSpec#getTimestampColumn()}.
    */
   private static List<String> findDimensions(
+      TimestampSpec timestampSpec,
       DimensionsSpec dimensionsSpec,
       Map<String, Object> rawInputRow
   )
   {
-    if (dimensionsSpec.isIncludeAllDimensions()) {
+    final String timestampColumn = timestampSpec.getTimestampColumn();
+    final Set<String> exclusions = dimensionsSpec.getDimensionExclusions();
+    if (dimensionsSpec.isIncludeAllDimensions() || dimensionsSpec.useSchemaDiscovery()) {
       LinkedHashSet<String> dimensions = new LinkedHashSet<>(dimensionsSpec.getDimensionNames());
-      dimensions.addAll(Sets.difference(rawInputRow.keySet(), dimensionsSpec.getDimensionExclusions()));
+      for (String field : rawInputRow.keySet()) {
+        if (timestampColumn.equals(field) || exclusions.contains(field)) {
+          continue;
+        }
+        dimensions.add(field);
+      }
       return new ArrayList<>(dimensions);
     } else {
       if (!dimensionsSpec.getDimensionNames().isEmpty()) {
         return dimensionsSpec.getDimensionNames();
       } else {
-        return new ArrayList<>(Sets.difference(rawInputRow.keySet(), dimensionsSpec.getDimensionExclusions()));
+        List<String> dimensions = new ArrayList<>();
+        for (String field : rawInputRow.keySet()) {
+          if (timestampColumn.equals(field) || exclusions.contains(field)) {
+            continue;
+          }
+          dimensions.add(field);
+        }
+        return dimensions;
       }
     }
   }
@@ -104,7 +120,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
       Map<String, Object> theMap
   ) throws ParseException
   {
-    final List<String> dimensionsToUse = findDimensions(dimensionsSpec, theMap);
+    final List<String> dimensionsToUse = findDimensions(timestampSpec, dimensionsSpec, theMap);
 
     final DateTime timestamp;
     try {

@@ -22,7 +22,6 @@ package org.apache.druid.query.expression;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -30,7 +29,6 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.NamedFunction;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.NestedPathFinder;
 import org.apache.druid.segment.nested.NestedPathPart;
 import org.apache.druid.segment.nested.StructuredData;
@@ -46,10 +44,6 @@ import java.util.stream.Collectors;
 
 public class NestedDataExpressions
 {
-  public static final ExpressionType TYPE = Preconditions.checkNotNull(
-      ExpressionType.fromColumnType(NestedDataComplexTypeSerde.TYPE)
-  );
-
   public static class JsonObjectExprMacro implements ExprMacroTable.ExprMacro
   {
     public static final String NAME = "json_object";
@@ -88,7 +82,7 @@ public class NestedDataExpressions
             theMap.put(field.asString(), unwrap(value));
           }
 
-          return ExprEval.ofComplex(TYPE, theMap);
+          return ExprEval.ofComplex(ExpressionType.NESTED_DATA, theMap);
         }
 
         @Override
@@ -102,7 +96,7 @@ public class NestedDataExpressions
         @Override
         public ExpressionType getOutputType(InputBindingInspector inspector)
         {
-          return TYPE;
+          return ExpressionType.NESTED_DATA;
         }
       }
       return new StructExpr(args);
@@ -213,12 +207,12 @@ public class NestedDataExpressions
         {
           ExprEval arg = args.get(0).eval(bindings);
           if (arg.value() == null) {
-            return ExprEval.ofComplex(TYPE, null);
+            return ExprEval.ofComplex(ExpressionType.NESTED_DATA, null);
           }
           if (arg.type().is(ExprType.STRING)) {
             try {
               return ExprEval.ofComplex(
-                  TYPE,
+                  ExpressionType.NESTED_DATA,
                   jsonMapper.readValue(arg.asString(), Object.class)
               );
             }
@@ -244,7 +238,7 @@ public class NestedDataExpressions
         @Override
         public ExpressionType getOutputType(InputBindingInspector inspector)
         {
-          return TYPE;
+          return ExpressionType.NESTED_DATA;
         }
       }
       return new ParseJsonExpr(args);
@@ -288,19 +282,19 @@ public class NestedDataExpressions
           if (arg.type().is(ExprType.STRING) && arg.value() != null) {
             try {
               return ExprEval.ofComplex(
-                  TYPE,
+                  ExpressionType.NESTED_DATA,
                   jsonMapper.readValue(arg.asString(), Object.class)
               );
             }
             catch (JsonProcessingException e) {
               return ExprEval.ofComplex(
-                  TYPE,
+                  ExpressionType.NESTED_DATA,
                   null
               );
             }
           }
           return ExprEval.ofComplex(
-              TYPE,
+              ExpressionType.NESTED_DATA,
               null
           );
         }
@@ -316,7 +310,7 @@ public class NestedDataExpressions
         @Override
         public ExpressionType getOutputType(InputBindingInspector inspector)
         {
-          return TYPE;
+          return ExpressionType.NESTED_DATA;
         }
       }
       return new ParseJsonExpr(args);
@@ -440,7 +434,7 @@ public class NestedDataExpressions
         {
           ExprEval input = args.get(0).eval(bindings);
           return ExprEval.ofComplex(
-              TYPE,
+              ExpressionType.NESTED_DATA,
               NestedPathFinder.find(unwrap(input), parts)
           );
         }
@@ -457,7 +451,7 @@ public class NestedDataExpressions
         public ExpressionType getOutputType(InputBindingInspector inspector)
         {
           // call all the output JSON typed
-          return TYPE;
+          return ExpressionType.NESTED_DATA;
         }
       }
       return new JsonQueryExpr(args);
@@ -480,10 +474,25 @@ public class NestedDataExpressions
       final StructuredDataProcessor processor = new StructuredDataProcessor()
       {
         @Override
-        public StructuredDataProcessor.ProcessedLiteral<?> processLiteralField(ArrayList<NestedPathPart> fieldPath, Object fieldValue)
+        public ProcessedValue<?> processField(ArrayList<NestedPathPart> fieldPath, @Nullable Object fieldValue)
         {
           // do nothing, we only want the list of fields returned by this processor
-          return StructuredDataProcessor.ProcessedLiteral.NULL_LITERAL;
+          return ProcessedValue.NULL_LITERAL;
+        }
+
+        @Nullable
+        @Override
+        public ProcessedValue<?> processArrayField(
+            ArrayList<NestedPathPart> fieldPath,
+            @Nullable List<?> array
+        )
+        {
+          // we only want to return a non-null value here if the value is an array of primitive values
+          ExprEval<?> eval = ExprEval.bestEffortArray(array);
+          if (eval.type().isArray() && eval.type().getElementType().isPrimitive()) {
+            return ProcessedValue.NULL_LITERAL;
+          }
+          return null;
         }
       };
 

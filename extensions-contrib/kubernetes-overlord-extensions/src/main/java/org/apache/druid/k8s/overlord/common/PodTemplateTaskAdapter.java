@@ -34,6 +34,7 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
+import io.fabric8.kubernetes.client.utils.Serialization;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
@@ -47,6 +48,7 @@ import org.apache.druid.server.DruidNode;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -69,12 +71,11 @@ import java.util.Properties;
  */
 public class PodTemplateTaskAdapter implements TaskAdapter
 {
-  public static String TYPE = "PodTemplate";
+  public static final String TYPE = "customTemplateAdapter";
 
   private static final Logger log = new Logger(PodTemplateTaskAdapter.class);
   private static final String TASK_PROPERTY = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".k8s.podTemplate.%s";
 
-  private final KubernetesClientApi client;
   private final KubernetesTaskRunnerConfig taskRunnerConfig;
   private final TaskConfig taskConfig;
   private final DruidNode node;
@@ -82,7 +83,6 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   private final HashMap<String, PodTemplate> templates;
 
   public PodTemplateTaskAdapter(
-      KubernetesClientApi client,
       KubernetesTaskRunnerConfig taskRunnerConfig,
       TaskConfig taskConfig,
       DruidNode node,
@@ -90,7 +90,6 @@ public class PodTemplateTaskAdapter implements TaskAdapter
       Properties properties
   )
   {
-    this.client = client;
     this.taskRunnerConfig = taskRunnerConfig;
     this.taskConfig = taskConfig;
     this.node = node;
@@ -122,7 +121,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     return new JobBuilder()
         .withNewMetadata()
         .withName(new K8sTaskId(task).getK8sTaskId())
-        .addToLabels(getJobLabels(taskRunnerConfig))
+        .addToLabels(getJobLabels(taskRunnerConfig, task))
         .addToAnnotations(getJobAnnotations(taskRunnerConfig, task))
         .endMetadata()
         .withNewSpec()
@@ -130,11 +129,11 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .editTemplate()
         .editOrNewMetadata()
         .addToAnnotations(getPodTemplateAnnotations(task))
-        .addToLabels(getPodLabels(taskRunnerConfig))
+        .addToLabels(getPodLabels(taskRunnerConfig, task))
         .endMetadata()
         .editSpec()
         .editFirstContainer()
-        .addAllToEnv(getEnv())
+        .addAllToEnv(getEnv(task))
         .endContainer()
         .endSpec()
         .endTemplate()
@@ -156,15 +155,15 @@ public class PodTemplateTaskAdapter implements TaskAdapter
    * @throws IOException
    */
   @Override
-  public Task toTask(Pod from) throws IOException
+  public Task toTask(Job from) throws IOException
   {
-    Map<String, String> annotations = from.getMetadata().getAnnotations();
+    Map<String, String> annotations = from.getSpec().getTemplate().getMetadata().getAnnotations();
     if (annotations == null) {
-      throw new IOE("No annotations found on pod [%s]", from.getMetadata().getName());
+      throw new IOE("No annotations found on pod spec for job [%s]", from.getMetadata().getName());
     }
     String task = annotations.get(DruidK8sConstants.TASK);
     if (task == null) {
-      throw new IOE("No task annotation found on pod [%s]", from.getMetadata().getName());
+      throw new IOE("No task annotation found on pod spec for job [%s]", from.getMetadata().getName());
     }
     return mapper.readValue(Base64Compression.decompressBase64(task), Task.class);
   }
@@ -198,19 +197,23 @@ public class PodTemplateTaskAdapter implements TaskAdapter
       return Optional.empty();
     }
     try {
-      return Optional.of(client.executeRequest(client -> client.v1().podTemplates().load(new File(podTemplateFile)).get()));
+      return Optional.of(Serialization.unmarshal(Files.newInputStream(new File(podTemplateFile).toPath()), PodTemplate.class));
     }
     catch (Exception e) {
       throw new ISE(e, "Failed to load pod template file for [%s] at [%s]", property, podTemplateFile);
     }
   }
 
-  private Collection<EnvVar> getEnv()
+  private Collection<EnvVar> getEnv(Task task)
   {
     return ImmutableList.of(
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_DIR_ENV)
-            .withValue(new File(taskConfig.getBaseTaskDirPaths().get(0)).getAbsolutePath())
+            .withValue(taskConfig.getBaseDir())
+            .build(),
+        new EnvVarBuilder()
+            .withName(DruidK8sConstants.TASK_ID_ENV)
+            .withValue(task.getId())
             .build(),
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_JSON_ENV)
@@ -221,9 +224,9 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     );
   }
 
-  private Map<String, String> getPodLabels(KubernetesTaskRunnerConfig config)
+  private Map<String, String> getPodLabels(KubernetesTaskRunnerConfig config, Task task)
   {
-    return getJobLabels(config);
+    return getJobLabels(config, task);
   }
 
   private Map<String, String> getPodTemplateAnnotations(Task task) throws IOException
@@ -238,11 +241,15 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .build();
   }
 
-  private Map<String, String> getJobLabels(KubernetesTaskRunnerConfig config)
+  private Map<String, String> getJobLabels(KubernetesTaskRunnerConfig config, Task task)
   {
     return ImmutableMap.<String, String>builder()
         .putAll(config.labels)
         .put(DruidK8sConstants.LABEL_KEY, "true")
+        .put(getDruidLabel(DruidK8sConstants.TASK_ID), task.getId())
+        .put(getDruidLabel(DruidK8sConstants.TASK_TYPE), task.getType())
+        .put(getDruidLabel(DruidK8sConstants.TASK_GROUP_ID), task.getGroupId())
+        .put(getDruidLabel(DruidK8sConstants.TASK_DATASOURCE), task.getDataSource())
         .build();
   }
 
@@ -255,5 +262,10 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .put(DruidK8sConstants.TASK_GROUP_ID, task.getGroupId())
         .put(DruidK8sConstants.TASK_DATASOURCE, task.getDataSource())
         .build();
+  }
+
+  private String getDruidLabel(String baseLabel)
+  {
+    return DruidK8sConstants.DRUID_LABEL_PREFIX + baseLabel;
   }
 }

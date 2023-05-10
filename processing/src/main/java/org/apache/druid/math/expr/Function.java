@@ -1950,7 +1950,7 @@ public interface Function extends NamedFunction
         castTo = ExpressionType.fromString(StringUtils.toUpperCase(y.asString()));
       }
       catch (IllegalArgumentException e) {
-        throw validationFailed("invalid type %s", y.asString());
+        throw validationFailed("Invalid type [%s]", y.asString());
       }
       return x.castTo(castTo);
     }
@@ -3054,7 +3054,6 @@ public interface Function extends NamedFunction
       if (arrayType == null) {
         arrayType = ExpressionTypeFactory.getInstance().ofArray(evaluated.type());
       }
-      ExpressionType.checkNestedArrayAllowed(arrayType);
       if (arrayType.getElementType().isNumeric() && evaluated.isNumericNull()) {
         out[i] = null;
       } else if (!evaluated.asArrayType().equals(arrayType)) {

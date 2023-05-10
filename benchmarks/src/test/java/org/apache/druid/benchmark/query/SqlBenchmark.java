@@ -39,10 +39,12 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -448,22 +450,14 @@ public class SqlBenchmark
     if (stringEncoding.startsWith("front-coded")) {
       String[] split = stringEncoding.split("-");
       int bucketSize = Integer.parseInt(split[2]);
-      encodingStrategy = new StringEncodingStrategy.FrontCoded(bucketSize);
+      encodingStrategy = new StringEncodingStrategy.FrontCoded(bucketSize, FrontCodedIndexed.V1);
     } else {
       encodingStrategy = new StringEncodingStrategy.Utf8();
     }
     final QueryableIndex index = segmentGenerator.generate(
         dataSegment,
         schemaInfo,
-        new IndexSpec(
-            null,
-            null,
-            encodingStrategy,
-            null,
-            null,
-            null,
-            null
-        ),
+        IndexSpec.builder().withStringDictionaryEncoding(encodingStrategy).build(),
         Granularities.NONE,
         rowsPerSegment
     );
@@ -487,7 +481,8 @@ public class SqlBenchmark
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
-        CatalogResolver.NULL_RESOLVER
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
   }
 

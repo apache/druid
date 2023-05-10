@@ -25,6 +25,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.DictionaryBuilding;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import java.util.ArrayList;
@@ -71,7 +72,7 @@ public class DictionaryBuildingSingleValueStringGroupByVectorColumnSelector impl
     int stateFootprintIncrease = 0;
 
     for (int i = startRow, j = keyOffset; i < endRow; i++, j += keySize) {
-      final String value = (String) vector[i];
+      final String value = DimensionHandlerUtils.convertObjectToString(vector[i]);
       final int dictId = reverseDictionary.getInt(value);
       if (dictId < 0) {
         final int nextId = dictionary.size();

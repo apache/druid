@@ -24,6 +24,7 @@ import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.apache.druid.segment.serde.NullValueIndexSupplier;
 
@@ -36,14 +37,14 @@ public class ColumnBuilder
   private final ColumnCapabilitiesImpl capabilitiesBuilder = ColumnCapabilitiesImpl.createDefault();
 
   @Nullable
-  private ColumnCapabilities handlerCapabilities = null;
-
-  @Nullable
   private Supplier<? extends BaseColumn> columnSupplier = null;
   @Nullable
   private ColumnIndexSupplier indexSupplier = NoIndexesColumnIndexSupplier.getInstance();
   @Nullable
   private SmooshedFileMapper fileMapper = null;
+
+  @Nullable
+  private ColumnFormat columnFormat = null;
 
   public ColumnCapabilitiesImpl getCapabilitiesBuilder()
   {
@@ -116,6 +117,13 @@ public class ColumnBuilder
     return this;
   }
 
+  public ColumnBuilder setNestedCommonFormatColumnSupplier(Supplier<? extends NestedCommonFormatColumn> columnSupplier)
+  {
+    checkColumnSupplierNotSet();
+    this.columnSupplier = columnSupplier;
+    return this;
+  }
+
   public ColumnBuilder setIndexSupplier(
       @Nullable ColumnIndexSupplier indexSupplier,
       boolean hasBitmapIndex,
@@ -147,9 +155,9 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setHandlerCapabilities(ColumnCapabilities handlerCapabilities)
+  public ColumnBuilder setColumnFormat(ColumnFormat columnFormat)
   {
-    this.handlerCapabilities = handlerCapabilities;
+    this.columnFormat = columnFormat;
     return this;
   }
 
@@ -157,7 +165,7 @@ public class ColumnBuilder
   {
     Preconditions.checkState(capabilitiesBuilder.getType() != null, "Type must be set.");
 
-    return new SimpleColumnHolder(capabilitiesBuilder, handlerCapabilities, columnSupplier, indexSupplier);
+    return new SimpleColumnHolder(capabilitiesBuilder, columnFormat, columnSupplier, indexSupplier);
   }
 
   private void checkColumnSupplierNotSet()

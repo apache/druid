@@ -64,7 +64,11 @@ appreciated.
 
 The [EXPLAIN PLAN](sql.md#explain-plan) functionality can help you understand how a given SQL query will
 be translated to native.
-EXPLAIN PLAN statements return a `RESOURCES` column that describes the resource being queried as well as a `PLAN` column that contains a JSON array of native queries that Druid will run.
+EXPLAIN PLAN statements return:
+- a `PLAN` column that contains a JSON array of native queries that Druid will run
+- a `RESOURCES` column that describes the resource being queried as well as a `PLAN` column that contains a JSON array of native queries that Druid will run
+- a `ATTRIBUTES` column that describes the attributes of a query, such as the statement type and target data source
+
 For example, consider the following query:
 
 ```sql
@@ -77,120 +81,142 @@ WHERE channel IN (SELECT page FROM wikipedia GROUP BY page ORDER BY COUNT(*) DES
 GROUP BY channel
 ```
 
-The EXPLAIN PLAN statement returns the following plan:
+The EXPLAIN PLAN statement returns the following result with plan, resources, and attributes information in it:
 
 ```json
 [
-  {
-    "query": {
-      "queryType": "topN",
-      "dataSource": {
-        "type": "join",
-        "left": {
-          "type": "table",
-          "name": "wikipedia"
-        },
-        "right": {
-          "type": "query",
-          "query": {
-            "queryType": "groupBy",
-            "dataSource": {
-              "type": "table",
-              "name": "wikipedia"
-            },
-            "intervals": {
-              "type": "intervals",
-              "intervals": [
-                "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-              ]
-            },
-            "granularity": {
-              "type": "all"
-            },
-            "dimensions": [
-              {
-                "type": "default",
-                "dimension": "page",
-                "outputName": "d0",
-                "outputType": "STRING"
-              }
-            ],
-            "aggregations": [
-              {
-                "type": "count",
-                "name": "a0"
-              }
-            ],
-            "limitSpec": {
-              "type": "default",
-              "columns": [
+  [
+    {
+      "query": {
+        "queryType": "topN",
+        "dataSource": {
+          "type": "join",
+          "left": {
+            "type": "table",
+            "name": "wikipedia"
+          },
+          "right": {
+            "type": "query",
+            "query": {
+              "queryType": "groupBy",
+              "dataSource": {
+                "type": "table",
+                "name": "wikipedia"
+              },
+              "intervals": {
+                "type": "intervals",
+                "intervals": [
+                  "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+                ]
+              },
+              "granularity": {
+                "type": "all"
+              },
+              "dimensions": [
                 {
-                  "dimension": "a0",
-                  "direction": "descending",
-                  "dimensionOrder": {
-                    "type": "numeric"
-                  }
+                  "type": "default",
+                  "dimension": "page",
+                  "outputName": "d0",
+                  "outputType": "STRING"
                 }
               ],
-              "limit": 10
-            },
-            "context": {
-              "sqlOuterLimit": 101,
-              "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
-              "useApproximateCountDistinct": false,
-              "useApproximateTopN": false
+              "aggregations": [
+                {
+                  "type": "count",
+                  "name": "a0"
+                }
+              ],
+              "limitSpec": {
+                "type": "default",
+                "columns": [
+                  {
+                    "dimension": "a0",
+                    "direction": "descending",
+                    "dimensionOrder": {
+                      "type": "numeric"
+                    }
+                  }
+                ],
+                "limit": 10
+              },
+              "context": {
+                "sqlOuterLimit": 101,
+                "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
+                "useApproximateCountDistinct": false,
+                "useApproximateTopN": false
+              }
             }
+          },
+          "rightPrefix": "j0.",
+          "condition": "(\"channel\" == \"j0.d0\")",
+          "joinType": "INNER"
+        },
+        "dimension": {
+          "type": "default",
+          "dimension": "channel",
+          "outputName": "d0",
+          "outputType": "STRING"
+        },
+        "metric": {
+          "type": "dimension",
+          "ordering": {
+            "type": "lexicographic"
           }
         },
-        "rightPrefix": "j0.",
-        "condition": "(\"channel\" == \"j0.d0\")",
-        "joinType": "INNER"
-      },
-      "dimension": {
-        "type": "default",
-        "dimension": "channel",
-        "outputName": "d0",
-        "outputType": "STRING"
-      },
-      "metric": {
-        "type": "dimension",
-        "ordering": {
-          "type": "lexicographic"
+        "threshold": 101,
+        "intervals": {
+          "type": "intervals",
+          "intervals": [
+            "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+          ]
+        },
+        "granularity": {
+          "type": "all"
+        },
+        "aggregations": [
+          {
+            "type": "count",
+            "name": "a0"
+          }
+        ],
+        "context": {
+          "sqlOuterLimit": 101,
+          "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
+          "useApproximateCountDistinct": false,
+          "useApproximateTopN": false
         }
       },
-      "threshold": 101,
-      "intervals": {
-        "type": "intervals",
-        "intervals": [
-          "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-        ]
-      },
-      "granularity": {
-        "type": "all"
-      },
-      "aggregations": [
+      "signature": [
         {
-          "type": "count",
-          "name": "a0"
+          "name": "d0",
+          "type": "STRING"
+        },
+        {
+          "name": "a0",
+          "type": "LONG"
         }
       ],
-      "context": {
-        "sqlOuterLimit": 101,
-        "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
-        "useApproximateCountDistinct": false,
-        "useApproximateTopN": false
-      }
-    },
-    "signature": [
-      {
-        "name": "d0",
-        "type": "STRING"
-      },
-      {
-        "name": "a0",
-        "type": "LONG"
-      }
-    ]
+      "columnMappings": [
+        {
+          "queryColumn": "d0",
+          "outputColumn": "channel"
+        },
+        {
+          "queryColumn": "a0",
+          "outputColumn": "EXPR$1"
+        }
+      ]
+    }
+  ],
+  [
+    {
+      "name": "wikipedia",
+      "type": "DATASOURCE"
+    }
+  ],
+  {
+    "statementType": "SELECT",
+    "targetDataSource": null
   }
 ]
 ```

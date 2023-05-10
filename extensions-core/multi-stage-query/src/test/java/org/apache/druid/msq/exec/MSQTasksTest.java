@@ -31,6 +31,8 @@ import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
+import org.apache.druid.msq.indexing.error.TooManyAttemptsForJob;
+import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
@@ -142,6 +144,53 @@ public class MSQTasksTest
   }
 
   @Test
+  public void test_makeErrorReport_controllerWithTooManyAttemptsForJob_workerPreferred()
+  {
+    final MSQErrorReport controllerReport = MSQTasks.makeErrorReport(
+        WORKER_ID,
+        WORKER_HOST,
+        MSQErrorReport.fromFault(WORKER_ID, WORKER_HOST, null, new TooManyAttemptsForJob(1, 1, "xxx", "xxx")),
+        null
+    );
+
+    final MSQErrorReport workerReport = MSQTasks.makeErrorReport(
+        WORKER_ID,
+        WORKER_HOST,
+        MSQErrorReport.fromFault(WORKER_ID, WORKER_HOST, null, new TooManyColumnsFault(1, 10)),
+        null
+    );
+
+    Assert.assertEquals(
+        workerReport,
+        MSQTasks.makeErrorReport(WORKER_ID, WORKER_HOST, controllerReport, workerReport)
+    );
+  }
+
+  @Test
+  public void test_makeErrorReport_controllerWithTooManyAttemptsForWorker_workerPreferred()
+  {
+    final MSQErrorReport controllerReport = MSQTasks.makeErrorReport(
+        WORKER_ID,
+        WORKER_HOST,
+        MSQErrorReport.fromFault(WORKER_ID, WORKER_HOST, null, new TooManyAttemptsForWorker(1, "xxx", 1, "xxx")),
+        null
+    );
+
+    final MSQErrorReport workerReport = MSQTasks.makeErrorReport(
+        WORKER_ID,
+        WORKER_HOST,
+        MSQErrorReport.fromFault(WORKER_ID, WORKER_HOST, null, new TooManyColumnsFault(1, 10)),
+        null
+    );
+
+    Assert.assertEquals(
+        workerReport,
+        MSQTasks.makeErrorReport(WORKER_ID, WORKER_HOST, controllerReport, workerReport)
+    );
+  }
+
+
+  @Test
   public void test_getWorkerFromTaskId()
   {
     Assert.assertEquals(1, MSQTasks.workerFromTaskId("xxxx-worker1_0"));
@@ -183,7 +232,7 @@ public class MSQTasksTest
     }
     catch (Exception e) {
       Assert.assertEquals(
-          MSQFaultUtils.generateMessageWithErrorCode(new TaskStartTimeoutFault(numTasks + 1)),
+          MSQFaultUtils.generateMessageWithErrorCode(new TaskStartTimeoutFault(5, numTasks + 1, 5000)),
           MSQFaultUtils.generateMessageWithErrorCode(((MSQException) e.getCause()).getFault())
       );
     }

@@ -32,7 +32,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
-import org.apache.druid.collections.Releaser;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -59,6 +58,7 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
+import java.io.Closeable;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -243,9 +243,9 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
                                       try (
                                           // These variables are used to close releasers automatically.
                                           @SuppressWarnings("unused")
-                                          Releaser bufferReleaser = mergeBufferHolder.increment();
+                                          Closeable bufferReleaser = mergeBufferHolder.increment();
                                           @SuppressWarnings("unused")
-                                          Releaser grouperReleaser = grouperHolder.increment()
+                                          Closeable grouperReleaser = grouperHolder.increment()
                                       ) {
                                         // Return true if OK, false if resources were exhausted.
                                         return input.run(queryPlusForRunners, responseContext)

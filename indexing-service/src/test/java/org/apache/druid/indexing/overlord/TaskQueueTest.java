@@ -412,10 +412,10 @@ public class TaskQueueTest extends IngestionTestBase
         TaskLocation.create("worker", 1, 2)
     ), workerHolder);
     while (!taskRunner.getRunningTasks()
-                      .stream()
-                      .map(TaskRunnerWorkItem::getTaskId)
-                      .collect(Collectors.toList())
-                      .contains(task.getId())) {
+        .stream()
+        .map(TaskRunnerWorkItem::getTaskId)
+        .collect(Collectors.toList())
+        .contains(task.getId())) {
       Thread.sleep(100);
     }
     taskQueue.shutdown(task.getId(), "shutdown");
@@ -435,7 +435,7 @@ public class TaskQueueTest extends IngestionTestBase
     HttpRemoteTaskRunnerTest.TestDruidNodeDiscovery druidNodeDiscovery = new HttpRemoteTaskRunnerTest.TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
-            .andReturn(druidNodeDiscovery);
+        .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
     TaskStorage taskStorageMock = EasyMock.createStrictMock(TaskStorage.class);
     for (String taskId : runningTasks) {
@@ -520,7 +520,7 @@ public class TaskQueueTest extends IngestionTestBase
     }
 
     @Override
-    public void cleanUp(TaskToolbox toolbox, boolean failure)
+    public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus)
     {
       // do nothing
     }

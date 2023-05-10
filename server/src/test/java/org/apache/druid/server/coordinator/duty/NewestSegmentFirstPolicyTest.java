@@ -699,7 +699,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsNothingAsSegmentsWasCompactedAndHaveSameSegmentGranularityAndSameTimezone()
   {
     // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
+    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -732,7 +732,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsNothingAsSegmentsWasCompactedAndHaveSameSegmentGranularityInLastCompactionState()
   {
     // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
+    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -765,7 +765,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentSegmentGranularity()
   {
     // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
+    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -808,7 +808,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentSegmentGranularityInLastCompactionState()
   {
     // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
+    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -851,7 +851,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentTimezone()
   {
     // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
+    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -903,7 +903,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentOrigin()
   {
     // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
+    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -954,7 +954,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentRollup()
   {
     // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
+    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -1014,7 +1014,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentQueryGranularity()
   {
     // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
+    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -1074,7 +1074,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentDimensions()
   {
     // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
+    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -1173,7 +1173,7 @@ public class NewestSegmentFirstPolicyTest
   {
     NullHandling.initializeForTests();
     // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
+    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -1297,7 +1297,7 @@ public class NewestSegmentFirstPolicyTest
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
     );
     // Same indexSpec as what is set in the auto compaction config
-    Map<String, Object> indexSpec = mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {});
+    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -1446,7 +1446,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsAsCompactionStateChangedWithCompactedStateHasSameSegmentGranularity()
   {
     // Different indexSpec as what is set in the auto compaction config
-    IndexSpec newIndexSpec = new IndexSpec(new ConciseBitmapSerdeFactory(), null, null, null);
+    IndexSpec newIndexSpec = IndexSpec.builder().withBitmapSerdeFactory(new ConciseBitmapSerdeFactory()).build();
     Map<String, Object> newIndexSpecMap = mapper.convertValue(newIndexSpec, new TypeReference<Map<String, Object>>() {});
     PartitionsSpec partitionsSpec = NewestSegmentFirstIterator.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null, null, null));
 
@@ -1508,7 +1508,7 @@ public class NewestSegmentFirstPolicyTest
                 null,
                 null,
                 null,
-                mapper.convertValue(new IndexSpec(), new TypeReference<Map<String, Object>>() {}),
+                IndexSpec.DEFAULT.asMap(mapper),
                 null
             )
         )
@@ -1528,7 +1528,7 @@ public class NewestSegmentFirstPolicyTest
                 1000L,
                 null,
                 partitionsSpec,
-                new IndexSpec(),
+                IndexSpec.DEFAULT,
                 null,
                 null,
                 null,
@@ -1563,7 +1563,7 @@ public class NewestSegmentFirstPolicyTest
                 1000L,
                 null,
                 partitionsSpec,
-                new IndexSpec(),
+                IndexSpec.DEFAULT,
                 null,
                 null,
                 null,

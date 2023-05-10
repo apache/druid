@@ -25,9 +25,9 @@ import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -174,7 +174,7 @@ public class BatchAppenderatorsTest
           maxRowsInMemory,
           maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
           skipBytesInMemoryOverheadCheck,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           0,
           false,
           0L,
@@ -567,23 +567,9 @@ public class BatchAppenderatorsTest
         TaskConfig.BatchProcessingMode mode
     )
     {
-      TaskConfig config = new TaskConfig(
-          null,
-          null,
-          null,
-          null,
-          null,
-          false,
-          null,
-          null,
-          null,
-          false,
-          false,
-          mode.name(),
-          null,
-          false,
-          null
-      );
+      TaskConfig config = new TaskConfigBuilder()
+          .setBatchProcessingMode(mode.name())
+          .build();
       return new TaskToolbox.Builder()
           .config(config)
           .joinableFactory(NoopJoinableFactory.INSTANCE)
@@ -596,7 +582,6 @@ public class BatchAppenderatorsTest
           .appenderatorsManager(new TestAppenderatorsManager())
           .taskLogPusher(null)
           .attemptId("1")
-          .dirTracker(new TaskStorageDirTracker(config))
           .build();
 
     }

@@ -20,27 +20,16 @@ import type { IconName } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { Column } from 'druid-query-toolkit';
 
+export function columnToSummary(column: Column): string {
+  const lines: string[] = [column.name];
+  if (column.sqlType) lines.push(`SQL type: ${column.sqlType}`);
+  if (column.nativeType) lines.push(`Native type: ${column.nativeType}`);
+  return lines.join('\n');
+}
+
 function getEffectiveColumnType(column: Column): string | undefined {
   if (column.sqlType === 'TIMESTAMP') return column.sqlType;
   return column.nativeType || column.sqlType;
-}
-
-export function sqlTypeFromDruid(druidType: string): string {
-  druidType = druidType.toLowerCase();
-  switch (druidType) {
-    case 'string':
-      return 'VARCHAR';
-
-    case 'long':
-      return 'BIGINT';
-
-    case 'float':
-    case 'double':
-      return druidType.toUpperCase();
-
-    default:
-      return 'COMPLEX';
-  }
 }
 
 export function columnToIcon(column: Column): IconName | undefined {
@@ -60,23 +49,34 @@ export function dataTypeToIcon(dataType: string): IconName {
       return IconNames.FONT;
 
     case 'BIGINT':
+    case 'LONG':
+      return IconNames.NUMERICAL;
+
     case 'DECIMAL':
     case 'REAL':
-    case 'LONG':
     case 'FLOAT':
     case 'DOUBLE':
-      return IconNames.NUMERICAL;
+      return IconNames.FLOATING_POINT;
 
     case 'ARRAY<STRING>':
       return IconNames.ARRAY_STRING;
 
     case 'ARRAY<LONG>':
+      return IconNames.ARRAY_NUMERIC;
+
     case 'ARRAY<FLOAT>':
     case 'ARRAY<DOUBLE>':
-      return IconNames.ARRAY_NUMERIC;
+      return IconNames.ARRAY_FLOATING_POINT;
 
     case 'COMPLEX<JSON>':
       return IconNames.DIAGRAM_TREE;
+
+    case 'COMPLEX<VARIANCE>':
+      return IconNames.ALIGNMENT_HORIZONTAL_CENTER;
+
+    case 'COMPLEX<IPADDRESS>':
+    case 'COMPLEX<IPPREFIX>':
+      return IconNames.IP_ADDRESS;
 
     case 'NULL':
       return IconNames.CIRCLE;

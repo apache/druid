@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import org.joda.time.Period;
 
 import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,12 @@ public class KubernetesTaskRunnerConfig
   @JsonProperty
   public boolean debugJobs = false;
 
+  /**
+   * Deprecated, please specify adapter type runtime property instead
+   *
+   * I.E `druid.indexer.runner.k8s.adapter.type: overlordMultiContainer`
+   */
+  @Deprecated
   @JsonProperty
   public boolean sidecarSupport = false;
 
@@ -82,8 +89,15 @@ public class KubernetesTaskRunnerConfig
   public Period k8sjobLaunchTimeout = new Period("PT1H");
 
   @JsonProperty
+  // ForkingTaskRunner inherits the monitors from the MM, in k8s mode
+  // the peon inherits the monitors from the overlord, so if someone specifies
+  // a TaskCountStatsMonitor in the overlord for example, the peon process
+  // fails because it can not inject this monitor in the peon process.
+  public List<String> peonMonitors = new ArrayList<>();
+
+  @JsonProperty
   @NotNull
-  public List<String> javaOptsArray;
+  public List<String> javaOptsArray = new ArrayList<>();
 
   @JsonProperty
   @NotNull
