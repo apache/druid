@@ -23,11 +23,7 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Stale bot action
-        uses: stale[bot]@v4
+      - uses: actions/stale@v8
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           stale-issue-message: |
