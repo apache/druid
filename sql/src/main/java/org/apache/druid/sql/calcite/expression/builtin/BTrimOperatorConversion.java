@@ -40,7 +40,7 @@ public class BTrimOperatorConversion implements SqlOperatorConversion
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
       .returnTypeCascadeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
-      .requiredOperands(1)
+      .requiredOperandCount(1)
       .build();
 
   @Override

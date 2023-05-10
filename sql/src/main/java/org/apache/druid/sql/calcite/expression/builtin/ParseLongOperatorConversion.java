@@ -40,7 +40,7 @@ public class ParseLongOperatorConversion implements SqlOperatorConversion
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER)
       .returnTypeCascadeNullable(SqlTypeName.BIGINT)
       .functionCategory(SqlFunctionCategory.STRING)
-      .requiredOperands(1)
+      .requiredOperandCount(1)
       .build();
 
   @Override

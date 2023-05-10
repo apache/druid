@@ -154,18 +154,19 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                        + "  APPROX_COUNT_DISTINCT(SUBSTRING(dim2, 1, 1)),\n" // on extractionFn, using generic A.C.D.
                        + "  COUNT(DISTINCT SUBSTRING(dim2, 1, 1) || 'x'),\n" // on expression, using COUNT DISTINCT
                        + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1, 21, 'HLL_8'),\n" // on native HllSketch column
-                       + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1)\n" // on native HllSketch column
+                       + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1),\n" // on native HllSketch column
+                       + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1, CAST(21 AS BIGINT))\n" // also native column
                        + "FROM druid.foo";
 
     final List<Object[]> expectedResults;
 
     if (NullHandling.replaceWithDefault()) {
       expectedResults = ImmutableList.of(
-          new Object[]{6L, 2L, 2L, 1L, 2L, 5L, 5L}
+          new Object[]{6L, 2L, 2L, 1L, 2L, 5L, 5L, 5L}
       );
     } else {
       expectedResults = ImmutableList.of(
-          new Object[]{6L, 2L, 2L, 1L, 1L, 5L, 5L}
+          new Object[]{6L, 2L, 2L, 1L, 1L, 5L, 5L, 5L}
       );
     }
 
@@ -229,7 +230,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               ROUND
                           ),
                           new HllSketchMergeAggregatorFactory("a5", "hllsketch_dim1", 21, "HLL_8", null, ROUND),
-                          new HllSketchMergeAggregatorFactory("a6", "hllsketch_dim1", null, null, null, ROUND)
+                          new HllSketchMergeAggregatorFactory("a6", "hllsketch_dim1", null, null, null, ROUND),
+                          new HllSketchMergeAggregatorFactory("a7", "hllsketch_dim1", 21, "HLL_4", null, ROUND)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)

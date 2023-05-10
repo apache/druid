@@ -38,7 +38,7 @@ public class RegexpExtractOperatorConversion implements SqlOperatorConversion
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("REGEXP_EXTRACT")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER)
-      .requiredOperands(2)
+      .requiredOperandCount(2)
       .literalOperands(1, 2)
       .returnTypeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)

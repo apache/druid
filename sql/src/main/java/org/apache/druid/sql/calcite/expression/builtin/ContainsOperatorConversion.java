@@ -80,7 +80,7 @@ public class ContainsOperatorConversion extends DirectOperatorConversion
     return OperatorConversions
         .operatorBuilder(StringUtils.toUpperCase(functionName))
         .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
-        .requiredOperands(2)
+        .requiredOperandCount(2)
         .literalOperands(1)
         .returnTypeNonNull(SqlTypeName.BOOLEAN)
         .functionCategory(SqlFunctionCategory.STRING)

@@ -43,7 +43,7 @@ public class SubstringOperatorConversion implements SqlOperatorConversion
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER)
       .functionCategory(SqlFunctionCategory.STRING)
       .returnTypeInference(ReturnTypes.ARG0)
-      .requiredOperands(2)
+      .requiredOperandCount(2)
       .build();
 
   @Override

@@ -207,7 +207,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
         + "APPROX_QUANTILE_DS(qsketch_m1, 0.01),\n"
         + "APPROX_QUANTILE_DS(qsketch_m1, 0.5, 64),\n"
         + "APPROX_QUANTILE_DS(qsketch_m1, 0.98, 256),\n"
-        + "APPROX_QUANTILE_DS(qsketch_m1, 0.99),\n"
+        + "APPROX_QUANTILE_DS(qsketch_m1, CAST(0.99 AS DOUBLE)),\n"
         + "APPROX_QUANTILE_DS(qsketch_m1, 0.99) FILTER(WHERE dim1 = 'abc'),\n"
         + "APPROX_QUANTILE_DS(qsketch_m1, 0.999) FILTER(WHERE dim1 <> 'abc'),\n"
         + "APPROX_QUANTILE_DS(qsketch_m1, 0.999) FILTER(WHERE dim1 = 'abc')\n"
