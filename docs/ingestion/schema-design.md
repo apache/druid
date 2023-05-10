@@ -244,19 +244,20 @@ You should query for the number of ingested rows with:
 
 Druid can infer the schema for your data in one of two ways:
 
-- [Type-aware schema discovery (experimental)](#type-aware-schema-discovery-experimental) where Druid infers the schema and type for your data. Type-aware schema discovery is experimental currently available for native batch and streaming ingestion.
+- [Type-aware schema discovery (experimental)](#type-aware-schema-discovery-experimental) where Druid infers the schema and type for your data. Type-aware schema discovery is an experimental feature currently available for native batch and streaming ingestion.
 - [String-based schema discovery](#string-based-schema-discovery) where all the discovered columns are typed as either native string or multi-value string columns.
 
 #### Type-aware schema discovery
 
-> Note that using type-aware schema discovery can impact downstream BI tools depending on how they handle ARRAY typed columns..
+> Note that using type-aware schema discovery can impact downstream BI tools depending on how they handle ARRAY typed columns.
 
 You can have Druid infer the schema and types for your data partially or fully by setting `dimensionsSpec.useSchemaDiscovery` to `true` and defining some or no dimensions in the dimensions list. 
 
 When performing type-aware schema discovery, Druid can discover all of the columns of your input data (that aren't in the exclusion list), but the behavior depends on the source data:
 
-- For primitive types, Druid ingests them as the most appropriate native Druid type, either string, double or long. 
-- For input formats with native boolean types will be ingested as strings or longs depending on the value of `druid.expressions.useStrictBooleans`.
+- **Primitive types**: Ingested as the most appropriate native Druid type, either string, double or long. 
+- **Native boolean types**:  Ingested as strings or longs depending on the value of `druid.expressions.useStrictBooleans`.
+- For input formats with native boolean types, Druid ingests them as strings or longs depending on the value of `druid.expressions.useStrictBooleans`.
 - For arrays, the data gets ingested as an array typed column: `ARRAY<STRING>`, `ARRAY<DOUBLE>`, or `ARRAY<LONG>`. You can then interact with these columns using ARRAY functions as well as UNNEST.
 - For mixed types, complex nested structures, and arrays of complex nested structures, Druid ingests the column as the least restrictive data type.
 
@@ -273,12 +274,12 @@ Druid coerces primitives and arrays of primitive types into the native Druid str
 
 #### Migrating to type-aware schema discovery
 
-If you previously used string-based schema discovery and want to migrate to type-aware schema discovery, you'll need to do the following:
+If you previously used string-based schema discovery and want to migrate to type-aware schema discovery, do the following:
 
-- Update any queries that use multi-value dimensions (MVDs) to use UNNEST in conjunction with other functions so that no  MVD behavior is being relied upon. Type-aware schema discovery generates ARRAY typed columns instead of MVDs, so queries that use any MVD features will fail.
+- Update any queries that use multi-value dimensions (MVDs) to use UNNEST in conjunction with other functions so that no MVD behavior is being relied upon. Type-aware schema discovery generates ARRAY typed columns instead of MVDs, so queries that use any MVD features will fail.
 - Be aware of mixed typed inputs and test how type-aware schema discovery handles them. Druid attempts to cast them as the least restrictive type.
-- If you notice issues with numeric types, you may need to explicitly cast them. Generally though, Druid will handle the coercion for you.
-- Update your dimension exclusion list and add any nested columns if you want to continue to exclude them. String-based schema discovery automatically ignored nested columns, but type-aware schema discovery will ingest them.
+- If you notice issues with numeric types, you may need to explicitly cast them. Generally, Druid handles the coercion for you.
+- Update your dimension exclusion list and add any nested columns if you want to continue to exclude them. String-based schema discovery automatically ignores nested columns, but type-aware schema discovery will ingest them.
 
 ### Including the same column as a dimension and a metric
 
