@@ -35,7 +35,10 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.FalseFilter;
+import org.apache.druid.segment.filter.OrFilter;
+import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
@@ -75,13 +78,29 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
 
   private static final InlineDataSource INDEXED_TABLE_DS = InlineDataSource.fromIterable(
       ImmutableList.of(
+          new Object[]{"El Salvador"},
+          new Object[]{"India"},
           new Object[]{"Mexico"},
           new Object[]{"Norway"},
-          new Object[]{"El Salvador"},
-          new Object[]{"United States"},
           new Object[]{"United States"}
+
       ),
       RowSignature.builder().add("country", ColumnType.STRING).build()
+  );
+
+  private static final InlineDataSource INDEXED_TABLE_DS_THREE_COLS = InlineDataSource.fromIterable(
+      ImmutableList.of(
+          new Object[]{"El Salvador", 1, 1.0},
+          new Object[]{"India", 2, 2.0},
+          new Object[]{"Mexico", 3, 3.0},
+          new Object[]{"Norway", 4, 4.0},
+          new Object[]{"United States", 5, 5.0}
+      ),
+      RowSignature.builder()
+                  .add("country", ColumnType.STRING)
+                  .add("m1", ColumnType.LONG)
+                  .add("m2", ColumnType.DOUBLE)
+                  .build()
   );
 
   private static final InlineDataSource NULL_INDEXED_TABLE_DS = InlineDataSource.fromIterable(
@@ -96,6 +115,14 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
       INDEXED_TABLE_DS.rowAdapter(),
       INDEXED_TABLE_DS.getRowSignature(),
       ImmutableSet.of("country"),
+      DateTimes.nowUtc().toString()
+  );
+
+  private static final IndexedTable TEST_INDEXED_TABLE_THREE_COLS = new RowBasedIndexedTable<>(
+      INDEXED_TABLE_DS_THREE_COLS.getRowsAsList(),
+      INDEXED_TABLE_DS_THREE_COLS.rowAdapter(),
+      INDEXED_TABLE_DS_THREE_COLS.getRowSignature(),
+      ImmutableSet.of("country", "m1", "m2"),
       DateTimes.nowUtc().toString()
   );
 
@@ -621,6 +648,62 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
         Pair.of(
             ImmutableList.of(),
             clauses
+        ),
+        conversion
+    );
+  }
+
+  @Test
+  public void test_convertJoinsToPartialFiltersMultipleCondtions()
+  {
+    JoinableClause joinableClause = new JoinableClause(
+        "j.",
+        new IndexedTableJoinable(TEST_INDEXED_TABLE_THREE_COLS),
+        JoinType.INNER,
+        JoinConditionAnalysis.forExpression("x == \"j.country\" && y == \"j.m1\"", "j.", ExprMacroTable.nil())
+    );
+    final Pair<List<Filter>, List<JoinableClause>> conversion = JoinableFactoryWrapper.convertJoinsToFilters(
+        ImmutableList.of(joinableClause),
+        ImmutableSet.of("x", "y"),
+        Integer.MAX_VALUE
+    );
+
+    Assert.assertEquals(
+        Pair.of(
+            ImmutableList.of(new OrFilter(ImmutableList.of(
+                new AndFilter(
+                    ImmutableList.of(
+                        new SelectorFilter("x", "El Salvador"),
+                        new SelectorFilter("y", "1")
+                    )
+                ),
+                new AndFilter(
+                    ImmutableList.of(
+                        new SelectorFilter("x", "India"),
+                        new SelectorFilter("y", "2")
+                    )
+                ),
+                new AndFilter(
+                    ImmutableList.of(
+                        new SelectorFilter("x", "Mexico"),
+                        new SelectorFilter("y", "3")
+                    )
+                ),
+                new AndFilter(
+                    ImmutableList.of(
+                        new SelectorFilter("x", "Norway"),
+                        new SelectorFilter("y", "4")
+                    )
+                ),
+                new AndFilter(
+                    ImmutableList.of(
+                        new SelectorFilter("x", "United States"),
+                        new SelectorFilter("y", "5")
+                    )
+                )
+            ))),
+            ImmutableList.of()
+            // the joinable clause remains intact since we've duplicates in country column
         ),
         conversion
     );
