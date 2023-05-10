@@ -806,4 +806,13 @@
     <!-- seems not applicable to plugin -->
     <cve>CVE-2022-45048</cve>
   </suppress>
+  <suppress>
+    <notes><![CDATA[
+     file name: hadoop-client-runtime-3.3.5.jar
+     ]]></notes>
+    <!-- this one is windows only? https://nvd.nist.gov/vuln/detail/CVE-2023-25612 -->
+    <cve>CVE-2022-26612</cve>
+    <!-- this one seems to apply to backend server? https://nvd.nist.gov/vuln/detail/CVE-2023-25613 -->
+    <cve>CVE-2023-25613</cve>
+  </suppress>
 </suppressions>
