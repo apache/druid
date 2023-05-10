@@ -78,10 +78,10 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
 
   private static final InlineDataSource INDEXED_TABLE_DS = InlineDataSource.fromIterable(
       ImmutableList.of(
-          new Object[]{"El Salvador"},
-          new Object[]{"India"},
           new Object[]{"Mexico"},
           new Object[]{"Norway"},
+          new Object[]{"El Salvador"},
+          new Object[]{"United States"},
           new Object[]{"United States"}
 
       ),
