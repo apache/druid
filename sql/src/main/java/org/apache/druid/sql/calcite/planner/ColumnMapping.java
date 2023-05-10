@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

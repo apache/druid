@@ -368,7 +368,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testGroupBySomeFieldOnStringColumnWithFilterExpectedType()
+  public void testGroupBySomeFieldOnStringColumnWithFilterExpectedTypeLong()
   {
     List<String> vals = new ArrayList<>();
     vals.add("100");
@@ -390,6 +390,64 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
         groupQuery,
         ImmutableList.of(
             new Object[]{100L, 2L}
+        ),
+        false,
+        true
+    );
+  }
+
+  @Test
+  public void testGroupBySomeFieldOnStringColumnWithFilterExpectedTypeDouble()
+  {
+    List<String> vals = new ArrayList<>();
+    vals.add("100");
+    vals.add("200");
+    vals.add("300");
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0", ColumnType.DOUBLE))
+                                          .setVirtualColumns(new NestedFieldVirtualColumn("dim", "$", "v0", ColumnType.LONG))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .setDimFilter(new InDimFilter("v0", vals, null))
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{100.0, 2L}
+        ),
+        false,
+        true
+    );
+  }
+
+  @Test
+  public void testGroupBySomeFieldOnStringColumnWithFilterExpectedTypeFloat()
+  {
+    List<String> vals = new ArrayList<>();
+    vals.add("100");
+    vals.add("200");
+    vals.add("300");
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0", ColumnType.FLOAT))
+                                          .setVirtualColumns(new NestedFieldVirtualColumn("dim", "$", "v0", ColumnType.LONG))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .setDimFilter(new InDimFilter("v0", vals, null))
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{100f, 2L}
         ),
         false,
         true
@@ -603,8 +661,10 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
       final Object[] resultRow = results.get(i).getArray();
       Assert.assertEquals(expected.get(i).length, resultRow.length);
       for (int j = 0; j < resultRow.length; j++) {
-        if (rowSignature.getColumnType(j).map(t -> t.anyOf(ValueType.DOUBLE, ValueType.FLOAT)).orElse(false)) {
+        if (rowSignature.getColumnType(j).map(t -> t.is(ValueType.DOUBLE)).orElse(false)) {
           Assert.assertEquals((Double) expected.get(i)[j], (Double) resultRow[j], 0.01);
+        } else if (rowSignature.getColumnType(j).map(t -> t.is(ValueType.FLOAT)).orElse(false)) {
+          Assert.assertEquals((Float) expected.get(i)[j], (Float) resultRow[j], 0.01);
         } else {
           Assert.assertEquals(expected.get(i)[j], resultRow[j]);
         }

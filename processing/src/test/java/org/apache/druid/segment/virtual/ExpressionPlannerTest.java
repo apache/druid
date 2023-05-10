@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.query.expression.NestedDataExpressions;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -824,7 +823,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
             ExpressionPlan.Trait.VECTORIZABLE
         )
     );
-    Assert.assertEquals(NestedDataExpressions.TYPE, thePlan.getOutputType());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, thePlan.getOutputType());
     ColumnCapabilities inferred = thePlan.inferColumnCapabilities(
         ExpressionType.toColumnType(thePlan.getOutputType())
     );

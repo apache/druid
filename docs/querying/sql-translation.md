@@ -195,6 +195,16 @@ The EXPLAIN PLAN statement returns the following result with plan, resources, an
           "name": "a0",
           "type": "LONG"
         }
+      ],
+      "columnMappings": [
+        {
+          "queryColumn": "d0",
+          "outputColumn": "channel"
+        },
+        {
+          "queryColumn": "a0",
+          "outputColumn": "EXPR$1"
+        }
       ]
     }
   ],
