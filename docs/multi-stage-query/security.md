@@ -50,8 +50,8 @@ SQL-based ingestion](./api.md).
 
 Depending on what a user is trying to do, they might also need the following permissions:
 
-- `INSERT` or `REPLACE` queries: Users must have READ DATASOURCE permission on the output datasource.
-- `SELECT` queries: Users must have read permissions on the `__query_select` datasource, which is a stub datasource that gets created.
+- `INSERT` or `REPLACE` queries: Users must have DATASOURCE READ permission on the output datasource.
+- `SELECT` queries: Users must have READ permission on the `__query_select` datasource, which is a stub datasource that gets created.
   
 
 
