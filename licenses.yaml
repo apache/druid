@@ -178,7 +178,7 @@ name: AWS SDK for Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.12.37
+version: 1.12.317
 libraries:
   - com.amazonaws: aws-java-sdk-core
   - com.amazonaws: aws-java-sdk-ec2
@@ -950,6 +950,16 @@ libraries:
 
 ---
 
+name: io.swagger swagger-annotations
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 2.8.6
+libraries:
+  - com.google.code.gson: gson
+
+---
+
 name: io.prometheus simpleclient_httpserver
 license_category: binary
 module: extensions/druid-kubernetes-extensions
@@ -1242,7 +1252,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.79.Final
+version: 4.1.86.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -2013,7 +2023,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.40.v20210413
+version: 9.4.48.v20220622
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -3873,9 +3883,19 @@ name: Gson
 license_category: binary
 module: extensions/protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.8.6
+version: 2.8.9
 libraries:
   - com.google.code.gson: gson
+
+---
+
+name: j2objc
+license_category: binary
+module: extensions/protobuf-extensions
+license_name: Apache License version 2.0
+version: 1.3
+libraries:
+  - com.google.j2objc: j2objc-annotations
 
 ---
 
@@ -3990,7 +4010,7 @@ name: Protocol Buffers
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 3.11.0
+version: 3.21.7
 copyright: Google, Inc.
 license_file_path:
   - licenses/bin/protobuf-java.BSD3
@@ -4143,7 +4163,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.3.3
+version: 42.4.1
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4155,7 +4175,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.3.3
+version: 42.4.1
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4167,7 +4187,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.3.3
+version: 42.4.1
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4179,7 +4199,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 3.11.0
+version: 3.21.7
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
