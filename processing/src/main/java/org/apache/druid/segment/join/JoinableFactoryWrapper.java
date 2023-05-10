@@ -28,15 +28,12 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.Filters;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -147,12 +144,16 @@ public class JoinableFactoryWrapper
       final Set<String> rightPrefixes
   )
   {
+    // This optimization kicks in when there is exactly 1 equijoin
+    // The reason being that getNonNullColumnValues uses a TreeSet for handling duplicates
+    // and does not return values in order.
+    // In case TreeSet if replaced by a LinkedHashSet, duplicates are not handled correctly
+    // and resulting ordering is improper.
+    // Considering these joins are converted to filters only when there is 1 equijoin
     if (clause.getJoinType() == JoinType.INNER
         && clause.getCondition().getNonEquiConditions().isEmpty()
-        && clause.getCondition().getEquiConditions().size() > 0) {
+        && clause.getCondition().getEquiConditions().size() == 1) {
       final List<Filter> filters = new ArrayList<>();
-      // Creating a map that will store for each index the filters that needs to be AND ed
-      final Map<Integer, List<Filter>> filterMap = new HashMap<>();
       int numValues = maxNumFilterValues;
       // if the right side columns are required, the clause cannot be fully converted
       boolean joinClauseFullyConverted = requiredColumns.stream().noneMatch(clause::includesColumn);
@@ -183,21 +184,6 @@ public class JoinableFactoryWrapper
         }
 
         numValues -= columnValuesWithUniqueFlag.getColumnValues().size();
-        // For each column value which are received in order we increment the index
-        // and add it in the appropriate index in the map
-        int c = 0;
-        for (String val : columnValuesWithUniqueFlag.getColumnValues()) {
-          final Filter currentSelFilter = Filters.toFilter(new SelectorDimFilter(leftColumn, val, null, null));
-          List<Filter> filterList = filterMap.get(c);
-          if (filterList == null) {
-            filterList = new ArrayList<Filter>();
-            filterList.add(currentSelFilter);
-            filterMap.put(c, filterList);
-          } else {
-            filterList.add(currentSelFilter);
-          }
-          c++;
-        }
         if (clause.getCondition().getEquiConditions().size() == 1) {
           filters.add(Filters.toFilter(new InDimFilter(leftColumn, columnValuesWithUniqueFlag.getColumnValues())));
         }
@@ -205,14 +191,7 @@ public class JoinableFactoryWrapper
           joinClauseFullyConverted = false;
         }
       }
-      if (clause.getCondition().getEquiConditions().size() == 1) {
-        return new JoinClauseToFilterConversion(Filters.maybeAnd(filters).orElse(null), joinClauseFullyConverted);
-      } else {
-        for (Map.Entry<Integer, List<Filter>> entry : filterMap.entrySet()) {
-          filters.add(Filters.and(entry.getValue()));
-        }
-        return new JoinClauseToFilterConversion(Filters.maybeOr(filters).orElse(null), joinClauseFullyConverted);
-      }
+      return new JoinClauseToFilterConversion(Filters.maybeAnd(filters).orElse(null), joinClauseFullyConverted);
     }
     return new JoinClauseToFilterConversion(null, false);
   }
