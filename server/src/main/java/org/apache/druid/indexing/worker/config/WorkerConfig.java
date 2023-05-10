@@ -45,6 +45,9 @@ public class WorkerConfig
   private int capacity = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1);
 
   @JsonProperty
+  private long baseTaskDirSize = Long.MAX_VALUE;
+
+  @JsonProperty
   private List<String> baseTaskDirs = null;
 
   @JsonProperty
@@ -78,6 +81,11 @@ public class WorkerConfig
   public int getCapacity()
   {
     return capacity;
+  }
+
+  public long getBaseTaskDirSize()
+  {
+    return baseTaskDirSize;
   }
 
   public List<String> getBaseTaskDirs()
