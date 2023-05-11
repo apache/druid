@@ -54,8 +54,7 @@ public class TaskConfig
     try {
       DEFAULT_DEFAULT_HADOOP_COORDINATES =
           ImmutableList.copyOf(Lists.newArrayList(IOUtils.toString(
-              TaskConfig.class.getResourceAsStream("/"
-                                                   + HADOOP_LIB_VERSIONS),
+              TaskConfig.class.getResourceAsStream("/" + HADOOP_LIB_VERSIONS),
               StandardCharsets.UTF_8
           ).split(",")));
 
