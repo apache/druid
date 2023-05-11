@@ -428,9 +428,9 @@ Task storage sizes are configured through a combination of three properties:
 2. `druid.worker.baseTaskDirs` - i.e. the list directories to use for task storage 
 3. `druid.worker.baseTaskDirSize` - i.e. the amount of storage to use on each storage location
 
-While it seems like one task might use multiple directories, only one directory from the list of base dirs will be used for any given task, as such, each task is only given a singular directory for scratch space.
+While it seems like one task might use multiple directories, only one directory from the list of base directories will be used for any given task, as such, each task is only given a singular directory for scratch space.
 
-The actual amount of memory assigned to any given task is computed by determining the largest size that enables all task slots to be given an equivalent amount of disk storage.  For example, with 5 slots, 2 directories (A and B) and a size of 300GB, 3 slots would be given to directory A, 2 slots to directory B and each slot would be allowed 100GB 
+The actual amount of memory assigned to any given task is computed by determining the largest size that enables all task slots to be given an equivalent amount of disk storage.  For example, with 5 slots, 2 directories (A and B) and a size of 300 GB, 3 slots would be given to directory A, 2 slots to directory B and each slot would be allowed 100 GB 
 
 ## All task types
 
