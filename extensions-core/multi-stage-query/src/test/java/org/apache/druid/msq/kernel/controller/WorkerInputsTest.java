@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
@@ -55,12 +56,7 @@ public class WorkerInputsTest
                        .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
                        .build(QUERY_ID);
 
-    final WorkerInputs inputs = WorkerInputs.create(
-        stageDef,
-        Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.MAX
-    );
+    final WorkerInputs inputs = makeWorkerInputsForTest(stageDef, WorkerAssignmentStrategy.MAX);
 
     Assert.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
@@ -83,12 +79,7 @@ public class WorkerInputsTest
                        .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
                        .build(QUERY_ID);
 
-    final WorkerInputs inputs = WorkerInputs.create(
-        stageDef,
-        Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.MAX
-    );
+    final WorkerInputs inputs = makeWorkerInputsForTest(stageDef, WorkerAssignmentStrategy.MAX);
 
     Assert.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
@@ -111,12 +102,7 @@ public class WorkerInputsTest
                        .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
                        .build(QUERY_ID);
 
-    final WorkerInputs inputs = WorkerInputs.create(
-        stageDef,
-        Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.AUTO
-    );
+    final WorkerInputs inputs = makeWorkerInputsForTest(stageDef, WorkerAssignmentStrategy.AUTO);
 
     Assert.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
@@ -136,12 +122,7 @@ public class WorkerInputsTest
                        .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
                        .build(QUERY_ID);
 
-    final WorkerInputs inputs = WorkerInputs.create(
-        stageDef,
-        Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.AUTO
-    );
+    final WorkerInputs inputs = makeWorkerInputsForTest(stageDef, WorkerAssignmentStrategy.AUTO);
 
     Assert.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
@@ -162,12 +143,7 @@ public class WorkerInputsTest
                        .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
                        .build(QUERY_ID);
 
-    final WorkerInputs inputs = WorkerInputs.create(
-        stageDef,
-        Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.AUTO
-    );
+    final WorkerInputs inputs = makeWorkerInputsForTest(stageDef, WorkerAssignmentStrategy.AUTO);
 
     Assert.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
@@ -187,12 +163,7 @@ public class WorkerInputsTest
                        .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
                        .build(QUERY_ID);
 
-    final WorkerInputs inputs = WorkerInputs.create(
-        stageDef,
-        Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.AUTO
-    );
+    final WorkerInputs inputs = makeWorkerInputsForTest(stageDef, WorkerAssignmentStrategy.AUTO);
 
     Assert.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
@@ -212,12 +183,7 @@ public class WorkerInputsTest
                        .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
                        .build(QUERY_ID);
 
-    final WorkerInputs inputs = WorkerInputs.create(
-        stageDef,
-        Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.AUTO
-    );
+    final WorkerInputs inputs = makeWorkerInputsForTest(stageDef, WorkerAssignmentStrategy.AUTO);
 
     Assert.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
@@ -238,12 +204,7 @@ public class WorkerInputsTest
                        .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
                        .build(QUERY_ID);
 
-    final WorkerInputs inputs = WorkerInputs.create(
-        stageDef,
-        Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.AUTO
-    );
+    final WorkerInputs inputs = makeWorkerInputsForTest(stageDef, WorkerAssignmentStrategy.AUTO);
 
     Assert.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
@@ -270,12 +231,7 @@ public class WorkerInputsTest
                        .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
                        .build(QUERY_ID);
 
-    final WorkerInputs inputs = WorkerInputs.create(
-        stageDef,
-        Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.AUTO
-    );
+    final WorkerInputs inputs = makeWorkerInputsForTest(stageDef, WorkerAssignmentStrategy.AUTO);
 
     Assert.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
@@ -292,6 +248,17 @@ public class WorkerInputsTest
   public void testEquals()
   {
     EqualsVerifier.forClass(WorkerInputs.class).usingGetClass().verify();
+  }
+
+  private static WorkerInputs makeWorkerInputsForTest(final StageDefinition stageDef, final WorkerAssignmentStrategy strategy)
+  {
+    return WorkerInputs.create(
+        stageDef,
+        Int2IntMaps.EMPTY_MAP,
+        new TestInputSpecSlicer(true),
+        strategy,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
+    );
   }
 
   private static class TestInputSpec implements InputSpec
