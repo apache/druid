@@ -66,7 +66,8 @@ public class MSQTestControllerContext implements ControllerContext
   private final TaskActionClient taskActionClient;
   private final Map<String, Worker> inMemoryWorkers = new HashMap<>();
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
-  private final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.singleThreaded(
+  private final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+      4,
       "MultiStageQuery-test-controller-client"));
   private final CoordinatorClient coordinatorClient;
   private final DruidNode node = new DruidNode(
