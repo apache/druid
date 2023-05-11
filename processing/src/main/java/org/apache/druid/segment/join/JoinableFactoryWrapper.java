@@ -35,7 +35,6 @@ import org.apache.druid.utils.CollectionUtils;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -182,7 +181,7 @@ public class JoinableFactoryWrapper
       if (!columnValuesWithUniqueFlag.isAllUnique()) {
         joinClauseFullyConverted = false;
       }
-      return new JoinClauseToFilterConversion(Optional.of(onlyFilter).orElse(null), joinClauseFullyConverted);
+      return new JoinClauseToFilterConversion(onlyFilter, joinClauseFullyConverted);
     }
     return new JoinClauseToFilterConversion(null, false);
   }
