@@ -63,6 +63,11 @@ import java.util.stream.Collectors;
  * <li><b>clusterStatisticsMergeMode</b>: Whether to use parallel or sequential mode for merging of the worker sketches.
  * Can be <b>PARALLEL</b>, <b>SEQUENTIAL</b> or <b>AUTO</b>. See {@link ClusterStatisticsMergeMode} for more information on each mode.
  * Default value is <b>PARALLEL</b></li>
+ *
+ * <li><b>useAutoColumnSchemas</b>: Temporary flag to allow experimentation using
+ * {@link org.apache.druid.segment.AutoTypeColumnSchema} for all 'standard' type columns during segment generation,
+ * see {@link DimensionSchemaUtils#createDimensionSchema} for more details.
+ *
  * </ol>
  **/
 public class MultiStageQueryContext
@@ -108,6 +113,8 @@ public class MultiStageQueryContext
   public static final String CTX_SORT_ORDER = "segmentSortOrder";
 
   public static final String CTX_INDEX_SPEC = "indexSpec";
+
+  public static final String CTX_USE_AUTO_SCHEMAS = "useAutoColumnSchemas";
 
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
@@ -211,6 +218,11 @@ public class MultiStageQueryContext
   public static IndexSpec getIndexSpec(final QueryContext queryContext, final ObjectMapper objectMapper)
   {
     return decodeIndexSpec(queryContext.get(CTX_INDEX_SPEC), objectMapper);
+  }
+
+  public static boolean useAutoColumnSchemas(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(CTX_USE_AUTO_SCHEMAS, false);
   }
 
   /**

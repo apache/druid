@@ -299,12 +299,30 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
     onQueryStringChange(parsedQuery.apply(queryAction).toString());
   });
 
+  const handleModeSelect = (newMode: Mode) => {
+    if (newMode === 'sql' && editorColumn) {
+      if (editorColumn.dirty) {
+        AppToaster.show({
+          message:
+            'Please save or discard the changes in the column editor before switching to the SQL tab.',
+          intent: Intent.WARNING,
+        });
+        return;
+      }
+
+      setEditorColumn(undefined);
+    }
+
+    setMode(newMode);
+  };
+
   const handleColumnSelect = usePermanentCallback((index: number) => {
     if (!ingestQueryPattern) return;
 
     if (editorColumn?.dirty) {
       AppToaster.show({
-        message: 'Please save or discard the changes in the column editor.',
+        message:
+          'Please save or discard the changes in the column editor before switching columns.',
         intent: Intent.WARNING,
       });
       return;
@@ -697,20 +715,20 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 text="Table"
                 disabled={!ingestQueryPattern}
                 active={effectiveMode === 'table'}
-                onClick={() => setMode('table')}
+                onClick={() => handleModeSelect('table')}
               />
               <Button
                 icon={IconNames.LIST_COLUMNS}
                 text="List"
                 disabled={!ingestQueryPattern}
                 active={effectiveMode === 'list'}
-                onClick={() => setMode('list')}
+                onClick={() => handleModeSelect('list')}
               />
               <Button
                 icon={IconNames.APPLICATION}
                 text="SQL"
                 active={effectiveMode === 'sql'}
-                onClick={() => setMode('sql')}
+                onClick={() => handleModeSelect('sql')}
               />
             </ButtonGroup>
             {enableAnalyze && ingestQueryPattern?.metrics && (
