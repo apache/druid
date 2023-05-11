@@ -212,7 +212,11 @@ public class ThreadingTaskRunner
                                   .setName(StringUtils.format("[%s]-%s", task.getId(), priorThreadName));
 
                             TaskStatus taskStatus;
-                            final TaskToolbox toolbox = toolboxFactory.build(storageSlot.getDirectory(), task);
+                            final TaskToolbox toolbox = toolboxFactory.build(
+                                config -> config.withBaseTaskDir(storageSlot.getDirectory())
+                                                .withTmpStorageBytesPerTask(storageSlot.getNumBytes()),
+                                task
+                            );
                             TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
                             TaskRunnerUtils.notifyStatusChanged(
                                 listeners,
