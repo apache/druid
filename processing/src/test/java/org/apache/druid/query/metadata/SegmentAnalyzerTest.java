@@ -19,9 +19,13 @@
 
 package org.apache.druid.query.metadata;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.CharSource;
 import com.google.common.io.Resources;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.QueryPlus;
@@ -42,8 +46,11 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.IncrementalIndexSegment;
+import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -346,6 +353,34 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
         Assert.assertTrue(result.getColumns().get(invalid_aggregator).isError());
       }
     }
+  }
+
+  @Test
+  public void testComplexAnalysisNullColumn() throws IOException
+  {
+    IndexBuilder bob = IndexBuilder.create();
+    bob.tmpDir(temporaryFolder.newFolder());
+    bob.writeNullColumns(true);
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("time", null, null),
+        DimensionsSpec.builder().useSchemaDiscovery(true).build(),
+        null
+    );
+    bob.schema(IncrementalIndexSchema.builder()
+                                     .withTimestampSpec(schema.getTimestampSpec())
+                                     .withDimensionsSpec(schema.getDimensionsSpec())
+                                     .build());
+    bob.rows(ImmutableList.of(
+        MapInputRowParser.parse(schema, TestHelper.makeMapWithExplicitNull("time", 1234L, "x", null)))
+    );
+
+    QueryableIndex queryableIndex = bob.buildMMappedIndex();
+    Segment s = new QueryableIndexSegment(queryableIndex, SegmentId.dummy("test"));
+
+    SegmentAnalyzer analyzer = new SegmentAnalyzer(EMPTY_ANALYSES);
+    Map<String, ColumnAnalysis> analysis = analyzer.analyze(s);
+    Assert.assertEquals(ColumnType.STRING, analysis.get("x").getTypeSignature());
+    Assert.assertFalse(analysis.get("x").isError());
   }
 
   private static final class DummyObjectStrategy implements ObjectStrategy

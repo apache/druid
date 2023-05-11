@@ -484,6 +484,17 @@ public class TestHelper
     return theVals;
   }
 
+  public static Map<String, Object> makeMapWithExplicitNull(Object... vals)
+  {
+    Preconditions.checkArgument(vals.length % 2 == 0);
+
+    Map<String, Object> theVals = new HashMap<>();
+    for (int i = 0; i < vals.length; i += 2) {
+      theVals.put(vals[i].toString(), vals[i + 1]);
+    }
+    return theVals;
+  }
+
   public static void testSerializesDeserializes(Object object)
   {
     testSerializesDeserializes(JSON_MAPPER, object);
