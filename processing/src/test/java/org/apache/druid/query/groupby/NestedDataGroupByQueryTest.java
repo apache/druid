@@ -312,17 +312,36 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testGroupByNonExistentFilter()
+  public void testGroupByNonExistentFilterAsString()
   {
     GroupByQuery groupQuery = GroupByQuery.builder()
                                           .setDataSource("test_datasource")
                                           .setGranularity(Granularities.ALL)
                                           .setInterval(Intervals.ETERNITY)
-                                          .setDimensions(DefaultDimensionSpec.of("v1"))
+                                          .setDimensions(DefaultDimensionSpec.of("v0"))
                                           .setVirtualColumns(
                                               new NestedFieldVirtualColumn("nest", "$.fake", "v0", ColumnType.STRING)
                                           )
-                                          .setDimFilter(new SelectorDimFilter("v0", "nope", null))
+                                          .setDimFilter(new SelectorDimFilter("v0", "1", null))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .build();
+
+    runResults(groupQuery, Collections.emptyList());
+  }
+
+  @Test
+  public void testGroupByNonExistentFilterAsNumeric()
+  {
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0"))
+                                          .setVirtualColumns(
+                                              new NestedFieldVirtualColumn("nest", "$.fake", "v0", ColumnType.LONG)
+                                          )
+                                          .setDimFilter(new SelectorDimFilter("v0", "1", null))
                                           .setAggregatorSpecs(new CountAggregatorFactory("count"))
                                           .setContext(getContext())
                                           .build();
@@ -409,6 +428,24 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
             new Object[]{100L, 2L}
         )
     );
+  }
+
+  @Test
+  public void testGroupBySomeFieldOnNestedStringColumnWithFilterExpectedTypeLong()
+  {
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("v0", ColumnType.LONG))
+                                          .setVirtualColumns(new NestedFieldVirtualColumn("nester", "$.y.a", "v0", ColumnType.LONG))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .setDimFilter(new SelectorDimFilter("v0", "100", null))
+                                          .build();
+
+
+    runResults(groupQuery, Collections.emptyList());
   }
 
   @Test
