@@ -1273,6 +1273,772 @@ public class TaskLockboxTest
   }
 
   @Test
+  public void testExclusiveLockCompatibility() throws Exception
+  {
+    final List<Task> tasks = new ArrayList<>();
+
+    final Task exclusiveTask = NoopTask.create(10);
+    tasks.add(exclusiveTask);
+    lockbox.add(exclusiveTask);
+    taskStorage.insert(exclusiveTask, TaskStatus.running(exclusiveTask.getId()));
+    TaskLock theLock = tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        exclusiveTask,
+        Intervals.of("2017/2018")
+    ).getTaskLock();
+    Assert.assertNotNull(theLock);
+    Assert.assertFalse(theLock.isRevoked());
+
+    // Another exclusive lock cannot be created for an overlapping interval
+    final Task otherExclusiveTask = NoopTask.create(10);
+    tasks.add(otherExclusiveTask);
+    lockbox.add(otherExclusiveTask);
+    taskStorage.insert(otherExclusiveTask, TaskStatus.running(otherExclusiveTask.getId()));
+    Assert.assertNull(
+        tryTimeChunkLock(
+            TaskLockType.EXCLUSIVE,
+            otherExclusiveTask,
+            Intervals.of("2017-05-01/2017-06-01")
+        ).getTaskLock()
+    );
+
+    // A shared lock cannot be created for an overlapping interval
+    final Task otherSharedTask = NoopTask.create(10);
+    tasks.add(otherSharedTask);
+    lockbox.add(otherSharedTask);
+    taskStorage.insert(otherSharedTask, TaskStatus.running(otherSharedTask.getId()));
+    Assert.assertNull(
+        tryTimeChunkLock(
+        TaskLockType.SHARED,
+        otherSharedTask,
+        Intervals.of("2016/2019")
+        ).getTaskLock()
+    );
+
+    // A replace lock cannot be created for an overlapping interval
+    final Task otherReplaceTask = NoopTask.create(10);
+    tasks.add(otherReplaceTask);
+    lockbox.add(otherReplaceTask);
+    taskStorage.insert(otherReplaceTask, TaskStatus.running(otherReplaceTask.getId()));
+    Assert.assertNull(
+        tryTimeChunkLock(
+            TaskLockType.REPLACE,
+            otherReplaceTask,
+            Intervals.of("2017/2018")
+        ).getTaskLock()
+    );
+
+    // An append lock cannot be created for an overlapping interval
+    final Task otherAppendTask = NoopTask.create(10);
+    tasks.add(otherAppendTask);
+    lockbox.add(otherAppendTask);
+    taskStorage.insert(otherAppendTask, TaskStatus.running(otherAppendTask.getId()));
+    Assert.assertNull(
+        tryTimeChunkLock(
+            TaskLockType.APPEND,
+            otherAppendTask,
+            Intervals.of("2017-05-01/2018-05-01")
+        ).getTaskLock()
+    );
+
+    final Set<TaskLock> expectedLocks = ImmutableSet.of(
+        theLock
+    );
+    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
+  }
+
+  @Test
+  public void testExclusiveLockCanRevokeAllIncompatible() throws Exception
+  {
+    final List<Task> tasks = new ArrayList<>();
+
+    // Revoked shared lock of higher priority -> revoked locks are not incompatible
+    final Task otherSharedTask = NoopTask.create(15);
+    tasks.add(otherSharedTask);
+    lockbox.add(otherSharedTask);
+    taskStorage.insert(otherSharedTask, TaskStatus.running(otherSharedTask.getId()));
+    TaskLock sharedLock = tryTimeChunkLock(
+        TaskLockType.SHARED,
+        otherSharedTask,
+        Intervals.of("2016/2019")
+    ).getTaskLock();
+    Assert.assertNotNull(sharedLock);
+    lockbox.revokeLock(otherSharedTask.getId(), sharedLock);
+
+    // Active Exclusive lock of lower priority -> will be revoked
+    final Task otherExclusiveTask = NoopTask.create(5);
+    tasks.add(otherExclusiveTask);
+    lockbox.add(otherExclusiveTask);
+    taskStorage.insert(otherExclusiveTask, TaskStatus.running(otherExclusiveTask.getId()));
+    TaskLock exclusiveLock = tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        otherExclusiveTask,
+        Intervals.of("2017-01-01/2017-02-01")
+    ).getTaskLock();
+    Assert.assertNotNull(exclusiveLock);
+    Assert.assertFalse(exclusiveLock.isRevoked());
+
+    // Active replace lock of lower priority -> will be revoked
+    final Task otherReplaceTask = NoopTask.create(5);
+    tasks.add(otherReplaceTask);
+    lockbox.add(otherReplaceTask);
+    taskStorage.insert(otherReplaceTask, TaskStatus.running(otherReplaceTask.getId()));
+    TaskLock replaceLock = tryTimeChunkLock(
+        TaskLockType.REPLACE,
+        otherReplaceTask,
+        Intervals.of("2017-07-01/2018-01-01")
+    ).getTaskLock();
+    Assert.assertNotNull(replaceLock);
+    Assert.assertFalse(replaceLock.isRevoked());
+
+    // Active append lock of lower priority -> will be revoked
+    final Task otherAppendTask = NoopTask.create(5);
+    tasks.add(otherAppendTask);
+    lockbox.add(otherAppendTask);
+    taskStorage.insert(otherAppendTask, TaskStatus.running(otherAppendTask.getId()));
+    TaskLock appendLock = tryTimeChunkLock(
+        TaskLockType.APPEND,
+        otherAppendTask,
+        Intervals.of("2017-09-01/2017-10-01")
+    ).getTaskLock();
+    Assert.assertNotNull(appendLock);
+    Assert.assertFalse(appendLock.isRevoked());
+
+    final Task exclusiveTask = NoopTask.create(10);
+    tasks.add(exclusiveTask);
+    lockbox.add(exclusiveTask);
+    taskStorage.insert(exclusiveTask, TaskStatus.running(exclusiveTask.getId()));
+    TaskLock theLock = tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        exclusiveTask,
+        Intervals.of("2017/2018")
+    ).getTaskLock();
+    Assert.assertNotNull(theLock);
+    Assert.assertFalse(theLock.isRevoked());
+
+    final Set<TaskLock> expectedActiveLocks = ImmutableSet.of(
+        theLock
+    );
+    Assert.assertEquals(expectedActiveLocks, getAllActiveLocks(tasks));
+    final Set<TaskLock> expectedLocks = ImmutableSet.of(
+        theLock,
+        sharedLock.revokedCopy(),
+        exclusiveLock.revokedCopy(),
+        appendLock.revokedCopy(),
+        replaceLock.revokedCopy()
+    );
+    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
+  }
+
+  @Test
+  public void testSharedLockCompatibility() throws Exception
+  {
+    final List<Task> tasks = new ArrayList<>();
+
+    final Task sharedTask = NoopTask.create(10);
+    tasks.add(sharedTask);
+    lockbox.add(sharedTask);
+    taskStorage.insert(sharedTask, TaskStatus.running(sharedTask.getId()));
+    TaskLock theLock = tryTimeChunkLock(
+        TaskLockType.SHARED,
+        sharedTask,
+        Intervals.of("2017/2018")
+    ).getTaskLock();
+    Assert.assertNotNull(theLock);
+    Assert.assertFalse(theLock.isRevoked());
+
+    // No overlapping exclusive lock is compatible
+    final Task otherExclusiveTask = NoopTask.create(10);
+    tasks.add(otherExclusiveTask);
+    lockbox.add(otherExclusiveTask);
+    taskStorage.insert(otherExclusiveTask, TaskStatus.running(otherExclusiveTask.getId()));
+    Assert.assertNull(
+        tryTimeChunkLock(
+            TaskLockType.EXCLUSIVE,
+            otherExclusiveTask,
+            Intervals.of("2017-05-01/2017-06-01")
+        ).getTaskLock()
+    );
+
+    // Enclosing shared lock of lower priority - compatible
+    final Task otherSharedTask0 = NoopTask.create(5);
+    tasks.add(otherSharedTask0);
+    lockbox.add(otherSharedTask0);
+    taskStorage.insert(otherSharedTask0, TaskStatus.running(otherSharedTask0.getId()));
+    TaskLock sharedLock0 = tryTimeChunkLock(
+            TaskLockType.SHARED,
+            otherSharedTask0,
+            Intervals.of("2016/2019")
+    ).getTaskLock();
+    Assert.assertNotNull(sharedLock0);
+    Assert.assertFalse(sharedLock0.isRevoked());
+
+    // Enclosed shared lock of higher priority - compatible
+    final Task otherSharedTask1 = NoopTask.create(15);
+    tasks.add(otherSharedTask1);
+    lockbox.add(otherSharedTask1);
+    taskStorage.insert(otherSharedTask1, TaskStatus.running(otherSharedTask1.getId()));
+    TaskLock sharedLock1 = tryTimeChunkLock(
+        TaskLockType.SHARED,
+        otherSharedTask1,
+        Intervals.of("2017-06-01/2017-07-01")
+    ).getTaskLock();
+    Assert.assertNotNull(sharedLock1);
+    Assert.assertFalse(sharedLock1.isRevoked());
+
+    // Partially Overlapping shared lock of equal priority - compatible
+    final Task otherSharedTask2 = NoopTask.create(10);
+    tasks.add(otherSharedTask2);
+    lockbox.add(otherSharedTask2);
+    taskStorage.insert(otherSharedTask2, TaskStatus.running(otherSharedTask2.getId()));
+    TaskLock sharedLock2 = tryTimeChunkLock(
+        TaskLockType.SHARED,
+        otherSharedTask2,
+        Intervals.of("2017-05-01/2018-05-01")
+    ).getTaskLock();
+    Assert.assertNotNull(sharedLock2);
+    Assert.assertFalse(sharedLock2.isRevoked());
+
+    // Conficting replace locks are incompatible
+    final Task otherReplaceTask = NoopTask.create(10);
+    tasks.add(otherReplaceTask);
+    lockbox.add(otherReplaceTask);
+    taskStorage.insert(otherReplaceTask, TaskStatus.running(otherReplaceTask.getId()));
+    Assert.assertNull(
+        tryTimeChunkLock(
+            TaskLockType.REPLACE,
+            otherReplaceTask,
+            Intervals.of("2017/2018")
+        ).getTaskLock()
+    );
+
+    // Conflicting append locks are incompatible
+    final Task otherAppendTask = NoopTask.create(10);
+    tasks.add(otherAppendTask);
+    lockbox.add(otherAppendTask);
+    taskStorage.insert(otherAppendTask, TaskStatus.running(otherAppendTask.getId()));
+    Assert.assertNull(
+        tryTimeChunkLock(
+            TaskLockType.APPEND,
+            otherAppendTask,
+            Intervals.of("2017-05-01/2018-05-01")
+        ).getTaskLock()
+    );
+
+    final Set<TaskLock> expectedLocks = ImmutableSet.of(
+        theLock,
+        sharedLock0,
+        sharedLock1,
+        sharedLock2
+    );
+    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
+  }
+
+  @Test
+  public void testSharedLockCanRevokeAllIncompatible() throws Exception
+  {
+    final List<Task> tasks = new ArrayList<>();
+
+    // Revoked Exclusive lock of higher priority -> revoked locks are not incompatible
+    final Task otherExclusiveTask = NoopTask.create(15);
+    tasks.add(otherExclusiveTask);
+    lockbox.add(otherExclusiveTask);
+    taskStorage.insert(otherExclusiveTask, TaskStatus.running(otherExclusiveTask.getId()));
+    TaskLock exclusiveLock = tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        otherExclusiveTask,
+        Intervals.of("2016/2019")
+    ).getTaskLock();
+    Assert.assertNotNull(exclusiveLock);
+    lockbox.revokeLock(otherExclusiveTask.getId(), exclusiveLock);
+
+    // Active Shared lock of same priority -> will not be affected
+    final Task otherSharedTask = NoopTask.create(10);
+    tasks.add(otherSharedTask);
+    lockbox.add(otherSharedTask);
+    taskStorage.insert(otherSharedTask, TaskStatus.running(otherSharedTask.getId()));
+    TaskLock sharedLock = tryTimeChunkLock(
+        TaskLockType.SHARED,
+        otherExclusiveTask,
+        Intervals.of("2017-01-01/2017-02-01")
+    ).getTaskLock();
+    Assert.assertNotNull(sharedLock);
+    Assert.assertFalse(sharedLock.isRevoked());
+
+    // Active replace lock of lower priority -> will be revoked
+    final Task otherReplaceTask = NoopTask.create(5);
+    tasks.add(otherReplaceTask);
+    lockbox.add(otherReplaceTask);
+    taskStorage.insert(otherReplaceTask, TaskStatus.running(otherReplaceTask.getId()));
+    TaskLock replaceLock = tryTimeChunkLock(
+        TaskLockType.REPLACE,
+        otherReplaceTask,
+        Intervals.of("2017-07-01/2018-07-01")
+    ).getTaskLock();
+    Assert.assertNotNull(replaceLock);
+    Assert.assertFalse(replaceLock.isRevoked());
+
+    // Active append lock of lower priority -> will be revoked
+    final Task otherAppendTask = NoopTask.create(5);
+    tasks.add(otherAppendTask);
+    lockbox.add(otherAppendTask);
+    taskStorage.insert(otherAppendTask, TaskStatus.running(otherAppendTask.getId()));
+    TaskLock appendLock = tryTimeChunkLock(
+        TaskLockType.APPEND,
+        otherAppendTask,
+        Intervals.of("2017-02-01/2017-03-01")
+    ).getTaskLock();
+    Assert.assertNotNull(appendLock);
+    Assert.assertFalse(appendLock.isRevoked());
+
+    final Task sharedTask = NoopTask.create(10);
+    tasks.add(sharedTask);
+    lockbox.add(sharedTask);
+    taskStorage.insert(sharedTask, TaskStatus.running(sharedTask.getId()));
+    TaskLock theLock = tryTimeChunkLock(
+        TaskLockType.SHARED,
+        sharedTask,
+        Intervals.of("2017/2018")
+    ).getTaskLock();
+    Assert.assertNotNull(theLock);
+    Assert.assertFalse(theLock.isRevoked());
+
+    final Set<TaskLock> expectedLocks = ImmutableSet.of(
+        theLock,
+        sharedLock,
+        exclusiveLock.revokedCopy(),
+        replaceLock.revokedCopy(),
+        appendLock.revokedCopy()
+    );
+    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
+
+    final Set<TaskLock> expectedActiveLocks = ImmutableSet.of(
+        theLock,
+        sharedLock
+    );
+    Assert.assertEquals(expectedActiveLocks, getAllActiveLocks(tasks));
+  }
+
+  @Test
+  public void testAppendLockCompatibility() throws Exception
+  {
+    final List<Task> tasks = new ArrayList<>();
+
+    final Task appendTask = NoopTask.create(10);
+    tasks.add(appendTask);
+    lockbox.add(appendTask);
+    taskStorage.insert(appendTask, TaskStatus.running(appendTask.getId()));
+    TaskLock theLock = tryTimeChunkLock(
+        TaskLockType.APPEND,
+        appendTask,
+        Intervals.of("2017/2018")
+    ).getTaskLock();
+    Assert.assertNotNull(theLock);
+    Assert.assertFalse(theLock.isRevoked());
+
+    // An exclusive lock cannot be created for an overlapping interval
+    final Task otherExclusiveTask = NoopTask.create(10);
+    tasks.add(otherExclusiveTask);
+    lockbox.add(otherExclusiveTask);
+    taskStorage.insert(otherExclusiveTask, TaskStatus.running(otherExclusiveTask.getId()));
+    Assert.assertNull(
+        tryTimeChunkLock(
+            TaskLockType.EXCLUSIVE,
+            otherExclusiveTask,
+            Intervals.of("2017-05-01/2017-06-01")
+        ).getTaskLock()
+    );
+
+    // A shared lock cannot be created for an overlapping interval
+    final Task otherSharedTask = NoopTask.create(10);
+    tasks.add(otherSharedTask);
+    lockbox.add(otherSharedTask);
+    taskStorage.insert(otherSharedTask, TaskStatus.running(otherSharedTask.getId()));
+    Assert.assertNull(
+        tryTimeChunkLock(
+            TaskLockType.SHARED,
+            otherSharedTask,
+            Intervals.of("2016/2019")
+        ).getTaskLock()
+    );
+
+    // A replace lock cannot be created for a non-enclosing interval
+    final Task otherReplaceTask0 = NoopTask.create(10);
+    tasks.add(otherReplaceTask0);
+    lockbox.add(otherReplaceTask0);
+    taskStorage.insert(otherReplaceTask0, TaskStatus.running(otherReplaceTask0.getId()));
+    TaskLock replaceLock0 = tryTimeChunkLock(
+        TaskLockType.REPLACE,
+        otherReplaceTask0,
+        Intervals.of("2017-05-01/2018-01-01")
+    ).getTaskLock();
+    Assert.assertNull(replaceLock0);
+
+    // A replace lock can be created for an enclosing interval
+    final Task otherReplaceTask1 = NoopTask.create(10);
+    tasks.add(otherReplaceTask1);
+    lockbox.add(otherReplaceTask1);
+    taskStorage.insert(otherReplaceTask1, TaskStatus.running(otherReplaceTask1.getId()));
+    TaskLock replaceLock1 = tryTimeChunkLock(
+        TaskLockType.REPLACE,
+        otherReplaceTask1,
+        Intervals.of("2017/2018")
+    ).getTaskLock();
+    Assert.assertNotNull(replaceLock1);
+    Assert.assertFalse(replaceLock1.isRevoked());
+
+    // Another replace lock cannot be created
+    final Task otherReplaceTask2 = NoopTask.create(10);
+    tasks.add(otherReplaceTask2);
+    lockbox.add(otherReplaceTask2);
+    taskStorage.insert(otherReplaceTask2, TaskStatus.running(otherReplaceTask2.getId()));
+    TaskLock replaceLock2 = tryTimeChunkLock(
+        TaskLockType.REPLACE,
+        otherReplaceTask2,
+        Intervals.of("2016/2019")
+    ).getTaskLock();
+    Assert.assertNull(replaceLock2);
+
+
+    // Any append lock can be created, provided that it lies within the interval of the previously created replace lock
+    // This should not revoke any of the existing locks even with a higher priority
+    final Task otherAppendTask0 = NoopTask.create(15);
+    tasks.add(otherAppendTask0);
+    lockbox.add(otherAppendTask0);
+    taskStorage.insert(otherAppendTask0, TaskStatus.running(otherAppendTask0.getId()));
+    TaskLock appendLock0 = tryTimeChunkLock(
+        TaskLockType.APPEND,
+        otherAppendTask0,
+        Intervals.of("2017-05-01/2017-06-01")
+    ).getTaskLock();
+    Assert.assertNotNull(appendLock0);
+    Assert.assertFalse(appendLock0.isRevoked());
+
+    // Append lock with a lower priority can be created as well
+    final Task otherAppendTask1 = NoopTask.create(5);
+    tasks.add(otherAppendTask1);
+    lockbox.add(otherAppendTask1);
+    taskStorage.insert(otherAppendTask1, TaskStatus.running(otherAppendTask1.getId()));
+    TaskLock appendLock1 = tryTimeChunkLock(
+        TaskLockType.APPEND,
+        otherAppendTask1,
+        Intervals.of("2017-05-01/2017-06-01")
+        //Intervals.of("2017-05-01/2018-06-01")
+    ).getTaskLock();
+    Assert.assertNotNull(appendLock1);
+    Assert.assertFalse(appendLock1.isRevoked());
+
+    final Set<TaskLock> expectedLocks = ImmutableSet.of(
+        theLock,
+        replaceLock1,
+        appendLock0,
+        appendLock1
+    );
+    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
+  }
+
+  @Test
+  public void testAppendLockCanRevokeAllIncompatible() throws Exception
+  {
+    final List<Task> tasks = new ArrayList<>();
+
+    // Revoked Shared lock of higher priority -> revoked locks are not incompatible
+    final Task otherSharedTask = NoopTask.create(15);
+    tasks.add(otherSharedTask);
+    lockbox.add(otherSharedTask);
+    taskStorage.insert(otherSharedTask, TaskStatus.running(otherSharedTask.getId()));
+    TaskLock sharedLock = tryTimeChunkLock(
+        TaskLockType.SHARED,
+        otherSharedTask,
+        Intervals.of("2016/2019")
+    ).getTaskLock();
+    Assert.assertNotNull(sharedLock);
+    lockbox.revokeLock(otherSharedTask.getId(), sharedLock);
+
+    // Active Exclusive lock of lower priority -> will be revoked
+    final Task otherExclusiveTask = NoopTask.create(5);
+    tasks.add(otherExclusiveTask);
+    lockbox.add(otherExclusiveTask);
+    taskStorage.insert(otherExclusiveTask, TaskStatus.running(otherExclusiveTask.getId()));
+    TaskLock exclusiveLock = tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        otherExclusiveTask,
+        Intervals.of("2017-01-01/2017-02-01")
+    ).getTaskLock();
+    Assert.assertNotNull(exclusiveLock);
+
+    // Active replace lock of lower priority which doesn't enclose the interval -> will be revoked
+    final Task otherReplaceTask = NoopTask.create(5);
+    tasks.add(otherReplaceTask);
+    lockbox.add(otherReplaceTask);
+    taskStorage.insert(otherReplaceTask, TaskStatus.running(otherReplaceTask.getId()));
+    TaskLock replaceLock = tryTimeChunkLock(
+        TaskLockType.REPLACE,
+        otherReplaceTask,
+        Intervals.of("2017-07-01/2018-07-01")
+    ).getTaskLock();
+    Assert.assertNotNull(replaceLock);
+    Assert.assertFalse(replaceLock.isRevoked());
+
+    // Active append lock of lower priority -> will not be revoked
+    final Task otherAppendTask0 = NoopTask.create(5);
+    tasks.add(otherAppendTask0);
+    lockbox.add(otherAppendTask0);
+    taskStorage.insert(otherAppendTask0, TaskStatus.running(otherAppendTask0.getId()));
+    TaskLock appendLock0 = tryTimeChunkLock(
+        TaskLockType.APPEND,
+        otherAppendTask0,
+        Intervals.of("2017-02-01/2017-03-01")
+    ).getTaskLock();
+    Assert.assertNotNull(appendLock0);
+    Assert.assertFalse(appendLock0.isRevoked());
+
+    // Active append lock of higher priority -> will not revoke or be revoked
+    final Task otherAppendTask1 = NoopTask.create(15);
+    tasks.add(otherAppendTask1);
+    lockbox.add(otherAppendTask1);
+    taskStorage.insert(otherAppendTask1, TaskStatus.running(otherAppendTask1.getId()));
+    TaskLock appendLock1 = tryTimeChunkLock(
+        TaskLockType.APPEND,
+        otherAppendTask1,
+        Intervals.of("2017-02-01/2017-05-01")
+    ).getTaskLock();
+    Assert.assertNotNull(appendLock1);
+    Assert.assertFalse(appendLock1.isRevoked());
+
+    final Task appendTask = NoopTask.create(10);
+    tasks.add(appendTask);
+    lockbox.add(appendTask);
+    taskStorage.insert(appendTask, TaskStatus.running(appendTask.getId()));
+    TaskLock theLock = tryTimeChunkLock(
+        TaskLockType.APPEND,
+        appendTask,
+        Intervals.of("2017/2018")
+    ).getTaskLock();
+    Assert.assertNotNull(theLock);
+    Assert.assertFalse(theLock.isRevoked());
+
+    final Set<TaskLock> expectedLocks = ImmutableSet.of(
+        theLock,
+        sharedLock.revokedCopy(),
+        exclusiveLock.revokedCopy(),
+        replaceLock.revokedCopy(),
+        appendLock0,
+        appendLock1
+    );
+    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
+
+    final Set<TaskLock> expectedActiveLocks = ImmutableSet.of(
+        theLock,
+        appendLock0,
+        appendLock1
+    );
+    Assert.assertEquals(expectedActiveLocks, getAllActiveLocks(tasks));
+  }
+
+
+  @Test
+  public void testReplaceLockCompatibility() throws Exception
+  {
+    final List<Task> tasks = new ArrayList<>();
+
+    final Task replaceTask = NoopTask.create(10);
+    tasks.add(replaceTask);
+    lockbox.add(replaceTask);
+    taskStorage.insert(replaceTask, TaskStatus.running(replaceTask.getId()));
+    TaskLock theLock = tryTimeChunkLock(
+        TaskLockType.REPLACE,
+        replaceTask,
+        Intervals.of("2017/2018")
+    ).getTaskLock();
+    Assert.assertNotNull(theLock);
+    Assert.assertFalse(theLock.isRevoked());
+
+    // An exclusive lock cannot be created for an overlapping interval
+    final Task otherExclusiveTask = NoopTask.create(10);
+    tasks.add(otherExclusiveTask);
+    lockbox.add(otherExclusiveTask);
+    taskStorage.insert(otherExclusiveTask, TaskStatus.running(otherExclusiveTask.getId()));
+    Assert.assertNull(
+        tryTimeChunkLock(
+            TaskLockType.EXCLUSIVE,
+            otherExclusiveTask,
+            Intervals.of("2017-05-01/2017-06-01")
+        ).getTaskLock()
+    );
+
+    // A shared lock cannot be created for an overlapping interval
+    final Task otherSharedTask = NoopTask.create(10);
+    tasks.add(otherSharedTask);
+    lockbox.add(otherSharedTask);
+    taskStorage.insert(otherSharedTask, TaskStatus.running(otherSharedTask.getId()));
+    Assert.assertNull(
+        tryTimeChunkLock(
+            TaskLockType.SHARED,
+            otherSharedTask,
+            Intervals.of("2016/2019")
+        ).getTaskLock()
+    );
+
+    // A replace lock cannot be created for an overlapping interval
+    final Task otherReplaceTask = NoopTask.create(10);
+    tasks.add(otherReplaceTask);
+    lockbox.add(otherReplaceTask);
+    taskStorage.insert(otherReplaceTask, TaskStatus.running(otherReplaceTask.getId()));
+    Assert.assertNull(
+        tryTimeChunkLock(
+            TaskLockType.REPLACE,
+            otherReplaceTask,
+            Intervals.of("2017/2018")
+        ).getTaskLock()
+    );
+
+    // An append lock can be created for an interval enclosed within the replace lock's.
+    // Also note that the append lock has a higher priority but doesn't revoke the replace lock as it can coexist.
+    final Task otherAppendTask0 = NoopTask.create(15);
+    tasks.add(otherAppendTask0);
+    lockbox.add(otherAppendTask0);
+    taskStorage.insert(otherAppendTask0, TaskStatus.running(otherAppendTask0.getId()));
+    TaskLock appendLock0 = tryTimeChunkLock(
+        TaskLockType.APPEND,
+        otherAppendTask0,
+        Intervals.of("2017-05-01/2017-06-01")
+    ).getTaskLock();
+    Assert.assertNotNull(appendLock0);
+    Assert.assertFalse(appendLock0.isRevoked());
+
+    // An append lock cannot coexist when its interval is not enclosed within the replace lock's.
+    final Task otherAppendTask1 = NoopTask.create(10);
+    tasks.add(otherAppendTask1);
+    lockbox.add(otherAppendTask1);
+    taskStorage.insert(otherAppendTask1, TaskStatus.running(otherAppendTask1.getId()));
+    TaskLock appendLock1 = tryTimeChunkLock(
+        TaskLockType.APPEND,
+        otherAppendTask1,
+        Intervals.of("2016-05-01/2017-06-01")
+    ).getTaskLock();
+    Assert.assertNull(appendLock1);
+
+    final Set<TaskLock> expectedLocks = ImmutableSet.of(
+        theLock,
+        appendLock0
+    );
+    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
+  }
+
+  @Test
+  public void testReplaceLockCanRevokeAllIncompatible() throws Exception
+  {
+    final List<Task> tasks = new ArrayList<>();
+
+    // Revoked Append lock of higher priority -> revoked locks are not incompatible
+    final Task otherAppendTask0 = NoopTask.create(15);
+    tasks.add(otherAppendTask0);
+    lockbox.add(otherAppendTask0);
+    taskStorage.insert(otherAppendTask0, TaskStatus.running(otherAppendTask0.getId()));
+    TaskLock appendLock0 = tryTimeChunkLock(
+        TaskLockType.APPEND,
+        otherAppendTask0,
+        Intervals.of("2016/2019")
+    ).getTaskLock();
+    Assert.assertNotNull(appendLock0);
+    lockbox.revokeLock(otherAppendTask0.getId(), appendLock0);
+
+    // Active append lock of higher priority within replace interval -> unaffected
+    final Task otherAppendTask1 = NoopTask.create(15);
+    tasks.add(otherAppendTask1);
+    lockbox.add(otherAppendTask1);
+    taskStorage.insert(otherAppendTask1, TaskStatus.running(otherAppendTask1.getId()));
+    TaskLock appendLock1 = tryTimeChunkLock(
+        TaskLockType.APPEND,
+        otherAppendTask1,
+        Intervals.of("2017-02-01/2017-03-01")
+    ).getTaskLock();
+    Assert.assertNotNull(appendLock1);
+    Assert.assertFalse(appendLock1.isRevoked());
+
+    // Active Append lock of lower priority which is not enclosed -> will be revoked
+    final Task otherAppendTask2 = NoopTask.create(5);
+    tasks.add(otherAppendTask2);
+    lockbox.add(otherAppendTask2);
+    taskStorage.insert(otherAppendTask2, TaskStatus.running(otherAppendTask2.getId()));
+    TaskLock appendLock2 = tryTimeChunkLock(
+        TaskLockType.APPEND,
+        otherAppendTask2,
+        Intervals.of("2017-09-01/2018-03-01")
+    ).getTaskLock();
+    Assert.assertNotNull(appendLock2);
+    Assert.assertFalse(appendLock2.isRevoked());
+
+    // Active Exclusive lock of lower priority -> will be revoked
+    final Task otherExclusiveTask = NoopTask.create(5);
+    tasks.add(otherExclusiveTask);
+    lockbox.add(otherExclusiveTask);
+    taskStorage.insert(otherExclusiveTask, TaskStatus.running(otherExclusiveTask.getId()));
+    TaskLock exclusiveLock = tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        otherExclusiveTask,
+        Intervals.of("2017-05-01/2017-06-01")
+    ).getTaskLock();
+    Assert.assertNotNull(exclusiveLock);
+
+    // Active replace lock of lower priority which doesn't enclose the interval -> will be revoked
+    final Task otherReplaceTask = NoopTask.create(5);
+    tasks.add(otherReplaceTask);
+    lockbox.add(otherReplaceTask);
+    taskStorage.insert(otherReplaceTask, TaskStatus.running(otherReplaceTask.getId()));
+    TaskLock replaceLock = tryTimeChunkLock(
+        TaskLockType.REPLACE,
+        otherReplaceTask,
+        Intervals.of("2016-09-01/2017-03-01")
+    ).getTaskLock();
+    Assert.assertNotNull(replaceLock);
+    Assert.assertFalse(replaceLock.isRevoked());
+
+    // Active shared lock of lower priority -> will be revoked
+    final Task otherSharedTask = NoopTask.create(5);
+    tasks.add(otherSharedTask);
+    lockbox.add(otherSharedTask);
+    taskStorage.insert(otherSharedTask, TaskStatus.running(otherSharedTask.getId()));
+    TaskLock sharedLock = tryTimeChunkLock(
+        TaskLockType.SHARED,
+        otherSharedTask,
+        Intervals.of("2017-04-01/2017-05-01")
+    ).getTaskLock();
+    Assert.assertNotNull(sharedLock);
+    Assert.assertFalse(sharedLock.isRevoked());
+
+    final Task replaceTask = NoopTask.create(10);
+    tasks.add(replaceTask);
+    lockbox.add(replaceTask);
+    taskStorage.insert(replaceTask, TaskStatus.running(replaceTask.getId()));
+    TaskLock theLock = tryTimeChunkLock(
+        TaskLockType.REPLACE,
+        replaceTask,
+        Intervals.of("2017/2018")
+    ).getTaskLock();
+    Assert.assertNotNull(theLock);
+    Assert.assertFalse(theLock.isRevoked());
+
+    final Set<TaskLock> expectedLocks = ImmutableSet.of(
+        theLock,
+        sharedLock.revokedCopy(),
+        exclusiveLock.revokedCopy(),
+        replaceLock.revokedCopy(),
+        appendLock0.revokedCopy(),
+        appendLock1,
+        appendLock2.revokedCopy()
+    );
+    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
+
+    final Set<TaskLock> expectedActiveLocks = ImmutableSet.of(
+        theLock,
+        appendLock1
+    );
+    Assert.assertEquals(expectedActiveLocks, getAllActiveLocks(tasks));
+  }
+
+  @Test
   public void testGetLockedIntervalsForRevokedLocks() throws Exception
   {
     // Acquire lock for a low priority task
@@ -1314,47 +2080,6 @@ public class TaskLockboxTest
             Intervals.of("2017-05-01/2017-06-01")),
         lockedIntervals.get(highPriorityTask.getDataSource())
     );
-  }
-
-  @Test
-  public void testFailedToReacquireTaskLock() throws Exception
-  {
-    // Tasks to be failed have a group id with the substring "FailingLockAcquisition"
-    // Please refer to NullLockPosseTaskLockbox
-    final Task taskWithFailingLockAcquisition0 = NoopTask.withGroupId("FailingLockAcquisition");
-    final Task taskWithFailingLockAcquisition1 = NoopTask.withGroupId("FailingLockAcquisition");
-    final Task taskWithSuccessfulLockAcquisition = NoopTask.create();
-    taskStorage.insert(taskWithFailingLockAcquisition0, TaskStatus.running(taskWithFailingLockAcquisition0.getId()));
-    taskStorage.insert(taskWithFailingLockAcquisition1, TaskStatus.running(taskWithFailingLockAcquisition1.getId()));
-    taskStorage.insert(taskWithSuccessfulLockAcquisition, TaskStatus.running(taskWithSuccessfulLockAcquisition.getId()));
-
-    TaskLockbox testLockbox = new NullLockPosseTaskLockbox(taskStorage, metadataStorageCoordinator);
-    testLockbox.add(taskWithFailingLockAcquisition0);
-    testLockbox.add(taskWithFailingLockAcquisition1);
-    testLockbox.add(taskWithSuccessfulLockAcquisition);
-
-    testLockbox.tryLock(taskWithFailingLockAcquisition0,
-                        new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
-                                                 taskWithFailingLockAcquisition0,
-                                                 Intervals.of("2017-07-01/2017-08-01"),
-                                                 null
-                        )
-    );
-
-    testLockbox.tryLock(taskWithSuccessfulLockAcquisition,
-                        new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
-                                                 taskWithSuccessfulLockAcquisition,
-                                                 Intervals.of("2017-07-01/2017-08-01"),
-                                                 null
-                        )
-    );
-
-    Assert.assertEquals(3, taskStorage.getActiveTasks().size());
-
-    // The tasks must be marked for failure
-    TaskLockboxSyncResult result = testLockbox.syncFromStorage();
-    Assert.assertEquals(ImmutableSet.of(taskWithFailingLockAcquisition0, taskWithFailingLockAcquisition1),
-                        result.getTasksToFail());
   }
 
   @Test
@@ -1401,6 +2126,47 @@ public class TaskLockboxTest
         ImmutableSet.of(conflictingLock, floorLock),
         getAllActiveLocks(tasks)
     );
+  }
+
+  @Test
+  public void testFailedToReacquireTaskLock() throws Exception
+  {
+    // Tasks to be failed have a group id with the substring "FailingLockAcquisition"
+    // Please refer to NullLockPosseTaskLockbox
+    final Task taskWithFailingLockAcquisition0 = NoopTask.withGroupId("FailingLockAcquisition");
+    final Task taskWithFailingLockAcquisition1 = NoopTask.withGroupId("FailingLockAcquisition");
+    final Task taskWithSuccessfulLockAcquisition = NoopTask.create();
+    taskStorage.insert(taskWithFailingLockAcquisition0, TaskStatus.running(taskWithFailingLockAcquisition0.getId()));
+    taskStorage.insert(taskWithFailingLockAcquisition1, TaskStatus.running(taskWithFailingLockAcquisition1.getId()));
+    taskStorage.insert(taskWithSuccessfulLockAcquisition, TaskStatus.running(taskWithSuccessfulLockAcquisition.getId()));
+
+    TaskLockbox testLockbox = new NullLockPosseTaskLockbox(taskStorage, metadataStorageCoordinator);
+    testLockbox.add(taskWithFailingLockAcquisition0);
+    testLockbox.add(taskWithFailingLockAcquisition1);
+    testLockbox.add(taskWithSuccessfulLockAcquisition);
+
+    testLockbox.tryLock(taskWithFailingLockAcquisition0,
+                        new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+                                                 taskWithFailingLockAcquisition0,
+                                                 Intervals.of("2017-07-01/2017-08-01"),
+                                                 null
+                        )
+    );
+
+    testLockbox.tryLock(taskWithSuccessfulLockAcquisition,
+                        new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+                                                 taskWithSuccessfulLockAcquisition,
+                                                 Intervals.of("2017-07-01/2017-08-01"),
+                                                 null
+                        )
+    );
+
+    Assert.assertEquals(3, taskStorage.getActiveTasks().size());
+
+    // The tasks must be marked for failure
+    TaskLockboxSyncResult result = testLockbox.syncFromStorage();
+    Assert.assertEquals(ImmutableSet.of(taskWithFailingLockAcquisition0, taskWithFailingLockAcquisition1),
+                        result.getTasksToFail());
   }
 
   private Set<TaskLock> getAllActiveLocks(List<Task> tasks)

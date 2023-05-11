@@ -21,6 +21,8 @@ package org.apache.druid.indexing.common;
 
 public enum TaskLockType
 {
+  REPLACE, // Meant to be used only with Replacing jobs and timechunk locking
+  APPEND, // Meant to be used only with Appending jobs and timechunk locking
   SHARED,
   EXCLUSIVE // taskLocks of this type can be shared by tasks of the same groupId.
 }
