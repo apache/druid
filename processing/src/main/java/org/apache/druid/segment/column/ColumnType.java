@@ -135,6 +135,23 @@ public class ColumnType extends BaseTypeSignature<ValueType>
     return ColumnTypeFactory.getInstance().ofComplex(complexTypeName);
   }
 
+  /**
+   * Finds the type that can best represent both types, or none if there is no type information.
+   * If either type is null, the other type is returned. If both types are null, this method returns null as we cannot
+   * determine any useful type information. If the types are {@link ValueType#COMPLEX}, they must be the same complex
+   * type, else this function throws a {@link IllegalArgumentException} as the types are truly incompatible, with the
+   * exception of {@link ColumnType#NESTED_DATA} which is complex and represents nested AND mixed type data so is
+   * instead treated as the 'least restrictive type' if present. If both types are {@link ValueType#ARRAY}, the result
+   * is an array of the result of calling this method again on {@link ColumnType#elementType}. If only one type is an
+   * array, the result is an array type of calling this method on the non-array type and the array element type. After
+   * arrays, if either type is {@link ValueType#STRING}, the result is {@link ValueType#STRING}. If both types are
+   * numeric, then the result will be {@link ValueType#LONG} if both are longs, {@link ValueType#FLOAT} if both are
+   * floats, else {@link ValueType#DOUBLE}.
+   *
+   * @see org.apache.druid.math.expr.ExpressionTypeConversion#function for a similar method used for expression type
+   *                                                                   inference
+   */
+  @Nullable
   public static ColumnType leastRestrictiveType(@Nullable ColumnType type, @Nullable ColumnType other)
   {
     if (type == null) {

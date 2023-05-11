@@ -27,16 +27,10 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 
-/**
- * Function that converts a String or a Multi Value direct column to an array.
- * Input expressions are not supported as one should use the array function for such cases.
- **/
-
-public class MultiValueStringToArrayOperatorConversion extends DirectOperatorConversion
+public class ArrayToMultiValueStringOperatorConversion extends DirectOperatorConversion
 {
   public static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("MV_TO_ARRAY")
-      // allow using arrays as inputs to MV_TO_ARRAY to assist with migration of MVDs to ARRAY types
+      .operatorBuilder("ARRAY_TO_MV")
       .operandTypeChecker(
           OperandTypes.or(
               OperandTypes.family(SqlTypeFamily.STRING),
@@ -44,11 +38,13 @@ public class MultiValueStringToArrayOperatorConversion extends DirectOperatorCon
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeNullableArrayWithNullableElements(SqlTypeName.VARCHAR)
+      .returnTypeNullable(SqlTypeName.VARCHAR)
       .build();
 
-  public MultiValueStringToArrayOperatorConversion()
+  public ArrayToMultiValueStringOperatorConversion()
   {
-    super(SQL_FUNCTION, "mv_to_array");
+    super(SQL_FUNCTION, "array_to_mv");
   }
+
+
 }
