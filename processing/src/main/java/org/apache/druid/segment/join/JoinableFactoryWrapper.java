@@ -25,15 +25,17 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.filter.FalseFilter;
-import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -145,51 +147,42 @@ public class JoinableFactoryWrapper
   )
   {
     // This optimization kicks in when there is exactly 1 equijoin
-    // The reason being that getNonNullColumnValues uses a TreeSet for handling duplicates
-    // and does not return values in order.
-    // In case TreeSet if replaced by a LinkedHashSet, duplicates are not handled correctly
-    // and resulting ordering is improper.
-    // Considering these joins are converted to filters only when there is 1 equijoin
+    final List<Equality> equiConditions = clause.getCondition().getEquiConditions();
     if (clause.getJoinType() == JoinType.INNER
         && clause.getCondition().getNonEquiConditions().isEmpty()
-        && clause.getCondition().getEquiConditions().size() == 1) {
-      final List<Filter> filters = new ArrayList<>();
-      int numValues = maxNumFilterValues;
+        && equiConditions.size() == 1) {
       // if the right side columns are required, the clause cannot be fully converted
       boolean joinClauseFullyConverted = requiredColumns.stream().noneMatch(clause::includesColumn);
+      final Equality condition = CollectionUtils.getOnlyElement(
+          equiConditions,
+          xse -> new IAE("Expected only one equi condition")
+      );
 
-      for (final Equality condition : clause.getCondition().getEquiConditions()) {
-        final String leftColumn = condition.getLeftExpr().getBindingIfIdentifier();
+      final String leftColumn = condition.getLeftExpr().getBindingIfIdentifier();
 
-        if (leftColumn == null) {
-          return new JoinClauseToFilterConversion(null, false);
-        }
-
-        // don't add a filter on any right side table columns. only filter on left base table is supported as of now.
-        if (rightPrefixes.stream().anyMatch(leftColumn::startsWith)) {
-          joinClauseFullyConverted = false;
-          continue;
-        }
-
-        Joinable.ColumnValuesWithUniqueFlag columnValuesWithUniqueFlag =
-            clause.getJoinable().getNonNullColumnValues(condition.getRightColumn(), numValues);
-        // For an empty values set, isAllUnique flag will be true only if the column had no non-null values.
-        if (columnValuesWithUniqueFlag.getColumnValues().isEmpty()) {
-          if (columnValuesWithUniqueFlag.isAllUnique()) {
-            return new JoinClauseToFilterConversion(FalseFilter.instance(), true);
-          } else {
-            joinClauseFullyConverted = false;
-          }
-          continue;
-        }
-
-        numValues -= columnValuesWithUniqueFlag.getColumnValues().size();
-        filters.add(Filters.toFilter(new InDimFilter(leftColumn, columnValuesWithUniqueFlag.getColumnValues())));
-        if (!columnValuesWithUniqueFlag.isAllUnique()) {
-          joinClauseFullyConverted = false;
-        }
+      if (leftColumn == null) {
+        return new JoinClauseToFilterConversion(null, false);
       }
-      return new JoinClauseToFilterConversion(Filters.maybeAnd(filters).orElse(null), joinClauseFullyConverted);
+
+      // don't add a filter on any right side table columns. only filter on left base table is supported as of now.
+      if (rightPrefixes.stream().anyMatch(leftColumn::startsWith)) {
+        return new JoinClauseToFilterConversion(null, false);
+      }
+
+      Joinable.ColumnValuesWithUniqueFlag columnValuesWithUniqueFlag =
+          clause.getJoinable().getNonNullColumnValues(condition.getRightColumn(), maxNumFilterValues);
+      // For an empty values set, isAllUnique flag will be true only if the column had no non-null values.
+      if (columnValuesWithUniqueFlag.getColumnValues().isEmpty()) {
+        if (columnValuesWithUniqueFlag.isAllUnique()) {
+          return new JoinClauseToFilterConversion(FalseFilter.instance(), true);
+        }
+        return new JoinClauseToFilterConversion(null, false);
+      }
+      final Filter onlyFilter = new InDimFilter(leftColumn, columnValuesWithUniqueFlag.getColumnValues());
+      if (!columnValuesWithUniqueFlag.isAllUnique()) {
+        joinClauseFullyConverted = false;
+      }
+      return new JoinClauseToFilterConversion(Optional.of(onlyFilter).orElse(null), joinClauseFullyConverted);
     }
     return new JoinClauseToFilterConversion(null, false);
   }
