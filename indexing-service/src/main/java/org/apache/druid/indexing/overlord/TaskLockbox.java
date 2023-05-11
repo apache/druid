@@ -1275,9 +1275,9 @@ public class TaskLockbox
       case REPLACE:
         return canReplaceLockCoexist(conflictPosses, request);
       case SHARED:
-        return canSharedLockCoexist(conflictPosses, request);
+        return canSharedLockCoexist(conflictPosses);
       case EXCLUSIVE:
-        return canExclusiveLockCoexist(conflictPosses, request);
+        return canExclusiveLockCoexist(conflictPosses);
       default:
         return false;
     }
@@ -1322,7 +1322,7 @@ public class TaskLockbox
    * @param replaceLock replace lock request
    * @return true iff replace lock can coexist with all its conflicting locks
    */
-  private static boolean canReplaceLockCoexist(List<TaskLockPosse> conflictPosses, LockRequest replaceLock)
+  private boolean canReplaceLockCoexist(List<TaskLockPosse> conflictPosses, LockRequest replaceLock)
   {
     for (TaskLockPosse posse : conflictPosses) {
       if (posse.getTaskLock().isRevoked()) {
@@ -1345,10 +1345,9 @@ public class TaskLockbox
    * Check if a SHARED lock can coexist with a given set of conflicting posses.
    * A SHARED lock can coexist with any number of other active SHARED locks
    * @param conflictPosses conflicting lock posses
-   * @param sharedLock replace lock request
    * @return true iff shared lock can coexist with all its conflicting locks
    */
-  private static boolean canSharedLockCoexist(List<TaskLockPosse> conflictPosses, LockRequest sharedLock)
+  private boolean canSharedLockCoexist(List<TaskLockPosse> conflictPosses)
   {
     for (TaskLockPosse posse : conflictPosses) {
       if (posse.getTaskLock().isRevoked()) {
@@ -1367,10 +1366,9 @@ public class TaskLockbox
    * Check if an EXCLUSIVE lock can coexist with a given set of conflicting posses.
    * An EXCLUSIVE lock cannot coexist with any other overlapping active locks
    * @param conflictPosses conflicting lock posses
-   * @param exclusiveLock exclusive lock request
    * @return true iff the exclusive lock can coexist with all its conflicting locks
    */
-  private static boolean canExclusiveLockCoexist(List<TaskLockPosse> conflictPosses, LockRequest exclusiveLock)
+  private boolean canExclusiveLockCoexist(List<TaskLockPosse> conflictPosses)
   {
     for (TaskLockPosse posse : conflictPosses) {
       if (posse.getTaskLock().isRevoked()) {
