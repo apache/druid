@@ -511,6 +511,18 @@
           <useManifestOnlyJar>false</useManifestOnlyJar>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <!-- LoggingEmitter is a delegating class. Skip tests. -->
+            <exclude>org/apache/druid/java/util/emitter/core/LoggingEmitter.class</exclude>
+            <!-- Logger is a facade to the slf4j Logger. No tests needed. -->
+            <exclude>org/apache/druid/java/util/common/logger/Logger.class</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
     </plugins>
 
     <resources>

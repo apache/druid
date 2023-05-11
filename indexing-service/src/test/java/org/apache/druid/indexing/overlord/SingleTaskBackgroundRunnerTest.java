@@ -163,7 +163,7 @@ public class SingleTaskBackgroundRunnerTest
       }
 
       @Override
-      public void cleanUp(TaskToolbox toolbox, boolean failure)
+      public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus)
       {
         // do nothing
       }
@@ -181,10 +181,10 @@ public class SingleTaskBackgroundRunnerTest
 
     final QueryRunner<ScanResultValue> queryRunner =
         Druids.newScanQueryBuilder()
-              .dataSource("foo")
-              .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
-              .build()
-              .getRunner(runner);
+            .dataSource("foo")
+            .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
+            .build()
+            .getRunner(runner);
 
     Assert.assertThat(queryRunner, CoreMatchers.instanceOf(SetAndVerifyContextQueryRunner.class));
   }
@@ -262,7 +262,7 @@ public class SingleTaskBackgroundRunnerTest
           }
 
           @Override
-          public void cleanUp(TaskToolbox toolbox, boolean failure)
+          public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus)
           {
             // do nothing
           }
@@ -384,7 +384,7 @@ public class SingleTaskBackgroundRunnerTest
     }
 
     @Override
-    public void cleanUp(TaskToolbox toolbox, boolean failure)
+    public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus)
     {
       // do nothing
     }

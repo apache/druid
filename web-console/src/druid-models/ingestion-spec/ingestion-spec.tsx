@@ -267,14 +267,17 @@ export interface DataSchema {
   metricsSpec?: MetricSpec[];
 }
 
-export type DimensionMode = 'specific' | 'auto-detect';
+export type SchemaMode = 'fixed' | 'string-only-discovery' | 'type-aware-discovery';
 
-export function getDimensionMode(spec: Partial<IngestionSpec>): DimensionMode {
+export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   if (deepGet(spec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery') === true) {
-    return 'auto-detect';
+    return 'type-aware-discovery';
+  }
+  if (deepGet(spec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions') === true) {
+    return 'string-only-discovery';
   }
   const dimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || EMPTY_ARRAY;
-  return Array.isArray(dimensions) && dimensions.length === 0 ? 'auto-detect' : 'specific';
+  return Array.isArray(dimensions) && dimensions.length === 0 ? 'string-only-discovery' : 'fixed';
 }
 
 export function getRollup(spec: Partial<IngestionSpec>): boolean {
@@ -2418,7 +2421,7 @@ function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, stri
 export function updateSchemaWithSample(
   spec: Partial<IngestionSpec>,
   sampleResponse: SampleResponse,
-  dimensionMode: DimensionMode,
+  schemaMode: SchemaMode,
   rollup: boolean,
   forcePartitionInitialization = false,
 ): Partial<IngestionSpec> {
@@ -2429,20 +2432,31 @@ export function updateSchemaWithSample(
 
   let newSpec = spec;
 
-  if (dimensionMode === 'auto-detect') {
-    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery', true);
-    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions', true);
-    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions', []);
-    newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions');
-  } else {
-    newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery');
-    newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions');
-    newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions');
-    newSpec = deepSet(
-      newSpec,
-      'spec.dataSchema.dimensionsSpec.dimensions',
-      getDimensionSpecs(sampleResponse, typeHints, guessNumericStringsAsNumbers, rollup),
-    );
+  switch (schemaMode) {
+    case 'type-aware-discovery':
+      newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery', true);
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions');
+      newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions', []);
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions');
+      break;
+
+    case 'string-only-discovery':
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery');
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions');
+      newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions', []);
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions');
+      break;
+
+    case 'fixed':
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery');
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions');
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions');
+      newSpec = deepSet(
+        newSpec,
+        'spec.dataSchema.dimensionsSpec.dimensions',
+        getDimensionSpecs(sampleResponse, typeHints, guessNumericStringsAsNumbers, rollup),
+      );
+      break;
   }
 
   if (rollup) {

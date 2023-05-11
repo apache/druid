@@ -26,11 +26,12 @@ import { AutoForm, CenterMessage, LearnMore, Loader } from '../../../components'
 import type { InputFormat, InputSource } from '../../../druid-models';
 import {
   BATCH_INPUT_FORMAT_FIELDS,
+  DETECTION_TIMESTAMP_SPEC,
   guessColumnTypeFromSampleResponse,
   guessIsArrayFromSampleResponse,
   inputFormatOutputsNumericStrings,
-  PLACEHOLDER_TIMESTAMP_SPEC,
   possibleDruidFormatForValues,
+  TIME_COLUMN,
 } from '../../../druid-models';
 import { useQueryManager } from '../../../hooks';
 import { getLink } from '../../../links';
@@ -46,8 +47,6 @@ import { getHeaderNamesFromSampleResponse, postToSampler } from '../../../utils/
 import { ParseDataTable } from '../../load-data-view/parse-data-table/parse-data-table';
 
 import './input-format-step.scss';
-
-const noop = () => {};
 
 export interface InputFormatAndMore {
   inputFormat: InputFormat;
@@ -93,7 +92,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
           },
           dataSchema: {
             dataSource: 'sample',
-            timestampSpec: PLACEHOLDER_TIMESTAMP_SPEC,
+            timestampSpec: DETECTION_TIMESTAMP_SPEC,
             dimensionsSpec: {
               useSchemaDiscovery: true,
             },
@@ -123,6 +122,14 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
         const possibleDruidFormat = possibleDruidFormatForValues(values);
         if (!possibleDruidFormat) return;
 
+        // The __time column is special because it already is a TIMESTAMP so there is no need parse it in any way
+        if (column === TIME_COLUMN) {
+          return {
+            column,
+            timeExpression: C(column),
+          };
+        }
+
         const formatSql = timeFormatToSql(possibleDruidFormat);
         if (!formatSql) return;
 
@@ -134,11 +141,17 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
     )[0];
   }
 
+  const headerNames = previewSampleResponse
+    ? getHeaderNamesFromSampleResponse(previewSampleResponse, 'ignoreIfZero')
+    : undefined;
+
   const inputFormatAndMore =
-    previewSampleResponse && AutoForm.isValidModel(inputFormat, BATCH_INPUT_FORMAT_FIELDS)
+    previewSampleResponse &&
+    headerNames &&
+    AutoForm.isValidModel(inputFormat, BATCH_INPUT_FORMAT_FIELDS)
       ? {
           inputFormat,
-          signature: getHeaderNamesFromSampleResponse(previewSampleResponse, true).map(name =>
+          signature: headerNames.map(name =>
             SqlColumnDeclaration.create(
               name,
               SqlType.fromNativeType(
@@ -150,7 +163,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
               ),
             ),
           ),
-          isArrays: getHeaderNamesFromSampleResponse(previewSampleResponse, true).map(name =>
+          isArrays: headerNames.map(name =>
             guessIsArrayFromSampleResponse(previewSampleResponse, name),
           ),
           timeExpression: selectTimestamp ? possibleTimeExpression?.timeExpression : undefined,
@@ -177,8 +190,6 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
             canFlatten={false}
             flattenedColumnsOnly={false}
             flattenFields={EMPTY_ARRAY}
-            onFlattenFieldSelect={noop}
-            useInput
           />
         )}
       </div>

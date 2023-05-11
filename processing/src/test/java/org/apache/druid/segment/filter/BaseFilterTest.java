@@ -375,15 +375,10 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                     .create()
                     .schema(DEFAULT_INDEX_SCHEMA)
                     .indexSpec(
-                        new IndexSpec(
-                            bitmapSerdeFactoryEntry.getValue(),
-                            null,
-                            encodingStrategy,
-                            null,
-                            null,
-                            null,
-                            null
-                        )
+                        IndexSpec.builder()
+                                 .withBitmapSerdeFactory(bitmapSerdeFactoryEntry.getValue())
+                                 .withStringDictionaryEncoding(encodingStrategy)
+                                 .build()
                     )
                     .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
                 constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
