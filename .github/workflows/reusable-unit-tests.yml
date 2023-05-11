@@ -96,6 +96,13 @@ jobs:
           ./it.sh ci
 
       - name: test & coverage
+        id: test-and-coverage
         env:
           MAVEN_PROJECTS: ${{ inputs.maven_projects }}
         run: ./.github/scripts/unit_tests_script.sh
+
+      - name: set outputs on failure
+        if: ${{ failure() && steps.test-and-coverage.conclusion == 'failure }}
+        run: |
+          echo "coverage failure - ${{ env.coverage-failure }}"
+          echo "coverage-failure=${{ env.coverage-failure }}" >> "$GITHUB_OUTPUT"
