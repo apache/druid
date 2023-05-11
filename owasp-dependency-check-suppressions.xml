@@ -105,14 +105,23 @@
   </suppress>
   <suppress>
     <!--
-      Suppressing for patch release 24.0.1
+      the suppressions here aren't currently applicable, but can be resolved once we update the version
       -->
     <notes><![CDATA[
    file name: jackson-databind-2.10.5.1.jar
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@.*$</packageUrl>
+    <!-- CVE-2022-42003 and CVE-2022-42004 are related to UNWRAP_SINGLE_VALUE_ARRAYS which we do not use
+    https://nvd.nist.gov/vuln/detail/CVE-2022-42003
+    https://nvd.nist.gov/vuln/detail/CVE-2022-42004
+     -->
     <cve>CVE-2022-42003</cve>
     <cve>CVE-2022-42004</cve>
+    <!-- CVE-2021-46877 only applies to jdk serialization which we do not use
+    https://nvd.nist.gov/vuln/detail/CVE-2021-46877
+    https://github.com/FasterXML/jackson-databind/issues/3328
+    -->
+    <cve>CVE-2021-46877</cve>
   </suppress>
 
 
@@ -805,5 +814,15 @@
      ]]></notes>
     <!-- seems not applicable to plugin -->
     <cve>CVE-2022-45048</cve>
+  </suppress>
+  <suppress>
+    <!-- from extensions using hadoop-client-runtime, these dependencies are shaded in the jar -->
+    <notes><![CDATA[
+     file name: hadoop-client-runtime-3.3.5.jar
+     ]]></notes>
+    <!-- this one is windows only - https://nvd.nist.gov/vuln/detail/CVE-2022-26612 -->
+    <cve>CVE-2022-26612</cve>
+    <!-- this one seems to apply to backend server - https://nvd.nist.gov/vuln/detail/CVE-2023-25613 -->
+    <cve>CVE-2023-25613</cve>
   </suppress>
 </suppressions>
