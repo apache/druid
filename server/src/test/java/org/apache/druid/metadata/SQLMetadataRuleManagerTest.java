@@ -261,7 +261,7 @@ public class SQLMetadataRuleManagerTest
             ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS)
         )
     );
-    ruleManager.overrideRule(DATASOURCE, rules, createAuditInfo("udpate rules"));
+    ruleManager.overrideRule(DATASOURCE, rules, createAuditInfo("update rules"));
 
     // Verify that rule was added
     ruleManager.poll();
@@ -289,7 +289,7 @@ public class SQLMetadataRuleManagerTest
             ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS)
         )
     );
-    ruleManager.overrideRule(DATASOURCE, rules, createAuditInfo("udpate rules"));
+    ruleManager.overrideRule(DATASOURCE, rules, createAuditInfo("update rules"));
 
     // Verify that rule was added
     ruleManager.poll();
