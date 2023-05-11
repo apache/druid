@@ -23,6 +23,7 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -54,6 +55,22 @@ public class SegmentReplicantLookup
             }
         )
     );
+
+    cluster.getBrokers().forEach(broker -> {
+      final ImmutableDruidServer server = broker.getServer();
+      for (DataSegment segment : server.iterateAllSegments()) {
+        computeIfAbsent(replicaCounts, segment.getId(), server.getTier())
+            .addLoadedBroadcast();
+      }
+    });
+
+    cluster.getRealtimes().forEach(realtime -> {
+      final ImmutableDruidServer server = realtime.getServer();
+      for (DataSegment segment : server.iterateAllSegments()) {
+        computeIfAbsent(replicaCounts, segment.getId(), server.getTier())
+            .addLoadedBroadcast();
+      }
+    });
 
     return new SegmentReplicantLookup(replicaCounts, cluster);
   }
@@ -164,7 +181,7 @@ public class SegmentReplicantLookup
 
       tierToReplicaCount.forEach((tier, counts) -> {
         final int underReplicated = counts.underReplicated(ignoreMissingServers);
-        if (underReplicated > 0) {
+        if (underReplicated >= 0) {
           Object2LongOpenHashMap<String> datasourceToUnderReplicated = (Object2LongOpenHashMap<String>)
               tierToUnderReplicated.computeIfAbsent(tier, ds -> new Object2LongOpenHashMap<>());
           datasourceToUnderReplicated.addTo(segment.getDataSource(), underReplicated);
@@ -183,6 +200,7 @@ public class SegmentReplicantLookup
     int possible;
     int required;
     int loaded;
+    int loadedBroadcast;
     int loading;
     int dropping;
     int moving;
@@ -190,6 +208,15 @@ public class SegmentReplicantLookup
     void addLoaded()
     {
       ++loaded;
+    }
+
+    /**
+     * Increments number of segments loaded on non-historical servers. This value
+     * is used only for computing level of under-replication of broadcast segments.
+     */
+    void addLoadedBroadcast()
+    {
+      ++loadedBroadcast;
     }
 
     void addQueued(SegmentAction action)
@@ -222,9 +249,9 @@ public class SegmentReplicantLookup
 
     int underReplicated(boolean ignoreMissingServers)
     {
-      int served = served();
+      int totalServed = loadedBroadcast + served();
       int targetCount = ignoreMissingServers ? required : Math.min(required, possible);
-      return targetCount > served ? targetCount - served : 0;
+      return targetCount > totalServed ? targetCount - totalServed : 0;
     }
   }
 }
