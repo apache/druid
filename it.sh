@@ -271,6 +271,7 @@ case $CMD in
     build_override
     verify_env_vars
     $IT_CASES_DIR/cluster.sh up $CATEGORY
+    docker logs -f metadata
 
     # Run the test. On failure, still shut down the cluster.
     # Return Maven's return code as the script's return code.
