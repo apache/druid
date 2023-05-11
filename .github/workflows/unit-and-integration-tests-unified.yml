@@ -133,7 +133,7 @@ jobs:
     steps:
       - name: "Print output"
         run: |
-          echo "unit-tests output - ${{ needs.unit-tests.result }} - ${{ needs.unit-tests.outputs.coverage-failure }}"
+          echo "unit-tests output - ${{ needs.unit-tests.result }} - ${{ toJSON(needs.unit-tests) }}"
 
   standard-its:
     needs: unit-tests

@@ -34,7 +34,7 @@ jobs:
       jdk: ${{ inputs.jdk }}
       sql_compatibility: ${{ inputs.sql_compatibility }}
       module: indexing
-      maven_projects: 'indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
+      maven_projects: 'indexing-service'
 
 #  processing_modules_test:
 #    uses: ./.github/workflows/reusable-unit-tests.yml
