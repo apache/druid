@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -406,6 +407,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     if (root == null || !root.isSingleType()) {
       return null;
     }
+    final Object defaultValue = getDefaultValueForType(root.getTypes().getSingleType());
     return new ColumnValueSelector<Object>()
     {
       @Override
@@ -459,11 +461,12 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         if (0 <= dimIndex && dimIndex < dims.length) {
           final StructuredData data = (StructuredData) dims[dimIndex];
           if (data != null) {
-            return ExprEval.bestEffortOf(data.getValue()).valueOrDefault();
+            final Object o = ExprEval.bestEffortOf(data.getValue()).valueOrDefault();
+            return o == null ? defaultValue : o;
           }
         }
 
-        return null;
+        return defaultValue;
       }
 
       @Override
@@ -487,7 +490,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
 
     private StructuredDataProcessor.ProcessedValue<?> processValue(ExprEval<?> eval)
     {
-      final ColumnType columnType = ExpressionType.toColumnType(eval.type());
+      final ExpressionType columnType = eval.type();
       int sizeEstimate;
       switch (columnType.getType()) {
         case LONG:
@@ -608,5 +611,20 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
                                    .setType(logicalType)
                                    .setHasNulls(hasNulls);
     }
+  }
+
+  @Nullable
+  private static Object getDefaultValueForType(@Nullable ColumnType columnType)
+  {
+    if (NullHandling.replaceWithDefault()) {
+      if (columnType != null) {
+        if (ColumnType.LONG.equals(columnType)) {
+          return NullHandling.defaultLongValue();
+        } else if (ColumnType.DOUBLE.equals(columnType)) {
+          return NullHandling.defaultDoubleValue();
+        }
+      }
+    }
+    return null;
   }
 }
