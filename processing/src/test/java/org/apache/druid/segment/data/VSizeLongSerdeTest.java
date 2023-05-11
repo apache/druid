@@ -247,6 +247,22 @@ public class VSizeLongSerdeTest
           values[i],
           out[outPosition]
       );
+
+      int delta = 100_000;
+      deserializer.getDelta(out, outPosition, i, 1, delta);
+      Assert.assertEquals(
+          StringUtils.format("Deserializer (testContiguousGetSingleRow, numBits = %d, position = %d)", numBits, i),
+          values[i] + delta,
+          out[outPosition]
+      );
+
+      deserializer.getDelta(out, outPosition, i, 1, -delta);
+
+      Assert.assertEquals(
+          StringUtils.format("Deserializer (testContiguousGetSingleRow, numBits = %d, position = %d)", numBits, i),
+          values[i] - delta,
+          out[outPosition]
+      );
     }
   }
 
@@ -264,6 +280,27 @@ public class VSizeLongSerdeTest
     Assert.assertArrayEquals(
         StringUtils.format("Deserializer (testContiguousGetWholeRegion, numBits = %d)", numBits),
         values,
+        Arrays.stream(out).skip(outPosition).toArray()
+    );
+
+    final long[] valuesPlus = new long[values.length];
+    final long[] valuesMinus = new long[values.length];
+    final int delta = 100_000;
+    for (int i = 0; i < values.length; i++) {
+      valuesPlus[i] = values[i] + delta;
+      valuesMinus[i] = values[i] - delta;
+    }
+    deserializer.getDelta(out, outPosition, 0, values.length, delta);
+    Assert.assertArrayEquals(
+        StringUtils.format("Deserializer (testContiguousGetWholeRegion, numBits = %d)", numBits),
+        valuesPlus,
+        Arrays.stream(out).skip(outPosition).toArray()
+    );
+
+    deserializer.getDelta(out, outPosition, 0, values.length, -delta);
+    Assert.assertArrayEquals(
+        StringUtils.format("Deserializer (testContiguousGetWholeRegion, numBits = %d)", numBits),
+        valuesMinus,
         Arrays.stream(out).skip(outPosition).toArray()
     );
   }
@@ -291,6 +328,23 @@ public class VSizeLongSerdeTest
           values[i],
           out[outPosition]
       );
+
+      int delta = 100_000;
+      deserializer.getDelta(out, outPosition, indexes, 1, indexOffset, values.length, delta);
+
+      Assert.assertEquals(
+          StringUtils.format("Deserializer (testNoncontiguousGetSingleRow, numBits = %d, position = %d)", numBits, i),
+          values[i] + delta,
+          out[outPosition]
+      );
+
+      deserializer.getDelta(out, outPosition, indexes, 1, indexOffset, values.length, -delta);
+
+      Assert.assertEquals(
+          StringUtils.format("Deserializer (testNoncontiguousGetSingleRow, numBits = %d, position = %d)", numBits, i),
+          values[i] - delta,
+          out[outPosition]
+      );
     }
   }
 
@@ -304,17 +358,24 @@ public class VSizeLongSerdeTest
     final int outPosition = 1;
     final long[] out = new long[values.length + outPosition];
     final long[] expectedOut = new long[values.length + outPosition];
+    final long[] expectedOutDeltaPlus = new long[values.length + outPosition];
+    final long[] expectedOutDeltaMinus = new long[values.length + outPosition];
     final int[] indexes = new int[values.length + outPosition];
 
     Arrays.fill(out, -1);
     Arrays.fill(expectedOut, -1);
+    Arrays.fill(expectedOutDeltaPlus, -1);
+    Arrays.fill(expectedOutDeltaMinus, -1);
     Arrays.fill(indexes, -1);
 
+    final int delta = 100_000;
     int cnt = 0;
     for (int i = 0; i < values.length; i++) {
       if (i % 2 == 0) {
         indexes[outPosition + i / 2] = i + indexOffset;
         expectedOut[outPosition + i / 2] = values[i];
+        expectedOutDeltaPlus[outPosition + i / 2] = values[i] + delta;
+        expectedOutDeltaMinus[outPosition + i / 2] = values[i] - delta;
         cnt++;
       }
     }
@@ -324,6 +385,22 @@ public class VSizeLongSerdeTest
     Assert.assertArrayEquals(
         StringUtils.format("Deserializer (testNoncontiguousGetEveryOtherValue, numBits = %d)", numBits),
         expectedOut,
+        out
+    );
+
+    deserializer.getDelta(out, outPosition, indexes, cnt, indexOffset, values.length, delta);
+
+    Assert.assertArrayEquals(
+        StringUtils.format("Deserializer (testNoncontiguousGetEveryOtherValue, numBits = %d)", numBits),
+        expectedOutDeltaPlus,
+        out
+    );
+
+    deserializer.getDelta(out, outPosition, indexes, cnt, indexOffset, values.length, -delta);
+
+    Assert.assertArrayEquals(
+        StringUtils.format("Deserializer (testNoncontiguousGetEveryOtherValue, numBits = %d)", numBits),
+        expectedOutDeltaMinus,
         out
     );
   }
@@ -338,11 +415,16 @@ public class VSizeLongSerdeTest
     final int outPosition = 1;
     final long[] out = new long[values.length + outPosition];
     final long[] expectedOut = new long[values.length + outPosition];
+    final long[] expectedOutDeltaPlus = new long[values.length + outPosition];
+    final long[] expectedOutDeltaMinus = new long[values.length + outPosition];
     final int[] indexes = new int[values.length + outPosition];
     final int limit = values.length - 2; // Don't do the last value
+    final int delta = 100_000;
 
     Arrays.fill(out, -1);
     Arrays.fill(expectedOut, -1);
+    Arrays.fill(expectedOutDeltaPlus, -1);
+    Arrays.fill(expectedOutDeltaMinus, -1);
     Arrays.fill(indexes, -1);
 
     int cnt = 0;
@@ -352,17 +434,39 @@ public class VSizeLongSerdeTest
 
         if (i < limit) {
           expectedOut[outPosition + i / 2] = values[i];
+          expectedOutDeltaPlus[outPosition + i / 2] = values[i] + delta;
+          expectedOutDeltaMinus[outPosition + i / 2] = values[i] - delta;
         }
 
         cnt++;
       }
     }
 
-    final int ret = deserializer.getDelta(out, outPosition, indexes, cnt, indexOffset, limit, 0);
+    int ret = deserializer.getDelta(out, outPosition, indexes, cnt, indexOffset, limit, 0);
 
     Assert.assertArrayEquals(
         StringUtils.format("Deserializer (testNoncontiguousGetEveryOtherValue, numBits = %d)", numBits),
         expectedOut,
+        out
+    );
+
+    Assert.assertEquals(Math.max(0, cnt - 1), ret);
+
+    ret = deserializer.getDelta(out, outPosition, indexes, cnt, indexOffset, limit, delta);
+
+    Assert.assertArrayEquals(
+        StringUtils.format("Deserializer (testNoncontiguousGetEveryOtherValue, numBits = %d)", numBits),
+        expectedOutDeltaPlus,
+        out
+    );
+
+    Assert.assertEquals(Math.max(0, cnt - 1), ret);
+
+    ret = deserializer.getDelta(out, outPosition, indexes, cnt, indexOffset, limit, -delta);
+
+    Assert.assertArrayEquals(
+        StringUtils.format("Deserializer (testNoncontiguousGetEveryOtherValue, numBits = %d)", numBits),
+        expectedOutDeltaMinus,
         out
     );
 

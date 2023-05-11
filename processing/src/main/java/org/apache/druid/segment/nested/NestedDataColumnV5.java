@@ -39,7 +39,7 @@ import java.util.List;
  * Nested data column with optimized support for simple arrays. Not actually v5 in the segment since columns are now
  * serialized using {@link org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde} instead of the generic
  * complex type system.
- *
+ * <p>
  * Not really stored in a segment as V5 since instead of V5 we migrated to {@link NestedCommonFormatColumn} which
  * specializes physical format based on the types of data encountered during processing, and so versions are now
  * {@link NestedCommonFormatColumnSerializer#V0} for all associated specializations.

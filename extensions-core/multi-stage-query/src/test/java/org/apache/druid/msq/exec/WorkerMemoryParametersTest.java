@@ -93,6 +93,31 @@ public class WorkerMemoryParametersTest
   }
 
   @Test
+  public void test_oneWorkerInJvm_smallWorkerCapacity()
+  {
+    // Supersorter max channels per processer are one less than they are usually to account for extra frames that are required while creating composing output channels
+    Assert.assertEquals(params(1, 3, 27_604_000, 12_360_000, 9_600_000), create(128_000_000, 1, 1, 1, 0, 0));
+    Assert.assertEquals(params(1, 1, 17_956_000, 8_040_000, 9_600_000), create(128_000_000, 1, 2, 1, 0, 0));
+
+    final MSQException e = Assert.assertThrows(
+        MSQException.class,
+        () -> create(1_000_000_000, 1, 32, 1, 0, 0)
+    );
+    Assert.assertEquals(new NotEnoughMemoryFault(1_588_044_000, 1_000_000_000, 750_000_000, 1, 32), e.getFault());
+
+    final MSQException e2 = Assert.assertThrows(
+        MSQException.class,
+        () -> create(128_000_000, 1, 4, 1, 0, 0)
+    );
+    Assert.assertEquals(new NotEnoughMemoryFault(580_006_666, 12_8000_000, 96_000_000, 1, 4), e2.getFault());
+
+    final MSQFault fault = Assert.assertThrows(MSQException.class, () -> create(1_000_000_000, 2, 32, 1, 0, 0))
+                                 .getFault();
+
+    Assert.assertEquals(new NotEnoughMemoryFault(2024045333, 1_000_000_000, 750_000_000, 2, 32), fault);
+  }
+
+  @Test
   public void test_fourWorkersInJvm_twoHundredWorkersInCluster_hashPartitions()
   {
     Assert.assertEquals(

@@ -54,7 +54,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
   private final Query<?> query;
   private final ReadableInput baseInput;
   private final List<ReadableFrameChannel> inputChannels;
-  private final ResourceHolder<WritableFrameChannel> outputChannel;
+  private final ResourceHolder<WritableFrameChannel> outputChannelHolder;
   private final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder;
   private final BroadcastJoinHelper broadcastJoinHelper;
 
@@ -64,14 +64,14 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
       final Query<?> query,
       final ReadableInput baseInput,
       final Int2ObjectMap<ReadableInput> sideChannels,
-      final ResourceHolder<WritableFrameChannel> outputChannel,
+      final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       final long memoryReservedForBroadcastJoin
   )
   {
     this.query = query;
     this.baseInput = baseInput;
-    this.outputChannel = outputChannel;
+    this.outputChannelHolder = outputChannelHolder;
     this.frameWriterFactoryHolder = frameWriterFactoryHolder;
 
     final Pair<List<ReadableFrameChannel>, BroadcastJoinHelper> inputChannelsAndBroadcastJoinHelper =
@@ -145,7 +145,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
   @Override
   public List<WritableFrameChannel> outputChannels()
   {
-    return Collections.singletonList(outputChannel.get());
+    return Collections.singletonList(outputChannelHolder.get());
   }
 
   @Override
@@ -166,9 +166,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
   @Override
   public void cleanup() throws IOException
   {
-    // Don't close the output channel, because multiple workers write to the same channel.
-    // The channel should be closed by the caller.
-    FrameProcessors.closeAll(inputChannels(), Collections.emptyList(), outputChannel, frameWriterFactoryHolder);
+    FrameProcessors.closeAll(inputChannels(), Collections.emptyList(), outputChannelHolder, frameWriterFactoryHolder);
   }
 
   protected FrameWriterFactory getFrameWriterFactory()

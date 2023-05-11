@@ -50,9 +50,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
+public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonFormatColumn>, ColumnIndexSupplier
 {
-  public static VariantArrayColumnAndIndexSupplier read(
+  public static VariantColumnAndIndexSupplier read(
       ColumnType logicalType,
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
@@ -64,6 +64,17 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
     final byte version = bb.get();
     final int columnNameLength = VByte.readInt(bb);
     final String columnName = StringUtils.fromUtf8(bb, columnNameLength);
+
+    // variant types store an extra byte containing a FieldTypeInfo.TypeSet which has bits set for all types
+    // present in the varaint column. this is a smaller scale, single path version of what a full nested column stores
+    // for each nested path. If this value is present then the column is a mixed type and the logical type represents
+    // the 'least restrictive' native Druid type, if not then all values consistently match the logical type
+    final Byte variantTypeByte;
+    if (bb.hasRemaining()) {
+      variantTypeByte = bb.get();
+    } else {
+      variantTypeByte = null;
+    }
 
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {
@@ -163,8 +174,9 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
         try (ColumnarInts throwAway = ints.get()) {
           size = throwAway.size();
         }
-        return new VariantArrayColumnAndIndexSupplier(
+        return new VariantColumnAndIndexSupplier(
             logicalType,
+            variantTypeByte,
             stringDictionary,
             frontCodedStringDictionarySupplier,
             longDictionarySupplier,
@@ -187,6 +199,8 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
 
 
   private final ColumnType logicalType;
+  @Nullable
+  private final Byte variantTypeSetByte;
 
   private final GenericIndexed<ByteBuffer> stringDictionary;
   private final Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier;
@@ -198,8 +212,9 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
   private final GenericIndexed<ImmutableBitmap> valueIndexes;
   private final ImmutableBitmap nullValueBitmap;
 
-  public VariantArrayColumnAndIndexSupplier(
+  public VariantColumnAndIndexSupplier(
       ColumnType logicalType,
+      @Nullable Byte variantTypeSetByte,
       GenericIndexed<ByteBuffer> stringDictionary,
       Supplier<FrontCodedIndexed> frontCodedStringDictionarySupplier,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
@@ -213,6 +228,7 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
   )
   {
     this.logicalType = logicalType;
+    this.variantTypeSetByte = variantTypeSetByte;
     this.stringDictionary = stringDictionary;
     this.frontCodedStringDictionarySupplier = frontCodedStringDictionarySupplier;
     this.longDictionarySupplier = longDictionarySupplier;
@@ -227,24 +243,26 @@ public class VariantArrayColumnAndIndexSupplier implements Supplier<NestedCommon
   public NestedCommonFormatColumn get()
   {
     if (frontCodedStringDictionarySupplier != null) {
-      return new VariantArrayColumn<>(
+      return new VariantColumn<>(
           frontCodedStringDictionarySupplier.get(),
           longDictionarySupplier.get(),
           doubleDictionarySupplier.get(),
           arrayDictionarySupplier.get(),
           encodedValueColumnSupplier.get(),
           nullValueBitmap,
-          logicalType
+          logicalType,
+          variantTypeSetByte
       );
     }
-    return new VariantArrayColumn<>(
+    return new VariantColumn<>(
         stringDictionary.singleThreaded(),
         longDictionarySupplier.get(),
         doubleDictionarySupplier.get(),
         arrayDictionarySupplier.get(),
         encodedValueColumnSupplier.get(),
         nullValueBitmap,
-        logicalType
+        logicalType,
+        variantTypeSetByte
     );
   }
 

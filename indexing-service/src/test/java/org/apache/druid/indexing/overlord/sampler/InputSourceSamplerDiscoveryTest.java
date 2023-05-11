@@ -33,6 +33,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.segment.AutoTypeColumnSchema;
+import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -182,5 +183,119 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
     finally {
       ExpressionProcessing.initializeForTests();
     }
+  }
+
+  @Test
+  public void testTypesClassicDiscovery()
+  {
+    final InputSource inputSource = new InlineInputSource(Strings.join(STR_JSON_ROWS, '\n'));
+    final DataSchema dataSchema = new DataSchema(
+        "test",
+        new TimestampSpec("t", null, null),
+        DimensionsSpec.builder().build(),
+        null,
+        null,
+        null
+    );
+    final SamplerResponse response = inputSourceSampler.sample(
+        inputSource,
+        new JsonInputFormat(null, null, null, null, null),
+        dataSchema,
+        null
+    );
+
+    Assert.assertEquals(6, response.getNumRowsRead());
+    Assert.assertEquals(5, response.getNumRowsIndexed());
+    Assert.assertEquals(6, response.getData().size());
+    Assert.assertEquals(
+        ImmutableList.of(
+            new StringDimensionSchema("string"),
+            new StringDimensionSchema("long"),
+            new StringDimensionSchema("double"),
+            new StringDimensionSchema("bool"),
+            new StringDimensionSchema("variant"),
+            new StringDimensionSchema("array")
+        ),
+        response.getLogicalDimensions()
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            new StringDimensionSchema("string"),
+            new StringDimensionSchema("long"),
+            new StringDimensionSchema("double"),
+            new StringDimensionSchema("bool"),
+            new StringDimensionSchema("variant"),
+            new StringDimensionSchema("array")
+        ),
+        response.getPhysicalDimensions()
+    );
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("string", ColumnType.STRING)
+                    .add("long", ColumnType.STRING)
+                    .add("double", ColumnType.STRING)
+                    .add("bool", ColumnType.STRING)
+                    .add("variant", ColumnType.STRING)
+                    .add("array", ColumnType.STRING)
+                    .build(),
+        response.getLogicalSegmentSchema()
+    );
+  }
+
+  @Test
+  public void testTypesNoDiscoveryExplicitSchema()
+  {
+    final InputSource inputSource = new InlineInputSource(Strings.join(STR_JSON_ROWS, '\n'));
+    final DataSchema dataSchema = new DataSchema(
+        "test",
+        new TimestampSpec("t", null, null),
+        DimensionsSpec.builder().setDimensions(
+            ImmutableList.of(new StringDimensionSchema("string"),
+                             new LongDimensionSchema("long"),
+                             new DoubleDimensionSchema("double"),
+                             new StringDimensionSchema("bool"),
+                             new NestedDataDimensionSchema("variant"),
+                             new NestedDataDimensionSchema("array"),
+                             new NestedDataDimensionSchema("nested")
+            )
+        ).build(),
+        null,
+        null,
+        null
+    );
+    final SamplerResponse response = inputSourceSampler.sample(
+        inputSource,
+        new JsonInputFormat(null, null, null, null, null),
+        dataSchema,
+        null
+    );
+
+    Assert.assertEquals(6, response.getNumRowsRead());
+    Assert.assertEquals(5, response.getNumRowsIndexed());
+    Assert.assertEquals(6, response.getData().size());
+    Assert.assertEquals(
+        dataSchema.getDimensionsSpec().getDimensions(),
+        response.getLogicalDimensions()
+    );
+
+    Assert.assertEquals(
+        dataSchema.getDimensionsSpec().getDimensions(),
+        response.getPhysicalDimensions()
+    );
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .addTimeColumn()
+                    .add("string", ColumnType.STRING)
+                    .add("long", ColumnType.LONG)
+                    .add("double", ColumnType.DOUBLE)
+                    .add("bool", ColumnType.STRING)
+                    .add("variant", ColumnType.NESTED_DATA)
+                    .add("array", ColumnType.NESTED_DATA)
+                    .add("nested", ColumnType.NESTED_DATA)
+                    .build(),
+        response.getLogicalSegmentSchema()
+    );
   }
 }

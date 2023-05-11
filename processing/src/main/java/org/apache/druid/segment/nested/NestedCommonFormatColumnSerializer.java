@@ -32,6 +32,25 @@ import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 import java.util.SortedMap;
 
+/**
+ * Basic serializer implementation for the {@link NestedCommonFormatColumn} family of columns. The
+ * {@link org.apache.druid.segment.AutoTypeColumnIndexer} catalogs the types and fields present in the data it processes
+ * using a {@link StructuredDataProcessor}. When persisting and merging segments, the
+ * {@link org.apache.druid.segment.AutoTypeColumnMerger} will choose the most appropriate serializer based on the data
+ * which was processed as follows:
+ *
+ * @see ScalarDoubleColumnSerializer  - single type double columns
+ * @see ScalarLongColumnSerializer    - single type long columns
+ * @see ScalarStringColumnSerializer  - single type string columns
+ * @see VariantColumnSerializer       - single type array columns of string, long, double, and mixed type columns
+ *
+ * @see NestedDataColumnSerializer    - nested columns
+ *
+ * @see NestedDataColumnSerializerV4  - legacy nested column format created by
+ *                                      {@link org.apache.druid.segment.NestedDataColumnIndexer} and
+ *                                      {@link org.apache.druid.segment.NestedDataColumnMerger}
+ *
+ */
 public abstract class NestedCommonFormatColumnSerializer implements GenericColumnSerializer<StructuredData>
 {
   public static final byte V0 = 0x00;
@@ -95,6 +114,9 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
     return buffer;
   }
 
+  /**
+   * Nested field columns are stored in separate
+   */
   public static String getInternalFileName(String fileNameBase, String field)
   {
     return StringUtils.format("%s.%s", fileNameBase, field);

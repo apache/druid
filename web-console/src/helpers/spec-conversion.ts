@@ -35,7 +35,7 @@ import type {
   TimestampSpec,
   Transform,
 } from '../druid-models';
-import { inflateDimensionSpec, upgradeSpec } from '../druid-models';
+import { inflateDimensionSpec, TIME_COLUMN, upgradeSpec } from '../druid-models';
 import { deepGet, filterMap, nonEmptyArray, oneOf } from '../utils';
 
 export function getSpecDatasourceName(spec: IngestionSpec): string {
@@ -129,15 +129,18 @@ export function convertSpecToSql(spec: any): QueryWithContext {
   const timestampColumnName = timestampSpec.column || 'timestamp';
   const timestampColumn = C(timestampColumnName);
   const format = timestampSpec.format || 'auto';
-  const timeTransform = transforms.find(t => t.name === '__time');
+  const timeTransform = transforms.find(t => t.name === TIME_COLUMN);
   if (timeTransform) {
     timeExpression = `REWRITE_[${timeTransform.expression}]_TO_SQL`;
+  } else if (timestampColumnName === TIME_COLUMN) {
+    timeExpression = String(timestampColumn);
+    columnDeclarations.unshift(SqlColumnDeclaration.create(timestampColumnName, SqlType.BIGINT));
   } else {
     let timestampColumnType: SqlType;
     switch (format) {
       case 'auto':
         timestampColumnType = SqlType.VARCHAR;
-        timeExpression = `CASE WHEN CAST(${timestampColumn} AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST(${timestampColumn} AS BIGINT)) ELSE TIME_PARSE(${timestampColumn}) END`;
+        timeExpression = `CASE WHEN CAST(${timestampColumn} AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST(${timestampColumn} AS BIGINT)) ELSE TIME_PARSE(TRIM(${timestampColumn})) END`;
         break;
 
       case 'iso':
@@ -271,7 +274,7 @@ export function convertSpecToSql(spec: any): QueryWithContext {
   }
 
   const dimensionExpressions = [
-    `  ${timeExpression} AS __time,${
+    `  ${timeExpression} AS "__time",${
       timeTransform ? ` --:ISSUE: Transform for __time could not be converted` : ''
     }`,
   ].concat(

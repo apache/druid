@@ -77,6 +77,13 @@ public class S3TaskLogs implements TaskLogs
     return streamTaskFile(0, taskKey);
   }
 
+  @Override
+  public Optional<InputStream> streamTaskStatus(String taskid) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "status.json");
+    return streamTaskFile(0, taskKey);
+  }
+
   private Optional<InputStream> streamTaskFile(final long offset, String taskKey) throws IOException
   {
     try {
@@ -139,6 +146,14 @@ public class S3TaskLogs implements TaskLogs
     final String taskKey = getTaskLogKey(taskid, "report.json");
     log.info("Pushing task reports %s to: %s", reportFile, taskKey);
     pushTaskFile(reportFile, taskKey);
+  }
+
+  @Override
+  public void pushTaskStatus(String taskid, File statusFile) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "status.json");
+    log.info("Pushing task status %s to: %s", statusFile, taskKey);
+    pushTaskFile(statusFile, taskKey);
   }
 
   private void pushTaskFile(final File logFile, String taskKey) throws IOException
