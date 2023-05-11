@@ -23,15 +23,19 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.logger.Logger;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -40,18 +44,17 @@ import java.util.stream.Collectors;
  */
 public class TaskStorageDirTracker
 {
+  private static final Logger log = new Logger(TaskStorageDirTracker.class);
+
   public static TaskStorageDirTracker fromConfigs(WorkerConfig workerConfig, TaskConfig taskConfig)
   {
+    final List<String> basePaths = workerConfig.getBaseTaskDirs();
     final List<File> baseTaskDirs;
-    if (workerConfig == null) {
+
+    if (basePaths == null) {
       baseTaskDirs = ImmutableList.of(taskConfig.getBaseTaskDir());
     } else {
-      final List<String> basePaths = workerConfig.getBaseTaskDirs();
-      if (basePaths == null) {
-        baseTaskDirs = ImmutableList.of(taskConfig.getBaseTaskDir());
-      } else {
-        baseTaskDirs = basePaths.stream().map(File::new).collect(Collectors.toList());
-      }
+      baseTaskDirs = basePaths.stream().map(File::new).collect(Collectors.toList());
     }
 
     return fromBaseDirs(baseTaskDirs, workerConfig.getCapacity(), workerConfig.getBaseTaskDirSize());
@@ -59,22 +62,23 @@ public class TaskStorageDirTracker
 
   public static TaskStorageDirTracker fromBaseDirs(List<File> baseTaskDirs, int numSlots, long dirSize)
   {
-    int slotsPerBaseTaskDir = Math.max(1, numSlots / baseTaskDirs.size());
-    if (numSlots % baseTaskDirs.size() > 0) {
+    int slotsPerBaseTaskDir = numSlots / baseTaskDirs.size();
+    if (slotsPerBaseTaskDir == 0) {
+      slotsPerBaseTaskDir = 1;
+    } else if (numSlots % baseTaskDirs.size() > 0) {
       // We have to add an extra slot per location if they do not evenly divide
       ++slotsPerBaseTaskDir;
     }
     long sizePerSlot = dirSize / slotsPerBaseTaskDir;
 
-    StorageSlot[] slots = new StorageSlot[numSlots];
+    File[] slotDirs = new File[numSlots];
     for (int i = 0; i < numSlots; ++i) {
       final int whichDir = i % baseTaskDirs.size();
       final int dirUsageCount = i / baseTaskDirs.size();
-      final File slotDirectory = new File(baseTaskDirs.get(whichDir), StringUtils.format("slot%d", dirUsageCount));
-      slots[i] = new StorageSlot(slotDirectory, sizePerSlot);
+      slotDirs[i] = new File(baseTaskDirs.get(whichDir), StringUtils.format("slot%d", dirUsageCount));
     }
 
-    return new TaskStorageDirTracker(baseTaskDirs, slots);
+    return new TaskStorageDirTracker(baseTaskDirs, slotDirs, sizePerSlot);
   }
 
   /**
@@ -97,10 +101,13 @@ public class TaskStorageDirTracker
    */
   private final AtomicInteger iterationCounter = new AtomicInteger(Integer.MIN_VALUE);
 
-  public TaskStorageDirTracker(List<File> baseTaskDirs, StorageSlot[] slots)
+  private TaskStorageDirTracker(List<File> baseTaskDirs, File[] slotDirs, long sizePerSlot)
   {
     this.baseTaskDirs = baseTaskDirs.toArray(new File[0]);
-    this.slots = slots;
+    this.slots = new StorageSlot[slotDirs.length];
+    for (int i = 0; i < slotDirs.length; ++i) {
+      slots[i] = new StorageSlot(slotDirs[i], sizePerSlot);
+    }
   }
 
   @LifecycleStart
@@ -136,60 +143,85 @@ public class TaskStorageDirTracker
       // This can be negative, so abs() it.
       final int currIncrement = Math.abs(iterationCounter.getAndIncrement() % slots.length);
       final StorageSlot candidateSlot = slots[currIncrement % slots.length];
-      if (candidateSlot.runningTaskId != null) {
-        continue;
+      if (candidateSlot.runningTaskId == null) {
+        candidateSlot.runningTaskId = taskId;
+        return candidateSlot;
       }
-      candidateSlot.runningTaskId = taskId;
-      return candidateSlot;
     }
     throw new ISE("Unable to pick a free slot, this should never happen, slot status [%s].", Arrays.toString(slots));
   }
 
   public synchronized void returnStorageSlot(StorageSlot slot)
   {
-    slot.runningTaskId = null;
+    if (slot.getParentRef() == this) {
+      slot.runningTaskId = null;
+    } else {
+      throw new IAE("Cannot return storage slot for task [%s] that I don't own.", slot.runningTaskId);
+    }
   }
 
-  @Nullable
-  public synchronized File findExistingTaskDir(String taskId)
+  /**
+   * Finds directories that might already exist for the list of tasks.  Useful in restoring tasks upon restart.
+   *
+   * @param taskIds the ids to find and restore
+   * @return a map of taskId to the StorageSlot for that task.  Contains null values for ids that couldn't be found
+   */
+  public synchronized Map<String, StorageSlot> findExistingTaskDirs(List<String> taskIds)
   {
-    File candidateLocation = null;
-    if (baseTaskDirs.length == 1) {
-      candidateLocation = new File(baseTaskDirs[0], taskId);
-    } else {
+    // Use a tree map because we don't expect this to be too large, but it's nice to have the keys sorted
+    // if this ever gets printed out.
+    Map<String, StorageSlot> retVal = new TreeMap<>();
+    List<String> missingIds = new ArrayList<>();
+
+
+    // We need to start by looking for the tasks in current slot locations so that we ensure that we have
+    // correct in-memory accounting for anything that is currently running in a known slot.  After that, for
+    // compatibility with an old implementation, we need to check the base directories to see if any of
+    // the tasks are running in the legacy locations and assign them to one of the free task slots.
+    for (String taskId : taskIds) {
+      StorageSlot candidateSlot = Arrays.stream(slots)
+                                        .filter(slot -> slot.runningTaskId == null)
+                                        .filter(slot -> new File(slot.getDirectory(), taskId).exists())
+                                        .findFirst()
+                                        .orElse(null);
+
+      if (candidateSlot == null) {
+        missingIds.add(taskId);
+      } else {
+        candidateSlot.runningTaskId = taskId;
+        retVal.put(taskId, candidateSlot);
+      }
+    }
+
+    for (String missingId : missingIds) {
+      File definitelyExists = null;
       for (File baseTaskDir : baseTaskDirs) {
-        File maybeExists = new File(baseTaskDir, taskId);
+        File maybeExists = new File(baseTaskDir, missingId);
         if (maybeExists.exists()) {
-          candidateLocation = maybeExists;
+          definitelyExists = maybeExists;
           break;
         }
       }
-    }
 
-    if (candidateLocation != null && candidateLocation.exists()) {
-      // task exists at old location, relocate to a "good" slot location and return that.
-      final StorageSlot taskSlot = pickStorageSlot(taskId);
-      final File pickedLocation = new File(taskSlot.getDirectory(), taskId);
-      if (candidateLocation.renameTo(pickedLocation)) {
-        taskSlot.runningTaskId = taskId;
-        return pickedLocation;
+      if (definitelyExists == null) {
+        retVal.put(missingId, null);
       } else {
-        throw new ISE("Unable to relocate task ([%s] -> [%s])", candidateLocation, pickedLocation);
-      }
-    } else {
-      for (StorageSlot slot : slots) {
-        candidateLocation = new File(slot.getDirectory(), taskId);
-        if (candidateLocation.exists()) {
-          slot.runningTaskId = taskId;
-          return candidateLocation;
+        final StorageSlot pickedSlot = pickStorageSlot(missingId);
+        final File pickedLocation = new File(pickedSlot.getDirectory(), missingId);
+        if (definitelyExists.renameTo(pickedLocation)) {
+          retVal.put(missingId, pickedSlot);
+        } else {
+          log.warn("Unable to relocate task ([%s] -> [%s]), pretend it didn't exist", definitelyExists, pickedLocation);
+          retVal.put(missingId, null);
+          returnStorageSlot(pickedSlot);
         }
       }
-
-      return null;
     }
+
+    return retVal;
   }
 
-  public static class StorageSlot
+  public class StorageSlot
   {
     private final File directory;
     private final long numBytes;
@@ -210,6 +242,11 @@ public class TaskStorageDirTracker
     public long getNumBytes()
     {
       return numBytes;
+    }
+
+    public TaskStorageDirTracker getParentRef()
+    {
+      return TaskStorageDirTracker.this;
     }
 
     @Override

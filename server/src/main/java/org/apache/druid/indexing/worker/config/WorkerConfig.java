@@ -83,9 +83,21 @@ public class WorkerConfig
     return capacity;
   }
 
+  public WorkerConfig setCapacity(int capacity)
+  {
+    this.capacity = capacity;
+    return this;
+  }
+
   public long getBaseTaskDirSize()
   {
     return baseTaskDirSize;
+  }
+
+  public WorkerConfig setBaseTaskDirSize(long baseTaskDirSize)
+  {
+    this.baseTaskDirSize = baseTaskDirSize;
+    return this;
   }
 
   public List<String> getBaseTaskDirs()
@@ -93,6 +105,13 @@ public class WorkerConfig
     return baseTaskDirs;
   }
 
+  public WorkerConfig setBaseTaskDirs(List<String> baseTaskDirs)
+  {
+    this.baseTaskDirs = baseTaskDirs;
+    return this;
+  }
+
+  @NotNull
   public String getCategory()
   {
     return category;

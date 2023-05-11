@@ -17,38 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.guice;
+package org.apache.druid.indexing.worker.config;
 
-import com.google.common.base.Supplier;
-import com.google.inject.Inject;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.Provider;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- */
-public class SupplierProvider<T> implements Provider<T>
+import java.util.Arrays;
+
+public class WorkerConfigTest
 {
-  private final Key<Supplier<T>> supplierKey;
-
-  private Provider<Supplier<T>> supplierProvider;
-
-  public SupplierProvider(
-      Key<Supplier<T>> supplierKey
-  )
+  @Test
+  public void testSetters()
   {
-    this.supplierKey = supplierKey;
-  }
+    WorkerConfig config = new WorkerConfig()
+        .setCapacity(10)
+        .setBaseTaskDirSize(100_000_000L)
+        .setBaseTaskDirs(Arrays.asList("1", "2", "another"));
 
-  @Inject
-  public void configure(Injector injector)
-  {
-    this.supplierProvider = injector.getProvider(supplierKey);
-  }
-
-  @Override
-  public T get()
-  {
-    return supplierProvider.get().get();
+    Assert.assertEquals(10, config.getCapacity());
+    Assert.assertEquals(100_000_000L, config.getBaseTaskDirSize());
+    Assert.assertEquals(Arrays.asList("1", "2", "another"), config.getBaseTaskDirs());
   }
 }

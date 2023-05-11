@@ -22,6 +22,8 @@ package org.apache.druid.indexing.common;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -30,7 +32,9 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class TaskStorageDirTrackerTest
@@ -61,26 +65,9 @@ public class TaskStorageDirTrackerTest
     verifier.validate(tracker.pickStorageSlot("eighth-task"), "A", "slot2");
 
     final TaskStorageDirTracker otherTracker = TaskStorageDirTracker.fromConfigs(
-        new WorkerConfig()
-        {
-          @Override
-          public List<String> getBaseTaskDirs()
-          {
-            return files.stream().map(File::toString).collect(Collectors.toList());
-          }
-
-          @Override
-          public int getCapacity()
-          {
-            return workerCapacity;
-          }
-
-          @Override
-          public long getBaseTaskDirSize()
-          {
-            return baseTaskDirSize;
-          }
-        },
+        new WorkerConfig().setCapacity(workerCapacity)
+                          .setBaseTaskDirSize(baseTaskDirSize)
+                          .setBaseTaskDirs(files.stream().map(File::toString).collect(Collectors.toList())),
         null
     );
     otherTracker.ensureDirectories();
@@ -88,9 +75,17 @@ public class TaskStorageDirTrackerTest
     verifier = new StorageSlotVerifier(tmpFolder).setExpectedSize(33_333_333L);
     verifier.validateException(otherTracker, "eighth-task");
 
-    tracker.returnStorageSlot(otherTracker.pickStorageSlot("task3"));
+    otherTracker.returnStorageSlot(otherTracker.pickStorageSlot("task3"));
     verifier.validate(otherTracker.pickStorageSlot("eighth-task"), "A", "slot2");
 
+    final IAE iae = Assert.assertThrows(
+        IAE.class,
+        () -> tracker.returnStorageSlot(otherTracker.pickStorageSlot("eighth-task"))
+    );
+    Assert.assertEquals(
+        "Cannot return storage slot for task [eighth-task] that I don't own.",
+        iae.getMessage()
+    );
   }
 
   private void validateRoundRobinAllocation(File tmpFolder, TaskStorageDirTracker dirTracker)
@@ -154,6 +149,87 @@ public class TaskStorageDirTrackerTest
         ISE.class,
         () -> tracker.pickStorageSlot("seventh-task")
     );
+  }
+
+  @Test
+  public void testMoreDirectoriesThanSlots() throws IOException
+  {
+    File tmpFolder = TMP.newFolder();
+    List<File> files = ImmutableList.of(
+        new File(tmpFolder, "A"),
+        new File(tmpFolder, "B"),
+        new File(tmpFolder, "C")
+    );
+    final int workerCapacity = 2;
+    final int baseTaskDirSize = 100_000_000;
+
+    final TaskStorageDirTracker tracker = TaskStorageDirTracker.fromConfigs(
+        new WorkerConfig().setCapacity(workerCapacity)
+                          .setBaseTaskDirSize(baseTaskDirSize)
+                          .setBaseTaskDirs(files.stream().map(File::toString).collect(Collectors.toList())),
+        null
+    );
+    tracker.ensureDirectories();
+    StorageSlotVerifier verifier = new StorageSlotVerifier(tmpFolder).setExpectedSize(100_000_000L);
+    verifier.validate(tracker.pickStorageSlot("task1"), "A", "slot0");
+    verifier.validate(tracker.pickStorageSlot("task2"), "B", "slot0");
+    Assert.assertThrows(
+        ISE.class,
+        () -> tracker.pickStorageSlot("third-task")
+    );
+  }
+
+  @Test
+  public void testMigration() throws IOException
+  {
+    File tmpFolder = TMP.newFolder();
+    List<File> files = ImmutableList.of(new File(tmpFolder, "A"), new File(tmpFolder, "B"));
+
+    TaskStorageDirTracker tracker = TaskStorageDirTracker.fromBaseDirs(files, 4, 100_000_000L);
+    tracker.ensureDirectories();
+
+    // First, set a baseline of what would happen without anything pre-defined.
+    StorageSlotVerifier verifier = new StorageSlotVerifier(tmpFolder).setExpectedSize(50_000_000L);
+    verifier.validate(tracker.pickStorageSlot("task1"), "A", "slot0");
+    verifier.validate(tracker.pickStorageSlot("task2"), "B", "slot1");
+    verifier.validate(tracker.pickStorageSlot("task3"), "A", "slot1");
+    verifier.validate(tracker.pickStorageSlot("task4"), "B", "slot0");
+    verifier.validateException(tracker, "fifth-task");
+
+
+    // Now, clean things up and start with some tasks for migration
+    FileUtils.deleteDirectory(tmpFolder);
+    FileUtils.mkdirp(new File(files.get(0), "task1"));
+    FileUtils.mkdirp(new File(files.get(1), "task3"));
+    FileUtils.mkdirp(new File(new File(files.get(0), "slot0"), "task2"));
+
+
+    tracker = TaskStorageDirTracker.fromBaseDirs(files, 4, 100_000_000L);
+    tracker.ensureDirectories();
+
+    // Remove "A/slot1" so that task3 cannot be moved
+    FileUtils.deleteDirectory(new File(files.get(0), "slot1"));
+
+    final Map<String, TaskStorageDirTracker.StorageSlot> dirs = tracker.findExistingTaskDirs(
+        Arrays.asList("task1", "task2", "task3", "task4")
+    );
+
+    Assert.assertNull(dirs.get("task3"));
+    Assert.assertNull(dirs.get("task4"));
+
+    // Re-create the dirs so that we can actually pick stuff again.
+    tracker.ensureDirectories();
+
+    verifier.validate(dirs.get("task1"), "B", "slot1");
+    verifier.validate(dirs.get("task2"), "A", "slot0");
+    verifier.validate(tracker.pickStorageSlot("task4"), "B", "slot0");
+    verifier.validate(tracker.pickStorageSlot("task5"), "A", "slot1");
+    verifier.validateException(tracker, "fifth-task");
+
+    verifier.validate(tracker.pickStorageSlot("task1"), "B", "slot1");
+    verifier.validate(tracker.pickStorageSlot("task2"), "A", "slot0");
+    verifier.validate(tracker.pickStorageSlot("task4"), "B", "slot0");
+    verifier.validate(tracker.pickStorageSlot("task5"), "A", "slot1");
   }
 
   public static class StorageSlotVerifier
