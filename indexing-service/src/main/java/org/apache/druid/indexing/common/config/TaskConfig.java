@@ -373,4 +373,25 @@ public class TaskConfig
         tmpStorageBytesPerTask
     );
   }
+
+  public TaskConfig withTmpStorageBytesPerTask(long tmpStorageBytesPerTask)
+  {
+    return new TaskConfig(
+        baseDir,
+        baseTaskDir,
+        hadoopWorkingPath,
+        defaultRowFlushBoundary,
+        defaultHadoopCoordinates,
+        restoreTasksOnRestart,
+        gracefulShutdownTimeout,
+        directoryLockTimeout,
+        shuffleDataLocations,
+        ignoreTimestampSpecForDruidInputSource,
+        batchMemoryMappedIndex,
+        batchProcessingMode,
+        storeEmptyColumns,
+        encapsulatedTask,
+        tmpStorageBytesPerTask
+    );
+  }
 }

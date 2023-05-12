@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.rvesse.airline.annotations.Command;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -440,11 +439,7 @@ public class CliCoordinator extends ServerRunnable
               adjustedProps.put(typeProperty, dutyName);
             }
             coordinatorCustomDutyProvider.inject(adjustedProps, configurator);
-            Supplier<CoordinatorCustomDuty> coordinatorCustomDutySupplier = coordinatorCustomDutyProvider.get();
-            if (coordinatorCustomDutySupplier == null) {
-              throw new ISE("Could not create CoordinatorCustomDuty with name: %s for group: %s", dutyName, coordinatorCustomDutyGroupName);
-            }
-            CoordinatorCustomDuty coordinatorCustomDuty = coordinatorCustomDutySupplier.get();
+            CoordinatorCustomDuty coordinatorCustomDuty = coordinatorCustomDutyProvider.get();
             if (coordinatorCustomDuty == null) {
               throw new ISE("Could not create CoordinatorCustomDuty with name: %s for group: %s", dutyName, coordinatorCustomDutyGroupName);
             }
