@@ -124,8 +124,8 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
         } else {
           final File dir = new File(storageSlot.getDirectory(), taskId);
           LOG.info("Task [%s] is not restorable, cleaning up the directory [%s]", taskId, dir);
-          FileUtils.deleteDirectory(dir);
           tracker.returnStorageSlot(storageSlot);
+          FileUtils.deleteDirectory(dir);
         }
       }
       catch (Exception e) {

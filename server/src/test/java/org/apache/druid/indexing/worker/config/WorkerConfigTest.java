@@ -30,9 +30,11 @@ public class WorkerConfigTest
   public void testSetters()
   {
     WorkerConfig config = new WorkerConfig()
+        .cloneBuilder()
         .setCapacity(10)
         .setBaseTaskDirSize(100_000_000L)
-        .setBaseTaskDirs(Arrays.asList("1", "2", "another"));
+        .setBaseTaskDirs(Arrays.asList("1", "2", "another"))
+        .build();
 
     Assert.assertEquals(10, config.getCapacity());
     Assert.assertEquals(100_000_000L, config.getBaseTaskDirSize());

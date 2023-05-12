@@ -65,9 +65,11 @@ public class TaskStorageDirTrackerTest
     verifier.validate(tracker.pickStorageSlot("eighth-task"), "A", "slot2");
 
     final TaskStorageDirTracker otherTracker = TaskStorageDirTracker.fromConfigs(
-        new WorkerConfig().setCapacity(workerCapacity)
+        new WorkerConfig().cloneBuilder()
+                          .setCapacity(workerCapacity)
                           .setBaseTaskDirSize(baseTaskDirSize)
-                          .setBaseTaskDirs(files.stream().map(File::toString).collect(Collectors.toList())),
+                          .setBaseTaskDirs(files.stream().map(File::toString).collect(Collectors.toList()))
+                          .build(),
         null
     );
     otherTracker.ensureDirectories();
@@ -164,9 +166,11 @@ public class TaskStorageDirTrackerTest
     final int baseTaskDirSize = 100_000_000;
 
     final TaskStorageDirTracker tracker = TaskStorageDirTracker.fromConfigs(
-        new WorkerConfig().setCapacity(workerCapacity)
+        new WorkerConfig().cloneBuilder()
+                          .setCapacity(workerCapacity)
                           .setBaseTaskDirSize(baseTaskDirSize)
-                          .setBaseTaskDirs(files.stream().map(File::toString).collect(Collectors.toList())),
+                          .setBaseTaskDirs(files.stream().map(File::toString).collect(Collectors.toList()))
+                          .build(),
         null
     );
     tracker.ensureDirectories();
