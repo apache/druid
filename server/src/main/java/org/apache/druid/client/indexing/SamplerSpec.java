@@ -37,7 +37,7 @@ public interface SamplerSpec
   /**
    * Returns the type of this sampler type.
    *
-   * @return task type label
+   * @return sampler spec type label
    */
 
   @Nullable
@@ -47,9 +47,9 @@ public interface SamplerSpec
   }
 
   /**
-   * @return The types of {@link org.apache.druid.data.input.InputSource} that the task uses. Empty set is returned if
-   * the task does not use any. Users can be given permission to access particular types of
-   * input sources but not others, using the
+   * @return The types of {@link org.apache.druid.data.input.InputSource} that the sampler spec uses.
+   * Empty set is returned if the sampler spec does not use any. Users can be given permission to access
+   * particular types of input sources but not others, using the
    * {@link org.apache.druid.server.security.AuthConfig#enableInputSourceSecurity} config.
    */
   @JsonIgnore
