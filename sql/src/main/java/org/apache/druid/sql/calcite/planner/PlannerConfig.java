@@ -333,6 +333,12 @@ public class PlannerConfig
       return this;
     }
 
+    public Builder nativeQuerySqlPlanningMode(String mode)
+    {
+      this.nativeQuerySqlPlanningMode = mode;
+      return this;
+    }
+
     public Builder withOverrides(final Map<String, Object> queryContext)
     {
       useApproximateCountDistinct = QueryContexts.parseBoolean(
