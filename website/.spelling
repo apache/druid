@@ -307,7 +307,6 @@ firefox
 firehose
 firehoses
 fromPigAvroStorage
-frontcoded
 frontends
 granularities
 granularitySpec
@@ -375,6 +374,7 @@ misconfigured
 mostAvailableSize
 multitenancy
 multitenant
+MVDs
 mysql
 namespace
 namespaced
