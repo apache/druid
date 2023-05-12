@@ -258,13 +258,15 @@ the exclusion list). Druid automatically chooses the most appropriate native Dru
 `DOUBLE`, `ARRAY<STRING>`, `ARRAY<LONG>`, `ARRAY<DOUBLE>`, or `COMPLEX<json>` for nested data. For input formats with
 native boolean types, Druid ingests these values as strings if `druid.expressions.useStrictBooleans` is set to `false`
 (the default), or longs if set to `true` (for more SQL compatible behavior). Array typed columns can be queried using
-the [array functions](../querying/sql-array-functions.md) or [`UNNEST`](../querying/sql-functions.md#unnest). Nested
-columns can be queried with the [json functions](../querying/sql-json-functions.md).
+the [array functions](../querying/sql-array-functions.md) or [UNNEST](../querying/sql-functions.md#unnest). Nested
+columns can be queried with the [JSON functions](../querying/sql-json-functions.md).
 
-Mixed type columns are stored in the 'least' restrictive type that can represent all values in the column. For example,
-mixed numeric columns are `DOUBLE`, if there are any strings present then the column is a `STRING`, if there are arrays
-then the column becomes an array with the least restrictive element type, and finally any nested data or arrays of
-nested data will be stored as `COMPLEX<json>` nested columns.
+Mixed type columns are stored in the _least_ restrictive type that can represent all values in the column. For example:
+
+- Mixed numeric columns are `DOUBLE`
+- If there are any strings present, then the column is a `STRING`
+- If there are arrays, then the column becomes an array with the least restrictive element type
+- Any nested data or arrays of nested data become `COMPLEX<json>` nested columns.
 
 If you're already using string-based schema discovery and want to migrate, see [Migrating to type-aware schema discovery](#migrating-to-type-aware-schema-discovery).
 
