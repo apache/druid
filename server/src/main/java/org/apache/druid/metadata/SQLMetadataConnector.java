@@ -59,6 +59,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private static final Logger log = new Logger(SQLMetadataConnector.class);
   private static final String PAYLOAD_TYPE = "BLOB";
   private static final String COLLATION = "";
+  private static final String MAX_ALLOWED_PACKET_ERROR = "query size is >= to max_allowed_packet";
 
   static final int DEFAULT_MAX_TRIES = 10;
 
@@ -165,14 +166,21 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public final boolean isTransientException(Throwable e)
   {
-    return e != null && (e instanceof RetryTransactionException
-                         || e instanceof SQLTransientException
-                         || e instanceof SQLRecoverableException
-                         || e instanceof UnableToObtainConnectionException
-                         || e instanceof UnableToExecuteStatementException
-                         || connectorIsTransientException(e)
-                         || (e instanceof SQLException && isTransientException(e.getCause()))
-                         || (e instanceof DBIException && isTransientException(e.getCause())));
+    if (e == null) {
+      return false;
+    }
+    if (e.getMessage() != null && e.getMessage().contains(MAX_ALLOWED_PACKET_ERROR)) {
+      return false;
+    }
+
+    return e instanceof RetryTransactionException
+           || e instanceof SQLTransientException
+           || e instanceof SQLRecoverableException
+           || e instanceof UnableToObtainConnectionException
+           || e instanceof UnableToExecuteStatementException
+           || connectorIsTransientException(e)
+           || (e instanceof SQLException && isTransientException(e.getCause()))
+           || (e instanceof DBIException && isTransientException(e.getCause()));
   }
 
   /**
