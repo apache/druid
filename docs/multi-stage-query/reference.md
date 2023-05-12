@@ -86,7 +86,7 @@ The input source and format are as above. The columns are expressed as in a SQL 
 Example: `(timestamp VARCHAR, metricType VARCHAR, value BIGINT)`. The optional `EXTEND` keyword
 can precede the column list: `EXTEND (timestamp VARCHAR...)`.
 
-For more information, see [Read external data with EXTERN](concepts.md#extern).
+For more information, see [Read external data with EXTERN](concepts.md#read-external-data-with-extern).
 
 ### `INSERT`
 
@@ -114,7 +114,7 @@ INSERT consists of the following parts:
 4. A [PARTITIONED BY](#partitioned-by) clause, such as `PARTITIONED BY DAY`.
 5. An optional [CLUSTERED BY](#clustered-by) clause.
 
-For more information, see [Load data with INSERT](concepts.md#insert).
+For more information, see [Load data with INSERT](concepts.md#load-data-with-insert).
 
 ### `REPLACE`
 
@@ -197,7 +197,7 @@ The following ISO 8601 periods are supported for `TIME_FLOOR` and the string con
 - P3M
 - P1Y
 
-For more information about partitioning, see [Partitioning](concepts.md#partitioning).
+For more information about partitioning, see [Partitioning](concepts.md#partitioning-by-time).
 
 ### `CLUSTERED BY`
 
@@ -267,7 +267,7 @@ inputs are all connected as broadcast inputs to the "base" stage.
 Together, all of these non-base leaf inputs must not exceed the [limit on broadcast table footprint](#limits). There
 is no limit on the size of the base (leftmost) input.
 
-Only LEFT JOIN, INNER JOIN, and CROSS JOIN are supported with with `broadcast`.
+Only LEFT JOIN, INNER JOIN, and CROSS JOIN are supported with `broadcast`.
 
 Join conditions, if present, must be equalities. It is not necessary to include a join condition; for example,
 `CROSS JOIN` and comma join do not require join conditions.
@@ -336,7 +336,7 @@ The context parameter that sets `sqlJoinAlgorithm` to `sortMerge` is not shown i
 
 ## Durable Storage
 
-Using durable storage with your SQL-based ingestions can improve their reliability by writing intermediate files to a storage location temporarily. 
+Using durable storage with your SQL-based ingestion can improve their reliability by writing intermediate files to a storage location temporarily. 
 
 To prevent durable storage from getting filled up with temporary files in case the tasks fail to clean them up, a periodic
 cleaner can be scheduled to clean the directories corresponding to which there isn't a controller task running. It utilizes
