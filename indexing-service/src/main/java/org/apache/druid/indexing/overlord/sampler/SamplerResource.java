@@ -26,10 +26,12 @@ import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerSpec;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.servlet.http.HttpServletRequest;
@@ -47,6 +49,8 @@ public class SamplerResource
 {
   private final AuthorizerMapper authorizerMapper;
   private final AuthConfig authConfig;
+  private static final ResourceAction STATE_RESOURCE_WRITE =
+      new ResourceAction(Resource.STATE_RESOURCE, Action.WRITE);
 
   @Inject
   public SamplerResource(
@@ -61,11 +65,11 @@ public class SamplerResource
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
   public SamplerResponse post(final SamplerSpec sampler, @Context final HttpServletRequest req)
   {
     Preconditions.checkNotNull(sampler, "Request body cannot be empty");
     Set<ResourceAction> resourceActions = new HashSet<>();
+    resourceActions.add(STATE_RESOURCE_WRITE);
     if (authConfig.isEnableInputSourceSecurity()) {
       resourceActions.addAll(sampler.getInputSourceResources());
     }

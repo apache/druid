@@ -89,6 +89,30 @@ public class SamplerResourceTest
   }
 
   @Test
+  public void test_post_properResourcesAuthorized()
+  {
+    expectAuthorizationTokenCheck(Users.INPUT_SOURCE_DISALLOWED);
+    Authorizer mockAuthorizer = EasyMock.createMock(Authorizer.class);
+    AuthorizerMapper mockAuthMapper = EasyMock.createMock(AuthorizerMapper.class);
+    EasyMock.expect(mockAuthMapper.getAuthorizer("druid")).andReturn(mockAuthorizer);
+    EasyMock.expect(mockAuthorizer.authorize(
+        EasyMock.anyObject(AuthenticationResult.class),
+        EasyMock.eq(Resource.STATE_RESOURCE),
+        EasyMock.eq(Action.WRITE))).andReturn(Access.OK);
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(false);
+    EasyMock.expect(samplerSpec.sample()).andReturn(null);
+    EasyMock.replay(
+        req,
+        authConfig,
+        mockAuthorizer,
+        mockAuthMapper,
+        samplerSpec
+    );
+    samplerResource = new SamplerResource(mockAuthMapper, authConfig);
+    samplerResource.post(samplerSpec, req);
+  }
+
+  @Test
   public void test_post_inputSourceSecurityEnabledAndinputSourceDisAllowed_throwsAuthError()
   {
     expectAuthorizationTokenCheck(Users.INPUT_SOURCE_DISALLOWED);
@@ -126,8 +150,6 @@ public class SamplerResourceTest
   {
     expectAuthorizationTokenCheck(Users.INPUT_SOURCE_DISALLOWED);
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(false);
-    EasyMock.expect(samplerSpec.getInputSourceResources()).andReturn(
-        Collections.singleton(new ResourceAction(new Resource("test", ResourceType.EXTERNAL), Action.READ)));
     EasyMock.expect(samplerSpec.sample()).andReturn(null);
     EasyMock.replay(
         req,
