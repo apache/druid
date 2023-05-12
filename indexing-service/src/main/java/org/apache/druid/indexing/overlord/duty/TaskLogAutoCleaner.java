@@ -56,16 +56,11 @@ public class TaskLogAutoCleaner implements OverlordDuty
   }
 
   @Override
-  public void run()
+  public void run() throws Exception
   {
-    try {
-      long timestamp = System.currentTimeMillis() - config.getDurationToRetain();
-      taskLogKiller.killOlderThan(timestamp);
-      taskStorage.removeTasksOlderThan(timestamp);
-    }
-    catch (Exception ex) {
-      log.error(ex, "Failed to clean-up the task logs");
-    }
+    long timestamp = System.currentTimeMillis() - config.getDurationToRetain();
+    taskLogKiller.killOlderThan(timestamp);
+    taskStorage.removeTasksOlderThan(timestamp);
   }
 
   @Override

@@ -25,6 +25,6 @@ package org.apache.druid.indexing.overlord.duty;
 public interface OverlordDuty
 {
   boolean isEnabled();
-  void run();
+  void run() throws Exception;
   DutySchedule getSchedule();
 }

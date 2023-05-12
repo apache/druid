@@ -33,11 +33,8 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 
 public class DurableStorageCleanerTest
 {
@@ -50,40 +47,34 @@ public class DurableStorageCleanerTest
   private static final String STRAY_DIR = "strayDirectory";
 
   @Test
-  public void testRun() throws IOException
+  public void testRun() throws Exception
   {
-    ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-    try {
-      EasyMock.reset(TASK_RUNNER, TASK_RUNNER_WORK_ITEM, STORAGE_CONNECTOR);
-      DurableStorageCleanerConfig durableStorageCleanerConfig = new DurableStorageCleanerConfig();
-      durableStorageCleanerConfig.delaySeconds = 1L;
-      durableStorageCleanerConfig.enabled = true;
-      DurableStorageCleaner durableStorageCleaner = new DurableStorageCleaner(
-          durableStorageCleanerConfig,
-          STORAGE_CONNECTOR,
-          () -> TASK_MASTER
-      );
-      EasyMock.expect(STORAGE_CONNECTOR.listDir(EasyMock.anyString()))
-              .andReturn(ImmutableList.of(DurableStorageUtils.getControllerDirectory(TASK_ID), STRAY_DIR)
-                                      .stream()
-                                      .iterator())
-              .anyTimes();
-      EasyMock.expect(TASK_RUNNER_WORK_ITEM.getTaskId()).andReturn(TASK_ID)
-              .anyTimes();
-      EasyMock.expect((Collection<TaskRunnerWorkItem>) TASK_RUNNER.getRunningTasks())
-              .andReturn(ImmutableList.of(TASK_RUNNER_WORK_ITEM))
-              .anyTimes();
-      EasyMock.expect(TASK_MASTER.getTaskRunner()).andReturn(Optional.of(TASK_RUNNER)).anyTimes();
-      Capture<Set<String>> capturedArguments = EasyMock.newCapture();
-      STORAGE_CONNECTOR.deleteFiles(EasyMock.capture(capturedArguments));
-      EasyMock.expectLastCall().once();
-      EasyMock.replay(TASK_MASTER, TASK_RUNNER, TASK_RUNNER_WORK_ITEM, STORAGE_CONNECTOR);
-      durableStorageCleaner.run();
-      Assert.assertEquals(Sets.newHashSet(STRAY_DIR), capturedArguments.getValue());
-    }
-    finally {
-      executor.shutdownNow();
-    }
+    EasyMock.reset(TASK_RUNNER, TASK_RUNNER_WORK_ITEM, STORAGE_CONNECTOR);
+    DurableStorageCleanerConfig durableStorageCleanerConfig = new DurableStorageCleanerConfig();
+    durableStorageCleanerConfig.delaySeconds = 1L;
+    durableStorageCleanerConfig.enabled = true;
+    DurableStorageCleaner durableStorageCleaner = new DurableStorageCleaner(
+        durableStorageCleanerConfig,
+        STORAGE_CONNECTOR,
+        () -> TASK_MASTER
+    );
+    EasyMock.expect(STORAGE_CONNECTOR.listDir(EasyMock.anyString()))
+            .andReturn(ImmutableList.of(DurableStorageUtils.getControllerDirectory(TASK_ID), STRAY_DIR)
+                                    .stream()
+                                    .iterator())
+            .anyTimes();
+    EasyMock.expect(TASK_RUNNER_WORK_ITEM.getTaskId()).andReturn(TASK_ID)
+            .anyTimes();
+    EasyMock.expect((Collection<TaskRunnerWorkItem>) TASK_RUNNER.getRunningTasks())
+            .andReturn(ImmutableList.of(TASK_RUNNER_WORK_ITEM))
+            .anyTimes();
+    EasyMock.expect(TASK_MASTER.getTaskRunner()).andReturn(Optional.of(TASK_RUNNER)).anyTimes();
+    Capture<Set<String>> capturedArguments = EasyMock.newCapture();
+    STORAGE_CONNECTOR.deleteFiles(EasyMock.capture(capturedArguments));
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(TASK_MASTER, TASK_RUNNER, TASK_RUNNER_WORK_ITEM, STORAGE_CONNECTOR);
+    durableStorageCleaner.run();
+    Assert.assertEquals(Sets.newHashSet(STRAY_DIR), capturedArguments.getValue());
   }
 
   @Test

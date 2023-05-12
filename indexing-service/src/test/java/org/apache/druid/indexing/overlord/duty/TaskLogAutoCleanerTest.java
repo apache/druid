@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 public class TaskLogAutoCleanerTest
 {
   @Test
-  public void testRun() throws IOException
+  public void testRun() throws Exception
   {
     // Setup config and mocks
     final long durationToRetain = TimeUnit.HOURS.toMillis(2);

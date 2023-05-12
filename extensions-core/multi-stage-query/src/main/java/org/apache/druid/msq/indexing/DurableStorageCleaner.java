@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.storage.StorageConnector;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -72,51 +71,46 @@ public class DurableStorageCleaner implements OverlordDuty
   }
 
   @Override
-  public void run()
+  public void run() throws Exception
   {
-    try {
-      Optional<TaskRunner> taskRunnerOptional = taskMasterProvider.get().getTaskRunner();
-      if (!taskRunnerOptional.isPresent()) {
-        LOG.info("DurableStorageCleaner not running since the node is not the leader");
-        return;
-      } else {
-        LOG.info("Running DurableStorageCleaner");
-      }
+    Optional<TaskRunner> taskRunnerOptional = taskMasterProvider.get().getTaskRunner();
+    if (!taskRunnerOptional.isPresent()) {
+      LOG.info("DurableStorageCleaner not running since the node is not the leader");
+      return;
+    } else {
+      LOG.info("Running DurableStorageCleaner");
+    }
 
-      TaskRunner taskRunner = taskRunnerOptional.get();
-      Iterator<String> allFiles = storageConnector.listDir("");
-      Set<String> runningTaskIds = taskRunner.getRunningTasks()
-                                             .stream()
-                                             .map(TaskRunnerWorkItem::getTaskId)
-                                             .map(DurableStorageUtils::getControllerDirectory)
-                                             .collect(Collectors.toSet());
+    TaskRunner taskRunner = taskRunnerOptional.get();
+    Iterator<String> allFiles = storageConnector.listDir("");
+    Set<String> runningTaskIds = taskRunner.getRunningTasks()
+                                           .stream()
+                                           .map(TaskRunnerWorkItem::getTaskId)
+                                           .map(DurableStorageUtils::getControllerDirectory)
+                                           .collect(Collectors.toSet());
 
-      Set<String> filesToRemove = new HashSet<>();
-      while (allFiles.hasNext()) {
-        String currentFile = allFiles.next();
-        String taskIdFromPathOrEmpty = DurableStorageUtils.getControllerTaskIdWithPrefixFromPath(currentFile);
-        if (taskIdFromPathOrEmpty != null && !taskIdFromPathOrEmpty.isEmpty()) {
-          if (runningTaskIds.contains(taskIdFromPathOrEmpty)) {
-            // do nothing
-          } else {
-            filesToRemove.add(currentFile);
-          }
+    Set<String> filesToRemove = new HashSet<>();
+    while (allFiles.hasNext()) {
+      String currentFile = allFiles.next();
+      String taskIdFromPathOrEmpty = DurableStorageUtils.getControllerTaskIdWithPrefixFromPath(currentFile);
+      if (taskIdFromPathOrEmpty != null && !taskIdFromPathOrEmpty.isEmpty()) {
+        if (runningTaskIds.contains(taskIdFromPathOrEmpty)) {
+          // do nothing
+        } else {
+          filesToRemove.add(currentFile);
         }
       }
-
-      if (filesToRemove.isEmpty()) {
-        LOG.info("There are no leftover directories to delete.");
-      } else {
-        LOG.info(
-            "Removing [%d] files which are not associated with any MSQ task.",
-            filesToRemove.size()
-        );
-        LOG.debug("Files to remove:\n[%s]\n", filesToRemove);
-        storageConnector.deleteFiles(filesToRemove);
-      }
     }
-    catch (IOException e) {
-      throw new RuntimeException("Error while running DurableStorageCleaner", e);
+
+    if (filesToRemove.isEmpty()) {
+      LOG.info("There are no leftover directories to delete.");
+    } else {
+      LOG.info(
+          "Removing [%d] files which are not associated with any MSQ task.",
+          filesToRemove.size()
+      );
+      LOG.debug("Files to remove:\n[%s]\n", filesToRemove);
+      storageConnector.deleteFiles(filesToRemove);
     }
   }
 
