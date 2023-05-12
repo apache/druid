@@ -17,12 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.Container;
@@ -49,6 +50,11 @@ import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.common.Base64Compression;
+import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
+import org.apache.druid.k8s.overlord.common.KubernetesClientApi;
+import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 
@@ -105,10 +111,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   public Job fromTask(Task task) throws IOException
   {
     String myPodName = System.getenv("HOSTNAME");
-    Pod pod = client.executeRequest(client -> client.pods()
-                                                    .inNamespace(taskRunnerConfig.namespace)
-                                                    .withName(myPodName)
-                                                    .get());
+    Pod pod = client.executeRequest(client -> client.pods().inNamespace(taskRunnerConfig.getNamespace()).withName(myPodName).get());
     PeonCommandContext context = new PeonCommandContext(
         generateCommand(task),
         javaOpts(task),
@@ -116,7 +119,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
         node.isEnableTlsPort()
     );
     PodSpec podSpec = pod.getSpec();
-    massageSpec(podSpec, taskRunnerConfig.primaryContainerName);
+    massageSpec(podSpec, taskRunnerConfig.getPrimaryContainerName());
     return createJobFromPodSpec(podSpec, task, context);
   }
 
@@ -152,9 +155,9 @@ public abstract class K8sTaskAdapter implements TaskAdapter
         .endMetadata()
         .withNewSpec()
         .withTemplate(podTemplate)
-        .withActiveDeadlineSeconds(taskRunnerConfig.maxTaskDuration.toStandardDuration().getStandardSeconds())
+        .withActiveDeadlineSeconds(taskRunnerConfig.getTaskTimeout().toStandardDuration().getStandardSeconds())
         .withBackoffLimit(0)
-        .withTtlSecondsAfterFinished((int) taskRunnerConfig.taskCleanupDelay.toStandardDuration().getStandardSeconds())
+        .withTtlSecondsAfterFinished((int) taskRunnerConfig.getTaskCleanupDelay().toStandardDuration().getStandardSeconds())
         .endSpec()
         .build();
   }
@@ -208,11 +211,11 @@ public abstract class K8sTaskAdapter implements TaskAdapter
       throws JsonProcessingException
   {
     // if the peon monitors are set, override the overlord's monitors (if set) with the peon monitors
-    if (!taskRunnerConfig.peonMonitors.isEmpty()) {
+    if (!taskRunnerConfig.getPeonMonitors().isEmpty()) {
       mainContainer.getEnv().removeIf(x -> "druid_monitoring_monitors".equals(x.getName()));
       mainContainer.getEnv().add(new EnvVarBuilder()
                                      .withName("druid_monitoring_monitors")
-                                     .withValue(mapper.writeValueAsString(taskRunnerConfig.peonMonitors))
+                                     .withValue(mapper.writeValueAsString(taskRunnerConfig.getPeonMonitors()))
                                      .build());
     }
 
@@ -281,17 +284,19 @@ public abstract class K8sTaskAdapter implements TaskAdapter
 
   protected Map<String, String> addJobSpecificAnnotations(PeonCommandContext context, K8sTaskId k8sTaskId)
   {
-    Map<String, String> annotations = taskRunnerConfig.annotations;
-    annotations.put(DruidK8sConstants.TASK_ID, k8sTaskId.getOriginalTaskId());
-    annotations.put(DruidK8sConstants.TLS_ENABLED, String.valueOf(context.isEnableTls()));
-    return annotations;
+    return ImmutableMap.<String, String>builder()
+        .putAll(taskRunnerConfig.getAnnotations())
+        .put(DruidK8sConstants.TASK_ID, k8sTaskId.getOriginalTaskId())
+        .put(DruidK8sConstants.TLS_ENABLED, String.valueOf(context.isEnableTls()))
+        .build();
   }
 
   protected Map<String, String> addJobSpecificLabels()
   {
-    Map<String, String> labels = taskRunnerConfig.labels;
-    labels.put(DruidK8sConstants.LABEL_KEY, "true");
-    return labels;
+    return ImmutableMap.<String, String>builder()
+        .putAll(taskRunnerConfig.getLabels())
+        .put(DruidK8sConstants.LABEL_KEY, "true")
+        .build();
   }
 
   protected PodTemplateSpec createTemplateFromSpec(
@@ -305,7 +310,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     podSpec.setNodeName(null);
     podSpec.setRestartPolicy("Never");
     podSpec.setHostname(k8sTaskId.getK8sTaskId());
-    podSpec.setTerminationGracePeriodSeconds(taskRunnerConfig.graceTerminationPeriodSeconds);
+    podSpec.setTerminationGracePeriodSeconds(taskRunnerConfig.getGraceTerminationPeriodSeconds());
 
     PodTemplateSpec podTemplate = new PodTemplateSpec();
     ObjectMeta objectMeta = new ObjectMeta();
@@ -343,7 +348,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   private List<String> javaOpts(Task task)
   {
     final List<String> javaOpts = new ArrayList<>();
-    Iterables.addAll(javaOpts, taskRunnerConfig.javaOptsArray);
+    Iterables.addAll(javaOpts, taskRunnerConfig.getJavaOptsArray());
 
     // Override task specific javaOpts
     Object taskJavaOpts = task.getContextValue(

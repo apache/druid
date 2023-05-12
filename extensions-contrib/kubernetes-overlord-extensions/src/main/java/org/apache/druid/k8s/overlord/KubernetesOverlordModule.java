@@ -40,7 +40,7 @@ import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogs;
 
 @LoadScope(roles = NodeRole.OVERLORD_JSON_NAME)
-public class K8sOverlordModule implements DruidModule
+public class KubernetesOverlordModule implements DruidModule
 {
   @Override
   public void configure(Binder binder)

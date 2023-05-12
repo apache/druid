@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,6 +35,14 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
+import org.apache.druid.k8s.overlord.common.JobResponse;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
+import org.apache.druid.k8s.overlord.common.K8sTestUtils;
+import org.apache.druid.k8s.overlord.common.KubernetesClientApi;
+import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
+import org.apache.druid.k8s.overlord.common.PeonCommandContext;
+import org.apache.druid.k8s.overlord.common.PeonPhase;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,7 +74,7 @@ public class DruidPeonClientIntegrationTest
   private TaskConfig taskConfig;
   private DruidNode druidNode;
   private KubernetesClientApi k8sClient;
-  private DruidKubernetesPeonClient peonClient;
+  private KubernetesPeonClient peonClient;
   private ObjectMapper jsonMapper;
 
   @BeforeEach
@@ -82,7 +90,7 @@ public class DruidPeonClientIntegrationTest
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
     );
     k8sClient = new DruidKubernetesClient();
-    peonClient = new DruidKubernetesPeonClient(k8sClient, "default", false);
+    peonClient = new KubernetesPeonClient(k8sClient, "default", false);
     druidNode = new DruidNode(
         "test",
         null,
@@ -103,8 +111,9 @@ public class DruidPeonClientIntegrationTest
     PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
 
     Task task = K8sTestUtils.getTask();
-    KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
-    config.namespace = "default";
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
+        .withNamespace("default")
+        .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         k8sClient,
         config,
@@ -121,10 +130,10 @@ public class DruidPeonClientIntegrationTest
     Job job = adapter.createJobFromPodSpec(podSpec, task, context);
 
     // launch the job and wait to start...
-    peonClient.launchJobAndWaitForStart(job, 1, TimeUnit.MINUTES);
+    peonClient.launchPeonJobAndWaitForStart(job, 1, TimeUnit.MINUTES);
 
     // there should be one job that is a k8s peon job that exists
-    List<Job> jobs = peonClient.listAllPeonJobs();
+    List<Job> jobs = peonClient.getPeonJobs();
     assertEquals(1, jobs.size());
 
     K8sTaskId taskId = new K8sTaskId(task.getId());
@@ -150,7 +159,7 @@ public class DruidPeonClientIntegrationTest
 
     // now copy the task.json file from the pod and make sure its the same as our task.json we expected
     Path downloadPath = Paths.get(tempDir.toAbsolutePath().toString(), "task.json");
-    Pod mainJobPod = peonClient.getMainJobPod(taskId);
+    Pod mainJobPod = peonClient.getPeonPodWithRetries(taskId);
     k8sClient.executeRequest(client -> {
       client.pods()
             .inNamespace("default")
@@ -165,16 +174,16 @@ public class DruidPeonClientIntegrationTest
     assertEquals(task, taskFromPod);
 
 
-    JobResponse jobStatusResult = peonClient.waitForJobCompletion(taskId, 2, TimeUnit.MINUTES);
+    JobResponse jobStatusResult = peonClient.waitForPeonJobCompletion(taskId, 2, TimeUnit.MINUTES);
     thread.join();
     assertEquals(PeonPhase.SUCCEEDED, jobStatusResult.getPhase());
     // as long as there were no exceptions we are good!
     assertEquals(expectedLogs, actualLogs);
     // cleanup my job
-    assertTrue(peonClient.cleanUpJob(taskId));
+    assertTrue(peonClient.deletePeonJob(taskId));
 
     // we cleaned up the job, none should exist
-    List<Job> existingJobs = peonClient.listAllPeonJobs();
+    List<Job> existingJobs = peonClient.getPeonJobs();
     assertEquals(0, existingJobs.size());
   }
 }
