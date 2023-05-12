@@ -17,14 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.helpers;
+package org.apache.druid.server.coordinator;
 
-import java.util.concurrent.ScheduledExecutorService;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- */
-public interface OverlordHelper
+public class CoordinatorOverlordServiceConfigTest
 {
-  boolean isEnabled();
-  void schedule(ScheduledExecutorService exec);
+  @Test
+  public void testOverlordServiceIsRequiredIfEnabled()
+  {
+    IllegalArgumentException e = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new CoordinatorOverlordServiceConfig(true, null)
+    );
+    Assert.assertEquals(
+        "'overlordService' must be specified when running Coordinator as Overlord.",
+        e.getMessage()
+    );
+  }
 }

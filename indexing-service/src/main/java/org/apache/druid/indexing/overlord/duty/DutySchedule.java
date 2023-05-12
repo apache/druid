@@ -17,18 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.tasklogs;
-
-import org.apache.druid.guice.annotations.ExtensionPoint;
-
-import java.io.IOException;
+package org.apache.druid.indexing.overlord.duty;
 
 /**
- * Cleans up stale task logs from deep storage.
+ * Schedule of an {@link OverlordDuty}.
  */
-@ExtensionPoint
-public interface TaskLogKiller
+public class DutySchedule
 {
-  void killAll() throws IOException;
-  void killOlderThan(long timestamp) throws IOException;
+  private final long periodMillis;
+  private final long initialDelayMillis;
+
+  public DutySchedule(long periodMillis, long initialDelayMillis)
+  {
+    this.initialDelayMillis = initialDelayMillis;
+    this.periodMillis = periodMillis;
+  }
+
+  public long getInitialDelayMillis()
+  {
+    return initialDelayMillis;
+  }
+
+  public long getPeriodMillis()
+  {
+    return periodMillis;
+  }
 }

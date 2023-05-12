@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.helpers;
+package org.apache.druid.indexing.overlord.duty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.TestHelper;

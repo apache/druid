@@ -17,37 +17,41 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.helpers;
+package org.apache.druid.indexing.overlord.duty;
 
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.joda.time.Duration;
 
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
+ * Manages the execution of all overlord duties on a single-threaded executor.
  */
-public class OverlordHelperManager
+public class OverlordDutyExecutor
 {
-  private static final Logger log = new Logger(OverlordHelperManager.class);
+  private static final Logger log = new Logger(OverlordDutyExecutor.class);
 
   private final ScheduledExecutorFactory execFactory;
-  private final Set<OverlordHelper> helpers;
+  private final Set<OverlordDuty> duties;
 
   private volatile ScheduledExecutorService exec;
   private final Object startStopLock = new Object();
   private volatile boolean started = false;
 
   @Inject
-  public OverlordHelperManager(
+  public OverlordDutyExecutor(
       ScheduledExecutorFactory scheduledExecutorFactory,
-      Set<OverlordHelper> helpers)
+      Set<OverlordDuty> duties
+  )
   {
     this.execFactory = scheduledExecutorFactory;
-    this.helpers = helpers;
+    this.duties = duties;
   }
 
   @LifecycleStart
@@ -55,19 +59,15 @@ public class OverlordHelperManager
   {
     synchronized (startStopLock) {
       if (!started) {
-        log.info("OverlordHelperManager is starting.");
-
-        for (OverlordHelper helper : helpers) {
-          if (helper.isEnabled()) {
-            if (exec == null) {
-              exec = execFactory.create(1, "Overlord-Helper-Manager-Exec--%d");
-            }
-            helper.schedule(exec);
+        log.info("Starting OverlordDutyExecutor.");
+        for (OverlordDuty duty : duties) {
+          if (duty.isEnabled()) {
+            schedule(duty);
           }
         }
-        started = true;
 
-        log.info("OverlordHelperManager is started.");
+        started = true;
+        log.info("OverlordDutyExecutor is now running.");
       }
     }
   }
@@ -77,15 +77,54 @@ public class OverlordHelperManager
   {
     synchronized (startStopLock) {
       if (started) {
-        log.info("OverlordHelperManager is stopping.");
+        log.info("Stopping OverlordDutyExecutor.");
         if (exec != null) {
           exec.shutdownNow();
           exec = null;
         }
         started = false;
 
-        log.info("OverlordHelperManager is stopped.");
+        log.info("OverlordDutyExecutor has been stopped.");
       }
+    }
+  }
+
+  /**
+   * Schedules execution of the given overlord duty.
+   */
+  private void schedule(OverlordDuty duty)
+  {
+    initExecutor();
+
+    final DutySchedule schedule = duty.getSchedule();
+    final String dutyName = duty.getClass().getName();
+
+    ScheduledExecutors.scheduleWithFixedDelay(
+        exec,
+        Duration.millis(schedule.getInitialDelayMillis()),
+        Duration.millis(schedule.getPeriodMillis()),
+        () -> {
+          try {
+            duty.run();
+          }
+          catch (Exception e) {
+            log.error(e, "Error while running duty [%s]", dutyName);
+          }
+        }
+    );
+
+    log.info(
+        "Scheduled overlord duty [%s] with initial delay [%d], period [%d].",
+        dutyName, schedule.getInitialDelayMillis(), schedule.getPeriodMillis()
+    );
+  }
+
+  private void initExecutor()
+  {
+    if (exec == null) {
+      final int numThreads = 1;
+      exec = execFactory.create(numThreads, "Overlord-Duty-Exec--%d");
+      log.info("Initialized duty executor with [%d] threads", numThreads);
     }
   }
 }

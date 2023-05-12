@@ -17,18 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.tasklogs;
+package org.apache.druid.common.config;
 
-import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.io.IOException;
-
-/**
- * Cleans up stale task logs from deep storage.
- */
-@ExtensionPoint
-public interface TaskLogKiller
+public class ConfigsTest
 {
-  void killAll() throws IOException;
-  void killOlderThan(long timestamp) throws IOException;
+  @Test
+  public void testValueOrDefault()
+  {
+    Assert.assertEquals(10, Configs.valueOrDefault((Integer) 10, 11));
+    Assert.assertEquals(11, Configs.valueOrDefault((Integer) null, 11));
+
+    Assert.assertEquals(10, Configs.valueOrDefault((Long) 10L, 11L));
+    Assert.assertEquals(11, Configs.valueOrDefault(null, 11L));
+
+    Assert.assertFalse(Configs.valueOrDefault((Boolean) false, true));
+    Assert.assertTrue(Configs.valueOrDefault(null, true));
+
+    Assert.assertEquals("abc", Configs.valueOrDefault("abc", "def"));
+    Assert.assertEquals("def", Configs.valueOrDefault(null, "def"));
+  }
+
 }

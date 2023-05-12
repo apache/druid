@@ -17,15 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.helpers;
+package org.apache.druid.indexing.overlord.duty;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.Configs;
 
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 /**
+ * Config for periodic cleanup of stale task logs from metadata store and deep
+ * storage.
  */
 public class TaskLogAutoCleanerConfig
 {
@@ -50,26 +54,25 @@ public class TaskLogAutoCleanerConfig
   )
   {
     if (enabled) {
-      Preconditions.checkNotNull(durationToRetain, "durationToRetain must be provided.");
+      Preconditions.checkNotNull(durationToRetain, "'durationToRetain' must be provided.");
     }
 
     this.enabled = enabled;
-    if (initialDelay == null) {
-      this.initialDelay = 60000 + ThreadLocalRandom.current().nextInt(4 * 60000);
-    } else {
-      this.initialDelay = initialDelay.longValue();
-    }
-    this.delay = delay == null ? 6 * 60 * 60 * 1000 : delay.longValue();
-    this.durationToRetain = durationToRetain == null ? Long.MAX_VALUE : durationToRetain.longValue();
+    this.initialDelay = Configs.valueOrDefault(
+        initialDelay,
+        60000 + ThreadLocalRandom.current().nextInt(4 * 60000)
+    );
+    this.delay = Configs.valueOrDefault(delay, TimeUnit.HOURS.toMillis(6));
+    this.durationToRetain = Configs.valueOrDefault(durationToRetain, Long.MAX_VALUE);
 
-    Preconditions.checkArgument(this.initialDelay > 0, "initialDelay must be > 0.");
-    Preconditions.checkArgument(this.delay > 0, "delay must be > 0.");
-    Preconditions.checkArgument(this.durationToRetain > 0, "durationToRetain must be > 0.");
+    Preconditions.checkArgument(this.initialDelay > 0, "'initialDelay' must be greater than 0.");
+    Preconditions.checkArgument(this.delay > 0, "'delay' must be greater than 0.");
+    Preconditions.checkArgument(this.durationToRetain > 0, "'durationToRetain' must be greater than 0.");
   }
 
   public boolean isEnabled()
   {
-    return this.enabled;
+    return enabled;
   }
 
   public long getInitialDelay()

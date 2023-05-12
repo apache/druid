@@ -17,20 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.helpers;
+package org.apache.druid.indexing.overlord.duty;
 
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.TaskStorage;
-import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.tasklogs.TaskLogKiller;
-import org.joda.time.Duration;
-
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
+ * Periodically cleans up stale task logs from both metadata store and deep storage.
+ *
+ * @see TaskLogAutoCleanerConfig
  */
-public class TaskLogAutoCleaner implements OverlordHelper
+public class TaskLogAutoCleaner implements OverlordDuty
 {
   private static final Logger log = new Logger(TaskLogAutoCleaner.class);
 
@@ -57,29 +56,16 @@ public class TaskLogAutoCleaner implements OverlordHelper
   }
 
   @Override
-  public void schedule(ScheduledExecutorService exec)
+  public void run() throws Exception
   {
-    log.info("Scheduling TaskLogAutoCleaner with config [%s].", config.toString());
+    long timestamp = System.currentTimeMillis() - config.getDurationToRetain();
+    taskLogKiller.killOlderThan(timestamp);
+    taskStorage.removeTasksOlderThan(timestamp);
+  }
 
-    ScheduledExecutors.scheduleWithFixedDelay(
-        exec,
-        Duration.millis(config.getInitialDelay()),
-        Duration.millis(config.getDelay()),
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            try {
-              long timestamp = System.currentTimeMillis() - config.getDurationToRetain();
-              taskLogKiller.killOlderThan(timestamp);
-              taskStorage.removeTasksOlderThan(timestamp);
-            }
-            catch (Exception ex) {
-              log.error(ex, "Failed to clean-up the task logs");
-            }
-          }
-        }
-    );
+  @Override
+  public DutySchedule getSchedule()
+  {
+    return new DutySchedule(config.getDelay(), config.getInitialDelay());
   }
 }
