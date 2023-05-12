@@ -29,7 +29,6 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.Streams;
@@ -37,7 +36,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Arrays;
@@ -45,7 +43,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -298,13 +295,6 @@ public class ExternalInputSpecSlicerTest
       throw new UnsupportedOperationException();
     }
 
-    @Nonnull
-    @Override
-    public Set<String> getTypes() throws UOE
-    {
-      throw new UOE("This inputSource does not support input source based security");
-    }
-
     @Override
     public boolean isSplittable()
     {
@@ -348,13 +338,6 @@ public class ExternalInputSpecSlicerTest
     {
       this.strings = strings;
       this.useSplitHintSpec = useSplitHintSpec;
-    }
-
-    @Nonnull
-    @Override
-    public Set<String> getTypes() throws UOE
-    {
-      throw new UOE("This inputSource does not support input source based security");
     }
 
     @Override

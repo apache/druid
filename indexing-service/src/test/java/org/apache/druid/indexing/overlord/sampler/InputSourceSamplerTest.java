@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.overlord.sampler;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -52,7 +51,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.collect.Utils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -1324,14 +1322,6 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
       )
       {
         throw new RuntimeException();
-      }
-
-      @Nonnull
-      @JsonIgnore
-      @Override
-      public Set<String> getTypes() throws UOE
-      {
-        throw new UOE("This inputSource does not support input source based security");
       }
     };
     inputSourceSampler.sample(failingReaderInputSource, null, null, null);

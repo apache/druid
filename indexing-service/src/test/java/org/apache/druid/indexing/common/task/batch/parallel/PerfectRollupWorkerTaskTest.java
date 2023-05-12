@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -27,23 +26,18 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.server.security.ResourceAction;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class PerfectRollupWorkerTaskTest
 {
@@ -171,17 +165,6 @@ public class PerfectRollupWorkerTaskTest
     public String getType()
     {
       return "TestPerfectRollupWorkerTask";
-    }
-
-    @JsonIgnore
-    @Nonnull
-    @Override
-    public Set<ResourceAction> getInputSourceResources() throws UOE
-    {
-      throw new UOE(StringUtils.format(
-          "Task type [%s], does not support input source based security",
-          getType()
-      ));
     }
 
     @Override

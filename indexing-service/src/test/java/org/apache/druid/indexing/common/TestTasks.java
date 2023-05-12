@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,12 +28,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.server.security.ResourceAction;
-
-import javax.annotation.Nonnull;
-import java.util.Set;
 
 public class TestTasks
 {
@@ -70,17 +63,6 @@ public class TestTasks
       return "immediateSuccess";
     }
 
-    @JsonIgnore
-    @Nonnull
-    @Override
-    public Set<ResourceAction> getInputSourceResources() throws UOE
-    {
-      throw new UOE(StringUtils.format(
-          "Task type [%s], does not support input source based security",
-          getType()
-      ));
-    }
-
     @Override
     public boolean isReady(TaskActionClient taskActionClient)
     {
@@ -112,17 +94,6 @@ public class TestTasks
     public String getType()
     {
       return "unending";
-    }
-
-    @JsonIgnore
-    @Nonnull
-    @Override
-    public Set<ResourceAction> getInputSourceResources() throws UOE
-    {
-      throw new UOE(StringUtils.format(
-          "Task type [%s], does not support input source based security",
-          getType()
-      ));
     }
 
     @Override

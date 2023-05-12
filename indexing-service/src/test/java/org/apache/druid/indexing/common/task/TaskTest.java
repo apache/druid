@@ -19,22 +19,17 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.server.security.ResourceAction;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.annotation.Nonnull;
 import java.util.Map;
-import java.util.Set;
 
 public class TaskTest
 {
@@ -62,17 +57,6 @@ public class TaskTest
     public String getType()
     {
       return null;
-    }
-
-    @JsonIgnore
-    @Nonnull
-    @Override
-    public Set<ResourceAction> getInputSourceResources() throws UOE
-    {
-      throw new UOE(StringUtils.format(
-          "Task type [%s], does not support input source based security",
-          getType()
-      ));
     }
 
     @Override

@@ -19,12 +19,9 @@
 
 package org.apache.druid.data.input;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.utils.CompressionUtils;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
@@ -32,7 +29,6 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collections;
-import java.util.Set;
 
 /**
  * {@link InputSource} backed by {@link ClassLoader#getResourceAsStream(String)}, for all your embedded test data
@@ -79,14 +75,6 @@ public class ResourceInputSource extends AbstractInputSource
         Collections.singletonList(new ResourceStreamEntity(classLoader, resourceFile)).iterator(),
         temporaryDirectory
     );
-  }
-
-  @Override
-  @JsonIgnore
-  @Nonnull
-  public Set<String> getTypes()
-  {
-    throw new UOE("This inputSource does not support input source based security");
   }
 
   public static class ResourceStreamEntity implements InputEntity

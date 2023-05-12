@@ -96,16 +96,10 @@ public interface InputSource
    * combining of multiple input sources.
    * @return The types of input sources uses
    */
-  /*
   @JsonIgnore
   @Nonnull
   default Set<String> getTypes()
   {
     throw new UOE("This inputSource does not support input source based security");
   }
-   */
-
-  @JsonIgnore
-  @Nonnull
-  Set<String> getTypes() throws UOE;
 }

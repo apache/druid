@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Function;
@@ -99,7 +98,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -147,7 +145,6 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -165,7 +162,6 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
@@ -341,13 +337,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     {
       return false;
     }
-
-    @Nonnull
-    @Override
-    public Set<String> getTypes() throws UOE
-    {
-      return ImmutableSet.of("mock");
-    }
   }
 
   private static class MockInputSource extends AbstractInputSource
@@ -382,13 +371,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     public boolean needsFormat()
     {
       return false;
-    }
-
-    @Nonnull
-    @Override
-    public Set<String> getTypes() throws UOE
-    {
-      return ImmutableSet.of("mock");
     }
   }
 
@@ -1045,16 +1027,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         return "test";
       }
 
-      @JsonIgnore
-      @Nonnull
-      @Override
-      public Set<ResourceAction> getInputSourceResources() throws UOE
-      {
-        throw new UOE(StringUtils.format(
-            "Task type [%s], does not support input source based security",
-            getType()
-        ));
-      }
       @Override
       public void stopGracefully(TaskConfig taskConfig)
       {
@@ -1105,17 +1077,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         return "test";
       }
 
-      @JsonIgnore
-      @Nonnull
-      @Override
-      public Set<ResourceAction> getInputSourceResources() throws UOE
-      {
-        throw new UOE(StringUtils.format(
-            "Task type [%s], does not support input source based security",
-            getType()
-        ));
-      }
-
       @Override
       public void stopGracefully(TaskConfig taskConfig)
       {
@@ -1156,17 +1117,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       public String getType()
       {
         return "test";
-      }
-
-      @JsonIgnore
-      @Nonnull
-      @Override
-      public Set<ResourceAction> getInputSourceResources() throws UOE
-      {
-        throw new UOE(StringUtils.format(
-            "Task type [%s], does not support input source based security",
-            getType()
-        ));
       }
 
       @Override
@@ -1504,17 +1454,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       public String getType()
       {
         return "test";
-      }
-
-      @JsonIgnore
-      @Nonnull
-      @Override
-      public Set<ResourceAction> getInputSourceResources() throws UOE
-      {
-        throw new UOE(StringUtils.format(
-            "Task type [%s], does not support input source based security",
-            getType()
-        ));
       }
 
       @Override

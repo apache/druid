@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -47,7 +46,6 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -55,7 +53,6 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.server.security.ResourceAction;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.joda.time.DateTime;
@@ -63,14 +60,12 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class SeekableStreamSamplerSpecTest extends EasyMockSupport
 {
@@ -316,23 +311,6 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
     protected RecordSupplier createRecordSupplier()
     {
       return recordSupplier;
-    }
-
-    @Override
-    public String getType()
-    {
-      return "test";
-    }
-
-    @Nonnull
-    @JsonIgnore
-    @Override
-    public Set<ResourceAction> getInputSourceResources() throws UOE
-    {
-      throw new UOE(StringUtils.format(
-          "SuperviserSpec type [%s], does not support input source based security",
-          getType()
-      ));
     }
   }
 

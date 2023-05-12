@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.overlord;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskStatus;
@@ -35,16 +34,11 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
-import javax.annotation.Nonnull;
 import java.util.List;
-import java.util.Set;
 
 /**
  */
@@ -59,17 +53,6 @@ public class RealtimeishTask extends AbstractTask
   public String getType()
   {
     return "realtime_test";
-  }
-
-  @JsonIgnore
-  @Nonnull
-  @Override
-  public Set<ResourceAction> getInputSourceResources() throws UOE
-  {
-    throw new UOE(StringUtils.format(
-        "Task type [%s], does not support input source based security",
-        getType()
-    ));
   }
 
   @Override

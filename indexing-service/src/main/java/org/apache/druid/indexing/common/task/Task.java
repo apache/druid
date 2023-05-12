@@ -152,7 +152,6 @@ public interface Task
    * @throws UnsupportedOperationException if the given task type does not suppoert input source based security. Such
    * would be the case, if the task uses firehose.
    */
-  /*
   @JsonIgnore
   @Nonnull
   default Set<ResourceAction> getInputSourceResources() throws UOE
@@ -162,10 +161,6 @@ public interface Task
         getType()
     ));
   }
-   */
-  @JsonIgnore
-  @Nonnull
-  Set<ResourceAction> getInputSourceResources() throws UOE;
 
   default UOE getInputSecurityOnFirehoseUnsupportedError()
   {
