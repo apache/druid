@@ -180,32 +180,27 @@ public class TaskLockboxTest
   {
     final Interval interval = Intervals.of("2017-01/2017-02");
 
-    // Add an exclusive lock entry of the highest priority
     final TaskLock exclusiveRevokedLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
         interval,
         HIGH_PRIORITY
     );
 
-    // Any equal or lower priority shared lock must fail
     validator.expectLockNotGranted(
         TaskLockType.SHARED,
         interval,
         HIGH_PRIORITY
     );
 
-    // Revoke existing active exclusive lock
     validator.revokeLock(exclusiveRevokedLock);
     validator.expectRevokedLocks(exclusiveRevokedLock);
 
-    // test creating a new low priority shared lock
     final TaskLock lowPrioritySharedLock = validator.expectLockCreated(
         TaskLockType.SHARED,
         interval,
         LOW_PRIORITY
     );
 
-    // Adding an exclusive task lock of medium priority should revoke all existing active locks
     final TaskLock mediumPriorityExclusiveLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
         interval,
@@ -214,7 +209,6 @@ public class TaskLockboxTest
     validator.expectActiveLocks(mediumPriorityExclusiveLock);
     validator.expectRevokedLocks(exclusiveRevokedLock, lowPrioritySharedLock);
 
-    // Add new shared lock which revokes the active exclusive task lock
     final TaskLock highPrioritySharedLock = validator.expectLockCreated(
         TaskLockType.SHARED,
         interval,
@@ -1259,28 +1253,24 @@ public class TaskLockboxTest
         MEDIUM_PRIORITY
     );
 
-    // Another exclusive lock cannot be created for an overlapping interval
     validator.expectLockNotGranted(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2017-05-01/2017-06-01"),
         MEDIUM_PRIORITY
     );
 
-    // A shared lock cannot be created for an overlapping interval
     validator.expectLockNotGranted(
         TaskLockType.SHARED,
         Intervals.of("2016/2019"),
         MEDIUM_PRIORITY
     );
 
-    // A replace lock cannot be created for an overlapping interval
     validator.expectLockNotGranted(
         TaskLockType.REPLACE,
         Intervals.of("2017/2018"),
         MEDIUM_PRIORITY
     );
 
-    // An append lock cannot be created for an overlapping interval
     validator.expectLockNotGranted(
         TaskLockType.APPEND,
         Intervals.of("2017-05-01/2018-05-01"),
@@ -1296,7 +1286,6 @@ public class TaskLockboxTest
   {
     final TaskLockboxValidator validator = new TaskLockboxValidator(lockbox, taskStorage);
 
-    // Revoked shared lock of higher priority -> revoked locks are compatible
     final TaskLock sharedLock = validator.tryTaskLock(
         TaskLockType.SHARED,
         Intervals.of("2016/2019"),
@@ -1304,21 +1293,18 @@ public class TaskLockboxTest
     );
     validator.revokeLock(sharedLock);
 
-    // Active Exclusive lock of lower priority -> will be revoked
     final TaskLock exclusiveLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2017-01-01/2017-02-01"),
         LOW_PRIORITY
     );
 
-    // Active replace lock of lower priority -> will be revoked
     final TaskLock replaceLock = validator.expectLockCreated(
         TaskLockType.REPLACE,
         Intervals.of("2017-07-01/2018-01-01"),
         LOW_PRIORITY
     );
 
-    // Active append lock of lower priority -> will be revoked
     final TaskLock appendLock = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-09-01/2017-10-01"),
@@ -1347,42 +1333,36 @@ public class TaskLockboxTest
         MEDIUM_PRIORITY
     );
 
-    // No overlapping exclusive lock is compatible
     validator.expectLockNotGranted(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2017-05-01/2017-06-01"),
         MEDIUM_PRIORITY
     );
 
-    // Enclosing shared lock of lower priority - compatible
     final TaskLock sharedLock0 = validator.expectLockCreated(
         TaskLockType.SHARED,
         Intervals.of("2016/2019"),
         LOW_PRIORITY
     );
 
-    // Enclosed shared lock of higher priority - compatible
     final TaskLock sharedLock1 = validator.expectLockCreated(
         TaskLockType.SHARED,
         Intervals.of("2017-06-01/2017-07-01"),
         LOW_PRIORITY
     );
 
-    // Partially Overlapping shared lock of equal priority - compatible
     final TaskLock sharedLock2 = validator.expectLockCreated(
         TaskLockType.SHARED,
         Intervals.of("2017-05-01/2018-05-01"),
         MEDIUM_PRIORITY
     );
 
-    // Conficting replace locks are incompatible
     validator.expectLockNotGranted(
         TaskLockType.REPLACE,
         Intervals.of("2017/2018"),
         MEDIUM_PRIORITY
     );
 
-    // Conflicting append locks are incompatible
     validator.expectLockNotGranted(
         TaskLockType.APPEND,
         Intervals.of("2017-05-01/2018-05-01"),
@@ -1396,7 +1376,6 @@ public class TaskLockboxTest
   @Test
   public void testSharedLockCanRevokeAllIncompatible() throws Exception
   {
-    // Revoked Exclusive lock of higher priority -> revoked locks are compatible
     final TaskLock exclusiveLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2016/2019"),
@@ -1404,21 +1383,18 @@ public class TaskLockboxTest
     );
     validator.revokeLock(exclusiveLock);
 
-    // Active Shared lock of same priority -> will not be affected
     final TaskLock sharedLock = validator.expectLockCreated(
         TaskLockType.SHARED,
         Intervals.of("2017-01-01/2017-02-01"),
         MEDIUM_PRIORITY
     );
 
-    // Active replace lock of lower priority -> will be revoked
     final TaskLock replaceLock = validator.expectLockCreated(
         TaskLockType.REPLACE,
         Intervals.of("2017-07-01/2018-07-01"),
         LOW_PRIORITY
     );
 
-    // Active append lock of lower priority -> will be revoked
     final TaskLock appendLock = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-02-01/2017-03-01"),
@@ -1447,35 +1423,30 @@ public class TaskLockboxTest
         MEDIUM_PRIORITY
     );
 
-    // An exclusive lock cannot be created for an overlapping interval
     validator.expectLockNotGranted(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2017-05-01/2017-06-01"),
         MEDIUM_PRIORITY
     );
 
-    // A shared lock cannot be created for an overlapping interval
     validator.expectLockNotGranted(
         TaskLockType.SHARED,
         Intervals.of("2016/2019"),
         MEDIUM_PRIORITY
     );
 
-    // A replace lock cannot be created for a non-enclosing interval
     validator.expectLockNotGranted(
         TaskLockType.REPLACE,
         Intervals.of("2017-05-01/2018-01-01"),
         MEDIUM_PRIORITY
     );
 
-    // A replace lock can be created for an enclosing interval
     final TaskLock replaceLock = validator.expectLockCreated(
         TaskLockType.REPLACE,
         Intervals.of("2017/2018"),
         MEDIUM_PRIORITY
     );
 
-    // Another replace lock cannot be created
     validator.expectLockNotGranted(
         TaskLockType.REPLACE,
         Intervals.of("2016/2019"),
@@ -1483,15 +1454,12 @@ public class TaskLockboxTest
     );
 
 
-    // Any append lock can be created, provided that it lies within the interval of the previously created replace lock
-    // This should not revoke any of the existing locks even with a higher priority
     final TaskLock appendLock0 = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-05-01/2017-06-01"),
         HIGH_PRIORITY
     );
 
-    // Append lock with a lower priority can be created as well
     final TaskLock appendLock1 = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-05-01/2017-06-01"),
@@ -1505,7 +1473,6 @@ public class TaskLockboxTest
   @Test
   public void testAppendLockCanRevokeAllIncompatible() throws Exception
   {
-    // Revoked Shared lock of higher priority -> revoked locks are compatible
     final TaskLock sharedLock = validator.expectLockCreated(
         TaskLockType.SHARED,
         Intervals.of("2016/2019"),
@@ -1513,28 +1480,24 @@ public class TaskLockboxTest
     );
     validator.revokeLock(sharedLock);
 
-    // Active Exclusive lock of lower priority -> will be revoked
     final TaskLock exclusiveLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2017-01-01/2017-02-01"),
         LOW_PRIORITY
     );
 
-    // Active replace lock of lower priority which doesn't enclose the interval -> will be revoked
     final TaskLock replaceLock = validator.expectLockCreated(
         TaskLockType.REPLACE,
         Intervals.of("2017-07-01/2018-07-01"),
         LOW_PRIORITY
     );
 
-    // Active append lock of lower priority -> will not be revoked
     final TaskLock appendLock0 = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-02-01/2017-03-01"),
         LOW_PRIORITY
     );
 
-    // Active append lock of higher priority -> will not revoke or be revoked
     final TaskLock appendLock1 = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-02-01/2017-05-01"),
@@ -1564,36 +1527,30 @@ public class TaskLockboxTest
         MEDIUM_PRIORITY
     );
 
-    // An exclusive lock cannot be created for an overlapping interval
     validator.expectLockNotGranted(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2017-05-01/2017-06-01"),
         MEDIUM_PRIORITY
     );
 
-    // A shared lock cannot be created for an overlapping interval
     validator.expectLockNotGranted(
         TaskLockType.SHARED,
         Intervals.of("2016/2019"),
         MEDIUM_PRIORITY
     );
 
-    // A replace lock cannot be created for an overlapping interval
     validator.expectLockNotGranted(
         TaskLockType.REPLACE,
         Intervals.of("2017/2018"),
         MEDIUM_PRIORITY
     );
 
-    // An append lock can be created for an interval enclosed within the replace lock's.
-    // Also note that the append lock has a higher priority but doesn't revoke the replace lock as it can coexist.
     final TaskLock appendLock = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-05-01/2017-06-01"),
         HIGH_PRIORITY
     );
 
-    // An append lock cannot coexist when its interval is not enclosed within the replace lock's.
     validator.expectLockNotGranted(
         TaskLockType.APPEND,
         Intervals.of("2016-05-01/2017-06-01"),
@@ -1607,7 +1564,6 @@ public class TaskLockboxTest
   @Test
   public void testReplaceLockCanRevokeAllIncompatible() throws Exception
   {
-    // Revoked Append lock of higher priority -> revoked locks are compatible
     final TaskLock appendLock0 = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2016/2019"),
@@ -1615,35 +1571,30 @@ public class TaskLockboxTest
     );
     validator.revokeLock(appendLock0);
 
-    // Active append lock of higher priority within replace interval -> unaffected
     final TaskLock appendLock1 = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-02-01/2017-03-01"),
         HIGH_PRIORITY
     );
 
-    // Active Append lock of lower priority which is not enclosed -> will be revoked
     final TaskLock appendLock2 = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-09-01/2018-03-01"),
         LOW_PRIORITY
     );
 
-    // Active Exclusive lock of lower priority -> will be revoked
     final TaskLock exclusiveLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2017-05-01/2017-06-01"),
         LOW_PRIORITY
     );
 
-    // Active replace lock of lower priority which doesn't enclose the interval -> will be revoked
     final TaskLock replaceLock = validator.expectLockCreated(
         TaskLockType.REPLACE,
         Intervals.of("2016-09-01/2017-03-01"),
         LOW_PRIORITY
     );
 
-    // Active shared lock of lower priority -> will be revoked
     final TaskLock sharedLock = validator.expectLockCreated(
         TaskLockType.SHARED,
         Intervals.of("2017-04-01/2017-05-01"),

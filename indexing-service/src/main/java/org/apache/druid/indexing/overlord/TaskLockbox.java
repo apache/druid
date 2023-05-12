@@ -39,6 +39,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -1257,7 +1258,7 @@ public class TaskLockbox
       case EXCLUSIVE:
         return canExclusiveLockCoexist(conflictPosses);
       default:
-        return false;
+        throw new UOE("Unsupposted lock type: " + request.getType());
     }
   }
 
@@ -1359,7 +1360,7 @@ public class TaskLockbox
 
 
   /**
-   * Verify if each incompatible active lock is revokable. If yes, revoke all of them.
+   * Verify if every incompatible active lock is revokable. If yes, revoke all of them.
    * - EXCLUSIVE locks are incompatible with every other conflicting lock
    * - SHARED locks are incompatible with conflicting locks of every other type
    * - REPLACE locks are incompatible with every conflicting lock which is not (APPEND and enclosed) within its interval
@@ -1417,7 +1418,7 @@ public class TaskLockbox
           }
           break;
         default:
-          return false;
+          throw new UOE("Unsupposted lock type: " + type);
       }
     }
     for (TaskLockPosse revokablePosse : possesToRevoke) {
