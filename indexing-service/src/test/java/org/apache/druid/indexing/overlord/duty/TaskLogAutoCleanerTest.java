@@ -26,7 +26,6 @@ import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 public class TaskLogAutoCleanerTest
