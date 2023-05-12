@@ -253,13 +253,18 @@ Druid can infer the schema for your data in one of two ways:
 
 You can have Druid infer the schema and types for your data partially or fully by setting `dimensionsSpec.useSchemaDiscovery` to `true` and defining some or no dimensions in the dimensions list. 
 
-When performing type-aware schema discovery, Druid can discover all of the columns of your input data (that aren't in the exclusion list), but the behavior depends on the source data:
+When performing type-aware schema discovery, Druid can discover all of the columns of your input data (that aren't in
+the exclusion list). Druid automatically chooses the most appropriate native Druid type among `STRING`, `LONG`,
+`DOUBLE`, `ARRAY<STRING>`, `ARRAY<LONG>`, `ARRAY<DOUBLE>`, or `COMPLEX<json>` for nested data. For input formats with
+native boolean types, Druid ingests these values as strings if `druid.expressions.useStrictBooleans` is set to `false`
+(the default), or longs if set to `true` (for more SQL compatible behavior). Array typed columns can be queried using
+the [array functions](../querying/sql-array-functions.md) or [`UNNEST`](../querying/sql-functions.md#unnest). Nested
+columns can be queried with the [json functions](../querying/sql-json-functions.md).
 
-- **Primitive types**: Ingested as the most appropriate native Druid type, either string, double or long. 
-- **Native boolean types**:  Ingested as strings or longs depending on the value of `druid.expressions.useStrictBooleans`.
-- For input formats with native boolean types, Druid ingests them as strings or longs depending on the value of `druid.expressions.useStrictBooleans`.
-- For arrays, the data gets ingested as an array typed column: `ARRAY<STRING>`, `ARRAY<DOUBLE>`, or `ARRAY<LONG>`. You can then interact with these columns using ARRAY functions as well as UNNEST.
-- For mixed types, complex nested structures, and arrays of complex nested structures, Druid ingests the column as the least restrictive data type.
+Mixed type columns are stored in the 'least' restrictive type that can represent all values in the column. For example,
+mixed numeric columns are `DOUBLE`, if there are any strings present then the column is a `STRING`, if there are arrays
+then the column becomes an array with the least restrictive element type, and finally any nested data or arrays of
+nested data will be stored as `COMPLEX<json>` nested columns.
 
 If you're already using string-based schema discovery and want to migrate, see [Migrating to type-aware schema discovery](#migrating-to-type-aware-schema-discovery).
 
