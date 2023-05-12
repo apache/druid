@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFormat;
@@ -31,9 +32,11 @@ import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Iterator;
@@ -104,6 +107,16 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
   public boolean needsFormat()
   {
     return true;
+  }
+
+  @Override
+  @JsonIgnore
+  @Nonnull
+  public Set<String> getTypes() throws UOE
+  {
+    // this input source type is only used with samplerSpec which defines its own input source types
+    // based on implementation.
+    throw new UOE("This inputSource does not support input source based security");
   }
 
   @Override

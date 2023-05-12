@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
@@ -31,13 +32,18 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
+import javax.annotation.Nonnull;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -66,6 +72,17 @@ public class ThreadingTaskRunnerTest
       public String getType()
       {
         return "test";
+      }
+
+      @JsonIgnore
+      @Nonnull
+      @Override
+      public Set<ResourceAction> getInputSourceResources() throws UOE
+      {
+        throw new UOE(StringUtils.format(
+            "Task type [%s], does not support input source based security",
+            getType()
+        ));
       }
 
       @Override

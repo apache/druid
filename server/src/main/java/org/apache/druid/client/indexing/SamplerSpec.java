@@ -19,10 +19,46 @@
 
 package org.apache.druid.client.indexing;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.server.security.ResourceAction;
+
+import javax.annotation.Nonnull;
+import java.util.Set;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface SamplerSpec
 {
   SamplerResponse sample();
+
+  /**
+   * Returns a descriptive label for this task type. Used for metrics emission and logging.
+   *
+   * @return task type label
+   */
+  String getType();
+
+  /**
+   * @return The types of {@link org.apache.druid.data.input.InputSource} that the task uses. Empty set is returned if
+   * the task does not use any. Users can be given permission to access particular types of
+   * input sources but not others, using the
+   * {@link org.apache.druid.server.security.AuthConfig#enableInputSourceSecurity} config.
+   */
+  /*
+  @JsonIgnore
+  @Nonnull
+  default Set<ResourceAction> getInputSourceResources() throws UOE
+  {
+    throw new UOE(StringUtils.format(
+        "SuperviserSpec type [%s], does not support input source based security",
+        getType()
+    ));
+  }
+
+   */
+
+  @JsonIgnore
+  @Nonnull
+  Set<ResourceAction> getInputSourceResources() throws UOE;
 }

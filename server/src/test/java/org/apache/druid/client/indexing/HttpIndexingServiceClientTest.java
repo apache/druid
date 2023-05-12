@@ -19,6 +19,7 @@
 
 package org.apache.druid.client.indexing;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -26,6 +27,8 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.Request;
@@ -33,6 +36,7 @@ import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.Capture;
@@ -49,9 +53,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.annotation.Nonnull;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Set;
 
 public class HttpIndexingServiceClientTest
 {
@@ -107,6 +113,23 @@ public class HttpIndexingServiceClientTest
       public SamplerResponse sample()
       {
         return samplerResponse;
+      }
+
+      @Override
+      public String getType()
+      {
+        return "test";
+      }
+
+      @Override
+      @Nonnull
+      @JsonIgnore
+      public Set<ResourceAction> getInputSourceResources() throws UOE
+      {
+        throw new UOE(StringUtils.format(
+            "SuperviserSpec type [%s], does not support input source based security",
+            getType()
+        ));
       }
     };
 
@@ -170,6 +193,23 @@ public class HttpIndexingServiceClientTest
       public SamplerResponse sample()
       {
         return samplerResponse;
+      }
+
+      @Override
+      public String getType()
+      {
+        return "test";
+      }
+
+      @Override
+      @Nonnull
+      @JsonIgnore
+      public Set<ResourceAction> getInputSourceResources() throws UOE
+      {
+        throw new UOE(StringUtils.format(
+            "SuperviserSpec type [%s], does not support input source based security",
+            getType()
+        ));
       }
     };
     HttpResponse response = EasyMock.createMock(HttpResponse.class);

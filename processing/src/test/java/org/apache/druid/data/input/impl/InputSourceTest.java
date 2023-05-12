@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
@@ -27,8 +28,10 @@ import org.apache.druid.java.util.common.UOE;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.Set;
 
 public class InputSourceTest
 {
@@ -54,6 +57,14 @@ public class InputSourceTest
     )
     {
       return null;
+    }
+
+    @Override
+    @JsonIgnore
+    @Nonnull
+    public Set<String> getTypes()
+    {
+      throw new UOE("This inputSource does not support input source based security");
     }
   };
 
