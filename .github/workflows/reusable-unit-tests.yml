@@ -102,7 +102,7 @@ jobs:
         run: ./.github/scripts/unit_tests_script.sh
 
       - name: set outputs on failure
-        if: ${{ failure() && steps.test-and-coverage.conclusion == 'failure }}
+        if: ${{ failure() && steps.test-and-coverage.conclusion == 'failure' }}
         run: |
           echo "coverage failure - ${{ env.coverage-failure }}"
           echo "coverage-failure=${{ env.coverage-failure }}" >> "$GITHUB_OUTPUT"
