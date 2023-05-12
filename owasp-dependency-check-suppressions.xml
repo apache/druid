@@ -825,7 +825,7 @@
     <!-- this one seems to apply to backend server - https://nvd.nist.gov/vuln/detail/CVE-2023-25613 -->
     <cve>CVE-2023-25613</cve>
   </suppress>
-  <suppress>g
+  <suppress>
     <notes><![CDATA[
      file name: ranger-plugins-*-2.0.0.jar
      ]]></notes>
