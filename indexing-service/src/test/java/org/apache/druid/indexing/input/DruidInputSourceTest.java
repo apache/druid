@@ -301,7 +301,7 @@ public class DruidInputSourceTest
   }
 
   @Test
-  public void testGetTypesEmpty()
+  public void testGetTypes()
   {
     String datasource = "foo";
     Interval interval = Intervals.of("2000/2001");
