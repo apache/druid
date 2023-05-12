@@ -80,7 +80,6 @@ services:
     ports:
       - 3306:3306
     volumes:
-      - ${SHARED_DIR}/db:/var/lib/mysql
       - ${SHARED_DIR}/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       MYSQL_ROOT_PASSWORD: driud
