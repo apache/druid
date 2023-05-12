@@ -75,7 +75,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -93,6 +92,7 @@ public class TaskLockboxTest
   private TaskStorage taskStorage;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private TaskLockbox lockbox;
+  private TaskLockboxValidator validator;
 
   private final int HIGH_PRIORITY = 15;
   private final int MEDIUM_PRIORITY = 10;
@@ -128,6 +128,7 @@ public class TaskLockboxTest
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(objectMapper, tablesConfig, derbyConnector);
 
     lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    validator = new TaskLockboxValidator(lockbox, taskStorage);
   }
 
   private LockResult acquireTimeChunkLock(TaskLockType lockType, Task task, Interval interval, long timeoutMs)
@@ -148,11 +149,13 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testLock() throws InterruptedException
+  public void testLock() throws Exception
   {
-    Task task = NoopTask.create();
-    lockbox.add(task);
-    Assert.assertNotNull(acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-02")));
+    validator.expectLockCreated(
+        TaskLockType.EXCLUSIVE,
+        Intervals.of("2015-01-01/2015-01-02"),
+        MEDIUM_PRIORITY
+    );
   }
 
   @Test(expected = IllegalStateException.class)
@@ -173,81 +176,52 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testTrySharedLock() throws EntryExistsException
+  public void testTrySharedLock() throws Exception
   {
     final Interval interval = Intervals.of("2017-01/2017-02");
-    final List<Task> tasks = new ArrayList<>();
-    final Set<TaskLock> activeLocks = new HashSet<>();
 
     // Add an exclusive lock entry of the highest priority
-    Task exclusiveHigherPriorityRevokedLockTask = NoopTask.create(100);
-    tasks.add(exclusiveHigherPriorityRevokedLockTask);
-    taskStorage.insert(
-        exclusiveHigherPriorityRevokedLockTask,
-        TaskStatus.running(exclusiveHigherPriorityRevokedLockTask.getId())
-    );
-    lockbox.add(exclusiveHigherPriorityRevokedLockTask);
-    final TaskLock exclusiveRevokedLock = tryTimeChunkLock(
+    final TaskLock exclusiveRevokedLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
-        exclusiveHigherPriorityRevokedLockTask,
-        interval
-    ).getTaskLock();
+        interval,
+        HIGH_PRIORITY
+    );
 
     // Any equal or lower priority shared lock must fail
-    final Task sharedLockTask = NoopTask.create(100);
-    lockbox.add(sharedLockTask);
-    Assert.assertFalse(tryTimeChunkLock(TaskLockType.SHARED, sharedLockTask, interval).isOk());
+    validator.expectLockNotGranted(
+        TaskLockType.SHARED,
+        interval,
+        HIGH_PRIORITY
+    );
 
     // Revoke existing active exclusive lock
-    lockbox.revokeLock(exclusiveHigherPriorityRevokedLockTask.getId(), exclusiveRevokedLock);
-    Assert.assertEquals(1, getAllLocks(tasks).size());
-    Assert.assertEquals(0, getAllActiveLocks(tasks).size());
-    Assert.assertEquals(activeLocks, getAllActiveLocks(tasks));
+    validator.revokeLock(exclusiveRevokedLock);
+    validator.expectRevokedLocks(exclusiveRevokedLock);
 
-    // test creating new shared locks
-    for (int i = 0; i < 3; i++) {
-      final Task task = NoopTask.create(Math.max(0, (i - 1) * 10)); // the first two tasks have the same priority
-      tasks.add(task);
-      taskStorage.insert(task, TaskStatus.running(task.getId()));
-      lockbox.add(task);
-      final TaskLock lock = tryTimeChunkLock(TaskLockType.SHARED, task, interval).getTaskLock();
-      Assert.assertNotNull(lock);
-      activeLocks.add(lock);
-    }
-    Assert.assertEquals(4, getAllLocks(tasks).size());
-    Assert.assertEquals(3, getAllActiveLocks(tasks).size());
-    Assert.assertEquals(activeLocks, getAllActiveLocks(tasks));
+    // test creating a new low priority shared lock
+    final TaskLock lowPrioritySharedLock = validator.expectLockCreated(
+        TaskLockType.SHARED,
+        interval,
+        LOW_PRIORITY
+    );
 
-    // Adding an exclusive task lock of priority 15 should revoke all existing active locks
-    Task exclusiveLowerPriorityLockTask = NoopTask.create(15);
-    tasks.add(exclusiveLowerPriorityLockTask);
-    taskStorage.insert(exclusiveLowerPriorityLockTask, TaskStatus.running(exclusiveLowerPriorityLockTask.getId()));
-    lockbox.add(exclusiveLowerPriorityLockTask);
-    final TaskLock lowerPriorityExclusiveLock = tryTimeChunkLock(
+    // Adding an exclusive task lock of medium priority should revoke all existing active locks
+    final TaskLock mediumPriorityExclusiveLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
-        exclusiveLowerPriorityLockTask,
-        interval
-    ).getTaskLock();
-    activeLocks.clear();
-    activeLocks.add(lowerPriorityExclusiveLock);
-    Assert.assertEquals(5, getAllLocks(tasks).size());
-    Assert.assertEquals(1, getAllActiveLocks(tasks).size());
-    Assert.assertEquals(activeLocks, getAllActiveLocks(tasks));
+        interval,
+        MEDIUM_PRIORITY
+    );
+    validator.expectActiveLocks(mediumPriorityExclusiveLock);
+    validator.expectRevokedLocks(exclusiveRevokedLock, lowPrioritySharedLock);
 
-    // Add new shared locks which revoke the active exclusive task lock
-    activeLocks.clear();
-    for (int i = 3; i < 5; i++) {
-      final Task task = NoopTask.create(Math.max(0, (i - 1) * 10)); // the first two tasks have the same priority
-      tasks.add(task);
-      taskStorage.insert(task, TaskStatus.running(task.getId()));
-      lockbox.add(task);
-      final TaskLock lock = tryTimeChunkLock(TaskLockType.SHARED, task, interval).getTaskLock();
-      Assert.assertNotNull(lock);
-      activeLocks.add(lock);
-    }
-    Assert.assertEquals(7, getAllLocks(tasks).size());
-    Assert.assertEquals(2, getAllActiveLocks(tasks).size());
-    Assert.assertEquals(activeLocks, getAllActiveLocks(tasks));
+    // Add new shared lock which revokes the active exclusive task lock
+    final TaskLock highPrioritySharedLock = validator.expectLockCreated(
+        TaskLockType.SHARED,
+        interval,
+        HIGH_PRIORITY
+    );
+    validator.expectActiveLocks(highPrioritySharedLock);
+    validator.expectRevokedLocks(exclusiveRevokedLock, lowPrioritySharedLock, mediumPriorityExclusiveLock);
   }
 
   @Test
@@ -536,8 +510,8 @@ public class TaskLockboxTest
     newBox.syncFromStorage();
 
     final Set<TaskLock> afterLocksInStorage = taskStorage.getActiveTasks().stream()
-                                                          .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
-                                                          .collect(Collectors.toSet());
+                                                         .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
+                                                         .collect(Collectors.toSet());
 
     Assert.assertEquals(
         beforeLocksInStorage.values().stream().flatMap(Collection::stream).collect(Collectors.toSet()),
@@ -1279,622 +1253,414 @@ public class TaskLockboxTest
   @Test
   public void testExclusiveLockCompatibility() throws Exception
   {
-    final List<Task> tasks = new ArrayList<>();
-
-    final TaskLock theLock = insertTaskLock(
+    final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2017/2018"),
-        MEDIUM_PRIORITY,
-        tasks
+        MEDIUM_PRIORITY
     );
-    Assert.assertNotNull(theLock);
-    Assert.assertFalse(theLock.isRevoked());
 
     // Another exclusive lock cannot be created for an overlapping interval
-    Assert.assertNull(
-        insertTaskLock(
-            TaskLockType.EXCLUSIVE,
-            Intervals.of("2017-05-01/2017-06-01"),
-            MEDIUM_PRIORITY,
-            tasks
-        )
+    validator.expectLockNotGranted(
+        TaskLockType.EXCLUSIVE,
+        Intervals.of("2017-05-01/2017-06-01"),
+        MEDIUM_PRIORITY
     );
 
     // A shared lock cannot be created for an overlapping interval
-    Assert.assertNull(
-        insertTaskLock(
-            TaskLockType.SHARED,
-            Intervals.of("2016/2019"),
-            MEDIUM_PRIORITY,
-            tasks
-        )
+    validator.expectLockNotGranted(
+        TaskLockType.SHARED,
+        Intervals.of("2016/2019"),
+        MEDIUM_PRIORITY
     );
 
     // A replace lock cannot be created for an overlapping interval
-    Assert.assertNull(
-        insertTaskLock(
-            TaskLockType.REPLACE,
-            Intervals.of("2017/2018"),
-            MEDIUM_PRIORITY,
-            tasks
-        )
+    validator.expectLockNotGranted(
+        TaskLockType.REPLACE,
+        Intervals.of("2017/2018"),
+        MEDIUM_PRIORITY
     );
 
     // An append lock cannot be created for an overlapping interval
-    Assert.assertNull(
-        insertTaskLock(
-            TaskLockType.APPEND,
-            Intervals.of("2017-05-01/2018-05-01"),
-            MEDIUM_PRIORITY,
-            tasks
-        )
+    validator.expectLockNotGranted(
+        TaskLockType.APPEND,
+        Intervals.of("2017-05-01/2018-05-01"),
+        MEDIUM_PRIORITY
     );
 
-    final Set<TaskLock> expectedLocks = ImmutableSet.of(
-        theLock
-    );
-    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
+    validator.expectActiveLocks(theLock);
+    validator.expectRevokedLocks();
   }
 
   @Test
   public void testExclusiveLockCanRevokeAllIncompatible() throws Exception
   {
-    final List<Task> tasks = new ArrayList<>();
+    final TaskLockboxValidator validator = new TaskLockboxValidator(lockbox, taskStorage);
 
-    // Revoked shared lock of higher priority -> revoked locks are not incompatible
-    final TaskLock sharedLock = insertTaskLock(
+    // Revoked shared lock of higher priority -> revoked locks are compatible
+    final TaskLock sharedLock = validator.tryTaskLock(
         TaskLockType.SHARED,
         Intervals.of("2016/2019"),
-        HIGH_PRIORITY,
-        tasks
+        HIGH_PRIORITY
     );
-    Assert.assertNotNull(sharedLock);
-    lockbox.revokeLock(tasks.get(0).getId(), sharedLock);
+    validator.revokeLock(sharedLock);
 
     // Active Exclusive lock of lower priority -> will be revoked
-    final TaskLock exclusiveLock = insertTaskLock(
+    final TaskLock exclusiveLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2017-01-01/2017-02-01"),
-        LOW_PRIORITY,
-        tasks
+        LOW_PRIORITY
     );
-    Assert.assertNotNull(exclusiveLock);
-    Assert.assertFalse(exclusiveLock.isRevoked());
 
     // Active replace lock of lower priority -> will be revoked
-    final TaskLock replaceLock = insertTaskLock(
+    final TaskLock replaceLock = validator.expectLockCreated(
         TaskLockType.REPLACE,
         Intervals.of("2017-07-01/2018-01-01"),
-        LOW_PRIORITY,
-        tasks
+        LOW_PRIORITY
     );
-    Assert.assertNotNull(replaceLock);
-    Assert.assertFalse(replaceLock.isRevoked());
 
     // Active append lock of lower priority -> will be revoked
-    final TaskLock appendLock = insertTaskLock(
+    final TaskLock appendLock = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-09-01/2017-10-01"),
-        LOW_PRIORITY,
-        tasks
+        LOW_PRIORITY
     );
-    Assert.assertNotNull(appendLock);
-    Assert.assertFalse(appendLock.isRevoked());
 
-    final TaskLock theLock = insertTaskLock(
+    validator.expectActiveLocks(exclusiveLock, replaceLock, appendLock);
+    validator.expectRevokedLocks(sharedLock);
+
+    final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2017/2018"),
-        MEDIUM_PRIORITY,
-        tasks
+        MEDIUM_PRIORITY
     );
-    Assert.assertNotNull(theLock);
-    Assert.assertFalse(theLock.isRevoked());
 
-    final Set<TaskLock> expectedLocks = ImmutableSet.of(
-        theLock,
-        sharedLock.revokedCopy(),
-        exclusiveLock.revokedCopy(),
-        appendLock.revokedCopy(),
-        replaceLock.revokedCopy()
-    );
-    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
-
-    final Set<TaskLock> expectedActiveLocks = ImmutableSet.of(
-        theLock
-    );
-    Assert.assertEquals(expectedActiveLocks, getAllActiveLocks(tasks));
+    validator.expectActiveLocks(theLock);
+    validator.expectRevokedLocks(sharedLock, exclusiveLock, appendLock, replaceLock);
   }
 
   @Test
   public void testSharedLockCompatibility() throws Exception
   {
-    final List<Task> tasks = new ArrayList<>();
-
-    final TaskLock theLock = insertTaskLock(
+    final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.SHARED,
         Intervals.of("2017/2018"),
-        MEDIUM_PRIORITY,
-        tasks
+        MEDIUM_PRIORITY
     );
-    Assert.assertNotNull(theLock);
-    Assert.assertFalse(theLock.isRevoked());
 
     // No overlapping exclusive lock is compatible
-    Assert.assertNull(
-        insertTaskLock(
-            TaskLockType.EXCLUSIVE,
-            Intervals.of("2017-05-01/2017-06-01"),
-            MEDIUM_PRIORITY,
-            tasks
-        )
+    validator.expectLockNotGranted(
+        TaskLockType.EXCLUSIVE,
+        Intervals.of("2017-05-01/2017-06-01"),
+        MEDIUM_PRIORITY
     );
 
     // Enclosing shared lock of lower priority - compatible
-    final TaskLock sharedLock0 = insertTaskLock(
-            TaskLockType.SHARED,
-            Intervals.of("2016/2019"),
-            LOW_PRIORITY,
-            tasks
+    final TaskLock sharedLock0 = validator.expectLockCreated(
+        TaskLockType.SHARED,
+        Intervals.of("2016/2019"),
+        LOW_PRIORITY
     );
-    Assert.assertNotNull(sharedLock0);
-    Assert.assertFalse(sharedLock0.isRevoked());
 
     // Enclosed shared lock of higher priority - compatible
-    final TaskLock sharedLock1 = insertTaskLock(
+    final TaskLock sharedLock1 = validator.expectLockCreated(
         TaskLockType.SHARED,
         Intervals.of("2017-06-01/2017-07-01"),
-        LOW_PRIORITY,
-        tasks
+        LOW_PRIORITY
     );
-    Assert.assertNotNull(sharedLock1);
-    Assert.assertFalse(sharedLock1.isRevoked());
 
     // Partially Overlapping shared lock of equal priority - compatible
-    final TaskLock sharedLock2 = insertTaskLock(
+    final TaskLock sharedLock2 = validator.expectLockCreated(
         TaskLockType.SHARED,
         Intervals.of("2017-05-01/2018-05-01"),
-        MEDIUM_PRIORITY,
-        tasks
+        MEDIUM_PRIORITY
     );
-    Assert.assertNotNull(sharedLock2);
-    Assert.assertFalse(sharedLock2.isRevoked());
 
     // Conficting replace locks are incompatible
-    Assert.assertNull(
-        insertTaskLock(
-            TaskLockType.REPLACE,
-            Intervals.of("2017/2018"),
-            MEDIUM_PRIORITY,
-            tasks
-        )
+    validator.expectLockNotGranted(
+        TaskLockType.REPLACE,
+        Intervals.of("2017/2018"),
+        MEDIUM_PRIORITY
     );
 
     // Conflicting append locks are incompatible
-    Assert.assertNull(
-        insertTaskLock(
-            TaskLockType.APPEND,
-            Intervals.of("2017-05-01/2018-05-01"),
-            MEDIUM_PRIORITY,
-            tasks
-        )
+    validator.expectLockNotGranted(
+        TaskLockType.APPEND,
+        Intervals.of("2017-05-01/2018-05-01"),
+        MEDIUM_PRIORITY
     );
 
-    final Set<TaskLock> expectedLocks = ImmutableSet.of(
-        theLock,
-        sharedLock0,
-        sharedLock1,
-        sharedLock2
-    );
-    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
+    validator.expectActiveLocks(theLock, sharedLock0, sharedLock1, sharedLock2);
+    validator.expectRevokedLocks();
   }
 
   @Test
   public void testSharedLockCanRevokeAllIncompatible() throws Exception
   {
-    final List<Task> tasks = new ArrayList<>();
-
-    // Revoked Exclusive lock of higher priority -> revoked locks are not incompatible
-    final TaskLock exclusiveLock = insertTaskLock(
+    // Revoked Exclusive lock of higher priority -> revoked locks are compatible
+    final TaskLock exclusiveLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2016/2019"),
-        HIGH_PRIORITY,
-        tasks
+        HIGH_PRIORITY
     );
-    Assert.assertNotNull(exclusiveLock);
-    lockbox.revokeLock(tasks.get(0).getId(), exclusiveLock);
+    validator.revokeLock(exclusiveLock);
 
     // Active Shared lock of same priority -> will not be affected
-    final TaskLock sharedLock = insertTaskLock(
+    final TaskLock sharedLock = validator.expectLockCreated(
         TaskLockType.SHARED,
         Intervals.of("2017-01-01/2017-02-01"),
-        MEDIUM_PRIORITY,
-        tasks
+        MEDIUM_PRIORITY
     );
-    Assert.assertNotNull(sharedLock);
-    Assert.assertFalse(sharedLock.isRevoked());
 
     // Active replace lock of lower priority -> will be revoked
-    final TaskLock replaceLock = insertTaskLock(
+    final TaskLock replaceLock = validator.expectLockCreated(
         TaskLockType.REPLACE,
         Intervals.of("2017-07-01/2018-07-01"),
-        LOW_PRIORITY,
-        tasks
+        LOW_PRIORITY
     );
-    Assert.assertNotNull(replaceLock);
-    Assert.assertFalse(replaceLock.isRevoked());
 
     // Active append lock of lower priority -> will be revoked
-    final TaskLock appendLock = insertTaskLock(
+    final TaskLock appendLock = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-02-01/2017-03-01"),
-        LOW_PRIORITY,
-        tasks
+        LOW_PRIORITY
     );
-    Assert.assertNotNull(appendLock);
-    Assert.assertFalse(appendLock.isRevoked());
 
-    final TaskLock theLock = insertTaskLock(
+    validator.expectActiveLocks(sharedLock, replaceLock, appendLock);
+    validator.expectRevokedLocks(exclusiveLock);
+
+    final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.SHARED,
         Intervals.of("2017/2018"),
-        MEDIUM_PRIORITY,
-        tasks
+        MEDIUM_PRIORITY
     );
-    Assert.assertNotNull(theLock);
-    Assert.assertFalse(theLock.isRevoked());
 
-    final Set<TaskLock> expectedLocks = ImmutableSet.of(
-        theLock,
-        sharedLock,
-        exclusiveLock.revokedCopy(),
-        replaceLock.revokedCopy(),
-        appendLock.revokedCopy()
-    );
-    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
-
-    final Set<TaskLock> expectedActiveLocks = ImmutableSet.of(
-        theLock,
-        sharedLock
-    );
-    Assert.assertEquals(expectedActiveLocks, getAllActiveLocks(tasks));
+    validator.expectActiveLocks(theLock, sharedLock);
+    validator.expectRevokedLocks(exclusiveLock, replaceLock, appendLock);
   }
 
   @Test
   public void testAppendLockCompatibility() throws Exception
   {
-    final List<Task> tasks = new ArrayList<>();
-
-    final TaskLock theLock = insertTaskLock(
+    final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017/2018"),
-        MEDIUM_PRIORITY,
-        tasks
+        MEDIUM_PRIORITY
     );
-    Assert.assertNotNull(theLock);
-    Assert.assertFalse(theLock.isRevoked());
 
     // An exclusive lock cannot be created for an overlapping interval
-    Assert.assertNull(
-        insertTaskLock(
-            TaskLockType.EXCLUSIVE,
-            Intervals.of("2017-05-01/2017-06-01"),
-            MEDIUM_PRIORITY,
-            tasks
-        )
+    validator.expectLockNotGranted(
+        TaskLockType.EXCLUSIVE,
+        Intervals.of("2017-05-01/2017-06-01"),
+        MEDIUM_PRIORITY
     );
 
     // A shared lock cannot be created for an overlapping interval
-    Assert.assertNull(
-        insertTaskLock(
-            TaskLockType.SHARED,
-            Intervals.of("2016/2019"),
-            MEDIUM_PRIORITY,
-            tasks
-        )
+    validator.expectLockNotGranted(
+        TaskLockType.SHARED,
+        Intervals.of("2016/2019"),
+        MEDIUM_PRIORITY
     );
 
     // A replace lock cannot be created for a non-enclosing interval
-    TaskLock replaceLock0 = insertTaskLock(
+    validator.expectLockNotGranted(
         TaskLockType.REPLACE,
         Intervals.of("2017-05-01/2018-01-01"),
-        MEDIUM_PRIORITY,
-        tasks
+        MEDIUM_PRIORITY
     );
-    Assert.assertNull(replaceLock0);
 
     // A replace lock can be created for an enclosing interval
-    final TaskLock replaceLock1 = insertTaskLock(
+    final TaskLock replaceLock = validator.expectLockCreated(
         TaskLockType.REPLACE,
         Intervals.of("2017/2018"),
-        MEDIUM_PRIORITY,
-        tasks
+        MEDIUM_PRIORITY
     );
-    Assert.assertNotNull(replaceLock1);
-    Assert.assertFalse(replaceLock1.isRevoked());
 
     // Another replace lock cannot be created
-    final TaskLock replaceLock2 = insertTaskLock(
+    validator.expectLockNotGranted(
         TaskLockType.REPLACE,
         Intervals.of("2016/2019"),
-        MEDIUM_PRIORITY,
-        tasks
+        MEDIUM_PRIORITY
     );
-    Assert.assertNull(replaceLock2);
 
 
     // Any append lock can be created, provided that it lies within the interval of the previously created replace lock
     // This should not revoke any of the existing locks even with a higher priority
-    final TaskLock appendLock0 = insertTaskLock(
+    final TaskLock appendLock0 = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-05-01/2017-06-01"),
-        HIGH_PRIORITY,
-        tasks
+        HIGH_PRIORITY
     );
-    Assert.assertNotNull(appendLock0);
-    Assert.assertFalse(appendLock0.isRevoked());
 
     // Append lock with a lower priority can be created as well
-    final TaskLock appendLock1 = insertTaskLock(
+    final TaskLock appendLock1 = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-05-01/2017-06-01"),
-        LOW_PRIORITY,
-        tasks
+        LOW_PRIORITY
     );
-    Assert.assertNotNull(appendLock1);
-    Assert.assertFalse(appendLock1.isRevoked());
 
-    final Set<TaskLock> expectedLocks = ImmutableSet.of(
-        theLock,
-        replaceLock1,
-        appendLock0,
-        appendLock1
-    );
-    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
+    validator.expectActiveLocks(theLock, replaceLock, appendLock0, appendLock1);
+    validator.expectRevokedLocks();
   }
 
   @Test
   public void testAppendLockCanRevokeAllIncompatible() throws Exception
   {
-    final List<Task> tasks = new ArrayList<>();
-
-    // Revoked Shared lock of higher priority -> revoked locks are not incompatible
-    final TaskLock sharedLock = insertTaskLock(
+    // Revoked Shared lock of higher priority -> revoked locks are compatible
+    final TaskLock sharedLock = validator.expectLockCreated(
         TaskLockType.SHARED,
         Intervals.of("2016/2019"),
-        HIGH_PRIORITY,
-        tasks
+        HIGH_PRIORITY
     );
-    Assert.assertNotNull(sharedLock);
-    lockbox.revokeLock(tasks.get(0).getId(), sharedLock);
+    validator.revokeLock(sharedLock);
 
     // Active Exclusive lock of lower priority -> will be revoked
-    final TaskLock exclusiveLock = insertTaskLock(
+    final TaskLock exclusiveLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2017-01-01/2017-02-01"),
-        LOW_PRIORITY,
-        tasks
+        LOW_PRIORITY
     );
-    Assert.assertNotNull(exclusiveLock);
-    Assert.assertFalse(exclusiveLock.isRevoked());
 
     // Active replace lock of lower priority which doesn't enclose the interval -> will be revoked
-    final TaskLock replaceLock = insertTaskLock(
+    final TaskLock replaceLock = validator.expectLockCreated(
         TaskLockType.REPLACE,
         Intervals.of("2017-07-01/2018-07-01"),
-        LOW_PRIORITY,
-        tasks
+        LOW_PRIORITY
     );
-    Assert.assertNotNull(replaceLock);
-    Assert.assertFalse(replaceLock.isRevoked());
 
     // Active append lock of lower priority -> will not be revoked
-    final TaskLock appendLock0 = insertTaskLock(
+    final TaskLock appendLock0 = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-02-01/2017-03-01"),
-        LOW_PRIORITY,
-        tasks
+        LOW_PRIORITY
     );
-    Assert.assertNotNull(appendLock0);
-    Assert.assertFalse(appendLock0.isRevoked());
 
     // Active append lock of higher priority -> will not revoke or be revoked
-    final TaskLock appendLock1 = insertTaskLock(
+    final TaskLock appendLock1 = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-02-01/2017-05-01"),
-        HIGH_PRIORITY,
-        tasks
+        HIGH_PRIORITY
     );
-    Assert.assertNotNull(appendLock1);
-    Assert.assertFalse(appendLock1.isRevoked());
 
-    final TaskLock theLock = insertTaskLock(
+    validator.expectActiveLocks(exclusiveLock, replaceLock, appendLock0, appendLock1);
+    validator.expectRevokedLocks(sharedLock);
+
+    final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017/2018"),
-        MEDIUM_PRIORITY,
-        tasks
+        MEDIUM_PRIORITY
     );
-    Assert.assertNotNull(theLock);
-    Assert.assertFalse(theLock.isRevoked());
 
-    final Set<TaskLock> expectedLocks = ImmutableSet.of(
-        theLock,
-        sharedLock.revokedCopy(),
-        exclusiveLock.revokedCopy(),
-        replaceLock.revokedCopy(),
-        appendLock0,
-        appendLock1
-    );
-    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
-
-    final Set<TaskLock> expectedActiveLocks = ImmutableSet.of(
-        theLock,
-        appendLock0,
-        appendLock1
-    );
-    Assert.assertEquals(expectedActiveLocks, getAllActiveLocks(tasks));
+    validator.expectActiveLocks(theLock, appendLock0, appendLock1);
+    validator.expectRevokedLocks(sharedLock, exclusiveLock, replaceLock);
   }
 
 
   @Test
   public void testReplaceLockCompatibility() throws Exception
   {
-    final List<Task> tasks = new ArrayList<>();
-
-    final TaskLock theLock = insertTaskLock(
+    final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.REPLACE,
         Intervals.of("2017/2018"),
-        MEDIUM_PRIORITY,
-        tasks
+        MEDIUM_PRIORITY
     );
-    Assert.assertNotNull(theLock);
-    Assert.assertFalse(theLock.isRevoked());
 
     // An exclusive lock cannot be created for an overlapping interval
-    Assert.assertNull(
-        insertTaskLock(
-            TaskLockType.EXCLUSIVE,
-            Intervals.of("2017-05-01/2017-06-01"),
-            MEDIUM_PRIORITY,
-            tasks
-        )
+    validator.expectLockNotGranted(
+        TaskLockType.EXCLUSIVE,
+        Intervals.of("2017-05-01/2017-06-01"),
+        MEDIUM_PRIORITY
     );
 
     // A shared lock cannot be created for an overlapping interval
-    Assert.assertNull(
-        insertTaskLock(
-            TaskLockType.SHARED,
-            Intervals.of("2016/2019"),
-            MEDIUM_PRIORITY,
-            tasks
-        )
+    validator.expectLockNotGranted(
+        TaskLockType.SHARED,
+        Intervals.of("2016/2019"),
+        MEDIUM_PRIORITY
     );
 
     // A replace lock cannot be created for an overlapping interval
-    Assert.assertNull(
-        insertTaskLock(
-            TaskLockType.REPLACE,
-            Intervals.of("2017/2018"),
-            MEDIUM_PRIORITY,
-            tasks
-        )
+    validator.expectLockNotGranted(
+        TaskLockType.REPLACE,
+        Intervals.of("2017/2018"),
+        MEDIUM_PRIORITY
     );
 
     // An append lock can be created for an interval enclosed within the replace lock's.
     // Also note that the append lock has a higher priority but doesn't revoke the replace lock as it can coexist.
-    final TaskLock appendLock0 = insertTaskLock(
+    final TaskLock appendLock = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-05-01/2017-06-01"),
-        HIGH_PRIORITY,
-        tasks
+        HIGH_PRIORITY
     );
-    Assert.assertNotNull(appendLock0);
-    Assert.assertFalse(appendLock0.isRevoked());
 
     // An append lock cannot coexist when its interval is not enclosed within the replace lock's.
-    final TaskLock appendLock1 = insertTaskLock(
+    validator.expectLockNotGranted(
         TaskLockType.APPEND,
         Intervals.of("2016-05-01/2017-06-01"),
-        MEDIUM_PRIORITY,
-        tasks
+        MEDIUM_PRIORITY
     );
-    Assert.assertNull(appendLock1);
 
-    final Set<TaskLock> expectedLocks = ImmutableSet.of(
-        theLock,
-        appendLock0
-    );
-    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
+    validator.expectActiveLocks(theLock, appendLock);
+    validator.expectRevokedLocks();
   }
 
   @Test
   public void testReplaceLockCanRevokeAllIncompatible() throws Exception
   {
-    final List<Task> tasks = new ArrayList<>();
-
-    // Revoked Append lock of higher priority -> revoked locks are not incompatible
-    final TaskLock appendLock0 = insertTaskLock(
+    // Revoked Append lock of higher priority -> revoked locks are compatible
+    final TaskLock appendLock0 = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2016/2019"),
-        HIGH_PRIORITY,
-        tasks
+        HIGH_PRIORITY
     );
-    Assert.assertNotNull(appendLock0);
-    lockbox.revokeLock(tasks.get(0).getId(), appendLock0);
+    validator.revokeLock(appendLock0);
 
     // Active append lock of higher priority within replace interval -> unaffected
-    final TaskLock appendLock1 = insertTaskLock(
+    final TaskLock appendLock1 = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-02-01/2017-03-01"),
-        HIGH_PRIORITY,
-        tasks
+        HIGH_PRIORITY
     );
-    Assert.assertNotNull(appendLock1);
-    Assert.assertFalse(appendLock1.isRevoked());
 
     // Active Append lock of lower priority which is not enclosed -> will be revoked
-    final TaskLock appendLock2 = insertTaskLock(
+    final TaskLock appendLock2 = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-09-01/2018-03-01"),
-        LOW_PRIORITY,
-        tasks
+        LOW_PRIORITY
     );
-    Assert.assertNotNull(appendLock2);
-    Assert.assertFalse(appendLock2.isRevoked());
 
     // Active Exclusive lock of lower priority -> will be revoked
-    final TaskLock exclusiveLock = insertTaskLock(
+    final TaskLock exclusiveLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2017-05-01/2017-06-01"),
-        LOW_PRIORITY,
-        tasks
+        LOW_PRIORITY
     );
-    Assert.assertNotNull(exclusiveLock);
-    Assert.assertFalse(exclusiveLock.isRevoked());
 
     // Active replace lock of lower priority which doesn't enclose the interval -> will be revoked
-    final TaskLock replaceLock = insertTaskLock(
+    final TaskLock replaceLock = validator.expectLockCreated(
         TaskLockType.REPLACE,
         Intervals.of("2016-09-01/2017-03-01"),
-        LOW_PRIORITY,
-        tasks
+        LOW_PRIORITY
     );
-    Assert.assertNotNull(replaceLock);
-    Assert.assertFalse(replaceLock.isRevoked());
 
     // Active shared lock of lower priority -> will be revoked
-    final TaskLock sharedLock = insertTaskLock(
+    final TaskLock sharedLock = validator.expectLockCreated(
         TaskLockType.SHARED,
         Intervals.of("2017-04-01/2017-05-01"),
-        LOW_PRIORITY,
-        tasks
+        LOW_PRIORITY
     );
-    Assert.assertNotNull(sharedLock);
-    Assert.assertFalse(sharedLock.isRevoked());
 
-    final TaskLock theLock = insertTaskLock(
+    validator.expectActiveLocks(appendLock1, appendLock2, exclusiveLock, replaceLock, sharedLock);
+    validator.expectRevokedLocks(appendLock0);
+
+    final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.REPLACE,
         Intervals.of("2017/2018"),
-        MEDIUM_PRIORITY,
-        tasks
+        MEDIUM_PRIORITY
     );
-    Assert.assertNotNull(theLock);
-    Assert.assertFalse(theLock.isRevoked());
 
-    final Set<TaskLock> expectedLocks = ImmutableSet.of(
-        theLock,
-        sharedLock.revokedCopy(),
-        exclusiveLock.revokedCopy(),
-        replaceLock.revokedCopy(),
-        appendLock0.revokedCopy(),
-        appendLock1,
-        appendLock2.revokedCopy()
-    );
-    Assert.assertEquals(expectedLocks, getAllLocks(tasks));
-
-    final Set<TaskLock> expectedActiveLocks = ImmutableSet.of(
-        theLock,
-        appendLock1
-    );
-    Assert.assertEquals(expectedActiveLocks, getAllActiveLocks(tasks));
+    validator.expectActiveLocks(appendLock1, theLock);
+    validator.expectRevokedLocks(appendLock0, appendLock2, exclusiveLock, replaceLock, sharedLock);
   }
 
   @Test
@@ -1942,52 +1708,6 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testConflictsWithOverlappingSharedLocks() throws Exception
-  {
-    final List<Task> tasks = new ArrayList<>();
-
-    final Task conflictingTask = NoopTask.create(10);
-    tasks.add(conflictingTask);
-    lockbox.add(conflictingTask);
-    taskStorage.insert(conflictingTask, TaskStatus.running(conflictingTask.getId()));
-    TaskLock conflictingLock = tryTimeChunkLock(
-        TaskLockType.SHARED,
-        conflictingTask,
-        Intervals.of("2023-05-01/2023-06-01")
-    ).getTaskLock();
-    Assert.assertNotNull(conflictingLock);
-    Assert.assertFalse(conflictingLock.isRevoked());
-
-    final Task floorTask = NoopTask.create(10);
-    tasks.add(floorTask);
-    lockbox.add(floorTask);
-    taskStorage.insert(floorTask, TaskStatus.running(floorTask.getId()));
-    TaskLock floorLock = tryTimeChunkLock(
-        TaskLockType.SHARED,
-        floorTask,
-        Intervals.of("2023-05-26/2023-05-27")
-    ).getTaskLock();
-    Assert.assertNotNull(floorLock);
-    Assert.assertFalse(floorLock.isRevoked());
-
-    final Task rightOverlapTask = NoopTask.create(10);
-    tasks.add(rightOverlapTask);
-    lockbox.add(rightOverlapTask);
-    taskStorage.insert(rightOverlapTask, TaskStatus.running(rightOverlapTask.getId()));
-    TaskLock rightOverlapLock = tryTimeChunkLock(
-        TaskLockType.EXCLUSIVE,
-        rightOverlapTask,
-        Intervals.of("2023-05-28/2023-06-03")
-    ).getTaskLock();
-    Assert.assertNull(rightOverlapLock);
-
-    Assert.assertEquals(
-        ImmutableSet.of(conflictingLock, floorLock),
-        getAllActiveLocks(tasks)
-    );
-  }
-
-  @Test
   public void testFailedToReacquireTaskLock() throws Exception
   {
     // Tasks to be failed have a group id with the substring "FailingLockAcquisition"
@@ -2028,29 +1748,115 @@ public class TaskLockboxTest
                         result.getTasksToFail());
   }
 
-  private TaskLock insertTaskLock(TaskLockType type, Interval interval, int priority, List<Task> taskAccumulator)
-      throws Exception
+  @Test
+  public void testConflictsWithOverlappingSharedLocks() throws Exception
   {
-    final Task task = NoopTask.create(priority);
-    taskAccumulator.add(task);
-    lockbox.add(task);
-    taskStorage.insert(task, TaskStatus.running(task.getId()));
-    return tryTimeChunkLock(type, task, interval).getTaskLock();
+    TaskLock conflictingLock = validator.expectLockCreated(
+        TaskLockType.SHARED,
+        Intervals.of("2023-05-01/2023-06-01"),
+        MEDIUM_PRIORITY
+    );
+
+    TaskLock floorLock = validator.expectLockCreated(
+        TaskLockType.SHARED,
+        Intervals.of("2023-05-26/2023-05-27"),
+        MEDIUM_PRIORITY
+    );
+
+    validator.expectLockNotGranted(
+        TaskLockType.EXCLUSIVE,
+        Intervals.of("2023-05-28/2023-06-03"),
+        MEDIUM_PRIORITY
+    );
+
+    validator.expectActiveLocks(conflictingLock, floorLock);
   }
 
-  private Set<TaskLock> getAllActiveLocks(List<Task> tasks)
-  {
-    return tasks.stream()
-                .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
-                .filter(taskLock -> !taskLock.isRevoked())
-                .collect(Collectors.toSet());
-  }
 
-  private Set<TaskLock> getAllLocks(List<Task> tasks)
+  private class TaskLockboxValidator
   {
-    return tasks.stream()
-                .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
-                .collect(Collectors.toSet());
+
+    private final List<Task> tasks;
+    private final TaskLockbox lockbox;
+    private final TaskStorage taskStorage;
+    private final Map<TaskLock, String> lockToTaskIdMap;
+
+    TaskLockboxValidator(TaskLockbox lockbox, TaskStorage taskStorage)
+    {
+      lockToTaskIdMap = new HashMap<>();
+      tasks = new ArrayList<>();
+      this.lockbox = lockbox;
+      this.taskStorage = taskStorage;
+    }
+
+    public TaskLock expectLockCreated(TaskLockType type, Interval interval, int priority) throws Exception
+    {
+      final TaskLock lock = tryTaskLock(type, interval, priority);
+      Assert.assertNotNull(lock);
+      Assert.assertFalse(lock.isRevoked());
+      return lock;
+    }
+
+    public void revokeLock(TaskLock lock)
+    {
+      lockbox.revokeLock(lockToTaskIdMap.get(lock), lock);
+    }
+
+    public void expectLockNotGranted(TaskLockType type, Interval interval, int priority) throws Exception
+    {
+      final TaskLock lock = tryTaskLock(type, interval, priority);
+      Assert.assertNull(lock);
+    }
+
+    public void expectRevokedLocks(TaskLock... locks)
+    {
+      final Set<TaskLock> allLocks = getAllLocks();
+      final Set<TaskLock> activeLocks = getAllActiveLocks();
+      Assert.assertEquals(allLocks.size() - activeLocks.size(), locks.length);
+      for (TaskLock lock : locks) {
+        Assert.assertTrue(allLocks.contains(lock.revokedCopy()));
+        Assert.assertFalse(activeLocks.contains(lock));
+      }
+    }
+
+    public void expectActiveLocks(TaskLock... locks)
+    {
+      final Set<TaskLock> allLocks = getAllLocks();
+      final Set<TaskLock> activeLocks = getAllActiveLocks();
+      Assert.assertEquals(activeLocks.size(), locks.length);
+      for (TaskLock lock : locks) {
+        Assert.assertTrue(allLocks.contains(lock));
+        Assert.assertTrue(activeLocks.contains(lock));
+      }
+    }
+
+    private TaskLock tryTaskLock(TaskLockType type, Interval interval, int priority) throws Exception
+    {
+      final Task task = NoopTask.create(priority);
+      tasks.add(task);
+      lockbox.add(task);
+      taskStorage.insert(task, TaskStatus.running(task.getId()));
+      TaskLock lock = tryTimeChunkLock(type, task, interval).getTaskLock();
+      if (lock != null) {
+        lockToTaskIdMap.put(lock, task.getId());
+      }
+      return lock;
+    }
+
+    private Set<TaskLock> getAllActiveLocks()
+    {
+      return tasks.stream()
+                  .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
+                  .filter(taskLock -> !taskLock.isRevoked())
+                  .collect(Collectors.toSet());
+    }
+
+    private Set<TaskLock> getAllLocks()
+    {
+      return tasks.stream()
+                  .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
+                  .collect(Collectors.toSet());
+    }
   }
 
   private static class IntervalLockWithoutPriority extends TimeChunkLock

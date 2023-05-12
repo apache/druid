@@ -24,7 +24,6 @@ import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
@@ -1093,27 +1092,6 @@ public class TaskLockbox
       finally {
         activeTasks.remove(task.getId());
       }
-    }
-    finally {
-      giant.unlock();
-    }
-  }
-
-  public Set<TaskLock> getAllExclusiveLocksForDatasource(final String datasource)
-  {
-    giant.lock();
-    try {
-      final NavigableMap<DateTime, SortedMap<Interval, List<TaskLockPosse>>> dsRunning = running.get(datasource);
-      if (dsRunning == null) {
-        return ImmutableSet.of();
-      }
-      return dsRunning.values()
-                      .stream()
-                      .flatMap(map -> map.values().stream())
-                      .flatMap(Collection::stream)
-                      .map(TaskLockPosse::getTaskLock)
-                      .filter(taskLock -> taskLock.getType().equals(TaskLockType.EXCLUSIVE))
-                      .collect(Collectors.toSet());
     }
     finally {
       giant.unlock();
