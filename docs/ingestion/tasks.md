@@ -425,7 +425,7 @@ Tasks sometimes need to use local disk for storage of things while the task is a
 
 Task storage sizes are configured through a combination of three properties:
 1. `druid.worker.capacity` - i.e. the "number of task slots"
-2. `druid.worker.baseTaskDirs` - i.e. the list directories to use for task storage 
+2. `druid.worker.baseTaskDirs` - i.e. the list of directories to use for task storage. 
 3. `druid.worker.baseTaskDirSize` - i.e. the amount of storage to use on each storage location
 
 While it seems like one task might use multiple directories, only one directory from the list of base directories will be used for any given task, as such, each task is only given a singular directory for scratch space.
