@@ -39,8 +39,8 @@ public class ArrayAppendOperatorConversion extends DirectOperatorConversion
                   OperandTypes.family(SqlTypeFamily.STRING)
               ),
               OperandTypes.or(
-                OperandTypes.family(SqlTypeFamily.STRING),
-                OperandTypes.family(SqlTypeFamily.NUMERIC)
+                  OperandTypes.family(SqlTypeFamily.STRING),
+                  OperandTypes.family(SqlTypeFamily.NUMERIC)
               )
           )
       )

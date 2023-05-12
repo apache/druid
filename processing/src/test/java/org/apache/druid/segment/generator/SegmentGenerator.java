@@ -112,7 +112,7 @@ public class SegmentGenerator implements Closeable
       final int numRows
   )
   {
-    return generate(dataSegment, schemaInfo, schemaInfo.getDimensionsSpec(), TransformSpec.NONE, new IndexSpec(), granularity, numRows);
+    return generate(dataSegment, schemaInfo, schemaInfo.getDimensionsSpec(), TransformSpec.NONE, IndexSpec.DEFAULT, granularity, numRows);
   }
 
   public QueryableIndex generate(

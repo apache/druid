@@ -32,10 +32,14 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DeprecatedQueryableIndexColumnSelector;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.data.CompressionFactory;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
@@ -46,6 +50,7 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -58,7 +63,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
 public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
@@ -98,6 +102,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
   private static final int ROWS_PER_SEGMENT = 10_000;
 
   private static QueryableIndex INDEX;
+  private static QueryableIndex INDEX_OTHER_ENCODINGS;
   private static Closer CLOSER;
 
   @BeforeClass
@@ -115,9 +120,32 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
                                                .size(0)
                                                .build();
 
+
+
     final SegmentGenerator segmentGenerator = CLOSER.register(new SegmentGenerator());
+
     INDEX = CLOSER.register(
         segmentGenerator.generate(dataSegment, schemaInfo, Granularities.HOUR, ROWS_PER_SEGMENT)
+    );
+
+
+    final SegmentGenerator otherGenerator = CLOSER.register(new SegmentGenerator());
+    final DataSegment otherSegment = DataSegment.builder()
+                                                .dataSource("foo")
+                                                .interval(schemaInfo.getDataInterval())
+                                                .version("2")
+                                                .shardSpec(new LinearShardSpec(0))
+                                                .size(0)
+                                                .build();
+    IndexSpec otherEncodings = IndexSpec.builder()
+                                        .withStringDictionaryEncoding(
+                                            new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V1)
+                                        )
+                                        .withLongEncoding(CompressionFactory.LongEncodingStrategy.AUTO)
+                                        .build();
+
+    INDEX_OTHER_ENCODINGS = CLOSER.register(
+        otherGenerator.generate(otherSegment, schemaInfo, otherEncodings, Granularities.HOUR, ROWS_PER_SEGMENT)
     );
   }
 
@@ -127,34 +155,57 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
     CLOSER.close();
   }
 
-  @Parameterized.Parameters(name = "expression = {0}")
+  @Parameterized.Parameters(name = "expression = {0}, encoding = {1}")
   public static Iterable<?> constructorFeeder()
   {
-    return EXPRESSIONS.stream().map(x -> new Object[]{x}).collect(Collectors.toList());
+    List<Object[]> params = new ArrayList<>();
+    for (String encoding : new String[]{"default", "front-coded-and-auto-longs"}) {
+      for (String expression : EXPRESSIONS) {
+        params.add(new Object[]{expression, encoding});
+      }
+    }
+    return params;
   }
 
+  private String encoding;
   private ExpressionType outputType;
   private String expression;
 
-  public ExpressionVectorSelectorsTest(String expression)
+  private QueryableIndex queryableIndexToUse;
+  private Closer perTestCloser = Closer.create();
+
+  public ExpressionVectorSelectorsTest(String expression, String encoding)
   {
     this.expression = expression;
+    this.encoding = encoding;
+    if ("front-coded-and-auto-longs".equals(encoding)) {
+      this.queryableIndexToUse = INDEX_OTHER_ENCODINGS;
+    } else {
+      this.queryableIndexToUse = INDEX;
+    }
   }
 
   @Before
   public void setup()
   {
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    outputType = parsed.getOutputType(new DeprecatedQueryableIndexColumnSelector(INDEX));
+    outputType = parsed.getOutputType(new DeprecatedQueryableIndexColumnSelector(queryableIndexToUse));
     if (outputType == null) {
       outputType = ExpressionType.STRING;
     }
   }
 
+  @After
+  public void teardown() throws IOException
+  {
+    perTestCloser.close();
+  }
+
+
   @Test
   public void sanityTestVectorizedExpressionSelector()
   {
-    sanityTestVectorizedExpressionSelectors(expression, outputType, INDEX, CLOSER, ROWS_PER_SEGMENT);
+    sanityTestVectorizedExpressionSelectors(expression, outputType, queryableIndexToUse, perTestCloser, ROWS_PER_SEGMENT);
   }
 
   public static void sanityTestVectorizedExpressionSelectors(

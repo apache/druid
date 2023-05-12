@@ -344,7 +344,8 @@ public class SegmentAnalyzer
     final TypeSignature<ValueType> typeSignature = capabilities == null ? ColumnType.UNKNOWN_COMPLEX : capabilities;
     final String typeName = typeSignature.getComplexTypeName();
 
-    try (final ComplexColumn complexColumn = columnHolder != null ? (ComplexColumn) columnHolder.getColumn() : null) {
+    try (final BaseColumn theColumn = columnHolder != null ? columnHolder.getColumn() : null) {
+      final ComplexColumn complexColumn = (ComplexColumn) theColumn;
       final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues().isTrue();
       final boolean hasNulls = capabilities != null && capabilities.hasNulls().isMaybeTrue();
       long size = 0;
@@ -386,6 +387,9 @@ public class SegmentAnalyzer
           null,
           null
       );
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 

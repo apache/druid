@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -46,6 +47,8 @@ import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.vector.NoFilterVectorOffset;
+import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -122,7 +125,7 @@ public class ScalarDoubleColumnSupplierTest extends InitializedNullHandlingTest
     try (final FileSmoosher smoosher = new FileSmoosher(tmpFile)) {
       ScalarDoubleColumnSerializer serializer = new ScalarDoubleColumnSerializer(
           fileNameBase,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
           closer
       );
@@ -235,7 +238,9 @@ public class ScalarDoubleColumnSupplierTest extends InitializedNullHandlingTest
   private void smokeTest(ScalarDoubleColumnAndIndexSupplier supplier, ScalarDoubleColumn column)
   {
     SimpleAscendingOffset offset = new SimpleAscendingOffset(data.size());
+    NoFilterVectorOffset vectorOffset = new NoFilterVectorOffset(1, 0, data.size());
     ColumnValueSelector<?> valueSelector = column.makeColumnValueSelector(offset);
+    VectorValueSelector vectorValueSelector = column.makeVectorValueSelector(vectorOffset);
 
     StringValueSetIndex valueSetIndex = supplier.as(StringValueSetIndex.class);
     DruidPredicateIndex predicateIndex = supplier.as(DruidPredicateIndex.class);
@@ -255,8 +260,17 @@ public class ScalarDoubleColumnSupplierTest extends InitializedNullHandlingTest
 
       if (row != null) {
         Assert.assertEquals(row, valueSelector.getObject());
-        Assert.assertEquals((double) row, valueSelector.getDouble(), 0.0);
+        Assert.assertEquals(row, valueSelector.getDouble(), 0.0);
         Assert.assertFalse(valueSelector.isNull());
+        Assert.assertEquals(row, vectorValueSelector.getDoubleVector()[0], 0.0);
+        Assert.assertEquals(row.longValue(), vectorValueSelector.getLongVector()[0]);
+        Assert.assertEquals(row.floatValue(), vectorValueSelector.getFloatVector()[0], 0.0);
+        boolean[] nullVector = vectorValueSelector.getNullVector();
+        if (NullHandling.sqlCompatible() && nullVector != null) {
+          Assert.assertFalse(nullVector[0]);
+        } else {
+          Assert.assertNull(nullVector);
+        }
 
         Assert.assertTrue(valueSetIndex.forValue(String.valueOf(row)).computeBitmapResult(resultFactory).get(i));
         Assert.assertTrue(valueSetIndex.forSortedValues(new TreeSet<>(ImmutableSet.of(String.valueOf(row))))
@@ -275,15 +289,36 @@ public class ScalarDoubleColumnSupplierTest extends InitializedNullHandlingTest
         Assert.assertFalse(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
 
       } else {
-        Assert.assertNull(valueSelector.getObject());
-        Assert.assertTrue(valueSelector.isNull());
+        if (NullHandling.sqlCompatible()) {
+          Assert.assertNull(valueSelector.getObject());
+          Assert.assertTrue(valueSelector.isNull());
+          Assert.assertTrue(vectorValueSelector.getNullVector()[0]);
+          Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
+          Assert.assertTrue(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
+          Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
+                                          .computeBitmapResult(resultFactory)
+                                          .get(i));
+        } else {
+          Assert.assertEquals(NullHandling.defaultDoubleValue(), valueSelector.getObject());
+          Assert.assertFalse(valueSelector.isNull());
+          Assert.assertEquals(NullHandling.defaultDoubleValue(), vectorValueSelector.getDoubleVector()[0], 0.0);
+          Assert.assertNull(vectorValueSelector.getNullVector());
 
-        Assert.assertTrue(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
+          Assert.assertFalse(valueSetIndex.forValue(null).computeBitmapResult(resultFactory).get(i));
+          Assert.assertFalse(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
+          Assert.assertFalse(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
+                                          .computeBitmapResult(resultFactory)
+                                          .get(i));
+          final String defaultString = String.valueOf(NullHandling.defaultDoubleValue());
+          Assert.assertTrue(valueSetIndex.forValue(defaultString).computeBitmapResult(resultFactory).get(i));
+          Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(defaultString))
+                                          .computeBitmapResult(resultFactory)
+                                          .get(i));
+        }
+
+
+
         Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
-        Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
-                                        .computeBitmapResult(resultFactory)
-                                        .get(i));
         Assert.assertFalse(valueSetIndex.forValue(NO_MATCH).computeBitmapResult(resultFactory).get(i));
         Assert.assertFalse(predicateIndex.forPredicate(new SelectorPredicateFactory(NO_MATCH))
                                          .computeBitmapResult(resultFactory)
@@ -291,6 +326,7 @@ public class ScalarDoubleColumnSupplierTest extends InitializedNullHandlingTest
       }
 
       offset.increment();
+      vectorOffset.advance();
     }
   }
 }

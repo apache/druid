@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
+import { Button, ButtonGroup, InputGroup, Intent, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import axios from 'axios';
@@ -40,7 +40,7 @@ import {
   submitTaskQuery,
 } from '../../../helpers';
 import { usePermanentCallback, useQueryManager } from '../../../hooks';
-import { Api } from '../../../singletons';
+import { Api, AppToaster } from '../../../singletons';
 import { ExecutionStateCache } from '../../../singletons/execution-state-cache';
 import { WorkbenchHistory } from '../../../singletons/workbench-history';
 import type { WorkbenchRunningPromise } from '../../../singletons/workbench-running-promises';
@@ -251,7 +251,24 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
   }
 
   const handleRun = usePermanentCallback(async (preview: boolean) => {
-    if (!query.isValid()) return;
+    const queryIssue = query.getIssue();
+    if (queryIssue) {
+      const position = WorkbenchQuery.getRowColumnFromIssue(queryIssue);
+
+      AppToaster.show({
+        icon: IconNames.ERROR,
+        intent: Intent.DANGER,
+        timeout: 90000,
+        message: queryIssue,
+        action: position
+          ? {
+              text: 'Go to issue',
+              onClick: () => moveToPosition(position),
+            }
+          : undefined,
+      });
+      return;
+    }
 
     if (query.getEffectiveEngine() !== 'sql-msq-task') {
       WorkbenchHistory.addQueryToHistory(query);

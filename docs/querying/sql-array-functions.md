@@ -36,8 +36,11 @@ sidebar_label: "Array functions"
 
 This page describes the operations you can perform on arrays using [Druid SQL](./sql.md). See [`ARRAY` data type documentation](./sql-data-types.md#arrays) for additional details.
 
-All array references in the array function documentation can refer to multi-value string columns or `ARRAY` literals. These functions are largely
-identical to the [multi-value string functions](sql-multivalue-string-functions.md), but use `ARRAY` types and behavior.
+All array references in the array function documentation can refer to multi-value string columns or `ARRAY` literals.
+These functions are largely identical to the [multi-value string functions](sql-multivalue-string-functions.md), but
+use `ARRAY` types and behavior. Multi-value string `VARCHAR` columns can be converted to `VARCHAR ARRAY` to use with
+these functions using `MV_TO_ARRAY`, and `ARRAY` types can be converted to multi-value string `VARCHAR` with
+`ARRAY_TO_MV`.
 
 |Function|Description|
 |--------|-----|
@@ -55,3 +58,4 @@ identical to the [multi-value string functions](sql-multivalue-string-functions.
 |`ARRAY_SLICE(arr, start, end)`|Returns the subarray of `arr` from the 0-based index `start` (inclusive) to `end` (exclusive). Returns `null`, if `start` is less than 0, greater than length of `arr`, or greater than `end`.|
 |`ARRAY_TO_STRING(arr, str)`|Joins all elements of `arr` by the delimiter specified by `str`.|
 |`STRING_TO_ARRAY(str1, str2)`|Splits `str1` into an array on the delimiter specified by `str2`.|
+|`ARRAY_TO_MV(arr)`|Converts an `ARRAY` of any type into a multi-value string `VARCHAR`.|

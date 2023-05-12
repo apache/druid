@@ -852,10 +852,18 @@ ORDER BY 1`;
         {
           icon: IconNames.EXPORT,
           title: 'Mark as used all segments',
-
           onAction: () =>
             this.setState({
               datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn: datasource,
+            }),
+        },
+        {
+          icon: IconNames.EXPORT,
+          title: 'Mark as used segments by interval',
+          onAction: () =>
+            this.setState({
+              datasourceToMarkSegmentsByIntervalIn: datasource,
+              useUnuseAction: 'use',
             }),
         },
         {
@@ -905,7 +913,6 @@ ORDER BY 1`;
           {
             icon: IconNames.EXPORT,
             title: 'Mark as used segments by interval',
-
             onAction: () =>
               this.setState({
                 datasourceToMarkSegmentsByIntervalIn: datasource,
@@ -915,7 +922,6 @@ ORDER BY 1`;
           {
             icon: IconNames.IMPORT,
             title: 'Mark as unused segments by interval',
-
             onAction: () =>
               this.setState({
                 datasourceToMarkSegmentsByIntervalIn: datasource,
@@ -1474,6 +1480,7 @@ ORDER BY 1`;
                   onDetail={() => {
                     this.onDetail(original);
                   }}
+                  disableDetail={unused}
                   actions={datasourceActions}
                 />
               );

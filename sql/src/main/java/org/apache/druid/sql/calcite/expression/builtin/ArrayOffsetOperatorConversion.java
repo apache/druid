@@ -37,7 +37,7 @@ public class ArrayOffsetOperatorConversion extends DirectOperatorConversion
                   OperandTypes.family(SqlTypeFamily.ARRAY),
                   OperandTypes.family(SqlTypeFamily.STRING)
               ),
-            OperandTypes.family(SqlTypeFamily.NUMERIC)
+              OperandTypes.family(SqlTypeFamily.NUMERIC)
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)
