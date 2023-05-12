@@ -62,8 +62,8 @@ then
   node_modules/.bin/diff-test-coverage \
   --coverage "**/target/site/jacoco/jacoco.xml" \
   --type jacoco \
-  --line-coverage 0 \
-  --branch-coverage 0 \
+  --line-coverage 50 \
+  --branch-coverage 50 \
   --function-coverage 0 \
   --log-template "coverage-lines-complete" \
   --log-template "coverage-files-complete" \
