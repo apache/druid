@@ -105,14 +105,23 @@
   </suppress>
   <suppress>
     <!--
-      Suppressing for patch release 24.0.1
+      the suppressions here aren't currently applicable, but can be resolved once we update the version
       -->
     <notes><![CDATA[
    file name: jackson-databind-2.10.5.1.jar
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@.*$</packageUrl>
+    <!-- CVE-2022-42003 and CVE-2022-42004 are related to UNWRAP_SINGLE_VALUE_ARRAYS which we do not use
+    https://nvd.nist.gov/vuln/detail/CVE-2022-42003
+    https://nvd.nist.gov/vuln/detail/CVE-2022-42004
+     -->
     <cve>CVE-2022-42003</cve>
     <cve>CVE-2022-42004</cve>
+    <!-- CVE-2021-46877 only applies to jdk serialization which we do not use
+    https://nvd.nist.gov/vuln/detail/CVE-2021-46877
+    https://github.com/FasterXML/jackson-databind/issues/3328
+    -->
+    <cve>CVE-2021-46877</cve>
   </suppress>
 
 
@@ -247,6 +256,7 @@
     <cve>CVE-2022-40150</cve>
     <cve>CVE-2022-45685</cve>
     <cve>CVE-2022-45693</cve>
+    <cve>CVE-2023-1436</cve>
   </suppress>
   <suppress>
     <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
@@ -256,6 +266,8 @@
     <packageUrl regex="true">^pkg:maven/org\.yaml/snakeyaml@1.6$</packageUrl>
     <cve>CVE-2017-18640</cve>
     <cve>CVE-2022-25857</cve>
+    <cve>CVE-2023-2251</cve>
+    <cve>CVE-2022-3064</cve>
   </suppress>
   <suppress>
     <!-- We need to wait for 17.0.0 of https://github.com/kubernetes-client/java/releases -->
@@ -264,6 +276,9 @@
     ]]></notes>
     <cve>CVE-2022-25857</cve>
     <cve>CVE-2022-1471</cve>
+    <!-- false positive -->
+    <cve>CVE-2023-2251</cve>
+    <cve>CVE-2022-3064</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -343,6 +358,7 @@
     <packageUrl regex="true">^pkg:maven/org\.apache\.kafka/kafka-clients@2.0.0$</packageUrl>
     <cve>CVE-2019-12399</cve>
     <cve>CVE-2018-17196</cve>
+    <cve>CVE-2023-25194</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -353,7 +369,7 @@
   </suppress>
   <suppress>
     <!--
-      ~ TODO: Fix when Apache Ranger is released with updated log4j
+      ~ ambari-metrics-emitter, druid-ranger-security
       -->
     <notes><![CDATA[
     file name: log4j-1.2.17.jar
@@ -365,6 +381,7 @@
     <cve>CVE-2022-23307</cve>
     <cve>CVE-2022-23305</cve>
     <cve>CVE-2022-23302</cve>
+    <cve>CVE-2023-26464</cve>
   </suppress>
   <suppress>
     <notes><![CDATA[
@@ -392,6 +409,7 @@
     <cve>CVE-2022-23305</cve>
     <cve>CVE-2022-23302</cve>
     <cve>CVE-2022-41881</cve>
+    <cve>CVE-2020-11612</cve>
   </suppress>
   <suppress>
        <!--
@@ -789,4 +807,30 @@
      <vulnerabilityName>1070209</vulnerabilityName>
      <cve>CVE-2020-7774</cve>
    </suppress>
+  <suppress>
+    <!-- druid-ranger-security -->
+    <notes><![CDATA[
+     file name: ranger-plugins-common-2.0.0.jar
+     ]]></notes>
+    <!-- seems not applicable to plugin -->
+    <cve>CVE-2022-45048</cve>
+  </suppress>
+  <suppress>
+    <!-- from extensions using hadoop-client-runtime, these dependencies are shaded in the jar -->
+    <notes><![CDATA[
+     file name: hadoop-client-runtime-3.3.5.jar
+     ]]></notes>
+    <!-- this one is windows only - https://nvd.nist.gov/vuln/detail/CVE-2022-26612 -->
+    <cve>CVE-2022-26612</cve>
+    <!-- this one seems to apply to backend server - https://nvd.nist.gov/vuln/detail/CVE-2023-25613 -->
+    <cve>CVE-2023-25613</cve>
+  </suppress>
+  <suppress>
+    <notes><![CDATA[
+     file name: ranger-plugins-*-2.0.0.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.ranger/ranger\-plugins\-.*@2.0.0$</packageUrl>
+    <!-- applies to ranger-hive-plugin which afaict we do not use https://nvd.nist.gov/vuln/detail/CVE-2021-40331 -->
+    <cve>CVE-2021-40331</cve>
+  </suppress>
 </suppressions>

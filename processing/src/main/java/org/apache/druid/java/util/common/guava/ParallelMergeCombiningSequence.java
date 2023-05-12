@@ -895,7 +895,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               accumulated.add(in);
               count++;
               if (count % batchSize == 0) {
-                yield();
+                this.yield();
               }
               return accumulated;
             }

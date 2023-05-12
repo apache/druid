@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.PodTemplate;
@@ -32,6 +32,9 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.common.Base64Compression;
+import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
+import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.server.DruidNode;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
@@ -43,6 +46,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Properties;
 
 public class PodTemplateTaskAdapterTest
@@ -57,7 +61,7 @@ public class PodTemplateTaskAdapterTest
   @BeforeEach
   public void setup()
   {
-    taskRunnerConfig = new KubernetesTaskRunnerConfig();
+    taskRunnerConfig = KubernetesTaskRunnerConfig.builder().build();
     taskConfig = new TaskConfigBuilder().setBaseDir("/tmp").build();
     node = new DruidNode(
         "test",
@@ -137,7 +141,7 @@ public class PodTemplateTaskAdapterTest
     Job actual = adapter.fromTask(task);
     Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
 
-    Assertions.assertEquals(expected, actual);
+    assertJobSpecsEqual(actual, expected);
   }
 
   @Test
@@ -179,7 +183,7 @@ public class PodTemplateTaskAdapterTest
     Job actual = adapter.fromTask(task);
     Job expected = K8sTestUtils.fileToResource("expectedNoopJobTlsEnabled.yaml", Job.class);
 
-    Assertions.assertEquals(expected, actual);
+    assertJobSpecsEqual(actual, expected);
   }
 
   @Test
@@ -234,7 +238,7 @@ public class PodTemplateTaskAdapterTest
     Job actual = adapter.fromTask(task);
     Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
 
-    Assertions.assertEquals(expected, actual);
+    assertJobSpecsEqual(actual, expected);
   }
 
   @Test
@@ -313,5 +317,25 @@ public class PodTemplateTaskAdapterTest
     Task expected = NoopTask.create("id", 1);
 
     Assertions.assertEquals(expected, actual);
+  }
+
+
+  private void assertJobSpecsEqual(Job actual, Job expected) throws IOException
+  {
+    Map<String, String> actualAnnotations = actual.getSpec().getTemplate().getMetadata().getAnnotations();
+    String actualTaskAnnotation = actualAnnotations.get(DruidK8sConstants.TASK);
+    actualAnnotations.remove(DruidK8sConstants.TASK);
+    actual.getSpec().getTemplate().getMetadata().setAnnotations(actualAnnotations);
+
+    Map<String, String> expectedAnnotations = expected.getSpec().getTemplate().getMetadata().getAnnotations();
+    String expectedTaskAnnotation = expectedAnnotations.get(DruidK8sConstants.TASK);
+    expectedAnnotations.remove(DruidK8sConstants.TASK);
+    expected.getSpec().getTemplate().getMetadata().setAnnotations(expectedAnnotations);
+
+    Assertions.assertEquals(actual, expected);
+    Assertions.assertEquals(
+        Base64Compression.decompressBase64(actualTaskAnnotation),
+        Base64Compression.decompressBase64(expectedTaskAnnotation)
+    );
   }
 }

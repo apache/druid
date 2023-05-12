@@ -17,11 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.common.collect.ImmutableList;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -35,6 +36,9 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.common.K8sTestUtils;
+import org.apache.druid.k8s.overlord.common.PeonCommandContext;
+import org.apache.druid.k8s.overlord.common.TestKubernetesClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.junit.jupiter.api.Assertions;
@@ -45,7 +49,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 
 @EnableKubernetesMockClient(crud = true)
 class MultiContainerTaskAdapterTest
@@ -86,8 +89,9 @@ class MultiContainerTaskAdapterTest
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpec.yaml", Pod.class);
-    KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
-    config.namespace = "test";
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
+        .withNamespace("test")
+        .build();
     MultiContainerTaskAdapter adapter = new MultiContainerTaskAdapter(
         testClient,
         config,
@@ -132,9 +136,10 @@ class MultiContainerTaskAdapterTest
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("multiContainerPodSpecOrder.yaml", Pod.class);
-    KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
-    config.namespace = "test";
-    config.primaryContainerName = "primary";
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
+        .withNamespace("test")
+        .withPrimaryContainerName("primary")
+        .build();
     MultiContainerTaskAdapter adapter = new MultiContainerTaskAdapter(
         testClient,
         config,
@@ -181,10 +186,11 @@ class MultiContainerTaskAdapterTest
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("podSpec.yaml", Pod.class);
-    KubernetesTaskRunnerConfig config = new KubernetesTaskRunnerConfig();
-    config.namespace = "test";
-    config.primaryContainerName = "primary";
-    config.peonMonitors = jsonMapper.readValue("[\"org.apache.druid.java.util.metrics.JvmMonitor\"]", List.class);
+    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
+        .withNamespace("test")
+        .withPrimaryContainerName("primary")
+        .withPeonMonitors(ImmutableList.of("org.apache.druid.java.util.metrics.JvmMonitor"))
+        .build();
     MultiContainerTaskAdapter adapter = new MultiContainerTaskAdapter(testClient,
                                                                        config,
                                                                        taskConfig,
@@ -193,7 +199,7 @@ class MultiContainerTaskAdapterTest
                                                                        jsonMapper);
     NoopTask task = NoopTask.create("id", 1);
     PodSpec spec = pod.getSpec();
-    K8sTaskAdapter.massageSpec(spec, config.primaryContainerName);
+    K8sTaskAdapter.massageSpec(spec, config.getPrimaryContainerName());
     Job actual = adapter.createJobFromPodSpec(
         spec,
         task,

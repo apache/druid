@@ -17,14 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.helpers;
+package org.apache.druid.k8s.overlord;
 
-import java.util.concurrent.ScheduledExecutorService;
+import org.apache.druid.indexing.common.task.Task;
 
-/**
- */
-public interface OverlordHelper
+public interface PeonLifecycleFactory
 {
-  boolean isEnabled();
-  void schedule(ScheduledExecutorService exec);
+  KubernetesPeonLifecycle build(Task task);
 }

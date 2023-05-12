@@ -979,7 +979,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .run();
   }
-
   @Test
   public void testUnnestRootSingleTypeArrayStringNulls()
   {
@@ -4842,5 +4841,303 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("EXPR$1", ColumnType.LONG)
                     .build()
     );
+  }
+
+  /**
+   * MVD version of {@link #testGroupByRootSingleTypeArrayLongNullsUnnest()}
+   */
+  @Test
+  public void testGroupByRootSingleTypeArrayLongNullsAsMvd()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "ARRAY_TO_MV(arrayLongNulls), "
+            + "SUM(cnt) "
+            + "FROM druid.arrays GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(TableDataSource.create(DATA_SOURCE_ARRAYS))
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                                )
+                            )
+                            .setVirtualColumns(expressionVirtualColumn("v0", "array_to_mv(\"arrayLongNulls\")", ColumnType.STRING))
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                // implicit mvd unnest treats null and empty as [null] so we get extra null matches than unnest
+                // directly on the ARRAY
+                new Object[]{NullHandling.defaultStringValue(), 9L},
+                new Object[]{"1", 5L},
+                new Object[]{"2", 6L},
+                new Object[]{"3", 6L},
+                new Object[]{"9", 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
+  /**
+   * MVD version of {@link #testGroupByRootSingleTypeArrayLongNullsFiltered()}
+   * - implicit unnest since it is an mvd instead of array grouping
+   * - filters are adjusted to match strings instead of numbers
+   */
+  @Test
+  public void testGroupByRootSingleTypeArrayLongNullsAsMvdFiltered()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "ARRAY_TO_MV(arrayLongNulls), "
+            + "SUM(cnt), "
+            + "SUM(MV_LENGTH(ARRAY_TO_MV(arrayLongNulls))) "
+            + "FROM druid.arrays "
+            + "WHERE MV_CONTAINS(ARRAY_TO_MV(arrayLongNulls), '1') "
+            + "GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                                )
+                            )
+                            .setVirtualColumns(
+                                expressionVirtualColumn("v0", "array_to_mv(\"arrayLongNulls\")", ColumnType.STRING),
+                                expressionVirtualColumn("v1", "array_length(array_to_mv(\"arrayLongNulls\"))", ColumnType.LONG)
+                            )
+                            .setDimFilter(
+                                new ExpressionDimFilter("array_contains(array_to_mv(\"arrayLongNulls\"),'1')", queryFramework().macroTable())
+                            )
+                            .setAggregatorSpecs(
+                                aggregators(
+                                    new LongSumAggregatorFactory("a0", "cnt"),
+                                    new LongSumAggregatorFactory("a1", "v1")
+                                )
+                            )
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{NullHandling.defaultStringValue(), 2L, 6L},
+                new Object[]{"1", 5L, 13L},
+                new Object[]{"2", 2L, 6L},
+                new Object[]{"3", 4L, 12L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .add("EXPR$2", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
+  /**
+   * MVD version of {@link #testGroupByRootSingleTypeArrayLongNullsFilteredMore()}
+   * - implicit unnest since it is an mvd instead of array grouping
+   * - filters are adjusted to match strings instead of numbers
+   */
+  @Test
+  public void testGroupByRootSingleTypeArrayLongNullsAsMvdFilteredMore()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "ARRAY_TO_MV(arrayLongNulls), "
+            + "SUM(cnt) "
+            + "FROM druid.arrays WHERE MV_CONTAINS(ARRAY_TO_MV(arrayLongNulls), '1') OR MV_OVERLAP(ARRAY_TO_MV(arrayLongNulls), ARRAY['2', '3']) GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                                )
+                            )
+                            .setVirtualColumns(
+                                expressionVirtualColumn("v0", "array_to_mv(\"arrayLongNulls\")", ColumnType.STRING)
+                            )
+                            .setDimFilter(
+                                or(
+                                    expressionFilter("array_contains(array_to_mv(\"arrayLongNulls\"),'1')"),
+                                    expressionFilter("array_overlap(array_to_mv(\"arrayLongNulls\"),array('2','3'))")
+                                )
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            // since array is converted to a MVD, implicit unnesting occurs
+            ImmutableList.of(
+                new Object[]{NullHandling.defaultStringValue(), 4L},
+                new Object[]{"1", 5L},
+                new Object[]{"2", 6L},
+                new Object[]{"3", 6L},
+                new Object[]{"9", 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
+  /**
+   * MVD version of {@link #testGroupByRootSingleTypeArrayStringNullsUnnest()}
+   */
+  @Test
+  public void testGroupByRootSingleTypeArrayStringNullsAsMvdUnnest()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "ARRAY_TO_MV(arrayStringNulls), "
+            + "SUM(cnt) "
+            + "FROM druid.arrays GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(
+                                TableDataSource.create(DATA_SOURCE_ARRAYS)
+                            )
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                                )
+                            )
+                            .setVirtualColumns(
+                                expressionVirtualColumn("v0", "array_to_mv(\"arrayStringNulls\")", ColumnType.STRING)
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                // count is 9 instead of 5 because implicit unnest treats null and empty as [null]
+                new Object[]{NullHandling.defaultStringValue(), 9L},
+                new Object[]{"a", 3L},
+                new Object[]{"b", 11L},
+                new Object[]{"d", 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
+  /**
+   * MVD version of {@link #testGroupByRootSingleTypeArrayStringNullsFiltered()}
+   * - implicit unnest since mvd instead of string array
+   */
+  @Test
+  public void testGroupByRootSingleTypeArrayStringNullsFilteredAsMvd()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "ARRAY_TO_MV(arrayStringNulls), "
+            + "SUM(cnt), "
+            + "SUM(MV_LENGTH(ARRAY_TO_MV(arrayStringNulls))) "
+            + "FROM druid.arrays "
+            + "WHERE MV_CONTAINS(ARRAY_TO_MV(arrayStringNulls), 'b') "
+            + "GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                                )
+                            )
+                            .setVirtualColumns(
+                                expressionVirtualColumn("v0", "array_to_mv(\"arrayStringNulls\")", ColumnType.STRING),
+                                new ExpressionVirtualColumn("v1", "array_length(array_to_mv(\"arrayStringNulls\"))", ColumnType.LONG, queryFramework().macroTable())
+                            )
+                            .setDimFilter(
+                                new ExpressionDimFilter("array_contains(array_to_mv(\"arrayStringNulls\"),'b')", queryFramework().macroTable())
+                            )
+                            .setAggregatorSpecs(
+                                aggregators(
+                                    new LongSumAggregatorFactory("a0", "cnt"),
+                                    new LongSumAggregatorFactory("a1", "v1")
+                                )
+                            )
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{NullHandling.defaultStringValue(), 4L, 10L},
+                new Object[]{"a", 3L, 6L},
+                new Object[]{"b", 11L, 24L},
+                new Object[]{"d", 2L, 6L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .add("EXPR$2", ColumnType.LONG)
+                        .build()
+        )
+        .run();
   }
 }
