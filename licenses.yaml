@@ -2913,7 +2913,7 @@ name: Apache Hadoop
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 3.3.1
+version: 3.3.5
 libraries:
   - org.apache.hadoop: hadoop-annotations
   - org.apache.hadoop: hadoop-auth
