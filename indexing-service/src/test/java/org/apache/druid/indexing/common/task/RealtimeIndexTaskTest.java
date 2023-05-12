@@ -201,7 +201,7 @@ public class RealtimeIndexTaskTest extends InitializedNullHandlingTest
   }
 
   @Test(timeout = 60_000L)
-  public void testInputSourceTypes()
+  public void testInputSourceResources()
   {
     final RealtimeIndexTask task = makeRealtimeTask(null);
     Assert.assertThrows(

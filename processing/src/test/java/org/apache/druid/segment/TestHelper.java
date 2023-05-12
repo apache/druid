@@ -62,7 +62,26 @@ import java.util.stream.IntStream;
 public class TestHelper
 {
   public static final ObjectMapper JSON_MAPPER = makeJsonMapper();
-  public static final ColumnConfig NO_CACHE_COLUMN_CONFIG = () -> 0;
+  public static final ColumnConfig NO_CACHE_ALWAYS_USE_INDEXES_COLUMN_CONFIG = new ColumnConfig()
+  {
+    @Override
+    public int columnCacheSizeBytes()
+    {
+      return 0;
+    }
+
+    @Override
+    public double skipValueRangeIndexScale()
+    {
+      return 1.0;
+    }
+
+    @Override
+    public double skipValuePredicateIndexScale()
+    {
+      return 1.0;
+    }
+  };
 
   public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
@@ -71,7 +90,7 @@ public class TestHelper
 
   public static IndexIO getTestIndexIO()
   {
-    return getTestIndexIO(NO_CACHE_COLUMN_CONFIG);
+    return getTestIndexIO(NO_CACHE_ALWAYS_USE_INDEXES_COLUMN_CONFIG);
   }
 
   public static IndexIO getTestIndexIO(ColumnConfig columnConfig)
@@ -461,6 +480,17 @@ public class TestHelper
       if (explicitNulls || vals[i + 1] != null) {
         theVals.put(vals[i].toString(), vals[i + 1]);
       }
+    }
+    return theVals;
+  }
+
+  public static Map<String, Object> makeMapWithExplicitNull(Object... vals)
+  {
+    Preconditions.checkArgument(vals.length % 2 == 0);
+
+    Map<String, Object> theVals = new HashMap<>();
+    for (int i = 0; i < vals.length; i += 2) {
+      theVals.put(vals[i].toString(), vals[i + 1]);
     }
     return theVals;
   }

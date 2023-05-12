@@ -103,7 +103,7 @@ public class SpatialFilterBonusTest
     for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
       IndexMerger indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
       IndexIO indexIO = TestHelper.getTestIndexIO();
-      final IndexSpec indexSpec = new IndexSpec();
+      final IndexSpec indexSpec = IndexSpec.DEFAULT;
       final IncrementalIndex rtIndex = makeIncrementalIndex();
       final QueryableIndex mMappedTestIndex = makeQueryableIndex(indexSpec, indexMerger, indexIO);
       final QueryableIndex mergedRealtimeIndex = makeMergedQueryableIndex(indexSpec, indexMerger, indexIO);

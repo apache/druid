@@ -86,7 +86,7 @@ The input source and format are as above. The columns are expressed as in a SQL 
 Example: `(timestamp VARCHAR, metricType VARCHAR, value BIGINT)`. The optional `EXTEND` keyword
 can precede the column list: `EXTEND (timestamp VARCHAR...)`.
 
-For more information, see [Read external data with EXTERN](concepts.md#extern).
+For more information, see [Read external data with EXTERN](concepts.md#read-external-data-with-extern).
 
 ### `INSERT`
 
@@ -114,7 +114,7 @@ INSERT consists of the following parts:
 4. A [PARTITIONED BY](#partitioned-by) clause, such as `PARTITIONED BY DAY`.
 5. An optional [CLUSTERED BY](#clustered-by) clause.
 
-For more information, see [Load data with INSERT](concepts.md#insert).
+For more information, see [Load data with INSERT](concepts.md#load-data-with-insert).
 
 ### `REPLACE`
 
@@ -197,7 +197,7 @@ The following ISO 8601 periods are supported for `TIME_FLOOR` and the string con
 - P3M
 - P1Y
 
-For more information about partitioning, see [Partitioning](concepts.md#partitioning).
+For more information about partitioning, see [Partitioning](concepts.md#partitioning-by-time).
 
 ### `CLUSTERED BY`
 
@@ -244,16 +244,22 @@ The following table lists the context parameters for the MSQ task engine:
 
 ## Joins
 
-Joins in multi-stage queries use one of two algorithms, based on the [context parameter](#context-parameters)
-`sqlJoinAlgorithm`. This context parameter applies to the entire SQL statement, so it is not possible to mix different
+Joins in multi-stage queries use one of two algorithms based on what you set the [context parameter](#context-parameters) `sqlJoinAlgorithm` to: 
+
+- [`broadcast`](#broadcast) (default) 
+- [`sortMerge`](#sort-merge).
+
+If you omit this context parameter, the MSQ task engine uses broadcast since it's the default join algorithm. The context parameter applies to the entire SQL statement, so you can't mix different
 join algorithms in the same query.
 
 ### Broadcast
 
-Set `sqlJoinAlgorithm` to `broadcast`.
-
 The default join algorithm for multi-stage queries is a broadcast hash join, which is similar to how
-[joins are executed with native queries](../querying/query-execution.md#join). First, any adjacent joins are flattened
+[joins are executed with native queries](../querying/query-execution.md#join). 
+
+To use broadcast joins, either omit the  `sqlJoinAlgorithm` or set it to `broadcast`.
+
+For a broadcast join, any adjacent joins are flattened
 into a structure with a "base" input (the bottom-leftmost one) and other leaf inputs (the rest). Next, any subqueries
 that are inputs the join (either base or other leafs) are planned into independent stages. Then, the non-base leaf
 inputs are all connected as broadcast inputs to the "base" stage.
@@ -261,17 +267,18 @@ inputs are all connected as broadcast inputs to the "base" stage.
 Together, all of these non-base leaf inputs must not exceed the [limit on broadcast table footprint](#limits). There
 is no limit on the size of the base (leftmost) input.
 
-Only LEFT JOIN, INNER JOIN, and CROSS JOIN are supported with with `broadcast`.
+Only LEFT JOIN, INNER JOIN, and CROSS JOIN are supported with `broadcast`.
 
 Join conditions, if present, must be equalities. It is not necessary to include a join condition; for example,
 `CROSS JOIN` and comma join do not require join conditions.
 
-As an example, the following statement has a single join chain where `orders` is the base input, and `products` and
-`customers` are non-base leaf inputs. The query will first read `products` and `customers`, then broadcast both to
-the stage that reads `orders`. That stage loads the broadcast inputs (`products` and `customers`) in memory, and walks
-through `orders` row by row. The results are then aggregated and written to the table `orders_enriched`. The broadcast
-inputs (`products` and `customers`) must fall under the limit on broadcast table footprint, but the base `orders` input
+The following example has a single join chain where `orders` is the base input while `products` and
+`customers` are non-base leaf inputs. The broadcast inputs (`products` and `customers`) must fall under the limit on broadcast table footprint, but the base `orders` input
 can be unlimited in size.
+
+The query reads `products` and `customers` and then broadcasts both to
+the stage that reads `orders`. That stage loads the broadcast inputs (`products` and `customers`) in memory and walks
+through `orders` row by row. The results are aggregated and written to the table `orders_enriched`. 
 
 ```
 REPLACE INTO orders_enriched
@@ -291,26 +298,23 @@ CLUSTERED BY product_name
 
 ### Sort-merge
 
-Set `sqlJoinAlgorithm` to `sortMerge`.
+You can use the sort-merge join algorithm to make queries more scalable at the cost of performance. If your goal is performance, consider [broadcast joins](#broadcast).  There are various scenarios where broadcast join would return a [`BroadcastTablesTooLarge`](#error-codes) error, but a sort-merge join would succeed.
 
-Multi-stage queries can use a sort-merge join algorithm. With this algorithm, each pairwise join is planned into its own
-stage with two inputs. The two inputs are partitioned and sorted using a hash partitioning on the same key. This
-approach is generally less performant, but more scalable, than `broadcast`. There are various scenarios where broadcast
-join would return a [`BroadcastTablesTooLarge`](#errors) error, but a sort-merge join would succeed.
+To use the sort-merge join algorithm, set the context parameter `sqlJoinAlgorithm` to `sortMerge`.
 
-There is no limit on the overall size of either input, so sort-merge is a good choice for performing a join of two large
-inputs, or for performing a self-join of a large input with itself.
+In a sort-merge join, each pairwise join is planned into its own stage with two inputs. The two inputs are partitioned and sorted using a hash partitioning on the same key. 
 
-There is a limit on the amount of data associated with each individual key. If _both_ sides of the join exceed this
-limit, the query returns a [`TooManyRowsWithSameKey`](#errors) error. If only one side exceeds the limit, the query
-does not return this error.
+When using the sort-merge algorithm, keep the following in mind:
 
-Join conditions, if present, must be equalities. It is not necessary to include a join condition; for example,
-`CROSS JOIN` and comma join do not require join conditions.
+- There is no limit on the overall size of either input, so sort-merge is a good choice for performing a join of two large inputs or for performing a self-join of a large input with itself.
 
-All join types are supported with `sortMerge`: LEFT, RIGHT, INNER, FULL, and CROSS.
+- There is a limit on the amount of data associated with each individual key. If _both_ sides of the join exceed this limit, the query returns a [`TooManyRowsWithSameKey`](#error-codes) error. If only one side exceeds the limit, the query does not return this error.
 
-As an example, the following statement runs using a single sort-merge join stage that receives `eventstream`
+- Join conditions are optional but must be equalities if they are present. For example, `CROSS JOIN` and comma join do not require join conditions.
+
+- All join types are supported with `sortMerge`: LEFT, RIGHT, INNER, FULL, and CROSS.
+
+The following example  runs using a single sort-merge join stage that receives `eventstream`
 (partitioned on `user_id`) and `users` (partitioned on `id`) as inputs. There is no limit on the size of either input.
 
 ```
@@ -328,9 +332,11 @@ PARTITIONED BY HOUR
 CLUSTERED BY user
 ```
 
+The context parameter that sets `sqlJoinAlgorithm` to `sortMerge` is not shown in the above example.
+
 ## Durable Storage
 
-Using durable storage with your SQL-based ingestions can improve their reliability by writing intermediate files to a storage location temporarily. 
+Using durable storage with your SQL-based ingestion can improve their reliability by writing intermediate files to a storage location temporarily. 
 
 To prevent durable storage from getting filled up with temporary files in case the tasks fail to clean them up, a periodic
 cleaner can be scheduled to clean the directories corresponding to which there isn't a controller task running. It utilizes
@@ -421,13 +427,13 @@ The following table describes error codes you may encounter in the `multiStageQu
 | <a name="error_InsertCannotBeEmpty">`InsertCannotBeEmpty`</a> | An INSERT or REPLACE query did not generate any output rows in a situation where output rows are required for success. This can happen for INSERT or REPLACE queries with `PARTITIONED BY` set to something other than `ALL` or `ALL TIME`. | `dataSource` |
 | <a name="error_InsertCannotOrderByDescending">`InsertCannotOrderByDescending`</a> | An INSERT query contained a `CLUSTERED BY` expression in descending order. Druid's segment generation code only supports ascending order. | `columnName` |
 | <a name="error_InsertLockPreempted">`InsertLockPreempted`</a> | An INSERT or REPLACE query was canceled by a higher-priority ingestion job, such as a real-time ingestion task. | |
-| <a name="error_InsertTimeNull">`InsertTimeNull`</a> | An INSERT or REPLACE query encountered a null timestamp in the `__time` field.<br /><br />This can happen due to using an expression like `TIME_PARSE(timestamp) AS __time` with a timestamp that cannot be parsed. ([`TIME_PARSE`](../querying/sql-scalar.md#date-and-time-functions) returns null when it cannot parse a timestamp.) In this case, try parsing your timestamps using a different function or pattern. Or, if your timestamps may genuinely be null, consider using [`COALESCE`](../querying/sql-scalar.md#other-scalar-functions) to provide a default value. One option is [`CURRENT_TIMESTAMP`](../querying/sql-scalar.md#date-and-time-functions), which represents the start time of the job.<br /><br />This error code only occurs when [`druid.generic.useDefaultValueForNull = false`](../configuration/index.md#sql-compatible-null-handling). When this property is `true` (the default setting), null timestamps are instead replaced by `1970-01-01 00:00:00`.|
+| <a name="error_InsertTimeNull">`InsertTimeNull`</a> | An INSERT or REPLACE query encountered a null timestamp in the `__time` field.<br /><br />This can happen due to using an expression like `TIME_PARSE(timestamp) AS __time` with a timestamp that cannot be parsed. ([`TIME_PARSE`](../querying/sql-scalar.md#date-and-time-functions) returns null when it cannot parse a timestamp.) In this case, try parsing your timestamps using a different function or pattern. Or, if your timestamps may genuinely be null, consider using [`COALESCE`](../querying/sql-scalar.md#other-scalar-functions) to provide a default value. One option is [`CURRENT_TIMESTAMP`](../querying/sql-scalar.md#date-and-time-functions), which represents the start time of the job.|
 | <a name="error_InsertTimeOutOfBounds">`InsertTimeOutOfBounds`</a> | A REPLACE query generated a timestamp outside the bounds of the TIMESTAMP parameter for your OVERWRITE WHERE clause.<br /> <br />To avoid this error, verify that the you specified is valid. | `interval`: time chunk interval corresponding to the out-of-bounds timestamp |
 | <a name="error_InvalidNullByte">`InvalidNullByte`</a> | A string column included a null byte. Null bytes in strings are not permitted. | `column`: The column that included the null byte |
 | <a name="error_QueryNotSupported">`QueryNotSupported`</a> | QueryKit could not translate the provided native query to a multi-stage query.<br /> <br />This can happen if the query uses features that aren't supported, like GROUPING SETS. | |
 | <a name="error_QueryRuntimeError">`QueryRuntimeError`</a> | MSQ uses the native query engine to run the leaf stages. This error tells MSQ that error is in native query runtime.<br /> <br /> Since this is a generic error, the user needs to look at logs for the error message and stack trace to figure out the next course of action. If the user is stuck, consider raising a `github` issue for assistance. |  `baseErrorMessage` error message from the native query runtime. |
 | <a name="error_RowTooLarge">`RowTooLarge`</a> | The query tried to process a row that was too large to write to a single frame. See the [Limits](#limits) table for specific limits on frame size. Note that the effective maximum row size is smaller than the maximum frame size due to alignment considerations during frame writing. | `maxFrameSize`: The limit on the frame size. |
-| <a name="error_TaskStartTimeout">`TaskStartTimeout`</a> | Unable to launch `numTasks` tasks within `timeout` milliseconds.<br /><br />There may be insufficient available slots to start all the worker tasks simultaneously. Try splitting up your query into smaller chunks using a smaller value of [`maxNumTasks`](#context-parameters). Another option is to increase capacity. | `numTasks`: The number of tasks attempted to launch.<br /><br />`timeout`: Timeout, in milliseconds, that was exceeded. |
+| <a name="error_TaskStartTimeout">`TaskStartTimeout`</a> | Unable to launch `numTasksNotStarted` worker out of total `totalTasks` workers tasks within `timeout` seconds of the last successful worker launch.<br /><br />There may be insufficient available slots to start all the worker tasks simultaneously. Try splitting up your query into smaller chunks using a smaller value of [`maxNumTasks`](#context-parameters). Another option is to increase capacity. | `numTasksNotStarted`: Number of tasks not yet started.<br /><br />`totalTasks`: The number of tasks attempted to launch.<br /><br />`timeout`: Timeout, in milliseconds, that was exceeded. |
 | <a name="error_TooManyAttemptsForJob">`TooManyAttemptsForJob`</a> | Total relaunch attempt count across all workers exceeded max relaunch attempt limit. See the [Limits](#limits) table for the specific limit. | `maxRelaunchCount`: Max number of relaunches across all the workers defined in the [Limits](#limits) section. <br /><br /> `currentRelaunchCount`: current relaunch counter for the job across all workers. <br /><br /> `taskId`: Latest task id which failed <br /> <br /> `rootErrorMessage`: Error message of the latest failed task.|
 | <a name="error_TooManyAttemptsForWorker">`TooManyAttemptsForWorker`</a> | Worker exceeded maximum relaunch attempt count as defined in the [Limits](#limits) section. |`maxPerWorkerRelaunchCount`: Max number of relaunches allowed per worker as defined in the [Limits](#limits) section. <br /><br /> `workerNumber`: the worker number for which the task failed <br /><br /> `taskId`: Latest task id which failed <br /> <br /> `rootErrorMessage`: Error message of the latest failed task.|
 | <a name="error_TooManyBuckets">`TooManyBuckets`</a> | Exceeded the maximum number of partition buckets for a stage (5,000 partition buckets).<br />< br />Partition buckets are created for each [`PARTITIONED BY`](#partitioned-by) time chunk for INSERT and REPLACE queries. The most common reason for this error is that your `PARTITIONED BY` is too narrow relative to your data. | `maxBuckets`: The limit on partition buckets. |

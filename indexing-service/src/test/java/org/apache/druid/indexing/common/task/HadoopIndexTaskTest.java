@@ -45,7 +45,7 @@ public class HadoopIndexTaskTest
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
-  public void testCorrectInputSourceTypes()
+  public void testCorrectInputSourceResources()
   {
     final HadoopIndexTask task = new HadoopIndexTask(
         null,
@@ -72,8 +72,8 @@ public class HadoopIndexTaskTest
     Assert.assertEquals(
         Collections.singleton(
             new ResourceAction(new Resource(
-                ResourceType.EXTERNAL,
-                "hadoop"
+                HadoopIndexTask.INPUT_SOURCE_TYPE,
+                ResourceType.EXTERNAL
             ), Action.READ)),
         task.getInputSourceResources()
     );

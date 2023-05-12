@@ -21,6 +21,8 @@ import { SqlColumn, SqlExpression, SqlFunction, SqlLiteral, SqlStar } from 'drui
 export function timeFormatToSql(timeFormat: string): SqlExpression | undefined {
   switch (timeFormat) {
     case 'auto':
+      return SqlExpression.parse('TIME_PARSE(TRIM(?))');
+
     case 'iso':
       return SqlExpression.parse('TIME_PARSE(?)');
 

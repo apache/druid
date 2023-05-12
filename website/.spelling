@@ -747,6 +747,7 @@ APPROX_QUANTILE_FIXED_BUCKETS
 100x
  - ../docs/configuration/logging.md
 _common
+appender
 appenders
  - ../docs/dependencies/deep-storage.md
 druid-hdfs-storage

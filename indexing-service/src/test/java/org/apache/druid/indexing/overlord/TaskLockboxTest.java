@@ -1357,6 +1357,52 @@ public class TaskLockboxTest
                         result.getTasksToFail());
   }
 
+  @Test
+  public void testConflictsWithOverlappingSharedLocks() throws Exception
+  {
+    final List<Task> tasks = new ArrayList<>();
+
+    final Task conflictingTask = NoopTask.create(10);
+    tasks.add(conflictingTask);
+    lockbox.add(conflictingTask);
+    taskStorage.insert(conflictingTask, TaskStatus.running(conflictingTask.getId()));
+    TaskLock conflictingLock = tryTimeChunkLock(
+        TaskLockType.SHARED,
+        conflictingTask,
+        Intervals.of("2023-05-01/2023-06-01")
+    ).getTaskLock();
+    Assert.assertNotNull(conflictingLock);
+    Assert.assertFalse(conflictingLock.isRevoked());
+
+    final Task floorTask = NoopTask.create(10);
+    tasks.add(floorTask);
+    lockbox.add(floorTask);
+    taskStorage.insert(floorTask, TaskStatus.running(floorTask.getId()));
+    TaskLock floorLock = tryTimeChunkLock(
+        TaskLockType.SHARED,
+        floorTask,
+        Intervals.of("2023-05-26/2023-05-27")
+    ).getTaskLock();
+    Assert.assertNotNull(floorLock);
+    Assert.assertFalse(floorLock.isRevoked());
+
+    final Task rightOverlapTask = NoopTask.create(10);
+    tasks.add(rightOverlapTask);
+    lockbox.add(rightOverlapTask);
+    taskStorage.insert(rightOverlapTask, TaskStatus.running(rightOverlapTask.getId()));
+    TaskLock rightOverlapLock = tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        rightOverlapTask,
+        Intervals.of("2023-05-28/2023-06-03")
+    ).getTaskLock();
+    Assert.assertNull(rightOverlapLock);
+
+    Assert.assertEquals(
+        ImmutableSet.of(conflictingLock, floorLock),
+        getAllActiveLocks(tasks)
+    );
+  }
+
   private Set<TaskLock> getAllActiveLocks(List<Task> tasks)
   {
     return tasks.stream()
