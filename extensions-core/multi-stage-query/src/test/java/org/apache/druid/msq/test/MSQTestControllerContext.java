@@ -63,11 +63,12 @@ import java.util.stream.Collectors;
 public class MSQTestControllerContext implements ControllerContext
 {
   private static final Logger log = new Logger(MSQTestControllerContext.class);
+  private static final int NUM_WORKERS = 4;
   private final TaskActionClient taskActionClient;
   private final Map<String, Worker> inMemoryWorkers = new HashMap<>();
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
   private final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(
-      4,
+      NUM_WORKERS,
       "MultiStageQuery-test-controller-client"));
   private final CoordinatorClient coordinatorClient;
   private final DruidNode node = new DruidNode(

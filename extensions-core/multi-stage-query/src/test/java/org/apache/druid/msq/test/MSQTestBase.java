@@ -901,7 +901,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
-
     public Builder setExpectedSegmentGenerationProgressCountersForStageWorker(
         CounterSnapshotMatcher counterSnapshot,
         int stage,
