@@ -39,6 +39,7 @@ import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -91,7 +92,19 @@ public class HdfsStorageDruidModule implements DruidModule
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-      FileSystem.get(conf);
+
+      // Not make the initialization take too long if HDFS can't be reached
+      conf.setInt("dfs.client.failover.max.attempts", 3);
+      conf.setInt("dfs.http.client.failover.max.attempts", 3);
+      FileSystem fs = FileSystem.get(conf);
+
+      // If cache is enabled, need to check the FileSystem object by access hdfs because FileSystem object will be used later.
+      // Like in push stage. If FileSystem is invalid, the peon task should stop immediately.
+      // See
+      boolean enabledCache = !conf.getBoolean("fs.hdfs.impl.disable.cache", false);
+      if (enabledCache) {
+        fs.exists(new Path("/"));
+      }
     }
     catch (IOException ex) {
       throw new RuntimeException(ex);
