@@ -765,7 +765,8 @@ public class MSQWorkerTaskLauncher
       long currentTimeMillis = System.currentTimeMillis();
       return (status == null || status.getStatusCode() == TaskState.RUNNING)
              && unknownLocation()
-             && (currentTimeMillis - recentFullyStartedWorkerTimeInMs.get() > maxTaskStartDelayMillis && currentTimeMillis - startTimeMs > maxTaskStartDelayMillis);
+             && currentTimeMillis - recentFullyStartedWorkerTimeInMs.get() > maxTaskStartDelayMillis
+             && currentTimeMillis - startTimeMs > maxTaskStartDelayMillis;
     }
 
     /**
