@@ -100,7 +100,7 @@ public class HdfsStorageDruidModule implements DruidModule
 
       // If cache is enabled, need to check the FileSystem object by access hdfs because FileSystem object will be used later.
       // Like in push stage. If FileSystem is invalid, the peon task should stop immediately.
-      // See
+      // See https://github.com/apache/druid/pull/14276
       boolean enabledCache = !conf.getBoolean("fs.hdfs.impl.disable.cache", false);
       if (enabledCache) {
         fs.exists(new Path("/"));
