@@ -103,29 +103,17 @@ In the [segments view](http://localhost:8888/unified-console.html#segments), cli
 
 The top of the info box shows the full segment ID, e.g. `deletion-tutorial_2015-09-12T14:00:00.000Z_2015-09-12T15:00:00.000Z_2019-02-28T01:11:51.606Z` for the segment of hour 14.
 
-Let's disable the hour 13 and 14 segments by sending a POST request to the Coordinator with this payload
-
-```json
-{
-  "segmentIds":
-  [
-    "deletion-tutorial_2015-09-12T13:00:00.000Z_2015-09-12T14:00:00.000Z_2019-05-01T17:38:46.961Z",
-    "deletion-tutorial_2015-09-12T14:00:00.000Z_2015-09-12T15:00:00.000Z_2019-05-01T17:38:46.961Z"
-  ]
-}
-```
-
-This payload json has been provided at `quickstart/tutorial/deletion-disable-segments.json`. Submit the POST request to Coordinator like this:
-
+Let's disable the last two segments, hour 22 and 23 segments, by sending a POST request to the Coordinator with this payload:
 ```bash
-curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/deletion-disable-segments.json http://localhost:8081/druid/coordinator/v1/datasources/deletion-tutorial/markUnused
+unusedSegmentIds=$(curl -X 'GET' -H 'Content-Type:application/json' http://localhost:8081/druid/coordinator/v1/datasources/deletion-tutorial/segments | jq '.[-2:]')
+curl -X 'POST' -H 'Content-Type:application/json' -d "{\"segmentIds\": $unusedSegmentIds}" http://localhost:8081/druid/coordinator/v1/datasources/deletion-tutorial/markUnused
 ```
 
-After that command completes, you should see that the segments for hour 13 and 14 have been disabled:
+After that command completes, you should see that the segments for hour 22 and 23 have been disabled:
 
 ![Segments 3](../assets/tutorial-deletion-03.png "Segments 3")
 
-Note that the hour 13 and 14 segments are still in deep storage:
+Note that the hour 22 and 23 segments are still in deep storage:
 
 ```bash
 $ ls -l1 var/druid/segments/deletion-tutorial/
@@ -165,16 +153,29 @@ A Kill Task spec has been provided at `quickstart/tutorial/deletion-kill.json`. 
 curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/deletion-kill.json http://localhost:8081/druid/indexer/v1/task
 ```
 
-After this task completes, you can see that the disabled segments have now been removed from deep storage:
+Once this task is finished, you will observe that the disabled segments, specifically segments for hours 18, 19, 22, and 23 have been successfully deleted from deep storage.
+
 
 ```bash
 $ ls -l1 var/druid/segments/deletion-tutorial/
+2015-09-12T00:00:00.000Z_2015-09-12T01:00:00.000Z
+2015-09-12T01:00:00.000Z_2015-09-12T02:00:00.000Z
+2015-09-12T02:00:00.000Z_2015-09-12T03:00:00.000Z
+2015-09-12T03:00:00.000Z_2015-09-12T04:00:00.000Z
+2015-09-12T04:00:00.000Z_2015-09-12T05:00:00.000Z
+2015-09-12T05:00:00.000Z_2015-09-12T06:00:00.000Z
+2015-09-12T06:00:00.000Z_2015-09-12T07:00:00.000Z
+2015-09-12T07:00:00.000Z_2015-09-12T08:00:00.000Z
+2015-09-12T08:00:00.000Z_2015-09-12T09:00:00.000Z
+2015-09-12T09:00:00.000Z_2015-09-12T10:00:00.000Z
+2015-09-12T10:00:00.000Z_2015-09-12T11:00:00.000Z
+2015-09-12T11:00:00.000Z_2015-09-12T12:00:00.000Z
 2015-09-12T12:00:00.000Z_2015-09-12T13:00:00.000Z
+2015-09-12T13:00:00.000Z_2015-09-12T14:00:00.000Z
+2015-09-12T14:00:00.000Z_2015-09-12T15:00:00.000Z
 2015-09-12T15:00:00.000Z_2015-09-12T16:00:00.000Z
 2015-09-12T16:00:00.000Z_2015-09-12T17:00:00.000Z
 2015-09-12T17:00:00.000Z_2015-09-12T18:00:00.000Z
 2015-09-12T20:00:00.000Z_2015-09-12T21:00:00.000Z
 2015-09-12T21:00:00.000Z_2015-09-12T22:00:00.000Z
-2015-09-12T22:00:00.000Z_2015-09-12T23:00:00.000Z
-2015-09-12T23:00:00.000Z_2015-09-13T00:00:00.000Z
 ```
