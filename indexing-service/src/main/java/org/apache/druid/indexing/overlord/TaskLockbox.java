@@ -1258,7 +1258,7 @@ public class TaskLockbox
       case EXCLUSIVE:
         return canExclusiveLockCoexist(conflictPosses);
       default:
-        throw new UOE("Unsupposted lock type: " + request.getType());
+        throw new UOE("Unsupported lock type: " + request.getType());
     }
   }
 
@@ -1418,7 +1418,7 @@ public class TaskLockbox
           }
           break;
         default:
-          throw new UOE("Unsupposted lock type: " + type);
+          throw new UOE("Unsupported lock type: " + type);
       }
     }
     for (TaskLockPosse revokablePosse : possesToRevoke) {

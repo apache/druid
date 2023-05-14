@@ -1454,6 +1454,8 @@ public class TaskLockboxTest
     );
 
 
+    // Any append lock can be created, provided that it lies within the interval of the previously created replace lock
+    // This should not revoke any of the existing locks even with a higher priority
     final TaskLock appendLock0 = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-05-01/2017-06-01"),
@@ -1545,6 +1547,8 @@ public class TaskLockboxTest
         MEDIUM_PRIORITY
     );
 
+    // An append lock can be created for an interval enclosed within the replace lock's.
+    // Also note that the append lock has a higher priority but doesn't revoke the replace lock as it can coexist.
     final TaskLock appendLock = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-05-01/2017-06-01"),
