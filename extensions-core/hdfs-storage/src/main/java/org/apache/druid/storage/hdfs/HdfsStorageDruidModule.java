@@ -94,8 +94,8 @@ public class HdfsStorageDruidModule implements DruidModule
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
       FileSystem fs = FileSystem.get(conf);
 
-      // If cache is enabled, need to check the FileSystem object by access hdfs because FileSystem object will be used later.
-      // Like in push stage. If FileSystem is invalid, the peon task should stop immediately.
+      // If cache is enabled, need to check the FileSystem object by access hdfs because FileSystem object will be used later, like in push stage.
+      // If FileSystem is invalid, the peon task should stop immediately.
       // See https://github.com/apache/druid/pull/14276
       boolean disableCache = conf.getBoolean("fs.hdfs.impl.disable.cache", false);
       if (!disableCache) {
