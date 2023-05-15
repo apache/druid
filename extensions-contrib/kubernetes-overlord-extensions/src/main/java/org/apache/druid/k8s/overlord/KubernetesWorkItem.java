@@ -56,6 +56,7 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
     this.shutdownRequested.set(true);
 
     if (this.kubernetesPeonLifecycle != null) {
+      this.kubernetesPeonLifecycle.saveLogs();
       this.kubernetesPeonLifecycle.shutdown();
     }
   }

@@ -265,7 +265,7 @@ public class KubernetesPeonLifecycle
     return taskStatus.withDuration(duration);
   }
 
-  private void saveLogs()
+  protected void saveLogs()
   {
     try {
       Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
@@ -273,10 +273,10 @@ public class KubernetesPeonLifecycle
         Optional<InputStream> maybeLogStream = streamLogs();
         if (maybeLogStream.isPresent()) {
           FileUtils.copyInputStreamToFile(maybeLogStream.get(), file.toFile());
+          taskLogs.pushTaskLog(taskId.getOriginalTaskId(), file.toFile());
         } else {
           log.debug("Log stream not found for %s", taskId.getOriginalTaskId());
         }
-        taskLogs.pushTaskLog(taskId.getOriginalTaskId(), file.toFile());
       }
       catch (IOException e) {
         log.error(e, "Failed to stream logs for task [%s]", taskId.getOriginalTaskId());

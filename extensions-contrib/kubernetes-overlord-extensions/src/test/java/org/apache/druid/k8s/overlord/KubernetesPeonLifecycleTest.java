@@ -248,6 +248,45 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
   }
 
   @Test
+  public void test_join_noLogStream() throws IOException
+  {
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(ID)
+        .endMetadata()
+        .withNewStatus()
+        .withSucceeded(1)
+        .withStartTime("2022-09-19T23:31:50Z")
+        .withCompletionTime("2022-09-19T23:32:48Z")
+        .endStatus()
+        .build();
+
+    EasyMock.expect(kubernetesClient.waitForPeonJobCompletion(
+        EasyMock.eq(k8sTaskId),
+        EasyMock.anyLong(),
+        EasyMock.eq(TimeUnit.MILLISECONDS)
+    )).andReturn(new JobResponse(job, PeonPhase.SUCCEEDED));
+    EasyMock.expect(kubernetesClient.getPeonLogs(k8sTaskId)).andReturn(Optional.absent());
+    EasyMock.expect(taskLogs.streamTaskStatus(ID)).andReturn(Optional.of(
+        IOUtils.toInputStream(mapper.writeValueAsString(SUCCESS), StandardCharsets.UTF_8)
+    ));
+    EasyMock.expect(kubernetesClient.deletePeonJob(k8sTaskId)).andReturn(true);
+
+    Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
+
+    replayAll();
+
+    TaskStatus taskStatus = peonLifecycle.join(0L);
+
+    verifyAll();
+
+    Assert.assertEquals(SUCCESS.withDuration(58000), taskStatus);
+    Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
+  }
+
+  @Test
   public void test_join_whenCalledMultipleTimes_raisesIllegalStateException() throws IOException
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
