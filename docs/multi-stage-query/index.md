@@ -1,7 +1,7 @@
 ---
 id: index
-title: SQL-based ingestion overview
-sidebar_label: Overview
+title: SQL-based ingestion
+sidebar_label: SQL-based ingestion
 description: Introduces multi-stage query architecture and its task engine
 ---
 

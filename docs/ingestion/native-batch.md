@@ -1,7 +1,7 @@
 ---
 id: native-batch
-title: Classic batch
-sidebar_label: Overview
+title: JSON-based batch
+sidebar_label: JSON-based batch
 ---
 
 <!--
@@ -23,8 +23,7 @@ sidebar_label: Overview
   ~ under the License.
   -->
 
-> This page describes native batch ingestion using [ingestion specs](ingestion-spec.md). Refer to the [ingestion
-> methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
+> This page describes JSON-based batch ingestion using [ingestion specs](ingestion-spec.md). For SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md) extension, see [SQL-based ingestion](../multi-stage-query/index.md). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
 
 Apache Druid supports the following types of native batch indexing tasks:
 - Parallel task indexing (`index_parallel`) that can run multiple indexing tasks concurrently. Parallel task works well for production ingestion tasks.
@@ -36,7 +35,7 @@ For related information on batch indexing, see:
 - [Batch ingestion method comparison table](./index.md#batch) for a comparison of batch ingestion methods.
 - [Tutorial: Loading a file](../tutorials/tutorial-batch.md) for a tutorial on native batch ingestion.
 - [Input sources](./input-sources.md) for possible input sources.
-- [Input formats](./data-formats.md#input-format) for possible input formats.
+- [Source input formats](./data-formats.md#input-format) for possible input formats.
 
 ## Submit an indexing task
 

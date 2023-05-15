@@ -1,7 +1,7 @@
 ---
 id: sql-jdbc
-title: JDBC driver API
-sidebar_label: JDBC driver
+title: SQL JDBC driver API
+sidebar_label: SQL JDBC driver
 ---
 
 <!--

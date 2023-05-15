@@ -1,7 +1,7 @@
 ---
 id: data-formats
-title: Input formats
-sidebar_label: Input formats
+title: Source input formats
+sidebar_label: Source input formats
 ---
 
 <!--

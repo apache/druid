@@ -1,6 +1,6 @@
 ---
 id: migrate-from-firehose
-title: "Migrate from firehose to input source ingestion"
+title: "Migrate from firehose to input source ingestion (legacy)"
 sidebar_label: "Migrate from firehose"
 ---
 
