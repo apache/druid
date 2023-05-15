@@ -203,8 +203,8 @@ If you see the error "Encountered multi-value dimension `x` that cannot be proce
 groupByEnableMultiValueUnnesting set to false", then wrap that column in `MV_TO_ARRAY(x) AS x`.
 
 The following [aggregation functions](../querying/sql-aggregations.md) are supported for rollup at ingestion time:
-`COUNT` (but switch to `SUM` at query time), `SUM`, `MIN`, `MAX`, `EARLIEST` ([string only](known-issues.md#select-statement)),
-`LATEST` ([string only](known-issues.md#select-statement)), `APPROX_COUNT_DISTINCT`, `APPROX_COUNT_DISTINCT_BUILTIN`,
+`COUNT` (but switch to `SUM` at query time), `SUM`, `MIN`, `MAX`, `EARLIEST` and `EARLIEST_BY` ([string only](known-issues.md#select-statement)),
+`LATEST` and `LATEST_BY` ([string only](known-issues.md#select-statement)), `APPROX_COUNT_DISTINCT`, `APPROX_COUNT_DISTINCT_BUILTIN`,
 `APPROX_COUNT_DISTINCT_DS_HLL`, `APPROX_COUNT_DISTINCT_DS_THETA`, and `DS_QUANTILES_SKETCH` (but switch to
 `APPROX_QUANTILE_DS` at query time). Do not use `AVG`; instead, use `SUM` and `COUNT` at ingest time and compute the
 quotient at query time.
