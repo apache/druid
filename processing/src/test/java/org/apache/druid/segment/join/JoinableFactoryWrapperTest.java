@@ -36,6 +36,7 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.FalseFilter;
+import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
@@ -100,6 +101,13 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
                   .build()
   );
 
+  private static final InlineDataSource INDEXED_TABLE_DS_ONE_ROW = InlineDataSource.fromIterable(
+      ImmutableList.of(
+          new Object[]{"Mexico"}
+      ),
+      RowSignature.builder().add("country", ColumnType.STRING).build()
+  );
+
   private static final InlineDataSource NULL_INDEXED_TABLE_DS = InlineDataSource.fromIterable(
       ImmutableList.of(
           new Object[]{null}
@@ -120,6 +128,14 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
       INDEXED_TABLE_DS_THREE_COLS.rowAdapter(),
       INDEXED_TABLE_DS_THREE_COLS.getRowSignature(),
       ImmutableSet.of("country", "m1", "m2"),
+      DateTimes.nowUtc().toString()
+  );
+
+  private static final IndexedTable TEST_INDEXED_TABLE_ONE_ROW = new RowBasedIndexedTable<>(
+      INDEXED_TABLE_DS_ONE_ROW.getRowsAsList(),
+      INDEXED_TABLE_DS_ONE_ROW.rowAdapter(),
+      INDEXED_TABLE_DS_ONE_ROW.getRowSignature(),
+      ImmutableSet.of("country"),
       DateTimes.nowUtc().toString()
   );
 
@@ -235,6 +251,33 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
             ),
             ImmutableList.of(joinableClause)
             // the joinable clause remains intact since we've duplicates in country column
+        ),
+        conversion
+    );
+  }
+
+  @Test
+  public void test_convertJoinsToPartialFiltersWithSelectorFiltersInsteadOfInsForSingleValue()
+  {
+    JoinableClause joinableClause = new JoinableClause(
+        "j.",
+        new IndexedTableJoinable(TEST_INDEXED_TABLE_ONE_ROW),
+        JoinType.INNER,
+        JoinConditionAnalysis.forExpression("x == \"j.country\"", "j.", ExprMacroTable.nil())
+    );
+    final Pair<List<Filter>, List<JoinableClause>> conversion = JoinableFactoryWrapper.convertJoinsToFilters(
+        ImmutableList.of(joinableClause),
+        ImmutableSet.of("x"),
+        Integer.MAX_VALUE
+    );
+
+    // Although the filter created was an In Filter in equijoin
+    // We should receive a SelectorFilter for Filters.toFilter
+    // as there is a single value
+    Assert.assertEquals(
+        Pair.of(
+            ImmutableList.of(new SelectorFilter("x", "Mexico", null)),
+            ImmutableList.of()
         ),
         conversion
     );
