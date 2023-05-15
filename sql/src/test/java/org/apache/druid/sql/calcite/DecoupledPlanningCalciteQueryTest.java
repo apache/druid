@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.junit.Ignore;
+import org.junit.Test;
 
 public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 {
@@ -341,6 +342,98 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
   @Override
   @Ignore
   public void testPlanWithInFilterLessThanInSubQueryThreshold()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testSubqueryTypeMismatchWithLiterals()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testTimeseriesQueryWithEmptyInlineDatasourceAndGranularity()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testGroupBySortPushDown()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testCaseFilteredAggregationWithGroupBy()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testGroupingWithNullInFilter()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  @Test
+  public void testStringAggExpressionNonConstantSeparator()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testOrderByAlongWithInternalScanQuery()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testSortProjectAfterNestedGroupBy()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testCountDistinctOfCaseWhen()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testOrderByAlongWithInternalScanQueryNoDistinct()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testNestedGroupBy()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testFilteredAggregations()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testCountNullableExpression()
   {
 
   }
