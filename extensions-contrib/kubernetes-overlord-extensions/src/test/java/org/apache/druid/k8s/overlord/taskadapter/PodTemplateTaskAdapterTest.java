@@ -319,6 +319,42 @@ public class PodTemplateTaskAdapterTest
     Assertions.assertEquals(expected, actual);
   }
 
+  @Test
+  public void test_fromTask_withRealIds() throws IOException
+  {
+    Path templatePath = Files.createFile(tempDir.resolve("noop.yaml"));
+    mapper.writeValue(templatePath.toFile(), podTemplateSpec);
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.noop", templatePath.toString());
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        props
+    );
+
+    Task task = new NoopTask(
+        "api-issued_kill_wikipedia3_omjobnbc_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:03:01.220Z",
+        "api-issued_kill_wikipedia3_omjobnbc_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:03:01.220Z",
+        "datasource",
+        0,
+        0,
+        null,
+        null,
+        null
+    );
+
+    Job actual = adapter.fromTask(task);
+    Job expected = K8sTestUtils.fileToResource("expectedNoopJobLongIds.yaml", Job.class);
+
+    assertJobSpecsEqual(actual, expected);
+  }
+
+
 
   private void assertJobSpecsEqual(Job actual, Job expected) throws IOException
   {

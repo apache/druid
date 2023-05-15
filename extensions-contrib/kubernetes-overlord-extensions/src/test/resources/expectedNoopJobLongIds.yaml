@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "apiissuedkillwikipedia3omjobnbc10000101t000000000z20230514t0000"
+  labels:
+    druid.k8s.peons: "true"
+    druid.task.id: "apiissuedkillwikipedia3omjobnbc10000101t000000000z20230514t0000"
+    druid.task.type: "noop"
+    druid.task.group.id: "apiissuedkillwikipedia3omjobnbc10000101t000000000z20230514t0000"
+    druid.task.datasource: "datasource"
+  annotations:
+    task.id: "api-issued_kill_wikipedia3_omjobnbc_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:03:01.220Z"
+    task.type: "noop"
+    task.group.id: "api-issued_kill_wikipedia3_omjobnbc_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:03:01.220Z"
+    task.datasource: "datasource"
+spec:
+  activeDeadlineSeconds: 14400
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 172800
+  template:
+    metadata:
+      labels:
+        druid.k8s.peons: "true"
+        druid.task.id: "apiissuedkillwikipedia3omjobnbc10000101t000000000z20230514t0000"
+        druid.task.type: "noop"
+        druid.task.group.id: "apiissuedkillwikipedia3omjobnbc10000101t000000000z20230514t0000"
+        druid.task.datasource: "datasource"
+      annotations:
+        task: "H4sIAAAAAAAAAMVQu07EMBD8F9fJae0QIblFCNHepeEay4kNLOezjR9AFOXf2XBIVNQnbbEzs6/ZhZU5WiaZDyGyhqGhXEdsMedqjTqhc+oTTxitQd2pcH4Lox8nxQGgBU4xAMif2BF1VAJE10Lf8pv/hH7gtxI6CXwnBBxp60sKNT5eZbXRRR9CTdP2hA3kC2hYqn7AM9GiB6DP5L3VZr5Qf3hvc3WFep/uD9T0jMm+hkwlvjrXsCn4Yr9IX1aaaH+Hy4XpD41Oj+iwzA+b/WuYT/a90sHmTkc90SFM8nX9BgfewfoTAgAA"
+        tls.enabled: "false"
+        task.id: "api-issued_kill_wikipedia3_omjobnbc_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:03:01.220Z"
+        task.type: "noop"
+        task.group.id: "api-issued_kill_wikipedia3_omjobnbc_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:03:01.220Z"
+        task.datasource: "datasource"
+    spec:
+      containers:
+        - command:
+            - sleep
+            - "3600"
+          env:
+            - name: "TASK_DIR"
+              value: "/tmp"
+            - name: "TASK_ID"
+              value: "api-issued_kill_wikipedia3_omjobnbc_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:03:01.220Z"
+            - name: "TASK_JSON"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "metadata.annotations['task']"
+          image: one
+          name: primary

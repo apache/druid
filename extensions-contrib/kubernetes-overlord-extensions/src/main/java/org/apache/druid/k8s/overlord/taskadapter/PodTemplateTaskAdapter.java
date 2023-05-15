@@ -35,6 +35,7 @@ import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.client.utils.Serialization;
+import org.apache.commons.lang3.RegExUtils;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
@@ -54,6 +55,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -244,15 +246,20 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .build();
   }
 
+  private String parseStringToK8sLabel(String rawString)
+  {
+    return org.apache.commons.lang3.StringUtils.left(RegExUtils.replaceAll(rawString, "[^a-zA-Z0-9\\\\s]", "")
+        .toLowerCase(Locale.ENGLISH), 63);
+  }
   private Map<String, String> getJobLabels(KubernetesTaskRunnerConfig config, Task task)
   {
     return ImmutableMap.<String, String>builder()
         .putAll(config.getLabels())
         .put(DruidK8sConstants.LABEL_KEY, "true")
-        .put(getDruidLabel(DruidK8sConstants.TASK_ID), task.getId())
-        .put(getDruidLabel(DruidK8sConstants.TASK_TYPE), task.getType())
-        .put(getDruidLabel(DruidK8sConstants.TASK_GROUP_ID), task.getGroupId())
-        .put(getDruidLabel(DruidK8sConstants.TASK_DATASOURCE), task.getDataSource())
+        .put(getDruidLabel(DruidK8sConstants.TASK_ID), parseStringToK8sLabel(task.getId()))
+        .put(getDruidLabel(DruidK8sConstants.TASK_TYPE), parseStringToK8sLabel(task.getType()))
+        .put(getDruidLabel(DruidK8sConstants.TASK_GROUP_ID), parseStringToK8sLabel(task.getGroupId()))
+        .put(getDruidLabel(DruidK8sConstants.TASK_DATASOURCE), parseStringToK8sLabel(task.getDataSource()))
         .build();
   }
 
