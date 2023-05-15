@@ -75,7 +75,7 @@ runs for the duration of the job.
 | **Can append?** | Yes. | Yes (INSERT). | No. |
 | **Can overwrite?** | Yes. | Yes (REPLACE). | Yes. |
 | **External dependencies** | None. | None. | Hadoop cluster. |
-| **Input sources** | Any [`inputSource`](./native-batch-input-source.md). | Any [`inputSource`](./native-batch-input-source.md) (using [EXTERN](../multi-stage-query/concepts.md#extern)) or Druid datasource (using FROM). | Any Hadoop FileSystem or Druid datasource. |
+| **Input sources** | Any [`inputSource`](./input-sources.md). | Any [`inputSource`](./input-sources.md) (using [EXTERN](../multi-stage-query/concepts.md#extern)) or Druid datasource (using FROM). | Any Hadoop FileSystem or Druid datasource. |
 | **Input formats** | Any [`inputFormat`](./data-formats.md#input-format). | Any [`inputFormat`](./data-formats.md#input-format). | Any Hadoop InputFormat. |
 | **Secondary partitioning options** | Dynamic, hash-based, and range-based partitioning methods are available. See [partitionsSpec](./native-batch.md#partitionsspec) for details.| Range partitioning ([CLUSTERED BY](../multi-stage-query/concepts.md#clustering)). |  Hash-based or range-based partitioning via [`partitionsSpec`](hadoop.md#partitionsspec). |
 | **[Rollup modes](./rollup.md#perfect-rollup-vs-best-effort-rollup)** | Perfect if `forceGuaranteedRollup` = true in the [`tuningConfig`](native-batch.md#tuningconfig).  | Always perfect. | Always perfect. |

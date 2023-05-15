@@ -52,7 +52,7 @@ To support ingestion, additional SQL functionality is available through the MSQ 
 ### Read external data with `EXTERN`
 
 Query tasks can access external data through the `EXTERN` function, using any native batch [input
-source](../ingestion/native-batch-input-source.md) and [input format](../ingestion/data-formats.md#input-format).
+source](../ingestion/input-sources.md) and [input format](../ingestion/data-formats.md#input-format).
 
 `EXTERN` can read multiple files in parallel across different worker tasks. However, `EXTERN` does not split individual
 files across multiple worker tasks. If you have a small number of very large input files, you can increase query

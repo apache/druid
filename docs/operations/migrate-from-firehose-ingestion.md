@@ -43,11 +43,11 @@ If you're unable to use the console or you have problems with the console method
 
 ### Update your ingestion spec manually
 
-To update your ingestion spec manually, copy your existing spec into a new file. Refer to [Native batch ingestion with firehose (Deprecated)](./native-batch-firehose.md) for a description of firehose properties.
+To update your ingestion spec manually, copy your existing spec into a new file. Refer to [Native batch ingestion with firehose (Deprecated)](../ingestion/native-batch-firehose.md) for a description of firehose properties.
 
 Edit the new file as follows:
 
-1. In the `ioConfig` component, replace the `firehose` definition with an `inputSource` definition for your chosen input source. See [Native batch input sources](./native-batch-input-source.md) for details.
+1. In the `ioConfig` component, replace the `firehose` definition with an `inputSource` definition for your chosen input source. See [Native batch input sources](../ingestion/input-sources.md) for details.
 2. Move the `timeStampSpec` definition from `parser.parseSpec` to the `dataSchema` component.
 3. Move the `dimensionsSpec` definition from `parser.parseSpec` to the `dataSchema` component.
 4. Move the `format` definition from `parser.parseSpec` to an `inputFormat` definition in `ioConfig`.
@@ -204,6 +204,6 @@ The following example illustrates the result of migrating the [example firehose 
 
 For more information, see the following pages:
 
-- [Ingestion](./index.md): Overview of the Druid ingestion process.
-- [Native batch ingestion](./native-batch.md): Description of the supported native batch indexing tasks.
-- [Ingestion spec reference](./ingestion-spec.md): Description of the components and properties in the ingestion spec.
+- [Ingestion](../ingestion/index.md): Overview of the Druid ingestion process.
+- [Native batch ingestion](../ingestion/native-batch.md): Description of the supported native batch indexing tasks.
+- [Ingestion spec reference](../ingestion/ingestion-spec.md): Description of the components and properties in the ingestion spec.

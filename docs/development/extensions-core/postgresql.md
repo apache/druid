@@ -87,7 +87,7 @@ In most cases, the configuration options map directly to the [postgres JDBC conn
 
 ### PostgreSQL Firehose
 
-The PostgreSQL extension provides an implementation of an [SQL input source](../../ingestion/native-batch-input-source.md) which can be used to ingest data into Druid from a PostgreSQL database.
+The PostgreSQL extension provides an implementation of an [SQL input source](../../ingestion/input-sources.md) which can be used to ingest data into Druid from a PostgreSQL database.
 
 ```json
 {

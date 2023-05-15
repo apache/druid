@@ -1,6 +1,6 @@
 ---
 id: native-batch
-title: Classic batch overview
+title: Classic batch
 sidebar_label: Overview
 ---
 
@@ -35,7 +35,7 @@ This topic covers the configuration for `index_parallel` ingestion specs.
 For related information on batch indexing, see:
 - [Batch ingestion method comparison table](./index.md#batch) for a comparison of batch ingestion methods.
 - [Tutorial: Loading a file](../tutorials/tutorial-batch.md) for a tutorial on native batch ingestion.
-- [Input sources](./native-batch-input-source.md) for possible input sources.
+- [Input sources](./input-sources.md) for possible input sources.
 - [Input formats](./data-formats.md#input-format) for possible input formats.
 
 ## Submit an indexing task
@@ -263,7 +263,7 @@ The size-based split hint spec affects all splittable input sources except for t
 
 #### Segments Split Hint Spec
 
-The segments split hint spec is used only for [`DruidInputSource`](./native-batch-input-source.md).
+The segments split hint spec is used only for [`DruidInputSource`](./input-sources.md).
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
@@ -707,17 +707,17 @@ by assigning more task slots to them.
 Use the `inputSource` object to define the location where your index can read data. Only the native parallel task and simple task support the input source.
 
 For details on available input sources see:
-- [S3 input source](./native-batch-input-source.md#s3-input-source) (`s3`) reads data from AWS S3 storage.
-- [Google Cloud Storage input source](./native-batch-input-source.md#google-cloud-storage-input-source) (`gs`) reads data from Google Cloud Storage.
-- [Azure input source](./native-batch-input-source.md#azure-input-source) (`azure`) reads data from Azure Blob Storage and Azure Data Lake.
-- [HDFS input source](./native-batch-input-source.md#hdfs-input-source) (`hdfs`) reads data from HDFS storage.
-- [HTTP input Source](./native-batch-input-source.md#http-input-source) (`http`) reads data from HTTP servers.
-- [Inline input Source](./native-batch-input-source.md#inline-input-source) reads data you paste into the web console.
-- [Local input Source](./native-batch-input-source.md#local-input-source) (`local`) reads data from local storage.
-- [Druid input Source](./native-batch-input-source.md#druid-input-source) (`druid`) reads data from a Druid datasource.
-- [SQL input Source](./native-batch-input-source.md#sql-input-source) (`sql`) reads data from a RDBMS source.
+- [S3 input source](./input-sources.md#s3-input-source) (`s3`) reads data from AWS S3 storage.
+- [Google Cloud Storage input source](./input-sources.md#google-cloud-storage-input-source) (`gs`) reads data from Google Cloud Storage.
+- [Azure input source](./input-sources.md#azure-input-source) (`azure`) reads data from Azure Blob Storage and Azure Data Lake.
+- [HDFS input source](./input-sources.md#hdfs-input-source) (`hdfs`) reads data from HDFS storage.
+- [HTTP input Source](./input-sources.md#http-input-source) (`http`) reads data from HTTP servers.
+- [Inline input Source](./input-sources.md#inline-input-source) reads data you paste into the web console.
+- [Local input Source](./input-sources.md#local-input-source) (`local`) reads data from local storage.
+- [Druid input Source](./input-sources.md#druid-input-source) (`druid`) reads data from a Druid datasource.
+- [SQL input Source](./input-sources.md#sql-input-source) (`sql`) reads data from a RDBMS source.
 
-For information on how to combine input sources, see [Combining input source](./native-batch-input-source.md#combining-input-source).
+For information on how to combine input sources, see [Combining input source](./input-sources.md#combining-input-source).
 
 ### `segmentWriteOutMediumFactory`
 
