@@ -51,6 +51,8 @@ jobs:
   unit-tests:
     name: ${{ inputs.module }} modules test
     runs-on: ubuntu-latest
+    outputs:
+      coverage_failure: ${{ steps.set_outputs.outputs.coverage_failure }}
     steps:
       - name: checkout branch
         uses: actions/checkout@v3
@@ -107,6 +109,7 @@ jobs:
         run: ./.github/scripts/unit_tests_script.sh
 
       - name: set outputs on failure
+        id: set_outputs
         if: ${{ failure() && steps.test_and_coverage.conclusion == 'failure' }}
         run: |
           echo "coverage failure - ${{ env.coverage_failure }}"
