@@ -42,6 +42,7 @@
         "label": "Ingestion concepts",
         "ids": [
           "ingestion/data-formats",
+          "ingestion/input-sources",
           "ingestion/schema-model",
           "ingestion/rollup",
           "ingestion/partitioning"
@@ -71,11 +72,9 @@
       },
       {
         "type": "subcategory",
-        "label": "JSON-based batch",
+        "label": "Classic batch",
         "ids": [
           "ingestion/native-batch",
-          "ingestion/native-batch-input-sources",
-          "ingestion/migrate-from-firehose",
           "ingestion/hadoop"
         ]
       },
@@ -162,8 +161,8 @@
       }
     ],
     "API reference":[
-      "api-reference/sql-ingestion-api",
       "api-reference/sql-api",
+      "api-reference/sql-ingestion-api",
       "api-reference/sql-jdbc",
       "api-reference/api-reference"
     ],
@@ -210,6 +209,7 @@
       "operations/high-availability",
       "operations/rolling-updates",
       "operations/rule-configuration",
+      "operations/migrate-from-firehose",
       "operations/other-hadoop",
       {
         "type": "subcategory",

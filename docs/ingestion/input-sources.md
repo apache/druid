@@ -1,7 +1,7 @@
 ---
-id: native-batch-input-sources
-title: "JSON-based batch input sources"
-sidebar_label: "JSON-based batch input sources"
+id: input-sources
+title: "Input sources"
+sidebar_label: "Input sources"
 ---
 
 <!--

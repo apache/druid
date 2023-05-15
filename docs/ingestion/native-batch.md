@@ -1,7 +1,7 @@
 ---
 id: native-batch
-title: "JSON-based batch overview"
-sidebar_label: "Overview"
+title: Classic batch overview
+sidebar_label: Overview
 ---
 
 <!--

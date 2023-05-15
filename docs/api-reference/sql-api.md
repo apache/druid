@@ -1,7 +1,7 @@
 ---
 id: sql-api
 title: Druid SQL API
-sidebar_label: Druid SQL API
+sidebar_label: Druid SQL
 ---
 
 <!--
