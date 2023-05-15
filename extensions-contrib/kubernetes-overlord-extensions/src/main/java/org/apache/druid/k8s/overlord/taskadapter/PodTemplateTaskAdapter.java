@@ -244,6 +244,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         .put(DruidK8sConstants.TASK_DATASOURCE, task.getDataSource())
         .build();
   }
+  
   private Map<String, String> getJobLabels(KubernetesTaskRunnerConfig config, Task task)
   {
     return ImmutableMap.<String, String>builder()
