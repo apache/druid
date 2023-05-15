@@ -1599,14 +1599,10 @@ public class ControllerImpl implements Controller
       final DataSchema dataSchema =
           generateDataSchema(querySpec, querySignature, queryClusterBy, columnMappings, jsonMapper);
 
-      final long maxInputBytesPerWorker =
-          MultiStageQueryContext.getMaxInputBytesPerWorker(querySpec.getQuery().context());
-
       builder.add(
           StageDefinition.builder(queryDef.getNextStageNumber())
                          .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
                          .maxWorkerCount(tuningConfig.getMaxNumWorkers())
-                         .maxInputBytesPerWorker(maxInputBytesPerWorker)
                          .processorFactory(
                              new SegmentGeneratorFrameProcessorFactory(
                                  dataSchema,
@@ -1903,12 +1899,19 @@ public class ControllerImpl implements Controller
               aggregators,
               outputColumnAggregatorFactories,
               outputColumnName,
-              type
+              type,
+              query.context()
           );
         } else {
           // complex columns only
           if (DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(type.getComplexTypeName())) {
-            dimensions.add(DimensionSchemaUtils.createDimensionSchema(outputColumnName, type));
+            dimensions.add(
+                DimensionSchemaUtils.createDimensionSchema(
+                    outputColumnName,
+                    type,
+                    MultiStageQueryContext.useAutoColumnSchemas(query.context())
+                )
+            );
           } else if (!isRollupQuery) {
             aggregators.add(new PassthroughAggregatorFactory(outputColumnName, type.getComplexTypeName()));
           } else {
@@ -1917,7 +1920,8 @@ public class ControllerImpl implements Controller
                 aggregators,
                 outputColumnAggregatorFactories,
                 outputColumnName,
-                type
+                type,
+                query.context()
             );
           }
         }
@@ -1943,13 +1947,20 @@ public class ControllerImpl implements Controller
       List<AggregatorFactory> aggregators,
       Map<String, AggregatorFactory> outputColumnAggregatorFactories,
       String outputColumn,
-      ColumnType type
+      ColumnType type,
+      QueryContext context
   )
   {
     if (outputColumnAggregatorFactories.containsKey(outputColumn)) {
       aggregators.add(outputColumnAggregatorFactories.get(outputColumn));
     } else {
-      dimensions.add(DimensionSchemaUtils.createDimensionSchema(outputColumn, type));
+      dimensions.add(
+          DimensionSchemaUtils.createDimensionSchema(
+              outputColumn,
+              type,
+              MultiStageQueryContext.useAutoColumnSchemas(context)
+          )
+      );
     }
   }
 
@@ -2391,10 +2402,14 @@ public class ControllerImpl implements Controller
      */
     private void startStages() throws IOException, InterruptedException
     {
+      final long maxInputBytesPerWorker =
+          MultiStageQueryContext.getMaxInputBytesPerWorker(task.getQuerySpec().getQuery().context());
+
       logKernelStatus(queryDef.getQueryId(), queryKernel);
       final List<StageId> newStageIds = queryKernel.createAndGetNewStageIds(
           inputSpecSlicerFactory,
-          task.getQuerySpec().getAssignmentStrategy()
+          task.getQuerySpec().getAssignmentStrategy(),
+          maxInputBytesPerWorker
       );
 
       for (final StageId stageId : newStageIds) {

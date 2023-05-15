@@ -214,6 +214,7 @@ A `dimensionsSpec` can have the following components:
 | `spatialDimensions`    | An array of [spatial dimensions](../querying/geo.md).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `[]`    |
 | `includeAllDimensions` | You can set `includeAllDimensions` to true to ingest both explicit dimensions in the `dimensions` field and other dimensions that the ingestion task discovers from input data. In this case, the explicit dimensions will appear first in order that you specify them and the dimensions dynamically discovered will come after. This flag can be useful especially with auto schema discovery using [`flattenSpec`](./data-formats.html#flattenspec). If this is not set and the `dimensions` field is not empty, Druid will ingest only explicit dimensions. If this is not set and the `dimensions` field is empty, all discovered dimensions will be ingested. | false   |
 
+
 #### Dimension objects
 
 Each dimension in the `dimensions` list can either be a name or an object. Providing a name is equivalent to providing
