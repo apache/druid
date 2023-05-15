@@ -185,10 +185,23 @@ public interface Expr extends Cacheable
     throw Exprs.cannotVectorize(this);
   }
 
+  // This will be overridden for lookup exprs
+  default void decorateCacheKeyBuilder(CacheKeyBuilder builder)
+  {
+    // no op
+  }
+
   @Override
   default byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(Exprs.EXPR_CACHE_KEY).appendString(stringify()).build();
+    CacheKeyBuilder builder = new CacheKeyBuilder(Exprs.EXPR_CACHE_KEY).appendString(stringify());
+    // delegate to the child expressions through shuttle
+    Shuttle keyShuttle = expr -> {
+      expr.decorateCacheKeyBuilder(builder);
+      return expr;
+    };
+    this.visit(keyShuttle);
+    return builder.build();
   }
 
   /**

@@ -109,11 +109,22 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       }
 
       @Override
+      public void decorateCacheKeyBuilder(CacheKeyBuilder builder)
+      {
+        builder.appendCacheable(extractionFn);
+      }
+
+      @Override
       public byte[] getCacheKey()
       {
-        return new CacheKeyBuilder(Exprs.LOOKUP_EXPR_CACHE_KEY).appendString(stringify())
-                                                               .appendCacheable(extractionFn)
-                                                               .build();
+        CacheKeyBuilder builder = new CacheKeyBuilder(Exprs.LOOKUP_EXPR_CACHE_KEY).appendString(stringify());
+        // delegate to the child expressions through shuttle
+        Shuttle keyShuttle = expr -> {
+          expr.decorateCacheKeyBuilder(builder);
+          return expr;
+        };
+        this.visit(keyShuttle);
+        return builder.build();
       }
     }
 
