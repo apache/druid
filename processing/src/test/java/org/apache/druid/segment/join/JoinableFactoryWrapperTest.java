@@ -271,9 +271,9 @@ public class JoinableFactoryWrapperTest extends NullHandlingTest
         Integer.MAX_VALUE
     );
 
-    // Although the filter created was an In Filter in equijoin
-    // We should receive a SelectorFilter for Filters.toFilter
-    // as there is a single value
+    // Although the filter created was an In Filter in equijoin (here inFilter = IN (Mexico))
+    // We should receive a SelectorFilter for Filters.toFilter(inFilter) call
+    // and should receive a SelectorFilter with x = Mexico
     Assert.assertEquals(
         Pair.of(
             ImmutableList.of(new SelectorFilter("x", "Mexico", null)),
