@@ -1,0 +1,47 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.k8s.overlord.common;
+
+import org.junit.Assert;
+import org.junit.Test;
+
+public class KubernetesStringUtilsTest
+{
+
+  @Test
+  public void test_shortId()
+  {
+    Assert.assertEquals("datasource", KubernetesStringUtils.parseStringToK8sLabel("datasource"));
+  }
+
+  @Test
+  public void test_k8sId()
+  {
+    Assert.assertEquals("apiissuedkillwikipedianewbalhnoib10000101t000000000z20230514t00", KubernetesStringUtils.parseStringToK8sLabel(
+        "api-issued_kill_wikipedia_new_balhnoib_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:28:42.526Z"
+    ));
+  }
+
+  @Test
+  public void test_null()
+  {
+    Assert.assertEquals("", KubernetesStringUtils.parseStringToK8sLabel(null));
+  }
+}
