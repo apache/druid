@@ -138,10 +138,10 @@ jobs:
 
   standard-its:
     needs: unit-tests
-    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.coverage-failure == 'true') }}
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/standard-its.yml
 
   revised-its:
     needs: unit-tests
-    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.coverage-failure == 'true') }}
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/revised-its.yml
