@@ -27,6 +27,9 @@ on:
         default: true
         description: 'For SQL compatibility'
     outputs:
+      dummy:
+        description: 'For debug purposes'
+        value: true
       continue_tests:
         description: 'Flag to decide if further tests need to be run incase if failure is due to coverage issues'
         value: |
@@ -67,3 +70,13 @@ jobs:
       sql_compatibility: ${{ inputs.sql_compatibility }}
       module: other
       maven_projects: '!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases'
+
+  test-job:
+    needs: [indexing_modules_test, other_modules_test]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Print outputs"
+        run: |
+          echo "indexing_modules_test output - ${{ needs.indexing_modules_test.result }} - ${{ toJSON(needs.indexing_modules_test) }}"
+          echo "other_modules_test output - ${{ needs.other_modules_test.result }} - ${{ toJSON(needs.other_modules_test) }}"
