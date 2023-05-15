@@ -22,7 +22,6 @@ on:
       - 'helm/**'
       - 'web-console/**'
       - '**/*.md'
-      - 'test-branch'
     branches:
       - master
       - '[0-9]+.[0-9]+.[0-9]+' # release branches
