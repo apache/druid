@@ -208,6 +208,7 @@ SqlParameter
 SslContextFactory
 StatsD
 SYSTEM_TABLE
+TaskRunner
 TCP
 TGT
 TLS
