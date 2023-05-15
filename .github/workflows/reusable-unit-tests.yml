@@ -52,7 +52,7 @@ jobs:
     name: ${{ inputs.module }} modules test
     runs-on: ubuntu-latest
     outputs:
-      coverage_failure: ${{ steps.set_outputs.outputs.coverage_failure }}
+      coverage_failure: ${{ steps.test_and_coverage.outputs.coverage_failure }}
     steps:
       - name: checkout branch
         uses: actions/checkout@v3
@@ -106,11 +106,6 @@ jobs:
         id: test_and_coverage
         env:
           MAVEN_PROJECTS: ${{ inputs.maven_projects }}
-        run: ./.github/scripts/unit_tests_script.sh
-
-      - name: set outputs on failure
-        id: set_outputs
-        if: ${{ failure() && steps.test_and_coverage.conclusion == 'failure' }}
         run: |
-          echo "coverage failure - ${{ env.coverage_failure }}"
+          ./.github/scripts/unit_tests_script.sh
           echo "coverage_failure=${{ env.coverage_failure }}" >> "$GITHUB_OUTPUT"

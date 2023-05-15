@@ -127,15 +127,6 @@ jobs:
       jdk: 8
       sql_compatibility: ${{ matrix.sql_compatibility }}
 
-  test-job:
-    needs: unit-tests
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: "Print output"
-        run: |
-          echo "unit-tests output - ${{ needs.unit-tests.result }} - ${{ toJSON(needs.unit-tests) }}"
-
   standard-its:
     needs: unit-tests
     if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
