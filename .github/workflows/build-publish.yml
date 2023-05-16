@@ -34,3 +34,4 @@ jobs:
       run: ./verta_build_and_publish.sh
       env:
         GITHUB_TOKEN: ${{ github.token }}
+        LOCAL_MAVEN_SETTINGS: $GITHUB_WORKSPACE/settings.xml
