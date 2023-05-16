@@ -312,7 +312,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
-      return taskQueue.get().getSuccessfulTaskCount();
+      return taskQueue.get().getAndResetSuccessfulTaskCounts();
     } else {
       return null;
     }
@@ -323,7 +323,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   {
     Optional<TaskQueue> taskQueue = getTaskQueue();
     if (taskQueue.isPresent()) {
-      return taskQueue.get().getFailedTaskCount();
+      return taskQueue.get().getAndResetFailedTaskCounts();
     } else {
       return null;
     }

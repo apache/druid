@@ -733,9 +733,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   @After
   public void tearDown()
   {
-    if (taskQueue.isActive()) {
-      taskQueue.stop();
-    }
+    taskQueue.stop();
   }
 
   @Test
@@ -1505,9 +1503,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
     // Since multiple tasks can be run in a single unit test using runTask(), hence this check and synchronization
     synchronized (this) {
-      if (!taskQueue.isActive()) {
-        taskQueue.start();
-      }
+      taskQueue.start();
     }
     taskQueue.add(dummyTask);
     taskQueue.add(task);
