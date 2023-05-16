@@ -767,6 +767,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   @Test
   public void testEmitBothLag() throws Exception
   {
+    expectEmitterSupervisor(false);
+
     CountDownLatch latch = new CountDownLatch(1);
     TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
         latch,
