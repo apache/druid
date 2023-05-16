@@ -24,6 +24,7 @@ import com.google.common.base.Optional;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.dsl.LogWatch;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
@@ -116,6 +117,30 @@ public class KubernetesPeonClient
     } else {
       log.info("Not cleaning up task %s due to flag: debugJobs=true", taskId);
       return true;
+    }
+  }
+
+  public Optional<LogWatch> getPeonLogWatcher(K8sTaskId taskId)
+  {
+    KubernetesClient k8sClient = clientApi.getClient();
+    try {
+      LogWatch logWatch = k8sClient.batch()
+          .v1()
+          .jobs()
+          .inNamespace(namespace)
+          .withName(taskId.getK8sTaskId())
+          .inContainer("main")
+          .watchLog();
+      if (logWatch == null) {
+        k8sClient.close();
+        return Optional.absent();
+      }
+      return Optional.of(logWatch);
+    }
+    catch (Exception e) {
+      log.error(e, "Error watching logs from task: %s", taskId);
+      k8sClient.close();
+      return Optional.absent();
     }
   }
 
