@@ -244,7 +244,7 @@ You should query for the number of ingested rows with:
 
 Druid can infer the schema for your data in one of two ways:
 
-- [Type-aware schema discovery (experimental)](#type-aware-schema-discovery-experimental) where Druid infers the schema and type for your data. Type-aware schema discovery is an experimental feature currently available for native batch and streaming ingestion.
+- [Type-aware schema discovery (experimental)](#type-aware-schema-discovery) where Druid infers the schema and type for your data. Type-aware schema discovery is an experimental feature currently available for native batch and streaming ingestion.
 - [String-based schema discovery](#string-based-schema-discovery) where all the discovered columns are typed as either native string or multi-value string columns.
 
 #### Type-aware schema discovery
