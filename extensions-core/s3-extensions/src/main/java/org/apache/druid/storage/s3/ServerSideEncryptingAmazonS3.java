@@ -25,6 +25,7 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.AccessControlList;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
@@ -43,11 +44,8 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.InputStream;
 
 /**
  * {@link AmazonS3} wrapper with {@link ServerSideEncryption}. Every {@link AmazonS3#putObject},
@@ -76,7 +74,20 @@ public class ServerSideEncryptingAmazonS3
 
   public boolean doesObjectExist(String bucket, String objectName)
   {
-    return amazonS3.doesObjectExist(bucket, objectName);
+    try {
+      // Ignore return value, just want to see if we can get the metadata at all.
+      getObjectMetadata(bucket, objectName);
+      return true;
+    }
+    catch (AmazonS3Exception e) {
+      if (e.getStatusCode() == 404) {
+        // Object not found.
+        return false;
+      } else {
+        // Some other error: re-throw.
+        throw e;
+      }
+    }
   }
 
   public ListObjectsV2Result listObjectsV2(ListObjectsV2Request request)
@@ -107,20 +118,9 @@ public class ServerSideEncryptingAmazonS3
     return amazonS3.getObject(serverSideEncryption.decorate(request));
   }
 
-  public PutObjectResult putObject(String bucket, String key, String content)
-  {
-    final InputStream in = new ByteArrayInputStream(StringUtils.toUtf8(content));
-    return putObject(new PutObjectRequest(bucket, key, in, new ObjectMetadata()));
-  }
-
   public PutObjectResult putObject(String bucket, String key, File file)
   {
     return putObject(new PutObjectRequest(bucket, key, file));
-  }
-
-  public PutObjectResult putObject(String bucket, String key, InputStream in, ObjectMetadata objectMetadata)
-  {
-    return putObject(new PutObjectRequest(bucket, key, in, objectMetadata));
   }
 
   public PutObjectResult putObject(PutObjectRequest request)
