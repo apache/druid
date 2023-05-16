@@ -767,8 +767,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   @Test
   public void testEmitBothLag() throws Exception
   {
-    expectEmitterSupervisor(false);
-
     CountDownLatch latch = new CountDownLatch(1);
     TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
         latch,
@@ -1033,6 +1031,30 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         ),
         stats.get("0")
     );
+  }
+
+  @Test
+  public void testStaleOffsetsNegativeLagNotEmitted() throws Exception
+  {
+    expectEmitterSupervisor(false);
+
+    CountDownLatch latch = new CountDownLatch(1);
+
+    final TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
+        latch,
+        TestEmittingTestSeekableStreamSupervisor.LAG,
+        // Record lag must not be emitted
+        ImmutableMap.of("0", 10L, "1", -100L),
+        null
+    );
+    supervisor.start();
+    // Forcibly set the offsets to be stale
+    supervisor.sequenceLastUpdated = new DateTime(0);
+
+    latch.await();
+
+    supervisor.emitLag();
+    Assert.assertEquals(0, emitter.getEvents().size());
   }
 
   private List<Event> filterMetrics(List<Event> events, List<String> whitelist)
