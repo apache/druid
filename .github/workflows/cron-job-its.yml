@@ -27,7 +27,7 @@ on:
 
 jobs:
   build:
-    if: github.event_name == 'schedule'
+    if: (github.event_name == 'schedule' && github.repository == 'apache/druid')
     name: build (jdk8)
     runs-on: ubuntu-latest
     steps:
@@ -107,10 +107,11 @@ jobs:
       group: other
 
   security_vulnerabilities:
+    if: github.repository == 'apache/druid'
     name: security vulnerabilities
     strategy:
       matrix:
-        HADOOP_PROFILE: [ '', '-Phadoop3' ]
+        HADOOP_PROFILE: [ '', '-Phadoop2' ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch

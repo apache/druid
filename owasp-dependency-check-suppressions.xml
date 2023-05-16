@@ -192,10 +192,12 @@
       ~       ... 27 more
       -->
     <notes><![CDATA[
-   file name: hibernate-validator-5.2.5.Final.jar
+   file name: hibernate-validator-5.3.6.Final.jar
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.hibernate/hibernate\-validator@.*$</packageUrl>
-    <cve>CVE-2017-7536</cve>
+    <cve>CVE-2019-10219</cve>
+    <cve>CVE-2019-14900</cve>
+    <cve>CVE-2020-10693</cve>
     <cve>CVE-2020-25638</cve>
   </suppress>
   <suppress>
@@ -216,8 +218,13 @@
     <cve>CVE-2019-20444</cve>
     <cve>CVE-2019-20445</cve>
     <cve>CVE-2020-11612</cve>
+    <cve>CVE-2021-21290</cve>
+    <cve>CVE-2021-21295</cve>
+    <cve>CVE-2021-21409</cve>
     <cve>CVE-2021-37136</cve>
     <cve>CVE-2021-37137</cve>
+    <cve>CVE-2021-43797</cve>
+    <cve>CVE-2022-24823</cve>
     <cve>CVE-2022-41881</cve>
   </suppress>
   <suppress>
@@ -619,6 +626,7 @@
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.asynchttpclient/async-http-client-netty-utils@2.5.3$</packageUrl>
     <cve>CVE-2021-43138</cve>
+    <cve>CVE-2021-4277</cve>
   </suppress>
 
   <suppress>
@@ -832,5 +840,27 @@
     <packageUrl regex="true">^pkg:maven/org\.apache\.ranger/ranger\-plugins\-.*@2.0.0$</packageUrl>
     <!-- applies to ranger-hive-plugin which afaict we do not use https://nvd.nist.gov/vuln/detail/CVE-2021-40331 -->
     <cve>CVE-2021-40331</cve>
+  </suppress>
+
+  <!-- filed against random script set, doesn't apply to any Maven artifacts - https://github.com/jeremylong/DependencyCheck/issues/5213 -->
+  <suppress>
+    <notes><![CDATA[
+      file name: plexus-utils-3.0.24.jar
+      file name: async-http-client-netty-utils-2.5.3.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/.*/.*@.*$</packageUrl>
+    <cve>CVE-2021-4277</cve>
+  </suppress>
+
+  <!--
+    ~ TODO: Update guava to any version after 29.0
+  -->
+  <suppress>
+    <notes><![CDATA[
+      file name: guava-16.0.1.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.google\.guava/guava@16.0.1$</packageUrl>
+    <cve>CVE-2018-10237</cve>
+    <cve>CVE-2020-8908</cve>
   </suppress>
 </suppressions>
