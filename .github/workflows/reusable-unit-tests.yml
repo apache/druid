@@ -52,7 +52,7 @@ jobs:
     name: ${{ inputs.module }} modules test
     runs-on: ubuntu-latest
     outputs:
-      coverage_failure: ${{ steps.test_and_coverage.outputs.coverage_failure }}
+      coverage_failure: ${{ steps.set_outputs.outputs.coverage_failure }}
     steps:
       - name: checkout branch
         uses: actions/checkout@v3
@@ -60,8 +60,7 @@ jobs:
           fetch-depth: 0
 
       - name: setup jdk${{ inputs.jdk }}
-        run: |
-          echo "JAVA_HOME=$JAVA_HOME_${{ inputs.jdk }}_X64" >> $GITHUB_ENV
+        run: echo "JAVA_HOME=$JAVA_HOME_${{ inputs.jdk }}_X64" >> $GITHUB_ENV
 
       - name: Restore Maven repository
         id: maven-restore
@@ -99,13 +98,15 @@ jobs:
 
       - name: Maven build
         if: steps.maven-restore.outputs.cache-hit != 'true'
-        run: |
-          ./it.sh ci
+        run: ./it.sh ci
 
       - name: test & coverage
         id: test_and_coverage
         env:
           MAVEN_PROJECTS: ${{ inputs.maven_projects }}
-        run: |
-          ./.github/scripts/unit_tests_script.sh
-          echo "coverage_failure=${{ env.coverage_failure }}" >> "$GITHUB_OUTPUT"
+        run: ./.github/scripts/unit_tests_script.sh
+
+      - name: set outputs on failure
+        id: set_outputs
+        if: ${{ failure() }}
+        run: echo "coverage_failure=${{ env.coverage_failure }}" >> "$GITHUB_OUTPUT"
