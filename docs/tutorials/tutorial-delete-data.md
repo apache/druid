@@ -159,7 +159,7 @@ A Kill Task spec has been provided at `quickstart/tutorial/deletion-kill.json`. 
 curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/deletion-kill.json http://localhost:8081/druid/indexer/v1/task
 ```
 
-Once this task is finished, you will observe that the disabled segments, specifically segments for hours 18, 19, 22, and 23 have been successfully deleted from deep storage.
+When the task finishes, note that Druid deleted the disabled segments from deep storage.
 
 
 ```bash
