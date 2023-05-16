@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -691,14 +690,14 @@ public class TaskQueue
 
   public Map<String, Long> getAndResetSuccessfulTaskCounts()
   {
-    Map<String, Long> total = Maps.newHashMap(datasourceToSuccessfulTaskCount);
+    Map<String, Long> total = new HashMap<>(datasourceToSuccessfulTaskCount);
     datasourceToSuccessfulTaskCount.clear();
     return total;
   }
 
   public Map<String, Long> getAndResetFailedTaskCounts()
   {
-    Map<String, Long> total = Maps.newHashMap(datasourceToFailedTaskCount);
+    Map<String, Long> total = new HashMap<>(datasourceToFailedTaskCount);
     datasourceToFailedTaskCount.clear();
     return total;
   }

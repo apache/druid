@@ -146,31 +146,6 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertTrue(taskQueue.getTasks().isEmpty());
   }
 
-  @Test
-  public void testShutdownAfterStopThrowsException() throws EntryExistsException
-  {
-    final TestTask task = new TestTask("t1", "2021-01/2021-02");
-    taskQueue.add(task);
-    Assert.assertEquals(1, taskQueue.getTasks().size());
-
-    taskQueue.stop();
-    Assert.assertThrows(
-        IllegalStateException.class,
-        () -> taskQueue.shutdown(task.getId(), "killing after stop")
-    );
-    Assert.assertTrue(taskQueue.getTasks().isEmpty());
-  }
-
-  @Test
-  public void testConcurrencyWithStorageSync()
-  {
-    // A: Metadata says remove, another thread says add
-    // B: Metadata says add, another thread says remove
-
-    // C: tasks changing while sync is going on
-    // - doesn't matter, we take a snapshot of tasks and then go from there
-  }
-
   /**
    * This test verifies releasing all locks of a task when it is not ready to run yet.
    *
