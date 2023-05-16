@@ -626,7 +626,6 @@
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.asynchttpclient/async-http-client-netty-utils@2.5.3$</packageUrl>
     <cve>CVE-2021-43138</cve>
-    <cve>CVE-2021-4277</cve>
   </suppress>
 
   <suppress>
