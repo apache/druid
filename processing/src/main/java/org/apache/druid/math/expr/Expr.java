@@ -185,7 +185,12 @@ public interface Expr extends Cacheable
     throw Exprs.cannotVectorize(this);
   }
 
-  // This will be overridden for lookup exprs
+
+  /**
+   * Decorates the cache key builder by adding extra elements if stringify alone is not sufficient
+   * to create the cache key. Override this method in such cases then, for e.g. {@link org.apache.druid.query.expression.LookupExprMacro}}
+   * @param builder
+   */
   default void decorateCacheKeyBuilder(CacheKeyBuilder builder)
   {
     // no op
