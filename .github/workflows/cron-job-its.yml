@@ -126,7 +126,7 @@ jobs:
 
       - name: security vulnerabilities check
         env:
-          MVN: mvn --no-snapshot-updates
+          MVN: mvn -U
           HADOOP_PROFILE: ${{ matrix.HADOOP_PROFILE }}
         run: |
           mvn dependency-check:purge dependency-check:check ${HADOOP_PROFILE} || { echo "
