@@ -124,9 +124,13 @@ jobs:
           distribution: 'zulu'
           cache: maven
 
+      - name: Maven build
+        id: maven_build
+        run: ./it.sh ci
+
       - name: security vulnerabilities check
         env:
-          MVN: mvn -U
+          MVN: mvn --no-snapshot-updates
           HADOOP_PROFILE: ${{ matrix.HADOOP_PROFILE }}
         run: |
           mvn dependency-check:purge dependency-check:check ${HADOOP_PROFILE} || { echo "
