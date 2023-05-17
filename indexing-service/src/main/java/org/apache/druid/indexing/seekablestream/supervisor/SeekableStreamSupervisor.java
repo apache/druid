@@ -4226,7 +4226,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             && sequenceLastUpdated.getMillis()
                < System.currentTimeMillis() - tuningConfig.getOffsetFetchPeriod().getMillis();
         if (areOffsetsStale && partitionLags.values().stream().anyMatch(x -> x < 0)) {
-          log.warn("Skipping negative lag emission as fetched offsets are stale");
           log.warn("Lag is negative and will not be emitted because topic offsets have become stale. "
                    + "This will not impact data processing. "
                    + "Offsets may become stale because of connectivity issues.");
