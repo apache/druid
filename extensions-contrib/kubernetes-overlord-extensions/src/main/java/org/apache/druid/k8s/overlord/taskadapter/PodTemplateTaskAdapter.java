@@ -47,7 +47,7 @@ import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
-import org.apache.druid.k8s.overlord.common.KubernetesStringUtils;
+import org.apache.druid.k8s.overlord.common.KubernetesOverlordUtils;
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
@@ -250,10 +250,10 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     return ImmutableMap.<String, String>builder()
         .putAll(config.getLabels())
         .put(DruidK8sConstants.LABEL_KEY, "true")
-        .put(getDruidLabel(DruidK8sConstants.TASK_ID), KubernetesStringUtils.convertTaskIdToK8sLabel(task.getId()))
-        .put(getDruidLabel(DruidK8sConstants.TASK_TYPE), KubernetesStringUtils.convertStringToK8sLabel(task.getType()))
-        .put(getDruidLabel(DruidK8sConstants.TASK_GROUP_ID), KubernetesStringUtils.convertTaskIdToK8sLabel(task.getGroupId()))
-        .put(getDruidLabel(DruidK8sConstants.TASK_DATASOURCE), KubernetesStringUtils.convertStringToK8sLabel(task.getDataSource()))
+        .put(getDruidLabel(DruidK8sConstants.TASK_ID), KubernetesOverlordUtils.convertTaskIdToK8sLabel(task.getId()))
+        .put(getDruidLabel(DruidK8sConstants.TASK_TYPE), KubernetesOverlordUtils.convertStringToK8sLabel(task.getType()))
+        .put(getDruidLabel(DruidK8sConstants.TASK_GROUP_ID), KubernetesOverlordUtils.convertTaskIdToK8sLabel(task.getGroupId()))
+        .put(getDruidLabel(DruidK8sConstants.TASK_DATASOURCE), KubernetesOverlordUtils.convertStringToK8sLabel(task.getDataSource()))
         .build();
   }
 

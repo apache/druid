@@ -22,20 +22,20 @@ package org.apache.druid.k8s.overlord.common;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class KubernetesStringUtilsTest
+public class KubernetesOverlordUtilsTest
 {
 
   @Test
   public void test_shortLabel()
   {
-    Assert.assertEquals("data_source", KubernetesStringUtils.convertStringToK8sLabel("data_source"));
+    Assert.assertEquals("data_source", KubernetesOverlordUtils.convertStringToK8sLabel("data_source"));
   }
 
 
   @Test
   public void test_stripDisallowedPatterns()
   {
-    Assert.assertEquals("data_source-1.wikipedia", KubernetesStringUtils.convertStringToK8sLabel(
+    Assert.assertEquals("data_source-1.wikipedia", KubernetesOverlordUtils.convertStringToK8sLabel(
         "_.-data_source-1.wikipedia.-_"
     ));
   }
@@ -43,13 +43,13 @@ public class KubernetesStringUtilsTest
   @Test
   public void test_nullLabel()
   {
-    Assert.assertEquals("", KubernetesStringUtils.convertStringToK8sLabel(null));
+    Assert.assertEquals("", KubernetesOverlordUtils.convertStringToK8sLabel(null));
   }
 
   @Test
   public void test_stripTaskId()
   {
-    Assert.assertEquals("apiissuedkillwikipedianewbalhnoib10000101t000000000z20230514t00", KubernetesStringUtils.convertTaskIdToK8sLabel(
+    Assert.assertEquals("apiissuedkillwikipedianewbalhnoib10000101t000000000z20230514t00", KubernetesOverlordUtils.convertTaskIdToK8sLabel(
         "api-issued_kill_wikipedia_new_balhnoib_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:28:42.526Z"
     ));
   }
@@ -57,6 +57,6 @@ public class KubernetesStringUtilsTest
   @Test
   public void test_nullTaskId()
   {
-    Assert.assertEquals("", KubernetesStringUtils.convertTaskIdToK8sLabel(null));
+    Assert.assertEquals("", KubernetesOverlordUtils.convertTaskIdToK8sLabel(null));
   }
 }

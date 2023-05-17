@@ -25,7 +25,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-public class KubernetesStringUtils
+public class KubernetesOverlordUtils
 {
   private static final Pattern K8S_LABEL_PATTERN = Pattern.compile("[^A-Za-z0-9_.-]");
   // replace all the ": - . _" to "", try to reduce the length of pod name and meet pod naming specifications 64 characters.

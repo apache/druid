@@ -340,7 +340,7 @@ public class PodTemplateTaskAdapterTest
     Task task = new NoopTask(
         "api-issued_kill_wikipedia3_omjobnbc_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:03:01.220Z",
         "api-issued_kill_wikipedia3_omjobnbc_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:03:01.220Z",
-        "datasource",
+        "data_source",
         0,
         0,
         null,

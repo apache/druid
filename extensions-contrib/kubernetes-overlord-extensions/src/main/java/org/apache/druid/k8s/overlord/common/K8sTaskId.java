@@ -37,7 +37,7 @@ public class K8sTaskId
   public K8sTaskId(String taskId)
   {
     this.originalTaskId = taskId;
-    this.k8sTaskId = KubernetesStringUtils.convertTaskIdToK8sLabel(taskId);
+    this.k8sTaskId = KubernetesOverlordUtils.convertTaskIdToK8sLabel(taskId);
   }
 
   public String getK8sTaskId()
