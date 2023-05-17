@@ -27,6 +27,8 @@ import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
@@ -49,9 +51,14 @@ import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregat
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.topn.DimensionTopNMetricSpec;
+import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
@@ -69,6 +76,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -80,6 +88,12 @@ import java.util.Properties;
 public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
   private static final boolean ROUND = true;
+
+  private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(
+      ImmutableList.of(
+          new HllPostAggExprMacros.HLLSketchEstimateExprMacro()
+      )
+  );
 
   @Override
   public void gatherProperties(Properties properties)
@@ -886,6 +900,189 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(new Object[]{"a", 0L, "0"})
+    );
+  }
+
+  @Test
+  public void testHllEstimateAsVirtualColumn()
+  {
+    testQuery(
+        "SELECT"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_dim1)"
+        + " FROM druid.foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(new ExpressionVirtualColumn(
+                    "v0",
+                    "hll_sketch_estimate(\"hllsketch_dim1\")",
+                    ColumnType.DOUBLE,
+                    MACRO_TABLE
+                ))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .columns("v0")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{0.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D}
+        )
+    );
+  }
+
+  @Test
+  public void testHllEstimateAsVirtualColumnWithRound()
+  {
+    testQuery(
+        "SELECT"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_dim1, TRUE)"
+        + " FROM druid.foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(new ExpressionVirtualColumn(
+                    "v0",
+                    "hll_sketch_estimate(\"hllsketch_dim1\",1)",
+                    ColumnType.DOUBLE,
+                    MACRO_TABLE
+                ))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .columns("v0")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{0.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D}
+        )
+    );
+  }
+
+  @Test
+  public void testHllEstimateAsVirtualColumnOnNonHllCol()
+  {
+    try {
+      testQuery(
+          "SELECT"
+          + " HLL_SKETCH_ESTIMATE(dim2)"
+          + " FROM druid.foo",
+          ImmutableList.of(
+              newScanQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(new ExpressionVirtualColumn(
+                      "v0",
+                      "hll_sketch_estimate(\"dim2\")",
+                      ColumnType.DOUBLE,
+                      MACRO_TABLE
+                  ))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .columns("v0")
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+          ),
+          ImmutableList.of()
+      );
+    }
+    catch (ExpressionValidationException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Function[HLL_SKETCH_ESTIMATE] requires a HllSketch as the argument")
+      );
+    }
+  }
+
+  @Test
+  public void testHllEstimateAsVirtualColumnWithGroupByOrderBy()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_dim1), count(*)"
+        + " FROM druid.foo"
+        + " GROUP BY 1"
+        + " ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(new ExpressionVirtualColumn(
+                            "v0",
+                            "hll_sketch_estimate(\"hllsketch_dim1\")",
+                            ColumnType.DOUBLE,
+                            MACRO_TABLE
+                        ))
+                        .setDimensions(
+                            new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new CountAggregatorFactory("a0")
+                            )
+                        )
+                        .setLimitSpec(
+                            DefaultLimitSpec
+                                .builder()
+                                .orderBy(
+                                    new OrderByColumnSpec(
+                                        "a0",
+                                        OrderByColumnSpec.Direction.DESCENDING,
+                                        StringComparators.NUMERIC
+                                    )
+                                )
+                                .build()
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1.0D, 5L},
+            new Object[]{0.0D, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testHllEstimateAsVirtualColumnWithTopN()
+  {
+    testQuery(
+        "SELECT"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_dim1)"
+        + " FROM druid.foo"
+        + " GROUP BY 1 ORDER BY 1"
+        + " LIMIT 2",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE))
+                .virtualColumns(new ExpressionVirtualColumn(
+                    "v0",
+                    "hll_sketch_estimate(\"hllsketch_dim1\")",
+                    ColumnType.DOUBLE,
+                    MACRO_TABLE
+                ))
+                .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+                .threshold(2)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{0.0D},
+            new Object[]{1.0D}
+        )
     );
   }
 }
