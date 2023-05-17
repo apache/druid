@@ -1321,6 +1321,7 @@ public class EvalTest extends InitializedNullHandlingTest
 
     // by default, booleans are handled as strings
     assertBestEffortOf(true, ExpressionType.STRING, "true");
+    assertBestEffortOf(Arrays.asList(true, false), ExpressionType.STRING_ARRAY, new Object[]{"true", "false"});
 
     assertBestEffortOf(
         new byte[]{1, 2, 3, 4},
@@ -1336,6 +1337,7 @@ public class EvalTest extends InitializedNullHandlingTest
       // in strict boolean mode, they are longs
       ExpressionProcessing.initializeForStrictBooleansTests(true);
       assertBestEffortOf(true, ExpressionType.LONG, 1L);
+      assertBestEffortOf(Arrays.asList(true, false), ExpressionType.LONG_ARRAY, new Object[]{1L, 0L});
     }
     finally {
       // reset
