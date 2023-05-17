@@ -57,14 +57,16 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -114,7 +116,7 @@ public class TaskQueue
   private final TaskLockbox taskLockbox;
   private final ServiceEmitter emitter;
 
-  private final AtomicBoolean managementRequested = new AtomicBoolean(false);
+  private final BlockingQueue<Object> managementRequestQueue = new ArrayBlockingQueue<>(1);
 
   private final ExecutorService managerExec = Executors.newSingleThreadExecutor(
       new ThreadFactoryBuilder()
@@ -252,10 +254,9 @@ public class TaskQueue
    */
   private void requestManagement()
   {
-    synchronized (managementRequested) {
-      managementRequested.set(true);
-      managementRequested.notify();
-    }
+    // do not care if the item fits into the queue:
+    // if the queue is already full, request has been triggered anyway
+    managementRequestQueue.offer(new Object());
   }
 
   /**
@@ -274,12 +275,10 @@ public class TaskQueue
     }
 
     // Wait for management to be requested
-    synchronized (managementRequested) {
-      while (!managementRequested.get()) {
-        managementRequested.wait(MANAGEMENT_WAIT_TIMEOUT_MILLIS - MIN_WAIT_TIME_MILLIS);
-      }
-      managementRequested.compareAndSet(true, false);
-    }
+    managementRequestQueue.poll(
+        MANAGEMENT_WAIT_TIMEOUT_MILLIS - MIN_WAIT_TIME_MILLIS,
+        TimeUnit.MILLISECONDS
+    );
   }
 
   /**
@@ -690,15 +689,19 @@ public class TaskQueue
 
   public Map<String, Long> getAndResetSuccessfulTaskCounts()
   {
-    Map<String, Long> total = new HashMap<>(datasourceToSuccessfulTaskCount);
-    datasourceToSuccessfulTaskCount.clear();
+    Set<String> datasources = new HashSet<>(datasourceToSuccessfulTaskCount.keySet());
+
+    Map<String, Long> total = new HashMap<>();
+    datasources.forEach(ds -> total.put(ds, datasourceToSuccessfulTaskCount.remove(ds)));
     return total;
   }
 
   public Map<String, Long> getAndResetFailedTaskCounts()
   {
-    Map<String, Long> total = new HashMap<>(datasourceToFailedTaskCount);
-    datasourceToFailedTaskCount.clear();
+    Set<String> datasources = new HashSet<>(datasourceToFailedTaskCount.keySet());
+
+    Map<String, Long> total = new HashMap<>();
+    datasources.forEach(ds -> total.put(ds, datasourceToFailedTaskCount.remove(ds)));
     return total;
   }
 
