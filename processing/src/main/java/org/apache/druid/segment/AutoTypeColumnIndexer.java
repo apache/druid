@@ -164,6 +164,10 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         fields.put(entry.getKey(), entry.getValue().getTypes());
       }
     }
+    // special handling for when column only has arrays with null elements, treat it as a string array
+    if (fields.isEmpty() && fieldIndexers.size() == 1) {
+      fields.put(fieldIndexers.firstKey(), new FieldTypeInfo.MutableTypeSet().add(ColumnType.STRING_ARRAY));
+    }
     return fields;
   }
 
