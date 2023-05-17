@@ -1051,7 +1051,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     );
     supervisor.start();
     // Forcibly set the offsets to be stale
-    supervisor.sequenceLastUpdated = new DateTime(0);
+    supervisor.sequenceLastUpdated = DateTime.now().minus(Integer.MAX_VALUE);
 
     latch.await();
 
