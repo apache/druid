@@ -24,7 +24,7 @@ description: Reference for the configuration options in the ingestion spec.
   ~ under the License.
   -->
 
-All ingestion methods use ingestion tasks to load data into Druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch and Hadoop-based ingestion use a one-time [task](tasks.md). All types of ingestion use an _ingestion spec_ to configure ingestion.
+All ingestion methods use ingestion tasks to load data into Druid. Streaming ingestion uses ongoing supervisors that run and supervise a set of tasks over time. Native batch and Hadoop-based ingestion use a one-time [task](tasks.md). Other than with SQL-based ingestion, use an _ingestion spec_ to configure your ingestion.
 
 Ingestion specs consists of three main components:
 
@@ -186,9 +186,19 @@ Treat `__time` as a millisecond timestamp: the number of milliseconds since Jan 
 ### `dimensionsSpec`
 
 The `dimensionsSpec` is located in `dataSchema` → `dimensionsSpec` and is responsible for
-configuring [dimensions](./data-model.md#dimensions). An example `dimensionsSpec` is:
+configuring [dimensions](./data-model.md#dimensions). 
 
-```
+You can either manually specify the dimensions or take advantage of schema auto-discovery where you allow Druid to infer all or some of the schema for your data. This means that you don't have to explicitly specify your dimensions and their type. 
+
+To use schema auto-discovery, set `useSchemaDiscovery` to `true`. 
+
+Alternatively, you can use the string-based schemaless ingestion where any discovered dimensions are treated as strings. To do so, leave `useSchemaDiscovery` set to `false` (default). Then, set the dimensions list to empty or set the  `includeAllDimensions` property to `true`.
+
+The following `dimensionsSpec` example uses schema auto-discovery (`"useSchemaDiscovery": true`) in conjunction with explicitly defined dimensions to have Druid infer some of the schema for the data:
+
+
+
+```json
 "dimensionsSpec" : {
   "dimensions": [
     "page",
@@ -196,9 +206,11 @@ configuring [dimensions](./data-model.md#dimensions). An example `dimensionsSpec
     { "type": "long", "name": "userId" }
   ],
   "dimensionExclusions" : [],
-  "spatialDimensions" : []
+  "spatialDimensions" : [],
+  "useSchemaDiscovery": true
 }
 ```
+
 
 > Conceptually, after input data records are read, Druid applies ingestion spec components in a particular order:
 > first [`flattenSpec`](data-formats.md#flattenspec) (if any), then [`timestampSpec`](#timestampspec), then [`transformSpec`](#transformspec),
@@ -212,7 +224,9 @@ A `dimensionsSpec` can have the following components:
 | `dimensions`           | A list of [dimension names or objects](#dimension-objects). You cannot include the same column in both `dimensions` and `dimensionExclusions`.<br /><br />If `dimensions` and `spatialDimensions` are both null or empty arrays, Druid treats all columns other than timestamp or metrics that do not appear in `dimensionExclusions` as String-typed dimension columns. See [inclusions and exclusions](#inclusions-and-exclusions) for details.<br /><br />As a best practice, put the most frequently filtered dimensions at the beginning of the dimensions list. In this case, it would also be good to consider [`partitioning`](partitioning.md) by those same dimensions.                                                                                                                                                                                                                                  | `[]`    |
 | `dimensionExclusions`  | The names of dimensions to exclude from ingestion. Only names are supported here, not objects.<br /><br />This list is only used if the `dimensions` and `spatialDimensions` lists are both null or empty arrays; otherwise it is ignored. See [inclusions and exclusions](#inclusions-and-exclusions) below for details.                                                                                                                                                                                                                                                                                                                                               | `[]`    |
 | `spatialDimensions`    | An array of [spatial dimensions](../development/geo.md).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `[]`    |
-| `includeAllDimensions` | You can set `includeAllDimensions` to true to ingest both explicit dimensions in the `dimensions` field and other dimensions that the ingestion task discovers from input data. In this case, the explicit dimensions will appear first in order that you specify them and the dimensions dynamically discovered will come after. This flag can be useful especially with auto schema discovery using [`flattenSpec`](./data-formats.html#flattenspec). If this is not set and the `dimensions` field is not empty, Druid will ingest only explicit dimensions. If this is not set and the `dimensions` field is empty, all discovered dimensions will be ingested. | false   |
+| `includeAllDimensions` | Note that this field only applies to string-based schema discovery where Druid ingests dimensions it discovers as strings. This is different from schema auto-discovery where Druid infers the type for data. You can set `includeAllDimensions` to true to ingest both explicit dimensions in the `dimensions` field and other dimensions that the ingestion task discovers from input data. In this case, the explicit dimensions will appear first in the order that you specify them, and the dimensions dynamically discovered will come after. This flag can be useful especially with auto schema discovery using [`flattenSpec`](./data-formats.html#flattenspec). If this is not set and the `dimensions` field is not empty, Druid will ingest only explicit dimensions. If this is not set and the `dimensions` field is empty, all discovered dimensions will be ingested. | false   |
+| `useSchemaDiscovery` | Configure Druid to use schema auto-discovery to discover some or all of the dimensions and types for your data. For any dimensions that aren't a uniform type, Druid ingests them as JSON. You can use this for native batch or streaming ingestion.  | false  | 
+
 
 #### Dimension objects
 
@@ -223,7 +237,7 @@ Dimension objects can have the following components:
 
 | Field | Description | Default |
 |-------|-------------|---------|
-| type | Either `string`, `long`, `float`, `double`, or `json`. | `string` |
+| type | Either `auto`, `string`, `long`, `float`, `double`, or `json`. For the `auto` type, Druid determines the most appropriate type for the dimension and assigns one of the following: STRING, ARRAY<STRING>, LONG, ARRAY<LONG>, DOUBLE, ARRAY<DOUBLE>, or COMPLEX<json> columns, all sharing a common 'nested' format. When Druid infers the schema with schema auto-discovery, the type is `auto`. | `string` |
 | name | The name of the dimension. This will be used as the field name to read from input records, as well as the column name stored in generated segments.<br /><br />Note that you can use a [`transformSpec`](#transformspec) if you want to rename columns during ingestion time. | none (required) |
 | createBitmapIndex | For `string` typed dimensions, whether or not bitmap indexes should be created for the column in generated segments. Creating a bitmap index requires more storage, but speeds up certain kinds of filtering (especially equality and prefix filtering). Only supported for `string` typed dimensions. | `true` |
 | multiValueHandling | Specify the type of handling for [multi-value fields](../querying/multi-value-dimensions.md). Possible values are `sorted_array`, `sorted_set`, and `array`. `sorted_array` and `sorted_set` order the array upon ingestion. `sorted_set` removes duplicates. `array` ingests data as-is | `sorted_array` |
@@ -234,6 +248,8 @@ Druid will interpret a `dimensionsSpec` in two possible ways: _normal_ or _schem
 
 Normal interpretation occurs when either `dimensions` or `spatialDimensions` is non-empty. In this case, the combination of the two lists will be taken as the set of dimensions to be ingested, and the list of `dimensionExclusions` will be ignored.
 
+> The following description of schemaless refers to  string-based schemaless  where Druid treats dimensions it discovers as strings. We recommend you use schema auto-discovery instead where Druid infers the type for the dimension. For more information, see [`dimensionsSpec`](#dimensionsspec).
+
 Schemaless interpretation occurs when both `dimensions` and `spatialDimensions` are empty or null. In this case, the set of dimensions is determined in the following way:
 
 1. First, start from the set of all root-level fields from the input record, as determined by the [`inputFormat`](./data-formats.md). "Root-level" includes all fields at the top level of a data structure, but does not included fields nested within maps or lists. To extract these, you must use a [`flattenSpec`](./data-formats.md#flattenspec). All fields of non-nested data formats, such as CSV and delimited text, are considered root-level.
@@ -243,6 +259,8 @@ Schemaless interpretation occurs when both `dimensions` and `spatialDimensions` 
 5. Any field used as an input to an aggregator from the [metricsSpec](#metricsspec) is excluded.
 6. Any field with the same name as an aggregator from the [metricsSpec](#metricsspec) is excluded.
 7. All other fields are ingested as `string` typed dimensions with the [default settings](#dimension-objects).
+
+Additionally, if you have empty columns that you want to include in the string-based schemaless ingestion, you'll need to include the context parameter `storeEmptyColumns` and set it to `true`.
 
 > Note: Fields generated by a [`transformSpec`](#transformspec) are not currently considered candidates for
 > schemaless dimension interpretation.
