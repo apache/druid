@@ -28,7 +28,7 @@ on:
         description: 'For SQL compatibility'
     outputs:
       continue_tests:
-        description: 'Flag to decide if phase 2 tests need to run incase coverage issue failures'
+        description: 'Flag to decide if next tests need to run incase coverage issue failures'
         value: |
           ${{
             (jobs.indexing_modules_test.result == 'success' || fromJson(jobs.indexing_modules_test.outputs.coverage_failure)) &&
@@ -61,7 +61,7 @@ jobs:
       sql_compatibility: ${{ inputs.sql_compatibility }}
       module: server
       maven_projects: 'server'
-#
+
   other_modules_test:
     uses: ./.github/workflows/reusable-unit-tests.yml
     with:
