@@ -105,6 +105,18 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
+  public void testAddAndRunTask() throws EntryExistsException
+  {
+    final TestTask task = new TestTask("t1", "2021-01/2021-02");
+    taskQueue.add(task);
+    Assert.assertEquals(1, taskQueue.getTasks().size());
+
+    taskQueue.manageTasks();
+    Assert.assertTrue(task.isDone());
+    Assert.assertTrue(taskQueue.getTasks().isEmpty());
+  }
+
+  @Test
   public void testAddDuplicateTaskThrowsException() throws EntryExistsException
   {
     final TestTask task = new TestTask("t1", "2021-01/2021-02");
@@ -114,11 +126,8 @@ public class TaskQueueTest extends IngestionTestBase
         () -> taskQueue.add(task)
     );
 
+    // Verify that the originally added task is still in queue
     Assert.assertEquals(1, taskQueue.getTasks().size());
-
-    taskQueue.manageTasks();
-    Assert.assertTrue(task.isDone());
-    Assert.assertTrue(taskQueue.getTasks().isEmpty());
   }
 
   @Test
