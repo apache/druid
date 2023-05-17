@@ -18,6 +18,7 @@ on:
   push:
     paths-ignore:
       - 'docs/**'
+      - 'website/**'
       - 'dev/**'
       - 'helm/**'
       - 'web-console/**'
@@ -29,6 +30,7 @@ on:
   pull_request:
     paths-ignore:
       - 'docs/**'
+      - 'website/**'
       - 'dev/**'
       - 'helm/**'
       - 'web-console/**'
