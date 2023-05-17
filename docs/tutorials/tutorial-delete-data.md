@@ -26,9 +26,9 @@ sidebar_label: "Deleting data"
 
 This tutorial demonstrates how to delete existing data.
 
-For this tutorial, we'll assume you've already downloaded Apache Druid as described in
-the [single-machine quickstart](index.md) and have it running on your local machine. In addition,
-we'll assume you've [jq](https://stedolan.github.io/jq/download/) installed in your machine.
+This tutorial requires the following:
+* A running Apache Druid instance. If you don't have Druid, see the [single-machine quickstart](index.md) to get started.
+* The command-line JSON processor, [jq](https://stedolan.github.io/jq/download/).
 
 ## Load initial data
 
