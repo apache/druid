@@ -921,7 +921,7 @@ public class SegmentMetadataCache
         querySegmentSpec,
         new AllColumnIncluderator(),
         false,
-        // we are not merging segment metadata query result, why use parallel merge pool
+        // disable the parallel merge because we don't care about the merge and don't want to consume its resources
         QueryContexts.override(
             brokerInternalQueryConfig.getContext(),
             QueryContexts.BROKER_PARALLEL_MERGE_KEY,

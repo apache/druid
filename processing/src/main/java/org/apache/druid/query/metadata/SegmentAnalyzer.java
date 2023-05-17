@@ -112,8 +112,13 @@ public class SegmentAnalyzer
         capabilities = storageAdapter.getColumnCapabilities(columnName);
       }
 
-      ColumnAnalysis analysis;
+      if (capabilities == null) {
+        log.warn("Unknown column type for column[%s]", columnName);
+        columns.put(columnName, ColumnAnalysis.error("unknown_type"));
+        continue;
+      }
 
+      ColumnAnalysis analysis;
       try {
         switch (capabilities.getType()) {
           case LONG:
@@ -143,16 +148,16 @@ public class SegmentAnalyzer
             analysis = analyzeComplexColumn(capabilities, numRows, columnHolder);
             break;
           default:
-            log.warn("Unknown column type[%s].", capabilities.asTypeString());
+            log.warn("Unknown column type[%s] for column[%s].", capabilities.asTypeString(), columnName);
             analysis = ColumnAnalysis.error(StringUtils.format("unknown_type_%s", capabilities.asTypeString()));
         }
       }
-      catch (Throwable throwable) {
+      catch (RuntimeException re) {
         // eat the exception and add error analysis, this is preferrable to exploding since exploding results in
         // the broker downstream SQL metadata cache left in a state where it is unable to completely finish
         // the SQL schema relies on this stuff functioning, and so will continuously retry when it faces a failure
-        log.warn(throwable, "Error analyzing column");
-        analysis = ColumnAnalysis.error(throwable.getMessage());
+        log.warn(re, "Error analyzing column[%s] of type[%s]", columnName, capabilities.asTypeString());
+        analysis = ColumnAnalysis.error(re.getMessage());
       }
 
       columns.put(columnName, analysis);
@@ -328,7 +333,7 @@ public class SegmentAnalyzer
   }
 
   private ColumnAnalysis analyzeComplexColumn(
-      @Nullable final ColumnCapabilities capabilities,
+      final ColumnCapabilities capabilities,
       final int numCells,
       @Nullable final ColumnHolder columnHolder
   )
@@ -345,7 +350,7 @@ public class SegmentAnalyzer
         return bob.withErrorMessage(
                     StringUtils.format(
                         "[%s] is not a [%s]",
-                        theColumn == null ? null : theColumn.getClass().getName(),
+                        theColumn.getClass().getName(),
                         ComplexColumn.class.getName()
                     )
                   )
@@ -353,8 +358,8 @@ public class SegmentAnalyzer
       }
       final ComplexColumn complexColumn = (ComplexColumn) theColumn;
 
-      bob.hasMultipleValues(capabilities != null && capabilities.hasMultipleValues().isTrue())
-         .hasNulls(capabilities != null && capabilities.hasNulls().isMaybeTrue());
+      bob.hasMultipleValues(capabilities.hasMultipleValues().isTrue())
+         .hasNulls(capabilities.hasNulls().isMaybeTrue());
 
       long size = 0;
       if (analyzingSize() && complexColumn != null) {
