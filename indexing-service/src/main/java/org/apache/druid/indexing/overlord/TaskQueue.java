@@ -88,11 +88,15 @@ public class TaskQueue
 
   /**
    * Map from Task ID to active task (submitted, running, recently finished).
+   * This must be a ConcurrentHashMap so that operations for any task id happen
+   * atomically.
    */
   private final ConcurrentHashMap<String, Task> tasks = new ConcurrentHashMap<>();
 
   /**
-   * Queue of all active Task IDs.
+   * Queue of all active Task IDs. Updates to this queue must happen within
+   * {@code tasks.compute()} or {@code tasks.computeIfAbsent()} to ensure that
+   * this queue is always in sync with the {@code tasks} map.
    */
   private final BlockingDeque<String> activeTaskIdQueue = new LinkedBlockingDeque<>();
 
@@ -256,7 +260,7 @@ public class TaskQueue
   {
     // do not care if the item fits into the queue:
     // if the queue is already full, request has been triggered anyway
-    managementRequestQueue.offer(new Object());
+    managementRequestQueue.offer(this);
   }
 
   /**
