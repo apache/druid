@@ -250,10 +250,10 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     return ImmutableMap.<String, String>builder()
         .putAll(config.getLabels())
         .put(DruidK8sConstants.LABEL_KEY, "true")
-        .put(getDruidLabel(DruidK8sConstants.TASK_ID), KubernetesStringUtils.parseStringToK8sLabel(task.getId()))
-        .put(getDruidLabel(DruidK8sConstants.TASK_TYPE), KubernetesStringUtils.parseStringToK8sLabel(task.getType()))
-        .put(getDruidLabel(DruidK8sConstants.TASK_GROUP_ID), KubernetesStringUtils.parseStringToK8sLabel(task.getGroupId()))
-        .put(getDruidLabel(DruidK8sConstants.TASK_DATASOURCE), KubernetesStringUtils.parseStringToK8sLabel(task.getDataSource()))
+        .put(getDruidLabel(DruidK8sConstants.TASK_ID), KubernetesStringUtils.convertTaskIdToK8sLabel(task.getId()))
+        .put(getDruidLabel(DruidK8sConstants.TASK_TYPE), KubernetesStringUtils.convertStringToK8sLabel(task.getType()))
+        .put(getDruidLabel(DruidK8sConstants.TASK_GROUP_ID), KubernetesStringUtils.convertTaskIdToK8sLabel(task.getGroupId()))
+        .put(getDruidLabel(DruidK8sConstants.TASK_DATASOURCE), KubernetesStringUtils.convertStringToK8sLabel(task.getDataSource()))
         .build();
   }
 

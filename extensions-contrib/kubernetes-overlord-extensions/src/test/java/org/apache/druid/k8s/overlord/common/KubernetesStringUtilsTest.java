@@ -26,22 +26,37 @@ public class KubernetesStringUtilsTest
 {
 
   @Test
-  public void test_shortId()
+  public void test_shortLabel()
   {
-    Assert.assertEquals("datasource", KubernetesStringUtils.parseStringToK8sLabel("datasource"));
+    Assert.assertEquals("data_source", KubernetesStringUtils.convertStringToK8sLabel("data_source"));
+  }
+
+
+  @Test
+  public void test_stripDisallowedPatterns()
+  {
+    Assert.assertEquals("data_source-1.wikipedia", KubernetesStringUtils.convertStringToK8sLabel(
+        "_.-data_source-1.wikipedia.-_"
+    ));
   }
 
   @Test
-  public void test_k8sId()
+  public void test_nullLabel()
   {
-    Assert.assertEquals("apiissuedkillwikipedianewbalhnoib10000101t000000000z20230514t00", KubernetesStringUtils.parseStringToK8sLabel(
+    Assert.assertEquals("", KubernetesStringUtils.convertStringToK8sLabel(null));
+  }
+
+  @Test
+  public void test_stripTaskId()
+  {
+    Assert.assertEquals("apiissuedkillwikipedianewbalhnoib10000101t000000000z20230514t00", KubernetesStringUtils.convertTaskIdToK8sLabel(
         "api-issued_kill_wikipedia_new_balhnoib_1000-01-01T00:00:00.000Z_2023-05-14T00:00:00.000Z_2023-05-15T17:28:42.526Z"
     ));
   }
 
   @Test
-  public void test_null()
+  public void test_nullTaskId()
   {
-    Assert.assertEquals("", KubernetesStringUtils.parseStringToK8sLabel(null));
+    Assert.assertEquals("", KubernetesStringUtils.convertTaskIdToK8sLabel(null));
   }
 }

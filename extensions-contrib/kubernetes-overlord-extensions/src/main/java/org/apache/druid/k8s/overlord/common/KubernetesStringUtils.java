@@ -23,12 +23,24 @@ import org.apache.commons.lang3.RegExUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 public class KubernetesStringUtils
 {
-  public static String parseStringToK8sLabel(String rawString)
+  private static final Pattern K8S_LABEL_PATTERN = Pattern.compile("[^A-Za-z0-9_.-]");
+  // replace all the ": - . _" to "", try to reduce the length of pod name and meet pod naming specifications 64 characters.
+  private static final Pattern K8S_TASK_ID_PATTERN = Pattern.compile("[^a-zA-Z0-9\\\\s]");
+
+  public static String convertStringToK8sLabel(String rawString)
   {
-    return rawString == null ? "" : StringUtils.left(RegExUtils.replaceAll(rawString, "[^a-zA-Z0-9\\\\s]", "")
+    String trimmedString = rawString == null ? "" : RegExUtils.replaceAll(rawString, K8S_LABEL_PATTERN, "");
+    return StringUtils.left(StringUtils.strip(trimmedString, "_.-"), 63);
+
+  }
+
+  public static String convertTaskIdToK8sLabel(String taskId)
+  {
+    return taskId == null ? "" : StringUtils.left(RegExUtils.replaceAll(taskId, K8S_TASK_ID_PATTERN, "")
         .toLowerCase(Locale.ENGLISH), 63);
   }
 }
