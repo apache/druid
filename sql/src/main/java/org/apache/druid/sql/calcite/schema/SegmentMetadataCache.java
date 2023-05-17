@@ -47,6 +47,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.GlobalTableDataSource;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
@@ -920,7 +921,12 @@ public class SegmentMetadataCache
         querySegmentSpec,
         new AllColumnIncluderator(),
         false,
-        brokerInternalQueryConfig.getContext(),
+        // disable the parallel merge because we don't care about the merge and don't want to consume its resources
+        QueryContexts.override(
+            brokerInternalQueryConfig.getContext(),
+            QueryContexts.BROKER_PARALLEL_MERGE_KEY,
+            false
+        ),
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         false
