@@ -95,13 +95,13 @@ $ ls -l1 var/druid/segments/deletion-tutorial/
 
 ## Disable segments by segment IDs
 
-Let's disable some segments by their segmentID. This will again mark the segments as "unused", but not remove them from deep storage. You can see the full segmentID for a segment from UI as explained below.
+Let's disable some segments by their segmentID. This will again mark the segments as "unused", but not remove them from deep storage. You can see the full segmentID for a segment using the web console.
 
 In the [segments view](http://localhost:8888/unified-console.html#segments), click one of the segment rows to open the segment metadata dialog:
 
 ![Segments_2](../assets/tutorial-deletion-02.png "Segments 2")
 
-The `identifier` in the metadata dialog shows the full segment ID, e.g. `deletion-tutorial_2015-09-12T23:00:00.000Z_2015-09-13T00:00:00.000Z_2023-05-16T00:04:12.091Z` for the segment of hour 23.
+The `identifier` field in the metadata dialog shows the full segment ID. For example, the hour 23 segment has segment ID `deletion-tutorial_2015-09-12T23:00:00.000Z_2015-09-13T00:00:00.000Z_2023-05-16T00:04:12.091Z`.
 
 Disable the last two segments, hour 22 and 23 segments, by sending a POST request to the Coordinator with the corresponding segment IDs.
 The following command queries the Coordinator for segment IDs and uses `jq` to parse and extract the IDs of the last two segments.
