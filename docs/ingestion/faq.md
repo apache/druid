@@ -82,7 +82,3 @@ You can use a [segment metadata query](../querying/segmentmetadataquery.md) for 
 ## Real-time ingestion seems to be stuck
 
 There are a few ways this can occur. Druid will throttle ingestion to prevent out of memory problems if the intermediate persists are taking too long or if hand-off is taking too long. If your process logs indicate certain columns are taking a very long time to build (for example, if your segment granularity is hourly, but creating a single column takes 30 minutes), you should re-evaluate your configuration or scale up your real-time ingestion.
-
-## More information
-
-Data ingestion for Druid can be difficult for first time users. Please don't hesitate to ask questions in the [Druid Forum](https://www.druidforum.org/).

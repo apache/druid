@@ -25,6 +25,7 @@
       "tutorials/tutorial-sql-query-view",
       "tutorials/tutorial-unnest-arrays",
       "tutorials/tutorial-jupyter-index",
+      "tutorials/tutorial-jupyter-docker",
       "tutorials/tutorial-jdbc"
     ],
     "Design": [
