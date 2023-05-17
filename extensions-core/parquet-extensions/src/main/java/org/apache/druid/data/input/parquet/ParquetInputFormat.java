@@ -21,6 +21,7 @@ package org.apache.druid.data.input.parquet;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputEntity;
@@ -39,6 +40,7 @@ import java.util.Objects;
 
 public class ParquetInputFormat extends NestedInputFormat
 {
+  private static final long SCALE_FACTOR = 8L;
   private final boolean binaryAsString;
   private final Configuration conf;
 
@@ -96,6 +98,13 @@ public class ParquetInputFormat extends NestedInputFormat
   {
     initialize(conf);
     return new ParquetReader(conf, inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString);
+  }
+
+  @JsonIgnore
+  @Override
+  public long getWeightedSize(String path, long size)
+  {
+    return size * SCALE_FACTOR;
   }
 
   @Override

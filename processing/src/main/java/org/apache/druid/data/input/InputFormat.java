@@ -67,4 +67,10 @@ public interface InputFormat
       InputEntity source,
       File temporaryDirectory
   );
+
+  @JsonIgnore
+  default long getWeightedSize(String path, long size)
+  {
+    return size;
+  }
 }

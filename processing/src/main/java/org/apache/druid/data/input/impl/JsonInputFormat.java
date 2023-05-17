@@ -20,15 +20,18 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.compress.utils.FileNameUtils;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -154,6 +157,21 @@ public class JsonInputFormat extends NestedInputFormat
     } else {
       return new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
     }
+  }
+
+  @JsonIgnore
+  @Override
+  public long getWeightedSize(String path, long size)
+  {
+    String pathExtension = FileNameUtils.getExtension(path);
+    if (!CompressionUtils.Format.isSupportedCompressionFormat(pathExtension)) {
+      return 1;
+    }
+
+    if (CompressionUtils.Format.GZ == CompressionUtils.Format.fromSuffix(pathExtension)) {
+      return size * 4L;
+    }
+    return size;
   }
 
   /**
