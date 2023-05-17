@@ -76,6 +76,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
@@ -145,6 +146,20 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
+  public void testAddBeforeStartThrowsException()
+  {
+    TaskQueue taskQueue = createTaskQueue(
+        new DefaultTaskConfig(),
+        new SimpleTaskRunner(actionClientFactory)
+    );
+
+    Assert.assertThrows(
+        IllegalStateException.class,
+        () -> taskQueue.add(new TestTask("t1", "2020/2021"))
+    );
+  }
+
+  @Test
   public void testAddAfterStopThrowsException()
   {
     taskQueue.stop();
@@ -155,9 +170,22 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertTrue(taskQueue.getTasks().isEmpty());
   }
 
+  @Test
+  public void testCompletedTaskIsNotRelaunched()
+  {
+
+  }
+
+  @Test
+  public void testAddTaskWhileAnotherTaskIsBeingAdded()
+  {
+    // We would want to latch DB operations
+    // We might also want to latch different sections of the TaskQueue code
+  }
+
   /**
    * This test verifies releasing all locks of a task when it is not ready to run yet.
-   *
+   * <p>
    * This test uses 2 APIs, {@link TaskQueue} APIs and {@link IngestionTestBase} APIs
    * to emulate the scenario of deadlock. The IngestionTestBase provides low-leve APIs
    * which you can manipulate {@link TaskLockbox} manually. These APIs should be used
@@ -375,10 +403,10 @@ public class TaskQueueTest extends IngestionTestBase
         workerHolder
     );
     while (!taskRunner.getRunningTasks()
-        .stream()
-        .map(TaskRunnerWorkItem::getTaskId)
-        .collect(Collectors.toList())
-        .contains(task.getId())) {
+                      .stream()
+                      .map(TaskRunnerWorkItem::getTaskId)
+                      .collect(Collectors.toList())
+                      .contains(task.getId())) {
       Thread.sleep(100);
     }
     taskQueue.shutdown(task.getId(), "shutdown");
@@ -399,7 +427,7 @@ public class TaskQueueTest extends IngestionTestBase
   {
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
-        .andReturn(new HttpRemoteTaskRunnerTest.TestDruidNodeDiscovery());
+            .andReturn(new HttpRemoteTaskRunnerTest.TestDruidNodeDiscovery());
     EasyMock.replay(druidNodeDiscoveryProvider);
     TaskStorage taskStorageMock = EasyMock.createStrictMock(TaskStorage.class);
     for (String taskId : runningTasks) {
