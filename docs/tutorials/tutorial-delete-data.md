@@ -1,7 +1,7 @@
 ---
 id: tutorial-delete-data
-title: "Tutorial: Deleting data"
-sidebar_label: "Deleting data"
+title: Delete data
+sidebar_label: Delete data
 ---
 
 <!--
