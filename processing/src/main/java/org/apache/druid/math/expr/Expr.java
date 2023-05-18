@@ -187,9 +187,11 @@ public interface Expr extends Cacheable
 
 
   /**
-   * Decorates the cache key builder by adding extra elements if stringify alone is not sufficient
-   * to create the cache key. Override this method in such cases then, for e.g. {@link org.apache.druid.query.expression.LookupExprMacro}}
-   * @param builder
+   * Decorates the {@link CacheKeyBuilder} for the default implementation of {@link #getCacheKey()}. The default cache
+   * key implementation includes the output of {@link #stringify()} and then uses a {@link Shuttle} to call this method
+   * on all children. The stringified representation is sufficient for most expressions, but for any which rely on
+   * external state that might change, this method allows the cache key to change when the state does, even if the
+   * expression itself is otherwise the same.
    */
   default void decorateCacheKeyBuilder(CacheKeyBuilder builder)
   {
