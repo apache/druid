@@ -328,7 +328,6 @@ JSON Request Payload:
 |`interval`|The interval for which to mark segments unused|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
 |`segmentIds`|Set of segment IDs to be marked unused|`["segmentId1", "segmentId2"]`|
 
-
 `DELETE /druid/coordinator/v1/datasources/{dataSourceName}`
 
 Marks as unused all segments belonging to a datasource. Returns a JSON object of the form
