@@ -120,7 +120,6 @@ Returns the number of segments to load and drop, as well as the total segment lo
 
 Returns the serialized JSON of segments to load and drop for each Historical process.
 
-
 #### Segment loading by datasource
 
 Note that all _interval_ query parameters are ISO 8601 strings&mdash;for example, 2016-06-27/2016-06-28.
