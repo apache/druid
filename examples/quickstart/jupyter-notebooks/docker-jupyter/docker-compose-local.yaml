@@ -162,7 +162,7 @@ services:
       context: ..
       dockerfile: Dockerfile
     container_name: jupyter
-    profiles: ["jupyter", "all-services"]
+    profiles: ["jupyter", "druid-jupyter", "all-services"]
     environment:
       DOCKER_STACKS_JUPYTER_CMD: "notebook"
       NOTEBOOK_ARGS: "--NotebookApp.token=''"
