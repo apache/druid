@@ -74,14 +74,13 @@ The following table describes how Druid maps SQL types onto native types when ru
 
 ## Multi-value strings
 
-Druid's native type system allows strings to potentially have multiple values. These
-[multi-value string dimensions](multi-value-dimensions.md) are reported in SQL as VARCHAR typed, and can be
-syntactically used like any other VARCHAR. Regular string functions that refer to multi-value string dimensions are
-applied to all values for each row individually. Multi-value string dimensions can also be treated as arrays via special
-[multi-value string functions](sql-multivalue-string-functions.md), which can perform powerful array-aware operations, but retain
-their VARCHAR typing and behavior.
+Druid's native type system allows strings to have multiple values. These [multi-value string dimensions](multi-value-dimensions.md) are reported in SQL as type VARCHAR and can be
+syntactically used like any other VARCHAR. Regular string functions that refer to multi-value string dimensions are applied to all values for each row individually.
 
-Grouping by a multi-value expression observes the native Druid multi-value aggregation behavior, which is similar to the SQL UNNEST operator. Refer to the documentation on [multi-value string dimensions](multi-value-dimensions.md) for additional details.
+You can treat multi-value string dimensions as arrays using special
+[multi-value string functions](sql-multivalue-string-functions.md), which perform powerful array-aware operations, but retain their VARCHAR type and behavior.
+
+When grouping on a multi-value dimension, Druid uses all values from matching rows to generate one group per value, similar to using the UNNEST operator on an ARRAY type. See [Grouping](multi-value-dimensions.md#grouping) for more information.
 
 > Because the SQL planner treats multi-value dimensions as VARCHAR, there are some inconsistencies between how they are handled in Druid SQL and in native queries. For instance, expressions involving multi-value dimensions may be incorrectly optimized by the Druid SQL planner. For example, `multi_val_dim = 'a' AND multi_val_dim = 'b'` is optimized to
 `false`, even though it is possible for a single row to have both `'a'` and `'b'` as values for `multi_val_dim`.
@@ -90,7 +89,7 @@ Grouping by a multi-value expression observes the native Druid multi-value aggre
 
 ## Arrays
 
-Druid supports ARRAY types constructed at query time. ARRAY types behave as standard SQL arrays, where results are grouped by matching entire arrays. This is in contrast to the implicit UNNEST that occurs when grouping on multi-value dimensions directly or when used with the multi-value functions.
+Druid supports ARRAY types constructed at query time. ARRAY types behave as standard SQL arrays, where results are grouped by matching entire arrays. This is in contrast to the implicit UNNEST that occurs when grouping on multi-value dimensions directly or when used with multi-value functions.
 
 You can convert multi-value dimensions to standard SQL arrays explicitly with `MV_TO_ARRAY` or implicitly using [array functions](./sql-array-functions.md). You can also use the array functions to construct arrays from multiple columns.
 
