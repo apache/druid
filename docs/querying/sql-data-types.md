@@ -26,8 +26,7 @@ sidebar_label: "SQL data types"
 > Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
 > This document describes the SQL language.
 
-
-Druid associates columns with a specific data type. This topic describes supported data types in [Druid SQL](./sql.md).
+Druid associates each column with a specific data type. This topic describes supported data types in [Druid SQL](./sql.md).
 
 ## Standard types
 
@@ -66,7 +65,7 @@ The following table describes how Druid maps SQL types onto native types when ru
 |SMALLINT|LONG|`0`||
 |INTEGER|LONG|`0`||
 |BIGINT|LONG|`0`|Druid LONG columns (except `__time`) are reported as BIGINT|
-|TIMESTAMP|LONG|`0`, meaning 1970-01-01 00:00:00 UTC|Druid's `__time` column is reported as TIMESTAMP. Casts between string and timestamp types assume standard SQL formatting&mdash;for example, `2000-01-02 03:04:05`&mdash;not ISO8601 formatting. For handling other formats, use one of the [time functions](sql-scalar.md#date-and-time-functions).|
+|TIMESTAMP|LONG|`0`, meaning 1970-01-01 00:00:00 UTC|Druid's `__time` column is reported as TIMESTAMP. Casts between string and timestamp types assume standard SQL formatting&mdash;for example, `2000-01-02 03:04:05`&mdash;not ISO 8601 formatting. For handling other formats, use one of the [time functions](sql-scalar.md#date-and-time-functions).|
 |DATE|LONG|`0`, meaning 1970-01-01|Casting TIMESTAMP to DATE rounds down the timestamp to the nearest day. Casts between string and date types assume standard SQL formatting&mdash;for example, `2000-01-02`. For handling other formats, use one of the [time functions](sql-scalar.md#date-and-time-functions).|
 |ARRAY|ARRAY|`NULL`|Druid native array types work as SQL arrays, and multi-value strings can be converted to arrays. See [Arrays](#arrays) for more information.|
 |OTHER|COMPLEX|none|May represent various Druid column types such as hyperUnique, approxHistogram, etc.|
@@ -82,9 +81,7 @@ applied to all values for each row individually. Multi-value string dimensions c
 [multi-value string functions](sql-multivalue-string-functions.md), which can perform powerful array-aware operations, but retain
 their VARCHAR typing and behavior.
 
-Grouping by a multi-value expression observes the native Druid multi-value aggregation behavior, which is similar to
-the implicit SQL UNNEST operator. Refer to the documentation on [multi-value string dimensions](multi-value-dimensions.md)
-for additional details.
+Grouping by a multi-value expression observes the native Druid multi-value aggregation behavior, which is similar to the SQL UNNEST operator. Refer to the documentation on [multi-value string dimensions](multi-value-dimensions.md) for additional details.
 
 > Because the SQL planner treats multi-value dimensions as VARCHAR, there are some inconsistencies between how they are handled in Druid SQL and in native queries. For instance, expressions involving multi-value dimensions may be incorrectly optimized by the Druid SQL planner. For example, `multi_val_dim = 'a' AND multi_val_dim = 'b'` is optimized to
 `false`, even though it is possible for a single row to have both `'a'` and `'b'` as values for `multi_val_dim`.
