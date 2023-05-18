@@ -295,9 +295,9 @@ Return the tiers that a datasource exists in.
 
 #### Note for coordinator's POST and DELETE APIs
 
-The segments would be enabled when these APIs are called, but then can be disabled again by the coordinator if any `dropRule` matches. Segments enabled by these APIs might not be loaded by historical processes if no `loadRule` matches. If an indexing or kill task runs at the same time as these APIs are invoked, the behavior is undefined. Some segments might be killed and others might be enabled. It's also possible that all segments might be disabled but at the same time, the indexing task is able to read data from those segments and succeed.
+While segments may be enabled by issuing POST requests for the datasources, the Coordinator may again disable segments if they match any configured [drop rules](../operations/rule-configuration.md#drop-rules). Even if segments are enabled by these APIs, you must configure a [load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes. If an indexing or kill task runs at the same time these APIs are invoked, the behavior is undefined. Some segments might be killed and others might be enabled. It's also possible that all segments might be disabled, but the indexing task can still read data from those segments and succeed.
 
-> Caution : Avoid using indexing or kill tasks and these APIs at the same time for the same datasource and time chunk. It's fine if the time chunks or datasource don't overlap.
+> Avoid using indexing or kill tasks and these APIs at the same time for the same datasource and time chunk.
 
 `POST /druid/coordinator/v1/datasources/{dataSourceName}`
 
