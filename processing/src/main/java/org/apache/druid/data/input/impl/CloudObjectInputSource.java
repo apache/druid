@@ -34,6 +34,7 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.utils.CollectionUtils;
+import org.apache.druid.utils.CompressionUtils;
 import org.apache.druid.utils.Streams;
 
 import javax.annotation.Nullable;
@@ -300,9 +301,13 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
             o -> {
               try {
                 if (o.getSize() == CloudObjectSplitWidget.UNKNOWN_SIZE) {
-                  return new InputFileAttribute(splitWidget.getObjectSize(o.getLocation()));
+                  return new InputFileAttribute(
+                      splitWidget.getObjectSize(o.getLocation()),
+                      CompressionUtils.Format.fromFileName(o.getLocation().getPath()));
                 } else {
-                  return new InputFileAttribute(o.getSize());
+                  return new InputFileAttribute(
+                      o.getSize(),
+                      CompressionUtils.Format.fromFileName(o.getLocation().getPath()));
                 }
               }
               catch (IOException e) {
