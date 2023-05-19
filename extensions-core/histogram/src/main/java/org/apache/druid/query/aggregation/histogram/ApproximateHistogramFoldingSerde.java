@@ -39,6 +39,7 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
 {
 
   public static final String TYPE_NAME = "approximateHistogram";
+
   @Override
   public String getTypeName()
   {

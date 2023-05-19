@@ -39,6 +39,7 @@ import java.util.List;
 public class HyperUniquesSerde extends ComplexMetricSerde
 {
   public static final String TYPE_NAME = "hyperUnique";
+
   private static Comparator<HyperLogLogCollector> comparator =
       Comparator.nullsFirst(Comparator.comparing(HyperLogLogCollector::toByteBuffer));
 
