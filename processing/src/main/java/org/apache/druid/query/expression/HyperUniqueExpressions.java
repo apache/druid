@@ -158,7 +158,6 @@ public class HyperUniqueExpressions
                 "requires a hyper-log-log collector as the second argument"
             );
           }
-
           HyperLogLogCollector collector = (HyperLogLogCollector) hllCollector.value();
           assert collector != null;
           ExprEval input = args.get(0).eval(bindings);
