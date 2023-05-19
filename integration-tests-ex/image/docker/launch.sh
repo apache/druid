@@ -22,14 +22,33 @@
 # Fail fast on any error
 set -e
 
-# Enable for tracing
+# Enable for debugging
 #set -x
 
-# Dump the environment for debugging.
+# Dump the environment for debugging. Also done later to the log.
 #env
 
 # Launch Druid within the container.
 cd /
+
+# Where things are located
+SHARED_DIR=/shared
+LOG_DIR=$SHARED_DIR/logs
+DRUID_HOME=/usr/local/druid
+
+# Allow test-specific extensions in the /shared/extensions directory.
+# If that directory exists (it won't for most tests), add it to the
+# extensions path, using a feature in Druid 26 or later.
+# For maximum flexibility, don't overwrite the extensions path if
+# it is set.
+TEST_EXTN_DIR=$SHARED_DIR/extensions
+if [ -d $TEST_EXTN_DIR ]; then
+  if [ -z "$druid_extensions_path" ]; then
+    export druid_extensions_path="[\"${TEST_EXTN_DIR}\"]"
+  else
+    echo "Extension directory $TEST_EXTN_DIR found, and druid_extensions_path={$druid_extensions_path} -- not setting path automatically"
+  fi
+fi
 
 # TODO: enable only for security-related tests?
 #/tls/generate-server-certs-and-keystores.sh
@@ -38,12 +57,12 @@ cd /
 # The MySQL driver is selected by the Docker Compose file.
 # Set  druid.metadata.mysql.driver.driverClassName to the preferred
 # driver.
-
-# Test-specific way to define extensions. Compose defines two test-specific
-# variables. We combine these to create the final form converted to a property.
 if [ -n "$MYSQL_DRIVER_CLASSNAME" ]; then
   export druid_metadata_mysql_driver_driverClassName="$MYSQL_DRIVER_CLASSNAME"
 fi
+
+# Test-specific way to define extensions. Compose defines two test-specific
+# variables. We combine these to create the final form converted to a property.
 if [ -n "$druid_extensions_loadList" ]; then
 	echo "Using the provided druid_extensions_loadList=$druid_extensions_loadList"
 else
@@ -76,10 +95,6 @@ DRUID_SERVICE_CONF_DIR="$(. /druid.sh; getConfPath ${DRUID_SERVICE})"
 # Export the common config file path to use in supervisord conf file
 DRUID_COMMON_CONF_DIR="$(. /druid.sh; getConfPath _common)"
 
-SHARED_DIR=/shared
-LOG_DIR=$SHARED_DIR/logs
-DRUID_HOME=/usr/local/druid
-
 # For multiple nodes of the same type to create a unique name
 INSTANCE_NAME=$DRUID_SERVICE
 if [ -n "$DRUID_INSTANCE" ]; then
@@ -88,7 +103,7 @@ fi
 
 # Assemble Java options
 JAVA_OPTS="$DRUID_SERVICE_JAVA_OPTS $DRUID_COMMON_JAVA_OPTS -XX:HeapDumpPath=$LOG_DIR/$INSTANCE_NAME $DEBUG_OPTS"
-LOG4J_CONFIG=$SHARED_DIR/conf/log4j2.xml
+LOG4J_CONFIG=$SHARED_DIR/resources/log4j2.xml
 if [ -f $LOG4J_CONFIG ]; then
 	JAVA_OPTS="$JAVA_OPTS -Dlog4j.configurationFile=$LOG4J_CONFIG"
 fi
@@ -117,6 +132,8 @@ if [ -d $EXTRA_RESOURCES ]; then
 	CP=$CP:$EXTRA_RESOURCES
 fi
 
+# For easier debugging, dump the environment and runtime.properties
+# to the log.
 LOG_FILE=$LOG_DIR/${INSTANCE_NAME}.log
 echo "" >> $LOG_FILE
 echo "--- env ---" >> $LOG_FILE

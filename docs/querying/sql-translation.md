@@ -195,6 +195,16 @@ The EXPLAIN PLAN statement returns the following result with plan, resources, an
           "name": "a0",
           "type": "LONG"
         }
+      ],
+      "columnMappings": [
+        {
+          "queryColumn": "d0",
+          "outputColumn": "channel"
+        },
+        {
+          "queryColumn": "a0",
+          "outputColumn": "EXPR$1"
+        }
       ]
     }
   ],
@@ -365,7 +375,7 @@ Additionally, some Druid native query features are not supported by the SQL lang
 include:
 
 - [Inline datasources](datasource.md#inline).
-- [Spatial filters](../development/geo.md).
+- [Spatial filters](geo.md).
 - [Multi-value dimensions](sql-data-types.md#multi-value-strings) are only partially implemented in Druid SQL. There are known
 inconsistencies between their behavior in SQL queries and in native queries due to how they are currently treated by
 the SQL planner.

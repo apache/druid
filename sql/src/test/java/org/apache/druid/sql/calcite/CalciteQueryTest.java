@@ -6898,12 +6898,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                         .setInterval(querySegmentSpec(Filtration.eternity()))
                                         .setGranularity(Granularities.ALL)
                                         .setDimensions(
-                                            useDefault ? dimensions(
+                                            dimensions(
                                                 new DefaultDimensionSpec("m2", "d0", ColumnType.DOUBLE),
                                                 new DefaultDimensionSpec("dim1", "d1")
-                                            ) : dimensions(
-                                                new DefaultDimensionSpec("dim1", "d0"),
-                                                new DefaultDimensionSpec("m2", "d1", ColumnType.DOUBLE)
                                             )
                                         )
                                         .setDimFilter(new SelectorDimFilter("m1", "5.0", null))
@@ -6922,7 +6919,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                         .setDimensions(dimensions(
                             new DefaultDimensionSpec("v0", "_d0", ColumnType.LONG),
-                            new DefaultDimensionSpec(useDefault ? "d1" : "d0", "_d1", ColumnType.STRING)
+                            new DefaultDimensionSpec("d1", "_d1", ColumnType.STRING)
                         ))
                         .setAggregatorSpecs(
                             aggregators(
@@ -6930,7 +6927,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ? new CountAggregatorFactory("_a0")
                                 : new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a0"),
-                                    not(selector("d1", null, null))
+                                    not(selector("d0", null, null))
                                 )
                             )
                         )
@@ -10455,6 +10452,27 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                 )
                                             )
                                             .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory("a0", "m1")))
+                                            .setPostAggregatorSpecs(
+                                                ImmutableList.of(
+                                                    expressionPostAgg(
+                                                        "p0",
+                                                        "timestamp_floor(\"d0\",'P1M',null,'UTC')"
+                                                    )
+                                                )
+                                            )
+                                            .setHavingSpec(
+                                                having(
+                                                    bound(
+                                                        "a0",
+                                                        "1",
+                                                        null,
+                                                        true,
+                                                        false,
+                                                        null,
+                                                        StringComparators.NUMERIC
+                                                    )
+                                                )
+                                            )
                                             .setContext(
                                                 withTimestampResultContext(
                                                     QUERY_CONTEXT_DEFAULT,
@@ -10468,29 +10486,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(
-                            expressionVirtualColumn(
-                                "v0",
-                                "timestamp_floor(\"d0\",'P1M',null,'UTC')",
-                                ColumnType.LONG
-                            )
-                        )
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("d1", "_d0"),
-                                new DefaultDimensionSpec("v0", "_d1", ColumnType.LONG)
-                            )
-                        )
-                        .setDimFilter(
-                            new BoundDimFilter(
-                                "a0",
-                                "1",
-                                null,
-                                true,
-                                null,
-                                null,
-                                null,
-                                StringComparators.NUMERIC
+                                new DefaultDimensionSpec("p0", "_d1", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new DoubleSumAggregatorFactory("_a0", "a0")))
@@ -14640,6 +14639,38 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{978480000000L, 6.0f}
+        )
+    );
+  }
+
+  @Test
+  public void testFilterWithNVLAndNotIn()
+  {
+    testQuery(
+        "select __time, dim1 from druid.foo where nvl(dim1, '') NOT IN ('a' , '')",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .intervals(querySegmentSpec(Intervals.of(
+                    "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                .columns(ImmutableList.of("__time", "dim1"))
+                .filters(and(
+                    or(
+                        not(selector("dim1", "a", null)),
+                        selector("dim1", null, null)
+                    ),
+                    not(selector("dim1", NullHandling.sqlCompatible() ? "" : null, null))
+                ))
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946771200000L, "10.1"},
+            new Object[]{946857600000L, "2"},
+            new Object[]{978307200000L, "1"},
+            new Object[]{978393600000L, "def"},
+            new Object[]{978480000000L, "abc"}
         )
     );
   }

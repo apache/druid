@@ -239,7 +239,7 @@ public class FloatFrameColumnReader implements FrameColumnReader
 
     private boolean isNull(final int physicalRow)
     {
-      if (NullHandling.sqlCompatible() && hasNulls) {
+      if (hasNulls) {
         final long rowPosition = memoryPosition + (long) sz * physicalRow;
         return memory.getByte(rowPosition) != 0;
       } else {

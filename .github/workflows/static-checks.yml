@@ -27,7 +27,7 @@ on:
       - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
 
 concurrency:
-  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
   cancel-in-progress: true
 
 env:
@@ -53,7 +53,8 @@ jobs:
           echo "java_version=${jdk:3}" >> $GITHUB_ENV
 
       - name: setup ${{ matrix.java }}
-        run: export JAVA_HOME=$JAVA_HOME_${{ env.java_version }}_X64
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_${{ env.java_version }}_X64" >> $GITHUB_ENV
 
       - name: packaging check
         run: |
@@ -81,14 +82,12 @@ jobs:
           ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
+      - name: checkstyle
+        if: ${{ matrix.java == 'jdk8' }}
+        run: ${MVN} checkstyle:checkstyle --fail-at-end
+
       - name: license checks
         if: ${{ matrix.java == 'jdk8' }}
-        run: ./.github/scripts/license_checks_script.sh
-
-      - name: license checks for hadoop3
-        if: ${{ matrix.java == 'jdk8' }}
-        env:
-          HADOOP_PROFILE: -Phadoop3
         run: ./.github/scripts/license_checks_script.sh
 
       - name: analyze dependencies
@@ -96,20 +95,16 @@ jobs:
         run: |
           ./.github/scripts/analyze_dependencies_script.sh
 
-      - name: analyze dependencies for hadoop3
+      - name: analyze dependencies for hadoop2
         if: ${{ matrix.java == 'jdk8' }}
         env:
-          HADOOP_PROFILE: -Phadoop3
+          HADOOP_PROFILE: -Phadoop2
         run: |
           ./.github/scripts/analyze_dependencies_script.sh
 
       - name: animal sniffer checks
         if: ${{ matrix.java == 'jdk8' }}
         run: ${MVN} animal-sniffer:check --fail-at-end
-
-      - name: checkstyle
-        if: ${{ matrix.java == 'jdk8' }}
-        run: ${MVN} checkstyle:checkstyle --fail-at-end
 
       - name: enforcer checks
         if: ${{ matrix.java == 'jdk8' }}
@@ -147,12 +142,9 @@ jobs:
       - name: checkout branch
         uses: actions/checkout@v3
 
-      - name: Set up JDK 11
-        uses: actions/setup-java@v3
-        with:
-          java-version: '11'
-          distribution: 'temurin'
-          cache: maven
+      - name: setup JDK11
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_11_X64" >> $GITHUB_ENV
 
       - name: setup node
         uses: actions/setup-node@v3

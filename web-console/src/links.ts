@@ -82,7 +82,7 @@ export function getLink(linkName: LinkNames): string {
     case 'DOCS_RUNE':
       return `${links.docsHref}/querying/querying.html`;
     case 'DOCS_API':
-      return `${links.docsHref}/operations/api-reference.html`;
+      return `${links.docsHref}/api-reference/api-reference.html`;
     case 'DOCS_MSQ_ERROR':
       return `${links.docsHref}/multi-stage-query/reference.html`;
     case 'COMMUNITY':
