@@ -132,14 +132,12 @@ public class KubernetesPeonClient
           .inContainer("main")
           .watchLog();
       if (logWatch == null) {
-        k8sClient.close();
         return Optional.absent();
       }
       return Optional.of(logWatch);
     }
     catch (Exception e) {
       log.error(e, "Error watching logs from task: %s", taskId);
-      k8sClient.close();
       return Optional.absent();
     }
   }
@@ -163,7 +161,6 @@ public class KubernetesPeonClient
     }
     catch (Exception e) {
       log.error(e, "Error streaming logs from task: %s", taskId);
-      k8sClient.close();
       return Optional.absent();
     }
   }

@@ -276,6 +276,10 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     );
     taskLogs.pushTaskLog(EasyMock.eq(ID), EasyMock.anyObject(File.class));
     EasyMock.expectLastCall();
+    taskLogs.pushTaskLog(EasyMock.eq(ID), EasyMock.anyObject(File.class));
+    EasyMock.expectLastCall();
+    logWatch.close();
+    EasyMock.expectLastCall();
     logWatch.close();
     EasyMock.expectLastCall();
     EasyMock.expect(kubernetesClient.deletePeonJob(k8sTaskId)).andReturn(true);
@@ -418,6 +422,38 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(SUCCESS, taskStatus);
+    Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
+  }
+
+
+  @Test
+  public void test_join_whenRuntimeExceptionThrownWhileWaitingForKubernetesJob_throwsException() throws IOException
+  {
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(task, kubernetesClient, taskLogs, mapper);
+
+    EasyMock.expect(kubernetesClient.waitForPeonJobCompletion(
+        EasyMock.eq(k8sTaskId),
+        EasyMock.anyLong(),
+        EasyMock.eq(TimeUnit.MILLISECONDS)
+    )).andThrow(new RuntimeException());
+
+    // We should still try to push logs
+    EasyMock.expect(kubernetesClient.getPeonLogWatcher(k8sTaskId)).andReturn(Optional.of(logWatch));
+    taskLogs.pushTaskLog(EasyMock.eq(ID), EasyMock.anyObject(File.class));
+    EasyMock.expectLastCall();
+    logWatch.close();
+    EasyMock.expectLastCall();
+
+    EasyMock.expect(kubernetesClient.deletePeonJob(k8sTaskId)).andReturn(true);
+
+    Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
+
+    replayAll();
+
+    Assert.assertThrows(RuntimeException.class, () -> peonLifecycle.join(0L));
+
+    verifyAll();
+
     Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
 

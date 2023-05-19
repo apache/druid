@@ -28,6 +28,7 @@ public class DruidKubernetesClient implements KubernetesClientApi
 {
 
   private final Config config;
+  private final KubernetesClient kubernetesClient;
 
   public DruidKubernetesClient()
   {
@@ -37,19 +38,18 @@ public class DruidKubernetesClient implements KubernetesClientApi
   public DruidKubernetesClient(Config config)
   {
     this.config = config;
+    this.kubernetesClient = new KubernetesClientBuilder().withConfig(config).build();
   }
 
   @Override
   public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
   {
-    try (KubernetesClient client = getClient()) {
-      return executor.executeRequest(client);
-    }
+    return executor.executeRequest(kubernetesClient);
   }
 
   @Override
   public KubernetesClient getClient()
   {
-    return new KubernetesClientBuilder().withConfig(config).build();
+    return this.kubernetesClient;
   }
 }

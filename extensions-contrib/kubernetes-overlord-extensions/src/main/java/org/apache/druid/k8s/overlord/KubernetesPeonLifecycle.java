@@ -38,6 +38,7 @@ import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -79,6 +80,7 @@ public class KubernetesPeonLifecycle
   private final KubernetesPeonClient kubernetesClient;
   private final ObjectMapper mapper;
 
+  @MonotonicNonNull
   private LogWatch logWatch;
 
   protected KubernetesPeonLifecycle(
@@ -154,16 +156,15 @@ public class KubernetesPeonLifecycle
           TimeUnit.MILLISECONDS
       );
 
-      saveLogs();
-
       return getTaskStatus(jobResponse.getJobDuration());
     }
     finally {
       try {
+        saveLogs();
         shutdown();
       }
       catch (Exception e) {
-        log.warn(e, "Task [%s] shutdown failed", taskId);
+        log.warn(e, "Task [%s] cleanup failed", taskId);
       }
 
       state.set(State.STOPPED);
@@ -293,7 +294,6 @@ public class KubernetesPeonLifecycle
         startWatchingLogs();
         if (logWatch != null) {
           FileUtils.copyInputStreamToFile(logWatch.getOutput(), file.toFile());
-          logWatch.close();
         } else {
           log.debug("Log stream not found for %s", taskId.getOriginalTaskId());
         }
@@ -303,6 +303,9 @@ public class KubernetesPeonLifecycle
         log.error(e, "Failed to stream logs for task [%s]", taskId.getOriginalTaskId());
       }
       finally {
+        if (logWatch != null) {
+          logWatch.close();
+        }
         Files.deleteIfExists(file);
       }
     }
