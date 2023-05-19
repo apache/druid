@@ -154,7 +154,6 @@ public class KubernetesPeonClient
                                    .inContainer("main")
                                    .getLogInputStream();
       if (logStream == null) {
-        k8sClient.close();
         return Optional.absent();
       }
       return Optional.of(logStream);

@@ -47,6 +47,10 @@ public class DruidKubernetesClient implements KubernetesClientApi
     return executor.executeRequest(kubernetesClient);
   }
 
+  /** This client automatically gets closed by the druid lifecycle, it should not be closed when used as it is
+   * meant to be reused.
+   * @return re-useable KubernetesClient
+   */
   @Override
   public KubernetesClient getClient()
   {
