@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
@@ -75,6 +77,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
@@ -107,7 +110,6 @@ public class SegmentMetadataCache
   private static final int MAX_SEGMENTS_PER_QUERY = 15000;
   private static final long DEFAULT_NUM_ROWS = 0;
   private static final Interner<RowSignature> ROW_SIGNATURE_INTERNER = Interners.newWeakInterner();
-
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final SegmentMetadataCacheConfig config;
   // Escalator, so we can attach an authentication result to queries we generate.
@@ -117,6 +119,7 @@ public class SegmentMetadataCache
   private final ExecutorService cacheExec;
   private final ExecutorService callbackExec;
   private final ServiceEmitter emitter;
+  private final ColumnTypeMergePolicy columnTypeMergePolicy;
 
   /**
    * Map of DataSource -> DruidTable.
@@ -229,6 +232,7 @@ public class SegmentMetadataCache
     this.segmentManager = segmentManager;
     this.joinableFactory = joinableFactory;
     this.config = Preconditions.checkNotNull(config, "config");
+    this.columnTypeMergePolicy = config.getMetadataColumnTypeMergePolicy();
     this.cacheExec = Execs.singleThreaded("DruidSchema-Cache-%d");
     this.callbackExec = Execs.singleThreaded("DruidSchema-Callback-%d");
     this.escalator = escalator;
@@ -808,20 +812,7 @@ public class SegmentMetadataCache
                 rowSignature.getColumnType(column)
                             .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
 
-            columnTypes.compute(column, (c, existingType) -> {
-              if (existingType == null) {
-                return columnType;
-              }
-              if (columnType == null) {
-                return existingType;
-              }
-              // if any are json, are all json
-              if (ColumnType.NESTED_DATA.equals(columnType) || ColumnType.NESTED_DATA.equals(existingType)) {
-                return ColumnType.NESTED_DATA;
-              }
-              // "existing type" is the 'newest' type, since we iterate the segments list by newest start time
-              return existingType;
-            });
+            columnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnType));
           }
         }
       }
@@ -993,6 +984,118 @@ public class SegmentMetadataCache
   {
     synchronized (lock) {
       runnable.run();
+    }
+  }
+
+
+  /**
+   * ColumnTypeMergePolicy defines the rules of which type to use when faced with the possibility of different types
+   * for the same column from segment to segment. It is used to help compute a {@link RowSignature} for a table in
+   * Druid based on the segment metadata of all segments, merging the types of each column encountered to end up with
+   * a single type to represent it globally.
+   */
+  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = FirstTypeMergePolicy.class)
+  @JsonSubTypes(value = {
+      @JsonSubTypes.Type(name = FirstTypeMergePolicy.NAME, value = FirstTypeMergePolicy.class),
+      @JsonSubTypes.Type(name = LeastRestrictiveTypeMergePolicy.NAME, value = LeastRestrictiveTypeMergePolicy.class)
+  })
+  @FunctionalInterface
+  public interface ColumnTypeMergePolicy
+  {
+    ColumnType merge(ColumnType existingType, ColumnType newType);
+  }
+
+  /**
+   * Classic logic, we use the first type we encounter. This policy is effectively 'newest first' because we iterated
+   * segments starting from the most recent time chunk, so this typically results in the most recently used type being
+   * chosen, at least for systems that are continuously updated with 'current' data.
+   *
+   * Since {@link ColumnTypeMergePolicy} are used to compute the SQL schema, at least in systems using SQL schemas which
+   * are poartially or fully computed by this cache, this merge policy can result in query time errors if incompatible
+   * types are mixed if the chosen type is more restrictive than the types of some segments. If data is likely to vary
+   * in type across segments, consider using {@link LeastRestrictiveTypeMergePolicy} instead.
+   */
+  public static class FirstTypeMergePolicy implements ColumnTypeMergePolicy
+  {
+    public static final String NAME = "newestFirst";
+    @Override
+    public ColumnType merge(ColumnType existingType, ColumnType newType)
+    {
+      if (existingType == null) {
+        return newType;
+      }
+      if (newType == null) {
+        return existingType;
+      }
+      // if any are json, are all json
+      if (ColumnType.NESTED_DATA.equals(newType) || ColumnType.NESTED_DATA.equals(existingType)) {
+        return ColumnType.NESTED_DATA;
+      }
+      // "existing type" is the 'newest' type, since we iterate the segments list by newest start time
+      return existingType;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(NAME);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      return o != null && getClass() == o.getClass();
+    }
+
+    @Override
+    public String toString()
+    {
+      return NAME;
+    }
+  }
+
+  /**
+   * Resolves types using {@link ColumnType#leastRestrictiveType(ColumnType, ColumnType)} to find the ColumnType that
+   * can best represent all data contained across all segments.
+   */
+  public static class LeastRestrictiveTypeMergePolicy implements ColumnTypeMergePolicy
+  {
+    public static final String NAME = "leastRestrictive";
+
+    @Override
+    public ColumnType merge(ColumnType existingType, ColumnType newType)
+    {
+      try {
+        return ColumnType.leastRestrictiveType(existingType, newType);
+      }
+      catch (ColumnType.IncompatibleTypeException incompatibleTypeException) {
+        // fall back to first encountered type if they are not compatible for some reason
+        return existingType;
+      }
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(NAME);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      return o != null && getClass() == o.getClass();
+    }
+
+    @Override
+    public String toString()
+    {
+      return NAME;
     }
   }
 }
