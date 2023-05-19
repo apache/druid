@@ -30,6 +30,7 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.NestedInputFormat;
 import org.apache.druid.data.input.parquet.guice.Parquet;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
@@ -102,7 +103,7 @@ public class ParquetInputFormat extends NestedInputFormat
 
   @JsonIgnore
   @Override
-  public long getWeightedSize(@Nullable String path, long size)
+  public long getWeightedSize(@Nullable CompressionUtils.Format compressionFormat, long size)
   {
     return size * SCALE_FACTOR;
   }

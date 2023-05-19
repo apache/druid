@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.compress.utils.FileNameUtils;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
@@ -161,14 +160,9 @@ public class JsonInputFormat extends NestedInputFormat
 
   @JsonIgnore
   @Override
-  public long getWeightedSize(@Nullable String path, long size)
+  public long getWeightedSize(@Nullable CompressionUtils.Format compressionFormat, long size)
   {
-    String pathExtension = FileNameUtils.getExtension(path);
-    if (!CompressionUtils.Format.isSupportedCompressionFormat(pathExtension)) {
-      return 1;
-    }
-
-    if (CompressionUtils.Format.GZ == CompressionUtils.Format.fromSuffix(pathExtension)) {
+    if (CompressionUtils.Format.GZ == compressionFormat) {
       return size * 4L;
     }
     return size;

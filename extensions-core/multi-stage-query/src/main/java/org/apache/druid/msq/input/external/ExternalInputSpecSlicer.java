@@ -246,9 +246,12 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
               item -> {
                 if (null != inputFormat) {
                   InputFileAttribute inputFileAttribute = inputAttributeExtractor.apply(item);
-                  return inputFormat.getWeightedSize(inputFileAttribute.getPath(), inputFileAttribute.getSize());
+                  return inputFormat.getWeightedSize(
+                      inputFileAttribute.getCompressionFormat(),
+                      inputFileAttribute.getSize());
+                } else {
+                  return inputAttributeExtractor.apply(item).getSize();
                 }
-                return inputAttributeExtractor.apply(item).getSize();
               },
               maxNumSlices,
               maxFilesPerSlice,

@@ -31,6 +31,7 @@ import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorInputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
 import org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStream;
+import org.apache.commons.compress.utils.FileNameUtils;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -70,30 +71,32 @@ public class CompressionUtils
 
   public enum Format
   {
-    BZ2(".bz2"),
-    GZ(".gz"),
-    SNAPPY(".sz"),
-    XZ(".xz"),
-    ZIP(".zip"),
-    ZSTD(".zst");
+    BZ2(".bz2", "bz2"),
+    GZ(".gz", "gz"),
+    SNAPPY(".sz", "sz"),
+    XZ(".xz", "xz"),
+    ZIP(".zip", "zip"),
+    ZSTD(".zst", "zst");
 
-    static final Map<String, Format> SUPPORTED_COMPRESSION_FORMATS;
+    private static final Map<String, Format> EXTENSION_TO_COMPRESSION_FORMAT;
 
     static {
       ImmutableMap.Builder<String, Format> builder = ImmutableMap.builder();
-      builder.put(BZ2.getSuffix(), BZ2);
-      builder.put(GZ.getSuffix(), GZ);
-      builder.put(SNAPPY.getSuffix(), SNAPPY);
-      builder.put(XZ.getSuffix(), XZ);
-      builder.put(ZIP.getSuffix(), ZIP);
-      builder.put(ZSTD.getSuffix(), ZSTD);
-      SUPPORTED_COMPRESSION_FORMATS = builder.build();
+      builder.put(BZ2.getExtension(), BZ2);
+      builder.put(GZ.getExtension(), GZ);
+      builder.put(SNAPPY.getExtension(), SNAPPY);
+      builder.put(XZ.getExtension(), XZ);
+      builder.put(ZIP.getExtension(), ZIP);
+      builder.put(ZSTD.getExtension(), ZSTD);
+      EXTENSION_TO_COMPRESSION_FORMAT = builder.build();
     }
 
     private final String suffix;
-    Format(String suffix)
+    private final String extension;
+    Format(String suffix, String extension)
     {
       this.suffix = suffix;
+      this.extension = extension;
     }
 
     public String getSuffix()
@@ -101,15 +104,19 @@ public class CompressionUtils
       return suffix;
     }
 
-    public static boolean isSupportedCompressionFormat(@Nullable String suffix)
+    public String getExtension()
     {
-      return null != suffix && SUPPORTED_COMPRESSION_FORMATS.containsKey(suffix);
+      return extension;
     }
 
     @Nullable
-    public static Format fromSuffix(String suffix)
+    public static Format fromFileName(@Nullable String fileName)
     {
-      return SUPPORTED_COMPRESSION_FORMATS.get(suffix);
+      String extension = FileNameUtils.getExtension(fileName);
+      if (null == extension) {
+        return null;
+      }
+      return EXTENSION_TO_COMPRESSION_FORMAT.get(extension);
     }
   }
   private static final Logger log = new Logger(CompressionUtils.class);

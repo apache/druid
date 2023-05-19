@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input;
 
+import org.apache.druid.utils.CompressionUtils;
+
 import javax.annotation.Nullable;
 
 /**
@@ -39,26 +41,27 @@ public class InputFileAttribute
    * The path of the input file.
    */
   @Nullable
-  private final String path;
+  private final CompressionUtils.Format compressionFormat;
 
   public InputFileAttribute(long size)
   {
     this(size, null);
   }
 
-  public InputFileAttribute(long size, @Nullable String path)
+  public InputFileAttribute(long size, @Nullable CompressionUtils.Format compressionFormat)
   {
     this.size = size;
-    this.path = path;
+    this.compressionFormat = compressionFormat;
+  }
+
+  @Nullable
+  public CompressionUtils.Format getCompressionFormat()
+  {
+    return compressionFormat;
   }
 
   public long getSize()
   {
     return size;
-  }
-
-  public String getPath()
-  {
-    return path;
   }
 }

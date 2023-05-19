@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import com.opencsv.enums.CSVReaderNullFieldIndicator;
-import org.apache.commons.compress.utils.FileNameUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
@@ -86,14 +85,9 @@ public class CsvInputFormat extends FlatTextInputFormat
 
   @JsonIgnore
   @Override
-  public long getWeightedSize(@Nullable String path, long size)
+  public long getWeightedSize(@Nullable CompressionUtils.Format compressionFormat, long size)
   {
-    String pathExtension = FileNameUtils.getExtension(path);
-    if (!CompressionUtils.Format.isSupportedCompressionFormat(pathExtension)) {
-      return 1;
-    }
-
-    if (CompressionUtils.Format.GZ == CompressionUtils.Format.fromSuffix(pathExtension)) {
+    if (CompressionUtils.Format.GZ == compressionFormat) {
       return size * 4L;
     }
     return size;

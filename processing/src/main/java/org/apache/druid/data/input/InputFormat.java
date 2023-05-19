@@ -30,6 +30,7 @@ import org.apache.druid.data.input.impl.NestedInputFormat;
 import org.apache.druid.data.input.impl.RegexInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.annotations.UnstableApi;
+import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -72,17 +73,17 @@ public interface InputFormat
   /**
    * Computes the weighted size of a given input object of the underyling input format type, weighted
    * for its cost during ingestion. The weight calculated is dependent on the format type and compression type
-   * ({@link org.apache.druid.utils.CompressionUtils.Format}) used if any. Uncompressed newline delimited json
-   * is used as baseline with scale factor 1. This means that when computing the byte weight that an uncompressed
-   * newline delimited json input object has towards ingestion, we take the file size as is, 1:1.
+   * ({@link CompressionUtils.Format}) used if any. Uncompressed newline delimited json is used as baseline
+   * with scale factor 1. This means that when computing the byte weight that an uncompressed newline delimited
+   * json input object has towards ingestion, we take the file size as is, 1:1.
    *
-   * @param path The path of the input object. Used to tell whether any compression is used.
+   * @param compressionFormat The compression format of the input object, if any.
    * @param size The size of the input object in bytes.
    *
    * @return The weighted size of the input object.
    */
   @JsonIgnore
-  default long getWeightedSize(@Nullable String path, long size)
+  default long getWeightedSize(@Nullable CompressionUtils.Format compressionFormat, long size)
   {
     return size;
   }
