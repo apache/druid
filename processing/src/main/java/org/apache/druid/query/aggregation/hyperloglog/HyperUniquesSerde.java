@@ -38,6 +38,7 @@ import java.util.List;
 
 public class HyperUniquesSerde extends ComplexMetricSerde
 {
+  public static final String TYPE_NAME = "hyperUnique";
   private static Comparator<HyperLogLogCollector> comparator =
       Comparator.nullsFirst(Comparator.comparing(HyperLogLogCollector::toByteBuffer));
 
@@ -56,7 +57,7 @@ public class HyperUniquesSerde extends ComplexMetricSerde
   @Override
   public String getTypeName()
   {
-    return "hyperUnique";
+    return TYPE_NAME;
   }
 
   @Override
