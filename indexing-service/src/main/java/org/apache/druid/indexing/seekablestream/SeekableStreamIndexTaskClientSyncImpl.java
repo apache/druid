@@ -85,7 +85,11 @@ public abstract class SeekableStreamIndexTaskClientSyncImpl<PartitionIdType, Seq
           publish ? "publish=true" : null,
           true
       );
-      return isSuccess(response);
+      boolean isSuccess = isSuccess(response);
+      if (!isSuccess) {
+        log.warn("Task [%s] coundln't be stopped because of http request failure.", id);
+      }
+      return isSuccess;
     }
     catch (NoTaskLocationException e) {
       return false;
