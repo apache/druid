@@ -27,6 +27,7 @@ import {
   getTimestampDetailFromSpec,
   getTimestampSpecColumnFromSpec,
   possibleDruidFormatForValues,
+  TIME_COLUMN,
 } from '../../../druid-models';
 import {
   DEFAULT_TABLE_CLASS_NAME,
@@ -86,7 +87,7 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
       pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
       showPagination={sampleResponse.data.length > STANDARD_TABLE_PAGE_SIZE}
       columns={filterMap(getHeaderNamesFromSampleResponse(sampleResponse), (columnName, i) => {
-        const isTimestamp = columnName === '__time';
+        const isTimestamp = columnName === TIME_COLUMN;
         if (!isTimestamp && !caseInsensitiveContains(columnName, columnFilter)) return;
         const used = timestampSpecColumn === columnName;
         const possibleFormat = isTimestamp
@@ -134,7 +135,7 @@ export const ParseTimeTable = React.memo(function ParseTimeTable(props: ParseTim
             if (row.original.unparseable) {
               return <TableCellUnparseable timestamp={isTimestamp} />;
             }
-            return <TableCell value={isTimestamp ? new Date(row.value) : row.value} />;
+            return <TableCell value={isTimestamp ? new Date(Number(row.value)) : row.value} />;
           },
           width: isTimestamp ? 200 : 140,
           resizable: !isTimestamp,
