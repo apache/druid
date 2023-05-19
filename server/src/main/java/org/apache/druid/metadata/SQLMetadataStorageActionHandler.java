@@ -793,7 +793,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   {
     DateTime dateTime = DateTimes.utc(timestamp);
     connector.retryWithHandle(
-        (HandleCallback<Void>) handle -> {
+        handle -> {
           handle.createStatement(getSqlRemoveLogsOlderThan())
                 .bind("date_time", dateTime.toString())
                 .execute();
@@ -883,9 +883,10 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   @Deprecated
   public String getSqlRemoveLogsOlderThan()
   {
-    return StringUtils.format("DELETE a FROM %s a INNER JOIN %s b ON a.%s_id = b.id "
-                              + "WHERE b.created_date < :date_time and b.active = false",
-                              logTable, entryTable, entryTypeName
+    return StringUtils.format(
+        "DELETE a FROM %s a INNER JOIN %s b ON a.%s_id = b.id "
+        + "WHERE b.created_date < :date_time and b.active = false",
+        logTable, entryTable, entryTypeName
     );
   }
 
@@ -970,21 +971,16 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   {
     List<TaskIdentifier> taskIdentifiers = new ArrayList<>();
     connector.retryWithHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            String sql = StringUtils.format(
-                "SELECT * FROM %1$s WHERE id > '%2$s' AND type IS null ORDER BY id %3$s",
-                tableName,
-                id,
-                connector.limitClause(limit)
-            );
-            Query<Map<String, Object>> query = handle.createQuery(sql);
-            taskIdentifiers.addAll(query.map(taskIdentifierMapper).list());
-            return null;
-          }
+        handle -> {
+          String sql = StringUtils.format(
+              "SELECT * FROM %1$s WHERE id > '%2$s' AND type IS null ORDER BY id %3$s",
+              tableName,
+              id,
+              connector.limitClause(limit)
+          );
+          Query<Map<String, Object>> query = handle.createQuery(sql);
+          taskIdentifiers.addAll(query.map(taskIdentifierMapper).list());
+          return null;
         }
     );
     return taskIdentifiers;
@@ -993,20 +989,16 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   private void updateTaskMetadatas(String tasksTable, List<TaskIdentifier> taskIdentifiers)
   {
     connector.retryWithHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            Batch batch = handle.createBatch();
-            String sql = "UPDATE %1$s SET type = '%2$s', group_id = '%3$s' WHERE id = '%4$s'";
-            for (TaskIdentifier metadata : taskIdentifiers) {
-              batch.add(StringUtils.format(sql, tasksTable, metadata.getType(), metadata.getGroupId(), metadata.getId())
-              );
-            }
-            batch.execute();
-            return null;
+        handle -> {
+          Batch batch = handle.createBatch();
+          String sql = "UPDATE %1$s SET type = '%2$s', group_id = '%3$s' WHERE id = '%4$s'";
+          for (TaskIdentifier metadata : taskIdentifiers) {
+            batch.add(
+                StringUtils.format(sql, tasksTable, metadata.getType(), metadata.getGroupId(), metadata.getId())
+            );
           }
+          batch.execute();
+          return null;
         }
     );
   }
@@ -1015,9 +1007,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public void populateTaskTypeAndGroupIdAsync()
   {
     ExecutorService executorService = Executors.newSingleThreadExecutor();
-    taskMigrationCompleteFuture = executorService.submit(
-        () -> populateTaskTypeAndGroupId()
-    );
+    taskMigrationCompleteFuture = executorService.submit(this::populateTaskTypeAndGroupId);
   }
 
   /**

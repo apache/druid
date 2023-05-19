@@ -20,7 +20,8 @@ import { Button, Callout, Code, FormGroup, Intent } from '@blueprintjs/core';
 import React from 'react';
 
 import { ExternalLink, LearnMore } from '../../components';
-import { DimensionMode, getIngestionDocLink, IngestionSpec } from '../../druid-models';
+import type { IngestionSpec, SchemaMode } from '../../druid-models';
+import { getIngestionDocLink } from '../../druid-models';
 import { getLink } from '../../links';
 import { deepGet, deepSet } from '../../utils';
 
@@ -56,31 +57,19 @@ export const ConnectMessage = React.memo(function ConnectMessage(props: ConnectM
   );
 });
 
-export interface ParserMessageProps {
-  canFlatten: boolean;
-}
-
-export const ParserMessage = React.memo(function ParserMessage(props: ParserMessageProps) {
-  const { canFlatten } = props;
-
+export const ParserMessage = React.memo(function ParserMessage() {
   return (
     <FormGroup>
       <Callout>
         <p>
-          Druid requires flat data (non-nested, non-hierarchical). Each row should represent a
-          discrete event.
+          Druid needs to parse data as columns. Determine the format of your data and ensure that
+          the columns are accurately parsed.
         </p>
-        {canFlatten && (
-          <p>
-            If you have nested data, you can{' '}
-            <ExternalLink href={`${getLink('DOCS')}/ingestion/index.html#flattenspec`}>
-              flatten
-            </ExternalLink>{' '}
-            it here. If the provided flattening capabilities are not sufficient, please pre-process
-            your data before ingesting it into Druid.
-          </p>
-        )}
-        <p>Ensure that your data appears correctly in a row/column orientation.</p>
+        <p>
+          If you have nested data, you can ingest it as{' '}
+          <ExternalLink href={`${getLink('DOCS')}/querying/nested-columns.html`}>json</ExternalLink>{' '}
+          dimensions.
+        </p>
         <LearnMore href={`${getLink('DOCS')}/ingestion/data-formats.html`} />
       </Callout>
     </FormGroup>
@@ -140,11 +129,11 @@ export const FilterMessage = React.memo(function FilterMessage() {
 });
 
 export interface SchemaMessageProps {
-  dimensionMode: DimensionMode;
+  schemaMode: SchemaMode;
 }
 
 export const SchemaMessage = React.memo(function SchemaMessage(props: SchemaMessageProps) {
-  const { dimensionMode } = props;
+  const { schemaMode } = props;
 
   return (
     <FormGroup>
@@ -153,7 +142,7 @@ export const SchemaMessage = React.memo(function SchemaMessage(props: SchemaMess
           Each column in Druid must have an assigned type (string, long, float, double, complex,
           etc).
         </p>
-        {dimensionMode === 'specific' && (
+        {schemaMode === 'fixed' && (
           <p>
             Default primitive types have been automatically assigned to your columns. If you want to
             change the type, click on the column header.

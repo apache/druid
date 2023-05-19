@@ -35,6 +35,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
+import org.apache.druid.msq.counters.SegmentGeneratorMetricsWrapper;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
@@ -53,12 +55,12 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Period;
 
@@ -147,6 +149,8 @@ public class SegmentGeneratorFrameProcessorFactory
               }
             }
         ));
+    final SegmentGenerationProgressCounter segmentGenerationProgressCounter = counters.segmentGenerationProgress();
+    final SegmentGeneratorMetricsWrapper segmentGeneratorMetricsWrapper = new SegmentGeneratorMetricsWrapper(segmentGenerationProgressCounter);
 
     final Sequence<SegmentGeneratorFrameProcessor> workers = inputSequence.map(
         readableInputPair -> {
@@ -170,7 +174,7 @@ public class SegmentGeneratorFrameProcessorFactory
                       persistDirectory,
                       frameContext.memoryParameters()
                   ),
-                  new FireDepartmentMetrics(), // We should eventually expose the FireDepartmentMetrics
+                  segmentGeneratorMetricsWrapper,
                   frameContext.segmentPusher(),
                   frameContext.jsonMapper(),
                   frameContext.indexIO(),
@@ -185,7 +189,8 @@ public class SegmentGeneratorFrameProcessorFactory
               columnMappings,
               dataSchema.getDimensionsSpec().getDimensionNames(),
               appenderator,
-              segmentIdWithShardSpec
+              segmentIdWithShardSpec,
+              segmentGenerationProgressCounter
           );
         }
     );
@@ -291,20 +296,20 @@ public class SegmentGeneratorFrameProcessorFactory
       @Override
       public IndexSpec getIndexSpec()
       {
-        return new IndexSpec();
+        return tuningConfig.getIndexSpec();
       }
 
       @Override
       public IndexSpec getIndexSpecForIntermediatePersists()
       {
         // Disable compression for intermediate persists to reduce direct memory usage.
-        return new IndexSpec(
-            null,
-            CompressionStrategy.UNCOMPRESSED, // Dimensions don't support NONE, so use UNCOMPRESSED
-            CompressionStrategy.NONE, // NONE is more efficient than UNCOMPRESSED
-            CompressionFactory.LongEncodingStrategy.LONGS,
-            null
-        );
+        return IndexSpec.builder()
+                        // Dimensions don't support NONE, so use UNCOMPRESSED
+                        .withDimensionCompression(CompressionStrategy.UNCOMPRESSED)
+                        // NONE is more efficient than UNCOMPRESSED
+                        .withMetricCompression(CompressionStrategy.NONE)
+                        .withLongEncoding(CompressionFactory.LongEncodingStrategy.LONGS)
+                        .build();
       }
 
       @Override

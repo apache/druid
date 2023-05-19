@@ -6,6 +6,7 @@ target
 *.tar.gz
 *.swp
 *.swo
+*.pyc
 .classpath
 .idea
 .project
@@ -27,3 +28,15 @@ README
 integration-tests/gen-scripts/
 /bin/
 *.hprof
+**/.ipynb_checkpoints/
+*.pyc
+**/.ipython/
+**/.jupyter/
+**/.local/
+**/druidapi.egg-info/
+examples/quickstart/jupyter-notebooks/docker-jupyter/notebooks
+
+# ignore NetBeans IDE specific files
+nbproject
+nbactions.xml
+nb-configuration.xml

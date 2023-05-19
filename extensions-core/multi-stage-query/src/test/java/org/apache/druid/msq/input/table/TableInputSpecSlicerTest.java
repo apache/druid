@@ -27,7 +27,7 @@ import org.apache.druid.msq.querykit.DataSegmentTimelineView;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.junit.Assert;
 import org.junit.Before;
@@ -79,15 +79,14 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
       BYTES_PER_SEGMENT
   );
 
-  private VersionedIntervalTimeline<String, DataSegment> timeline;
-  private DataSegmentTimelineView timelineView;
+  private SegmentTimeline timeline;
   private TableInputSpecSlicer slicer;
 
   @Before
   public void setUp()
   {
-    timeline = VersionedIntervalTimeline.forSegments(ImmutableList.of(SEGMENT1, SEGMENT2));
-    timelineView = (dataSource, intervals) -> {
+    timeline = SegmentTimeline.forSegments(ImmutableList.of(SEGMENT1, SEGMENT2));
+    DataSegmentTimelineView timelineView = (dataSource, intervals) -> {
       if (DATASOURCE.equals(dataSource)) {
         return Optional.of(timeline);
       } else {
@@ -107,7 +106,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
   public void test_sliceStatic_noDataSource()
   {
     final TableInputSpec spec = new TableInputSpec("no such datasource", null, null);
-    Assert.assertEquals(Collections.emptyList(), slicer.sliceStatic(spec, 2));
+    Assert.assertEquals(
+        ImmutableList.of(NilInputSlice.INSTANCE, NilInputSlice.INSTANCE),
+        slicer.sliceStatic(spec, 2)
+    );
   }
 
   @Test
@@ -167,7 +169,10 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
         null
     );
 
-    Assert.assertEquals(Collections.emptyList(), slicer.sliceStatic(spec, 2));
+    Assert.assertEquals(
+        ImmutableList.of(NilInputSlice.INSTANCE, NilInputSlice.INSTANCE),
+        slicer.sliceStatic(spec, 2)
+    );
   }
 
   @Test

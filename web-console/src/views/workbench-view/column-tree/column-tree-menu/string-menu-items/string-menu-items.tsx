@@ -18,15 +18,8 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import {
-  SqlExpression,
-  SqlFunction,
-  SqlJoinPart,
-  SqlLiteral,
-  SqlQuery,
-  SqlRef,
-  SqlTableRef,
-} from 'druid-query-toolkit';
+import type { SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import { C, F, N, SqlJoinPart, T } from 'druid-query-toolkit';
 import React from 'react';
 
 import { EMPTY_LITERAL, prettyPrintSql } from '../../../../../utils';
@@ -43,7 +36,6 @@ export interface StringMenuItemsProps {
 export const StringMenuItems = React.memo(function StringMenuItems(props: StringMenuItemsProps) {
   function renderFilterMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    const ref = SqlRef.column(columnName);
 
     function filterMenuItem(clause: SqlExpression, run = true) {
       return (
@@ -56,19 +48,20 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
       );
     }
 
+    const column = C(columnName);
     return (
       <MenuItem icon={IconNames.FILTER} text="Filter">
-        {filterMenuItem(ref.isNotNull())}
-        {filterMenuItem(ref.equal(EMPTY_LITERAL), false)}
-        {filterMenuItem(ref.like(EMPTY_LITERAL), false)}
-        {filterMenuItem(SqlFunction.simple('REGEXP_LIKE', [ref, EMPTY_LITERAL]), false)}
+        {filterMenuItem(column.isNotNull())}
+        {filterMenuItem(column.equal(EMPTY_LITERAL), false)}
+        {filterMenuItem(column.like(EMPTY_LITERAL), false)}
+        {filterMenuItem(F('REGEXP_LIKE', column, EMPTY_LITERAL), false)}
       </MenuItem>
     );
   }
 
   function renderRemoveFilter(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
-    if (!parsedQuery.getEffectiveWhereExpression().containsColumn(columnName)) return;
+    if (!parsedQuery.getEffectiveWhereExpression().containsColumnName(columnName)) return;
 
     return (
       <MenuItem
@@ -118,24 +111,12 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
       );
     }
 
+    const column = C(columnName);
     return (
       <MenuItem icon={IconNames.GROUP_OBJECTS} text="Group by">
-        {groupByMenuItem(SqlRef.column(columnName))}
-        {groupByMenuItem(
-          SqlFunction.simple('SUBSTRING', [
-            SqlRef.column(columnName),
-            SqlLiteral.create(1),
-            SqlLiteral.create(2),
-          ]),
-          `${columnName}_substring`,
-        )}
-        {groupByMenuItem(
-          SqlFunction.simple('REGEXP_EXTRACT', [
-            SqlRef.column(columnName),
-            SqlLiteral.create('(\\d+)'),
-          ]),
-          `${columnName}_extract`,
-        )}
+        {groupByMenuItem(column)}
+        {groupByMenuItem(F('SUBSTRING', column, 1, 2), `${columnName}_substring`)}
+        {groupByMenuItem(F('REGEXP_EXTRACT', column, '(\\d+)'), `${columnName}_extract`)}
       </MenuItem>
     );
   }
@@ -143,7 +124,6 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
   function renderAggregateMenu(): JSX.Element | undefined {
     const { columnName, parsedQuery, onQueryChange } = props;
     if (!parsedQuery.hasGroupBy()) return;
-    const ref = SqlRef.column(columnName);
 
     function aggregateMenuItem(ex: SqlExpression, alias: string, run = true) {
       return (
@@ -156,18 +136,16 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
       );
     }
 
+    const column = C(columnName);
     return (
       <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
-        {aggregateMenuItem(SqlFunction.countDistinct(ref), `dist_${columnName}`)}
+        {aggregateMenuItem(F.countDistinct(column), `dist_${columnName}`)}
         {aggregateMenuItem(
-          SqlFunction.COUNT_STAR.addWhereExpression(ref.equal(EMPTY_LITERAL)),
+          F.count().addWhereExpression(column.equal(EMPTY_LITERAL)),
           `filtered_dist_${columnName}`,
           false,
         )}
-        {aggregateMenuItem(
-          SqlFunction.simple('LATEST', [ref, SqlLiteral.create(100)]),
-          `latest_${columnName}`,
-        )}
+        {aggregateMenuItem(F('LATEST', column, 100), `latest_${columnName}`)}
       </MenuItem>
     );
   }
@@ -175,6 +153,8 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
   function renderJoinMenu(): JSX.Element | undefined {
     const { schema, table, columnName, parsedQuery, onQueryChange } = props;
     if (schema !== 'lookup' || !parsedQuery) return;
+    const firstTableName = parsedQuery.getFirstTableName();
+    if (!firstTableName) return;
 
     const { originalTableColumn, lookupColumn } = getJoinColumns(parsedQuery, table);
 
@@ -188,13 +168,15 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
               parsedQuery.addJoin(
                 SqlJoinPart.create(
                   'LEFT',
-                  SqlTableRef.create(table, schema),
-                  SqlRef.column(columnName, table, 'lookup').equal(
-                    SqlRef.column(
-                      lookupColumn === columnName ? originalTableColumn : 'XXX',
-                      parsedQuery.getFirstTableName(),
+                  N(schema).table(table),
+                  N('lookup')
+                    .table(table)
+                    .column(columnName)
+                    .equal(
+                      T(firstTableName).column(
+                        lookupColumn === columnName ? originalTableColumn : 'XXX',
+                      ),
                     ),
-                  ),
                 ),
               ),
               false,
@@ -209,13 +191,15 @@ export const StringMenuItems = React.memo(function StringMenuItems(props: String
               parsedQuery.addJoin(
                 SqlJoinPart.create(
                   'INNER',
-                  SqlTableRef.create(table, schema),
-                  SqlRef.column(columnName, table, 'lookup').equal(
-                    SqlRef.column(
-                      lookupColumn === columnName ? originalTableColumn : 'XXX',
-                      parsedQuery.getFirstTableName(),
+                  N(schema).table(table),
+                  N('lookup')
+                    .table(table)
+                    .column(columnName)
+                    .equal(
+                      T(firstTableName).column(
+                        lookupColumn === columnName ? originalTableColumn : 'XXX',
+                      ),
                     ),
-                  ),
                 ),
               ),
               false,

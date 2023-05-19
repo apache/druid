@@ -64,12 +64,13 @@ Each Apache Druid query can accept a list of virtual columns as a parameter. The
 ## Virtual column types
 
 ### Expression virtual column
-Expression virtual columns use Druid's native [expression](../misc/math-expr.md) system to allow defining query time
+
+Expression virtual columns use Druid's native [expression](math-expr.md) system to allow defining query time
 transforms of inputs from one or more columns.
 
 The expression virtual column has the following syntax:
 
-```
+```json
 {
   "type": "expression",
   "name": <name of the virtual column>,
@@ -82,9 +83,8 @@ The expression virtual column has the following syntax:
 |--------|-----------|---------|
 |type|Must be `"expression"` to indicate that this is an expression virtual column.|yes|
 |name|The name of the virtual column.|yes|
-|expression|An [expression](../misc/math-expr.md) that takes a row as input and outputs a value for the virtual column.|yes|
+|expression|An [expression](math-expr.md) that takes a row as input and outputs a value for the virtual column.|yes|
 |outputType|The expression's output will be coerced to this type. Can be LONG, FLOAT, DOUBLE, STRING, ARRAY types, or COMPLEX types.|no, default is FLOAT|
-
 
 ### Nested field virtual column
 
@@ -155,6 +155,7 @@ is using JSONPath syntax `path`, the second with a jq `path`, and the third uses
 |useJqSyntax|If true, parse `path` using 'jq' syntax instead of 'JSONPath'.|no, default is false|
 
 #### Nested path part
+
 Specify `pathParts` as an array of objects that describe each component of the path to traverse. Each object can take the following properties:
 
 |property|description|required?|
@@ -166,10 +167,10 @@ Specify `pathParts` as an array of objects that describe each component of the p
 See [Nested columns](./nested-columns.md) for more information on ingesting and storing nested data.
 
 ### List filtered virtual column
+
 This virtual column provides an alternative way to use
 ['list filtered' dimension spec](./dimensionspecs.md#filtered-dimensionspecs) as a virtual column. It has optimized
 access to the underlying column value indexes that can provide a small performance improvement in some cases.
-
 
 ```json
     {

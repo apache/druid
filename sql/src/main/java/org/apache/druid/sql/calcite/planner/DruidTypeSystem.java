@@ -22,16 +22,20 @@ package org.apache.druid.sql.calcite.planner;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
+import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
 
 public class DruidTypeSystem implements RelDataTypeSystem
 {
   public static final DruidTypeSystem INSTANCE = new DruidTypeSystem();
+  public static final RelDataTypeFactory TYPE_FACTORY = new SqlTypeFactoryImpl(DruidTypeSystem.INSTANCE);
 
   /**
    * Druid uses millisecond precision for timestamps internally. This is also the default at the SQL layer.
    */
   public static final int DEFAULT_TIMESTAMP_PRECISION = 3;
+
+  public static final String VARIANT_TYPE_NAME = "VARIANT";
 
   private DruidTypeSystem()
   {

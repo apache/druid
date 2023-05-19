@@ -24,7 +24,7 @@ sidebar_label: "SQL query translation"
   -->
 
 > Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+> This document describes the Druid SQL language.
 
 Druid uses [Apache Calcite](https://calcite.apache.org/) to parse and plan SQL queries.
 Druid translates SQL statements into its [native JSON-based query language](querying.md).
@@ -34,8 +34,8 @@ This topic includes best practices and tools to help you achieve good performanc
 
 ## Best practices
 
-Consider this (non-exhaustive) list of things to look out for when looking into the performance implications of
-how your SQL queries are translated to native queries.
+Consider the following non-exhaustive list of best practices when looking into performance implications of
+translating Druid SQL queries to native queries.
 
 1. If you wrote a filter on the primary time column `__time`, make sure it is being correctly translated to an
 `"intervals"` filter, as described in the [Time filters](#time-filters) section below. If not, you may need to change
@@ -64,7 +64,11 @@ appreciated.
 
 The [EXPLAIN PLAN](sql.md#explain-plan) functionality can help you understand how a given SQL query will
 be translated to native.
-EXPLAIN PLAN statements return a `RESOURCES` column that describes the resource being queried as well as a `PLAN` column that contains a JSON array of native queries that Druid will run.
+EXPLAIN PLAN statements return:
+- a `PLAN` column that contains a JSON array of native queries that Druid will run
+- a `RESOURCES` column that describes the resource being queried as well as a `PLAN` column that contains a JSON array of native queries that Druid will run
+- a `ATTRIBUTES` column that describes the attributes of a query, such as the statement type and target data source
+
 For example, consider the following query:
 
 ```sql
@@ -77,120 +81,142 @@ WHERE channel IN (SELECT page FROM wikipedia GROUP BY page ORDER BY COUNT(*) DES
 GROUP BY channel
 ```
 
-The EXPLAIN PLAN statement returns the following plan:
+The EXPLAIN PLAN statement returns the following result with plan, resources, and attributes information in it:
 
 ```json
 [
-  {
-    "query": {
-      "queryType": "topN",
-      "dataSource": {
-        "type": "join",
-        "left": {
-          "type": "table",
-          "name": "wikipedia"
-        },
-        "right": {
-          "type": "query",
-          "query": {
-            "queryType": "groupBy",
-            "dataSource": {
-              "type": "table",
-              "name": "wikipedia"
-            },
-            "intervals": {
-              "type": "intervals",
-              "intervals": [
-                "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-              ]
-            },
-            "granularity": {
-              "type": "all"
-            },
-            "dimensions": [
-              {
-                "type": "default",
-                "dimension": "page",
-                "outputName": "d0",
-                "outputType": "STRING"
-              }
-            ],
-            "aggregations": [
-              {
-                "type": "count",
-                "name": "a0"
-              }
-            ],
-            "limitSpec": {
-              "type": "default",
-              "columns": [
+  [
+    {
+      "query": {
+        "queryType": "topN",
+        "dataSource": {
+          "type": "join",
+          "left": {
+            "type": "table",
+            "name": "wikipedia"
+          },
+          "right": {
+            "type": "query",
+            "query": {
+              "queryType": "groupBy",
+              "dataSource": {
+                "type": "table",
+                "name": "wikipedia"
+              },
+              "intervals": {
+                "type": "intervals",
+                "intervals": [
+                  "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+                ]
+              },
+              "granularity": {
+                "type": "all"
+              },
+              "dimensions": [
                 {
-                  "dimension": "a0",
-                  "direction": "descending",
-                  "dimensionOrder": {
-                    "type": "numeric"
-                  }
+                  "type": "default",
+                  "dimension": "page",
+                  "outputName": "d0",
+                  "outputType": "STRING"
                 }
               ],
-              "limit": 10
-            },
-            "context": {
-              "sqlOuterLimit": 101,
-              "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
-              "useApproximateCountDistinct": false,
-              "useApproximateTopN": false
+              "aggregations": [
+                {
+                  "type": "count",
+                  "name": "a0"
+                }
+              ],
+              "limitSpec": {
+                "type": "default",
+                "columns": [
+                  {
+                    "dimension": "a0",
+                    "direction": "descending",
+                    "dimensionOrder": {
+                      "type": "numeric"
+                    }
+                  }
+                ],
+                "limit": 10
+              },
+              "context": {
+                "sqlOuterLimit": 101,
+                "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
+                "useApproximateCountDistinct": false,
+                "useApproximateTopN": false
+              }
             }
+          },
+          "rightPrefix": "j0.",
+          "condition": "(\"channel\" == \"j0.d0\")",
+          "joinType": "INNER"
+        },
+        "dimension": {
+          "type": "default",
+          "dimension": "channel",
+          "outputName": "d0",
+          "outputType": "STRING"
+        },
+        "metric": {
+          "type": "dimension",
+          "ordering": {
+            "type": "lexicographic"
           }
         },
-        "rightPrefix": "j0.",
-        "condition": "(\"channel\" == \"j0.d0\")",
-        "joinType": "INNER"
-      },
-      "dimension": {
-        "type": "default",
-        "dimension": "channel",
-        "outputName": "d0",
-        "outputType": "STRING"
-      },
-      "metric": {
-        "type": "dimension",
-        "ordering": {
-          "type": "lexicographic"
+        "threshold": 101,
+        "intervals": {
+          "type": "intervals",
+          "intervals": [
+            "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+          ]
+        },
+        "granularity": {
+          "type": "all"
+        },
+        "aggregations": [
+          {
+            "type": "count",
+            "name": "a0"
+          }
+        ],
+        "context": {
+          "sqlOuterLimit": 101,
+          "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
+          "useApproximateCountDistinct": false,
+          "useApproximateTopN": false
         }
       },
-      "threshold": 101,
-      "intervals": {
-        "type": "intervals",
-        "intervals": [
-          "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-        ]
-      },
-      "granularity": {
-        "type": "all"
-      },
-      "aggregations": [
+      "signature": [
         {
-          "type": "count",
-          "name": "a0"
+          "name": "d0",
+          "type": "STRING"
+        },
+        {
+          "name": "a0",
+          "type": "LONG"
         }
       ],
-      "context": {
-        "sqlOuterLimit": 101,
-        "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
-        "useApproximateCountDistinct": false,
-        "useApproximateTopN": false
-      }
-    },
-    "signature": [
-      {
-        "name": "d0",
-        "type": "STRING"
-      },
-      {
-        "name": "a0",
-        "type": "LONG"
-      }
-    ]
+      "columnMappings": [
+        {
+          "queryColumn": "d0",
+          "outputColumn": "channel"
+        },
+        {
+          "queryColumn": "a0",
+          "outputColumn": "EXPR$1"
+        }
+      ]
+    }
+  ],
+  [
+    {
+      "name": "wikipedia",
+      "type": "DATASOURCE"
+    }
+  ],
+  {
+    "statementType": "SELECT",
+    "targetDataSource": null
   }
 ]
 ```
@@ -241,10 +267,9 @@ enabling logging and running this query, we can see that it actually runs as the
 
 Druid SQL uses four different native query types.
 
-- [Scan](scan-query.md) is used for queries that do not aggregate (no GROUP BY, no DISTINCT).
+- [Scan](scan-query.md) is used for queries that do not aggregate&mdash;no GROUP BY, no DISTINCT.
 
-- [Timeseries](timeseriesquery.md) is used for queries that GROUP BY `FLOOR(__time TO unit)` or `TIME_FLOOR(__time,
-period)`, have no other grouping expressions, no HAVING or LIMIT clauses, no nesting, and either no ORDER BY, or an
+- [Timeseries](timeseriesquery.md) is used for queries that GROUP BY `FLOOR(__time TO unit)` or `TIME_FLOOR(__time, period)`, have no other grouping expressions, no HAVING clause, no nesting, and either no ORDER BY, or an
 ORDER BY that orders by same expression as present in GROUP BY. It also uses Timeseries for "grand total" queries that
 have aggregation functions but no GROUP BY. This query type takes advantage of the fact that Druid segments are sorted
 by time.
@@ -350,7 +375,7 @@ Additionally, some Druid native query features are not supported by the SQL lang
 include:
 
 - [Inline datasources](datasource.md#inline).
-- [Spatial filters](../development/geo.md).
+- [Spatial filters](geo.md).
 - [Multi-value dimensions](sql-data-types.md#multi-value-strings) are only partially implemented in Druid SQL. There are known
 inconsistencies between their behavior in SQL queries and in native queries due to how they are currently treated by
 the SQL planner.

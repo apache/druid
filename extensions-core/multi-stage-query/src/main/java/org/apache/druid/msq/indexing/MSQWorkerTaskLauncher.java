@@ -35,17 +35,21 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
+import org.apache.druid.msq.exec.Limits;
+import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.WorkerManagerClient;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TaskStartTimeoutFault;
+import org.apache.druid.msq.indexing.error.TooManyAttemptsForJob;
+import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +58,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
@@ -66,7 +71,8 @@ public class MSQWorkerTaskLauncher
   private static final long HIGH_FREQUENCY_CHECK_MILLIS = 100;
   private static final long LOW_FREQUENCY_CHECK_MILLIS = 2000;
   private static final long SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS = 10000;
-  private static final long SHUTDOWN_TIMEOUT_MS = Duration.ofMinutes(1).toMillis();
+  private static final long SHUTDOWN_TIMEOUT_MILLIS = Duration.ofMinutes(1).toMillis();
+  private int currentRelaunchCount = 0;
 
   // States for "state" variable.
   private enum State
@@ -81,15 +87,19 @@ public class MSQWorkerTaskLauncher
   private final ControllerContext context;
   private final ExecutorService exec;
   private final long maxTaskStartDelayMillis;
-  private final boolean durableStageStorageEnabled;
 
   // Mutable state meant to be accessible by threads outside the main loop.
   private final SettableFuture<?> stopFuture = SettableFuture.create();
   private final AtomicReference<State> state = new AtomicReference<>(State.NEW);
   private final AtomicBoolean cancelTasksOnStop = new AtomicBoolean();
 
+  // Set by launchTasksIfNeeded.
   @GuardedBy("taskIds")
   private int desiredTaskCount = 0;
+
+  // Set by the main loop when it acknowledges a new desiredTaskCount.
+  @GuardedBy("taskIds")
+  private int acknowledgedDesiredTaskCount = 0;
 
   // Worker number -> task ID.
   @GuardedBy("taskIds")
@@ -101,26 +111,47 @@ public class MSQWorkerTaskLauncher
 
   // Mutable state accessible only to the main loop. LinkedHashMap since order of key set matters. Tasks are added
   // here once they are submitted for running, but before they are fully started up.
+  // taskId -> taskTracker
   private final Map<String, TaskTracker> taskTrackers = new LinkedHashMap<>();
 
   // Set of tasks which are issued a cancel request by the controller.
   private final Set<String> canceledWorkerTasks = ConcurrentHashMap.newKeySet();
 
+  private final Map<String, Object> taskContextOverrides;
+
+  // tasks to clean up due to retries
+  private final Set<String> tasksToCleanup = ConcurrentHashMap.newKeySet();
+
+  // workers to relaunch
+  private final Set<Integer> workersToRelaunch = ConcurrentHashMap.newKeySet();
+
+  // workers that failed, but without active work orders. There is no need to retry these unless a future stage
+  // requires it.
+  @GuardedBy("taskIds")
+  private final Set<Integer> failedInactiveWorkers = ConcurrentHashMap.newKeySet();
+
+  private final ConcurrentHashMap<Integer, List<String>> workerToTaskIds = new ConcurrentHashMap<>();
+  private final RetryTask retryTask;
+
+  private final AtomicLong recentFullyStartedWorkerTimeInMillis = new AtomicLong(System.currentTimeMillis());
+
   public MSQWorkerTaskLauncher(
       final String controllerTaskId,
       final String dataSource,
       final ControllerContext context,
-      final boolean durableStageStorageEnabled,
+      final RetryTask retryTask,
+      final Map<String, Object> taskContextOverrides,
       final long maxTaskStartDelayMillis
   )
   {
     this.controllerTaskId = controllerTaskId;
     this.dataSource = dataSource;
     this.context = context;
+    this.taskContextOverrides = taskContextOverrides;
     this.exec = Execs.singleThreaded(
         "multi-stage-query-task-launcher[" + StringUtils.encodeForFormat(controllerTaskId) + "]-%s"
     );
-    this.durableStageStorageEnabled = durableStageStorageEnabled;
+    this.retryTask = retryTask;
     this.maxTaskStartDelayMillis = maxTaskStartDelayMillis;
   }
 
@@ -174,18 +205,13 @@ public class MSQWorkerTaskLauncher
     }
 
     // Block until stopped.
-    try {
-      FutureUtils.getUnchecked(stopFuture, false);
-    }
-    catch (Throwable ignored) {
-      // Suppress.
-    }
+    waitForWorkerShutdown();
   }
 
   /**
    * Get the list of currently-active tasks.
    */
-  public List<String> getTaskList()
+  public List<String> getActiveTasks()
   {
     synchronized (taskIds) {
       return ImmutableList.copyOf(taskIds);
@@ -199,8 +225,11 @@ public class MSQWorkerTaskLauncher
   public void launchTasksIfNeeded(final int taskCount) throws InterruptedException
   {
     synchronized (taskIds) {
+      retryInactiveTasksIfNeeded(taskCount);
+
       if (taskCount > desiredTaskCount) {
         desiredTaskCount = taskCount;
+        taskIds.notifyAll();
       }
 
       while (taskIds.size() < taskCount || !IntStream.range(0, taskCount).allMatch(fullyStartedTasks::contains)) {
@@ -211,6 +240,77 @@ public class MSQWorkerTaskLauncher
 
         taskIds.wait();
       }
+    }
+  }
+
+  public void retryInactiveTasksIfNeeded(int taskCount)
+  {
+    synchronized (taskIds) {
+      // Fetch the list of workers which failed without work orders
+      Iterator<Integer> iterator = failedInactiveWorkers.iterator();
+      while (iterator.hasNext()) {
+        Integer workerNumber = iterator.next();
+        // If the controller expects the task to be running, queue it for retry
+        if (workerNumber < taskCount) {
+          submitForRelaunch(workerNumber);
+          iterator.remove();
+        }
+      }
+    }
+  }
+
+  Set<Integer> getWorkersToRelaunch()
+  {
+    return workersToRelaunch;
+  }
+
+  /**
+   * Queues worker for relaunch. A noop if the worker is already in the queue.
+   *
+   * @param workerNumber worker number
+   */
+  public void submitForRelaunch(int workerNumber)
+  {
+    workersToRelaunch.add(workerNumber);
+  }
+
+  /**
+   * Report a worker that failed without active orders. To be retried if it is requried for future stages only.
+   * @param workerNumber worker number
+   */
+  public void reportFailedInactiveWorker(int workerNumber)
+  {
+    synchronized (taskIds) {
+      failedInactiveWorkers.add(workerNumber);
+    }
+  }
+
+  /**
+   * Blocks the call untill the worker tasks are ready to be contacted for work.
+   *
+   * @param workerSet
+   * @throws InterruptedException
+   */
+  public void waitUntilWorkersReady(Set<Integer> workerSet) throws InterruptedException
+  {
+    synchronized (taskIds) {
+      while (!fullyStartedTasks.containsAll(workerSet)) {
+        if (stopFuture.isDone() || stopFuture.isCancelled()) {
+          FutureUtils.getUnchecked(stopFuture, false);
+          throw new ISE("Stopped");
+        }
+        taskIds.wait();
+      }
+    }
+  }
+
+  public void waitForWorkerShutdown()
+  {
+    try {
+      FutureUtils.getUnchecked(stopFuture, false);
+    }
+    catch (Throwable ignored) {
+      // Suppress.
     }
   }
 
@@ -226,6 +326,15 @@ public class MSQWorkerTaskLauncher
     return canceledWorkerTasks.contains(taskId);
   }
 
+
+  public boolean isTaskLatest(String taskId)
+  {
+    int worker = MSQTasks.workerFromTaskId(taskId);
+    synchronized (taskIds) {
+      return taskId.equals(taskIds.get(worker));
+    }
+  }
+
   private void mainLoop()
   {
     try {
@@ -238,6 +347,8 @@ public class MSQWorkerTaskLauncher
           runNewTasks();
           updateTaskTrackersAndTaskIds();
           checkForErroneousTasks();
+          relaunchTasks();
+          cleanFailedTasksWhichAreRelaunched();
         }
         catch (Throwable e) {
           state.set(State.STOPPED);
@@ -267,11 +378,11 @@ public class MSQWorkerTaskLauncher
         // Sleep for a bit, maybe.
         final long now = System.currentTimeMillis();
 
-        if (now > stopStartTime + SHUTDOWN_TIMEOUT_MS) {
+        if (now > stopStartTime + SHUTDOWN_TIMEOUT_MILLIS) {
           if (caught != null) {
             throw caught;
           } else {
-            throw new ISE("Task shutdown timed out (limit = %,dms)", SHUTDOWN_TIMEOUT_MS);
+            throw new ISE("Task shutdown timed out (limit = %,dms)", SHUTDOWN_TIMEOUT_MILLIS);
           }
         }
 
@@ -304,8 +415,11 @@ public class MSQWorkerTaskLauncher
   {
     final Map<String, Object> taskContext = new HashMap<>();
 
-    if (durableStageStorageEnabled) {
-      taskContext.put(MultiStageQueryContext.CTX_ENABLE_DURABLE_SHUFFLE_STORAGE, true);
+    for (Map.Entry<String, Object> taskContextOverride : taskContextOverrides.entrySet()) {
+      if (taskContextOverride.getKey() == null || taskContextOverride.getValue() == null) {
+        continue;
+      }
+      taskContext.put(taskContextOverride.getKey(), taskContextOverride.getValue());
     }
 
     final int firstTask;
@@ -314,6 +428,7 @@ public class MSQWorkerTaskLauncher
     synchronized (taskIds) {
       firstTask = taskIds.size();
       taskCount = desiredTaskCount;
+      acknowledgedDesiredTaskCount = desiredTaskCount;
     }
 
     for (int i = firstTask; i < taskCount; i++) {
@@ -321,16 +436,38 @@ public class MSQWorkerTaskLauncher
           controllerTaskId,
           dataSource,
           i,
-          taskContext
+          taskContext,
+          0
       );
 
-      taskTrackers.put(task.getId(), new TaskTracker(i));
+      taskTrackers.put(task.getId(), new TaskTracker(i, task));
+      workerToTaskIds.compute(i, (workerId, taskIds) -> {
+        if (taskIds == null) {
+          taskIds = new ArrayList<>();
+        }
+        taskIds.add(task.getId());
+        return taskIds;
+      });
+
       context.workerManager().run(task.getId(), task);
 
       synchronized (taskIds) {
         taskIds.add(task.getId());
         taskIds.notifyAll();
       }
+    }
+  }
+
+  /**
+   * Returns a pair which contains the number of currently running worker tasks and the number of worker tasks that are
+   * not yet fully started as left and right respectively.
+   */
+  public WorkerCount getWorkerTaskCount()
+  {
+    synchronized (taskIds) {
+      int runningTasks = fullyStartedTasks.size();
+      int pendingTasks = desiredTaskCount - runningTasks;
+      return new WorkerCount(runningTasks, pendingTasks);
     }
   }
 
@@ -363,7 +500,9 @@ public class MSQWorkerTaskLauncher
 
         if (tracker.status.getStatusCode() == TaskState.RUNNING && !tracker.unknownLocation()) {
           synchronized (taskIds) {
-            fullyStartedTasks.add(tracker.workerNumber);
+            if (fullyStartedTasks.add(tracker.workerNumber)) {
+              recentFullyStartedWorkerTimeInMillis.set(System.currentTimeMillis());
+            }
             taskIds.notifyAll();
           }
         }
@@ -374,33 +513,141 @@ public class MSQWorkerTaskLauncher
   /**
    * Used by the main loop to generate exceptions if any tasks have failed, have taken too long to start up, or
    * have gone inexplicably missing.
-   *
+   * <p>
    * Throws an exception if some task is erroneous.
    */
   private void checkForErroneousTasks()
   {
     final int numTasks = taskTrackers.size();
 
-    for (final Map.Entry<String, TaskTracker> taskEntry : taskTrackers.entrySet()) {
+    Iterator<Map.Entry<String, TaskTracker>> taskTrackerIterator = taskTrackers.entrySet().iterator();
+
+    while (taskTrackerIterator.hasNext()) {
+      final Map.Entry<String, TaskTracker> taskEntry = taskTrackerIterator.next();
       final String taskId = taskEntry.getKey();
       final TaskTracker tracker = taskEntry.getValue();
+      if (tracker.isRetrying()) {
+        continue;
+      }
 
       if (tracker.status == null) {
-        throw new MSQException(UnknownFault.forMessage(StringUtils.format("Task [%s] status missing", taskId)));
-      }
+        removeWorkerFromFullyStartedWorkers(tracker);
+        final String errorMessage = StringUtils.format("Task [%s] status missing", taskId);
+        log.info(errorMessage + ". Trying to relaunch the worker");
+        tracker.enableRetrying();
+        retryTask.retry(
+            tracker.msqWorkerTask,
+            UnknownFault.forMessage(errorMessage)
+        );
 
-      if (tracker.didRunTimeOut(maxTaskStartDelayMillis) && !canceledWorkerTasks.contains(taskId)) {
-        throw new MSQException(new TaskStartTimeoutFault(numTasks + 1));
+      } else if (tracker.didRunTimeOut(maxTaskStartDelayMillis) && !canceledWorkerTasks.contains(taskId)) {
+        removeWorkerFromFullyStartedWorkers(tracker);
+        throw new MSQException(new TaskStartTimeoutFault(
+            this.getWorkerTaskCount().getPendingWorkerCount(),
+            numTasks + 1,
+            maxTaskStartDelayMillis
+        ));
+      } else if (tracker.didFail() && !canceledWorkerTasks.contains(taskId)) {
+        removeWorkerFromFullyStartedWorkers(tracker);
+        log.info("Task[%s] failed because %s. Trying to relaunch the worker", taskId, tracker.status.getErrorMsg());
+        tracker.enableRetrying();
+        retryTask.retry(tracker.msqWorkerTask, new WorkerFailedFault(taskId, tracker.status.getErrorMsg()));
       }
+    }
+  }
 
-      if (tracker.didFail() && !canceledWorkerTasks.contains(taskId)) {
-        throw new MSQException(new WorkerFailedFault(taskId, tracker.status.getErrorMsg()));
-      }
+  private void removeWorkerFromFullyStartedWorkers(TaskTracker tracker)
+  {
+    synchronized (taskIds) {
+      fullyStartedTasks.remove(tracker.msqWorkerTask.getWorkerNumber());
+    }
+  }
+
+
+  private void relaunchTasks()
+  {
+    Iterator<Integer> iterator = workersToRelaunch.iterator();
+
+    while (iterator.hasNext()) {
+      int worker = iterator.next();
+      workerToTaskIds.compute(worker, (workerId, taskHistory) -> {
+
+        if (taskHistory == null || taskHistory.isEmpty()) {
+          throw new ISE("TaskHistory cannot by null for worker %d", workerId);
+        }
+        String latestTaskId = taskHistory.get(taskHistory.size() - 1);
+
+        TaskTracker tracker = taskTrackers.get(latestTaskId);
+        if (tracker == null) {
+          throw new ISE("Did not find taskTracker for latest taskId[%s]", latestTaskId);
+        }
+        // if task is not failed donot retry
+        if (!tracker.isComplete()) {
+          return taskHistory;
+        }
+
+        MSQWorkerTask toRelaunch = tracker.msqWorkerTask;
+        MSQWorkerTask relaunchedTask = toRelaunch.getRetryTask();
+
+        // check relaunch limits
+        checkRelaunchLimitsOrThrow(tracker, toRelaunch);
+        // clean up trackers and tasks
+        tasksToCleanup.add(latestTaskId);
+        taskTrackers.remove(latestTaskId);
+        log.info(
+            "Relaunching worker[%d] with new task id[%s] with worker relaunch count[%d] and job relaunch count[%d]",
+            relaunchedTask.getWorkerNumber(),
+            relaunchedTask.getId(),
+            toRelaunch.getRetryCount(),
+            currentRelaunchCount
+        );
+
+        currentRelaunchCount += 1;
+        taskTrackers.put(relaunchedTask.getId(), new TaskTracker(relaunchedTask.getWorkerNumber(), relaunchedTask));
+        synchronized (taskIds) {
+          fullyStartedTasks.remove(relaunchedTask.getWorkerNumber());
+          taskIds.notifyAll();
+        }
+
+        context.workerManager().run(relaunchedTask.getId(), relaunchedTask);
+        taskHistory.add(relaunchedTask.getId());
+
+        synchronized (taskIds) {
+          // replace taskId with the retry taskID for the same worker number
+          taskIds.set(toRelaunch.getWorkerNumber(), relaunchedTask.getId());
+          taskIds.notifyAll();
+        }
+        return taskHistory;
+
+      });
+      iterator.remove();
+    }
+  }
+
+  private void checkRelaunchLimitsOrThrow(TaskTracker tracker, MSQWorkerTask relaunchTask)
+  {
+    if (relaunchTask.getRetryCount() > Limits.PER_WORKER_RELAUNCH_LIMIT) {
+      throw new MSQException(new TooManyAttemptsForWorker(
+          Limits.PER_WORKER_RELAUNCH_LIMIT,
+          relaunchTask.getId(),
+          relaunchTask.getWorkerNumber(),
+          tracker.status.getErrorMsg()
+      ));
+    }
+    if (currentRelaunchCount > Limits.TOTAL_RELAUNCH_LIMIT) {
+      throw new MSQException(new TooManyAttemptsForJob(
+          Limits.TOTAL_RELAUNCH_LIMIT,
+          currentRelaunchCount,
+          relaunchTask.getId(),
+          tracker.status.getErrorMsg()
+      ));
     }
   }
 
   private void shutDownTasks()
   {
+
+    cleanFailedTasksWhichAreRelaunched();
     for (final Map.Entry<String, TaskTracker> taskEntry : taskTrackers.entrySet()) {
       final String taskId = taskEntry.getKey();
       final TaskTracker tracker = taskEntry.getValue();
@@ -413,18 +660,43 @@ public class MSQWorkerTaskLauncher
   }
 
   /**
+   * Cleans the task identified in {@link MSQWorkerTaskLauncher#relaunchTasks()} for relaunch. Asks the overlord to cancel the task.
+   */
+  private void cleanFailedTasksWhichAreRelaunched()
+  {
+    Iterator<String> tasksToCancel = tasksToCleanup.iterator();
+    while (tasksToCancel.hasNext()) {
+      String taskId = tasksToCancel.next();
+      try {
+        if (canceledWorkerTasks.add(taskId)) {
+          try {
+            context.workerManager().cancel(taskId);
+          }
+          catch (Exception ignore) {
+            //ignoring cancellation exception
+          }
+        }
+      }
+      finally {
+        tasksToCancel.remove();
+      }
+
+    }
+  }
+
+  /**
    * Used by the main loop to decide how often to check task status.
    */
-  private long computeSleepTime(final long loopDurationMs)
+  private long computeSleepTime(final long loopDurationMillis)
   {
     final OptionalLong maxTaskStartTime =
-        taskTrackers.values().stream().mapToLong(tracker -> tracker.startTimeMs).max();
+        taskTrackers.values().stream().mapToLong(tracker -> tracker.startTimeMillis).max();
 
     if (maxTaskStartTime.isPresent() &&
         System.currentTimeMillis() - maxTaskStartTime.getAsLong() < SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS) {
-      return HIGH_FREQUENCY_CHECK_MILLIS - loopDurationMs;
+      return HIGH_FREQUENCY_CHECK_MILLIS - loopDurationMillis;
     } else {
-      return LOW_FREQUENCY_CHECK_MILLIS - loopDurationMs;
+      return LOW_FREQUENCY_CHECK_MILLIS - loopDurationMillis;
     }
   }
 
@@ -436,7 +708,11 @@ public class MSQWorkerTaskLauncher
       } else {
         // wait on taskIds so we can wake up early if needed.
         synchronized (taskIds) {
-          taskIds.wait(sleepMillis);
+          // desiredTaskCount is set by launchTasksIfNeeded, and acknowledgedDesiredTaskCount is set by mainLoop when
+          // it acknowledges a new target. If these are not equal, do another run immediately and launch more tasks.
+          if (acknowledgedDesiredTaskCount == desiredTaskCount) {
+            taskIds.wait(sleepMillis);
+          }
         }
       }
     } else {
@@ -450,16 +726,20 @@ public class MSQWorkerTaskLauncher
   /**
    * Tracker for information about a worker. Mutable.
    */
-  private static class TaskTracker
+  private class TaskTracker
   {
     private final int workerNumber;
-    private final long startTimeMs = System.currentTimeMillis();
+    private final long startTimeMillis = System.currentTimeMillis();
+    private final MSQWorkerTask msqWorkerTask;
     private TaskStatus status;
     private TaskLocation initialLocation;
 
-    public TaskTracker(int workerNumber)
+    private boolean isRetrying = false;
+
+    public TaskTracker(int workerNumber, MSQWorkerTask msqWorkerTask)
     {
       this.workerNumber = workerNumber;
+      this.msqWorkerTask = msqWorkerTask;
     }
 
     public boolean unknownLocation()
@@ -477,11 +757,39 @@ public class MSQWorkerTaskLauncher
       return status != null && status.getStatusCode().isFailure();
     }
 
+    /**
+     * Checks if the task has timed out if all the following conditions are true:
+     * 1. The task is still running.
+     * 2. The location has never been reported by the task. If this is not the case, the task has started already.
+     * 3. Task has taken more than maxTaskStartDelayMillis to start.
+     * 4. No task has started in maxTaskStartDelayMillis. This is in case the cluster is scaling up and other workers
+     *    are starting.
+     */
     public boolean didRunTimeOut(final long maxTaskStartDelayMillis)
     {
+      long currentTimeMillis = System.currentTimeMillis();
       return (status == null || status.getStatusCode() == TaskState.RUNNING)
              && unknownLocation()
-             && System.currentTimeMillis() - startTimeMs > maxTaskStartDelayMillis;
+             && currentTimeMillis - recentFullyStartedWorkerTimeInMillis.get() > maxTaskStartDelayMillis
+             && currentTimeMillis - startTimeMillis > maxTaskStartDelayMillis;
+    }
+
+    /**
+     * Enables retrying for the task
+     */
+    public void enableRetrying()
+    {
+      isRetrying = true;
+    }
+
+    /**
+     * Checks is the task is retrying,
+     *
+     * @return
+     */
+    public boolean isRetrying()
+    {
+      return isRetrying;
     }
   }
 }

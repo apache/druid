@@ -41,12 +41,12 @@ import org.apache.druid.query.Query;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
@@ -54,7 +54,7 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
   private final Query<?> query;
   private final ReadableInput baseInput;
   private final List<ReadableFrameChannel> inputChannels;
-  private final ResourceHolder<WritableFrameChannel> outputChannel;
+  private final ResourceHolder<WritableFrameChannel> outputChannelHolder;
   private final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder;
   private final BroadcastJoinHelper broadcastJoinHelper;
 
@@ -64,15 +64,14 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
       final Query<?> query,
       final ReadableInput baseInput,
       final Int2ObjectMap<ReadableInput> sideChannels,
-      final JoinableFactoryWrapper joinableFactory,
-      final ResourceHolder<WritableFrameChannel> outputChannel,
+      final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       final long memoryReservedForBroadcastJoin
   )
   {
     this.query = query;
     this.baseInput = baseInput;
-    this.outputChannel = outputChannel;
+    this.outputChannelHolder = outputChannelHolder;
     this.frameWriterFactoryHolder = frameWriterFactoryHolder;
 
     final Pair<List<ReadableFrameChannel>, BroadcastJoinHelper> inputChannelsAndBroadcastJoinHelper =
@@ -80,86 +79,11 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
             query.getDataSource(),
             baseInput,
             sideChannels,
-            joinableFactory,
             memoryReservedForBroadcastJoin
         );
 
     this.inputChannels = inputChannelsAndBroadcastJoinHelper.lhs;
     this.broadcastJoinHelper = inputChannelsAndBroadcastJoinHelper.rhs;
-  }
-
-  @Override
-  public List<ReadableFrameChannel> inputChannels()
-  {
-    return inputChannels;
-  }
-
-  @Override
-  public List<WritableFrameChannel> outputChannels()
-  {
-    return Collections.singletonList(outputChannel.get());
-  }
-
-  @Override
-  public ReturnOrAwait<Long> runIncrementally(final IntSet readableInputs) throws IOException
-  {
-    if (!initializeSegmentMapFn(readableInputs)) {
-      return ReturnOrAwait.awaitAll(broadcastJoinHelper.getSideChannelNumbers());
-    } else if (readableInputs.size() != inputChannels.size()) {
-      return ReturnOrAwait.awaitAll(inputChannels.size());
-    } else if (baseInput.hasSegment()) {
-      return runWithSegment(baseInput.getSegment());
-    } else {
-      assert baseInput.hasChannel();
-      return runWithInputChannel(baseInput.getChannel(), baseInput.getChannelFrameReader());
-    }
-  }
-
-  @Override
-  public void cleanup() throws IOException
-  {
-    // Don't close the output channel, because multiple workers write to the same channel.
-    // The channel should be closed by the caller.
-    FrameProcessors.closeAll(inputChannels(), Collections.emptyList(), outputChannel, frameWriterFactoryHolder);
-  }
-
-  protected FrameWriterFactory getFrameWriterFactory()
-  {
-    return frameWriterFactoryHolder.get();
-  }
-
-  protected abstract ReturnOrAwait<Long> runWithSegment(SegmentWithDescriptor segment) throws IOException;
-
-  protected abstract ReturnOrAwait<Long> runWithInputChannel(
-      ReadableFrameChannel inputChannel,
-      FrameReader inputFrameReader
-  ) throws IOException;
-
-  /**
-   * Helper intended to be used by subclasses. Applies {@link #segmentMapFn}, which applies broadcast joins
-   * if applicable to this query.
-   */
-  protected SegmentReference mapSegment(final Segment segment)
-  {
-    return segmentMapFn.apply(ReferenceCountingSegment.wrapRootGenerationSegment(segment));
-  }
-
-  private boolean initializeSegmentMapFn(final IntSet readableInputs)
-  {
-    if (segmentMapFn != null) {
-      return true;
-    } else if (broadcastJoinHelper == null) {
-      segmentMapFn = Function.identity();
-      return true;
-    } else {
-      final boolean retVal = broadcastJoinHelper.buildBroadcastTablesIncrementally(readableInputs);
-
-      if (retVal) {
-        segmentMapFn = broadcastJoinHelper.makeSegmentMapFn(query);
-      }
-
-      return retVal;
-    }
   }
 
   /**
@@ -169,7 +93,6 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
       final DataSource dataSource,
       final ReadableInput baseInput,
       final Int2ObjectMap<ReadableInput> sideChannels,
-      final JoinableFactoryWrapper joinableFactory,
       final long memoryReservedForBroadcastJoin
   )
   {
@@ -204,7 +127,6 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
           inputNumberToProcessorChannelMap,
           inputChannels,
           channelReaders,
-          joinableFactory,
           memoryReservedForBroadcastJoin
       );
     } else {
@@ -212,5 +134,77 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Long>
     }
 
     return Pair.of(inputChannels, broadcastJoinHelper);
+  }
+
+  @Override
+  public List<ReadableFrameChannel> inputChannels()
+  {
+    return inputChannels;
+  }
+
+  @Override
+  public List<WritableFrameChannel> outputChannels()
+  {
+    return Collections.singletonList(outputChannelHolder.get());
+  }
+
+  @Override
+  public ReturnOrAwait<Long> runIncrementally(final IntSet readableInputs) throws IOException
+  {
+    if (!initializeSegmentMapFn(readableInputs)) {
+      return ReturnOrAwait.awaitAll(broadcastJoinHelper.getSideChannelNumbers());
+    } else if (readableInputs.size() != inputChannels.size()) {
+      return ReturnOrAwait.awaitAll(inputChannels.size());
+    } else if (baseInput.hasSegment()) {
+      return runWithSegment(baseInput.getSegment());
+    } else {
+      assert baseInput.hasChannel();
+      return runWithInputChannel(baseInput.getChannel(), baseInput.getChannelFrameReader());
+    }
+  }
+
+  @Override
+  public void cleanup() throws IOException
+  {
+    FrameProcessors.closeAll(inputChannels(), Collections.emptyList(), outputChannelHolder, frameWriterFactoryHolder);
+  }
+
+  protected FrameWriterFactory getFrameWriterFactory()
+  {
+    return frameWriterFactoryHolder.get();
+  }
+
+  protected abstract ReturnOrAwait<Long> runWithSegment(SegmentWithDescriptor segment) throws IOException;
+
+  protected abstract ReturnOrAwait<Long> runWithInputChannel(
+      ReadableFrameChannel inputChannel,
+      FrameReader inputFrameReader
+  ) throws IOException;
+
+  /**
+   * Helper intended to be used by subclasses. Applies {@link #segmentMapFn}, which applies broadcast joins
+   * if applicable to this query.
+   */
+  protected SegmentReference mapSegment(final Segment segment)
+  {
+    return segmentMapFn.apply(ReferenceCountingSegment.wrapRootGenerationSegment(segment));
+  }
+
+  private boolean initializeSegmentMapFn(final IntSet readableInputs)
+  {
+    final AtomicLong cpuAccumulator = new AtomicLong();
+    if (segmentMapFn != null) {
+      return true;
+    } else if (broadcastJoinHelper == null) {
+      segmentMapFn = Function.identity();
+      return true;
+    } else {
+      final boolean retVal = broadcastJoinHelper.buildBroadcastTablesIncrementally(readableInputs);
+      DataSource inlineChannelDataSource = broadcastJoinHelper.inlineChannelData(query.getDataSource());
+      if (retVal) {
+        segmentMapFn = inlineChannelDataSource.createSegmentMapFunction(query, cpuAccumulator);
+      }
+      return retVal;
+    }
   }
 }

@@ -22,6 +22,7 @@ package org.apache.druid.msq.sql;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.common.guava.FutureUtils;
@@ -33,43 +34,42 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.exec.MSQTasks;
-import org.apache.druid.msq.indexing.ColumnMapping;
-import org.apache.druid.msq.indexing.ColumnMappings;
 import org.apache.druid.msq.indexing.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQDestination;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.TaskReportMSQDestination;
+import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
+import org.apache.druid.sql.calcite.planner.ColumnMapping;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.QueryUtils;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.Grouping;
 import org.apache.druid.sql.calcite.run.QueryMaker;
+import org.apache.druid.sql.calcite.run.SqlResults;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class MSQTaskQueryMaker implements QueryMaker
@@ -79,17 +79,13 @@ public class MSQTaskQueryMaker implements QueryMaker
   private static final String DESTINATION_REPORT = "taskReport";
 
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
-  private static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
-
-  // Lower than the default to minimize the impact of per-row overheads that are not accounted for by
-  // OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
-  private static final int DEFAULT_ROWS_IN_MEMORY = 100000;
 
   private final String targetDataSource;
   private final OverlordClient overlordClient;
   private final PlannerContext plannerContext;
   private final ObjectMapper jsonMapper;
   private final List<Pair<Integer, String>> fieldMapping;
+
 
   MSQTaskQueryMaker(
       @Nullable final String targetDataSource,
@@ -109,16 +105,24 @@ public class MSQTaskQueryMaker implements QueryMaker
   @Override
   public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
+    Hook.QUERY_PLAN.run(druidQuery.getQuery());
     String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
 
-    QueryContext queryContext = plannerContext.queryContext();
-    String msqMode = MultiStageQueryContext.getMSQMode(queryContext);
+    // SQL query context: context provided by the user, and potentially modified by handlers during planning.
+    // Does not directly influence task execution, but it does form the basis for the initial native query context,
+    // which *does* influence task execution.
+    final QueryContext sqlQueryContext = plannerContext.queryContext();
+
+    // Native query context: sqlQueryContext plus things that we add prior to creating a controller task.
+    final Map<String, Object> nativeQueryContext = new HashMap<>(sqlQueryContext.asMap());
+
+    final String msqMode = MultiStageQueryContext.getMSQMode(sqlQueryContext);
     if (msqMode != null) {
-      MSQMode.populateDefaultQueryContext(msqMode, plannerContext.queryContextMap());
+      MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContext);
     }
 
     final String ctxDestination =
-        DimensionHandlerUtils.convertObjectToString(MultiStageQueryContext.getDestination(queryContext));
+        DimensionHandlerUtils.convertObjectToString(MultiStageQueryContext.getDestination(sqlQueryContext));
 
     Object segmentGranularity;
     try {
@@ -131,7 +135,7 @@ public class MSQTaskQueryMaker implements QueryMaker
                     + "segment graularity");
     }
 
-    final int maxNumTasks = MultiStageQueryContext.getMaxNumTasks(queryContext);
+    final int maxNumTasks = MultiStageQueryContext.getMaxNumTasks(sqlQueryContext);
 
     if (maxNumTasks < 2) {
       throw new IAE(MultiStageQueryContext.CTX_MAX_NUM_TASKS
@@ -140,21 +144,13 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     // This parameter is used internally for the number of worker tasks only, so we subtract 1
     final int maxNumWorkers = maxNumTasks - 1;
-
-    final int rowsPerSegment = MultiStageQueryContext.getRowsPerSegment(
-        queryContext,
-        DEFAULT_ROWS_PER_SEGMENT
-    );
-
-    final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(
-        queryContext,
-        DEFAULT_ROWS_IN_MEMORY
-    );
-
-    final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(queryContext);
+    final int rowsPerSegment = MultiStageQueryContext.getRowsPerSegment(sqlQueryContext);
+    final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(sqlQueryContext);
+    final IndexSpec indexSpec = MultiStageQueryContext.getIndexSpec(sqlQueryContext, jsonMapper);
+    final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(sqlQueryContext);
 
     final List<Interval> replaceTimeChunks =
-        Optional.ofNullable(plannerContext.queryContext().get(DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS))
+        Optional.ofNullable(sqlQueryContext.get(DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS))
                 .map(
                     s -> {
                       if (s instanceof String && "all".equals(StringUtils.toLowerCase((String) s))) {
@@ -177,15 +173,11 @@ public class MSQTaskQueryMaker implements QueryMaker
     final Map<String, ColumnType> aggregationIntermediateTypeMap =
         finalizeAggregations ? null /* Not needed */ : buildAggregationIntermediateTypeMap(druidQuery);
 
-    final List<String> sqlTypeNames = new ArrayList<>();
-    final List<ColumnMapping> columnMappings = new ArrayList<>();
+    final List<SqlTypeName> sqlTypeNames = new ArrayList<>();
+    final List<ColumnMapping> columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery);
 
     for (final Pair<Integer, String> entry : fieldMapping) {
-      // Note: SQL generally allows output columns to be duplicates, but MultiStageQueryMakerFactory.validateNoDuplicateAliases
-      // will prevent duplicate output columns from appearing here. So no need to worry about it.
-
       final String queryColumn = druidQuery.getOutputRowSignature().getColumnName(entry.getKey());
-      final String outputColumns = entry.getValue();
 
       final SqlTypeName sqlTypeName;
 
@@ -196,8 +188,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         sqlTypeName = druidQuery.getOutputRowType().getFieldList().get(entry.getKey()).getType().getSqlTypeName();
       }
 
-      sqlTypeNames.add(sqlTypeName.getName());
-      columnMappings.add(new ColumnMapping(queryColumn, outputColumns));
+      sqlTypeNames.add(sqlTypeName);
     }
 
     final MSQDestination destination;
@@ -215,11 +206,9 @@ public class MSQTaskQueryMaker implements QueryMaker
         throw new ISE("Unable to convert %s to a segment granularity", segmentGranularity);
       }
 
-      final List<String> segmentSortOrder = MultiStageQueryContext.decodeSortOrder(
-          MultiStageQueryContext.getSortOrder(queryContext)
-      );
+      final List<String> segmentSortOrder = MultiStageQueryContext.getSortOrder(sqlQueryContext);
 
-      validateSegmentSortOrder(
+      MSQTaskQueryMakerUtils.validateSegmentSortOrder(
           segmentSortOrder,
           fieldMapping.stream().map(f -> f.right).collect(Collectors.toList())
       );
@@ -248,15 +237,16 @@ public class MSQTaskQueryMaker implements QueryMaker
                .query(druidQuery.getQuery().withOverriddenContext(nativeQueryContextOverrides))
                .columnMappings(new ColumnMappings(columnMappings))
                .destination(destination)
-               .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(queryContext))
-               .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment))
+               .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(sqlQueryContext))
+               .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, indexSpec))
                .build();
 
     final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
-        querySpec,
-        plannerContext.getSql(),
+        querySpec.withOverriddenContext(nativeQueryContext),
+        MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(plannerContext.getSql()),
         plannerContext.queryContextMap(),
+        SqlResults.Context.fromPlannerContext(plannerContext),
         sqlTypeNames,
         null
     );
@@ -282,20 +272,4 @@ public class MSQTaskQueryMaker implements QueryMaker
     return retVal;
   }
 
-  static void validateSegmentSortOrder(final List<String> sortOrder, final Collection<String> allOutputColumns)
-  {
-    final Set<String> allOutputColumnsSet = new HashSet<>(allOutputColumns);
-
-    for (final String column : sortOrder) {
-      if (!allOutputColumnsSet.contains(column)) {
-        throw new IAE("Column [%s] in segment sort order does not appear in the query output", column);
-      }
-    }
-
-    if (sortOrder.size() > 0
-        && allOutputColumns.contains(ColumnHolder.TIME_COLUMN_NAME)
-        && !ColumnHolder.TIME_COLUMN_NAME.equals(sortOrder.get(0))) {
-      throw new IAE("Segment sort order must begin with column [%s]", ColumnHolder.TIME_COLUMN_NAME);
-    }
-  }
 }

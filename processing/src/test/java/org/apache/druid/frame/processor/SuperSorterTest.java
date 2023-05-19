@@ -27,6 +27,7 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -36,10 +37,11 @@ import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.key.KeyTestUtils;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyReader;
-import org.apache.druid.frame.key.SortColumn;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
@@ -66,10 +68,10 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -110,7 +112,7 @@ public class SuperSorterTest
     }
 
     @Test
-    public void testSingleEmptyInputChannel() throws Exception
+    public void testSingleEmptyInputChannel_fileStorage() throws Exception
     {
       final BlockingQueueFrameChannel inputChannel = BlockingQueueFrameChannel.minimal();
       inputChannel.writable().close();
@@ -118,15 +120,15 @@ public class SuperSorterTest
       final SettableFuture<ClusterByPartitions> outputPartitionsFuture = SettableFuture.create();
       final SuperSorterProgressTracker superSorterProgressTracker = new SuperSorterProgressTracker();
 
+      final File tempFolder = temporaryFolder.newFolder();
       final SuperSorter superSorter = new SuperSorter(
           Collections.singletonList(inputChannel.readable()),
           FrameReader.create(RowSignature.empty()),
-          ClusterBy.none(),
+          Collections.emptyList(),
           outputPartitionsFuture,
           exec,
-          temporaryFolder.newFolder(),
-          new FileOutputChannelFactory(temporaryFolder.newFolder(), FRAME_SIZE),
-          () -> ArenaMemoryAllocator.createOnHeap(FRAME_SIZE),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
           2,
           2,
           -1,
@@ -161,6 +163,7 @@ public class SuperSorterTest
     private final int maxActiveProcessors;
     private final int maxChannelsPerProcessor;
     private final int numThreads;
+    private final boolean isComposedStorage;
 
     private StorageAdapter adapter;
     private RowSignature signature;
@@ -174,7 +177,8 @@ public class SuperSorterTest
         int numChannels,
         int maxActiveProcessors,
         int maxChannelsPerProcessor,
-        int numThreads
+        int numThreads,
+        boolean isComposedStorage
     )
     {
       this.maxRowsPerFrame = maxRowsPerFrame;
@@ -183,6 +187,7 @@ public class SuperSorterTest
       this.maxActiveProcessors = maxActiveProcessors;
       this.maxChannelsPerProcessor = maxChannelsPerProcessor;
       this.numThreads = numThreads;
+      this.isComposedStorage = isComposedStorage;
     }
 
     @Parameterized.Parameters(
@@ -191,7 +196,8 @@ public class SuperSorterTest
                + "numChannels = {2}, "
                + "maxActiveProcessors = {3}, "
                + "maxChannelsPerProcessor = {4}, "
-               + "numThreads = {5}"
+               + "numThreads = {5}, "
+               + "isComposedStorage = {6}"
     )
     public static Iterable<Object[]> constructorFeeder()
     {
@@ -203,17 +209,20 @@ public class SuperSorterTest
             for (int maxActiveProcessors : new int[]{1, 2, 4}) {
               for (int maxChannelsPerProcessor : new int[]{2, 3, 8}) {
                 for (int numThreads : new int[]{1, 3}) {
-                  if (maxActiveProcessors >= maxChannelsPerProcessor) {
-                    constructors.add(
-                        new Object[]{
-                            maxRowsPerFrame,
-                            maxBytesPerFrame,
-                            numChannels,
-                            maxActiveProcessors,
-                            maxChannelsPerProcessor,
-                            numThreads
-                        }
-                    );
+                  for (boolean isComposedStorage : new boolean[]{true, false}) {
+                    if (maxActiveProcessors >= maxChannelsPerProcessor) {
+                      constructors.add(
+                          new Object[]{
+                              maxRowsPerFrame,
+                              maxBytesPerFrame,
+                              numChannels,
+                              maxActiveProcessors,
+                              maxChannelsPerProcessor,
+                              numThreads,
+                              isComposedStorage
+                          }
+                      );
+                    }
                   }
                 }
               }
@@ -274,6 +283,14 @@ public class SuperSorterTest
         final ClusterByPartitions clusterByPartitions
     ) throws Exception
     {
+      final File tempFolder = temporaryFolder.newFolder();
+      final OutputChannelFactory outputChannelFactory = isComposedStorage ? new ComposingOutputChannelFactory(
+          ImmutableList.of(
+              new FileOutputChannelFactory(new File(tempFolder, "1"), maxBytesPerFrame, null),
+              new FileOutputChannelFactory(new File(tempFolder, "2"), maxBytesPerFrame, null)
+          ),
+          maxBytesPerFrame
+      ) : new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null);
       final RowKeyReader keyReader = clusterBy.keyReader(signature);
       final Comparator<RowKey> keyComparator = clusterBy.keyComparator();
       final SettableFuture<ClusterByPartitions> clusterByPartitionsFuture = SettableFuture.create();
@@ -282,12 +299,11 @@ public class SuperSorterTest
       final SuperSorter superSorter = new SuperSorter(
           inputChannels,
           frameReader,
-          clusterBy,
+          clusterBy.getColumns(),
           clusterByPartitionsFuture,
           exec,
-          temporaryFolder.newFolder(),
-          new FileOutputChannelFactory(temporaryFolder.newFolder(), maxBytesPerFrame),
-          () -> ArenaMemoryAllocator.createOnHeap(maxBytesPerFrame),
+          new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null),
+          outputChannelFactory,
           maxActiveProcessors,
           maxChannelsPerProcessor,
           -1,
@@ -380,8 +396,8 @@ public class SuperSorterTest
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
-              new SortColumn("qualityLong", false),
-              new SortColumn(FrameTestUtil.ROW_NUMBER_COLUMN, false)
+              new KeyColumn("qualityLong", KeyOrder.ASCENDING),
+              new KeyColumn(FrameTestUtil.ROW_NUMBER_COLUMN, KeyOrder.ASCENDING)
           ),
           0
       );
@@ -395,8 +411,8 @@ public class SuperSorterTest
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
-              new SortColumn("qualityLong", false),
-              new SortColumn(FrameTestUtil.ROW_NUMBER_COLUMN, false)
+              new KeyColumn("qualityLong", KeyOrder.ASCENDING),
+              new KeyColumn(FrameTestUtil.ROW_NUMBER_COLUMN, KeyOrder.ASCENDING)
           ),
           0
       );
@@ -442,8 +458,8 @@ public class SuperSorterTest
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
-              new SortColumn("quality", true),
-              new SortColumn(FrameTestUtil.ROW_NUMBER_COLUMN, false)
+              new KeyColumn("quality", KeyOrder.DESCENDING),
+              new KeyColumn(FrameTestUtil.ROW_NUMBER_COLUMN, KeyOrder.ASCENDING)
           ),
           0
       );
@@ -481,9 +497,9 @@ public class SuperSorterTest
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
-              new SortColumn(ColumnHolder.TIME_COLUMN_NAME, false),
-              new SortColumn("market", false),
-              new SortColumn(FrameTestUtil.ROW_NUMBER_COLUMN, false)
+              new KeyColumn(ColumnHolder.TIME_COLUMN_NAME, KeyOrder.ASCENDING),
+              new KeyColumn("market", KeyOrder.ASCENDING),
+              new KeyColumn(FrameTestUtil.ROW_NUMBER_COLUMN, KeyOrder.ASCENDING)
           ),
           0
       );
@@ -521,8 +537,8 @@ public class SuperSorterTest
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
-              new SortColumn("placementish", true),
-              new SortColumn(FrameTestUtil.ROW_NUMBER_COLUMN, false)
+              new KeyColumn("placementish", KeyOrder.DESCENDING),
+              new KeyColumn(FrameTestUtil.ROW_NUMBER_COLUMN, KeyOrder.ASCENDING)
           ),
           0
       );
@@ -560,8 +576,47 @@ public class SuperSorterTest
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
-              new SortColumn("qualityLong", true),
-              new SortColumn(FrameTestUtil.ROW_NUMBER_COLUMN, false)
+              new KeyColumn("qualityLong", KeyOrder.DESCENDING),
+              new KeyColumn(FrameTestUtil.ROW_NUMBER_COLUMN, KeyOrder.ASCENDING)
+          ),
+          0
+      );
+
+      setUpInputChannels(clusterBy);
+
+      final ClusterByPartitions partitions = new ClusterByPartitions(
+          ImmutableList.of(
+              new ClusterByPartition(
+                  createKey(clusterBy, 1800L, 8L),
+                  createKey(clusterBy, 1600L, 506L)
+              ),
+              new ClusterByPartition(
+                  createKey(clusterBy, 1600L, 506L),
+                  createKey(clusterBy, 1400L, 204L)
+              ),
+              new ClusterByPartition(
+                  createKey(clusterBy, 1400L, 204L),
+                  createKey(clusterBy, 1300L, 900L)
+              ),
+              new ClusterByPartition(
+                  createKey(clusterBy, 1300L, 900L),
+                  null
+              )
+          )
+      );
+
+      Assert.assertEquals(4, partitions.size());
+
+      verifySuperSorter(clusterBy, partitions);
+    }
+
+    @Test
+    public void test_clusterByQualityLongDescRowNumberAsc_fourPartitions_durableStorage() throws Exception
+    {
+      final ClusterBy clusterBy = new ClusterBy(
+          ImmutableList.of(
+              new KeyColumn("qualityLong", KeyOrder.DESCENDING),
+              new KeyColumn(FrameTestUtil.ROW_NUMBER_COLUMN, KeyOrder.ASCENDING)
           ),
           0
       );
@@ -614,7 +669,13 @@ public class SuperSorterTest
       final File file = new File(tmpDir, StringUtils.format("channel-%d", i));
       files.add(file);
       writableChannels.add(
-          new WritableFrameFileChannel(FrameFileWriter.open(Channels.newChannel(new FileOutputStream(file)), null))
+          new WritableFrameFileChannel(
+              FrameFileWriter.open(
+                  Channels.newChannel(Files.newOutputStream(file.toPath())),
+                  null,
+                  ByteTracker.unboundedTracker()
+              )
+          )
       );
     }
 
@@ -643,7 +704,7 @@ public class SuperSorterTest
     for (int i = 0; i < writableChannels.size(); i++) {
       WritableFrameChannel writableChannel = writableChannels.get(i);
       writableChannel.close();
-      retVal.add(new ReadableFileFrameChannel(FrameFile.open(files.get(i))));
+      retVal.add(new ReadableFileFrameChannel(FrameFile.open(files.get(i), null)));
     }
 
     return retVal;

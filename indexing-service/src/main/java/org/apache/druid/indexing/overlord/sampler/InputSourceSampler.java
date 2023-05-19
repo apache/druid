@@ -31,6 +31,7 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimedShutoffInputSourceReader;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -44,6 +45,8 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -232,9 +235,51 @@ public class InputSourceSampler
 
         int numRowsRead = responseRows.size();
 
+        List<DimensionSchema> logicalDimensionSchemas = new ArrayList<>();
+        List<DimensionSchema> physicalDimensionSchemas = new ArrayList<>();
+
+        RowSignature.Builder signatureBuilder = RowSignature.builder();
+        signatureBuilder.add(
+            ColumnHolder.TIME_COLUMN_NAME,
+            index.getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME).toColumnType()
+        );
+        for (IncrementalIndex.DimensionDesc dimensionDesc : index.getDimensions()) {
+          if (!SamplerInputRow.SAMPLER_ORDERING_COLUMN.equals(dimensionDesc.getName())) {
+            final ColumnType columnType = dimensionDesc.getCapabilities().toColumnType();
+            signatureBuilder.add(dimensionDesc.getName(), columnType);
+            // use explicitly specified dimension schema if it exists
+            if (dataSchema != null &&
+                dataSchema.getDimensionsSpec() != null &&
+                dataSchema.getDimensionsSpec().getSchema(dimensionDesc.getName()) != null) {
+              logicalDimensionSchemas.add(dataSchema.getDimensionsSpec().getSchema(dimensionDesc.getName()));
+            } else {
+              logicalDimensionSchemas.add(
+                  DimensionSchema.getDefaultSchemaForBuiltInType(
+                      dimensionDesc.getName(),
+                      dimensionDesc.getCapabilities()
+                  )
+              );
+            }
+            physicalDimensionSchemas.add(
+                dimensionDesc.getIndexer().getFormat().getColumnSchema(dimensionDesc.getName())
+            );
+          }
+        }
+        for (AggregatorFactory aggregatorFactory : index.getMetricAggs()) {
+          if (!SamplerInputRow.SAMPLER_ORDERING_COLUMN.equals(aggregatorFactory.getName())) {
+            signatureBuilder.add(
+                aggregatorFactory.getName(),
+                index.getColumnCapabilities(aggregatorFactory.getName()).toColumnType()
+            );
+          }
+        }
+
         return new SamplerResponse(
             numRowsRead,
             numRowsIndexed,
+            logicalDimensionSchemas,
+            physicalDimensionSchemas,
+            signatureBuilder.build(),
             responseRows.stream()
                         .filter(Objects::nonNull)
                         .filter(x -> x.getParsed() != null || x.isUnparseable() != null)

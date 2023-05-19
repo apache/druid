@@ -55,6 +55,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
@@ -109,6 +110,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestName;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -201,6 +203,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+  @Rule
+  public final TestName testName = new TestName();
+
   /**
    * Transient task failure rate emulated by the taskKiller in {@link SimpleThreadingTaskRunner}.
    * Per {@link SubTaskSpec}, there could be at most one task failure.
@@ -239,28 +244,14 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   public void setUpAbstractParallelIndexSupervisorTaskTest() throws IOException
   {
     localDeepStorage = temporaryFolder.newFolder("localStorage");
-    taskRunner = new SimpleThreadingTaskRunner();
+    taskRunner = new SimpleThreadingTaskRunner(testName.getMethodName());
     objectMapper = getObjectMapper();
     indexingServiceClient = new LocalOverlordClient(objectMapper, taskRunner);
-    intermediaryDataManager = new LocalIntermediaryDataManager(
-        new WorkerConfig(),
-        new TaskConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null,
-            ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)),
-            false,
-            false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null
-        ),
-        null
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)))
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
+    intermediaryDataManager = new LocalIntermediaryDataManager(new WorkerConfig(), taskConfig, null);
     remoteApiExecutor = Execs.singleThreaded("coordinator-api-executor");
     coordinatorClient = new LocalCoordinatorClient(remoteApiExecutor);
     prepareObjectMapper(objectMapper, getIndexIO());
@@ -357,15 +348,14 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   public class SimpleThreadingTaskRunner
   {
     private final ConcurrentMap<String, TaskContainer> tasks = new ConcurrentHashMap<>();
-    private final ListeningExecutorService service = MoreExecutors.listeningDecorator(
-        Execs.multiThreaded(5, "simple-threading-task-runner-%d")
-    );
+    private final ListeningExecutorService service;
 
     private final ScheduledExecutorService taskKiller = Execs.scheduledSingleThreaded("simple-threading-task-killer");
     private final Set<String> killedSubtaskSpecs = new HashSet<>();
 
-    SimpleThreadingTaskRunner()
+    SimpleThreadingTaskRunner(String threadNameBase)
     {
+      service = MoreExecutors.listeningDecorator(Execs.multiThreaded(5, threadNameBase + "-%d"));
       taskKiller.scheduleAtFixedRate(
           () -> {
             for (TaskContainer taskContainer : tasks.values()) {
@@ -644,21 +634,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   public void prepareObjectMapper(ObjectMapper objectMapper, IndexIO indexIO)
   {
-    final TaskConfig taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
 
     objectMapper.setInjectableValues(
         new InjectableValues.Std()
@@ -692,24 +670,11 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   protected TaskToolbox createTaskToolbox(Task task, TaskActionClient actionClient) throws IOException
   {
+    TaskConfig config = new TaskConfigBuilder()
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
     return new TaskToolbox.Builder()
-        .config(
-            new TaskConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                null,
-                null,
-                null,
-                false,
-                false,
-                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-                null
-            )
-        )
+        .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
         .taskActionClient(actionClient)
         .segmentPusher(
@@ -741,6 +706,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .coordinatorClient(coordinatorClient)
         .supervisorTaskClientProvider(new LocalParallelIndexTaskClientProvider(taskRunner, transientApiCallFailureRate))
         .shuffleClient(new LocalShuffleClient(intermediaryDataManager))
+        .taskLogPusher(null)
+        .attemptId("1")
         .build();
   }
 
@@ -823,6 +790,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     );
     Map<String, Object> emptyAverageMinuteMap = ImmutableMap.of(
         "processed", 0.0,
+        "processedBytes", 0.0,
         "unparseable", 0.0,
         "thrownAway", 0.0,
         "processedWithError", 0.0
@@ -888,8 +856,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     Map<String, Object> expectedPayload = (Map<String, Object>) expectedReports.get("payload");
     Map<String, Object> actualPayload = (Map<String, Object>) actualReports.get("payload");
     Assert.assertEquals(expectedPayload.get("ingestionState"), actualPayload.get("ingestionState"));
-    Assert.assertEquals(expectedPayload.get("rowStats"), actualPayload.get("rowStats"));
-    Assert.assertEquals(expectedPayload.get("ingestionState"), actualPayload.get("ingestionState"));
+
+    Map<String, Object> expectedTotals = (Map<String, Object>) expectedPayload.get("totals");
+    Map<String, Object> actualTotals = (Map<String, Object>) actualReports.get("totals");
+    Assert.assertEquals(expectedTotals, actualTotals);
 
     List<ParseExceptionReport> expectedParseExceptionReports =
         (List<ParseExceptionReport>) ((Map<String, Object>)

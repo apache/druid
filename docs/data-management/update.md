@@ -43,7 +43,7 @@ is ongoing for a particular time range of a datasource, new ingestions for that 
 other time ranges proceed as normal. Read-only queries also proceed as normal, using the pre-existing version of the
 data.
 
-Druid does not support single-record updates by primary key.
+> Druid does not support single-record updates by primary key.
 
 ## Reindex
 
@@ -52,7 +52,7 @@ is used to perform schema changes, repartition data, filter out unwanted data, e
 behaves just like any other [overwrite](#overwrite) with regard to atomic updates and locking.
 
 With [native batch](../ingestion/native-batch.md), use the [`druid` input
-source](../ingestion/native-batch-input-source.md#druid-input-source). If needed,
+source](../ingestion/input-sources.md#druid-input-source). If needed,
 [`transformSpec`](../ingestion/ingestion-spec.md#transformspec) can be used to filter or modify data during the
 reindexing job.
 

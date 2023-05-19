@@ -204,6 +204,7 @@ public class ArithmeticPostAggregator implements PostAggregator
       case MINUS:
       case DIV:
       case QUOTIENT:
+      case POW:
         return true;
       default:
         throw new IAE(op.fn);
@@ -245,6 +246,14 @@ public class ArithmeticPostAggregator implements PostAggregator
       public double compute(double lhs, double rhs)
       {
         return lhs / rhs;
+      }
+    },
+
+    POW("pow") {
+      @Override
+      public double compute(double lhs, double rhs)
+      {
+        return Math.pow(lhs, rhs);
       }
     };
 

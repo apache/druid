@@ -16,40 +16,39 @@
  * limitations under the License.
  */
 
-import { HTMLSelect, Menu, MenuItem, Position, Tree, TreeNodeInfo } from '@blueprintjs/core';
+import type { TreeNodeInfo } from '@blueprintjs/core';
+import { HTMLSelect, Menu, MenuItem, Position, Tree } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { SqlExpression } from 'druid-query-toolkit';
 import {
+  C,
+  F,
+  N,
+  SqlColumn,
   SqlComparison,
-  SqlExpression,
-  SqlFunction,
   SqlJoinPart,
   SqlQuery,
-  SqlRef,
-  SqlTableRef,
+  SqlTable,
+  T,
 } from 'druid-query-toolkit';
-import React, { ChangeEvent } from 'react';
+import type { ChangeEvent } from 'react';
+import React from 'react';
 
 import { Deferred, Loader } from '../../../components';
-import {
-  ColumnMetadata,
-  copyAndAlert,
-  dataTypeToIcon,
-  groupBy,
-  oneOf,
-  prettyPrintSql,
-} from '../../../utils';
+import type { ColumnMetadata } from '../../../utils';
+import { copyAndAlert, dataTypeToIcon, groupBy, oneOf, prettyPrintSql } from '../../../utils';
 
 import { NumberMenuItems, StringMenuItems, TimeMenuItems } from './column-tree-menu';
 
 import './column-tree.scss';
 
-const COUNT_STAR = SqlFunction.COUNT_STAR.as('Count');
+const COUNT_STAR = F.count().as('Count');
 
 function getCountExpression(columnNames: string[]): SqlExpression {
   for (const columnName of columnNames) {
     if (columnName === 'count' || columnName === '__count') {
-      return SqlFunction.simple('SUM', [SqlRef.column(columnName)]).as('Count');
+      return F.sum(C(columnName)).as('Count');
     }
   }
   return COUNT_STAR;
@@ -96,22 +95,22 @@ function handleColumnShow(options: HandleColumnClickOptions): void {
     where = parsedQuery.getWhereExpression();
     aggregates = parsedQuery.getAggregateSelectExpressions();
   } else if (columnSchema === 'druid') {
-    from = SqlTableRef.create(columnTable);
+    from = T(columnTable);
     where = defaultWhere;
   } else {
-    from = SqlTableRef.create(columnTable, columnSchema);
+    from = N(columnSchema).table(columnTable);
   }
 
   if (!aggregates.length) {
     aggregates.push(COUNT_STAR);
   }
 
-  const columnRef = SqlRef.column(columnName);
+  const column = C(columnName);
   let query: SqlQuery;
   if (columnSchema === 'druid' && columnType === 'TIMESTAMP') {
-    query = TIME_QUERY.fillPlaceholders([columnRef, from]) as SqlQuery;
+    query = TIME_QUERY.fillPlaceholders([column, from]) as SqlQuery;
   } else {
-    query = STRING_QUERY.fillPlaceholders([columnRef, from]) as SqlQuery;
+    query = STRING_QUERY.fillPlaceholders([column, from]) as SqlQuery;
   }
 
   let newSelectExpressions = query.selectExpressions;
@@ -152,11 +151,11 @@ export function getJoinColumns(parsedQuery: SqlQuery, _table: string) {
     const firstOnExpression = parsedQuery.fromClause.joinParts.first().onExpression;
     if (firstOnExpression instanceof SqlComparison && firstOnExpression.op === '=') {
       const { lhs, rhs } = firstOnExpression;
-      if (lhs instanceof SqlRef && lhs.getNamespace() === 'lookup') {
-        lookupColumn = lhs.getColumn();
+      if (lhs instanceof SqlColumn && lhs.getNamespaceName() === 'lookup') {
+        lookupColumn = lhs.getName();
       }
-      if (rhs instanceof SqlRef) {
-        originalTableColumn = rhs.getColumn();
+      if (rhs instanceof SqlColumn) {
+        originalTableColumn = rhs.getName();
       }
     }
   }
@@ -199,7 +198,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     <Deferred
                       content={() => {
                         const parsedQuery = props.getParsedQuery();
-                        const tableRef = SqlTableRef.create(tableName);
+                        const tableRef = T(tableName);
                         const prettyTableRef = prettyPrintSql(tableRef);
                         const countExpression = getCountExpression(
                           metadata.map(child => child.COLUMN_NAME),
@@ -207,7 +206,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
 
                         const getQueryOnTable = () => {
                           return SqlQuery.create(
-                            SqlTableRef.create(
+                            SqlTable.create(
                               tableName,
                               schemaName === 'druid' ? undefined : schemaName,
                             ),
@@ -235,7 +234,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                     .changeSelectExpressions(
                                       metadata
                                         .map(child => child.COLUMN_NAME)
-                                        .map(columnName => SqlRef.column(columnName)),
+                                        .map(columnName => C(columnName)),
                                     )
                                     .changeWhereExpression(getWhere()),
                                   true,
@@ -259,6 +258,22 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                 onQueryChange(
                                   getQueryOnTable()
                                     .changeSelect(0, countExpression)
+                                    .changeGroupByExpressions([])
+                                    .changeWhereExpression(getWhere(true)),
+                                  true,
+                                );
+                              }}
+                            />
+                            <MenuItem
+                              icon={IconNames.FULLSCREEN}
+                              text={`SELECT MIN(__time), MAX(__time) FROM ${tableName}`}
+                              onClick={() => {
+                                onQueryChange(
+                                  getQueryOnTable()
+                                    .changeSelectExpressions([
+                                      F.min(C('__time')).as('min_time'),
+                                      F.max(C('__time')).as('max_time'),
+                                    ])
                                     .changeGroupByExpressions([])
                                     .changeWhereExpression(getWhere(true)),
                                   true,
@@ -297,13 +312,16 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                         .addJoin(
                                           SqlJoinPart.create(
                                             'LEFT',
-                                            SqlTableRef.create(tableName, schemaName),
-                                            SqlRef.column(lookupColumn, tableName, 'lookup').equal(
-                                              SqlRef.column(
-                                                originalTableColumn,
-                                                parsedQuery.getFirstTableName(),
+                                            N(schemaName).table(tableName),
+                                            N('lookup')
+                                              .table(tableName)
+                                              .column(lookupColumn)
+                                              .equal(
+                                                SqlColumn.create(
+                                                  originalTableColumn,
+                                                  parsedQuery.getFirstTableName(),
+                                                ),
                                               ),
-                                            ),
                                           ),
                                         ),
                                       false,
@@ -322,13 +340,16 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                                       parsedQuery.addJoin(
                                         SqlJoinPart.create(
                                           'INNER',
-                                          SqlTableRef.create(tableName, schemaName),
-                                          SqlRef.column(lookupColumn, tableName, 'lookup').equal(
-                                            SqlRef.column(
-                                              originalTableColumn,
-                                              parsedQuery.getFirstTableName(),
+                                          N(schemaName).table(tableName),
+                                          N('lookup')
+                                            .table(tableName)
+                                            .column(lookupColumn)
+                                            .equal(
+                                              SqlColumn.create(
+                                                originalTableColumn,
+                                                parsedQuery.getFirstTableName(),
+                                              ),
                                             ),
-                                          ),
                                         ),
                                       ),
                                       false,

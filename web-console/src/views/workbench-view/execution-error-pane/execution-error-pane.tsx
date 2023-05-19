@@ -22,7 +22,7 @@ import React, { useState } from 'react';
 
 import { ClickToCopy, ExternalLink } from '../../../components';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
-import { Execution } from '../../../druid-models';
+import type { Execution } from '../../../druid-models';
 import { getLink } from '../../../links';
 import { downloadQueryDetailArchive } from '../../../utils';
 
@@ -46,7 +46,9 @@ export const ExecutionErrorPane = React.memo(function ExecutionErrorPane(
       <p className="error-message-text">
         {error.errorCode && (
           <>
-            <ExternalLink href={getLink('DOCS_MSQ_ERROR')}>{error.errorCode}</ExternalLink>
+            <ExternalLink href={`${getLink('DOCS_MSQ_ERROR')}#error_${error.errorCode}`}>
+              {error.errorCode}
+            </ExternalLink>
             {': '}
           </>
         )}

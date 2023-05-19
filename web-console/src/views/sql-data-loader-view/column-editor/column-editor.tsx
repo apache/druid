@@ -19,7 +19,8 @@
 import { Button, FormGroup, InputGroup, Intent, Menu, MenuItem, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
-import { QueryResult, SqlExpression, SqlFunction } from 'druid-query-toolkit';
+import type { QueryResult } from 'druid-query-toolkit';
+import { SqlExpression, SqlFunction } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
 import { AppToaster } from '../../../singletons';
@@ -41,23 +42,25 @@ function breakdownExpression(expression: SqlExpression): Breakdown {
   expression = expression.getUnderlyingExpression();
 
   let nativeType: string | undefined;
-  if (expression instanceof SqlFunction && expression.getEffectiveFunctionName() === 'CAST') {
-    const asType = String(expression.getArgAsString(1)).toUpperCase();
-    switch (asType) {
-      case 'VARCHAR':
-        nativeType = 'string';
-        expression = expression.getArg(0)!;
-        break;
+  if (expression instanceof SqlFunction) {
+    const asType = expression.getCastType();
+    if (asType) {
+      switch (asType.value.toUpperCase()) {
+        case 'VARCHAR':
+          nativeType = 'string';
+          expression = expression.getArg(0)!;
+          break;
 
-      case 'BIGINT':
-        nativeType = 'long';
-        expression = expression.getArg(0)!;
-        break;
+        case 'BIGINT':
+          nativeType = 'long';
+          expression = expression.getArg(0)!;
+          break;
 
-      case 'DOUBLE':
-        nativeType = 'double';
-        expression = expression.getArg(0)!;
-        break;
+        case 'DOUBLE':
+          nativeType = 'double';
+          expression = expression.getArg(0)!;
+          break;
+      }
     }
   }
 

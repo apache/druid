@@ -27,7 +27,7 @@ import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
-import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -81,9 +81,11 @@ public interface Controller
   // Worker-to-controller messages
 
   /**
-   * Provide a {@link ClusterByStatisticsSnapshot} for shuffling stages.
+   * Accepts a {@link PartialKeyStatisticsInformation} and updates the controller key statistics information. If all key
+   * statistics have been gathered, enqueues the task with the {@link WorkerSketchFetcher} to generate partiton boundaries.
+   * This is intended to be called by the {@link org.apache.druid.msq.indexing.ControllerChatHandler}.
    */
-  void updateStatus(int stageNumber, int workerNumber, Object keyStatisticsObject);
+  void updatePartialKeyStatisticsInformation(int stageNumber, int workerNumber, Object partialKeyStatisticsInformationObject);
 
   /**
    * System error reported by a subtask. Note that the errors are organized by
@@ -102,7 +104,7 @@ public interface Controller
   /**
    * Periodic update of {@link CounterSnapshots} from subtasks.
    */
-  void updateCounters(CounterSnapshotsTree snapshotsTree);
+  void updateCounters(String taskId, CounterSnapshotsTree snapshotsTree);
 
   /**
    * Reports that results are ready for a subtask.

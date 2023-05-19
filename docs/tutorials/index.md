@@ -1,6 +1,7 @@
 ---
 id: index
 title: "Quickstart (local)"
+sidebar_label: Quickstart (local)
 ---
 
 <!--
@@ -22,10 +23,9 @@ title: "Quickstart (local)"
   ~ under the License.
   -->
 
+This quickstart helps you install Apache Druid and introduces you to Druid ingestion and query features. For this tutorial, you need a machine with at least 6 GiB of RAM.
 
-This quickstart gets you started with Apache Druid using the [`micro-quickstart`](../operations/single-server.md#micro-quickstart-4-cpu-16gib-ram) configuration, and introduces you to Druid ingestion and query features.
-
-In this quickstart, you'll do the following:
+In this quickstart, you'll:
 - install Druid
 - start up Druid services
 - use SQL to ingest and query data
@@ -33,23 +33,19 @@ In this quickstart, you'll do the following:
 Druid supports a variety of ingestion options. Once you're done with this tutorial, refer to the
 [Ingestion](../ingestion/index.md) page to determine which ingestion method is right for you.
 
-## Requirements
+## Prerequisites
 
-You can follow these steps on a relatively modest machine, such as a workstation or virtual server with 16 GiB of RAM.
-
-Druid comes equipped with several [startup configuration profiles](../operations/single-server.md) for a
-range of machine sizes. These range from `nano` (1 CPU, 4GiB RAM) to `x-large` (64 CPU, 512GiB RAM). For more
-information, see [Single server deployment](../operations/single-server.md). For information on deploying Druid services
-across clustered machines, see [Clustered deployment](./cluster.md).
+You can follow these steps on a relatively modest machine, such as a workstation or virtual server with 6 GiB of RAM.
 
 The software requirements for the installation machine are:
 
-* Linux, Mac OS X, or other Unix-like OS. (Windows is not supported.)
-* Java 8u92+ or Java 11.
+* Linux, Mac OS X, or other Unix-like OS. (Windows is not supported)
+* [Java 8u92+ or Java 11](../operations/java.md)
+* Python 3 (preferred) or Python 2
+* Perl 5
 
-> Druid relies on the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME` to find Java on the machine. You can set
-`DRUID_JAVA_HOME` if there is more than one instance of Java. To verify Java requirements for your environment, run the 
-`bin/verify-java` script.
+Java must be available. Either it is on your path, or set one of the `JAVA_HOME` or `DRUID_JAVA_HOME` environment variables.
+You can run `apache-druid-{{DRUIDVERSION}}/bin/verify-java` to verify Java requirements for your environment.
 
 Before installing a production Druid instance, be sure to review the [security
 overview](../operations/security-overview.md). In general, avoid running Druid as root user. Consider creating a
@@ -58,8 +54,6 @@ dedicated user account for running Druid.
 ## Install Druid
 
 Download the [{{DRUIDVERSION}} release](https://www.apache.org/dyn/closer.cgi?path=/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz) from Apache Druid. 
-For this quickstart, you need Druid version 24.0 or higher.
-For versions earlier than 24.0 (0.23 and below), see [Load data with native batch ingestion](tutorial-batch-native.md).
 
 In your terminal, extract the file and change directories to the distribution directory:
 
@@ -72,42 +66,47 @@ The distribution directory contains `LICENSE` and `NOTICE` files and subdirector
 
 ## Start up Druid services
 
-Start up Druid services using the `micro-quickstart` single-machine configuration.
+Start up Druid services using the automatic single-machine configuration.
 This configuration includes default settings that are appropriate for this tutorial, such as loading the `druid-multi-stage-query` extension by default so that you can use the MSQ task engine.
 
-You can view that setting and others in the configuration files in the `conf/druid/single-server/micro-quickstart/`. 
+You can view the default settings in the configuration files located in `conf/druid/auto`.
 
 From the apache-druid-{{DRUIDVERSION}} package root, run the following command:
 
 ```bash
-./bin/start-micro-quickstart
+./bin/start-druid
 ```
 
-This brings up instances of ZooKeeper and the Druid services:
+This launches instances of ZooKeeper and the Druid services.
+For example:
 
 ```bash
-$ ./bin/start-micro-quickstart
-[Thu Sep  8 18:30:00 2022] Starting Apache Druid.
-[Thu Sep  8 18:30:00 2022] Open http://localhost:8888/ in your browser to access the web console.
-[Thu Sep  8 18:30:00 2022] Or, if you have enabled TLS, use https on port 9088.
-[Thu Sep  8 18:30:00 2022] Running command[zk], logging to[/apache-druid-{{DRUIDVERSION}}/var/sv/zk.log]: bin/run-zk conf
-[Thu Sep  8 18:30:00 2022] Running command[coordinator-overlord], logging to[/apache-druid-{{DRUIDVERSION}}/var/sv/coordinator-overlord.log]: bin/run-druid coordinator-overlord conf/druid/single-server/micro-quickstart
-[Thu Sep  8 18:30:00 2022] Running command[broker], logging to[/apache-druid-{{DRUIDVERSION}}/var/sv/broker.log]: bin/run-druid broker conf/druid/single-server/micro-quickstart
-[Thu Sep  8 18:30:00 2022] Running command[router], logging to[/apache-druid-{{DRUIDVERSION}}/var/sv/router.log]: bin/run-druid router conf/druid/single-server/micro-quickstart
-[Thu Sep  8 18:30:00 2022] Running command[historical], logging to[/apache-druid-{{DRUIDVERSION}}/var/sv/historical.log]: bin/run-druid historical conf/druid/single-server/micro-quickstart
-[Thu Sep  8 18:30:00 2022] Running command[middleManager], logging to[/apache-druid-{{DRUIDVERSION}}/var/sv/middleManager.log]: bin/run-druid middleManager conf/druid/single-server/micro-quickstart
+$ ./bin/start-druid
+[Tue Nov 29 16:31:06 2022] Starting Apache Druid.
+[Tue Nov 29 16:31:06 2022] Open http://localhost:8888/ in your browser to access the web console.
+[Tue Nov 29 16:31:06 2022] Or, if you have enabled TLS, use https on port 9088.
+[Tue Nov 29 16:31:06 2022] Starting services with log directory [/apache-druid-{{DRUIDVERSION}}/log].
+[Tue Nov 29 16:31:06 2022] Running command[zk]: bin/run-zk conf
+[Tue Nov 29 16:31:06 2022] Running command[broker]: bin/run-druid broker /apache-druid-{{DRUIDVERSION}}/conf/druid/single-server/quickstart '-Xms1187m -Xmx1187m -XX:MaxDirectMemorySize=791m'
+[Tue Nov 29 16:31:06 2022] Running command[router]: bin/run-druid router /apache-druid-{{DRUIDVERSION}}/conf/druid/single-server/quickstart '-Xms128m -Xmx128m'
+[Tue Nov 29 16:31:06 2022] Running command[coordinator-overlord]: bin/run-druid coordinator-overlord /apache-druid-{{DRUIDVERSION}}/conf/druid/single-server/quickstart '-Xms1290m -Xmx1290m'
+[Tue Nov 29 16:31:06 2022] Running command[historical]: bin/run-druid historical /apache-druid-{{DRUIDVERSION}}/conf/druid/single-server/quickstart '-Xms1376m -Xmx1376m -XX:MaxDirectMemorySize=2064m'
+[Tue Nov 29 16:31:06 2022] Running command[middleManager]: bin/run-druid middleManager /apache-druid-{{DRUIDVERSION}}/conf/druid/single-server/quickstart '-Xms64m -Xmx64m' '-Ddruid.worker.capacity=2 -Ddruid.indexer.runner.javaOptsArray=["-server","-Duser.timezone=UTC","-Dfile.encoding=UTF-8","-XX:+ExitOnOutOfMemoryError","-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager","-Xms256m","-Xmx256m","-XX:MaxDirectMemorySize=256m"]'
 ```
 
-All persistent state, such as the cluster metadata store and segments for the services, are kept in the `var` directory under 
-the Druid root directory, apache-druid-{{DRUIDVERSION}}. Each service writes to a log file under `var/sv`.
+Druid may use up to 80% of the total available system memory.
+To explicitly set the total memory available to Druid, pass a value for the memory parameter. For example, `./bin/start-druid -m 16g`. 
+
+Druid stores all persistent state data, such as the cluster metadata store and data segments, in `apache-druid-{{DRUIDVERSION}}/var`.
+Each service writes to a log file under `apache-druid-{{DRUIDVERSION}}/log`.
 
 At any time, you can revert Druid to its original, post-installation state by deleting the entire `var` directory. You may want to do this, for example, between Druid tutorials or after experimentation, to start with a fresh instance. 
 
-To stop Druid at any time, use CTRL+C in the terminal. This exits the `bin/start-micro-quickstart` script and terminates all Druid processes.
+To stop Druid at any time, use CTRL+C in the terminal. This exits the `bin/start-druid` script and terminates all Druid processes.
 
 ## Open the web console 
 
-After the Druid services finish startup, open the [web console](../operations/web-console.md) at [http://localhost:8888](http://localhost:8888). 
+After starting the Druid services, open the [web console](../operations/web-console.md) at [http://localhost:8888](http://localhost:8888). 
 
 ![web console](../assets/tutorial-quickstart-01.png "web console")
 
@@ -220,6 +219,6 @@ See the following topics for more information:
 * [Tutorial: Load files using SQL](./tutorial-msq-extern.md) to learn how to generate a SQL query that loads external data into a Druid datasource.
 * [Tutorial: Load data with native batch ingestion](tutorial-batch-native.md) to load and query data with Druid's native batch ingestion feature.
 * [Tutorial: Load stream data from Apache Kafka](./tutorial-kafka.md) to load streaming data from a Kafka topic.
-* [Extensions](../development/extensions.md) for details on Druid extensions.
+* [Extensions](../configuration/extensions.md) for details on Druid extensions.
 
-Remember that after stopping Druid services, you can start clean next time by deleting the `var` directory from the Druid root directory and running the `bin/start-micro-quickstart` script again. You may want to do this before using other data ingestion tutorials, since they use the same Wikipedia datasource.
+Remember that after stopping Druid services, you can start clean next time by deleting the `var` directory from the Druid root directory and running the `bin/start-druid` script again. You may want to do this before using other data ingestion tutorials, since they use the same Wikipedia datasource.

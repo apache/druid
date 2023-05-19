@@ -46,6 +46,9 @@ public class MSQStatusReport
 
   private final long durationMs;
 
+  private final int pendingTasks;
+
+  private final int runningTasks;
 
   @JsonCreator
   public MSQStatusReport(
@@ -53,7 +56,9 @@ public class MSQStatusReport
       @JsonProperty("errorReport") @Nullable MSQErrorReport errorReport,
       @JsonProperty("warnings") Collection<MSQErrorReport> warningReports,
       @JsonProperty("startTime") @Nullable DateTime startTime,
-      @JsonProperty("durationMs") long durationMs
+      @JsonProperty("durationMs") long durationMs,
+      @JsonProperty("pendingTasks") int pendingTasks,
+      @JsonProperty("runningTasks") int runningTasks
   )
   {
     this.status = Preconditions.checkNotNull(status, "status");
@@ -61,6 +66,8 @@ public class MSQStatusReport
     this.warningReports = warningReports != null ? warningReports : Collections.emptyList();
     this.startTime = startTime;
     this.durationMs = durationMs;
+    this.pendingTasks = pendingTasks;
+    this.runningTasks = runningTasks;
   }
 
   @JsonProperty
@@ -90,6 +97,18 @@ public class MSQStatusReport
   public DateTime getStartTime()
   {
     return startTime;
+  }
+
+  @JsonProperty
+  public int getPendingTasks()
+  {
+    return pendingTasks;
+  }
+
+  @JsonProperty
+  public int getRunningTasks()
+  {
+    return runningTasks;
   }
 
   @JsonProperty

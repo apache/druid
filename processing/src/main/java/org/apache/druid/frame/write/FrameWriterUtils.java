@@ -23,7 +23,7 @@ import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.field.FieldReaders;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -181,23 +181,23 @@ public class FrameWriterUtils
    * @throws IllegalArgumentException if there is a problem
    */
   public static void verifySortColumns(
-      final List<SortColumn> sortColumns,
+      final List<KeyColumn> keyColumns,
       final RowSignature signature
   )
   {
-    if (!areSortColumnsPrefixOfSignature(sortColumns, signature)) {
+    if (!areKeyColumnsPrefixOfSignature(keyColumns, signature)) {
       throw new IAE(
           "Sort column [%s] must be a prefix of the signature",
-          sortColumns.stream().map(SortColumn::columnName).collect(Collectors.joining(", "))
+          keyColumns.stream().map(KeyColumn::columnName).collect(Collectors.joining(", "))
       );
     }
 
     // Verify that all sort columns are comparable.
-    for (final SortColumn sortColumn : sortColumns) {
-      final ColumnType columnType = signature.getColumnType(sortColumn.columnName()).orElse(null);
+    for (final KeyColumn keyColumn : keyColumns) {
+      final ColumnType columnType = signature.getColumnType(keyColumn.columnName()).orElse(null);
 
-      if (columnType == null || !FieldReaders.create(sortColumn.columnName(), columnType).isComparable()) {
-        throw new IAE("Sort column [%s] is not comparable (type = %s)", sortColumn.columnName(), columnType);
+      if (columnType == null || !FieldReaders.create(keyColumn.columnName(), columnType).isComparable()) {
+        throw new IAE("Sort column [%s] is not comparable (type = %s)", keyColumn.columnName(), columnType);
       }
     }
   }
@@ -205,7 +205,7 @@ public class FrameWriterUtils
   /**
    * Copies "len" bytes from {@code src.position()} to "dstPosition" in "memory". Does not update the position of src.
    *
-   * @throws InvalidNullByteException "allowNullBytes" is true and a null byte is encountered
+   * @throws InvalidNullByteException if "allowNullBytes" is false and a null byte is encountered
    */
   public static void copyByteBufferToMemory(
       final ByteBuffer src,
@@ -272,19 +272,19 @@ public class FrameWriterUtils
   }
 
   /**
-   * Returns whether the provided sortColumns are all a prefix of the signature.
+   * Returns whether the provided key columns are all a prefix of the signature.
    */
-  private static boolean areSortColumnsPrefixOfSignature(
-      final List<SortColumn> sortColumns,
+  private static boolean areKeyColumnsPrefixOfSignature(
+      final List<KeyColumn> keyColumns,
       final RowSignature signature
   )
   {
-    if (sortColumns.size() > signature.size()) {
+    if (keyColumns.size() > signature.size()) {
       return false;
     }
 
-    for (int i = 0; i < sortColumns.size(); i++) {
-      if (!sortColumns.get(i).columnName().equals(signature.getColumnName(i))) {
+    for (int i = 0; i < keyColumns.size(); i++) {
+      if (!keyColumns.get(i).columnName().equals(signature.getColumnName(i))) {
         return false;
       }
     }

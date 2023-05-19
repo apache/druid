@@ -39,7 +39,7 @@ Druid uses the following resource types:
 * STATE &ndash; Cluster-wide state resources.
 * SYSTEM_TABLE &ndash; when the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true, then Druid uses this resource type to authorize the system tables in the `sys` schema in SQL.
 
-For specific resources associated with the resource types, see [Defining permissions](#defining-permissions) and the corresponding endpoint descriptions in [API reference](./api-reference.md).
+For specific resources associated with the resource types, see [Defining permissions](#defining-permissions) and the corresponding endpoint descriptions in [API reference](../api-reference/api-reference.md).
 
 ### Actions
 
@@ -141,7 +141,7 @@ There is only one possible resource name for the "STATE" config resource type, "
 Resource names for this type are system schema table names in the `sys` schema in SQL, for example `sys.segments` and `sys.server_segments`. Druid only enforces authorization for `SYSTEM_TABLE` resources when the Broker property `druid.sql.planner.authorizeSystemTablesDirectly` is true.
 ### HTTP methods
 
-For information on what HTTP methods are supported on a particular request endpoint, refer to [API reference](./api-reference.md).
+For information on what HTTP methods are supported on a particular request endpoint, refer to [API reference](../api-reference/api-reference.md).
 
 `GET` requests require READ permissions, while `POST` and `DELETE` requests require WRITE permissions.
 

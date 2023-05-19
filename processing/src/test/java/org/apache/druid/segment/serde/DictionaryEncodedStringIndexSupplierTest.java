@@ -44,7 +44,7 @@ import java.util.TreeSet;
 
 public class DictionaryEncodedStringIndexSupplierTest extends InitializedNullHandlingTest
 {
-  BitmapSerdeFactory roaringFactory = new RoaringBitmapSerdeFactory(null);
+  BitmapSerdeFactory roaringFactory = RoaringBitmapSerdeFactory.getInstance();
   BitmapResultFactory<ImmutableBitmap> bitmapResultFactory = new DefaultBitmapResultFactory(
       roaringFactory.getBitmapFactory()
   );
@@ -115,7 +115,7 @@ public class DictionaryEncodedStringIndexSupplierTest extends InitializedNullHan
     GenericIndexedWriter<ByteBuffer> byteBufferWriter = new GenericIndexedWriter<>(
         new OnHeapMemorySegmentWriteOutMedium(),
         "byteBuffers",
-        GenericIndexed.BYTE_BUFFER_STRATEGY
+        GenericIndexed.UTF8_STRATEGY
     );
 
     stringWriter.open();
@@ -167,7 +167,7 @@ public class DictionaryEncodedStringIndexSupplierTest extends InitializedNullHan
     return new DictionaryEncodedStringIndexSupplier(
         roaringFactory.getBitmapFactory(),
         GenericIndexed.read(stringBuffer, GenericIndexed.STRING_STRATEGY),
-        GenericIndexed.read(byteBuffer, GenericIndexed.BYTE_BUFFER_STRATEGY),
+        GenericIndexed.read(byteBuffer, GenericIndexed.UTF8_STRATEGY),
         bitmaps,
         null
     );

@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import { Icon, IconName } from '@blueprintjs/core';
+import type { IconName } from '@blueprintjs/core';
+import { Icon } from '@blueprintjs/core';
 import classNames from 'classnames';
 import React from 'react';
 
@@ -26,10 +27,17 @@ export interface ActionIconProps {
   className?: string;
   icon: IconName;
   onClick?: () => void;
+  disabled?: boolean;
 }
 
 export const ActionIcon = React.memo(function ActionIcon(props: ActionIconProps) {
-  const { className, icon, onClick } = props;
+  const { className, icon, onClick, disabled } = props;
 
-  return <Icon className={classNames('action-icon', className)} icon={icon} onClick={onClick} />;
+  return (
+    <Icon
+      className={classNames('action-icon', className, { disabled })}
+      icon={icon}
+      onClick={onClick}
+    />
+  );
 });

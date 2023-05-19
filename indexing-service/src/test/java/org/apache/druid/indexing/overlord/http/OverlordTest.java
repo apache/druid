@@ -40,6 +40,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TimeChunkLock;
+import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -60,7 +61,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
-import org.apache.druid.indexing.overlord.helpers.OverlordHelperManager;
+import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.Intervals;
@@ -190,8 +191,24 @@ public class OverlordTest
     taskCompletionCountDownLatches.put(badTaskId, new CountDownLatch(1));
     taskCompletionCountDownLatches.put(goodTaskId, new CountDownLatch(1));
 
-    TaskRunnerFactory taskRunnerFactory = (TaskRunnerFactory<MockTaskRunner>) () ->
-        new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches);
+    TaskRunnerFactory<MockTaskRunner> taskRunnerFactory = new TaskRunnerFactory<MockTaskRunner>()
+    {
+      private MockTaskRunner runner;
+
+      @Override
+      public MockTaskRunner build()
+      {
+        runner = new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches);
+        return runner;
+      }
+
+      @Override
+      public MockTaskRunner get()
+      {
+        return runner;
+      }
+    };
+
 
     taskRunnerFactory.build().run(badTask);
     taskRunnerFactory.build().run(goodTask);
@@ -209,8 +226,9 @@ public class OverlordTest
         new CoordinatorOverlordServiceConfig(null, null),
         serviceEmitter,
         supervisorManager,
-        EasyMock.createNiceMock(OverlordHelperManager.class),
-        new TestDruidLeaderSelector()
+        EasyMock.createNiceMock(OverlordDutyExecutor.class),
+        new TestDruidLeaderSelector(),
+        EasyMock.createNiceMock(SegmentAllocationQueue.class)
     );
     EmittingLogger.registerEmitter(serviceEmitter);
   }
@@ -240,7 +258,8 @@ public class OverlordTest
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         workerTaskRunnerQueryAdapter,
-        null
+        null,
+        new AuthConfig()
     );
     Response response = overlordResource.getLeader();
     Assert.assertEquals(druidNode.getHostAndPort(), response.getEntity());

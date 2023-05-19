@@ -115,8 +115,7 @@ will not detect this automatically.
 
 Dynamic Configuration
 ---------------------
-> Dynamic lookup configuration is an [experimental](../development/experimental.md) feature. Static
-> configuration is no longer supported.
+
 The following documents the behavior of the cluster-wide config which is accessible through the Coordinator.
 The configuration is propagated through the concept of "tier" of servers.
 A "tier" is defined as a group of services which should receive a set of lookups.

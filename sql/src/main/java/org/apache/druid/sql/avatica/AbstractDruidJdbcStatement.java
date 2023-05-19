@@ -27,6 +27,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
@@ -56,16 +57,19 @@ public abstract class AbstractDruidJdbcStatement implements Closeable
 
   protected final String connectionId;
   protected final int statementId;
+  protected final ResultFetcherFactory fetcherFactory;
   protected Throwable throwable;
   protected DruidJdbcResultSet resultSet;
 
   public AbstractDruidJdbcStatement(
       final String connectionId,
-      final int statementId
+      final int statementId,
+      final ResultFetcherFactory fetcherFactory
   )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId, "connectionId");
     this.statementId = statementId;
+    this.fetcherFactory = fetcherFactory;
   }
 
   protected static Meta.Signature createSignature(

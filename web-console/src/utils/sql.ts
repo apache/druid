@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
-import { SqlExpression, SqlFunction, SqlLiteral, SqlRef, SqlStar } from 'druid-query-toolkit';
+import { SqlColumn, SqlExpression, SqlFunction, SqlLiteral, SqlStar } from 'druid-query-toolkit';
 
 export function timeFormatToSql(timeFormat: string): SqlExpression | undefined {
   switch (timeFormat) {
     case 'auto':
+      return SqlExpression.parse('TIME_PARSE(TRIM(?))');
+
     case 'iso':
       return SqlExpression.parse('TIME_PARSE(?)');
 
@@ -54,7 +56,7 @@ export function convertToGroupByExpression(ex: SqlExpression): SqlExpression | u
   if (interestingArgs.length !== 1) return;
 
   const newEx = interestingArgs[0];
-  if (newEx instanceof SqlRef) return newEx;
+  if (newEx instanceof SqlColumn) return newEx;
 
   return newEx.as((ex.getOutputName() || 'grouped').replace(/^[a-z]+_/i, ''));
 }

@@ -37,12 +37,12 @@ import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.sql.SqlTaskStatus;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
 import org.apache.druid.testing.clients.msq.MsqOverlordResourceTestClient;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.testng.Assert;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -95,7 +95,15 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
    */
   public SqlTaskStatus submitMsqTask(String sqlQueryString) throws ExecutionException, InterruptedException
   {
-    return submitMsqTask(new SqlQuery(sqlQueryString, null, false, false, false, ImmutableMap.of(), null));
+    return submitMsqTask(sqlQueryString, ImmutableMap.of());
+  }
+
+  /**
+   * Submits a task to the MSQ API with the given query string, and default headers and custom context parameters
+   */
+  public SqlTaskStatus submitMsqTask(String sqlQueryString, Map<String, Object> context) throws ExecutionException, InterruptedException
+  {
+    return submitMsqTask(new SqlQuery(sqlQueryString, null, false, false, false, context, null));
   }
 
   // Run the task, wait for it to complete, fetch the reports, verify the results,
@@ -154,8 +162,14 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
           throw new TaskStillRunningException();
         },
         (Throwable t) -> t instanceof TaskStillRunningException,
+        99,
         100
     );
+  }
+
+  public void pollTaskIdForSuccess(String taskId) throws Exception
+  {
+    Assert.assertEquals(pollTaskIdForCompletion(taskId), TaskState.SUCCESS);
   }
 
   /**
@@ -188,13 +202,13 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     List<Map<String, Object>> actualResults = new ArrayList<>();
 
     Yielder<Object[]> yielder = resultsReport.getResultYielder();
-    RowSignature rowSignature = resultsReport.getSignature();
+    List<MSQResultsReport.ColumnAndType> rowSignature = resultsReport.getSignature();
 
     while (!yielder.isDone()) {
       Object[] row = yielder.get();
       Map<String, Object> rowWithFieldNames = new LinkedHashMap<>();
       for (int i = 0; i < row.length; ++i) {
-        rowWithFieldNames.put(rowSignature.getColumnName(i), row[i]);
+        rowWithFieldNames.put(rowSignature.get(i).getName(), row[i]);
       }
       actualResults.add(rowWithFieldNames);
       yielder = yielder.next(null);
@@ -245,9 +259,28 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
         );
       }
       String taskId = sqlTaskStatus.getTaskId();
-      pollTaskIdForCompletion(taskId);
+      pollTaskIdForSuccess(taskId);
       compareResults(taskId, queryWithResults);
     }
+  }
+
+  /**
+   * Submits a {@link SqlQuery} to the MSQ API for execution. This method waits for the created task to be completed.
+   */
+  public void submitMsqTaskAndWaitForCompletion(String sqlQueryString, Map<String, Object> context)
+      throws Exception
+  {
+    SqlTaskStatus sqlTaskStatus = submitMsqTask(sqlQueryString, context);
+
+    LOG.info("Sql Task submitted with task Id - %s", sqlTaskStatus.getTaskId());
+
+    if (sqlTaskStatus.getState().isFailure()) {
+      Assert.fail(StringUtils.format(
+          "Unable to start the task successfully.\nPossible exception: %s",
+          sqlTaskStatus.getError()
+      ));
+    }
+    pollTaskIdForCompletion(sqlTaskStatus.getTaskId());
   }
 
   private static class TaskStillRunningException extends Exception

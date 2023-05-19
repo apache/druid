@@ -22,7 +22,7 @@ title: "Globally Cached Lookups"
   ~ under the License.
   -->
 
-To use this Apache Druid extension, [include](../extensions.md#loading-extensions) `druid-lookups-cached-global` in the extensions load list.
+To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-lookups-cached-global` in the extensions load list.
 
 ## Configuration
 > Static configuration is no longer supported. Lookups can be configured through
@@ -168,7 +168,7 @@ It's highly recommended that `druid.lookup.namespace.numBufferedEntries` is set 
 
 ## Supported lookups
 
-For additional lookups, please see our [extensions list](../extensions.md).
+For additional lookups, please see our [extensions list](../../configuration/extensions.md).
 
 ### URI lookup
 

@@ -26,6 +26,7 @@ import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.DruidLeaderSelector.Listener;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.Task;
@@ -33,7 +34,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
-import org.apache.druid.indexing.overlord.helpers.OverlordHelperManager;
+import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -90,8 +91,9 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
       final ServiceEmitter emitter,
       final SupervisorManager supervisorManager,
-      final OverlordHelperManager overlordHelperManager,
-      @IndexingService final DruidLeaderSelector overlordLeaderSelector
+      final OverlordDutyExecutor overlordDutyExecutor,
+      @IndexingService final DruidLeaderSelector overlordLeaderSelector,
+      final SegmentAllocationQueue segmentAllocationQueue
   )
   {
     this.supervisorManager = supervisorManager;
@@ -135,7 +137,23 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
           leaderLifecycle.addManagedInstance(taskRunner);
           leaderLifecycle.addManagedInstance(taskQueue);
           leaderLifecycle.addManagedInstance(supervisorManager);
-          leaderLifecycle.addManagedInstance(overlordHelperManager);
+          leaderLifecycle.addManagedInstance(overlordDutyExecutor);
+          leaderLifecycle.addHandler(
+              new Lifecycle.Handler()
+              {
+                @Override
+                public void start()
+                {
+                  segmentAllocationQueue.becomeLeader();
+                }
+
+                @Override
+                public void stop()
+                {
+                  segmentAllocationQueue.stopBeingLeader();
+                }
+              }
+          );
 
           leaderLifecycle.addHandler(
               new Lifecycle.Handler()

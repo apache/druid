@@ -31,12 +31,12 @@ import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.CPUTimeMetricQueryRunner;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
@@ -59,7 +59,6 @@ import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
@@ -148,11 +147,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
     // We only handle one particular dataSource. Make sure that's what we have, then ignore from here on out.
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    final DataSource dataSourceFromQuery = query.getDataSource();
+    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
 
     // Sanity check: make sure the query is based on the table we're meant to handle.
     if (!analysis.getBaseTableDataSource().filter(ds -> dataSource.equals(ds.getName())).isPresent()) {
-      throw new ISE("Cannot handle datasource: %s", analysis.getDataSource());
+      throw new ISE("Cannot handle datasource: %s", dataSourceFromQuery);
     }
 
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
@@ -165,22 +165,20 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
     // Make sure this query type can handle the subquery, if present.
-    if (analysis.isQuery() && !toolChest.canPerformSubquery(((QueryDataSource) analysis.getDataSource()).getQuery())) {
-      throw new ISE("Cannot handle subquery: %s", analysis.getDataSource());
+    if ((dataSourceFromQuery instanceof QueryDataSource) && !toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery())) {
+      throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
     }
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
-        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
-        analysis.getPreJoinableClauses(),
-        cpuTimeAccumulator,
-        analysis.getBaseQuery().orElse(query)
-    );
+    final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery
+                                                                        .createSegmentMapFunction(
+                                                                            query,
+                                                                            cpuTimeAccumulator
+                                                                        );
+
 
     // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
-    final Optional<byte[]> cacheKeyPrefix = analysis.isJoin()
-                                            ? joinableFactoryWrapper.computeJoinDataSourceCacheKey(analysis)
-                                            : Optional.of(StringUtils.EMPTY_BYTES);
+    final Optional<byte[]> cacheKeyPrefix = Optional.ofNullable(query.getDataSource().getCacheKey());
 
     Iterable<QueryRunner<T>> perSegmentRunners = Iterables.transform(
         specs,

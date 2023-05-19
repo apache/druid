@@ -18,25 +18,18 @@
 
 import { Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import {
-  Column,
-  SqlComparison,
-  SqlExpression,
-  SqlLiteral,
-  SqlQuery,
-  SqlRecord,
-  SqlRef,
-  trimString,
-} from 'druid-query-toolkit';
+import type { Column, SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import { C, L, SqlComparison, SqlLiteral, SqlRecord, trimString } from 'druid-query-toolkit';
 import React from 'react';
 
-import { copyAndAlert, prettyPrintSql, QueryAction, stringifyValue } from '../../utils';
+import type { QueryAction } from '../../utils';
+import { copyAndAlert, prettyPrintSql, stringifyValue } from '../../utils';
 
 function sqlLiteralForColumnValue(column: Column, value: unknown): SqlLiteral | undefined {
   if (column.sqlType === 'TIMESTAMP') {
     const asDate = new Date(value as any);
     if (!isNaN(asDate.valueOf())) {
-      return SqlLiteral.create(asDate);
+      return L(asDate);
     }
   }
 
@@ -112,14 +105,14 @@ export function CellFilterMenu(props: CellFilterMenuProps) {
     let ex: SqlExpression | undefined;
     let having = false;
     if (query.hasStarInSelect()) {
-      ex = SqlRef.column(column.name);
+      ex = C(column.name);
     } else {
       const selectValue = query.getSelectExpressionForIndex(headerIndex);
       if (selectValue) {
         const outputName = selectValue.getOutputName();
         having = query.isAggregateSelectIndex(headerIndex);
         if (having && outputName) {
-          ex = SqlRef.column(outputName);
+          ex = C(outputName);
         } else {
           ex = selectValue.getUnderlyingExpression();
         }
@@ -133,11 +126,11 @@ export function CellFilterMenu(props: CellFilterMenuProps) {
           icon={IconNames.FILTER}
           text={`${having ? 'Having' : 'Filter on'}: ${prettyPrintSql(clause)}`}
           onClick={() => {
-            const column = clause.getUsedColumns()[0];
+            const columnName = clause.getUsedColumnNames()[0];
             onQueryAction(
               having
-                ? q => q.removeFromHaving(column).addHaving(clause)
-                : q => q.removeColumnFromWhere(column).addWhere(clause),
+                ? q => q.removeFromHaving(columnName).addHaving(clause)
+                : q => q.removeColumnFromWhere(columnName).addWhere(clause),
             );
           }}
         />
@@ -151,7 +144,7 @@ export function CellFilterMenu(props: CellFilterMenuProps) {
     const currentClauses =
       currentFilterExpression
         ?.decomposeViaAnd()
-        ?.filter(ex => String(ex.getUsedColumns()) === column.name) || [];
+        ?.filter(ex => String(ex.getUsedColumnNames()) === column.name) || [];
 
     const updatedClause =
       currentClauses.length === 1 && val ? addToClause(currentClauses[0], val) : undefined;
@@ -160,7 +153,7 @@ export function CellFilterMenu(props: CellFilterMenuProps) {
     const jsonColumn = column.nativeType === 'COMPLEX<json>';
     return (
       <Menu>
-        {ex?.getFirstColumn() && val && !jsonColumn && (
+        {ex?.getFirstColumnName() && val && !jsonColumn && (
           <>
             {updatedClause && filterOnMenuItem(updatedClause)}
             {filterOnMenuItem(ex.equal(val))}
@@ -177,7 +170,7 @@ export function CellFilterMenu(props: CellFilterMenuProps) {
       </Menu>
     );
   } else {
-    const ref = SqlRef.column(column.name);
+    const ref = C(column.name);
     const stringValue = stringifyValue(value);
     const trimmedValue = trimString(stringValue, 50);
     return (

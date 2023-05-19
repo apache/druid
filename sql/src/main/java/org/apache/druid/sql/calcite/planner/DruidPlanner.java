@@ -94,6 +94,7 @@ public class DruidPlanner implements Closeable
   private final CalcitePlanner planner;
   private final PlannerContext plannerContext;
   private final SqlEngine engine;
+  private final PlannerHook hook;
   private State state = State.START;
   private SqlStatementHandler handler;
   private boolean authorized;
@@ -101,13 +102,15 @@ public class DruidPlanner implements Closeable
   DruidPlanner(
       final FrameworkConfig frameworkConfig,
       final PlannerContext plannerContext,
-      final SqlEngine engine
+      final SqlEngine engine,
+      final PlannerHook hook
   )
   {
     this.frameworkConfig = frameworkConfig;
     this.planner = new CalcitePlanner(frameworkConfig);
     this.plannerContext = plannerContext;
     this.engine = engine;
+    this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
   }
 
   /**
@@ -124,12 +127,15 @@ public class DruidPlanner implements Closeable
     engine.validateContext(plannerContext.queryContextMap());
 
     // Parse the query string.
-    SqlNode root = planner.parse(plannerContext.getSql());
+    String sql = plannerContext.getSql();
+    hook.captureSql(sql);
+    SqlNode root = planner.parse(sql);
     handler = createHandler(root);
 
     try {
       handler.validate();
       plannerContext.setResourceActions(handler.resourceActions());
+      plannerContext.setExplainAttributes(handler.explainAttributes());
     }
     catch (RuntimeException e) {
       throw new ValidationException(e);
@@ -161,7 +167,6 @@ public class DruidPlanner implements Closeable
     }
     throw new ValidationException(StringUtils.format("Cannot execute [%s].", node.getKind()));
   }
-
 
   /**
    * Prepare a SQL query for execution, including some initial parsing and
@@ -294,6 +299,12 @@ public class DruidPlanner implements Closeable
     public DateTimeZone timeZone()
     {
       return plannerContext.getTimeZone();
+    }
+
+    @Override
+    public PlannerHook hook()
+    {
+      return hook;
     }
   }
 }

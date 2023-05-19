@@ -35,6 +35,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -48,6 +49,7 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement.ResultSet;
 import org.apache.druid.sql.SqlPlanningException.PlanningError;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -144,6 +146,7 @@ public class SqlStatementTest
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
 
     testRequestLogger = new TestRequestLogger();
+    final JoinableFactoryWrapper joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
@@ -153,7 +156,10 @@ public class SqlStatementTest
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of()),
+        joinableFactoryWrapper,
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
 
     this.sqlStatementFactory = new SqlStatementFactory(
@@ -163,7 +169,6 @@ public class SqlStatementTest
             new NoopServiceEmitter(),
             testRequestLogger,
             QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-            new AuthConfig(),
             defaultQueryConfig,
             new SqlLifecycleManager()
         )

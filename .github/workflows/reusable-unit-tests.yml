@@ -1,0 +1,103 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License
+
+name: Revised Unit Tests shared workflow
+on:
+  workflow_call:
+    inputs:
+      jdk:
+        required: true
+        type: string
+        description: 'JDK version used to test Druid'
+      sql_compatibility:
+        required: false
+        type: boolean
+        default: true
+        description: 'For SQL compatibility'
+      module:
+        required: true
+        type: string
+        description: 'Name of group of tests that are running'
+      maven_projects:
+        required: true
+        type: string
+        description: 'Name of group of tests running (to display)'
+
+env:
+  MVN: mvn -B
+  MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
+  MAVEN_SKIP_TESTS: -P skip-tests
+  MAVEN_OPTS: -Xmx3500m
+  FORCE_COLOR: 2
+  SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
+
+jobs:
+  unit-tests:
+    name: ${{ inputs.module }} modules test
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout branch
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup jdk${{ inputs.jdk }}
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_${{ inputs.jdk }}_X64" >> $GITHUB_ENV
+
+      - name: Restore Maven repository
+        id: maven-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ inputs.jdk }}-${{ github.sha }}
+
+      - name: setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.17.0
+
+      - name: setup variables
+        run: |
+          export base_ref=${{ github.base_ref }}
+          echo "GITHUB_BASE_REF=${base_ref}" >> $GITHUB_ENV
+          # If sql_compatibilty is true, we want to set default_value_for_null
+          # which enables compatibility mode
+          if (${{ inputs.sql_compatibility }} == true); then
+            echo "DRUID_USE_DEFAULT_VALUE_FOR_NULL=false" >> $GITHUB_ENV
+          else
+            echo "DRUID_USE_DEFAULT_VALUE_FOR_NULL=true" >> $GITHUB_ENV
+          fi
+
+      - name: fetch base branch for test coverage
+        if: ${{ github.base_ref != '' }}
+        run: |
+          # Add merge target branch to determine diff.
+          # This is not needed for build triggered by tags, since there will be no code diff.
+          git remote set-branches --add origin ${GITHUB_BASE_REF} && git fetch
+
+      - name: setup diff-test-coverage
+        run: npm install @connectis/diff-test-coverage@1.5.3
+
+      - name: Maven build
+        if: steps.maven-restore.outputs.cache-hit != 'true'
+        run: |
+          ./it.sh ci
+
+      - name: test & coverage
+        env:
+          MAVEN_PROJECTS: ${{ inputs.maven_projects }}
+        run: |
+          ./.github/scripts/unit_tests_script.sh

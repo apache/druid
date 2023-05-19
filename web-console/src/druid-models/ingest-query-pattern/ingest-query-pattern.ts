@@ -23,13 +23,13 @@ import {
   SqlPartitionedByClause,
   SqlQuery,
   SqlReplaceClause,
-  SqlTableRef,
   SqlWithPart,
+  T,
 } from 'druid-query-toolkit';
 
 import { filterMap, oneOf } from '../../utils';
+import type { ExternalConfig } from '../external-config/external-config';
 import {
-  ExternalConfig,
   externalConfigToInitDimensions,
   externalConfigToTableExpression,
   fitExternalConfigPattern,
@@ -63,6 +63,7 @@ export function externalConfigToIngestQueryPattern(
   config: ExternalConfig,
   isArrays: boolean[],
   timeExpression: SqlExpression | undefined,
+  partitionedByHint: string | undefined,
 ): IngestQueryPattern {
   return {
     destinationTableName: guessDataSourceNameFromInputSource(config.inputSource) || 'data',
@@ -71,7 +72,7 @@ export function externalConfigToIngestQueryPattern(
     mainExternalConfig: config,
     filters: [],
     dimensions: externalConfigToInitDimensions(config, isArrays, timeExpression),
-    partitionedBy: timeExpression ? 'day' : 'all',
+    partitionedBy: partitionedByHint || (timeExpression ? 'day' : 'all'),
     clusteredBy: [],
   };
 }
@@ -132,7 +133,7 @@ function verifyHasOutputName(expression: SqlExpression): void {
 }
 
 export function fitIngestQueryPattern(query: SqlQuery): IngestQueryPattern {
-  if (query.explainClause) throw new Error(`Can not use EXPLAIN in the data loader flow`);
+  if (query.explain) throw new Error(`Can not use EXPLAIN in the data loader flow`);
   if (query.havingClause) throw new Error(`Can not use HAVING in the data loader flow`);
   if (query.orderByClause) throw new Error(`Can not USE ORDER BY in the data loader flow`);
   if (query.limitClause) throw new Error(`Can not use LIMIT in the data loader flow`);
@@ -150,10 +151,10 @@ export function fitIngestQueryPattern(query: SqlQuery): IngestQueryPattern {
   let overwriteWhere: SqlExpression | undefined;
   if (query.insertClause) {
     mode = 'insert';
-    destinationTableName = query.insertClause.table.getTable();
+    destinationTableName = query.insertClause.table.getName();
   } else if (query.replaceClause) {
     mode = 'replace';
-    destinationTableName = query.replaceClause.table.getTable();
+    destinationTableName = query.replaceClause.table.getName();
     overwriteWhere = query.replaceClause.whereClause?.expression;
   } else {
     throw new Error(`Must have an INSERT or REPLACE clause`);
@@ -251,7 +252,7 @@ export function ingestQueryPatternToQuery(
     partitionedBy,
     clusteredBy,
   } = ingestQueryPattern;
-  return SqlQuery.from(SqlTableRef.create(mainExternalName))
+  return SqlQuery.from(T(mainExternalName))
     .applyIf(!preview, q =>
       mode === 'insert'
         ? q.changeInsertIntoTable(destinationTableName)

@@ -20,55 +20,50 @@
 package org.apache.druid.query.aggregation;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.cell.RandomStringUtils;
 import org.apache.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.stream.Collectors;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class SerializablePairLongStringComplexMetricSerdeTest
 {
-  private static final SerializablePairLongStringComplexMetricSerde COMPLEX_METRIC_SERDE =
+  static {
+    NullHandling.initializeForTests();
+  }
+
+  private static final SerializablePairLongStringComplexMetricSerde LEGACY_SERDE =
       new SerializablePairLongStringComplexMetricSerde();
+  private static final SerializablePairLongStringComplexMetricSerde COMPRESSED_SERDE =
+      new SerializablePairLongStringComplexMetricSerde(true);
 
   // want deterministic test input
   private final Random random = new Random(0);
   private final RandomStringUtils randomStringUtils = new RandomStringUtils(random);
 
-  private GenericColumnSerializer<SerializablePairLongString> serializer;
-
-  @SuppressWarnings("unchecked")
-  @Before
-  public void setup()
-  {
-    SegmentWriteOutMedium writeOutMedium = new OnHeapMemorySegmentWriteOutMedium();
-    serializer = (GenericColumnSerializer<SerializablePairLongString>) COMPLEX_METRIC_SERDE.getSerializer(
-        writeOutMedium,
-        "not-used"
-    );
-  }
-
   @Test
   public void testSingle() throws Exception
   {
-    assertExpected(ImmutableList.of(new SerializablePairLongString(100L, "fuu")), 77);
+    assertExpected(ImmutableList.of(new SerializablePairLongString(100L, "fuu")), 33, 77);
   }
 
   @Test
@@ -78,7 +73,7 @@ public class SerializablePairLongStringComplexMetricSerdeTest
     assertExpected(ImmutableList.of(new SerializablePairLongString(
         100L,
         randomStringUtils.randomAlphanumeric(2 * 1024 * 1024)
-    )), 2103140);
+    )), 2097182, 2103140);
   }
 
   @Test
@@ -95,8 +90,7 @@ public class SerializablePairLongStringComplexMetricSerdeTest
       valueList.add(new SerializablePairLongString(Integer.MAX_VALUE + (long) i, stringList.get(i % numStrings)));
     }
 
-    //actual input bytes in naive encoding is ~10mb
-    assertExpected(valueList, 1746026);
+    assertExpected(valueList, 10440010, 1746026);
   }
 
   @Test
@@ -109,8 +103,7 @@ public class SerializablePairLongStringComplexMetricSerdeTest
       valueList.add(new SerializablePairLongString(Integer.MAX_VALUE + (long) i, stringValue));
     }
 
-    //actual input bytes in naive encoding is ~10mb
-    assertExpected(valueList, 289645);
+    assertExpected(valueList, 10440010, 289645);
   }
 
   @Test
@@ -122,81 +115,109 @@ public class SerializablePairLongStringComplexMetricSerdeTest
       valueList.add(new SerializablePairLongString(random.nextLong(), randomStringUtils.randomAlphanumeric(1024)));
     }
 
-    assertExpected(valueList, 10428975);
+    assertExpected(valueList, 10440010, 10428975);
   }
 
   @Test
   public void testNullString() throws Exception
   {
-    assertExpected(ImmutableList.of(new SerializablePairLongString(100L, null)), 74);
+    assertExpected(ImmutableList.of(new SerializablePairLongString(100L, null)), 30, 74);
   }
 
   @Test
   public void testEmpty() throws Exception
   {
     // minimum size for empty data
-    assertExpected(Collections.emptyList(), 57);
+    assertExpected(Collections.emptyList(), 10, 57);
   }
 
   @Test
   public void testSingleNull() throws Exception
   {
-    assertExpected(Arrays.asList(new SerializablePairLongString[]{null}), 58);
+    assertExpected(Arrays.asList(new SerializablePairLongString[]{null}), 18, 58);
   }
 
   @Test
   public void testMultipleNull() throws Exception
   {
-    assertExpected(Arrays.asList(null, null, null, null), 59);
+    assertExpected(Arrays.asList(null, null, null, null), 42, 59);
   }
 
-  private void assertExpected(List<SerializablePairLongString> expected) throws IOException
+  private ByteBuffer assertExpected(
+      List<SerializablePairLongString> expected,
+      int expectedLegacySize,
+      int expectedCompressedSize
+  ) throws IOException
   {
-    assertExpected(expected, -1);
-  }
+    SegmentWriteOutMedium writeOutMedium = new OnHeapMemorySegmentWriteOutMedium();
+    ByteBuffer legacyBuffer = serializeAllValuesToByteBuffer(
+        expected,
+        LEGACY_SERDE.getSerializer(writeOutMedium, "not-used"),
+        expectedLegacySize
+    ).asReadOnlyBuffer();
+    ByteBuffer compressedBuffer = serializeAllValuesToByteBuffer(
+        expected,
+        COMPRESSED_SERDE.getSerializer(writeOutMedium, "not-used"),
+        expectedCompressedSize
+    ).asReadOnlyBuffer();
 
-  private void assertExpected(List<SerializablePairLongString> expected, int expectedSize) throws IOException
-  {
-    List<SerializablePairLongStringValueSelector> valueSelectors =
-        expected.stream().map(SerializablePairLongStringValueSelector::new).collect(Collectors.toList());
-    ByteBuffer byteBuffer = serializeAllValuesToByteBuffer(valueSelectors, serializer, expectedSize);
-
-    try (SerializablePairLongStringComplexColumn complexColumn = createComplexColumn(byteBuffer)) {
-      for (int i = 0; i < valueSelectors.size(); i++) {
-        Assert.assertEquals(expected.get(i), complexColumn.getRowValue(i));
+    try (ComplexColumn legacyCol = createComplexColumn(legacyBuffer);
+         ComplexColumn compressedCol = createComplexColumn(compressedBuffer)
+    ) {
+      for (int i = 0; i < expected.size(); i++) {
+        Assert.assertEquals(expected.get(i), legacyCol.getRowValue(i));
+        Assert.assertEquals(expected.get(i), compressedCol.getRowValue(i));
       }
     }
+    return compressedBuffer;
   }
 
-  private SerializablePairLongStringComplexColumn createComplexColumn(ByteBuffer byteBuffer)
+  private ComplexColumn createComplexColumn(ByteBuffer byteBuffer)
   {
     ColumnBuilder builder = new ColumnBuilder();
     int serializedSize = byteBuffer.remaining();
 
-    COMPLEX_METRIC_SERDE.deserializeColumn(byteBuffer, builder);
+    LEGACY_SERDE.deserializeColumn(byteBuffer, builder);
     builder.setType(ValueType.COMPLEX);
 
     ColumnHolder columnHolder = builder.build();
 
-    SerializablePairLongStringComplexColumn column = (SerializablePairLongStringComplexColumn) columnHolder.getColumn();
+    final ComplexColumn col = (ComplexColumn) columnHolder.getColumn();
+    if (col instanceof SerializablePairLongStringComplexColumn) {
+      Assert.assertEquals(serializedSize, col.getLength());
+    }
+    Assert.assertEquals("serializablePairLongString", col.getTypeName());
+    Assert.assertEquals(SerializablePairLongString.class, col.getClazz());
 
-    Assert.assertEquals(serializedSize, column.getLength());
-    Assert.assertEquals("serializablePairLongString", column.getTypeName());
-    Assert.assertEquals(SerializablePairLongString.class, column.getClazz());
-
-    return column;
+    return col;
   }
 
 
+  @SuppressWarnings({"unchecked", "rawtypes"})
   private static ByteBuffer serializeAllValuesToByteBuffer(
-      Collection<SerializablePairLongStringValueSelector> valueSelectors,
-      GenericColumnSerializer<SerializablePairLongString> serializer,
+      List<SerializablePairLongString> values,
+      GenericColumnSerializer serializer,
       int expectedSize
   ) throws IOException
   {
     serializer.open();
 
-    for (SerializablePairLongStringValueSelector valueSelector : valueSelectors) {
+    final AtomicReference<SerializablePairLongString> reference = new AtomicReference<>(null);
+    ColumnValueSelector<SerializablePairLongString> valueSelector =
+        new SingleObjectColumnValueSelector<SerializablePairLongString>(
+            SerializablePairLongString.class
+        )
+        {
+          @Nullable
+          @Override
+          public SerializablePairLongString getObject()
+          {
+            return reference.get();
+          }
+        };
+
+    for (SerializablePairLongString selector : values) {
+      reference.set(selector);
       serializer.serialize(valueSelector);
     }
 
@@ -224,14 +245,5 @@ public class SerializablePairLongStringComplexMetricSerdeTest
     Assert.assertEquals(serializer.getSerializedSize(), byteBuffer.limit());
 
     return byteBuffer;
-  }
-
-  private static class SerializablePairLongStringValueSelector
-      extends SingleValueColumnValueSelector<SerializablePairLongString>
-  {
-    public SerializablePairLongStringValueSelector(SerializablePairLongString value)
-    {
-      super(SerializablePairLongString.class, value);
-    }
   }
 }

@@ -20,43 +20,44 @@
 package org.apache.druid.msq.shuffle;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableInputStreamFrameChannel;
+import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Supplier;
 
 /**
  * Provides input channels connected to durable storage.
  */
 public class DurableStorageInputChannelFactory implements InputChannelFactory
 {
+
+  private static final Logger LOG = new Logger(DurableStorageInputChannelFactory.class);
+
   private final StorageConnector storageConnector;
   private final ExecutorService remoteInputStreamPool;
   private final String controllerTaskId;
-  private final Supplier<List<String>> taskList;
 
   public DurableStorageInputChannelFactory(
       final String controllerTaskId,
-      final Supplier<List<String>> taskList,
       final StorageConnector storageConnector,
       final ExecutorService remoteInputStreamPool
   )
   {
     this.controllerTaskId = Preconditions.checkNotNull(controllerTaskId, "controllerTaskId");
-    this.taskList = Preconditions.checkNotNull(taskList, "taskList");
     this.storageConnector = Preconditions.checkNotNull(storageConnector, "storageConnector");
     this.remoteInputStreamPool = Preconditions.checkNotNull(remoteInputStreamPool, "remoteInputStreamPool");
   }
@@ -67,7 +68,6 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
    */
   public static DurableStorageInputChannelFactory createStandardImplementation(
       final String controllerTaskId,
-      final Supplier<List<String>> taskList,
       final StorageConnector storageConnector,
       final Closer closer
   )
@@ -75,48 +75,106 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
     final ExecutorService remoteInputStreamPool =
         Executors.newCachedThreadPool(Execs.makeThreadFactory(controllerTaskId + "-remote-fetcher-%d"));
     closer.register(remoteInputStreamPool::shutdownNow);
-    return new DurableStorageInputChannelFactory(controllerTaskId, taskList, storageConnector, remoteInputStreamPool);
+    return new DurableStorageInputChannelFactory(controllerTaskId, storageConnector, remoteInputStreamPool);
   }
 
   @Override
   public ReadableFrameChannel openChannel(StageId stageId, int workerNumber, int partitionNumber) throws IOException
   {
-    final String workerTaskId = taskList.get().get(workerNumber);
 
     try {
-      final String remotePartitionPath = DurableStorageOutputChannelFactory.getPartitionFileName(
+      final String remotePartitionPath = findSuccessfulPartitionOutput(
           controllerTaskId,
-          workerTaskId,
+          workerNumber,
           stageId.getStageNumber(),
           partitionNumber
       );
-      RetryUtils.retry(() -> {
-        if (!storageConnector.pathExists(remotePartitionPath)) {
-          throw new ISE(
-              "Could not find remote output of worker task[%s] stage[%d] partition[%d]",
-              workerTaskId,
-              stageId.getStageNumber(),
-              partitionNumber
-          );
-        }
-        return Boolean.TRUE;
-      }, (throwable) -> true, 10);
+      LOG.debug(
+          "Reading output of stage [%d], partition [%d] for worker [%d] from the file at path [%s]",
+          stageId.getStageNumber(),
+          partitionNumber,
+          workerNumber,
+          remotePartitionPath
+      );
+      if (!storageConnector.pathExists(remotePartitionPath)) {
+        throw new ISE(
+            "Could not find remote outputs of stage [%d] partition [%d] for worker [%d] at the path [%s]",
+            stageId.getStageNumber(),
+            partitionNumber,
+            workerNumber,
+            remotePartitionPath
+        );
+      }
       final InputStream inputStream = storageConnector.read(remotePartitionPath);
 
       return ReadableInputStreamFrameChannel.open(
           inputStream,
           remotePartitionPath,
-          remoteInputStreamPool
+          remoteInputStreamPool,
+          false
       );
     }
     catch (Exception e) {
       throw new IOE(
           e,
-          "Could not find remote output of worker task[%s] stage[%d] partition[%d]",
-          workerTaskId,
+          "Encountered error while reading the output of stage [%d], partition [%d] for worker [%d]",
           stageId.getStageNumber(),
-          partitionNumber
+          partitionNumber,
+          workerNumber
       );
     }
+  }
+
+  /**
+   * Given an input worker number, stage number and the partition number, this method figures out the exact location
+   * where the outputs would be present in the durable storage and returns the complete path or throws an exception
+   * if no such file exists in the durable storage
+   * More information at {@link DurableStorageOutputChannelFactory#createSuccessFile(String)}
+   */
+  public String findSuccessfulPartitionOutput(
+      final String controllerTaskId,
+      final int workerNo,
+      final int stageNumber,
+      final int partitionNumber
+  ) throws IOException
+  {
+    String successfulFilePath = DurableStorageUtils.getSuccessFilePath(
+        controllerTaskId,
+        stageNumber,
+        workerNo
+    );
+
+    if (!storageConnector.pathExists(successfulFilePath)) {
+      throw new ISE(
+          "No file present at the location [%s]. Unable to read the outputs of stage [%d], partition [%d] for the worker [%d]",
+          successfulFilePath,
+          stageNumber,
+          partitionNumber,
+          workerNo
+      );
+    }
+
+    String successfulTaskId;
+
+    try (InputStream is = storageConnector.read(successfulFilePath)) {
+      successfulTaskId = IOUtils.toString(is, StandardCharsets.UTF_8);
+    }
+    if (successfulTaskId == null) {
+      throw new ISE("Unable to read the task id from the file: [%s]", successfulFilePath);
+    }
+    LOG.debug(
+        "Reading output of stage [%d], partition [%d] from task id [%s]",
+        stageNumber,
+        partitionNumber,
+        successfulTaskId
+    );
+
+    return DurableStorageUtils.getPartitionOutputsFileNameForPartition(
+        controllerTaskId,
+        stageNumber,
+        workerNo,
+        successfulTaskId,
+        partitionNumber
+    );
   }
 }

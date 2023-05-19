@@ -24,7 +24,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 public class Access
 {
-  static final String DEFAULT_ERROR_MESSAGE = "Unauthorized";
+  public static final String DEFAULT_ERROR_MESSAGE = "Unauthorized";
 
   public static final Access OK = new Access(true);
   public static final Access DENIED = new Access(false);

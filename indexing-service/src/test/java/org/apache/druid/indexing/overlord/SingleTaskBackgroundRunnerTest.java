@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
@@ -64,6 +65,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -85,21 +87,12 @@ public class SingleTaskBackgroundRunnerTest
   {
     final TestUtils utils = new TestUtils();
     final DruidNode node = new DruidNode("testServer", "testHost", false, 1000, null, true, false);
-    final TaskConfig taskConfig = new TaskConfig(
-        temporaryFolder.newFile().toString(),
-        null,
-        null,
-        50000,
-        null,
-        true,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setBaseDir(temporaryFolder.newFile().toString())
+        .setDefaultRowFlushBoundary(50000)
+        .setRestoreTasksOnRestart(true)
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
     final ServiceEmitter emitter = new NoopServiceEmitter();
     EmittingLogger.registerEmitter(emitter);
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
@@ -138,7 +131,9 @@ public class SingleTaskBackgroundRunnerTest
         new NoopOverlordClient(),
         null,
         null,
-        null
+        null,
+        null,
+        "1"
     );
     runner = new SingleTaskBackgroundRunner(
         toolboxFactory,
@@ -158,9 +153,24 @@ public class SingleTaskBackgroundRunnerTest
   @Test
   public void testRun() throws ExecutionException, InterruptedException
   {
+    NoopTask task = new NoopTask(null, null, null, 500L, 0, null, null, null)
+    {
+      @Nullable
+      @Override
+      public String setup(TaskToolbox toolbox)
+      {
+        return null;
+      }
+
+      @Override
+      public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus)
+      {
+        // do nothing
+      }
+    };
     Assert.assertEquals(
         TaskState.SUCCESS,
-        runner.run(new NoopTask(null, null, null, 500L, 0, null, null, null)).get().getStatusCode()
+        runner.run(task).get().getStatusCode()
     );
   }
 
@@ -171,10 +181,10 @@ public class SingleTaskBackgroundRunnerTest
 
     final QueryRunner<ScanResultValue> queryRunner =
         Druids.newScanQueryBuilder()
-              .dataSource("foo")
-              .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
-              .build()
-              .getRunner(runner);
+            .dataSource("foo")
+            .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
+            .build()
+            .getRunner(runner);
 
     Assert.assertThat(queryRunner, CoreMatchers.instanceOf(SetAndVerifyContextQueryRunner.class));
   }
@@ -239,9 +249,22 @@ public class SingleTaskBackgroundRunnerTest
         new RestorableTask(new BooleanHolder())
         {
           @Override
-          public TaskStatus run(TaskToolbox toolbox)
+          public TaskStatus runTask(TaskToolbox toolbox)
           {
             throw new Error("task failure test");
+          }
+
+          @Nullable
+          @Override
+          public String setup(TaskToolbox toolbox)
+          {
+            return null;
+          }
+
+          @Override
+          public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus)
+          {
+            // do nothing
           }
         }
     );
@@ -336,7 +359,7 @@ public class SingleTaskBackgroundRunnerTest
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox)
+    public TaskStatus runTask(TaskToolbox toolbox)
     {
       return TaskStatus.success(getId());
     }
@@ -352,6 +375,21 @@ public class SingleTaskBackgroundRunnerTest
     {
       gracefullyStopped.set();
     }
+
+    @Nullable
+    @Override
+    public String setup(TaskToolbox toolbox)
+    {
+      return null;
+    }
+
+    @Override
+    public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus)
+    {
+      // do nothing
+    }
+
+
   }
 
   private static class BooleanHolder

@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>25.0.0-SNAPSHOT</version>
+        <version>27.0.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -39,8 +39,8 @@
     </repositories>
 
     <properties>
-        <hadoop.integ.libs>"org.apache.hadoop:hadoop-client:${hadoop.compile.version}", "org.apache.hadoop:hadoop-azure:${hadoop.compile.version}"</hadoop.integ.libs>
-        <hadoop.s3.impl>org.apache.hadoop.fs.s3native.NativeS3FileSystem</hadoop.s3.impl>
+        <hadoop.integ.libs>"org.apache.hadoop:hadoop-client-api:${hadoop.compile.version}", "org.apache.hadoop:hadoop-client-runtime:${hadoop.compile.version}", "org.apache.hadoop:hadoop-azure:${hadoop.compile.version}"</hadoop.integ.libs>
+        <hadoop.s3.impl>org.apache.hadoop.fs.s3a.S3AFileSystem</hadoop.s3.impl>
     </properties>
 
     <dependencies>
@@ -85,11 +85,6 @@
         <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-core</artifactId>
-            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -271,6 +266,10 @@
             <artifactId>guice</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.google.inject.extensions</groupId>
+            <artifactId>guice-multibindings</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
@@ -338,7 +337,6 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-native-kqueue</artifactId>
             <classifier>osx-x86_64</classifier>
-            <!--<classifier>osx-aarch_64</classifier> - Use for M1 Macs -->
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -556,10 +554,10 @@
 
     <profiles>
         <profile>
-            <id>hadoop3</id>
+            <id>hadoop2</id>
             <properties>
-                <hadoop.integ.libs>"org.apache.hadoop:hadoop-client-api:${hadoop.compile.version}", "org.apache.hadoop:hadoop-client-runtime:${hadoop.compile.version}", "org.apache.hadoop:hadoop-azure:${hadoop.compile.version}"</hadoop.integ.libs>
-                <hadoop.s3.impl>org.apache.hadoop.fs.s3a.S3AFileSystem</hadoop.s3.impl>
+                <hadoop.integ.libs>"org.apache.hadoop:hadoop-client:${hadoop.compile.version}", "org.apache.hadoop:hadoop-azure:${hadoop.compile.version}"</hadoop.integ.libs>
+                <hadoop.s3.impl>org.apache.hadoop.fs.s3native.NativeS3FileSystem</hadoop.s3.impl>
             </properties>
         </profile>
         <profile>
@@ -651,7 +649,7 @@
                                 </property>
                             </properties>
                             <argLine>
-                                -Xmx64m
+                                -Xmx128m
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8
                                 -Ddruid.test.config.dockerIp=${env.DOCKER_IP}

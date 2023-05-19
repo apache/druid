@@ -23,15 +23,24 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.Int2IntAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.QueryValidator;
+import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFault;
+import org.apache.druid.msq.indexing.error.MSQFaultUtils;
+import org.apache.druid.msq.indexing.error.UnknownFault;
+import org.apache.druid.msq.indexing.error.WorkerFailedFault;
+import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.InputSpecSlicerFactory;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
@@ -42,8 +51,11 @@ import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
+import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -55,7 +67,7 @@ import java.util.stream.Collectors;
 
 /**
  * Kernel for the controller of a multi-stage query.
- *
+ * <p>
  * Instances of this class are state machines for query execution. Kernels do not do any RPC or deal with any data.
  * This separation of decision-making from the "real world" allows the decision-making to live in one,
  * easy-to-follow place.
@@ -64,6 +76,7 @@ import java.util.stream.Collectors;
  */
 public class ControllerQueryKernel
 {
+  private static final Logger log = new Logger(ControllerQueryKernel.class);
   private final QueryDefinition queryDef;
 
   /**
@@ -106,15 +119,40 @@ public class ControllerQueryKernel
    */
   private final Set<StageId> effectivelyFinishedStages = new HashSet<>();
 
-  public ControllerQueryKernel(final QueryDefinition queryDef)
+  /**
+   * Map<StageId, Map <WorkerNumber, WorkOrder>>
+   * Stores the work order per worker per stage so that we can retrieve that in case of worker retry
+   */
+  private final Map<StageId, Int2ObjectMap<WorkOrder>> stageWorkOrders;
+
+  /**
+   * {@link MSQFault#getErrorCode()} which are retried.
+   */
+  private static final Set<String> RETRIABLE_ERROR_CODES = ImmutableSet.of(
+      CanceledFault.CODE,
+      UnknownFault.CODE,
+      WorkerRpcFailedFault.CODE
+  );
+  private final int maxRetainedPartitionSketchBytes;
+  private final boolean faultToleranceEnabled;
+
+  public ControllerQueryKernel(
+      final QueryDefinition queryDef,
+      int maxRetainedPartitionSketchBytes,
+      boolean faultToleranceEnabled
+  )
   {
     this.queryDef = queryDef;
+    this.maxRetainedPartitionSketchBytes = maxRetainedPartitionSketchBytes;
+    this.faultToleranceEnabled = faultToleranceEnabled;
     this.inflowMap = ImmutableMap.copyOf(computeStageInflowMap(queryDef));
     this.outflowMap = ImmutableMap.copyOf(computeStageOutflowMap(queryDef));
 
     // pendingInflowMap and pendingOutflowMap are wholly separate from inflowMap, so we can edit the Sets.
     this.pendingInflowMap = computeStageInflowMap(queryDef);
     this.pendingOutflowMap = computeStageOutflowMap(queryDef);
+
+    stageWorkOrders = new HashMap<>();
 
     initializeReadyToRunStages();
   }
@@ -124,7 +162,8 @@ public class ControllerQueryKernel
    */
   public List<StageId> createAndGetNewStageIds(
       final InputSpecSlicerFactory slicerFactory,
-      final WorkerAssignmentStrategy assignmentStrategy
+      final WorkerAssignmentStrategy assignmentStrategy,
+      final long maxInputBytesPerWorker
   )
   {
     final Int2IntMap stageWorkerCountMap = new Int2IntAVLTreeMap();
@@ -139,7 +178,7 @@ public class ControllerQueryKernel
       }
     }
 
-    createNewKernels(stageWorkerCountMap, slicerFactory.makeSlicer(stagePartitionsMap), assignmentStrategy);
+    createNewKernels(stageWorkerCountMap, slicerFactory.makeSlicer(stagePartitionsMap), assignmentStrategy, maxInputBytesPerWorker);
     return stageTracker.values()
                        .stream()
                        .filter(controllerStageTracker -> controllerStageTracker.getPhase() == ControllerStagePhase.NEW)
@@ -207,7 +246,7 @@ public class ControllerQueryKernel
   }
 
   /**
-   * Returns true if all the stages comprising the query definition have been sucessful in producing their results
+   * Returns true if all the stages comprising the query definition have been successful in producing their results
    */
   public boolean isSuccess()
   {
@@ -225,7 +264,7 @@ public class ControllerQueryKernel
       @Nullable final Int2ObjectMap<Object> extraInfos
   )
   {
-    final Int2ObjectMap<WorkOrder> retVal = new Int2ObjectAVLTreeMap<>();
+    final Int2ObjectMap<WorkOrder> workerToWorkOrder = new Int2ObjectAVLTreeMap<>();
     final ControllerStageTracker stageKernel = getStageKernelOrThrow(getStageId(stageNumber));
 
     final WorkerInputs workerInputs = stageKernel.getWorkerInputs();
@@ -245,16 +284,17 @@ public class ControllerQueryKernel
       );
 
       QueryValidator.validateWorkOrder(workOrder);
-      retVal.put(workerNumber, workOrder);
+      workerToWorkOrder.put(workerNumber, workOrder);
     }
-
-    return retVal;
+    stageWorkOrders.put(new StageId(queryDef.getQueryId(), stageNumber), workerToWorkOrder);
+    return workerToWorkOrder;
   }
 
   private void createNewKernels(
       final Int2IntMap stageWorkerCountMap,
       final InputSpecSlicer slicer,
-      final WorkerAssignmentStrategy assignmentStrategy
+      final WorkerAssignmentStrategy assignmentStrategy,
+      final long maxInputBytesPerWorker
   )
   {
     for (final StageId nextStage : readyToRunStages) {
@@ -264,7 +304,9 @@ public class ControllerQueryKernel
           stageDef,
           stageWorkerCountMap,
           slicer,
-          assignmentStrategy
+          assignmentStrategy,
+          maxRetainedPartitionSketchBytes,
+          maxInputBytesPerWorker
       );
       stageTracker.put(nextStage, stageKernel);
     }
@@ -324,11 +366,43 @@ public class ControllerQueryKernel
   }
 
   /**
+   * Delegates call to {@link ControllerStageTracker#getWorkersToSendPartitionBoundaries()}
+   */
+  public IntSet getWorkersToSendPartitionBoundaries(final StageId stageId)
+  {
+    return getStageKernelOrThrow(stageId).getWorkersToSendPartitionBoundaries();
+  }
+
+  /**
+   * Delegates call to {@link ControllerQueryKernel#workOrdersSentForWorker(StageId, int)}
+   */
+  public void workOrdersSentForWorker(final StageId stageId, int worker)
+  {
+    getStageKernelOrThrow(stageId).workOrderSentForWorker(worker);
+  }
+
+  /**
+   * Delegates call to {@link ControllerStageTracker#partitionBoundariesSentForWorker(int)} ()}
+   */
+  public void partitionBoundariesSentForWorker(final StageId stageId, int worker)
+  {
+    getStageKernelOrThrow(stageId).partitionBoundariesSentForWorker(worker);
+  }
+
+  /**
    * Delegates call to {@link ControllerStageTracker#getResultPartitionBoundaries()}
    */
   public ClusterByPartitions getResultPartitionBoundariesForStage(final StageId stageId)
   {
     return getStageKernelOrThrow(stageId).getResultPartitionBoundaries();
+  }
+
+  /**
+   * Delegates call to {@link ControllerStageTracker#getCompleteKeyStatisticsInformation()}
+   */
+  public CompleteKeyStatisticsInformation getCompleteKeyStatisticsInformation(final StageId stageId)
+  {
+    return getStageKernelOrThrow(stageId).getCompleteKeyStatisticsInformation();
   }
 
   /**
@@ -349,13 +423,16 @@ public class ControllerQueryKernel
 
   /**
    * Checks if the stage can be started, delegates call to {@link ControllerStageTracker#start()} for internal phase
-   * transition and registers the transition in this queryKernel
+   * transition and registers the transition in this queryKernel. Work orders need to be created via {@link ControllerQueryKernel#createWorkOrders(int, Int2ObjectMap)} before calling this method.
    */
   public void startStage(final StageId stageId)
   {
     final ControllerStageTracker stageKernel = getStageKernelOrThrow(stageId);
     if (stageKernel.getPhase() != ControllerStagePhase.NEW) {
       throw new ISE("Cannot start the stage: [%s]", stageId);
+    }
+    if (stageWorkOrders.get(stageId) == null) {
+      throw new ISE("Work orders not present for stage %s", stageId);
     }
     stageKernel.start();
     transitionStageKernel(stageId, ControllerStagePhase.READING_INPUT);
@@ -364,7 +441,7 @@ public class ControllerQueryKernel
   /**
    * Checks if the stage can be finished, delegates call to {@link ControllerStageTracker#finish()} for internal phase
    * transition and registers the transition in this query kernel
-   *
+   * <p>
    * If the method is called with strict = true, we confirm if the stage can be marked as finished or else
    * throw illegal argument exception
    */
@@ -376,6 +453,7 @@ public class ControllerQueryKernel
     getStageKernelOrThrow(stageId).finish();
     effectivelyFinishedStages.remove(stageId);
     transitionStageKernel(stageId, ControllerStagePhase.FINISHED);
+    stageWorkOrders.remove(stageId);
   }
 
   /**
@@ -387,22 +465,24 @@ public class ControllerQueryKernel
   }
 
   /**
-   * Delegates call to {@link ControllerStageTracker#addResultKeyStatisticsForWorker(int, ClusterByStatisticsSnapshot)}.
+   * Delegates call to {@link ControllerStageTracker#addPartialKeyInformationForWorker(int, PartialKeyStatisticsInformation)}.
    * If calling this causes transition for the stage kernel, then this gets registered in this query kernel
    */
-  public void addResultKeyStatisticsForStageAndWorker(
+  public void addPartialKeyStatisticsForStageAndWorker(
       final StageId stageId,
       final int workerNumber,
-      final ClusterByStatisticsSnapshot snapshot
+      final PartialKeyStatisticsInformation partialKeyStatisticsInformation
   )
   {
-    ControllerStagePhase newPhase = getStageKernelOrThrow(stageId).addResultKeyStatisticsForWorker(
+    ControllerStageTracker stageKernel = getStageKernelOrThrow(stageId);
+    ControllerStagePhase newPhase = stageKernel.addPartialKeyInformationForWorker(
         workerNumber,
-        snapshot
+        partialKeyStatisticsInformation
     );
 
-    // If the phase is POST_READING or FAILED, that implies the kernel has transitioned. We need to account for that
+    // If the kernel phase has transitioned, we need to account for that.
     switch (newPhase) {
+      case MERGING_STATISTICS:
       case POST_READING:
       case FAILED:
         transitionStageKernel(stageId, newPhase);
@@ -433,6 +513,12 @@ public class ControllerQueryKernel
     return getStageKernelOrThrow(stageId).getFailureReason();
   }
 
+  public void failStageForReason(final StageId stageId, MSQFault fault)
+  {
+    getStageKernelOrThrow(stageId).failForReason(fault);
+    transitionStageKernel(stageId, ControllerStagePhase.FAILED);
+  }
+
   /**
    * Delegates call to {@link ControllerStageTracker#fail()} and registers this transition to FAILED in this query kernel
    */
@@ -454,8 +540,23 @@ public class ControllerQueryKernel
     return stageKernel;
   }
 
+  private WorkOrder getWorkOrder(int workerNumber, StageId stageId)
+  {
+    Int2ObjectMap<WorkOrder> stageWorkOrder = stageWorkOrders.get(stageId);
+
+    if (stageWorkOrder == null) {
+      throw new ISE("Stage[%d] work orders not found", stageId.getStageNumber());
+    }
+
+    WorkOrder workOrder = stageWorkOrder.get(workerNumber);
+    if (workOrder == null) {
+      throw new ISE("Work order for worker[%d] not found for stage[%d]", workerNumber, stageId.getStageNumber());
+    }
+    return workOrder;
+  }
+
   /**
-   * Whenever a stage kernel changes it phase, the change must be "registered" by calling this method with the stageId
+   * Whenever a stage kernel changes its phase, the change must be "registered" by calling this method with the stageId
    * and the new phase
    */
   public void transitionStageKernel(StageId stageId, ControllerStagePhase newPhase)
@@ -482,6 +583,12 @@ public class ControllerQueryKernel
     }
 
     if (ControllerStagePhase.isPostReadingPhase(newPhase)) {
+
+      // when fault tolerance is enabled, we cannot delete the input data eagerly as we need the input stage for retry until
+      // results for the current stage are ready.
+      if (faultToleranceEnabled && newPhase == ControllerStagePhase.POST_READING) {
+        return;
+      }
       // Once the stage has consumed all the data/input from its dependent stages, we remove it from all the stages
       // whose input it was dependent on
       for (StageId inputStage : inflowMap.get(stageId)) {
@@ -542,5 +649,137 @@ public class ControllerQueryKernel
     }
 
     return retVal;
+  }
+
+  /**
+   * Checks the {@link MSQFault#getErrorCode()} is eligible for retry.
+   * <br/>
+   * If yes, transitions the stage to{@link ControllerStagePhase#RETRYING} and returns all the {@link WorkOrder}
+   * <br/>
+   * else throw {@link MSQException}
+   *
+   * @param workerNumber
+   * @param msqFault
+   * @return List of {@link WorkOrder} that needs to be retried.
+   */
+  public List<WorkOrder> getWorkInCaseWorkerEligibleForRetryElseThrow(int workerNumber, MSQFault msqFault)
+  {
+
+    final String errorCode;
+    if (msqFault instanceof WorkerFailedFault) {
+      errorCode = MSQFaultUtils.getErrorCodeFromMessage((((WorkerFailedFault) msqFault).getErrorMsg()));
+    } else {
+      errorCode = msqFault.getErrorCode();
+    }
+
+    log.info("Parsed out errorCode[%s] to check eligibility for retry", errorCode);
+
+    if (RETRIABLE_ERROR_CODES.contains(errorCode)) {
+      return getWorkInCaseWorkerEligibleForRetry(workerNumber);
+    } else {
+      throw new MSQException(msqFault);
+    }
+  }
+
+  /**
+   * Gets all the stages currently being tracked and filters out all effectively finished stages.
+   * <br/>
+   * From the remaining stages, checks if (stage,worker) needs to be retried.
+   * <br/>
+   * If yes adds the workOrder for that stage to the return list and transitions the stage kernel to {@link ControllerStagePhase#RETRYING}
+   *
+   * @param worker
+   * @return List of {@link WorkOrder} that needs to be retried.
+   */
+  private List<WorkOrder> getWorkInCaseWorkerEligibleForRetry(int worker)
+  {
+    List<StageId> trackedSet = new ArrayList<>(getActiveStages());
+    trackedSet.removeAll(getEffectivelyFinishedStageIds());
+
+    List<WorkOrder> workOrders = new ArrayList<>();
+
+    for (StageId stageId : trackedSet) {
+      ControllerStageTracker controllerStageTracker = getStageKernelOrThrow(stageId);
+      if (ControllerStagePhase.RETRYING.canTransitionFrom(controllerStageTracker.getPhase())
+          && controllerStageTracker.retryIfNeeded(worker)) {
+        workOrders.add(getWorkOrder(worker, stageId));
+        // should be a no-op.
+        transitionStageKernel(stageId, ControllerStagePhase.RETRYING);
+      }
+    }
+    return workOrders;
+  }
+
+  /**
+   * For each stage, fetches the workers who are ready with their {@link ClusterByStatisticsSnapshot}
+   */
+  public Map<StageId, Set<Integer>> getStagesAndWorkersToFetchClusterStats()
+  {
+    List<StageId> trackedSet = new ArrayList<>(getActiveStages());
+    trackedSet.removeAll(getEffectivelyFinishedStageIds());
+
+    Map<StageId, Set<Integer>> stageToWorkers = new HashMap<>();
+
+    for (StageId stageId : trackedSet) {
+      ControllerStageTracker controllerStageTracker = getStageKernelOrThrow(stageId);
+      if (controllerStageTracker.getStageDefinition().mustGatherResultKeyStatistics()) {
+        stageToWorkers.put(stageId, controllerStageTracker.getWorkersToFetchClusterStatisticsFrom());
+      }
+    }
+    return stageToWorkers;
+  }
+
+
+  /**
+   * Delegates call to {@link ControllerStageTracker#startFetchingStatsFromWorker(int)} for each worker
+   */
+  public void startFetchingStatsFromWorker(StageId stageId, Set<Integer> workers)
+  {
+    ControllerStageTracker controllerStageTracker = getStageKernelOrThrow(stageId);
+
+    for (int worker : workers) {
+      controllerStageTracker.startFetchingStatsFromWorker(worker);
+    }
+  }
+
+  /**
+   * Delegates call to {@link ControllerStageTracker#mergeClusterByStatisticsCollectorForAllTimeChunks(int, ClusterByStatisticsSnapshot)}
+   */
+  public void mergeClusterByStatisticsCollectorForAllTimeChunks(
+      StageId stageId,
+      int workerNumber,
+      ClusterByStatisticsSnapshot clusterByStatsSnapshot
+  )
+  {
+    getStageKernelOrThrow(stageId).mergeClusterByStatisticsCollectorForAllTimeChunks(
+        workerNumber,
+        clusterByStatsSnapshot
+    );
+  }
+
+  /**
+   * Delegates call to {@link ControllerStageTracker#mergeClusterByStatisticsCollectorForTimeChunk(int, Long, ClusterByStatisticsSnapshot)}
+   */
+
+  public void mergeClusterByStatisticsCollectorForTimeChunk(
+      StageId stageId,
+      int workerNumber,
+      Long timeChunk,
+      ClusterByStatisticsSnapshot clusterByStatsSnapshot
+  )
+  {
+    getStageKernelOrThrow(stageId).mergeClusterByStatisticsCollectorForTimeChunk(
+        workerNumber,
+        timeChunk,
+        clusterByStatsSnapshot
+    );
+  }
+
+  /**
+   * Delegates call to {@link ControllerStageTracker#allPartialKeyInformationFetched()}
+   */
+  public boolean allPartialKeyInformationPresent(StageId stageId)
+  {
+    return getStageKernelOrThrow(stageId).allPartialKeyInformationFetched();
   }
 }

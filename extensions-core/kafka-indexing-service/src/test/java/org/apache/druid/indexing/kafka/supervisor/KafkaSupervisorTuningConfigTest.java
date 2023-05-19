@@ -32,8 +32,6 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.File;
-
 public class KafkaSupervisorTuningConfigTest
 {
   private final ObjectMapper mapper;
@@ -59,14 +57,14 @@ public class KafkaSupervisorTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertNotNull(config.getBasePersistDirectory());
+    Assert.assertNull(config.getBasePersistDirectory());
     Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
-    Assert.assertEquals(1000000, config.getMaxRowsInMemory());
+    Assert.assertEquals(150000, config.getMaxRowsInMemory());
     Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
-    Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
-    Assert.assertEquals(new IndexSpec(), config.getIndexSpecForIntermediatePersists());
+    Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpec());
+    Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpecForIntermediatePersists());
     Assert.assertEquals(false, config.isReportParseExceptions());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
     Assert.assertNull(config.getWorkerThreads());
@@ -110,7 +108,7 @@ public class KafkaSupervisorTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertEquals(new File("/tmp/xxx"), config.getBasePersistDirectory());
+    Assert.assertNull(config.getBasePersistDirectory());
     Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
     Assert.assertEquals(100, config.getMaxRowsInMemory());
     Assert.assertEquals(100, config.getMaxRowsPerSegment().intValue());
@@ -124,8 +122,14 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(Duration.standardSeconds(15), config.getHttpTimeout());
     Assert.assertEquals(Duration.standardSeconds(95), config.getShutdownTimeout());
     Assert.assertEquals(Duration.standardSeconds(20), config.getOffsetFetchPeriod());
-    Assert.assertEquals(new IndexSpec(null, null, CompressionStrategy.NONE, null), config.getIndexSpec());
-    Assert.assertEquals(new IndexSpec(null, CompressionStrategy.UNCOMPRESSED, null, null), config.getIndexSpecForIntermediatePersists());
+    Assert.assertEquals(
+        IndexSpec.builder().withMetricCompression(CompressionStrategy.NONE).build(),
+        config.getIndexSpec()
+    );
+    Assert.assertEquals(
+        IndexSpec.builder().withDimensionCompression(CompressionStrategy.UNCOMPRESSED).build(),
+        config.getIndexSpecForIntermediatePersists()
+    );
   }
 
 }

@@ -30,7 +30,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>25.0.0-SNAPSHOT</version>
+        <version>27.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -46,6 +46,7 @@
             <version>${project.parent.version}</version>
         </dependency>
     </dependencies>
+
     <properties>
         <!-- the default value is a repeated flag from the command line, since blank value is not allowed -->
         <druid.distribution.pulldeps.opts>--clean</druid.distribution.pulldeps.opts>
@@ -115,7 +116,7 @@
 
     <profiles>
         <profile>
-            <id>dist</id>
+            <id>dist-hadoop2</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
                 <property>
@@ -189,6 +190,7 @@
                                         <argument>
                                             -Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop-dependencies
                                         </argument>
+                                        <argument>-Dhadoop2.enabled=true</argument>
                                         <argument>org.apache.druid.cli.Main</argument>
                                         <argument>tools</argument>
                                         <argument>pull-deps</argument>
@@ -255,6 +257,8 @@
                                         <argument>org.apache.druid.extensions:druid-ranger-security</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kubernetes-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-catalog</argument>
                                         <argument>${druid.distribution.pulldeps.opts}</argument>
                                     </arguments>
                                 </configuration>
@@ -297,7 +301,7 @@
             </build>
         </profile>
         <profile>
-            <id>dist-hadoop3</id>
+            <id>dist</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
@@ -368,7 +372,6 @@
                                         <argument>
                                             -Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop-dependencies
                                         </argument>
-                                        <argument>-Dhadoop3.enabled=true</argument>
                                         <argument>org.apache.druid.cli.Main</argument>
                                         <argument>tools</argument>
                                         <argument>pull-deps</argument>
@@ -437,6 +440,8 @@
                                         <argument>org.apache.druid.extensions:druid-ranger-security</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kubernetes-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-catalog</argument>
                                         <argument>${druid.distribution.pulldeps.opts}</argument>
                                     </arguments>
                                 </configuration>
@@ -594,6 +599,8 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-influxdb-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:kafka-emitter</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-kubernetes-overlord-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:materialized-view-maintenance</argument>
                                         <argument>-c</argument>

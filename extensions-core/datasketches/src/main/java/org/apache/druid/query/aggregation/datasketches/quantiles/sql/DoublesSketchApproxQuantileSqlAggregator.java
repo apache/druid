@@ -83,6 +83,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
         plannerContext,
         rowSignature,
         Expressions.fromFieldAccess(
+            rexBuilder.getTypeFactory(),
             rowSignature,
             project,
             aggregateCall.getArgList().get(0)
@@ -95,6 +96,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
     final AggregatorFactory aggregatorFactory;
     final String histogramName = StringUtils.format("%s:agg", name);
     final RexNode probabilityArg = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         aggregateCall.getArgList().get(1)
@@ -110,6 +112,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 
     if (aggregateCall.getArgList().size() >= 3) {
       final RexNode resolutionArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(2)
@@ -172,7 +175,8 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
           histogramName,
           input.getDirectColumn(),
           k,
-          getMaxStreamLengthFromQueryContext(plannerContext.queryContext())
+          getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
+          true
       );
     } else {
       String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -183,7 +187,8 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
           histogramName,
           virtualColumnName,
           k,
-          getMaxStreamLengthFromQueryContext(plannerContext.queryContext())
+          getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
+          true
       );
     }
 

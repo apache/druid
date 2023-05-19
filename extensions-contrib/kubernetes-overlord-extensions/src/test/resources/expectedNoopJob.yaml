@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "id"
+  labels:
+    druid.k8s.peons: "true"
+    druid.task.id: "id"
+    druid.task.type: "noop"
+    druid.task.group.id: "id"
+    druid.task.datasource: "datasource"
+  annotations:
+    task.id: "id"
+    task.type: "noop"
+    task.group.id: "id"
+    task.datasource: "datasource"
+spec:
+  activeDeadlineSeconds: 14400
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 172800
+  template:
+    metadata:
+      labels:
+        druid.k8s.peons: "true"
+        druid.task.id: "id"
+        druid.task.type: "noop"
+        druid.task.group.id: "id"
+        druid.task.datasource: "datasource"
+      annotations:
+        task: "H4sIAAAAAAAAAEVOuQ4CIRD9l6kpVhObbY0xtrs2liOMSoKAHEZC+HeHrEczmXfmVUjFE4xgnfMgQCv++Qi4Bpf94QcVJpxdDrKbO4gLEBCyPeo70+vNMHBDnAhVWag/nihmkzh72s0cuuhANxfZYrMxAqSziV6s18aN9CkfK+ATtcGzNjqVfZ/0HRTokblEbdGjZBHGVWtvT9WXlc8AAAA="
+        tls.enabled: "false"
+        task.id: "id"
+        task.type: "noop"
+        task.group.id: "id"
+        task.datasource: "datasource"
+    spec:
+      containers:
+        - command:
+            - sleep
+            - "3600"
+          env:
+            - name: "TASK_DIR"
+              value: "/tmp"
+            - name: "TASK_ID"
+              value: "id"
+            - name: "TASK_JSON"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "metadata.annotations['task']"
+          image: one
+          name: primary

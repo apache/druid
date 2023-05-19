@@ -21,12 +21,9 @@ package org.apache.druid.query.expression;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -67,17 +64,17 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
       "y", ImmutableMap.of("a", "hello", "b", "world")
   );
 
-  Expr.ObjectBinding inputBindings = InputBindings.withTypedSuppliers(
-      new ImmutableMap.Builder<String, Pair<ExpressionType, Supplier<Object>>>()
-          .put("nest", new Pair<>(NestedDataExpressions.TYPE, () -> NEST))
-          .put("nestWrapped", new Pair<>(NestedDataExpressions.TYPE, () -> new StructuredData(NEST)))
-          .put("nester", new Pair<>(NestedDataExpressions.TYPE, () -> NESTER))
-          .put("string", new Pair<>(ExpressionType.STRING, () -> "abcdef"))
-          .put("long", new Pair<>(ExpressionType.LONG, () -> 1234L))
-          .put("double", new Pair<>(ExpressionType.DOUBLE, () -> 1.234))
-          .put("nullString", new Pair<>(ExpressionType.STRING, () -> null))
-          .put("nullLong", new Pair<>(ExpressionType.LONG, () -> null))
-          .put("nullDouble", new Pair<>(ExpressionType.DOUBLE, () -> null))
+  Expr.ObjectBinding inputBindings = InputBindings.forInputSuppliers(
+      new ImmutableMap.Builder<String, InputBindings.InputSupplier>()
+          .put("nest", InputBindings.inputSupplier(ExpressionType.NESTED_DATA, () -> NEST))
+          .put("nestWrapped", InputBindings.inputSupplier(ExpressionType.NESTED_DATA, () -> new StructuredData(NEST)))
+          .put("nester", InputBindings.inputSupplier(ExpressionType.NESTED_DATA, () -> NESTER))
+          .put("string", InputBindings.inputSupplier(ExpressionType.STRING, () -> "abcdef"))
+          .put("long", InputBindings.inputSupplier(ExpressionType.LONG, () -> 1234L))
+          .put("double", InputBindings.inputSupplier(ExpressionType.DOUBLE, () -> 1.234))
+          .put("nullString", InputBindings.inputSupplier(ExpressionType.STRING, () -> null))
+          .put("nullLong", InputBindings.inputSupplier(ExpressionType.LONG, () -> null))
+          .put("nullDouble", InputBindings.inputSupplier(ExpressionType.DOUBLE, () -> null))
           .build()
   );
 
@@ -129,12 +126,12 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     Expr expr = Parser.parse("json_paths(nest)", MACRO_TABLE);
     ExprEval eval = expr.eval(inputBindings);
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[]{"$.y", "$.z", "$.x"}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[]{"$.x", "$.y", "$.z"}, (Object[]) eval.value());
 
     expr = Parser.parse("json_paths(nester)", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
-    Assert.assertArrayEquals(new Object[]{"$.x[0]", "$.x[1]", "$.x[2]", "$.y.b", "$.y.a"}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[]{"$.x", "$.y.a", "$.y.b"}, (Object[]) eval.value());
   }
 
   @Test
@@ -173,7 +170,7 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
 
     expr = Parser.parse("json_value(nester, '$.y.a', 'LONG')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
-    Assert.assertEquals(NullHandling.defaultLongValue(), eval.value());
+    Assert.assertNull(eval.value());
     Assert.assertEquals(ExpressionType.LONG, eval.type());
 
     expr = Parser.parse("json_value(nester, '$.y.a.b.c[12]')", MACRO_TABLE);
@@ -212,17 +209,17 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     Expr expr = Parser.parse("json_query(nest, '$.x')", MACRO_TABLE);
     ExprEval eval = expr.eval(inputBindings);
     Assert.assertEquals(100L, eval.value());
-    Assert.assertEquals(NestedDataExpressions.TYPE, eval.type());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
 
     expr = Parser.parse("json_query(nester, '$.x')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertEquals(NESTER.get("x"), eval.value());
-    Assert.assertEquals(NestedDataExpressions.TYPE, eval.type());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
 
     expr = Parser.parse("json_query(nester, '$.x[1]')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertEquals("b", eval.value());
-    Assert.assertEquals(NestedDataExpressions.TYPE, eval.type());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
 
     expr = Parser.parse("json_query(nester, '$.x[23]')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
@@ -239,7 +236,7 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     expr = Parser.parse("json_query(nester, '$.y.a')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertEquals("hello", eval.value());
-    Assert.assertEquals(NestedDataExpressions.TYPE, eval.type());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
 
     expr = Parser.parse("json_query(nester, '$.y.a.b.c[12]')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
@@ -248,7 +245,7 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     expr = Parser.parse("json_query(long, '$')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertEquals(1234L, eval.value());
-    Assert.assertEquals(NestedDataExpressions.TYPE, eval.type());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
   }
 
   @Test
@@ -257,44 +254,44 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     Expr expr = Parser.parse("parse_json(null)", MACRO_TABLE);
     ExprEval eval = expr.eval(inputBindings);
     Assert.assertEquals(null, eval.value());
-    Assert.assertEquals(NestedDataExpressions.TYPE, eval.type());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
 
     expr = Parser.parse("parse_json('null')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertEquals(null, eval.value());
-    Assert.assertEquals(NestedDataExpressions.TYPE, eval.type());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
 
     Assert.assertThrows(ExpressionProcessingException.class, () -> Parser.parse("parse_json('{')", MACRO_TABLE));
     expr = Parser.parse("try_parse_json('{')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertEquals(null, eval.value());
-    Assert.assertEquals(NestedDataExpressions.TYPE, eval.type());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
 
     Assert.assertThrows(ExpressionProcessingException.class, () -> Parser.parse("parse_json('hello world')", MACRO_TABLE));
     expr = Parser.parse("try_parse_json('hello world')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertEquals(null, eval.value());
-    Assert.assertEquals(NestedDataExpressions.TYPE, eval.type());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
 
     expr = Parser.parse("parse_json('\"hello world\"')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertEquals("hello world", eval.value());
-    Assert.assertEquals(NestedDataExpressions.TYPE, eval.type());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
 
     expr = Parser.parse("parse_json('1')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertEquals(1, eval.value());
-    Assert.assertEquals(NestedDataExpressions.TYPE, eval.type());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
 
     expr = Parser.parse("parse_json('true')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertEquals(true, eval.value());
-    Assert.assertEquals(NestedDataExpressions.TYPE, eval.type());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
 
     expr = Parser.parse("parse_json('{\"foo\":1}')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertEquals("{\"foo\":1}", JSON_MAPPER.writeValueAsString(eval.value()));
-    Assert.assertEquals(NestedDataExpressions.TYPE, eval.type());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
   }
 
   @Test
@@ -312,7 +309,7 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
       Map val = (Map) eval.value();
       Assert.assertEquals(NEST.get(key), ((Integer) val.get(key)).longValue());
     }
-    Assert.assertEquals(NestedDataExpressions.TYPE, eval.type());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
 
     expr = Parser.parse("json_value(parse_json('{\"x\":100,\"y\":200,\"z\":300}'), '$.x')", MACRO_TABLE);
     eval = expr.eval(inputBindings);

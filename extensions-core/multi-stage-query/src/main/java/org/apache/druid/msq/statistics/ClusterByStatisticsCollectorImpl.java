@@ -35,6 +35,7 @@ import org.apache.druid.segment.column.RowSignature;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
@@ -56,15 +57,15 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
 
   private final boolean[] hasMultipleValues;
 
-  private final int maxRetainedBytes;
+  private final long maxRetainedBytes;
   private final int maxBuckets;
-  private double totalRetainedBytes;
+  private long totalRetainedBytes;
 
   private ClusterByStatisticsCollectorImpl(
       final ClusterBy clusterBy,
       final RowKeyReader keyReader,
       final KeyCollectorFactory<?, ?> keyCollectorFactory,
-      final int maxRetainedBytes,
+      final long maxRetainedBytes,
       final int maxBuckets,
       final boolean checkHasMultipleValues
   )
@@ -86,7 +87,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   public static ClusterByStatisticsCollector create(
       final ClusterBy clusterBy,
       final RowSignature signature,
-      final int maxRetainedBytes,
+      final long maxRetainedBytes,
       final int maxBuckets,
       final boolean aggregate,
       final boolean checkHasMultipleValues
@@ -167,7 +168,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   public ClusterByStatisticsCollector addAll(final ClusterByStatisticsSnapshot snapshot)
   {
     // Add all key collectors from the other collector.
-    for (ClusterByStatisticsSnapshot.Bucket otherBucket : snapshot.getBuckets()) {
+    for (ClusterByStatisticsSnapshot.Bucket otherBucket : snapshot.getBuckets().values()) {
       //noinspection rawtypes, unchecked
       final KeyCollector<?> otherKeyCollector =
           ((KeyCollectorFactory) keyCollectorFactory).fromSnapshot(otherBucket.getKeyCollectorSnapshot());
@@ -315,13 +316,20 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
   {
     assertRetainedByteCountsAreTrackedCorrectly();
 
-    final List<ClusterByStatisticsSnapshot.Bucket> bucketSnapshots = new ArrayList<>();
+    final Map<Long, ClusterByStatisticsSnapshot.Bucket> bucketSnapshots = new HashMap<>();
+    final RowKeyReader trimmedRowReader = keyReader.trimmedKeyReader(clusterBy.getBucketByCount());
 
     for (final Map.Entry<RowKey, BucketHolder> bucketEntry : buckets.entrySet()) {
       //noinspection rawtypes, unchecked
       final KeyCollectorSnapshot keyCollectorSnapshot =
           ((KeyCollectorFactory) keyCollectorFactory).toSnapshot(bucketEntry.getValue().keyCollector);
-      bucketSnapshots.add(new ClusterByStatisticsSnapshot.Bucket(bucketEntry.getKey(), keyCollectorSnapshot));
+      Long bucketKey = Long.MIN_VALUE;
+
+      // If there is a clustering on time, read the first field from each bucket and add it to the snapshots.
+      if (clusterBy.getBucketByCount() == 1) {
+        bucketKey = (Long) trimmedRowReader.read(bucketEntry.getKey(), 0);
+      }
+      bucketSnapshots.put(bucketKey, new ClusterByStatisticsSnapshot.Bucket(bucketEntry.getKey(), keyCollectorSnapshot, totalRetainedBytes));
     }
 
     final IntSet hasMultipleValuesSet;
@@ -367,10 +375,10 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
    * number the same, if downsampling is not possible. (For example: downsampling is not possible if all buckets
    * have been downsampled all the way to one key each.)
    */
-  private void downSample()
+  void downSample()
   {
-    double newTotalRetainedBytes = totalRetainedBytes;
-    final double targetTotalRetainedBytes = totalRetainedBytes / 2;
+    long newTotalRetainedBytes = totalRetainedBytes;
+    final long targetTotalRetainedBytes = totalRetainedBytes / 2;
 
     final List<BucketHolder> sortedHolders = new ArrayList<>(buckets.size());
 
@@ -384,7 +392,8 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
     // Downsample least-dense buckets first. (They're less likely to need high resolution.)
     sortedHolders.sort(
         Comparator.comparing((BucketHolder holder) ->
-                                 (double) holder.keyCollector.estimatedTotalWeight() / holder.keyCollector.estimatedRetainedKeys())
+                                 (double) holder.keyCollector.estimatedTotalWeight()
+                                 / holder.keyCollector.estimatedRetainedKeys())
     );
 
     int i = 0;
@@ -396,7 +405,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
       bucketHolder.keyCollector.downSample();
       newTotalRetainedBytes += bucketHolder.updateRetainedBytes();
 
-      if (i == sortedHolders.size() - 1 || sortedHolders.get(i + 1).retainedBytes > bucketHolder.retainedBytes) {
+      if (i == sortedHolders.size() - 1 || sortedHolders.get(i + 1).retainedBytes > bucketHolder.retainedBytes || bucketHolder.keyCollector.estimatedRetainedKeys() <= 1) {
         i++;
       }
     }

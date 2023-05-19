@@ -57,7 +57,7 @@ export const LocalStorageKeys = {
 
   SQL_DATA_LOADER_CONTENT: 'sql-data-loader-content' as const,
 };
-export type LocalStorageKeys = typeof LocalStorageKeys[keyof typeof LocalStorageKeys];
+export type LocalStorageKeys = (typeof LocalStorageKeys)[keyof typeof LocalStorageKeys];
 
 // ----------------------------
 

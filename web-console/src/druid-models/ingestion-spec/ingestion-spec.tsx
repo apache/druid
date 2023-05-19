@@ -20,7 +20,9 @@ import { Code } from '@blueprintjs/core';
 import { range } from 'd3-array';
 import React from 'react';
 
-import { AutoForm, ExternalLink, Field } from '../../components';
+import type { Field } from '../../components';
+import { AutoForm, ExternalLink } from '../../components';
+import { IndexSpecDialog } from '../../dialogs/index-spec-dialog/index-spec-dialog';
 import { getLink } from '../../links';
 import {
   allowKeys,
@@ -32,32 +34,33 @@ import {
   EMPTY_ARRAY,
   EMPTY_OBJECT,
   filterMap,
+  findMap,
   isSimpleArray,
   oneOf,
   parseCsvLine,
   typeIs,
 } from '../../utils';
-import { SampleHeaderAndRows } from '../../utils/sampler';
+import type { SampleResponse } from '../../utils/sampler';
+import type { DimensionsSpec } from '../dimension-spec/dimension-spec';
 import {
-  DimensionsSpec,
   getDimensionSpecName,
   getDimensionSpecs,
   getDimensionSpecType,
 } from '../dimension-spec/dimension-spec';
-import { InputFormat, issueWithInputFormat } from '../input-format/input-format';
-import {
-  FILTER_SUGGESTIONS,
-  InputSource,
-  issueWithInputSource,
-} from '../input-source/input-source';
+import type { IndexSpec } from '../index-spec/index-spec';
+import { summarizeIndexSpec } from '../index-spec/index-spec';
+import type { InputFormat } from '../input-format/input-format';
+import { issueWithInputFormat } from '../input-format/input-format';
+import type { InputSource } from '../input-source/input-source';
+import { FILTER_SUGGESTIONS, issueWithInputSource } from '../input-source/input-source';
+import type { MetricSpec } from '../metric-spec/metric-spec';
 import {
   getMetricSpecOutputType,
   getMetricSpecs,
   getMetricSpecSingleFieldName,
-  MetricSpec,
 } from '../metric-spec/metric-spec';
-import { TimestampSpec } from '../timestamp-spec/timestamp-spec';
-import { TransformSpec } from '../transform-spec/transform-spec';
+import type { TimestampSpec } from '../timestamp-spec/timestamp-spec';
+import type { TransformSpec } from '../transform-spec/transform-spec';
 
 export const MAX_INLINE_DATA_LENGTH = 65536;
 
@@ -264,11 +267,17 @@ export interface DataSchema {
   metricsSpec?: MetricSpec[];
 }
 
-export type DimensionMode = 'specific' | 'auto-detect';
+export type SchemaMode = 'fixed' | 'string-only-discovery' | 'type-aware-discovery';
 
-export function getDimensionMode(spec: Partial<IngestionSpec>): DimensionMode {
+export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
+  if (deepGet(spec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery') === true) {
+    return 'type-aware-discovery';
+  }
+  if (deepGet(spec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions') === true) {
+    return 'string-only-discovery';
+  }
   const dimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions') || EMPTY_ARRAY;
-  return Array.isArray(dimensions) && dimensions.length === 0 ? 'auto-detect' : 'specific';
+  return Array.isArray(dimensions) && dimensions.length === 0 ? 'string-only-discovery' : 'fixed';
 }
 
 export function getRollup(spec: Partial<IngestionSpec>): boolean {
@@ -285,12 +294,8 @@ export function getSpecType(spec: Partial<IngestionSpec>): IngestionType {
   );
 }
 
-export function isTask(spec: Partial<IngestionSpec>) {
-  const type = String(getSpecType(spec));
-  return (
-    type.startsWith('index_') ||
-    oneOf(type, 'index', 'compact', 'kill', 'append', 'merge', 'same_interval_merge')
-  );
+export function isStreamingSpec(spec: Partial<IngestionSpec>): boolean {
+  return oneOf(getSpecType(spec), 'kafka', 'kinesis');
 }
 
 export function isDruidSource(spec: Partial<IngestionSpec>): boolean {
@@ -895,6 +900,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Bootstrap servers',
           type: 'string',
           required: true,
+          placeholder: 'kafka_broker_host:9092',
           info: (
             <>
               <ExternalLink
@@ -916,6 +922,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           required: true,
           defined: typeIs('kafka'),
+          placeholder: 'topic_name',
         },
         {
           name: 'consumerProperties',
@@ -1383,6 +1390,7 @@ export interface TuningConfig {
   partitionsSpec?: PartitionsSpec;
   maxPendingPersists?: number;
   indexSpec?: IndexSpec;
+  indexSpecForIntermediatePersists?: IndexSpec;
   forceExtendableShardSpecs?: boolean;
   forceGuaranteedRollup?: boolean;
   reportParseExceptions?: boolean;
@@ -1871,49 +1879,40 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     hideInMore: true,
     info: <>Milliseconds to wait for segment handoff. 0 means to wait forever.</>,
   },
+
   {
-    name: 'spec.tuningConfig.indexSpec.bitmap.type',
-    label: 'Index bitmap type',
-    type: 'string',
-    defaultValue: 'roaring',
-    suggestions: ['concise', 'roaring'],
+    name: 'spec.tuningConfig.indexSpec',
+    type: 'custom',
     hideInMore: true,
-    info: <>Compression format for bitmap indexes.</>,
+    info: <>Defines segment storage format options to use at indexing time.</>,
+    placeholder: 'Default index spec',
+    customSummary: summarizeIndexSpec,
+    customDialog: ({ value, onValueChange, onClose }) => (
+      <IndexSpecDialog onClose={onClose} onSave={onValueChange} indexSpec={value} />
+    ),
   },
   {
-    name: 'spec.tuningConfig.indexSpec.dimensionCompression',
-    label: 'Index dimension compression',
-    type: 'string',
-    defaultValue: 'lz4',
-    suggestions: ['lz4', 'lzf', 'uncompressed'],
-    hideInMore: true,
-    info: <>Compression format for dimension columns.</>,
-  },
-  {
-    name: 'spec.tuningConfig.indexSpec.metricCompression',
-    label: 'Index metric compression',
-    type: 'string',
-    defaultValue: 'lz4',
-    suggestions: ['lz4', 'lzf', 'uncompressed'],
-    hideInMore: true,
-    info: <>Compression format for primitive type metric columns.</>,
-  },
-  {
-    name: 'spec.tuningConfig.indexSpec.longEncoding',
-    label: 'Index long encoding',
-    type: 'string',
-    defaultValue: 'longs',
-    suggestions: ['longs', 'auto'],
+    name: 'spec.tuningConfig.indexSpecForIntermediatePersists',
+    type: 'custom',
     hideInMore: true,
     info: (
       <>
-        Encoding format for long-typed columns. Applies regardless of whether they are dimensions or
-        metrics. <Code>auto</Code> encodes the values using offset or lookup table depending on
-        column cardinality, and store them with variable size. <Code>longs</Code> stores the value
-        as-is with 8 bytes each.
+        Defines segment storage format options to use at indexing time for intermediate persisted
+        temporary segments.
       </>
     ),
+    placeholder: 'Default index spec',
+    customSummary: summarizeIndexSpec,
+    customDialog: ({ value, onValueChange, onClose }) => (
+      <IndexSpecDialog
+        title="Index spec for intermediate persists"
+        onClose={onClose}
+        onSave={onValueChange}
+        indexSpec={value}
+      />
+    ),
   },
+
   {
     name: 'spec.tuningConfig.splitHintSpec.maxSplitSize',
     type: 'number',
@@ -2120,18 +2119,6 @@ export function getTuningFormFields() {
   return TUNING_FORM_FIELDS;
 }
 
-export interface IndexSpec {
-  bitmap?: Bitmap;
-  dimensionCompression?: string;
-  metricCompression?: string;
-  longEncoding?: string;
-}
-
-export interface Bitmap {
-  type: string;
-  compressRunOnSerialization?: boolean;
-}
-
 // --------------
 
 export function updateIngestionType(
@@ -2155,29 +2142,33 @@ export function updateIngestionType(
   return newSpec;
 }
 
-export function issueWithSampleData(sampleData: string[]): JSX.Element | undefined {
-  if (sampleData.length) {
-    const firstData = sampleData[0];
+export function issueWithSampleData(
+  sampleData: SampleResponse,
+  spec: Partial<IngestionSpec>,
+): JSX.Element | undefined {
+  if (isStreamingSpec(spec)) return;
 
-    if (firstData === '{') {
-      return (
-        <>
-          This data looks like regular JSON object. For Druid to parse a text file it must have one
-          row per event. Maybe look at{' '}
-          <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink> instead.
-        </>
-      );
-    }
+  const firstData: string = findMap(sampleData.data, l => l.input?.raw);
+  if (firstData) return;
 
-    if (oneOf(firstData, '[', '[]')) {
-      return (
-        <>
-          This data looks like a multi-line JSON array. For Druid to parse a text file it must have
-          one row per event. Maybe look at{' '}
-          <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink> instead.
-        </>
-      );
-    }
+  if (firstData === '{') {
+    return (
+      <>
+        This data looks like multi-line formatted JSON object. For Druid to parse a text file it
+        must have one row per event. Consider reformatting your data as{' '}
+        <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink>.
+      </>
+    );
+  }
+
+  if (oneOf(firstData, '[', '[]')) {
+    return (
+      <>
+        This data looks like a multi-line JSON array. For Druid to parse a text file it must have
+        one row per event. Consider reformatting your data as{' '}
+        <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink>.
+      </>
+    );
   }
 
   return;
@@ -2185,18 +2176,43 @@ export function issueWithSampleData(sampleData: string[]): JSX.Element | undefin
 
 export function fillInputFormatIfNeeded(
   spec: Partial<IngestionSpec>,
-  sampleData: string[],
+  sampleResponse: SampleResponse,
 ): Partial<IngestionSpec> {
   if (deepGet(spec, 'spec.ioConfig.inputFormat.type')) return spec;
-  return deepSet(spec, 'spec.ioConfig.inputFormat', guessInputFormat(sampleData));
+
+  return deepSet(
+    spec,
+    'spec.ioConfig.inputFormat',
+    getSpecType(spec) === 'kafka'
+      ? guessKafkaInputFormat(filterMap(sampleResponse.data, l => l.input))
+      : guessSimpleInputFormat(
+          filterMap(sampleResponse.data, l => l.input?.raw),
+          isStreamingSpec(spec),
+        ),
+  );
 }
 
 function noNumbers(xs: string[]): boolean {
   return xs.every(x => isNaN(Number(x)));
 }
 
-export function guessInputFormat(sampleData: string[]): InputFormat {
-  let sampleDatum = sampleData[0];
+export function guessKafkaInputFormat(sampleRaw: Record<string, any>[]): InputFormat {
+  const hasHeader = sampleRaw.some(x => Object.keys(x).some(k => k.startsWith('kafka.header.')));
+  const keys = filterMap(sampleRaw, x => x['kafka.key']);
+  const payloads = filterMap(sampleRaw, x => x.raw);
+  return {
+    type: 'kafka',
+    headerFormat: hasHeader ? { type: 'string' } : undefined,
+    keyFormat: keys.length ? guessSimpleInputFormat(keys, true) : undefined,
+    valueFormat: guessSimpleInputFormat(payloads, true),
+  };
+}
+
+export function guessSimpleInputFormat(
+  sampleRaw: string[],
+  canBeMultiLineJson = false,
+): InputFormat {
+  let sampleDatum = sampleRaw[0];
   if (sampleDatum) {
     sampleDatum = String(sampleDatum); // Really ensure it is a string
 
@@ -2283,6 +2299,11 @@ export function guessInputFormat(sampleData: string[]): InputFormat {
         numColumns: lineAsTsvPipe.length,
       });
     }
+
+    // If the object is a single json object spanning multiple lines than the first one will just start with `{`
+    if (canBeMultiLineJson && sampleDatum.startsWith('{')) {
+      return { type: 'json', useJsonNodeReader: true };
+    }
   }
 
   return inputFormatFromType({ type: 'regex' });
@@ -2327,11 +2348,11 @@ function inputFormatFromType(options: InputFormatFromTypeOptions): InputFormat {
 
 // ------------------------
 
-export function guessIsArrayFromHeaderAndRows(
-  headerAndRows: SampleHeaderAndRows,
+export function guessIsArrayFromSampleResponse(
+  sampleResponse: SampleResponse,
   column: string,
 ): boolean {
-  return headerAndRows.rows.some(r => isSimpleArray(r.input?.[column]));
+  return sampleResponse.data.some(r => isSimpleArray(r.input?.[column]));
 }
 
 export function guessColumnTypeFromInput(
@@ -2363,13 +2384,13 @@ export function guessColumnTypeFromInput(
   }
 }
 
-export function guessColumnTypeFromHeaderAndRows(
-  headerAndRows: SampleHeaderAndRows,
+export function guessColumnTypeFromSampleResponse(
+  sampleResponse: SampleResponse,
   column: string,
   guessNumericStringsAsNumbers: boolean,
 ): string {
   return guessColumnTypeFromInput(
-    filterMap(headerAndRows.rows, r => r.input?.[column]),
+    filterMap(sampleResponse.data, r => r.input?.[column]),
     guessNumericStringsAsNumbers,
   );
 }
@@ -2399,8 +2420,8 @@ function getTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string, stri
 
 export function updateSchemaWithSample(
   spec: Partial<IngestionSpec>,
-  headerAndRows: SampleHeaderAndRows,
-  dimensionMode: DimensionMode,
+  sampleResponse: SampleResponse,
+  schemaMode: SchemaMode,
   rollup: boolean,
   forcePartitionInitialization = false,
 ): Partial<IngestionSpec> {
@@ -2411,27 +2432,37 @@ export function updateSchemaWithSample(
 
   let newSpec = spec;
 
-  if (dimensionMode === 'auto-detect') {
-    newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions');
-    newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions', []);
-  } else {
-    newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions');
+  switch (schemaMode) {
+    case 'type-aware-discovery':
+      newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery', true);
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions');
+      newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions', []);
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions');
+      break;
 
-    const dimensions = getDimensionSpecs(
-      headerAndRows,
-      typeHints,
-      guessNumericStringsAsNumbers,
-      rollup,
-    );
-    if (dimensions) {
-      newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions', dimensions);
-    }
+    case 'string-only-discovery':
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery');
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions');
+      newSpec = deepSet(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions', []);
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensions');
+      break;
+
+    case 'fixed':
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery');
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.includeAllDimensions');
+      newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.dimensionExclusions');
+      newSpec = deepSet(
+        newSpec,
+        'spec.dataSchema.dimensionsSpec.dimensions',
+        getDimensionSpecs(sampleResponse, typeHints, guessNumericStringsAsNumbers, rollup),
+      );
+      break;
   }
 
   if (rollup) {
     newSpec = deepSet(newSpec, 'spec.dataSchema.granularitySpec.queryGranularity', 'hour');
 
-    const metrics = getMetricSpecs(headerAndRows, typeHints, guessNumericStringsAsNumbers);
+    const metrics = getMetricSpecs(sampleResponse, typeHints, guessNumericStringsAsNumbers);
     if (metrics) {
       newSpec = deepSet(newSpec, 'spec.dataSchema.metricsSpec', metrics);
     }

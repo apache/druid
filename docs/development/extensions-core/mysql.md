@@ -23,7 +23,7 @@ title: "MySQL Metadata Store"
   -->
 
 
-To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `mysql-metadata-storage` in the extensions load list.
+To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `mysql-metadata-storage` in the extensions load list.
 
 > The MySQL extension requires the MySQL Connector/J library or MariaDB Connector/J library, neither of which are included in the Druid distribution.
 > Refer to the following section for instructions on how to install this library.
@@ -125,7 +125,7 @@ If using the MariaDB connector library, set `druid.metadata.mysql.driver.driverC
 |`druid.metadata.mysql.ssl.enabledSSLCipherSuites`|Overrides the existing cipher suites with these cipher suites.|none|no|
 |`druid.metadata.mysql.ssl.enabledTLSProtocols`|Overrides the TLS protocols with these protocols.|none|no|
 
-### MySQL InputSource and Firehose
+### MySQL InputSource
 
 ```json
 {
@@ -133,22 +133,17 @@ If using the MariaDB connector library, set `druid.metadata.mysql.driver.driverC
   "spec": {
     "dataSchema": {
       "dataSource": "some_datasource",
-      "parser": {
-        "parseSpec": {
-          "format": "timeAndDims",
-          "dimensionsSpec": {
-            "dimensionExclusions": [],
-            "dimensions": [
-              "dim1",
-              "dim2",
-              "dim3"
-            ]
-          },
-          "timestampSpec": {
-            "format": "auto",
-            "column": "ts"
-          }
-        }
+      "dimensionsSpec": {
+        "dimensionExclusions": [],
+        "dimensions": [
+          "dim1",
+          "dim2",
+          "dim3"
+        ]
+      },
+      "timestampSpec": {
+        "format": "auto",
+        "column": "ts"
       },
       "metricsSpec": [],
       "granularitySpec": {
@@ -167,7 +162,7 @@ If using the MariaDB connector library, set `druid.metadata.mysql.driver.driverC
     },
     "ioConfig": {
       "type": "index_parallel",
-      "firehose": {
+      "inputSource": {
         "type": "sql",
         "database": {
           "type": "mysql",
@@ -180,6 +175,9 @@ If using the MariaDB connector library, set `druid.metadata.mysql.driver.driverC
         "sqls": [
           "SELECT * FROM some_table"
         ]
+      },
+      "inputFormat": {
+        "type": "json"
       }
     },
     "tuningConfig": {

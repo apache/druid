@@ -18,7 +18,8 @@
 
 import React from 'react';
 
-import { ExternalLink, Field } from '../../components';
+import type { Field } from '../../components';
+import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
 import { deepGet, deepSet, nonEmptyArray, typeIs } from '../../utils';
 
@@ -76,7 +77,7 @@ export type InputSourceDesc =
       dataSource: string;
       interval: string;
       filter?: any;
-      dimensions?: string[]; // ToDo: these are not in the docs https://druid.apache.org/docs/latest/ingestion/native-batch-input-sources.html
+      dimensions?: string[]; // ToDo: these are not in the docs https://druid.apache.org/docs/latest/ingestion/input-sources.html
       metrics?: string[];
       maxInputSegmentBytesPerTask?: number;
     }

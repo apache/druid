@@ -24,14 +24,21 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
+import com.google.inject.multibindings.Multibinder;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexing.overlord.duty.OverlordDuty;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.msq.indexing.DurableStorageCleaner;
+import org.apache.druid.msq.indexing.DurableStorageCleanerConfig;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * Module for functionality related to durable storage for stage output data.
@@ -44,16 +51,19 @@ public class MSQDurableStorageModule implements DruidModule
   public static final String MSQ_INTERMEDIATE_STORAGE_ENABLED =
       String.join(".", MSQ_INTERMEDIATE_STORAGE_PREFIX, "enable");
 
-  @Inject
   private Properties properties;
+  private Set<NodeRole> nodeRoles;
 
-  public MSQDurableStorageModule()
-  {
-  }
-
-  public MSQDurableStorageModule(Properties properties)
+  @Inject
+  public void setProperties(Properties properties)
   {
     this.properties = properties;
+  }
+
+  @Inject
+  public void setNodeRoles(@Self Set<NodeRole> nodeRoles)
+  {
+    this.nodeRoles = nodeRoles;
   }
 
   @Override
@@ -76,11 +86,23 @@ public class MSQDurableStorageModule implements DruidModule
       binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
             .toProvider(Key.get(StorageConnectorProvider.class, MultiStageQuery.class))
             .in(LazySingleton.class);
+
+      if (nodeRoles.contains(NodeRole.OVERLORD)) {
+        JsonConfigProvider.bind(
+            binder,
+            String.join(".", MSQ_INTERMEDIATE_STORAGE_PREFIX, "cleaner"),
+            DurableStorageCleanerConfig.class
+        );
+
+        Multibinder.newSetBinder(binder, OverlordDuty.class)
+                   .addBinding()
+                   .to(DurableStorageCleaner.class);
+      }
     }
   }
 
   private boolean isDurableShuffleStorageEnabled()
   {
-    return Boolean.parseBoolean((String) properties.getOrDefault(MSQ_INTERMEDIATE_STORAGE_ENABLED, "false"));
+    return Boolean.parseBoolean(properties.getProperty(MSQ_INTERMEDIATE_STORAGE_ENABLED, "false"));
   }
 }

@@ -1,7 +1,7 @@
 ---
 id: native-batch
-title: "Native batch ingestion"
-sidebar_label: "Native batch"
+title: JSON-based batch
+sidebar_label: JSON-based batch
 ---
 
 <!--
@@ -23,8 +23,7 @@ sidebar_label: "Native batch"
   ~ under the License.
   -->
 
-> This page describes native batch ingestion using [ingestion specs](ingestion-spec.md). Refer to the [ingestion
-> methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
+> This page describes JSON-based batch ingestion using [ingestion specs](ingestion-spec.md). For SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md) extension, see [SQL-based ingestion](../multi-stage-query/index.md). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
 
 Apache Druid supports the following types of native batch indexing tasks:
 - Parallel task indexing (`index_parallel`) that can run multiple indexing tasks concurrently. Parallel task works well for production ingestion tasks.
@@ -35,14 +34,14 @@ This topic covers the configuration for `index_parallel` ingestion specs.
 For related information on batch indexing, see:
 - [Batch ingestion method comparison table](./index.md#batch) for a comparison of batch ingestion methods.
 - [Tutorial: Loading a file](../tutorials/tutorial-batch.md) for a tutorial on native batch ingestion.
-- [Input sources](./native-batch-input-source.md) for possible input sources.
-- [Input formats](./data-formats.md#input-format) for possible input formats.
+- [Input sources](./input-sources.md) for possible input sources.
+- [Source input formats](./data-formats.md#input-format) for possible input formats.
 
 ## Submit an indexing task
 
 To run either kind of native batch indexing task you can:
 - Use the **Load Data** UI in the web console to define and submit an ingestion spec.
-- Define an ingestion spec in JSON based upon the [examples](#parallel-indexing-example) and reference topics for batch indexing. Then POST the ingestion spec to the [Indexer API endpoint](../operations/api-reference.md#tasks), 
+- Define an ingestion spec in JSON based upon the [examples](#parallel-indexing-example) and reference topics for batch indexing. Then POST the ingestion spec to the [Indexer API endpoint](../api-reference/api-reference.md#tasks), 
 `/druid/indexer/v1/task`, the Overlord service. Alternatively you can use the indexing script included with Druid at `bin/post-index-task`.
 
 ## Parallel task indexing
@@ -196,7 +195,7 @@ The following table defines the primary sections of the input spec:
 |type|The task type. For parallel task indexing, set the value to `index_parallel`.|yes|
 |id|The task ID. If omitted, Druid generates the task ID using the task type, data source name, interval, and date-time stamp. |no|
 |spec|The ingestion spec that defines the [data schema](#dataschema), [IO config](#ioconfig), and [tuning config](#tuningconfig).|yes|
-|context|Context to specify various task configuration parameters. See [Task context parameters](tasks.md#context-parameters) for more details.|no|
+|context|Context to specify various task configuration parameters. See [Task context parameters](../ingestion/tasks.md#context-parameters) for more details.|no|
 
 ### `dataSchema`
 
@@ -263,7 +262,7 @@ The size-based split hint spec affects all splittable input sources except for t
 
 #### Segments Split Hint Spec
 
-The segments split hint spec is used only for [`DruidInputSource`](./native-batch-input-source.md) and legacy `IngestSegmentFirehose`.
+The segments split hint spec is used only for [`DruidInputSource`](./input-sources.md).
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
@@ -588,7 +587,7 @@ An example of the result is
           "filter": "lineitem.tbl.5"
         },
         "inputFormat": {
-          "format": "tsv",
+          "type": "tsv",
           "delimiter": "|",
           "columns": [
             "l_orderkey",
@@ -679,8 +678,7 @@ Returns the task attempt history of the worker task spec of the given id, or HTT
 While ingesting data using the parallel task indexing, Druid creates segments from the input data and pushes them. For segment pushing,
 the parallel task index supports the following segment pushing modes based upon your type of [rollup](./rollup.md):
 
-- Bulk pushing mode: Used for perfect rollup. Druid pushes every segment at the very end of the index task. Until then, Druid stores created segments in memory and local storage of the service running the index task. This mode can cause problems if you have limited storage capacity, and is not recommended to use in production.
-To enable bulk pushing mode, set `forceGuaranteedRollup` in your TuningConfig. You cannot use bulk pushing with `appendToExisting` in your IOConfig.
+- Bulk pushing mode: Used for perfect rollup. Druid pushes every segment at the very end of the index task. Until then, Druid stores created segments in memory and local storage of the service running the index task. To enable bulk pushing mode, set `forceGuaranteedRollup` to `true` in your tuning config. You cannot use bulk pushing with `appendToExisting` in your IOConfig.
 - Incremental pushing mode: Used for best-effort rollup. Druid pushes segments are incrementally during the course of the indexing task. The index task collects data and stores created segments in the memory and disks of the services running the task until the total number of collected rows exceeds `maxTotalRows`. At that point the index task immediately pushes all segments created up until that moment, cleans up pushed segments, and continues to ingest the remaining data.
 
 ## Capacity planning
@@ -708,17 +706,17 @@ by assigning more task slots to them.
 Use the `inputSource` object to define the location where your index can read data. Only the native parallel task and simple task support the input source.
 
 For details on available input sources see:
-- [S3 input source](./native-batch-input-source.md#s3-input-source) (`s3`) reads data from AWS S3 storage.
-- [Google Cloud Storage input source](./native-batch-input-source.md#google-cloud-storage-input-source) (`gs`) reads data from Google Cloud Storage.
-- [Azure input source](./native-batch-input-source.md#azure-input-source) (`azure`) reads data from Azure Blob Storage and Azure Data Lake.
-- [HDFS input source](./native-batch-input-source.md#hdfs-input-source) (`hdfs`) reads data from HDFS storage.
-- [HTTP input Source](./native-batch-input-source.md#http-input-source) (`http`) reads data from HTTP servers.
-- [Inline input Source](./native-batch-input-source.md#inline-input-source) reads data you paste into the web console.
-- [Local input Source](./native-batch-input-source.md#local-input-source) (`local`) reads data from local storage.
-- [Druid input Source](./native-batch-input-source.md#druid-input-source) (`druid`) reads data from a Druid datasource.
-- [SQL input Source](./native-batch-input-source.md#sql-input-source) (`sql`) reads data from a RDBMS source.
+- [S3 input source](./input-sources.md#s3-input-source) (`s3`) reads data from AWS S3 storage.
+- [Google Cloud Storage input source](./input-sources.md#google-cloud-storage-input-source) (`gs`) reads data from Google Cloud Storage.
+- [Azure input source](./input-sources.md#azure-input-source) (`azure`) reads data from Azure Blob Storage and Azure Data Lake.
+- [HDFS input source](./input-sources.md#hdfs-input-source) (`hdfs`) reads data from HDFS storage.
+- [HTTP input Source](./input-sources.md#http-input-source) (`http`) reads data from HTTP servers.
+- [Inline input Source](./input-sources.md#inline-input-source) reads data you paste into the web console.
+- [Local input Source](./input-sources.md#local-input-source) (`local`) reads data from local storage.
+- [Druid input Source](./input-sources.md#druid-input-source) (`druid`) reads data from a Druid datasource.
+- [SQL input Source](./input-sources.md#sql-input-source) (`sql`) reads data from a RDBMS source.
 
-For information on how to combine input sources, see [Combining input source](./native-batch-input-source.md#combining-input-source).
+For information on how to combine input sources, see [Combining input source](./input-sources.md#combining-input-source).
 
 ### `segmentWriteOutMediumFactory`
 

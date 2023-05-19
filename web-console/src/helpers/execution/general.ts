@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { CancelToken } from 'axios';
-import { QueryResult } from 'druid-query-toolkit';
+import type { CancelToken } from 'axios';
+import type { QueryResult } from 'druid-query-toolkit';
 
-import { Execution } from '../../druid-models';
+import type { Execution } from '../../druid-models';
 import { IntermediateQueryState } from '../../utils';
 
 import {
-  updateExecutionWithDatasourceExistsIfNeeded,
+  updateExecutionWithDatasourceLoadedIfNeeded,
   updateExecutionWithTaskIfNeeded,
 } from './sql-task-execution';
 
@@ -49,7 +49,7 @@ export async function executionBackgroundStatusCheck(
   switch (execution.engine) {
     case 'sql-msq-task':
       execution = await updateExecutionWithTaskIfNeeded(execution, cancelToken);
-      execution = await updateExecutionWithDatasourceExistsIfNeeded(execution, cancelToken);
+      execution = await updateExecutionWithDatasourceLoadedIfNeeded(execution, cancelToken);
       break;
 
     default:

@@ -1,0 +1,127 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Revised Integration Tests shared workflow
+on:
+  workflow_call:
+    inputs:
+      script:
+        description: 'Which IT script to run'
+        required: true
+        type: string
+      build_jdk:
+        description: 'Which jdk version was used to build'
+        required: true
+        type: string
+      runtime_jdk:
+        description: 'Which JDK version to use at runtime'
+        required: true
+        type: string
+      use_indexer:
+        description: 'Which indexer to use'
+        required: true
+        type: string
+      it:
+        description: 'IT test Category'
+        required: true
+        type: string
+      mysql_driver:
+        description: 'MySQL driver to use'
+        required: false
+        type: string
+        default: com.mysql.jdbc.Driver
+      DRUID_CLOUD_BUCKET:
+        required: false
+        type: string
+      DRUID_CLOUD_PATH:
+        required: false
+        type: string
+      AWS_REGION:
+        required: false
+        type: string
+      AWS_ACCESS_KEY_ID:
+        required: false
+        type: string
+      AWS_SECRET_ACCESS_KEY:
+        required: false
+        type: string
+
+env:
+  MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }} # Used by tests to connect to metadata store directly.
+  DRUID_CLOUD_BUCKET: ${{ inputs.DRUID_CLOUD_BUCKET }}
+  DRUID_CLOUD_PATH: ${{ inputs.DRUID_CLOUD_PATH }}
+  AWS_REGION: ${{ inputs.AWS_REGION }}
+  AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ inputs.AWS_SECRET_ACCESS_KEY }}
+  SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
+
+jobs:
+  test: # GitHub job that runs a given revised/new IT against retrieved cached druid docker image
+    name: ${{ inputs.it }} integration test (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }})
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+
+      - name: Setup java
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_${{ inputs.build_jdk }}_X64" >> $GITHUB_ENV
+
+      - name: Restore Maven repository
+        id: maven-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ github.sha }}
+
+      - name: Restore targets
+        id: targets-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: ./**/target
+          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-targets-${{ github.sha }}
+
+      - name: Retrieve cached docker image
+        id: docker-restore
+        uses: actions/cache/restore@v3
+        with:
+          key: druid-container-jdk${{ inputs.build_jdk }}.tar.gz-${{ github.sha }}
+          path: |
+            ./druid-container-jdk${{ inputs.build_jdk }}.tar.gz
+            ./integration-tests-ex/image/target/env.sh
+
+      - name: Maven build
+        if: steps.maven-restore.outputs.cache-hit != 'true' || ( steps.docker-restore.outputs.cache-hit != 'true' && steps.targets-restore.outputs.cache-hit != 'true' )
+        run: |
+          ./it.sh ci
+
+      - name: Create docker image
+        if: steps.docker-restore.outputs.cache-hit != 'true' || steps.maven-restore.outputs.cache-hit != 'true'
+        env:
+          docker-restore: ${{ toJson(steps.docker-restore.outputs) }}
+        run: |
+          ./it.sh image
+          source ./integration-tests-ex/image/target/env.sh
+          docker tag $DRUID_IT_IMAGE_NAME $DRUID_IT_IMAGE_NAME-jdk${{ inputs.build_jdk }}
+          echo $DRUID_IT_IMAGE_NAME
+          docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ inputs.build_jdk }}.tar.gz
+
+      - name: Load docker image
+        run: |
+          docker load --input druid-container-jdk${{ inputs.build_jdk }}.tar.gz
+          docker images
+
+      - name: Run IT
+        run: ${{ inputs.script }}

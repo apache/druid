@@ -24,6 +24,7 @@ import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.ResourceAction;
@@ -207,10 +208,8 @@ public class DirectStatement extends AbstractStatement implements Cancelable
         sqlToolbox.engine,
         queryPlus.sql(),
         queryContext,
-        // Context keys for authorization. Use the user-provided keys,
-        // NOT the keys from the query context which, by this point,
-        // will have been extended with internally-defined values.
-        queryPlus.context().keySet())) {
+        hook
+    )) {
       validate(planner);
       authorize(planner, authorizer());
 
@@ -273,7 +272,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
   {
     if (state == State.CANCELLED) {
       throw new QueryInterruptedException(
-          QueryInterruptedException.QUERY_CANCELED,
+          QueryException.QUERY_CANCELED_ERROR_CODE,
           StringUtils.format("Query is canceled [%s]", sqlQueryId()),
           null,
           null
@@ -313,5 +312,12 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       super.closeWithError(e);
       state = State.CLOSED;
     }
+  }
+
+  @Override
+  public void closeQuietly()
+  {
+    sqlToolbox.sqlLifecycleManager.remove(sqlQueryId(), this);
+    super.closeQuietly();
   }
 }

@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.table;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptTable.ToRelContext;
 import org.apache.calcite.rel.RelNode;
@@ -30,27 +31,38 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.external.ExternalTableScan;
 
+import java.util.Set;
+
 /**
  * Represents an source of data external to Druid: a CSV file, an HTTP request, etc.
  * Each such table represents one of Druid's {@link DataSource} types. Since SQL
  * requires knowledge of the schema of that input source, the user must provide
  * that information in SQL (via the `EXTERN` or up-coming `STAGED` function) or
- * from the upcoming Druid Catalog.
+ * from the Druid Catalog.
  */
 public class ExternalTable extends DruidTable
 {
   private final DataSource dataSource;
   private final ObjectMapper objectMapper;
 
+  private final Supplier<Set<String>> inputSourceTypeSupplier;
+
+  /**
+   * Cached row type, to avoid recreating types multiple times.
+   */
+  private RelDataType rowType;
+
   public ExternalTable(
       final DataSource dataSource,
       final RowSignature rowSignature,
-      final ObjectMapper objectMapper
+      final ObjectMapper objectMapper,
+      final Supplier<Set<String>> inputSourceTypesSupplier
   )
   {
     super(rowSignature);
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.objectMapper = objectMapper;
+    this.inputSourceTypeSupplier = inputSourceTypesSupplier;
   }
 
   @Override
@@ -74,11 +86,19 @@ public class ExternalTable extends DruidTable
   @Override
   public RelDataType getRowType(final RelDataTypeFactory typeFactory)
   {
-    // For external datasources, the row type should be determined by whatever the row signature has been explicitly
-    // passed in. Typecasting directly to SqlTypeName.TIMESTAMP will lead to inconsistencies with the Calcite functions
-    // For example, TIME_PARSE(__time) where __time is specified to be a string field in the external datasource
-    // would lead to an exception because __time would be interpreted as timestamp if we typecast it.
-    return RowSignatures.toRelDataType(getRowSignature(), typeFactory, true);
+    if (rowType == null) {
+      // For external datasources, the row type should be determined by whatever the row signature has been explicitly
+      // passed in. Typecasting directly to SqlTypeName.TIMESTAMP will lead to inconsistencies with the Calcite functions
+      // For example, TIME_PARSE(__time) where __time is specified to be a string field in the external datasource
+      // would lead to an exception because __time would be interpreted as timestamp if we typecast it.
+      rowType = RowSignatures.toRelDataType(getRowSignature(), typeFactory, true);
+    }
+    return rowType;
+  }
+
+  public Supplier<Set<String>> getInputSourceTypeSupplier()
+  {
+    return inputSourceTypeSupplier;
   }
 
   @Override

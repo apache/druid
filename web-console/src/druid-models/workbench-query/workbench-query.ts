@@ -16,31 +16,35 @@
  * limitations under the License.
  */
 
-import {
+import type {
   SqlClusteredByClause,
   SqlExpression,
-  SqlFunction,
+  SqlPartitionedByClause,
+  SqlQuery,
+} from 'druid-query-toolkit';
+import {
+  C,
+  F,
   SqlLiteral,
   SqlOrderByClause,
   SqlOrderByExpression,
-  SqlPartitionedByClause,
-  SqlQuery,
-  SqlRef,
-  SqlTableRef,
+  SqlTable,
 } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
 
-import { ColumnMetadata, deleteKeys, generate8HexId } from '../../utils';
-import { DruidEngine, validDruidEngine } from '../druid-engine/druid-engine';
-import { LastExecution } from '../execution/execution';
-import { ExternalConfig } from '../external-config/external-config';
+import type { ColumnMetadata, RowColumn } from '../../utils';
+import { deleteKeys, generate8HexId } from '../../utils';
+import type { DruidEngine } from '../druid-engine/druid-engine';
+import { validDruidEngine } from '../druid-engine/druid-engine';
+import type { LastExecution } from '../execution/execution';
+import type { ExternalConfig } from '../external-config/external-config';
 import {
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
 } from '../ingest-query-pattern/ingest-query-pattern';
-import { QueryContext } from '../query-context/query-context';
+import type { QueryContext } from '../query-context/query-context';
 
 import { WorkbenchQueryPart } from './workbench-query-part';
 
@@ -82,13 +86,19 @@ export class WorkbenchQuery {
     externalConfig: ExternalConfig,
     isArrays: boolean[],
     timeExpression: SqlExpression | undefined,
+    partitionedByHint: string | undefined,
   ): WorkbenchQuery {
     return new WorkbenchQuery({
       queryContext: {},
       queryParts: [
         WorkbenchQueryPart.fromQueryString(
           ingestQueryPatternToQuery(
-            externalConfigToIngestQueryPattern(externalConfig, isArrays, timeExpression),
+            externalConfigToIngestQueryPattern(
+              externalConfig,
+              isArrays,
+              timeExpression,
+              partitionedByHint,
+            ),
           ).toString(),
         ),
       ],
@@ -185,7 +195,7 @@ export class WorkbenchQuery {
       .map(line =>
         line.replace(
           /^(\s*)(INSERT\s+INTO|REPLACE\s+INTO|OVERWRITE|PARTITIONED\s+BY|CLUSTERED\s+BY)/i,
-          (_, spaces, thing) => `${spaces}--${thing.substr(2)}`,
+          (_, spaces, thing) => `${spaces}--${thing.slice(2)}`,
         ),
       )
       .join('\n');
@@ -201,10 +211,7 @@ export class WorkbenchQuery {
     let partitionedByExpression = partitionedByClause.expression;
     if (partitionedByExpression) {
       if (partitionedByExpression instanceof SqlLiteral) {
-        partitionedByExpression = SqlFunction.floor(
-          SqlRef.column('__time'),
-          partitionedByExpression,
-        );
+        partitionedByExpression = F.floor(C('__time'), partitionedByExpression);
       }
       orderByExpressions.push(SqlOrderByExpression.create(partitionedByExpression));
     }
@@ -216,6 +223,12 @@ export class WorkbenchQuery {
     }
 
     return orderByExpressions.length ? SqlOrderByClause.create(orderByExpressions) : undefined;
+  }
+
+  static getRowColumnFromIssue(issue: string): RowColumn | undefined {
+    const m = issue.match(/at line (\d+),(\d+)/);
+    if (!m) return;
+    return { match: '', row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
   }
 
   public readonly queryParts: WorkbenchQueryPart[];
@@ -344,13 +357,12 @@ export class WorkbenchQuery {
     return this.getLastPart().isEmptyQuery();
   }
 
-  public isValid(): boolean {
+  public getIssue(): string | undefined {
     const lastPart = this.getLastPart();
-    if (lastPart.isJsonLike() && !lastPart.validJson()) {
-      return false;
+    if (lastPart.isJsonLike()) {
+      return lastPart.issueWithJson();
     }
-
-    return true;
+    return;
   }
 
   public canPrettify(): boolean {
@@ -451,8 +463,8 @@ export class WorkbenchQuery {
     const parsedQuery = this.getParsedQuery();
     if (parsedQuery) {
       const fromExpression = parsedQuery.getFirstFromExpression();
-      if (fromExpression instanceof SqlTableRef) {
-        const firstTable = fromExpression.getTable();
+      if (fromExpression instanceof SqlTable) {
+        const firstTable = fromExpression.getName();
         ret = ret.changeQueryParts(
           this.queryParts.map(queryPart =>
             queryPart.queryName === firstTable ? queryPart.addPreviewLimit() : queryPart,
@@ -461,10 +473,10 @@ export class WorkbenchQuery {
       }
     }
 
-    // Adjust the context, remove maxNumTasks and add in ingest mode flags
-    const cleanContext = deleteKeys(this.queryContext, ['maxNumTasks']);
-    ret = ret.changeQueryContext({
-      ...cleanContext,
+    // Explicitly select MSQ, adjust the context, set maxNumTasks to the lowest possible and add in ingest mode flags
+    ret = ret.changeEngine('sql-msq-task').changeQueryContext({
+      ...this.queryContext,
+      maxNumTasks: 2,
       finalizeAggregations: false,
       groupByEnableMultiValueUnnesting: false,
     });
@@ -476,16 +488,17 @@ export class WorkbenchQuery {
           .changeReplaceClause(undefined)
           .changePartitionedByClause(undefined)
           .changeClusteredByClause(undefined)
-          .changeOrderByClause(
-            WorkbenchQuery.makeOrderByClause(
-              parsedQuery.partitionedByClause,
-              parsedQuery.clusteredByClause,
-            ),
-          )
           .toString()
       : WorkbenchQuery.commentOutIngestParts(this.getQueryString());
 
     return ret.changeQueryString(newQueryString);
+  }
+
+  public setMaxNumTasksIfUnset(maxNumTasks: number | undefined): WorkbenchQuery {
+    const { queryContext } = this;
+    if (typeof queryContext.maxNumTasks === 'number' || !maxNumTasks) return this;
+
+    return this.changeQueryContext({ ...queryContext, maxNumTasks: Math.max(maxNumTasks, 2) });
   }
 
   public getApiQuery(makeQueryId: () => string = uuidv4): {

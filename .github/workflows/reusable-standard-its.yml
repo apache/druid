@@ -1,0 +1,97 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Revised Integration Tests shared workflow
+on:
+  workflow_call:
+    inputs:
+      runtime_jdk:
+        description: 'Which JDK version to use at runtime'
+        required: true
+        type: string
+      use_indexer:
+        description: 'Which indexer to use'
+        required: true
+        type: string
+      override_config_path:
+        description: 'Existing Druid configuration (using Docker) can be overridden or new config vars can be set e.g. when using cloud storage'
+        required: false
+        type: string
+      group:
+        required: true
+        type: string
+        description: 'Name of group of tests running (to display)'
+      testing_groups:
+        required: true
+        type: string
+      build_jdk:
+        description: 'Which jdk version was used to build'
+        required: true
+        type: string
+      mysql_driver:
+        description: 'MySQL driver to use'
+        required: false
+        type: string
+        default: com.mysql.jdbc.Driver
+
+env:
+  MVN: mvn --no-snapshot-updates
+  MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
+  MAVEN_SKIP_TESTS: -P skip-tests
+  DOCKER_IP: 127.0.0.1  # for integration tests
+  MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
+  SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
+
+jobs:
+  test: # Github job that runs a given standard/old IT for a given testing group
+    name: ${{ inputs.group }} integration test (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }}, Indexer=${{ inputs.use_indexer }}, Mysql=${{ inputs.mysql_driver }})
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v3
+
+      - name: Setup java
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_${{ inputs.runtime_jdk }}_X64" >> $GITHUB_ENV
+
+      - name: Restore Maven repository
+        id: maven-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ inputs.build_jdk }}-${{ github.sha }}
+
+      - name: Maven build
+        if: steps.maven-restore.outputs.cache-hit != 'true'
+        run: |
+          ./it.sh ci
+
+      - name: Run IT
+        id: run-it
+        env:
+          MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
+        run: |
+          # Debug echo
+          echo "Mysql driver: ${MYSQL_DRIVER_CLASSNAME}"
+          echo "${MVN} verify -pl integration-tests -P integration-tests ${{ inputs.testing_groups }} -Djvm.runtime=${{ inputs.runtime_jdk }} -Dit.indexer=${{ inputs.use_indexer }} ${MAVEN_SKIP} -Doverride.config.path=${{ inputs.override_config_path }}"
+          ${MVN} verify -pl integration-tests -P integration-tests ${{ inputs.testing_groups }} -Djvm.runtime=${{ inputs.runtime_jdk }} -Dit.indexer=${{ inputs.use_indexer }} ${MAVEN_SKIP} -Doverride.config.path=${{ inputs.override_config_path }}
+
+      - name: Debug IT
+        if: steps.run-it.conclusion == 'failure'
+        run: |
+          for v in broker router ${{ inputs.use_indexer }} historical coordinator overlord; do
+            echo "------------------------druid-"$v"-------------------------";
+            sudo docker exec druid-"$v" tail -1000 /shared/logs/"$v".log;
+          done

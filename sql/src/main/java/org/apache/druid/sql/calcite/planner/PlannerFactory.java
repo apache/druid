@@ -39,7 +39,9 @@ import org.apache.calcite.tools.Frameworks;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserImplFactory;
@@ -50,9 +52,8 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 
-public class PlannerFactory
+public class PlannerFactory extends PlannerToolbox
 {
   static final SqlParser.Config PARSER_CONFIG = SqlParser
       .configBuilder()
@@ -61,17 +62,8 @@ public class PlannerFactory
       .setQuotedCasing(Casing.UNCHANGED)
       .setQuoting(Quoting.DOUBLE_QUOTE)
       .setConformance(DruidConformance.instance())
-      .setParserFactory(new DruidSqlParserImplFactory()) // Custom sql parser factory
+      .setParserFactory(new DruidSqlParserImplFactory()) // Custom SQL parser factory
       .build();
-
-  private final DruidSchemaCatalog rootSchema;
-  private final DruidOperatorTable operatorTable;
-  private final ExprMacroTable macroTable;
-  private final PlannerConfig plannerConfig;
-  private final ObjectMapper jsonMapper;
-  private final AuthorizerMapper authorizerMapper;
-  private final String druidSchemaName;
-  private final CalciteRulesManager calciteRuleManager;
 
   @Inject
   public PlannerFactory(
@@ -82,17 +74,25 @@ public class PlannerFactory
       final AuthorizerMapper authorizerMapper,
       final @Json ObjectMapper jsonMapper,
       final @DruidSchemaName String druidSchemaName,
-      final CalciteRulesManager calciteRuleManager
+      final CalciteRulesManager calciteRuleManager,
+      final JoinableFactoryWrapper joinableFactoryWrapper,
+      final CatalogResolver catalog,
+      final AuthConfig authConfig
   )
   {
-    this.rootSchema = rootSchema;
-    this.operatorTable = operatorTable;
-    this.macroTable = macroTable;
-    this.plannerConfig = plannerConfig;
-    this.authorizerMapper = authorizerMapper;
-    this.jsonMapper = jsonMapper;
-    this.druidSchemaName = druidSchemaName;
-    this.calciteRuleManager = calciteRuleManager;
+    super(
+        operatorTable,
+        macroTable,
+        jsonMapper,
+        plannerConfig,
+        rootSchema,
+        joinableFactoryWrapper,
+        catalog,
+        druidSchemaName,
+        calciteRuleManager,
+        authorizerMapper,
+        authConfig
+    );
   }
 
   /**
@@ -102,22 +102,18 @@ public class PlannerFactory
       final SqlEngine engine,
       final String sql,
       final Map<String, Object> queryContext,
-      Set<String> contextKeys
+      final PlannerHook hook
   )
   {
     final PlannerContext context = PlannerContext.create(
+        this,
         sql,
-        operatorTable,
-        macroTable,
-        jsonMapper,
-        plannerConfig,
-        rootSchema,
         engine,
         queryContext,
-        contextKeys
+        hook
     );
 
-    return new DruidPlanner(buildFrameworkConfig(context), context, engine);
+    return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook);
   }
 
   /**
@@ -127,7 +123,7 @@ public class PlannerFactory
   @VisibleForTesting
   public DruidPlanner createPlannerForTesting(final SqlEngine engine, final String sql, final Map<String, Object> queryContext)
   {
-    final DruidPlanner thePlanner = createPlanner(engine, sql, queryContext, queryContext.keySet());
+    final DruidPlanner thePlanner = createPlanner(engine, sql, queryContext, null);
     thePlanner.getPlannerContext()
               .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
     try {

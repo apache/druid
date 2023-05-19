@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.querykit.scan;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -53,11 +54,11 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -88,19 +89,18 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       final ScanQuery query,
       final ReadableInput baseInput,
       final Int2ObjectMap<ReadableInput> sideChannels,
-      final JoinableFactoryWrapper joinableFactory,
-      final ResourceHolder<WritableFrameChannel> outputChannel,
+      final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       @Nullable final AtomicLong runningCountForLimit,
-      final long memoryReservedForBroadcastJoin
+      final long memoryReservedForBroadcastJoin,
+      final ObjectMapper jsonMapper
   )
   {
     super(
         query,
         baseInput,
         sideChannels,
-        joinableFactory,
-        outputChannel,
+        outputChannelHolder,
         frameWriterFactoryHolder,
         memoryReservedForBroadcastJoin
     );
@@ -111,7 +111,8 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     final List<VirtualColumn> frameWriterVirtualColumns = new ArrayList<>();
     frameWriterVirtualColumns.add(partitionBoostVirtualColumn);
 
-    final VirtualColumn segmentGranularityVirtualColumn = QueryKitUtils.makeSegmentGranularityVirtualColumn(query);
+    final VirtualColumn segmentGranularityVirtualColumn =
+        QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query);
 
     if (segmentGranularityVirtualColumn != null) {
       frameWriterVirtualColumns.add(segmentGranularityVirtualColumn);
@@ -149,12 +150,12 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Long> runWithSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (cursor == null) {
-      closer.register(segment);
+      final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
 
       final Yielder<Cursor> cursorYielder = Yielders.each(
           makeCursors(
               query.withQuerySegmentSpec(new SpecificSegmentSpec(segment.getDescriptor())),
-              mapSegment(segment.getOrLoadSegment()).asStorageAdapter()
+              mapSegment(segmentHolder.get()).asStorageAdapter()
           )
       );
 

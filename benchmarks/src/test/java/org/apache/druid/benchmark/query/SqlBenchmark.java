@@ -34,13 +34,17 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchApproxQuantileSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchObjectSqlAggregator;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.aggregation.ApproxCountDistinctSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -48,6 +52,7 @@ import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -75,7 +80,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import javax.annotation.Nullable;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -87,8 +91,8 @@ import java.util.concurrent.TimeUnit;
  */
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 5)
-@Measurement(iterations = 15)
+@Warmup(iterations = 3)
+@Measurement(iterations = 5)
 public class SqlBenchmark
 {
   static {
@@ -391,16 +395,30 @@ public class SqlBenchmark
       // 20: GroupBy, doubles sketches
       "SELECT dimZipf, APPROX_QUANTILE_DS(sumFloatNormal, 0.5), DS_QUANTILES_SKETCH(maxLongUniform) "
       + "FROM foo "
-      + "GROUP BY 1"
+      + "GROUP BY 1",
+
+      // 21, 22: stringy stuff
+      "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo WHERE dimUniform NOT LIKE '%3' GROUP BY 1, 2",
+      "SELECT dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential = '311' GROUP BY 1 ORDER BY 1",
+      // 23: full scan
+      "SELECT * FROM foo",
+      "SELECT * FROM foo WHERE dimSequential IN ('1', '2', '3', '4', '5', '10', '11', '20', '21', '23', '40', '50', '64', '70', '100')",
+      "SELECT * FROM foo WHERE dimSequential > '10' AND dimSequential < '8500'",
+      "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential IN ('1', '2', '3', '4', '5', '10', '11', '20', '21', '23', '40', '50', '64', '70', '100') GROUP BY 1, 2",
+      "SELECT dimSequential, dimZipf, SUM(sumLongSequential) FROM foo WHERE dimSequential > '10' AND dimSequential < '8500' GROUP BY 1, 2"
+
+
   );
 
   @Param({"5000000"})
   private int rowsPerSegment;
 
-  @Param({"force"})
+  @Param({"false", "force"})
   private String vectorize;
+  @Param({"none", "front-coded-4", "front-coded-16"})
+  private String stringEncoding;
 
-  @Param({"0", "10", "18"})
+  @Param({"4", "5", "6", "7", "8", "10", "11", "12", "19", "21", "22", "23", "26", "27"})
   private String query;
 
   @Param({STORAGE_MMAP, STORAGE_FRAME_ROW, STORAGE_FRAME_COLUMNAR})
@@ -428,7 +446,21 @@ public class SqlBenchmark
 
     final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
     log.info("Starting benchmark setup using cacheDir[%s], rows[%,d].", segmentGenerator.getCacheDir(), rowsPerSegment);
-    final QueryableIndex index = segmentGenerator.generate(dataSegment, schemaInfo, Granularities.NONE, rowsPerSegment);
+    StringEncodingStrategy encodingStrategy;
+    if (stringEncoding.startsWith("front-coded")) {
+      String[] split = stringEncoding.split("-");
+      int bucketSize = Integer.parseInt(split[2]);
+      encodingStrategy = new StringEncodingStrategy.FrontCoded(bucketSize, FrontCodedIndexed.V1);
+    } else {
+      encodingStrategy = new StringEncodingStrategy.Utf8();
+    }
+    final QueryableIndex index = segmentGenerator.generate(
+        dataSegment,
+        schemaInfo,
+        IndexSpec.builder().withStringDictionaryEncoding(encodingStrategy).build(),
+        Granularities.NONE,
+        rowsPerSegment
+    );
 
     final QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
 
@@ -447,7 +479,10 @@ public class SqlBenchmark
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
         CalciteTests.DRUID_SCHEMA_NAME,
-        new CalciteRulesManager(ImmutableSet.of())
+        new CalciteRulesManager(ImmutableSet.of()),
+        CalciteTests.createJoinableFactoryWrapper(),
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
   }
 

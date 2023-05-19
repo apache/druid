@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.column;
 
+import org.apache.druid.collections.bitmap.BitmapFactory;
+
 import javax.annotation.Nullable;
 
 /**
@@ -41,4 +43,7 @@ public interface DictionaryEncodedStringValueIndex extends DictionaryEncodedValu
    */
   @Nullable
   String getValue(int index);
+
+  @SuppressWarnings({"unreachable", "unused"})
+  BitmapFactory getBitmapFactory();
 }

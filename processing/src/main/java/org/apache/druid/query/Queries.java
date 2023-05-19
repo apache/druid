@@ -30,7 +30,6 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -167,7 +166,8 @@ public class Queries
     }
 
     // Verify preconditions and invariants, just in case.
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(retVal.getDataSource());
+    final DataSource retDataSource = retVal.getDataSource();
+    final DataSourceAnalysis analysis = retDataSource.getAnalysis();
 
     // Sanity check: query must be based on a single table.
     if (!analysis.getBaseTableDataSource().isPresent()) {
@@ -191,40 +191,7 @@ public class Queries
    */
   public static <T> Query<T> withBaseDataSource(final Query<T> query, final DataSource newBaseDataSource)
   {
-    final Query<T> retVal;
-
-    if (query.getDataSource() instanceof QueryDataSource) {
-      final Query<?> subQuery = ((QueryDataSource) query.getDataSource()).getQuery();
-      retVal = query.withDataSource(new QueryDataSource(withBaseDataSource(subQuery, newBaseDataSource)));
-    } else {
-      final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
-
-      DataSource current = newBaseDataSource;
-      DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
-
-      for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
-        current = JoinDataSource.create(
-            current,
-            clause.getDataSource(),
-            clause.getPrefix(),
-            clause.getCondition(),
-            clause.getJoinType(),
-            joinBaseFilter
-        );
-        joinBaseFilter = null;
-      }
-
-      retVal = query.withDataSource(current);
-    }
-
-    // Verify postconditions, just in case.
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(retVal.getDataSource());
-
-    if (!newBaseDataSource.equals(analysis.getBaseDataSource())) {
-      throw new ISE("Unable to replace base dataSource");
-    }
-
-    return retVal;
+    return query.withDataSource(query.getDataSource().withUpdatedDataSource(newBaseDataSource));
   }
 
   /**

@@ -20,7 +20,8 @@ import { Alert, Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintj
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import SplitterLayout from 'react-splitter-layout';
-import ReactTable, { Filter } from 'react-table';
+import type { Filter } from 'react-table';
+import ReactTable from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -40,7 +41,8 @@ import {
   SupervisorTableActionDialog,
   TaskTableActionDialog,
 } from '../../dialogs';
-import { QueryWithContext } from '../../druid-models';
+import type { QueryWithContext } from '../../druid-models';
+import type { Capabilities } from '../../helpers';
 import {
   SMALL_TABLE_PAGE_SIZE,
   SMALL_TABLE_PAGE_SIZE_OPTIONS,
@@ -48,7 +50,6 @@ import {
 } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import {
-  Capabilities,
   deepGet,
   formatDuration,
   getDruidErrorMessage,
@@ -62,7 +63,7 @@ import {
   QueryManager,
   QueryState,
 } from '../../utils';
-import { BasicAction } from '../../utils/basic-action';
+import type { BasicAction } from '../../utils/basic-action';
 
 import './ingestion-view.scss';
 
@@ -917,7 +918,8 @@ ORDER BY
             width: 80,
             filterable: false,
             className: 'padded',
-            Cell({ value, original }) {
+            Cell({ value, original, aggregated }) {
+              if (aggregated) return '';
               if (value > 0) {
                 return formatDuration(value);
               }

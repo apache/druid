@@ -457,7 +457,7 @@ public class QueryContexts
   {
     return new BadQueryContextException(
         StringUtils.format(
-            "Expected key [%s] to be in %s, but got [%s]",
+            "Expected key [%s] to be %s, but got [%s]",
             key,
             expected,
             actual

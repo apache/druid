@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.config.Config;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 import org.hamcrest.CoreMatchers;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -51,6 +52,12 @@ public class DruidProcessingConfigTest
   private static Injector makeInjector(int numProcessors, long directMemorySize, long heapSize)
   {
     return makeInjector(numProcessors, directMemorySize, heapSize, new Properties(), null);
+  }
+
+  @AfterClass
+  public static void teardown()
+  {
+    JvmUtils.resetTestsToDefaultRuntimeInfo();
   }
 
   private static Injector makeInjector(
@@ -190,13 +197,13 @@ public class DruidProcessingConfigTest
     config.intermediateComputeSizeBytes();
   }
 
-  static class MockRuntimeInfo extends RuntimeInfo
+  public static class MockRuntimeInfo extends RuntimeInfo
   {
     private final int availableProcessors;
     private final long maxHeapSize;
     private final long directSize;
 
-    MockRuntimeInfo(int availableProcessors, long directSize, long maxHeapSize)
+    public MockRuntimeInfo(int availableProcessors, long directSize, long maxHeapSize)
     {
       this.availableProcessors = availableProcessors;
       this.directSize = directSize;

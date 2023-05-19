@@ -20,17 +20,18 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.Union;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.IngestionState;
@@ -64,10 +65,10 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.segment.incremental.MutableRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
+import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
@@ -77,6 +78,9 @@ import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -122,7 +126,7 @@ import java.util.stream.Collectors;
 
 /**
  * ParallelIndexSupervisorTask is capable of running multiple subTasks for parallel indexing. This is
- * applicable if the input {@link FiniteFirehoseFactory} is splittable. While this task is running, it can submit
+ * applicable if the input {@link InputSource} is splittable. While this task is running, it can submit
  * multiple child tasks to overlords. This task succeeds only when all its child tasks succeed; otherwise it fails.
  *
  * @see ParallelIndexTaskRunner
@@ -241,9 +245,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       checkPartitionsSpecForForceGuaranteedRollup(ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec());
     }
 
-    this.baseInputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
-        ingestionSchema.getDataSchema().getParser()
-    );
+    this.baseInputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
     this.missingIntervalsInOverwriteMode = (getIngestionMode()
                                             != IngestionMode.APPEND)
                                            && ingestionSchema.getDataSchema()
@@ -271,6 +273,22 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
   public String getType()
   {
     return TYPE;
+  }
+
+  @Nonnull
+  @JsonIgnore
+  @Override
+  public Set<ResourceAction> getInputSourceResources()
+  {
+    if (getIngestionSchema().getIOConfig().getFirehoseFactory() != null) {
+      throw getInputSecurityOnFirehoseUnsupportedError();
+    }
+    return getIngestionSchema().getIOConfig().getInputSource() != null ?
+           getIngestionSchema().getIOConfig().getInputSource().getTypes()
+                               .stream()
+                               .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
+                               .collect(Collectors.toSet()) :
+           ImmutableSet.of();
   }
 
   @JsonProperty("spec")
@@ -426,8 +444,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return findInputSegments(
         getDataSource(),
         taskActionClient,
-        intervals,
-        ingestionSchema.getIOConfig().getFirehoseFactory()
+        intervals
     );
   }
 
@@ -1128,12 +1145,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
     Set<DataSegment> tombStones = Collections.emptySet();
     if (getIngestionMode() == IngestionMode.REPLACE) {
-      TombstoneHelper tombstoneHelper = new TombstoneHelper(
-          newSegments,
-          ingestionSchema.getDataSchema(),
-          toolbox.getTaskActionClient()
-      );
-      List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals();
+      TombstoneHelper tombstoneHelper = new TombstoneHelper(toolbox.getTaskActionClient());
+      List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals(newSegments, ingestionSchema.getDataSchema());
       if (!tombstoneIntervals.isEmpty()) {
 
         Map<Interval, SegmentIdWithShardSpec> tombstonesAnShards = new HashMap<>();
@@ -1146,7 +1159,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           tombstonesAnShards.put(interval, segmentIdWithShardSpec);
         }
 
-        tombStones = tombstoneHelper.computeTombstones(tombstonesAnShards);
+        tombStones = tombstoneHelper.computeTombstones(ingestionSchema.getDataSchema(), tombstonesAnShards);
         // add tombstones
         newSegments.addAll(tombStones);
 
@@ -1214,10 +1227,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    */
   private Map<String, TaskReport> getTaskCompletionReports(TaskStatus taskStatus, boolean segmentAvailabilityConfirmed)
   {
-    Pair<Map<String, Object>, Map<String, Object>> rowStatsAndUnparseableEvents = doGetRowStatsAndUnparseableEvents(
-        "true",
-        true
-    );
+    Pair<Map<String, Object>, Map<String, Object>> rowStatsAndUnparseableEvents =
+        doGetRowStatsAndUnparseableEvents("true", true);
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
             getId(),
@@ -1538,6 +1549,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       Map<String, Object> buildSegmentsRowStatsMap = (Map<String, Object>) buildSegmentsRowStats;
       return new RowIngestionMetersTotals(
           ((Number) buildSegmentsRowStatsMap.get("processed")).longValue(),
+          ((Number) buildSegmentsRowStatsMap.get("processedBytes")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("processedWithError")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("thrownAway")).longValue(),
           ((Number) buildSegmentsRowStatsMap.get("unparseable")).longValue()
@@ -1553,7 +1565,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       boolean includeUnparseable
   )
   {
-    final MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
+    final SimpleRowIngestionMeters buildSegmentsRowStats = new SimpleRowIngestionMeters();
 
     List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
 
@@ -1594,7 +1606,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       Map<String, GeneratedPartitionsReport> completedSubtaskReports =
           (Map<String, GeneratedPartitionsReport>) currentRunner.getReports();
 
-      final MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
+      final SimpleRowIngestionMeters buildSegmentsRowStats = new SimpleRowIngestionMeters();
       final List<ParseExceptionReport> unparseableEvents = new ArrayList<>();
       for (GeneratedPartitionsReport generatedPartitionsReport : completedSubtaskReports.values()) {
         Map<String, TaskReport> taskReport = generatedPartitionsReport.getTaskReport();
@@ -1625,7 +1637,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       boolean includeUnparseable
   )
   {
-    final MutableRowIngestionMeters buildSegmentsRowStats = new MutableRowIngestionMeters();
+    final SimpleRowIngestionMeters buildSegmentsRowStats = new SimpleRowIngestionMeters();
     for (String runningTaskId : runningTaskIds) {
       try {
         final Map<String, Object> report = getTaskReport(toolbox.getOverlordClient(), runningTaskId);
@@ -1690,7 +1702,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
     return totals;
   }
 
-  private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEvents(String full, boolean includeUnparseable)
+  private Pair<Map<String, Object>, Map<String, Object>> doGetRowStatsAndUnparseableEvents(
+      String full,
+      boolean includeUnparseable
+  )
   {
     if (currentSubTaskHolder == null) {
       return Pair.of(ImmutableMap.of(), ImmutableMap.of());
