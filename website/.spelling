@@ -2263,3 +2263,5 @@ druid-tdigestsketch
 gce-extensions
 prometheus-emitter
 kubernetes-overlord-extensions
+UCS
+ISO646-US
