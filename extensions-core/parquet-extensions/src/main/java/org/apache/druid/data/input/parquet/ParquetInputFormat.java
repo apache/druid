@@ -102,7 +102,7 @@ public class ParquetInputFormat extends NestedInputFormat
 
   @JsonIgnore
   @Override
-  public long getWeightedSize(String path, long size)
+  public long getWeightedSize(@Nullable String path, long size)
   {
     return size * SCALE_FACTOR;
   }

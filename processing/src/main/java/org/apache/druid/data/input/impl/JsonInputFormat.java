@@ -161,7 +161,7 @@ public class JsonInputFormat extends NestedInputFormat
 
   @JsonIgnore
   @Override
-  public long getWeightedSize(String path, long size)
+  public long getWeightedSize(@Nullable String path, long size)
   {
     String pathExtension = FileNameUtils.getExtension(path);
     if (!CompressionUtils.Format.isSupportedCompressionFormat(pathExtension)) {

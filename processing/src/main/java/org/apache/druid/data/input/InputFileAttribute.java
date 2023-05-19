@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input;
 
+import javax.annotation.Nullable;
+
 /**
  * A class storing some attributes of an input file.
  * This information is used to make splits in the parallel indexing.
@@ -33,13 +35,30 @@ public class InputFileAttribute
    */
   private final long size;
 
+  /**
+   * The path of the input file.
+   */
+  @Nullable
+  private final String path;
+
   public InputFileAttribute(long size)
   {
+    this(size, null);
+  }
+
+  public InputFileAttribute(long size, @Nullable String path)
+  {
     this.size = size;
+    this.path = path;
   }
 
   public long getSize()
   {
     return size;
+  }
+
+  public String getPath()
+  {
+    return path;
   }
 }

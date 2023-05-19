@@ -31,6 +31,7 @@ import org.apache.druid.data.input.impl.RegexInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.annotations.UnstableApi;
 
+import javax.annotation.Nullable;
 import java.io.File;
 
 /**
@@ -81,7 +82,7 @@ public interface InputFormat
    * @return The weighted size of the input object.
    */
   @JsonIgnore
-  default long getWeightedSize(String path, long size)
+  default long getWeightedSize(@Nullable String path, long size)
   {
     return size;
   }
