@@ -22,16 +22,16 @@ package org.apache.druid.query.aggregation.datasketches.hll.sql;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchHolder;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class HllPostAggExprMacros
 {
-  // make same name as SQL binding
-  public static final String HLL_SKETCH_ESTIMATE = "HLL_SKETCH_ESTIMATE";
+  public static final String HLL_SKETCH_ESTIMATE = "hll_sketch_estimate";
 
   public static class HLLSketchEstimateExprMacro implements ExprMacroTable.ExprMacro
   {
@@ -39,44 +39,7 @@ public class HllPostAggExprMacros
     @Override
     public Expr apply(List<Expr> args)
     {
-      class HllSketchEstimateExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
-      {
-
-        public HllSketchEstimateExpr(List<Expr> args)
-        {
-          super(HLL_SKETCH_ESTIMATE, args);
-        }
-
-        @Override
-        public ExprEval eval(ObjectBinding bindings)
-        {
-          boolean round = false;
-          Expr arg = args.get(0);
-          ExprEval eval = arg.eval(bindings);
-          if (args.size() == 2) {
-            round = args.get(1).eval(bindings).asBoolean();
-          }
-
-          final Object valObj = eval.value();
-          if (valObj == null) {
-            return ExprEval.of(null);
-          }
-          if (eval.type().is(ExprType.COMPLEX) && valObj instanceof HllSketchHolder) {
-            HllSketchHolder h = HllSketchHolder.fromObj(valObj);
-            double estimate = h.getEstimate();
-            return round ? ExprEval.of(Math.round(estimate)) : ExprEval.of(estimate);
-          } else {
-            throw HLLSketchEstimateExprMacro.this.validationFailed("requires a HllSketch as the argument");
-          }
-        }
-
-        @Override
-        public Expr visit(Shuttle shuttle)
-        {
-          List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-          return shuttle.visit(new HllSketchEstimateExpr(newArgs));
-        }
-      }
+      validationHelperCheckAnyOfArgumentCount(args, 1, 2);
       return new HllSketchEstimateExpr(args);
     }
 
@@ -86,4 +49,52 @@ public class HllPostAggExprMacros
       return HLL_SKETCH_ESTIMATE;
     }
   }
+
+  public static class HllSketchEstimateExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+  {
+    private Expr estimateExpr;
+    private Expr isRound;
+
+    public HllSketchEstimateExpr(List<Expr> args)
+    {
+      super(HLL_SKETCH_ESTIMATE, args);
+      this.estimateExpr = args.get(0);
+      if (args.size() == 2) {
+        isRound = args.get(1);
+      }
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(InputBindingInspector inspector)
+    {
+      return ExpressionType.DOUBLE;
+    }
+
+    @Override
+    public ExprEval eval(ObjectBinding bindings)
+    {
+      boolean round = false;
+      ExprEval eval = estimateExpr.eval(bindings);
+      if (isRound != null) {
+        round = isRound.eval(bindings).asBoolean();
+      }
+
+      final Object valObj = eval.value();
+      if (valObj == null) {
+        return ExprEval.of(null);
+      }
+      HllSketchHolder h = HllSketchHolder.fromObj(valObj);
+      double estimate = h.getEstimate();
+      return round ? ExprEval.of(Math.round(estimate)) : ExprEval.of(estimate);
+    }
+
+    @Override
+    public Expr visit(Shuttle shuttle)
+    {
+      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
+      return shuttle.visit(new HllSketchEstimateExpr(newArgs));
+    }
+  }
 }
+

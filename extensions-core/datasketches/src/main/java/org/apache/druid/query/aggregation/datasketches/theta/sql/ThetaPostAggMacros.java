@@ -22,14 +22,15 @@ package org.apache.druid.query.aggregation.datasketches.theta.sql;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchHolder;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class ThetaPostAggMacros
 {
-  public static final String THETA_SKETCH_ESTIMATE = "THETA_SKETCH_ESTIMATE";
+  public static final String THETA_SKETCH_ESTIMATE = "theta_sketch_estimate";
 
   public static class ThetaSketchEstimateExprMacro implements ExprMacroTable.ExprMacro
   {
@@ -37,39 +38,7 @@ public class ThetaPostAggMacros
     @Override
     public Expr apply(List<Expr> args)
     {
-      class ThetaSketchEstimateExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
-      {
-
-        public ThetaSketchEstimateExpr(Expr arg)
-        {
-          super(THETA_SKETCH_ESTIMATE, arg);
-        }
-
-        @Override
-        public ExprEval eval(ObjectBinding bindings)
-        {
-          validationHelperCheckArgumentCount(args, 1);
-          Expr arg = args.get(0);
-          ExprEval eval = arg.eval(bindings);
-          final Object valObj = eval.value();
-          if (valObj == null) {
-            return ExprEval.of(null);
-          }
-          if (eval.type().is(ExprType.COMPLEX) && valObj instanceof SketchHolder) {
-            SketchHolder thetaSketchHolder = (SketchHolder) valObj;
-            double estimate = thetaSketchHolder.getEstimate();
-            return ExprEval.of(estimate);
-          } else {
-            throw ThetaSketchEstimateExprMacro.this.validationFailed("requires a ThetaSketch as the argument");
-          }
-        }
-
-        @Override
-        public Expr visit(Shuttle shuttle)
-        {
-          return shuttle.visit(apply(shuttle.visitAll(args)));
-        }
-      }
+      validationHelperCheckArgumentCount(args, 1);
       return new ThetaSketchEstimateExpr(args.get(0));
     }
 
@@ -77,6 +46,43 @@ public class ThetaPostAggMacros
     public String name()
     {
       return THETA_SKETCH_ESTIMATE;
+    }
+  }
+
+  public static class ThetaSketchEstimateExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+  {
+    private Expr estimateExpr;
+
+    public ThetaSketchEstimateExpr(Expr arg)
+    {
+      super(THETA_SKETCH_ESTIMATE, arg);
+      this.estimateExpr = arg;
+    }
+
+    @Override
+    public ExprEval eval(ObjectBinding bindings)
+    {
+      ExprEval eval = estimateExpr.eval(bindings);
+      final Object valObj = eval.value();
+      if (valObj == null) {
+        return ExprEval.of(null);
+      }
+      SketchHolder thetaSketchHolder = (SketchHolder) valObj;
+      double estimate = thetaSketchHolder.getEstimate();
+      return ExprEval.of(estimate);
+    }
+
+    @Override
+    public Expr visit(Shuttle shuttle)
+    {
+      return shuttle.visit(new ThetaSketchEstimateExpr(arg));
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(InputBindingInspector inspector)
+    {
+      return ExpressionType.DOUBLE;
     }
   }
 }

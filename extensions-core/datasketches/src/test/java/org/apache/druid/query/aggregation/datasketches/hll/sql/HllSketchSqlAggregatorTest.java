@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
@@ -135,6 +134,14 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                                              null,
                                                              false,
                                                              ROUND
+                                                         ),
+                                                         new HllSketchBuildAggregatorFactory(
+                                                             "hllsketch_dim3",
+                                                             "dim3",
+                                                             null,
+                                                             null,
+                                                             false,
+                                                             false
                                                          )
                                                      )
                                                      .withRollup(false)
@@ -142,6 +149,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                              )
                                              .rows(TestDataBuilder.ROWS1)
                                              .buildMMappedIndex();
+
 
     return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
@@ -941,7 +949,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT"
-        + " HLL_SKETCH_ESTIMATE(hllsketch_dim1, TRUE)"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_dim3, FALSE), HLL_SKETCH_ESTIMATE(hllsketch_dim3, TRUE)"
         + " FROM druid.foo",
         ImmutableList.of(
             newScanQueryBuilder()
@@ -949,22 +957,27 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(new ExpressionVirtualColumn(
                     "v0",
-                    "hll_sketch_estimate(\"hllsketch_dim1\",1)",
+                    "hll_sketch_estimate(\"hllsketch_dim3\",0)",
+                    ColumnType.DOUBLE,
+                    MACRO_TABLE
+                ), new ExpressionVirtualColumn(
+                    "v1",
+                    "hll_sketch_estimate(\"hllsketch_dim3\",1)",
                     ColumnType.DOUBLE,
                     MACRO_TABLE
                 ))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .columns("v0")
+                .columns("v0", "v1")
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{0.0D},
-            new Object[]{1.0D},
-            new Object[]{1.0D},
-            new Object[]{1.0D},
-            new Object[]{1.0D},
-            new Object[]{1.0D}
+            new Object[]{2.000000004967054D, 2.0D},
+            new Object[]{2.000000004967054D, 2.0D},
+            new Object[]{1.0D, 1.0D},
+            new Object[]{0.0D, 0.0D},
+            new Object[]{0.0D, 0.0D},
+            new Object[]{0.0D, 0.0D}
         )
     );
   }
@@ -995,9 +1008,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           ImmutableList.of()
       );
     }
-    catch (ExpressionValidationException e) {
+    catch (IllegalArgumentException e) {
       Assert.assertTrue(
-          e.getMessage().contains("Function[HLL_SKETCH_ESTIMATE] requires a HllSketch as the argument")
+          e.getMessage().contains("Input byte[] should at least have 2 bytes for base64 bytes")
       );
     }
   }
@@ -1058,7 +1071,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT"
-        + " HLL_SKETCH_ESTIMATE(hllsketch_dim1)"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_dim1), COUNT(*)"
         + " FROM druid.foo"
         + " GROUP BY 1 ORDER BY 1"
         + " LIMIT 2",
@@ -1076,12 +1089,13 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 ))
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
                 .threshold(2)
+                .aggregators(new CountAggregatorFactory("a0"))
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{0.0D},
-            new Object[]{1.0D}
+            new Object[]{0.0D, 1L},
+            new Object[]{1.0D, 5L}
         )
     );
   }
