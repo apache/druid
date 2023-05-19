@@ -74,7 +74,7 @@ public class DropwizardEmitterConfigTest extends JsonConfigTesterBase<Dropwizard
     propertyValues.put(getPropertyKey("includeHost"), "true");
     testProperties.putAll(propertyValues);
     configProvider.inject(testProperties, configurator);
-    DropwizardEmitterConfig config = configProvider.get().get();
+    DropwizardEmitterConfig config = configProvider.get();
     Assert.assertTrue("IncludeHost", config.getIncludeHost());
     Assert.assertEquals("test-prefix", config.getPrefix());
     Assert.assertEquals(1, config.getReporters().size());

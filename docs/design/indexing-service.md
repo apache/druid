@@ -25,12 +25,12 @@ title: "Indexing Service"
 
 The Apache Druid indexing service is a highly-available, distributed service that runs indexing related tasks.
 
-Indexing [tasks](../ingestion/tasks.md) create (and sometimes destroy) Druid [segments](../design/segments.md). The indexing service has a master/slave like architecture.
+Indexing [tasks](../ingestion/tasks.md) are responsible for creating and [killing](../ingestion/tasks.md#kill) Druid [segments](../design/segments.md).
 
-The indexing service is composed of three main components: a [Peon](../design/peons.md) component that can run a single task, a [Middle Manager](../design/middlemanager.md) component that manages Peons, and an [Overlord](../design/overlord.md) component that manages task distribution to MiddleManagers.
-Overlords and MiddleManagers may run on the same process or across multiple processes while MiddleManagers and Peons always run on the same process.
+The indexing service is composed of three main components: [Peons](../design/peons.md) that can run a single task, [MiddleManagers](../design/middlemanager.md) that manage Peons, and an [Overlord](../design/overlord.md) that manages task distribution to MiddleManagers.
+Overlords and MiddleManagers may run on the same process or across multiple processes, while MiddleManagers and Peons always run on the same process.
 
-Tasks are managed using API endpoints on the Overlord service. Please see [Overlord Task API](../operations/api-reference.md#tasks) for more information.
+Tasks are managed using API endpoints on the Overlord service. See [Overlord Task API](../operations/api-reference.md#tasks) for more information.
 
 ![Indexing Service](../assets/indexing_service.png "Indexing Service")
 
