@@ -73,4 +73,4 @@ See [druid-hdfs-storage extension documentation](../development/extensions-core/
 
 ## Additional options
 
-For additional deep storage options, please see our [extensions list](../development/extensions.md).
+For additional deep storage options, please see our [extensions list](../configuration/extensions.md).

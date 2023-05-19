@@ -1,6 +1,7 @@
 ---
 id: api-reference
-title: "API reference"
+title: HTTP API endpoints reference
+sidebar_label: API endpoints reference
 ---
 
 <!--
@@ -23,21 +24,21 @@ title: "API reference"
   -->
 
 
-This page documents all of the API endpoints for each Druid service type.
+This topic documents all of the API endpoints for each Druid service type.
 
 ## Common
 
-The following endpoints are supported by all processes.
+All processes support the following endpoints.
 
 ### Process information
 
 `GET /status`
 
-Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the process.
+Returns the Druid version, loaded extensions, memory used, total memory, and other useful information about the process.
 
 `GET /status/health`
 
-An endpoint that always returns a boolean "true" value with a 200 OK response, useful for automated health checks.
+Always returns a boolean `true` value with a 200 OK response, useful for automated health checks.
 
 `GET /status/properties`
 
@@ -77,7 +78,7 @@ Returns the current leader Coordinator of the cluster.
 
 `GET /druid/coordinator/v1/isLeader`
 
-Returns a JSON object with field "leader", either true or false, indicating if this server is the current leader
+Returns a JSON object with `leader` parameter, either true or false, indicating if this server is the current leader
 Coordinator of the cluster. In addition, returns HTTP 200 if the server is the current leader and HTTP 404 if not.
 This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service
 at the load balancer.
@@ -119,11 +120,10 @@ Returns the number of segments to load and drop, as well as the total segment lo
 
 Returns the serialized JSON of segments to load and drop for each Historical process.
 
-
 #### Segment loading by datasource
 
-Note that all _interval_ query parameters are ISO 8601 strings (e.g., 2016-06-27/2016-06-28).
-Also note that these APIs only guarantees that the segments are available at the time of the call. 
+Note that all _interval_ query parameters are ISO 8601 strings&mdash;for example, 2016-06-27/2016-06-28.
+Also note that these APIs only guarantees that the segments are available at the time of the call.
 Segments can still become missing because of historical process failures or any other reasons afterward.
 
 `GET /druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?forceMetadataRefresh={boolean}&interval={myInterval}`
@@ -144,7 +144,7 @@ over the given interval (or last 2 weeks if interval is not given). This does no
 (Note: `forceMetadataRefresh=true` refreshes Coordinator's metadata cache of all datasources. This can be a heavy operation in terms 
 of the load on the metadata store but can be necessary to make sure that we verify all the latest segments' load status)
 * Setting `forceMetadataRefresh` to false will use the metadata cached on the coordinator from the last force/periodic refresh. 
-If no used segments are found for the given inputs, this API returns `204 No Content` 
+If no used segments are found for the given inputs, this API returns `204 No Content`
 
 `GET /druid/coordinator/v1/datasources/{dataSourceName}/loadstatus?full&forceMetadataRefresh={boolean}&interval={myInterval}`
 
@@ -216,18 +216,17 @@ segment is unused, or is unknown, a 404 response is returned.
 
 `GET /druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments`
 
-Returns a list of all segments, overlapping with any of given intervals,  for a datasource as stored in the metadata store. Request body is array of string IS0 8601 intervals like [interval1, interval2,...] for example ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]
+Returns a list of all segments, overlapping with any of given intervals,  for a datasource as stored in the metadata store. Request body is array of string IS0 8601 intervals like `[interval1, interval2,...]`&mdash;for example, `["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]`.
 
 `GET /druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments?full`
 
-Returns a list of all segments, overlapping with any of given intervals, for a datasource with the full segment metadata as stored in the metadata store. Request body is array of string ISO 8601 intervals like [interval1, interval2,...] for example ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]
+Returns a list of all segments, overlapping with any of given intervals, for a datasource with the full segment metadata as stored in the metadata store. Request body is array of string ISO 8601 intervals like `[interval1, interval2,...]`&mdash;for example, `["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]`.
 
 <a name="coordinator-datasources"></a>
 
 #### Datasources
 
-Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
-(e.g., 2016-06-27_2016-06-28).
+Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`&mdash;for example, `2016-06-27_2016-06-28`.
 
 `GET /druid/coordinator/v1/datasources`
 
@@ -235,7 +234,7 @@ Returns a list of datasource names found in the cluster as seen by the coordinat
 
 `GET /druid/coordinator/v1/datasources?simple`
 
-Returns a list of JSON objects containing the name and properties of datasources found in the cluster.  Properties include segment count, total segment byte size, replicated total segment byte size, minTime, and maxTime.
+Returns a list of JSON objects containing the name and properties of datasources found in the cluster. Properties include segment count, total segment byte size, replicated total segment byte size, minTime, and maxTime.
 
 `GET /druid/coordinator/v1/datasources?full`
 
@@ -247,7 +246,7 @@ Returns a JSON object containing the name and properties of a datasource. Proper
 
 `GET /druid/coordinator/v1/datasources/{dataSourceName}?full`
 
-Returns full metadata for a datasource .
+Returns full metadata for a datasource.
 
 `GET /druid/coordinator/v1/datasources/{dataSourceName}/intervals`
 
@@ -294,6 +293,7 @@ Returns full segment metadata for a specific segment in the cluster.
 Return the tiers that a datasource exists in.
 
 #### Note for Coordinator's POST and DELETE APIs
+
 While segments may be enabled by issuing POST requests for the datasources, the Coordinator may again disable segments if they match any configured [drop rules](../operations/rule-configuration.md#drop-rules). Even if segments are enabled by these APIs, you must configure a [load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes. If an indexing or kill task runs at the same time these APIs are invoked, the behavior is undefined. Some segments might be killed and others might be enabled. It's also possible that all segments might be disabled, but the indexing task can still read data from those segments and succeed.
 
 > Avoid using indexing or kill tasks and these APIs at the same time for the same datasource and time chunk.
@@ -316,8 +316,8 @@ result of this API call.
 
 Marks segments (un)used for a datasource by interval or set of segment Ids. When marking used only segments that are not overshadowed will be updated.
 
-The request payload contains the interval or set of segment Ids to be marked unused.
-Either interval or segment ids should be provided, if both or none are provided in the payload, the API would throw an error (400 BAD REQUEST).
+The request payload contains the interval or set of segment IDs to be marked unused.
+Either interval or segment IDs should be provided, if both or none are provided in the payload, the API would throw an error (400 BAD REQUEST).
 
 Interval specifies the start and end times as IS0 8601 strings. `interval=(start/end)` where start and end both are inclusive and only the segments completely contained within the specified interval will be disabled, partially overlapping segments will not be affected.
 
@@ -325,9 +325,8 @@ JSON Request Payload:
 
  |Key|Description|Example|
 |----------|-------------|---------|
-|`interval`|The interval for which to mark segments unused|"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"|
-|`segmentIds`|Set of segment Ids to be marked unused|["segmentId1", "segmentId2"]|
-
+|`interval`|The interval for which to mark segments unused|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
+|`segmentIds`|Set of segment IDs to be marked unused|`["segmentId1", "segmentId2"]`|
 
 `DELETE /druid/coordinator/v1/datasources/{dataSourceName}`
 
@@ -348,8 +347,7 @@ result of this API call.
 
 #### Retention rules
 
-Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
-(e.g., 2016-06-27_2016-06-28).
+Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/` as in `2016-06-27_2016-06-28`.
 
 `GET /druid/coordinator/v1/rules`
 
@@ -365,7 +363,7 @@ Returns all rules for a specified datasource and includes default datasource.
 
 `GET /druid/coordinator/v1/rules/history?interval=<interval>`
 
-Returns audit history of rules for all datasources. default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Coordinator runtime.properties
+Returns audit history of rules for all datasources. Default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Coordinator `runtime.properties`.
 
 `GET /druid/coordinator/v1/rules/history?count=<n>`
 
@@ -373,7 +371,7 @@ Returns last `n` entries of audit history of rules for all datasources.
 
 `GET /druid/coordinator/v1/rules/{dataSourceName}/history?interval=<interval>`
 
-Returns audit history of rules for a specified datasource. default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Coordinator runtime.properties
+Returns audit history of rules for a specified datasource. Default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Coordinator `runtime.properties`.
 
 `GET /druid/coordinator/v1/rules/{dataSourceName}/history?count=<n>`
 
@@ -387,13 +385,12 @@ Optional Header Parameters for auditing the config change can also be specified.
 
 |Header Param Name| Description | Default |
 |----------|-------------|---------|
-|`X-Druid-Author`| author making the config change|""|
-|`X-Druid-Comment`| comment describing the change being done|""|
+|`X-Druid-Author`| Author making the config change|`""`|
+|`X-Druid-Comment`| Comment describing the change being done|`""`|
 
 #### Intervals
 
-Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
-(e.g., 2016-06-27_2016-06-28).
+Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/` as in `2016-06-27_2016-06-28`.
 
 `GET /druid/coordinator/v1/intervals`
 
@@ -401,22 +398,22 @@ Returns all intervals for all datasources with total size and count.
 
 `GET /druid/coordinator/v1/intervals/{interval}`
 
-Returns aggregated total size and count for all intervals that intersect given isointerval.
+Returns aggregated total size and count for all intervals that intersect given ISO interval.
 
 `GET /druid/coordinator/v1/intervals/{interval}?simple`
 
-Returns total size and count for each interval within given isointerval.
+Returns total size and count for each interval within given ISO interval.
 
 `GET /druid/coordinator/v1/intervals/{interval}?full`
 
-Returns total size and count for each datasource for each interval within given isointerval.
+Returns total size and count for each datasource for each interval within given ISO interval.
 
 #### Dynamic configuration
 
 See [Coordinator Dynamic Configuration](../configuration/index.md#dynamic-configuration) for details.
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
-(e.g., 2016-06-27_2016-06-28).
+as in `2016-06-27_2016-06-28`.
 
 `GET /druid/coordinator/v1/config`
 
@@ -437,11 +434,10 @@ Update overlord dynamic worker configuration.
 
 Returns the total size of segments awaiting compaction for the given dataSource. The specified dataSource must have [automatic compaction](../data-management/automatic-compaction.md) enabled.
 
-
-
 `GET /druid/coordinator/v1/compaction/status`
 
 Returns the status and statistics from the auto-compaction run of all dataSources which have auto-compaction enabled in the latest run. The response payload includes a list of `latestStatus` objects. Each `latestStatus` represents the status for a dataSource (which has/had auto-compaction enabled).
+
 The `latestStatus` object has the following keys:
 * `dataSource`: name of the datasource for this status information
 * `scheduleStatus`: auto-compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the dataSource has an active auto-compaction config submitted. Otherwise, returns `NOT_ENABLED`.
@@ -457,8 +453,8 @@ The `latestStatus` object has the following keys:
 
 `GET /druid/coordinator/v1/compaction/status?dataSource={dataSource}`
 
-Similar to the API `/druid/coordinator/v1/compaction/status` above but filters response to only return information for the {dataSource} given. 
-Note that {dataSource} given must have/had auto-compaction enabled.
+Similar to the API `/druid/coordinator/v1/compaction/status` above but filters response to only return information for the dataSource given.
+The dataSource must have auto-compaction enabled.
 
 #### Automatic compaction configuration
 
@@ -525,14 +521,14 @@ Returns the current leader Overlord of the cluster. If you have multiple Overlor
 
 `GET /druid/indexer/v1/isLeader`
 
-This returns a JSON object with field "leader", either true or false. In addition, this call returns HTTP 200 if the
+This returns a JSON object with field `leader`, either true or false. In addition, this call returns HTTP 200 if the
 server is the current leader and HTTP 404 if not. This is suitable for use as a load balancer status check if you
 only want the active leader to be considered in-service at the load balancer.
 
 #### Tasks
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
-(e.g., 2016-06-27_2016-06-28).
+as in `2016-06-27_2016-06-28`.
 
 `GET /druid/indexer/v1/tasks`
 
@@ -618,9 +614,9 @@ Returns a list of objects of the currently active supervisors.
 |---|---|---|
 |`id`|String|supervisor unique identifier|
 |`state`|String|basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-supervisor-operations.md) for details.|
-|`detailedState`|String|supervisor specific state. (See documentation of specific supervisor for details), e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
+|`detailedState`|String|supervisor specific state. See documentation of specific supervisor for details: [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md)|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
-|`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
+|`spec`|SupervisorSpec|JSON specification of supervisor|
 
 `GET /druid/indexer/v1/supervisor?state=true`
 
@@ -630,7 +626,7 @@ Returns a list of objects of the currently active supervisors and their current 
 |---|---|---|
 |`id`|String|supervisor unique identifier|
 |`state`|String|basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-supervisor-operations.md) for details.|
-|`detailedState`|String|supervisor specific state. (See documentation of the specific supervisor for details, e.g. [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md))|
+|`detailedState`|String|supervisor specific state. See documentation of the specific supervisor for details: [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md)|
 |`healthy`|Boolean|true or false indicator of overall supervisor health|
 |`suspended`|Boolean|true or false indicator of whether the supervisor is in suspended state|
 
@@ -685,7 +681,7 @@ Terminate all supervisors at once.
 `POST /druid/indexer/v1/supervisor/<supervisorId>/shutdown`
 
 > This API is deprecated and will be removed in future releases.
-> Please use the equivalent 'terminate' instead.
+> Please use the equivalent `terminate` instead.
 
 Shutdown a supervisor.
 
@@ -694,7 +690,7 @@ Shutdown a supervisor.
 See [Overlord Dynamic Configuration](../configuration/index.md#overlord-dynamic-configuration) for details.
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
-(e.g., 2016-06-27_2016-06-28).
+as in `2016-06-27_2016-06-28`.
 
 `GET /druid/indexer/v1/worker`
 
@@ -735,7 +731,7 @@ and `druid.port` with the boolean state as the value.
 
 `GET /druid/worker/v1/tasks`
 
-Retrieve a list of active tasks being run on MiddleManager. Returns JSON list of taskid strings.  Normal usage should
+Retrieve a list of active tasks being run on MiddleManager. Returns JSON list of taskid strings. Normal usage should
 prefer to use the `/druid/indexer/v1/tasks` [Overlord API](#overlord) or one of it's task state specific variants instead.
 
 ```json
@@ -810,7 +806,7 @@ This section documents the API endpoints for the processes that reside on Query 
 #### Datasource information
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
-(e.g., 2016-06-27_2016-06-28).
+as in `2016-06-27_2016-06-28`.
 
 > Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
 > [`INFORMATION_SCHEMA.TABLES`](../querying/sql-metadata-tables.md#tables-table),
