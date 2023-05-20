@@ -1018,6 +1018,7 @@ public class SegmentMetadataCache
   public static class FirstTypeMergePolicy implements ColumnTypeMergePolicy
   {
     public static final String NAME = "newestFirst";
+
     @Override
     public ColumnType merge(ColumnType existingType, ColumnType newType)
     {
