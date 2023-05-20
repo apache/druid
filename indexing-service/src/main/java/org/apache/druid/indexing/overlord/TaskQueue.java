@@ -119,7 +119,7 @@ public class TaskQueue
   private final TaskLockbox taskLockbox;
   private final ServiceEmitter emitter;
 
-  private final BlockingQueue<Object> managementRequestQueue = new ArrayBlockingQueue<>(1);
+  private final BlockingQueue<String> managementRequestQueue = new ArrayBlockingQueue<>(1);
 
   private final ExecutorService managerExec = Executors.newSingleThreadExecutor(
       new ThreadFactoryBuilder()
@@ -178,7 +178,7 @@ public class TaskQueue
           "Shutting down forcefully as task failed to reacquire lock while becoming leader"
       );
     }
-    requestManagement();
+    requestManagement("Starting TaskQueue");
     // Remove any unacquired locks from storage (shutdown only clears entries for which a TaskLockPosse was acquired)
     // This is called after requesting management as locks need to be cleared after notifyStatus is processed
     for (Task task : tasksToFail) {
@@ -246,7 +246,7 @@ public class TaskQueue
     recentlyCompletedTaskIds.clear();
     managerExec.shutdownNow();
     storageSyncExec.shutdownNow();
-    requestManagement();
+    requestManagement("Stopping TaskQueue");
   }
 
   /**
@@ -255,11 +255,11 @@ public class TaskQueue
    * Callers (such as notifyStatus) can trigger task management by calling
    * this method.
    */
-  private void requestManagement()
+  private void requestManagement(String reason)
   {
     // do not care if the item fits into the queue:
     // if the queue is already full, request has been triggered anyway
-    managementRequestQueue.offer(this);
+    managementRequestQueue.offer(reason);
   }
 
   /**
@@ -278,10 +278,11 @@ public class TaskQueue
     }
 
     // Wait for management to be requested
-    managementRequestQueue.poll(
+    String reason = managementRequestQueue.poll(
         MANAGEMENT_WAIT_TIMEOUT_MILLIS - MIN_WAIT_TIME_MILLIS,
         TimeUnit.MILLISECONDS
     );
+    log.debug("Received management request [%s]", reason);
   }
 
   /**
@@ -438,7 +439,7 @@ public class TaskQueue
     // Do not add the task to queue if insert into metadata fails for any reason
     taskStorage.insert(task, TaskStatus.running(task.getId()));
     addTaskInternal(task);
-    requestManagement();
+    requestManagement("Adding new task");
     return true;
   }
 
@@ -576,7 +577,7 @@ public class TaskQueue
 
     // Cleanup internal state
     removeTaskInternal(task);
-    requestManagement();
+    requestManagement("Completing task");
   }
 
   /**
@@ -687,7 +688,7 @@ public class TaskQueue
         newTasks.size(), addedTasks.size(), removedTasks.size()
     );
 
-    requestManagement();
+    requestManagement("Syncing storage");
   }
 
   public Map<String, Long> getAndResetSuccessfulTaskCounts()
