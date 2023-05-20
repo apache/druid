@@ -332,7 +332,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     double cost = 0d;
 
     // the sum of the costs of segments expected to be on the server (loaded + loading - dropping)
-    Set<DataSegment> projectedSegments = server.getProjectedSegments(true);
+    Set<DataSegment> projectedSegments = server.getProjectedSegments();
     cost += computeJointSegmentsCost(proposalSegment, projectedSegments);
 
     // minus the self cost of the segment

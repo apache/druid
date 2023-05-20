@@ -74,6 +74,12 @@ public class ServerHolder implements Comparable<ServerHolder>
    */
   private final Map<DataSegment, SegmentAction> queuedSegments = new HashMap<>();
 
+  /**
+   * Segments that are expected to be loaded on this server once all the
+   * operations in progress have completed.
+   */
+  private final Set<DataSegment> projectedSegments = new HashSet<>();
+
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
   {
     this(server, peon, false, 0, 1);
@@ -115,17 +121,19 @@ public class ServerHolder implements Comparable<ServerHolder>
 
     final AtomicInteger movingSegmentCount = new AtomicInteger();
     final AtomicInteger loadingReplicaCount = new AtomicInteger();
-    updateQueuedSegments(movingSegmentCount, loadingReplicaCount);
+    initializeQueuedSegments(movingSegmentCount, loadingReplicaCount);
 
     this.movingSegmentCount = movingSegmentCount.get();
     this.loadingReplicaCount = loadingReplicaCount.get();
   }
 
-  private void updateQueuedSegments(
+  private void initializeQueuedSegments(
       AtomicInteger movingSegmentCount,
       AtomicInteger loadingReplicaCount
   )
   {
+    projectedSegments.addAll(server.iterateAllSegments());
+
     final List<SegmentHolder> expiredSegments = new ArrayList<>();
     peon.getSegmentsInQueue().forEach(
         (holder) -> {
@@ -135,13 +143,7 @@ public class ServerHolder implements Comparable<ServerHolder>
           }
 
           final SegmentAction action = holder.getAction();
-          final DataSegment segment = holder.getSegment();
-          queuedSegments.put(segment, simplify(action));
-          if (action.isLoad()) {
-            sizeOfLoadingSegments += segment.getSize();
-          } else {
-            sizeOfDroppingSegments += segment.getSize();
-          }
+          updateQueuedSegments(holder.getSegment(), simplify(action), true);
 
           if (action == SegmentAction.MOVE_TO) {
             movingSegmentCount.incrementAndGet();
@@ -153,7 +155,7 @@ public class ServerHolder implements Comparable<ServerHolder>
     );
 
     peon.getSegmentsMarkedToDrop().forEach(
-        segment -> queuedSegments.put(segment, SegmentAction.MOVE_FROM)
+        segment -> updateQueuedSegments(segment, SegmentAction.MOVE_FROM, true)
     );
 
     if (!expiredSegments.isEmpty()) {
@@ -247,25 +249,10 @@ public class ServerHolder implements Comparable<ServerHolder>
   /**
    * Segments that are expected to be loaded on this server once all the
    * operations in progress have completed.
-   *
-   * @param includeMoving true if segments moving to this server should also be included.
    */
-  public Set<DataSegment> getProjectedSegments(boolean includeMoving)
+  public Set<DataSegment> getProjectedSegments()
   {
-    final Set<DataSegment> segments = new HashSet<>(server.iterateAllSegments());
-    queuedSegments.forEach((segment, action) -> {
-      if (action == SegmentAction.LOAD) {
-        segments.add(segment);
-      } else if (action == SegmentAction.DROP) {
-        segments.remove(segment);
-      } else if (action == SegmentAction.MOVE_TO && includeMoving) {
-        segments.add(segment);
-      } else if (action == SegmentAction.MOVE_FROM && includeMoving) {
-        segments.remove(segment);
-      }
-    });
-
-    return segments;
+    return projectedSegments;
   }
 
   /**
@@ -320,20 +307,18 @@ public class ServerHolder implements Comparable<ServerHolder>
 
     if (action.isLoad()) {
       ++totalAssignmentsInRun;
-      sizeOfLoadingSegments += segment.getSize();
-    } else {
-      sizeOfDroppingSegments += segment.getSize();
     }
 
-    queuedSegments.put(segment, simplify(action));
+    updateQueuedSegments(segment, simplify(action), true);
     return true;
   }
 
   public boolean cancelOperation(SegmentAction action, DataSegment segment)
   {
-    return queuedSegments.get(segment) == simplify(action)
-           && (action == SegmentAction.MOVE_FROM || peon.cancelOperation(segment))
-           && cleanupState(segment);
+    final SegmentAction queuedAction = queuedSegments.get(segment);
+    return queuedAction == simplify(action)
+           && (queuedAction == SegmentAction.MOVE_FROM || peon.cancelOperation(segment))
+           && updateQueuedSegments(segment, queuedAction, false);
   }
 
   public boolean hasSegmentLoaded(SegmentId segmentId)
@@ -352,13 +337,26 @@ public class ServerHolder implements Comparable<ServerHolder>
     return action == SegmentAction.REPLICATE ? SegmentAction.LOAD : action;
   }
 
-  private boolean cleanupState(DataSegment segment)
+  private boolean updateQueuedSegments(DataSegment segment, SegmentAction action, boolean addToQueue)
   {
-    final SegmentAction action = queuedSegments.remove(segment);
-    if (action.isLoad()) {
-      sizeOfLoadingSegments -= segment.getSize();
+    if (addToQueue) {
+      queuedSegments.put(segment, action);
     } else {
-      sizeOfDroppingSegments -= segment.getSize();
+      queuedSegments.remove(segment);
+    }
+
+    final long sizeDelta = addToQueue ? segment.getSize() : -segment.getSize();
+    if (action.isLoad()) {
+      sizeOfLoadingSegments += sizeDelta;
+    } else if (action == SegmentAction.DROP) {
+      sizeOfDroppingSegments += sizeDelta;
+    }
+
+    // Remove from projected if load is cancelled or drop is started, add otherwise
+    if (addToQueue ^ action.isLoad()) {
+      projectedSegments.remove(segment);
+    } else {
+      projectedSegments.add(segment);
     }
 
     return true;
