@@ -110,6 +110,7 @@ public class MSQTestControllerContext implements ControllerContext
                               .collect(Collectors.toList())
                      )
     );
+    Mockito.when(coordinatorClient.isHandOffComplete(ArgumentMatchers.anyString(), ArgumentMatchers.any())).thenReturn(Boolean.TRUE);
     this.workerMemoryParameters = workerMemoryParameters;
   }
 

@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
+import org.apache.druid.msq.exec.SegmentLoadAwaiter;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
@@ -44,6 +45,7 @@ import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -90,10 +92,17 @@ public class MSQTaskReportTest
         new Object[]{"bar"}
     );
 
+    SegmentLoadAwaiter.Status status = new SegmentLoadAwaiter.Status(
+        SegmentLoadAwaiter.State.RUNNING, DateTime.now(),
+        200L,
+        50,
+        10
+    );
+
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, 1, 2),
+            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, 1, 2, status),
             MSQStagesReport.create(
                 QUERY_DEFINITION,
                 ImmutableMap.of(),
@@ -142,11 +151,18 @@ public class MSQTaskReportTest
   @Test
   public void testSerdeErrorReport() throws Exception
   {
+    SegmentLoadAwaiter.Status status = new SegmentLoadAwaiter.Status(
+        SegmentLoadAwaiter.State.FAILED, DateTime.now(),
+        200L,
+        50,
+        10
+    );
+
     final MSQErrorReport errorReport = MSQErrorReport.fromFault(TASK_ID, HOST, 0, new TooManyColumnsFault(10, 5));
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.FAILED, errorReport, new ArrayDeque<>(), null, 0, 1, 2),
+            new MSQStatusReport(TaskState.FAILED, errorReport, new ArrayDeque<>(), null, 0, 1, 2, status),
             MSQStagesReport.create(
                 QUERY_DEFINITION,
                 ImmutableMap.of(),
@@ -179,10 +195,17 @@ public class MSQTaskReportTest
   @Test
   public void testWriteTaskReport() throws Exception
   {
+    SegmentLoadAwaiter.Status status = new SegmentLoadAwaiter.Status(
+        SegmentLoadAwaiter.State.SUCCESS, DateTime.now(),
+        200L,
+        50,
+        0
+    );
+
     final MSQTaskReport report = new MSQTaskReport(
         TASK_ID,
         new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, 1, 2),
+            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, 1, 2, status),
             MSQStagesReport.create(
                 QUERY_DEFINITION,
                 ImmutableMap.of(),
