@@ -281,7 +281,7 @@ public class DruidCoordinator
 
     final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
     for (DataSegment segment : dataSegments) {
-      if (segmentReplicantLookup.getTotalServedReplicas(segment.getId()) == 0) {
+      if (segmentReplicantLookup.getLoadedReplicas(segment.getId(), true) == 0) {
         numsUnavailableUsedSegmentsPerDataSource.addTo(segment.getDataSource(), 1);
       } else {
         numsUnavailableUsedSegmentsPerDataSource.addTo(segment.getDataSource(), 0);

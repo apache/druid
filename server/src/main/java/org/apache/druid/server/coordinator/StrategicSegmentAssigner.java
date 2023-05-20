@@ -166,7 +166,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     if (serverA.isLoadingSegment(segment)) {
       // Cancel the load on serverA and load on serverB instead
       if (serverA.cancelOperation(SegmentAction.LOAD, segment)) {
-        int loadedCountOnTier = replicantLookup.getServedReplicas(segment.getId(), tier);
+        int loadedCountOnTier = replicantLookup.getLoadedNotDroppingReplicas(segment.getId(), tier);
         return loadSegment(segment, serverB, loadedCountOnTier >= 1);
       }
 
@@ -195,17 +195,17 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       }
     });
 
-    final int totalOverReplication =
-        replicantLookup.getTotalServedReplicas(segment.getId()) - requiredTotalReplicas.get();
+    final int loadedNotDroppingReplicas = replicantLookup.getLoadedReplicas(segment.getId(), false);
+    final int replicaSurplus = loadedNotDroppingReplicas - requiredTotalReplicas.get();
 
     // Update replicas in every tier
-    int totalDropsQueued = 0;
+    int dropsQueued = 0;
     for (String tier : allTiers) {
-      totalDropsQueued += updateReplicasInTier(
+      dropsQueued += updateReplicasInTier(
           segment,
           tier,
           tierToReplicaCount.getOrDefault(tier, 0),
-          totalOverReplication - totalDropsQueued
+          replicaSurplus - dropsQueued
       );
     }
   }
@@ -227,7 +227,11 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       int maxReplicasToDrop
   )
   {
-    final int projectedReplicas = replicantLookup.getProjectedReplicas(segment.getId(), tier);
+    final int loadedNotDroppingReplicas =
+        replicantLookup.getLoadedNotDroppingReplicas(segment.getId(), tier);
+    final int loadingReplicas = replicantLookup.getLoadingReplicas(segment.getId(), tier);
+    final int projectedReplicas = loadedNotDroppingReplicas + loadingReplicas;
+
     final int movingReplicas = replicantLookup.getMovingReplicas(segment.getId(), tier);
     final boolean shouldCancelMoves = requiredReplicas == 0 && movingReplicas > 0;
 
@@ -254,8 +258,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       // Cancelled drops can be counted as loaded replicas, thus reducing deficit
       int numReplicasToLoad = replicaDeficit - cancelledDrops;
       if (numReplicasToLoad > 0) {
-        boolean isAlreadyLoadedOnTier = replicantLookup.getServedReplicas(segment.getId(), tier)
-                                        + cancelledDrops >= 1;
+        boolean isAlreadyLoadedOnTier = loadedNotDroppingReplicas + cancelledDrops >= 1;
         int numLoadsQueued = loadReplicas(numReplicasToLoad, segment, tier, segmentStatus, isAlreadyLoadedOnTier);
         incrementStat(Stats.Segments.ASSIGNED, segment, tier, numLoadsQueued);
       }

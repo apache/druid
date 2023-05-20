@@ -105,19 +105,6 @@ public class SegmentReplicantLookup
   }
 
   /**
-   * Total number of replicas of the segment expected to be present on the given
-   * tier once all the operations in progress have completed.
-   * <p>
-   * Includes replicas with state LOADING and LOADED.
-   * Does not include replicas with state DROPPING or MOVING_TO.
-   */
-  public int getProjectedReplicas(SegmentId segmentId, String tier)
-  {
-    ReplicaCount count = replicaCounts.get(segmentId, tier);
-    return count == null ? 0 : count.projected();
-  }
-
-  /**
    * Number of replicas of the segment currently being moved in the given tier.
    */
   public int getMovingReplicas(SegmentId segmentId, String tier)
@@ -130,24 +117,32 @@ public class SegmentReplicantLookup
    * Number of replicas of the segment which are safely loaded on the given tier
    * and are not being dropped.
    */
-  public int getServedReplicas(SegmentId segmentId, String tier)
+  public int getLoadedNotDroppingReplicas(SegmentId segmentId, String tier)
   {
     ReplicaCount count = replicaCounts.get(segmentId, tier);
-    return (count == null) ? 0 : count.served();
+    return (count == null) ? 0 : count.loadedNotDropping();
+  }
+
+  public int getLoadingReplicas(SegmentId segmentId, String tier)
+  {
+    ReplicaCount count = replicaCounts.get(segmentId, tier);
+    return count == null ? 0 : count.loading;
   }
 
   /**
-   * Number of replicas of the segment which are safely loaded on the cluster
-   * and are not being dropped.
+   * Number of replicas of the segment which are loaded on the cluster.
+   *
+   * @param includeDropping Whether segments which are being dropped should be
+   *                        included in the total count.
    */
-  public int getTotalServedReplicas(SegmentId segmentId)
+  public int getLoadedReplicas(SegmentId segmentId, boolean includeDropping)
   {
     final Map<String, ReplicaCount> allTiers = replicaCounts.row(segmentId);
-    int totalServed = 0;
+    int totalLoaded = 0;
     for (ReplicaCount count : allTiers.values()) {
-      totalServed += count.served();
+      totalLoaded += includeDropping ? count.loaded : count.loadedNotDropping();
     }
-    return totalServed;
+    return totalLoaded;
   }
 
   /**
@@ -237,21 +232,16 @@ public class SegmentReplicantLookup
       }
     }
 
-    int projected()
-    {
-      return loaded + loading - dropping;
-    }
-
-    int served()
+    int loadedNotDropping()
     {
       return loaded - dropping;
     }
 
     int underReplicated(boolean ignoreMissingServers)
     {
-      int totalServed = loadedBroadcast + served();
+      int totalLoaded = loaded + loadedBroadcast;
       int targetCount = ignoreMissingServers ? required : Math.min(required, possible);
-      return targetCount > totalServed ? targetCount - totalServed : 0;
+      return targetCount > totalLoaded ? targetCount - totalLoaded : 0;
     }
   }
 }
