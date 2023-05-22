@@ -1,7 +1,7 @@
 ---
 id: tutorial-sql-query-view
-title: "Tutorial: Get to know Query view"
-sidebar_label: "Get to know Query view"
+title: Get to know Query view
+sidebar_label: Get to know Query view
 ---
 
 <!--
@@ -28,7 +28,7 @@ This tutorial demonstrates some useful features built into Query view in Apache 
 
 Query view lets you run [Druid SQL queries](../querying/sql.md) and [native (JSON-based) queries](../querying/querying.md) against ingested data. Try out the [Introduction to Druid SQL](./tutorial-jupyter-index.md#tutorials) tutorial to learn more about Druid SQL.
 
-You can use Query view to test and tune queries before you use them in API requests&mdash;for example, to perform [SQL-based ingestion](../multi-stage-query/api.md). You can also ingest data directly in Query view.
+You can use Query view to test and tune queries before you use them in API requests&mdash;for example, to perform [SQL-based ingestion](../api-reference/sql-ingestion-api.md). You can also ingest data directly in Query view.
 
 The tutorial guides you through the steps to ingest sample data and query the ingested data using some Query view features.
 

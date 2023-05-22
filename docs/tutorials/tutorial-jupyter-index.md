@@ -1,6 +1,7 @@
 ---
 id: tutorial-jupyter-index
-title: "Jupyter Notebook tutorials"
+title: Jupyter Notebook tutorials
+sidebar_label: Jupyter Notebook tutorials
 ---
 
 <!--
