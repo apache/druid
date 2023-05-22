@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 
 import javax.annotation.Nullable;
@@ -152,7 +151,7 @@ public class ColumnType extends BaseTypeSignature<ValueType>
    *                                                                   inference
    */
   @Nullable
-  public static ColumnType leastRestrictiveType(@Nullable ColumnType type, @Nullable ColumnType other) throws IncompatibleTypeException
+  public static ColumnType leastRestrictiveType(@Nullable ColumnType type, @Nullable ColumnType other) throws Types.IncompatibleTypeException
   {
     if (type == null) {
       return other;
@@ -168,7 +167,7 @@ public class ColumnType extends BaseTypeSignature<ValueType>
         return type;
       }
       if (!Objects.equals(type, other)) {
-        throw new IncompatibleTypeException(type, other);
+        throw new Types.IncompatibleTypeException(type, other);
       }
       return type;
     }
@@ -177,7 +176,7 @@ public class ColumnType extends BaseTypeSignature<ValueType>
       if (ColumnType.NESTED_DATA.equals(type) || ColumnType.NESTED_DATA.equals(other)) {
         return ColumnType.NESTED_DATA;
       }
-      throw new IncompatibleTypeException(type, other);
+      throw new Types.IncompatibleTypeException(type, other);
     }
 
     // arrays convert based on least restrictive element type
@@ -230,11 +229,4 @@ public class ColumnType extends BaseTypeSignature<ValueType>
     return ColumnType.DOUBLE;
   }
 
-  public static class IncompatibleTypeException extends IAE
-  {
-    public IncompatibleTypeException(ColumnType type, ColumnType other)
-    {
-      super("Cannot implicitly cast %s to %s", type, other);
-    }
-  }
 }

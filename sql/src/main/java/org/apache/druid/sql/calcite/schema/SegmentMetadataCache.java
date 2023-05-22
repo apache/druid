@@ -58,6 +58,7 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
@@ -807,7 +808,6 @@ public class SegmentMetadataCache
         final RowSignature rowSignature = availableSegmentMetadata.getRowSignature();
         if (rowSignature != null) {
           for (String column : rowSignature.getColumnNames()) {
-            // Newer column types should override older ones.
             final ColumnType columnType =
                 rowSignature.getColumnType(column)
                             .orElseThrow(() -> new ISE("Encountered null type for column [%s]", column));
@@ -1011,13 +1011,14 @@ public class SegmentMetadataCache
    * chosen, at least for systems that are continuously updated with 'current' data.
    *
    * Since {@link ColumnTypeMergePolicy} are used to compute the SQL schema, at least in systems using SQL schemas which
-   * are poartially or fully computed by this cache, this merge policy can result in query time errors if incompatible
+   * are partially or fully computed by this cache, this merge policy can result in query time errors if incompatible
    * types are mixed if the chosen type is more restrictive than the types of some segments. If data is likely to vary
    * in type across segments, consider using {@link LeastRestrictiveTypeMergePolicy} instead.
    */
   public static class FirstTypeMergePolicy implements ColumnTypeMergePolicy
   {
     public static final String NAME = "newestFirst";
+    private static final FirstTypeMergePolicy INSTANCE = new FirstTypeMergePolicy();
 
     @Override
     public ColumnType merge(ColumnType existingType, ColumnType newType)
@@ -1072,9 +1073,9 @@ public class SegmentMetadataCache
       try {
         return ColumnType.leastRestrictiveType(existingType, newType);
       }
-      catch (ColumnType.IncompatibleTypeException incompatibleTypeException) {
+      catch (Types.IncompatibleTypeException incompatibleTypeException) {
         // fall back to first encountered type if they are not compatible for some reason
-        return existingType;
+        return FirstTypeMergePolicy.INSTANCE.merge(existingType, newType);
       }
     }
 
