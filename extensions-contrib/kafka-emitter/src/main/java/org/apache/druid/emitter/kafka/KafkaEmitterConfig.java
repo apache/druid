@@ -93,8 +93,7 @@ public class KafkaEmitterConfig
   )
   {
     this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "bootstrap.servers can not be null");
-    this.eventTypes = validateEventTypes(eventTypes, requestTopic);
-
+    this.eventTypes = maybeUpdateEventTypes(eventTypes, requestTopic);
     this.metricTopic = this.eventTypes.contains(EventType.METRICS) ? Preconditions.checkNotNull(metricTopic, "metric.topic can not be null") : null;
     this.alertTopic = this.eventTypes.contains(EventType.ALERTS) ? Preconditions.checkNotNull(alertTopic, "alert.topic can not be null") : null;
     this.requestTopic = this.eventTypes.contains(EventType.REQUESTS) ? Preconditions.checkNotNull(requestTopic, "request.topic can not be null") : null;
@@ -103,7 +102,7 @@ public class KafkaEmitterConfig
     this.kafkaProducerConfig = kafkaProducerConfig == null ? ImmutableMap.of() : kafkaProducerConfig;
   }
 
-  private Set<EventType> validateEventTypes(Set<EventType> eventTypes, String requestTopic)
+  private Set<EventType> maybeUpdateEventTypes(Set<EventType> eventTypes, String requestTopic)
   {
     // Unless explicitly overridden, kafka emitter will always emit metrics and alerts
     if (eventTypes == null) {

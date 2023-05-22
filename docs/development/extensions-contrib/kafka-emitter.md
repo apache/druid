@@ -51,7 +51,8 @@ All the configuration parameters for the Kafka emitter are under `druid.emitter.
 
 ```
 druid.emitter.kafka.bootstrap.servers=hostname1:9092,hostname2:9092
-druid.emitter.kafka.event.types=["alerts", "requests", "segmentMetadata"]
+druid.emitter.kafka.event.types=["metrics", alerts", "requests", "segmentMetadata"]
+druid.emitter.kafka.metric.topic=druid-metric
 druid.emitter.kafka.alert.topic=druid-alert
 druid.emitter.kafka.request.topic=druid-request-logs
 druid.emitter.kafka.segmentMetadata.topic=druid-segment-metadata 

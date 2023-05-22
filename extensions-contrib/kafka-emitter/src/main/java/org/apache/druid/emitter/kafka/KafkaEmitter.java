@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.emitter.kafka.KafkaEmitterConfig.EventType;
 import org.apache.druid.emitter.kafka.MemoryBoundLinkedBlockingQueue.ObjectContainer;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
@@ -37,7 +38,6 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.util.Properties;
@@ -61,12 +61,12 @@ public class KafkaEmitter implements Emitter
   private final AtomicLong invalidLost;
 
   private final KafkaEmitterConfig config;
-  private final Producer<String, byte[]> producer;
+  private final Producer<String, String> producer;
   private final ObjectMapper jsonMapper;
-  private final MemoryBoundLinkedBlockingQueue<byte[]> metricQueue;
-  private final MemoryBoundLinkedBlockingQueue<byte[]> alertQueue;
-  private final MemoryBoundLinkedBlockingQueue<byte[]> requestQueue;
-  private final MemoryBoundLinkedBlockingQueue<byte[]> segmentMetadataQueue;
+  private final MemoryBoundLinkedBlockingQueue<String> metricQueue;
+  private final MemoryBoundLinkedBlockingQueue<String> alertQueue;
+  private final MemoryBoundLinkedBlockingQueue<String> requestQueue;
+  private final MemoryBoundLinkedBlockingQueue<String> segmentMetadataQueue;
   private final ScheduledExecutorService scheduler;
 
   protected int sendInterval = DEFAULT_SEND_INTERVAL_SECONDS;
@@ -102,7 +102,7 @@ public class KafkaEmitter implements Emitter
   }
 
   @VisibleForTesting
-  protected Producer<String, byte[]> setKafkaProducer()
+  protected Producer<String, String> setKafkaProducer()
   {
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
@@ -111,7 +111,7 @@ public class KafkaEmitter implements Emitter
       Properties props = new Properties();
       props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBootstrapServers());
       props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-      props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
+      props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
       props.put(ProducerConfig.RETRIES_CONFIG, DEFAULT_RETRIES);
       props.putAll(config.getKafkaProducerConfig());
 
@@ -170,9 +170,9 @@ public class KafkaEmitter implements Emitter
     sendToKafka(config.getSegmentMetadataTopic(), segmentMetadataQueue, setProducerCallback(segmentMetadataLost));
   }
 
-  private void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<byte[]> recordQueue, Callback callback)
+  private void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue, Callback callback)
   {
-    ObjectContainer<byte[]> objectToSend;
+    ObjectContainer<String> objectToSend;
     try {
       while (true) {
         objectToSend = recordQueue.take();
@@ -196,11 +196,13 @@ public class KafkaEmitter implements Emitter
               .build();
         }
 
-        byte[] resultBytes = jsonMapper.writeValueAsBytes(map);
-        ObjectContainer<byte[]> objectContainer = new ObjectContainer<>(
-            resultBytes,
-            resultBytes.length
+        String resultJson = jsonMapper.writeValueAsString(map);
+
+        ObjectContainer<String> objectContainer = new ObjectContainer<>(
+            resultJson,
+            StringUtils.toUtf8(resultJson).length
         );
+
         Set<EventType> eventTypes = config.getEventTypes();
         if (event instanceof ServiceMetricEvent) {
           if (!eventTypes.contains(EventType.METRICS) || !metricQueue.offer(objectContainer)) {

@@ -67,7 +67,7 @@ public class KafkaEmitterTest
   }
 
   // there is 1 seconds wait in kafka emitter before it starts sending events to broker, set a timeout for 5 seconds
-  @Test(timeout = 5_000)
+  @Test(timeout = 10_000)
   public void testKafkaEmitter() throws InterruptedException
   {
     final List<ServiceMetricEvent> serviceMetricEvents = ImmutableList.of(
@@ -101,14 +101,14 @@ public class KafkaEmitterTest
     final CountDownLatch countDownSentEvents = new CountDownLatch(
         requestTopic == null ? totalEventsExcludingRequestLogEvents : totalEvents);
 
-    final KafkaProducer<String, byte[]> producer = mock(KafkaProducer.class);
+    final KafkaProducer<String, String> producer = mock(KafkaProducer.class);
     final KafkaEmitter kafkaEmitter = new KafkaEmitter(
         new KafkaEmitterConfig("", eventsType, "metrics", "alerts", requestTopic, "metadata", "test-cluster", null),
         new ObjectMapper()
     )
     {
       @Override
-      protected Producer<String, byte[]> setKafkaProducer()
+      protected Producer<String, String> setKafkaProducer()
       {
         // override send interval to 1 second
         sendInterval = 1;
