@@ -435,9 +435,9 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     for (DruidQuery druidQuery : druidQueryList) {
       Query<?> nativeQuery = druidQuery.getQuery();
       ObjectNode objectNode = jsonMapper.createObjectNode();
-      objectNode.put("query", jsonMapper.convertValue(nativeQuery, ObjectNode.class));
-      objectNode.put("signature", jsonMapper.convertValue(druidQuery.getOutputRowSignature(), ArrayNode.class));
-      objectNode.put(
+      objectNode.set("query", jsonMapper.convertValue(nativeQuery, ObjectNode.class));
+      objectNode.set("signature", jsonMapper.convertValue(druidQuery.getOutputRowSignature(), ArrayNode.class));
+      objectNode.set(
           "columnMappings",
           jsonMapper.convertValue(QueryUtils.buildColumnMappings(relRoot.fields, druidQuery), ArrayNode.class));
       nativeQueriesArrayNode.add(objectNode);
