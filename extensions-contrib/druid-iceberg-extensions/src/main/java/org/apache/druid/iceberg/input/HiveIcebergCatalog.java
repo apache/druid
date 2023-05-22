@@ -73,7 +73,7 @@ public class HiveIcebergCatalog extends IcebergCatalog
     this.catalogUri = Preconditions.checkNotNull(catalogUri, "catalogUri cannot be null");
     this.catalogProperties = catalogProperties != null ? catalogProperties : new HashMap<>();
     this.configuration = configuration;
-    catalogProperties
+    this.catalogProperties
         .forEach(this.configuration::set);
     this.hiveCatalog = retrieveCatalog();
   }
