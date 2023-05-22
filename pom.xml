@@ -217,6 +217,7 @@
         <module>extensions-contrib/prometheus-emitter</module>
         <module>extensions-contrib/opentelemetry-emitter</module>
         <module>extensions-contrib/kubernetes-overlord-extensions</module>
+        <module>extensions-contrib/druid-iceberg-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- Revised integration tests -->
@@ -255,7 +256,6 @@
             </snapshots>
         </pluginRepository>
     </pluginRepositories>
-
     <dependencyManagement>
         <dependencies>
             <!-- Compile Scope -->

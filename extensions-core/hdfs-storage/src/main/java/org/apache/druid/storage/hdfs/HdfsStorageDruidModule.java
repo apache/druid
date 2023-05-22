@@ -34,6 +34,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.inputsource.hdfs.HdfsInputSource;
+import org.apache.druid.inputsource.hdfs.HdfsInputSourceAdapter;
 import org.apache.druid.inputsource.hdfs.HdfsInputSourceConfig;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
@@ -65,7 +66,8 @@ public class HdfsStorageDruidModule implements DruidModule
     return Collections.singletonList(
         new SimpleModule().registerSubtypes(
             new NamedType(HdfsLoadSpec.class, HdfsStorageDruidModule.SCHEME),
-            new NamedType(HdfsInputSource.class, HdfsStorageDruidModule.SCHEME)
+            new NamedType(HdfsInputSource.class, HdfsStorageDruidModule.SCHEME),
+            new NamedType(HdfsInputSourceAdapter.class, HdfsStorageDruidModule.SCHEME)
         )
     );
   }
