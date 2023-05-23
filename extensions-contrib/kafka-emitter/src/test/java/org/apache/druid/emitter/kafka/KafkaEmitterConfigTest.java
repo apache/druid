@@ -74,7 +74,7 @@ public class KafkaEmitterConfigTest
   public void testSerDeserKafkaEmitterConfigNullMetricsTopic() throws IOException
   {
     Set<KafkaEmitterConfig.EventType> eventTypeSet = new HashSet<KafkaEmitterConfig.EventType>();
-    eventTypeSet.add(KafkaEmitterConfig.EventType.SEGMENTMETADATA);
+    eventTypeSet.add(KafkaEmitterConfig.EventType.SEGMENT_METADATA);
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", eventTypeSet, null,
         null, null, "metadataTest",
         "clusterNameTest", ImmutableMap.<String, String>builder()
@@ -105,7 +105,7 @@ public class KafkaEmitterConfigTest
   @Test
   public void testDeserializeEventTypesWithDifferentCase() throws JsonProcessingException
   {
-    Assert.assertEquals(KafkaEmitterConfig.EventType.SEGMENTMETADATA, mapper.readValue("\"segmentMetadata\"", KafkaEmitterConfig.EventType.class));
+    Assert.assertEquals(KafkaEmitterConfig.EventType.SEGMENT_METADATA, mapper.readValue("\"segmentMetadata\"", KafkaEmitterConfig.EventType.class));
     Assert.assertEquals(KafkaEmitterConfig.EventType.ALERTS, mapper.readValue("\"alerts\"", KafkaEmitterConfig.EventType.class));
     Assert.assertThrows(ValueInstantiationException.class, () -> mapper.readValue("\"segment_metadata\"", KafkaEmitterConfig.EventType.class));
   }

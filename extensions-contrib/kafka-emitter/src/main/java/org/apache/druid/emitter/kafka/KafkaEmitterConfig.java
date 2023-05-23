@@ -40,13 +40,7 @@ public class KafkaEmitterConfig
     METRICS,
     ALERTS,
     REQUESTS,
-    SEGMENTMETADATA {
-      @Override
-      public String toString()
-      {
-        return "segmentMetadata";
-      }
-    };
+    SEGMENT_METADATA;
 
     @JsonValue
     @Override
@@ -97,7 +91,7 @@ public class KafkaEmitterConfig
     this.metricTopic = this.eventTypes.contains(EventType.METRICS) ? Preconditions.checkNotNull(metricTopic, "metric.topic can not be null") : null;
     this.alertTopic = this.eventTypes.contains(EventType.ALERTS) ? Preconditions.checkNotNull(alertTopic, "alert.topic can not be null") : null;
     this.requestTopic = this.eventTypes.contains(EventType.REQUESTS) ? Preconditions.checkNotNull(requestTopic, "request.topic can not be null") : null;
-    this.segmentMetadataTopic = this.eventTypes.contains(EventType.SEGMENTMETADATA) ? Preconditions.checkNotNull(segmentMetadataTopic, "segmentMetadata.topic can not be null") : null;
+    this.segmentMetadataTopic = this.eventTypes.contains(EventType.SEGMENT_METADATA) ? Preconditions.checkNotNull(segmentMetadataTopic, "segmentMetadata.topic can not be null") : null;
     this.clusterName = clusterName;
     this.kafkaProducerConfig = kafkaProducerConfig == null ? ImmutableMap.of() : kafkaProducerConfig;
   }

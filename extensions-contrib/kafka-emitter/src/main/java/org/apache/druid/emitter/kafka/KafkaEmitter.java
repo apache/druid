@@ -19,6 +19,7 @@
 
 package org.apache.druid.emitter.kafka;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.emitter.kafka.KafkaEmitterConfig.EventType;
@@ -135,7 +136,7 @@ public class KafkaEmitter implements Emitter
     if (eventTypes.contains(EventType.REQUESTS)) {
       scheduler.schedule(this::sendRequestToKafka, sendInterval, TimeUnit.SECONDS);
     }
-    if (eventTypes.contains(EventType.SEGMENTMETADATA)) {
+    if (eventTypes.contains(EventType.SEGMENT_METADATA)) {
       scheduler.schedule(this::sendSegmentMetadataToKafka, sendInterval, TimeUnit.SECONDS);
     }
     scheduler.scheduleWithFixedDelay(() -> {
@@ -217,14 +218,14 @@ public class KafkaEmitter implements Emitter
             requestLost.incrementAndGet();
           }
         } else if (event instanceof SegmentMetadataEvent) {
-          if (!eventTypes.contains(EventType.SEGMENTMETADATA) || !segmentMetadataQueue.offer(objectContainer)) {
+          if (!eventTypes.contains(EventType.SEGMENT_METADATA) || !segmentMetadataQueue.offer(objectContainer)) {
             segmentMetadataLost.incrementAndGet();
           }
         } else {
           invalidLost.incrementAndGet();
         }
       }
-      catch (Exception e) {
+      catch (JsonProcessingException e) {
         invalidLost.incrementAndGet();
         log.warn(e, "Exception while serializing event");
       }
