@@ -226,7 +226,7 @@ public class IngestSegmentFirehoseTest
       for (String line : rows) {
         index.add(parser.parse(line));
       }
-      indexMerger.persist(index, segmentDir, new IndexSpec(), null);
+      indexMerger.persist(index, segmentDir, IndexSpec.DEFAULT, null);
     }
   }
 }

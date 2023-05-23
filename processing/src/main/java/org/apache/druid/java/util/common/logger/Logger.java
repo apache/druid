@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -86,6 +87,13 @@ public class Logger
     }
   }
 
+  public void trace(Marker marker, String message, Object... formatArgs)
+  {
+    if (log.isTraceEnabled()) {
+      log.trace(marker, StringUtils.nonStrictFormat(message, formatArgs));
+    }
+  }
+
   public void debug(String message, Object... formatArgs)
   {
     if (log.isDebugEnabled()) {
@@ -93,6 +101,12 @@ public class Logger
     }
   }
 
+  public void debug(Marker marker, String message, Object... formatArgs)
+  {
+    if (log.isDebugEnabled()) {
+      log.debug(marker, StringUtils.nonStrictFormat(message, formatArgs));
+    }
+  }
   public void debug(Throwable t, String message, Object... formatArgs)
   {
     if (log.isDebugEnabled()) {
@@ -104,6 +118,13 @@ public class Logger
   {
     if (log.isInfoEnabled()) {
       log.info(StringUtils.nonStrictFormat(message, formatArgs));
+    }
+  }
+
+  public void info(Marker marker, String message, Object... formatArgs)
+  {
+    if (log.isInfoEnabled()) {
+      log.info(marker, StringUtils.nonStrictFormat(message, formatArgs));
     }
   }
 
@@ -131,6 +152,11 @@ public class Logger
     log.warn(StringUtils.nonStrictFormat(message, formatArgs));
   }
 
+  public void warn(Marker marker, String message, Object... formatArgs)
+  {
+    log.warn(marker, StringUtils.nonStrictFormat(message, formatArgs));
+  }
+
   public void warn(Throwable t, String message, Object... formatArgs)
   {
     logException(log::warn, t, StringUtils.nonStrictFormat(message, formatArgs));
@@ -139,6 +165,11 @@ public class Logger
   public void error(String message, Object... formatArgs)
   {
     log.error(StringUtils.nonStrictFormat(message, formatArgs));
+  }
+
+  public void error(Marker marker, String message, Object... formatArgs)
+  {
+    log.error(marker, StringUtils.nonStrictFormat(message, formatArgs));
   }
 
   /**
@@ -222,6 +253,11 @@ public class Logger
         fn.accept(StringUtils.nonStrictFormat("%s (%s)", message, t.toString()), null);
       }
     }
+  }
+
+  public String getName()
+  {
+    return this.log.getName();
   }
 
   /**

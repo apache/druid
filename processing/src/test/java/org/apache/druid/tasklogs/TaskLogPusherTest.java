@@ -17,15 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.collections;
+package org.apache.druid.tasklogs;
 
-import java.io.Closeable;
+import org.junit.Test;
 
-/**
- * Releaser is like Closeable, but doesn't throw IOExceptions.
- */
-public interface Releaser extends Closeable
+import java.io.File;
+import java.io.IOException;
+
+public class TaskLogPusherTest
 {
-  @Override
-  void close();
+  /**
+   * Test default implementation of pushTaskStatus in TaskLogPusher interface for code coverage
+   *
+   * @throws IOException
+   */
+  @Test
+  public void test_pushTaskStatus() throws IOException
+  {
+    TaskLogPusher taskLogPusher = new TaskLogPusher() {
+      @Override
+      public void pushTaskLog(String taskid, File logFile)
+      {
+      }
+    };
+    taskLogPusher.pushTaskStatus("id", new File(""));
+  }
 }
