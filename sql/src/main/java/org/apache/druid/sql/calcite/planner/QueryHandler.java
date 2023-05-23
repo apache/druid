@@ -75,6 +75,7 @@ import org.apache.druid.utils.Throwables;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -376,8 +377,11 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
           }
         }
       }
-      final Set<Resource> resources =
-          plannerContext.getResourceActions().stream().map(ResourceAction::getResource).collect(Collectors.toSet());
+      final List<Resource> resources = plannerContext.getResourceActions()
+          .stream()
+          .map(ResourceAction::getResource)
+          .sorted(Comparator.comparing(Resource::getName))
+          .collect(Collectors.toList());
       resourcesString = plannerContext.getJsonMapper().writeValueAsString(resources);
     }
     catch (JsonProcessingException jpe) {
@@ -431,9 +435,9 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     for (DruidQuery druidQuery : druidQueryList) {
       Query<?> nativeQuery = druidQuery.getQuery();
       ObjectNode objectNode = jsonMapper.createObjectNode();
-      objectNode.put("query", jsonMapper.convertValue(nativeQuery, ObjectNode.class));
-      objectNode.put("signature", jsonMapper.convertValue(druidQuery.getOutputRowSignature(), ArrayNode.class));
-      objectNode.put(
+      objectNode.set("query", jsonMapper.convertValue(nativeQuery, ObjectNode.class));
+      objectNode.set("signature", jsonMapper.convertValue(druidQuery.getOutputRowSignature(), ArrayNode.class));
+      objectNode.set(
           "columnMappings",
           jsonMapper.convertValue(QueryUtils.buildColumnMappings(relRoot.fields, druidQuery), ArrayNode.class));
       nativeQueriesArrayNode.add(objectNode);
