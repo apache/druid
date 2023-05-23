@@ -46,7 +46,10 @@ public class MySQLConnector extends SQLMetadataConnector
   private static final String SERIAL_TYPE = "BIGINT(20) AUTO_INCREMENT";
   private static final String QUOTE_STRING = "`";
   private static final String COLLATION = "CHARACTER SET utf8mb4 COLLATE utf8mb4_bin";
-  private static final String MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME = "com.mysql.jdbc.exceptions.MySQLTransientException";
+  private static final String MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME
+      = "com.mysql.jdbc.exceptions.MySQLTransientException";
+  private static final String MARIA_DB_PACKET_EXCEPTION_CLASS_NAME
+      = "org.mariadb.jdbc.internal.util.exceptions.MaxAllowedPacketException";
 
   @Nullable
   private final Class<?> myTransientExceptionClass;
@@ -216,6 +219,24 @@ public class MySQLConnector extends SQLMetadataConnector
              || e instanceof SQLException && ((SQLException) e).getErrorCode() == 1317 /* ER_QUERY_INTERRUPTED */;
     }
     return false;
+  }
+
+  @Override
+  protected boolean connectorIsNonTransientException(Throwable e)
+  {
+    // Check only for packet exception as other non-transient exceptions would
+    // already be filtered out
+    return isRootCausePacketException(e);
+  }
+
+  private boolean isRootCausePacketException(Throwable t)
+  {
+    if (t == null) {
+      return false;
+    }
+
+    return MARIA_DB_PACKET_EXCEPTION_CLASS_NAME.equals(t.getClass().getName())
+           || isRootCausePacketException(t.getCause());
   }
 
   @Override

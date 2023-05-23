@@ -59,8 +59,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private static final Logger log = new Logger(SQLMetadataConnector.class);
   private static final String PAYLOAD_TYPE = "BLOB";
   private static final String COLLATION = "";
-  private static final String MAX_ALLOWED_PACKET_ERROR = "query size is >= to max_allowed_packet";
-
   static final int DEFAULT_MAX_TRIES = 10;
 
   private final Supplier<MetadataStorageConnectorConfig> config;
@@ -164,12 +162,29 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
   }
 
+  /**
+   * Returns true for errors that are definitely transient. An error can be
+   * confirmed to be transient iff:
+   * <ul>
+   *   <li>Either: {@link #connectorIsTransientException(Throwable)} returns true</li>
+   *   <li>Or: {@link #couldBeTransientException(Throwable)} returns true and
+   *   {@link #connectorIsNonTransientException(Throwable)} returns false.</li>
+   * </ul>
+   */
   public final boolean isTransientException(Throwable e)
   {
+    return connectorIsTransientException(e)
+        || (couldBeTransientException(e) && !connectorIsNonTransientException(e));
+  }
+
+  /**
+   * Checks if the given error could potentially be transient.
+   * An error for which this method returns true is then tested against
+   * {@link #connectorIsNonTransientException(Throwable)} for confirmation.
+   */
+  private boolean couldBeTransientException(Throwable e)
+  {
     if (e == null) {
-      return false;
-    }
-    if (e.getMessage() != null && e.getMessage().contains(MAX_ALLOWED_PACKET_ERROR)) {
       return false;
     }
 
@@ -177,16 +192,28 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
            || e instanceof SQLTransientException
            || e instanceof SQLRecoverableException
            || e instanceof UnableToObtainConnectionException
-           || e instanceof UnableToExecuteStatementException
-           || connectorIsTransientException(e)
+           || (e instanceof UnableToExecuteStatementException && isTransientException(e.getCause()))
            || (e instanceof SQLException && isTransientException(e.getCause()))
            || (e instanceof DBIException && isTransientException(e.getCause()));
   }
 
   /**
-   * Vendor specific errors that are not covered by {@link #isTransientException(Throwable)}
+   * Vendor specific errors that are not covered by {@link #couldBeTransientException(Throwable)}.
+   * This method takes precedence over {@link #connectorIsNonTransientException(Throwable)}
+   * i.e. an error for which both of these methods return true is categorized
+   * as transient.
    */
   protected boolean connectorIsTransientException(Throwable e)
+  {
+    return false;
+  }
+
+  /**
+   * Returns true if a given vendor specific error is definitely not transient.
+   * This method is called only for errors that are potentially transient,
+   * i.e. errors for which {@link #couldBeTransientException(Throwable)} returns true.
+   */
+  protected boolean connectorIsNonTransientException(Throwable e)
   {
     return false;
   }
@@ -344,12 +371,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     try {
       DatabaseMetaData databaseMetaData = handle.getConnection().getMetaData();
-      ResultSet columns = databaseMetaData.getColumns(
-          null,
-          null,
-          table,
-          column
-      );
+      ResultSet columns = databaseMetaData.getColumns(null, null, table, column);
       return columns.next();
     }
     catch (SQLException e) {

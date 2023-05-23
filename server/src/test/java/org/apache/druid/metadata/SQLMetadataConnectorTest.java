@@ -33,7 +33,6 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
@@ -83,28 +82,23 @@ public class SQLMetadataConnectorTest
     connector.createSupervisorsTable();
 
     connector.getDBI().withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            for (String table : tables) {
-              Assert.assertTrue(
-                  StringUtils.format("table %s was not created!", table),
-                  connector.tableExists(handle, table)
-              );
-            }
-
-            String taskTable = tablesConfig.getTasksTable();
-            for (String column : Arrays.asList("type", "group_id")) {
-              Assert.assertTrue(
-                  StringUtils.format("Tasks table column %s was not created!", column),
-                  connector.tableContainsColumn(handle, taskTable, column)
-              );
-            }
-
-            return null;
+        handle -> {
+          for (String table : tables) {
+            Assert.assertTrue(
+                StringUtils.format("table %s was not created!", table),
+                connector.tableExists(handle, table)
+            );
           }
+
+          String taskTable = tablesConfig.getTasksTable();
+          for (String column : Arrays.asList("type", "group_id")) {
+            Assert.assertTrue(
+                StringUtils.format("Tasks table column %s was not created!", column),
+                connector.tableContainsColumn(handle, taskTable, column)
+            );
+          }
+
+          return null;
         }
     );
 
@@ -152,16 +146,8 @@ public class SQLMetadataConnectorTest
   private void dropTable(final String tableName)
   {
     connector.getDBI().withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
-                  .execute();
-            return null;
-          }
-        }
+        handle -> handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
+                        .execute()
     );
   }
 
@@ -248,25 +234,15 @@ public class SQLMetadataConnectorTest
     );
 
     // Transient exceptions
-    Assert.assertTrue(metadataConnector.isTransientException(new SQLTransientException()));
     Assert.assertTrue(metadataConnector.isTransientException(new RetryTransactionException("")));
     Assert.assertTrue(metadataConnector.isTransientException(new SQLRecoverableException()));
-    Assert.assertTrue(metadataConnector.isTransientException(new UnableToExecuteStatementException("")));
-    Assert.assertTrue(
-        metadataConnector.isTransientException(new UnableToObtainConnectionException(new Exception()))
-    );
+    Assert.assertTrue(metadataConnector.isTransientException(new SQLTransientException()));
+    Assert.assertTrue(metadataConnector.isTransientException(new SQLTransientConnectionException()));
 
     // Non transient exceptions
     Assert.assertFalse(metadataConnector.isTransientException(null));
     Assert.assertFalse(metadataConnector.isTransientException(new SQLException()));
-    Assert.assertFalse(
-        metadataConnector.isTransientException(new CallbackFailedException(new Exception()))
-    );
-    Assert.assertFalse(
-        metadataConnector.isTransientException(
-            new SQLTransientConnectionException("Could not send query: query size is >= to max_allowed_packet")
-        )
-    );
+    Assert.assertFalse(metadataConnector.isTransientException(new UnableToExecuteStatementException("")));
 
     // Nested transient exceptions
     Assert.assertTrue(
@@ -274,18 +250,28 @@ public class SQLMetadataConnectorTest
             new CallbackFailedException(new SQLTransientException())
         )
     );
+    Assert.assertTrue(
+        metadataConnector.isTransientException(
+            new UnableToObtainConnectionException(new SQLException())
+        )
+    );
+    Assert.assertTrue(
+        metadataConnector.isTransientException(
+            new UnableToExecuteStatementException(new SQLTransientException())
+        )
+    );
 
     // Nested non-transient exceptions
     Assert.assertFalse(
         metadataConnector.isTransientException(
-            new CallbackFailedException(
-                new UnableToExecuteStatementException(
-                    new SQLTransientConnectionException(
-                        "Could not send query: query size is >= to max_allowed_packet"
-                    )
-                )
-            )
+            new CallbackFailedException(new SQLException())
         )
     );
+    Assert.assertFalse(
+        metadataConnector.isTransientException(
+            new UnableToExecuteStatementException(new SQLException())
+        )
+    );
+
   }
 }
