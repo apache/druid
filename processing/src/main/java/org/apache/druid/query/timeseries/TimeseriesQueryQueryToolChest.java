@@ -480,7 +480,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     );
 
     FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-        FrameType.ROW_BASED,
+        FrameType.COLUMNAR,
         new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
         rowSignature,
         new ArrayList<>(),

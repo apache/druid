@@ -112,7 +112,7 @@ public class FrameCursorUtils
                   frameWriter.getTotalSize(),
                   frameWriter.getNumRows(),
                   memoryLimitBytes,
-                  QueryContexts.MAX_SUBQUERY_MEMORY_BYTES_KEY
+                  QueryContexts.MAX_SUBQUERY_BYTES_KEY
               )
           );
         }

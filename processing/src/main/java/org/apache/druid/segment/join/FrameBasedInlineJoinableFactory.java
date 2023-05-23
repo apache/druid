@@ -22,6 +22,8 @@ package org.apache.druid.segment.join;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.segment.join.table.BroadcastSegmentIndexedTable;
+import org.apache.druid.segment.join.table.IndexedTableJoinable;
 
 import java.util.Optional;
 
@@ -44,8 +46,11 @@ public class FrameBasedInlineJoinableFactory implements JoinableFactory
   public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
   {
     FrameBasedInlineDataSource frameBasedInlineDataSource = (FrameBasedInlineDataSource) dataSource;
-    InlineDataSource inlineDataSource = frameBasedInlineDataSource.toInlineDataSource();
 
-    return INLINE_JOINABLE_FACTORY.build(inlineDataSource, condition);
+    BroadcastSegmentIndexedTable broadcastSegmentIndexedTable = new BroadcastSegmentIndexedTable(
+
+    );
+
+    return Optional.of(new IndexedTableJoinable(broadcastSegmentIndexedTable));
   }
 }

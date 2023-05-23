@@ -359,7 +359,7 @@ public class QueryContext
 
   public long getMaxSubqueryMemoryBytes(long defaultMemoryBytes)
   {
-    return getLong(QueryContexts.MAX_SUBQUERY_MEMORY_BYTES_KEY, defaultMemoryBytes);
+    return getLong(QueryContexts.MAX_SUBQUERY_BYTES_KEY, defaultMemoryBytes);
   }
 
   public int getUncoveredIntervalsLimit()

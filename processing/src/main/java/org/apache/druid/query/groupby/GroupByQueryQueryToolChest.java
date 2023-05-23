@@ -731,7 +731,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     RowSignature rowSignature = resultArraySignature(query);
 
     FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-        FrameType.ROW_BASED,
+        FrameType.COLUMNAR,
         new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
         rowSignature,
         new ArrayList<>(),

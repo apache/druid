@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FrameSignaturePair;
-import org.apache.druid.query.FramesBackedInlineDataSource;
+import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -229,7 +229,7 @@ public class ScanQueryQueryToolChestTest
                                                   .add("bar3", null)
                                                   .build();
 
-    Sequence<Object[]> rows = new FramesBackedInlineDataSource(frames, resultRowSignature).getRowsAsSequence();
+    Sequence<Object[]> rows = new FrameBasedInlineDataSource(frames, resultRowSignature).getRowsAsSequence();
 
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
@@ -283,7 +283,7 @@ public class ScanQueryQueryToolChestTest
                                                   .add("bar3", null)
                                                   .build();
 
-    Sequence<Object[]> rows = new FramesBackedInlineDataSource(frames, resultRowSignature).getRowsAsSequence();
+    Sequence<Object[]> rows = new FrameBasedInlineDataSource(frames, resultRowSignature).getRowsAsSequence();
 
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
@@ -345,7 +345,7 @@ public class ScanQueryQueryToolChestTest
                                                   .add("bar3", null)
                                                   .build();
 
-    Sequence<Object[]> rows = new FramesBackedInlineDataSource(frames, resultRowSignature).getRowsAsSequence();
+    Sequence<Object[]> rows = new FrameBasedInlineDataSource(frames, resultRowSignature).getRowsAsSequence();
 
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(

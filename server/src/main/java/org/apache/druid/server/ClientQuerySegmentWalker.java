@@ -37,7 +37,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.FrameSignaturePair;
-import org.apache.druid.query.FramesBackedInlineDataSource;
+import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.PostProcessingOperator;
@@ -202,7 +202,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     );
     newQuery = newQuery.withDataSource(maybeInlinedDataSource);
 
-    log.info("Memory used by subqueries of query [%s] is [%d]", query, memoryLimitAcc.get());
+    log.debug("Memory used by subqueries of query [%s] is [%d]", query, memoryLimitAcc.get());
 
     if (canRunQueryUsingLocalWalker(newQuery)) {
       // No need to decorate since LocalQuerySegmentWalker does its own.
@@ -328,7 +328,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final DataSource dataSource,
       @Nullable final QueryToolChest toolChestIfOutermost,
       final AtomicInteger subqueryRowLimitAccumulator,
-      final AtomicLong subqueryRowMemoryLimitAccumulator,
+      final AtomicLong subqueryMemoryLimitAccumulator,
       final int maxSubqueryRows,
       final long maxSubqueryMemory,
       final boolean dryRun
@@ -357,7 +357,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             current,
             null,
             subqueryRowLimitAccumulator,
-            subqueryRowMemoryLimitAccumulator,
+            subqueryMemoryLimitAccumulator,
             maxSubqueryRows,
             maxSubqueryMemory,
             dryRun
@@ -379,7 +379,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
               current,
               toolChestIfOutermost,
               subqueryRowLimitAccumulator,
-              subqueryRowMemoryLimitAccumulator,
+              subqueryMemoryLimitAccumulator,
               maxSubqueryRows,
               maxSubqueryMemory,
               dryRun
@@ -405,7 +405,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             queryResults,
             warehouse.getToolChest(subQuery),
             subqueryRowLimitAccumulator,
-            subqueryRowMemoryLimitAccumulator,
+            subqueryMemoryLimitAccumulator,
             maxSubqueryRows,
             maxSubqueryMemory
         );
@@ -418,7 +418,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                         Iterables.getOnlyElement(dataSource.getChildren()),
                         null,
                         subqueryRowLimitAccumulator,
-                        subqueryRowMemoryLimitAccumulator,
+                        subqueryMemoryLimitAccumulator,
                         maxSubqueryRows,
                         maxSubqueryMemory,
                         dryRun
@@ -427,7 +427,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             ),
             toolChestIfOutermost,
             subqueryRowLimitAccumulator,
-            subqueryRowMemoryLimitAccumulator,
+            subqueryMemoryLimitAccumulator,
             maxSubqueryRows,
             maxSubqueryMemory,
             dryRun
@@ -442,7 +442,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                         child,
                         null,
                         subqueryRowLimitAccumulator,
-                        subqueryRowMemoryLimitAccumulator,
+                        subqueryMemoryLimitAccumulator,
                         maxSubqueryRows,
                         maxSubqueryMemory,
                         dryRun
@@ -617,19 +617,19 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       long memoryLimit
   )
   {
-    final int limitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
+    final int rowLimitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
     boolean memoryLimitSet = memoryLimit >= 0;
 
-    if (limitAccumulator.get() >= limitToUse) {
+    if (limitAccumulator.get() >= rowLimitToUse) {
       throw ResourceLimitExceededException.withMessage(
-          "Cannot issue subquery, maximum[%d] reached",
-          limitToUse
+          "Cannot issue the query, subqueries generated results beyond maximum[%d] rows",
+          rowLimitToUse
       );
     }
 
     if (memoryLimitSet && memoryLimitAccumulator.get() >= memoryLimit) {
       throw ResourceLimitExceededException.withMessage(
-          "Cannot issue subquery, maximum subquery result bytes[%d] reached",
+          "Cannot issue the query, subqueries generated results beyond maximum[%d] bytes",
           memoryLimit
       );
     }
@@ -645,7 +645,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         );
 
         if (!framesOptional.isPresent()) {
-          throw new ISE("The memory of the subqueries cannot be estimated correctly.");
+          throw new ISE("The memory of the subqueries cannot be estimated correctly");
         }
 
         Sequence<FrameSignaturePair> frames = framesOptional.get();
@@ -659,16 +659,16 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                 );
 
               }
-              if (limitAccumulator.addAndGet(frame.getFrame().numRows()) >= limitToUse) {
+              if (limitAccumulator.addAndGet(frame.getFrame().numRows()) >= rowLimitToUse) {
                 throw ResourceLimitExceededException.withMessage(
                     "Subquery generated results beyond maximum[%d] rows",
-                    limitToUse
+                    rowLimitToUse
                 );
               }
               frameSignaturePairs.add(frame);
             }
         );
-        dataSource = new FramesBackedInlineDataSource(frameSignaturePairs, toolChest.resultArraySignature(query));
+        dataSource = new FrameBasedInlineDataSource(frameSignaturePairs, toolChest.resultArraySignature(query));
       }
       catch (ResourceLimitExceededException rlee) {
         throw rlee;
@@ -688,10 +688,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       toolChest.resultsAsArrays(query, results).accumulate(
           resultList,
           (acc, in) -> {
-            if (limitAccumulator.getAndIncrement() >= limitToUse) {
+            if (limitAccumulator.getAndIncrement() >= rowLimitToUse) {
               throw ResourceLimitExceededException.withMessage(
                   "Subquery generated results beyond maximum[%d] rows",
-                  limitToUse
+                  rowLimitToUse
               );
             }
             acc.add(in);

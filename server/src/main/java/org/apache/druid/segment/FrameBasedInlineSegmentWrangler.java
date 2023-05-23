@@ -22,10 +22,11 @@ package org.apache.druid.segment;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.FramesBackedInlineDataSource;
+import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import java.util.Iterator;
 import java.util.stream.Collectors;
 
 public class FrameBasedInlineSegmentWrangler implements SegmentWrangler
@@ -39,14 +40,19 @@ public class FrameBasedInlineSegmentWrangler implements SegmentWrangler
       Iterable<Interval> intervals
   )
   {
-    final FramesBackedInlineDataSource framesBackedInlineDataSource = (FramesBackedInlineDataSource) dataSource;
+    final FrameBasedInlineDataSource frameBasedInlineDataSource = (FrameBasedInlineDataSource) dataSource;
 
-    return framesBackedInlineDataSource.getFrames().stream().map(
-        frameSignaturePair -> new FrameSegment(
-            frameSignaturePair.getFrame(),
-            FrameReader.create(frameSignaturePair.getRowSignature(), true),
-            SegmentId.dummy(SEGMENT_ID)
+    return () -> frameBasedInlineDataSource
+        .getFrames()
+        .stream()
+        .<Segment>map(
+            frameSignaturePair -> new FrameSegment(
+                frameSignaturePair.getFrame(),
+                FrameReader.create(frameSignaturePair.getRowSignature(), true),
+                SegmentId.dummy(SEGMENT_ID)
+            )
         )
-    ).collect(Collectors.toList());
+        .iterator();
+
   }
 }

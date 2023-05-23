@@ -235,7 +235,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   );
 
   public static final Map<String, Object> QUERY_CONTEXT_WITH_SUBQUERY_MEMORY_LIMIT =
-      DEFAULT_QUERY_CONTEXT_BUILDER.put(QueryContexts.MAX_SUBQUERY_MEMORY_BYTES_KEY, "100000")
+      DEFAULT_QUERY_CONTEXT_BUILDER.put(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
                                    .build();
 
   // Add additional context to the given context map for when the

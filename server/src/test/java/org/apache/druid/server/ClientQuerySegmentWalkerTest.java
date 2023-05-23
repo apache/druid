@@ -34,7 +34,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.FramesBackedInlineDataSource;
+import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
@@ -823,7 +823,7 @@ public class ClientQuerySegmentWalkerTest
                                 .granularity(Granularities.ALL)
                                 .intervals(Intervals.ONLY_ETERNITY)
                                 .aggregators(new CountAggregatorFactory("cnt"))
-                                .context(ImmutableMap.of(QueryContexts.MAX_SUBQUERY_MEMORY_BYTES_KEY, "1"))
+                                .context(ImmutableMap.of(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "1"))
                                 .build()
                                 .withId(DUMMY_QUERY_ID);
 
@@ -1347,7 +1347,7 @@ public class ClientQuerySegmentWalkerTest
     final SegmentWrangler segmentWrangler = new MapSegmentWrangler(
         ImmutableMap.<Class<? extends DataSource>, SegmentWrangler>builder()
                     .put(InlineDataSource.class, new IterableBasedInlineSegmentWrangler())
-                    .put(FramesBackedInlineDataSource.class, new FrameBasedInlineSegmentWrangler())
+                    .put(FrameBasedInlineDataSource.class, new FrameBasedInlineSegmentWrangler())
                     .build()
     );
 
@@ -1499,7 +1499,7 @@ public class ClientQuerySegmentWalkerTest
               .build()
       );
 
-      if (modifiedQuery.getDataSource() instanceof FramesBackedInlineDataSource) {
+      if (modifiedQuery.getDataSource() instanceof FrameBasedInlineDataSource) {
         // Do this recursively for if the query's datasource is a query datasource
       }
 
