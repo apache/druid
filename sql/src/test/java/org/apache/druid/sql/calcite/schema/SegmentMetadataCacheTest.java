@@ -404,7 +404,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(1).getType().getSqlTypeName());
 
     Assert.assertEquals("m1", fields.get(2).getName());
-    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(2).getType().getSqlTypeName());
+    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(2).getType().getSqlTypeName());
 
     Assert.assertEquals("dim1", fields.get(3).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(3).getType().getSqlTypeName());
@@ -442,7 +442,15 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     // using 'newest first' column type merge strategy, the types are expected to be the types defined in the newer
     // segment, except for json, which is special handled
-    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch(
+        new SegmentMetadataCacheConfig() {
+          @Override
+          public SegmentMetadataCache.ColumnTypeMergePolicy getMetadataColumnTypeMergePolicy()
+          {
+            return new SegmentMetadataCache.FirstTypeMergePolicy();
+          }
+        }
+    );
     final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource(CalciteTests.SOME_DATASOURCE);
     final DruidTable table = new DatasourceTable(fooDs);
     final RelDataType rowType = table.getRowType(new JavaTypeFactoryImpl());
@@ -485,15 +493,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   {
     // using 'least restrictive' column type merge strategy, the types are expected to be the types defined as the
     // least restrictive blend across all segments
-    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch(
-        new SegmentMetadataCacheConfig() {
-          @Override
-          public SegmentMetadataCache.ColumnTypeMergePolicy getMetadataColumnTypeMergePolicy()
-          {
-            return new SegmentMetadataCache.LeastRestrictiveTypeMergePolicy();
-          }
-        }
-    );
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource(CalciteTests.SOME_DATASOURCE);
     final DruidTable table = new DatasourceTable(fooDs);
     final RelDataType rowType = table.getRowType(new JavaTypeFactoryImpl());
