@@ -251,12 +251,13 @@ public class IndexMergerV9 implements IndexMerger
 
       progress.progress();
       startTime = System.currentTimeMillis();
-      try (FileOutputStream fos = new FileOutputStream(new File(outDir, "factory.json"))) {
+      try (FileOutputStream fos = new FileOutputStream(new File(outDir, "factory.json"));
+          OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
         SegmentizerFactory customSegmentLoader = indexSpec.getSegmentLoader();
         if (customSegmentLoader != null) {
-          mapper.writeValue(fos, customSegmentLoader);
+          mapper.writeValue(osw, customSegmentLoader);
         } else {
-          mapper.writeValue(fos, new MMappedQueryableSegmentizerFactory(indexIO));
+          mapper.writeValue(osw, new MMappedQueryableSegmentizerFactory(indexIO));
         }
       }
       log.debug("Completed factory.json in %,d millis", System.currentTimeMillis() - startTime);
