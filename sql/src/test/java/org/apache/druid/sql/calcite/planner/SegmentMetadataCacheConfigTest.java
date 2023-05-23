@@ -65,7 +65,7 @@ public class SegmentMetadataCacheConfigTest
     final Properties properties = new Properties();
     properties.setProperty(
         CalcitePlannerModule.CONFIG_BASE + ".metadataColumnTypeMergePolicy",
-        "{\"type\":\"latestInterval\"}"
+        "latestInterval"
     );
     properties.setProperty(CalcitePlannerModule.CONFIG_BASE + ".metadataRefreshPeriod", "PT2M");
     properties.setProperty(CalcitePlannerModule.CONFIG_BASE + ".metadataSegmentPollPeriod", "15000");

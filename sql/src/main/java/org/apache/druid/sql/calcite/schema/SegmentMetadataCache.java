@@ -19,8 +19,7 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
@@ -38,6 +37,7 @@ import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -994,15 +994,22 @@ public class SegmentMetadataCache
    * Druid based on the segment metadata of all segments, merging the types of each column encountered to end up with
    * a single type to represent it globally.
    */
-  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LeastRestrictiveTypeMergePolicy.class)
-  @JsonSubTypes(value = {
-      @JsonSubTypes.Type(name = FirstTypeMergePolicy.NAME, value = FirstTypeMergePolicy.class),
-      @JsonSubTypes.Type(name = LeastRestrictiveTypeMergePolicy.NAME, value = LeastRestrictiveTypeMergePolicy.class)
-  })
   @FunctionalInterface
   public interface ColumnTypeMergePolicy
   {
     ColumnType merge(ColumnType existingType, ColumnType newType);
+
+    @JsonCreator
+    static ColumnTypeMergePolicy fromString(String type)
+    {
+      if (LeastRestrictiveTypeMergePolicy.NAME.equals(type)) {
+        return LeastRestrictiveTypeMergePolicy.INSTANCE;
+      }
+      if (FirstTypeMergePolicy.NAME.equals(type)) {
+        return FirstTypeMergePolicy.INSTANCE;
+      }
+      throw new IAE("Unknown type [%s]", type);
+    }
   }
 
   /**
@@ -1066,6 +1073,7 @@ public class SegmentMetadataCache
   public static class LeastRestrictiveTypeMergePolicy implements ColumnTypeMergePolicy
   {
     public static final String NAME = "leastRestrictive";
+    private static final LeastRestrictiveTypeMergePolicy INSTANCE = new LeastRestrictiveTypeMergePolicy();
 
     @Override
     public ColumnType merge(ColumnType existingType, ColumnType newType)
