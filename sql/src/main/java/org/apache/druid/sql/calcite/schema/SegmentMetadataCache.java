@@ -994,7 +994,7 @@ public class SegmentMetadataCache
    * Druid based on the segment metadata of all segments, merging the types of each column encountered to end up with
    * a single type to represent it globally.
    */
-  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = FirstTypeMergePolicy.class)
+  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LeastRestrictiveTypeMergePolicy.class)
   @JsonSubTypes(value = {
       @JsonSubTypes.Type(name = FirstTypeMergePolicy.NAME, value = FirstTypeMergePolicy.class),
       @JsonSubTypes.Type(name = LeastRestrictiveTypeMergePolicy.NAME, value = LeastRestrictiveTypeMergePolicy.class)
@@ -1017,7 +1017,7 @@ public class SegmentMetadataCache
    */
   public static class FirstTypeMergePolicy implements ColumnTypeMergePolicy
   {
-    public static final String NAME = "newestFirst";
+    public static final String NAME = "latestInterval";
     private static final FirstTypeMergePolicy INSTANCE = new FirstTypeMergePolicy();
 
     @Override

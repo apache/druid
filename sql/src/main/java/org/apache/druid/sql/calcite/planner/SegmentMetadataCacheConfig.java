@@ -45,7 +45,7 @@ public class SegmentMetadataCacheConfig
 
   @JsonProperty
   private SegmentMetadataCache.ColumnTypeMergePolicy metadataColumnTypeMergePolicy =
-      new SegmentMetadataCache.FirstTypeMergePolicy();
+      new SegmentMetadataCache.LeastRestrictiveTypeMergePolicy();
 
   public static SegmentMetadataCacheConfig create()
   {

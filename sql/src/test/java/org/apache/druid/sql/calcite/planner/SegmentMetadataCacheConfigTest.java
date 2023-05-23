@@ -51,7 +51,7 @@ public class SegmentMetadataCacheConfigTest
     Assert.assertFalse(config.isMetadataSegmentCacheEnable());
     Assert.assertEquals(Period.minutes(1), config.getMetadataRefreshPeriod());
     Assert.assertEquals(60_000, config.getMetadataSegmentPollPeriod());
-    Assert.assertEquals(new SegmentMetadataCache.FirstTypeMergePolicy(), config.getMetadataColumnTypeMergePolicy());
+    Assert.assertEquals(new SegmentMetadataCache.LeastRestrictiveTypeMergePolicy(), config.getMetadataColumnTypeMergePolicy());
   }
 
   @Test
@@ -65,7 +65,7 @@ public class SegmentMetadataCacheConfigTest
     final Properties properties = new Properties();
     properties.setProperty(
         CalcitePlannerModule.CONFIG_BASE + ".metadataColumnTypeMergePolicy",
-        "{\"type\":\"leastRestrictive\"}"
+        "{\"type\":\"latestInterval\"}"
     );
     properties.setProperty(CalcitePlannerModule.CONFIG_BASE + ".metadataRefreshPeriod", "PT2M");
     properties.setProperty(CalcitePlannerModule.CONFIG_BASE + ".metadataSegmentPollPeriod", "15000");
@@ -78,7 +78,7 @@ public class SegmentMetadataCacheConfigTest
     Assert.assertEquals(Period.minutes(2), config.getMetadataRefreshPeriod());
     Assert.assertEquals(15_000, config.getMetadataSegmentPollPeriod());
     Assert.assertEquals(
-        new SegmentMetadataCache.LeastRestrictiveTypeMergePolicy(),
+        new SegmentMetadataCache.FirstTypeMergePolicy(),
         config.getMetadataColumnTypeMergePolicy()
     );
   }
