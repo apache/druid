@@ -19,6 +19,8 @@
 
 package org.apache.druid.msq.input.external;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
@@ -29,8 +31,10 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.utils.CompressionUtils;
 import org.apache.druid.utils.Streams;
 import org.junit.Assert;
 import org.junit.Before;
@@ -42,13 +46,37 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ExternalInputSpecSlicerTest
 {
-  static final InputFormat INPUT_FORMAT = new JsonInputFormat(null, null, null, null, null);
+  static class TestInputFormat extends JsonInputFormat
+  {
+    public TestInputFormat(
+        @JsonProperty("flattenSpec") @Nullable JSONPathSpec flattenSpec,
+        @JsonProperty("featureSpec") @Nullable Map<String, Boolean> featureSpec,
+        @JsonProperty("keepNullColumns") @Nullable Boolean keepNullColumns,
+        @JsonProperty("assumeNewlineDelimited") @Nullable Boolean assumeNewlineDelimited,
+        @JsonProperty("useJsonNodeReader") @Nullable Boolean useJsonNodeReader
+    )
+    {
+      super(flattenSpec, featureSpec, keepNullColumns, assumeNewlineDelimited, useJsonNodeReader);
+    }
+
+    @JsonIgnore
+    @Override
+    public long getWeightedSize(@Nullable CompressionUtils.Format compressionFormat, long size)
+    {
+      if (null != compressionFormat) {
+        return size * 4L;
+      }
+      return size;
+    }
+  }
+  static final TestInputFormat INPUT_FORMAT = new TestInputFormat(null, null, null, null, null);
   static final RowSignature SIGNATURE = RowSignature.builder().add("s", ColumnType.STRING).build();
 
   private ExternalInputSpecSlicer slicer;
@@ -188,6 +216,19 @@ public class ExternalInputSpecSlicerTest
   }
 
   @Test
+  public void test_sliceDynamic_splittableWithCompression_needThreeDueToBytes()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(
+            splittableSlice("foo"),
+            splittableSlice("bar"),
+            splittableSlice("baz")
+        ),
+        slicer.sliceDynamic(splittableSpecWithCompression("foo", "bar", "baz"), 100, 5, 7)
+    );
+  }
+
+  @Test
   public void test_sliceDynamic_splittableThatIgnoresSplitHints_oneHundredMax()
   {
     Assert.assertEquals(
@@ -226,7 +267,16 @@ public class ExternalInputSpecSlicerTest
   static ExternalInputSpec splittableSpec(final String... strings)
   {
     return new ExternalInputSpec(
-        new TestSplittableInputSource(Arrays.asList(strings), true),
+        new TestSplittableInputSource(Arrays.asList(strings), true, false),
+        INPUT_FORMAT,
+        SIGNATURE
+    );
+  }
+
+  static ExternalInputSpec splittableSpecWithCompression(final String... strings)
+  {
+    return new ExternalInputSpec(
+        new TestSplittableInputSource(Arrays.asList(strings), true, true),
         INPUT_FORMAT,
         SIGNATURE
     );
@@ -235,7 +285,7 @@ public class ExternalInputSpecSlicerTest
   static ExternalInputSpec splittableSpecThatIgnoresSplitHints(final String... strings)
   {
     return new ExternalInputSpec(
-        new TestSplittableInputSource(Arrays.asList(strings), false),
+        new TestSplittableInputSource(Arrays.asList(strings), false, false),
         INPUT_FORMAT,
         SIGNATURE
     );
@@ -254,7 +304,7 @@ public class ExternalInputSpecSlicerTest
   {
     return new ExternalInputSlice(
         Stream.of(strings)
-              .map(s -> new TestSplittableInputSource(Collections.singletonList(s), false))
+              .map(s -> new TestSplittableInputSource(Collections.singletonList(s), false, false))
               .collect(Collectors.toList()),
         INPUT_FORMAT,
         SIGNATURE
@@ -333,11 +383,16 @@ public class ExternalInputSpecSlicerTest
   {
     private final List<String> strings;
     private final boolean useSplitHintSpec;
+    private final boolean compresssedFiles;
 
-    public TestSplittableInputSource(final List<String> strings, final boolean useSplitHintSpec)
+    public TestSplittableInputSource(
+        final List<String> strings,
+        final boolean useSplitHintSpec,
+        final boolean compressedFiles)
     {
       this.strings = strings;
       this.useSplitHintSpec = useSplitHintSpec;
+      this.compresssedFiles = compressedFiles;
     }
 
     @Override
@@ -367,7 +422,9 @@ public class ExternalInputSpecSlicerTest
       if (useSplitHintSpec) {
         splits = splitHintSpec.split(
             strings.iterator(),
-            s -> new InputFileAttribute(s.length())
+            s -> compresssedFiles
+                   ? new InputFileAttribute(s.length(), CompressionUtils.Format.GZ)
+                   : new InputFileAttribute(s.length())
         );
       } else {
         // Ignore splitHintSpec, return one element per split. Similar to HttpInputSource, for example.
@@ -386,7 +443,7 @@ public class ExternalInputSpecSlicerTest
     @Override
     public InputSource withSplit(InputSplit<List<String>> split)
     {
-      return new TestSplittableInputSource(split.get(), useSplitHintSpec);
+      return new TestSplittableInputSource(split.get(), useSplitHintSpec, compresssedFiles);
     }
 
     @Override

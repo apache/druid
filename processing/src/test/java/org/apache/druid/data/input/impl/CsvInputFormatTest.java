@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.utils.CompressionUtils;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -184,5 +185,21 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
   {
     final CsvInputFormat format = new CsvInputFormat(null, null, true, null, 0);
     Assert.assertTrue(format.isFindColumnsFromHeader());
+  }
+
+  @Test
+  public void test_getWeightedSize_withoutCompression()
+  {
+    final CsvInputFormat format = new CsvInputFormat(null, null, true, null, 0);
+    final long unweightedSize = 100L;
+    Assert.assertEquals(unweightedSize, format.getWeightedSize(null, unweightedSize));
+  }
+
+  @Test
+  public void test_getWeightedSize_withGzCompression()
+  {
+    final CsvInputFormat format = new CsvInputFormat(null, null, true, null, 0);
+    final long unweightedSize = 100L;
+    Assert.assertEquals(unweightedSize * 4L, format.getWeightedSize(CompressionUtils.Format.GZ, unweightedSize));
   }
 }
