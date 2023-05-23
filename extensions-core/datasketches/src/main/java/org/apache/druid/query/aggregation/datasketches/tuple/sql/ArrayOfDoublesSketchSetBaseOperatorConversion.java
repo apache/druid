@@ -28,7 +28,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
-import org.apache.datasketches.Util;
+import org.apache.datasketches.thetacommon.ThetaUtil;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchSetOpPostAggregator;
@@ -92,7 +92,7 @@ public abstract class ArrayOfDoublesSketchSetBaseOperatorConversion implements S
       nominalEntries = ((Number) RexLiteral.value(potentialNominalEntriesArg)).intValue();
       metricExpressionEndIndex = lastArgIndex - 1;
     } else {
-      nominalEntries = Util.DEFAULT_NOMINAL_ENTRIES;
+      nominalEntries = ThetaUtil.DEFAULT_NOMINAL_ENTRIES;
       metricExpressionEndIndex = lastArgIndex;
     }
 
