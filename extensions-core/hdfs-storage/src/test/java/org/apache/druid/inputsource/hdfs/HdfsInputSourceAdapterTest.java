@@ -33,6 +33,6 @@ public class HdfsInputSourceAdapterTest
     Configuration conf = new Configuration();
     HdfsInputSourceConfig inputSourceConfig = new HdfsInputSourceConfig(null);
     HdfsInputSourceAdapter hdfsInputSourceAdapter = new HdfsInputSourceAdapter(conf, inputSourceConfig);
-    Assert.assertTrue(hdfsInputSourceAdapter.generateInputSource(Arrays.asList("hdfs://foo/bar/def.parquet", "hdfs://foo/bar/abc.parquet")) instanceof HdfsInputSource);
+    Assert.assertTrue(hdfsInputSourceAdapter.generateInputSource(Arrays.asList("hdfs://localhost:7020/bar/def.parquet", "hdfs://localhost:7020/bar/abc.parquet")) instanceof HdfsInputSource);
   }
 }
