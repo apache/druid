@@ -193,8 +193,10 @@
       -->
     <notes><![CDATA[
    file name: hibernate-validator-5.3.6.Final.jar
+   file name: hibernate-validator-5.2.5.Final.jar
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.hibernate/hibernate\-validator@.*$</packageUrl>
+    <cve>CVE-2017-7536</cve>
     <cve>CVE-2019-10219</cve>
     <cve>CVE-2019-14900</cve>
     <cve>CVE-2020-10693</cve>
