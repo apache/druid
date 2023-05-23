@@ -21,6 +21,7 @@ package org.apache.druid.iceberg.input;
 
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,10 +31,40 @@ import java.util.HashMap;
 public class HiveIcebergCatalogTest
 {
   @Test
-  public void testCatalogSerDe()
+  public void testCatalogCreate()
   {
     final File warehouseDir = FileUtils.createTempDir();
-    HiveIcebergCatalog hiveCatalog = new HiveIcebergCatalog(warehouseDir.getPath(), "hdfs://testuri", new HashMap<>(), new Configuration());
+    HiveIcebergCatalog hiveCatalog = new HiveIcebergCatalog(
+        warehouseDir.getPath(),
+        "hdfs://testuri",
+        new HashMap<>(),
+        new Configuration()
+    );
+    HiveIcebergCatalog hiveCatalogNullProps = new HiveIcebergCatalog(
+        warehouseDir.getPath(),
+        "hdfs://testuri",
+        null,
+        new Configuration()
+    );
     Assert.assertEquals("hive", hiveCatalog.retrieveCatalog().name());
+    Assert.assertEquals(2, hiveCatalogNullProps.getCatalogProperties().size());
+  }
+
+  @Test
+  public void testAuthenticate()
+  {
+    UserGroupInformation.setLoginUser(UserGroupInformation.createUserForTesting("test", new String[]{"testGroup"}));
+    final File warehouseDir = FileUtils.createTempDir();
+    HashMap<String, String> catalogMap = new HashMap<>();
+    catalogMap.put("principal", "test");
+    catalogMap.put("keytab", "test");
+    HiveIcebergCatalog hiveCatalog = new HiveIcebergCatalog(
+        warehouseDir.getPath(),
+        "hdfs://testuri",
+        catalogMap,
+        new Configuration()
+    );
+    Assert.assertEquals("hdfs://testuri", hiveCatalog.getCatalogUri());
+
   }
 }

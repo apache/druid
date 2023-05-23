@@ -977,7 +977,7 @@ This input source provides filters: `and` , `equals` , `interval` and `or`. Thes
 
 |Property|Description|Required|
 |--------|-----------|---------|
-|type|Set this value to `or`.|yes|
+|type|Set this value to `not`.|yes|
 |filter|The iceberg filter on which logical NOT is applied|yes|
 
 

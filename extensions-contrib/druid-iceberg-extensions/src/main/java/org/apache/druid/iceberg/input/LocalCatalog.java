@@ -38,10 +38,10 @@ public class LocalCatalog extends IcebergCatalog
   public static final String TYPE_KEY = "local";
 
   @JsonProperty
-  private String warehousePath;
+  private final String warehousePath;
 
   @JsonProperty
-  private Map<String, String> catalogProperties;
+  private final Map<String, String> catalogProperties;
 
   private BaseMetastoreCatalog catalog;
 

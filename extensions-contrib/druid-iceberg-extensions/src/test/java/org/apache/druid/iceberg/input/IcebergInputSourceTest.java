@@ -44,7 +44,9 @@ import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
 import org.apache.iceberg.types.Types;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -57,6 +59,9 @@ import java.util.stream.Stream;
 
 public class IcebergInputSourceTest
 {
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   IcebergCatalog testCatalog;
 
   Schema tableSchema = new Schema(
@@ -91,6 +96,7 @@ public class IcebergInputSourceTest
                                             .flatMap(List::stream)
                                             .collect(Collectors.toList());
 
+    Assert.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
     Assert.assertEquals(1, localInputSourceList.size());
     CloseableIterable<Record> datafileReader = Parquet.read(Files.localInput(localInputSourceList.get(0)))
                                                       .project(tableSchema)
@@ -99,6 +105,7 @@ public class IcebergInputSourceTest
                                                           fileSchema
                                                       ))
                                                       .build();
+
 
     for (Record record : datafileReader) {
       Assert.assertEquals(tableData.get("id"), record.get(0));

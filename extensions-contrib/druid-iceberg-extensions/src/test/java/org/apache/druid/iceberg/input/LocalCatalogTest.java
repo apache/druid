@@ -20,6 +20,7 @@
 package org.apache.druid.iceberg.input;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.junit.Assert;
@@ -41,5 +42,11 @@ public class LocalCatalogTest
     Assert.assertEquals(before, after);
     Assert.assertEquals("hadoop", before.retrieveCatalog().name());
     Assert.assertEquals("hadoop", after.retrieveCatalog().name());
+  }
+
+  @Test
+  public void testEqualsContract()
+  {
+    EqualsVerifier.forClass(LocalCatalog.class).withNonnullFields("warehousePath").withIgnoredFields("catalog").usingGetClass().verify();
   }
 }
