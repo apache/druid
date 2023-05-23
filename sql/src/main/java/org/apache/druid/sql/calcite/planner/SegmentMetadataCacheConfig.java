@@ -94,7 +94,7 @@ public class SegmentMetadataCacheConfig
            ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
            ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", awaitInitializationOnStart=" + awaitInitializationOnStart +
-           ", columnTypeMergePolicy=" + metadataColumnTypeMergePolicy +
+           ", metadataColumnTypeMergePolicy=" + metadataColumnTypeMergePolicy +
            '}';
   }
 }
