@@ -917,11 +917,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           @Override
           public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
           {
+            String sql = "SELECT handed_off, payload FROM %s WHERE used=true";
             return handle
-                .createQuery(StringUtils.format(
-                    "SELECT handed_off, payload FROM %s WHERE used=true",
-                    getSegmentsTable()
-                ))
+                .createQuery(StringUtils.format(sql, getSegmentsTable()))
                 .setFetchSize(connector.getStreamingFetchSize())
                 .map(
                     new ResultSetMapper<DataSegment>()
@@ -976,10 +974,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     }
 
     handedOffSegments.clear();
-    handedOffSegments.addAll(datasourceToHandedOffSegments.values()
-                                                          .stream()
-                                                          .flatMap(Collection::stream)
-                                                          .collect(Collectors.toSet()));
+    for (Set<SegmentId> segmentIdSet : datasourceToHandedOffSegments.values()) {
+      handedOffSegments.addAll(segmentIdSet);
+    }
 
     if (null != dataSourcesSnapshot) {
       Set<SegmentWithOvershadowedStatus> oldSegments = DataSourcesSnapshot.getSegmentsWithOvershadowedStatus(

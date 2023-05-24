@@ -42,23 +42,39 @@ import java.util.concurrent.ExecutorService;
  *
  * Clients call {@link #addChangeRequest} or {@link #addChangeRequests} to add updates (e. g. of segments).
  *
- * Clients call {@link #getRequestsSinceAsync} to get updates since given counter.
+ * Clients call {@link #getRequestsSinceAsync} or {@link #getRequestsSinceSync} to get updates since given counter.
  */
 
 public class ChangeRequestHistory<T>
 {
   private static int MAX_SIZE = 1000;
 
+  /**
+   * size of the bounded queue
+   */
   private final int maxSize;
 
   private final boolean asyncMode;
 
+  /**
+   * queue to hold the changes
+   */
   private final CircularBuffer<Holder<T>> changes;
 
+  /**
+   * map to hold the change request for a given counter, required in async mode
+   */
   @VisibleForTesting
   LinkedHashMap<CustomSettableFuture<T>, Counter> waitingFutures;
 
+  /**
+   * executor to resolve the waiting futures, required in async mode
+   */
   private ExecutorService singleThreadedExecutor;
+
+  /**
+   * runnable to resolve the waiting futures, required in async mode
+   */
   private Runnable resolveWaitingFuturesRunnable;
 
   public ChangeRequestHistory()

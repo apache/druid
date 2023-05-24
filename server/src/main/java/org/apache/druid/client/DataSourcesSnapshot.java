@@ -48,8 +48,6 @@ import java.util.stream.Stream;
  */
 public class DataSourcesSnapshot
 {
-  private static final EmittingLogger log = new EmittingLogger(DataSourcesSnapshot.class);
-
   public static DataSourcesSnapshot fromUsedSegments(
       Iterable<DataSegment> segments,
       ImmutableMap<String, String> dataSourceProperties
@@ -266,8 +264,6 @@ public class DataSourcesSnapshot
       String dataSource, SegmentId segmentId
   )
   {
-    return handedOffState
-        .getOrDefault(dataSource, new HashSet<>())
-        .contains(segmentId);
+    return handedOffState.containsKey(dataSource) && handedOffState.get(dataSource).contains(segmentId);
   }
 }

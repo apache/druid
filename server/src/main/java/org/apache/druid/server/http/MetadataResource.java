@@ -173,6 +173,26 @@ public class MetadataResource
     return builder.entity(authorizedSegments).build();
   }
 
+  /**
+   * This endpoint is used by MetadataSegmentView in broker to keep an up-to-date list of segments present in the system
+   *
+   * This endpoint lists segments present in the system and can also incrementally provide the segments added/dropped
+   * since last response.
+   *
+   * Here is how, this is used.
+   *
+   * (1) Client sends first request /druid/coordinator/v1/metadata/changedSegments?counter=-1
+   * Server responds with list of segments currently present and a <counter,hash> pair.
+   *
+   * (2) Client sends subsequent requests /druid/coordinator/v1/metadata/changedSegments?counter=<counter>&hash=<hash>
+   * Where <counter,hash> values are used from the last response. Server responds with list of segment updates
+   * since given counter.
+   *
+   * @param req
+   * @param dataSources
+   * @param counter counter received in last response.
+   * @param hash hash received in last response.
+   */
   @GET
   @Path("/changedSegments")
   @Produces(MediaType.APPLICATION_JSON)

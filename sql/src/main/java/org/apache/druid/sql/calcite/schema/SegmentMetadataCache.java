@@ -306,7 +306,7 @@ public class SegmentMetadataCache
           {
             synchronized (lock) {
               isMetadataViewInitialized = true;
-              log.info("Segment view is intialized");
+              log.debug("Segment view is intialized in ");
               lock.notifyAll();
             }
 
@@ -326,7 +326,7 @@ public class SegmentMetadataCache
           {
             synchronized (lock) {
               isServerViewInitialized = true;
-              log.info("TimelineServerView is initialized");
+              log.debug("TimelineServerView is initialized");
               lock.notifyAll();
             }
 
