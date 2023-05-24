@@ -198,7 +198,7 @@ The following ISO 8601 periods are supported for `TIME_FLOOR` and the string con
 - P1Y
 
 For more information about partitioning, see [Partitioning](concepts.md#partitioning-by-time). <br /><br />
-*Avoid using `P1W` due to alignment complications with months and years.
+*Avoid  partitioning by week, `P1W`, because weeks don't align neatly with months and years, making it difficult to partition by coarser granularities later.
 
 ### `CLUSTERED BY`
 
