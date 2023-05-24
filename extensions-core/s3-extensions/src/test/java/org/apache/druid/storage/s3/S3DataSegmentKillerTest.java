@@ -315,7 +315,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     MultiObjectDeleteException multiObjectDeleteException = new MultiObjectDeleteException(
         ImmutableList.of(deleteError),
         ImmutableList.of());
-    EasyMock.expectLastCall().andThrow(multiObjectDeleteException);
+    EasyMock.expectLastCall().andThrow(multiObjectDeleteException).once();
 
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
@@ -328,7 +328,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_kill_listOfSegments_amazonServiceExceptionExceptionIsThrown() throws SegmentLoadingException
+  public void test_kill_listOfSegments_multiDeleteExceptionIsThrownMultipleTimes() throws SegmentLoadingException
   {
     DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(TEST_BUCKET);
     deleteObjectsRequest.withKeys(KEY_1_PATH, KEY_2_PATH);
@@ -336,7 +336,41 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class));
     MultiObjectDeleteException.DeleteError deleteError = new MultiObjectDeleteException.DeleteError();
     deleteError.setKey(KEY_1_PATH);
-    EasyMock.expectLastCall().andThrow(new AmazonServiceException(""));
+    MultiObjectDeleteException multiObjectDeleteException = new MultiObjectDeleteException(
+        ImmutableList.of(deleteError),
+        ImmutableList.of());
+    deleteError.setKey(KEY_2_PATH);
+    MultiObjectDeleteException multiObjectDeleteException2 = new MultiObjectDeleteException(
+        ImmutableList.of(deleteError),
+        ImmutableList.of());
+    EasyMock.expectLastCall().andThrow(multiObjectDeleteException).once();
+    EasyMock.expectLastCall().andThrow(multiObjectDeleteException2).once();
+
+    EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
+    segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
+    ImmutableList.Builder builder = ImmutableList.builder();
+    // limit is 1000 per chunk, but we attempt to delete 2 objects per key so this will be 1002 keys so it will make 2
+    // calls via the s3client to delete all these objects
+    for(int ii = 0; ii < 501; ii++) {
+      builder.add(DATA_SEGMENT_1);
+    }
+
+    try {
+      segmentKiller.kill(builder.build());
+    }
+    catch (SegmentLoadingException exc) {
+      Assert.assertEquals("Couldn't delete from bucket: [test_bucket] these files [[key1/, key2/]]", exc.getMessage());
+    }
+  }
+
+  @Test
+  public void test_kill_listOfSegments_amazonServiceExceptionExceptionIsThrown() throws SegmentLoadingException
+  {
+    DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(TEST_BUCKET);
+    deleteObjectsRequest.withKeys(KEY_1_PATH, KEY_2_PATH);
+    // struggled with the idea of making it match on equaling this
+    s3Client.deleteObjects(EasyMock.anyObject(DeleteObjectsRequest.class));
+    EasyMock.expectLastCall().andThrow(new AmazonServiceException("")).once();
 
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
