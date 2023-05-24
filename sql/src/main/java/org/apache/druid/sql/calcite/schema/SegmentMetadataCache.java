@@ -1002,10 +1002,10 @@ public class SegmentMetadataCache
     @JsonCreator
     static ColumnTypeMergePolicy fromString(String type)
     {
-      if (LeastRestrictiveTypeMergePolicy.NAME.equals(type)) {
+      if (LeastRestrictiveTypeMergePolicy.NAME.equalsIgnoreCase(type)) {
         return LeastRestrictiveTypeMergePolicy.INSTANCE;
       }
-      if (FirstTypeMergePolicy.NAME.equals(type)) {
+      if (FirstTypeMergePolicy.NAME.equalsIgnoreCase(type)) {
         return FirstTypeMergePolicy.INSTANCE;
       }
       throw new IAE("Unknown type [%s]", type);
