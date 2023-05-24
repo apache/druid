@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join.table;
 
 import com.google.common.base.Preconditions;
+import com.google.common.math.IntMath;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReader;
@@ -63,7 +64,6 @@ import java.util.stream.Collectors;
 public class FrameBasedIndexedTable implements IndexedTable
 {
   private static final Logger LOG = new Logger(BroadcastSegmentIndexedTable.class);
-  private static final byte CACHE_PREFIX = 0x01;
 
   private final Set<String> keyColumns;
   private final RowSignature rowSignature;
@@ -225,7 +225,7 @@ public class FrameBasedIndexedTable implements IndexedTable
   {
 
     if (!rowSignature.contains(column)) {
-      throw new IAE("Column[%d] is not a valid column for the frame based datasource");
+      throw new IAE("Column[%d] is not a valid column for the frame based datasource", column);
     }
 
     String columnName = rowSignature.getColumnName(column);
@@ -257,7 +257,9 @@ public class FrameBasedIndexedTable implements IndexedTable
           );
         }
         // The offset needs to be changed as well
-        int adjustedOffset = frameIndex == 0 ? row : row - cumulativeRowCount.get(frameIndex - 1);
+        int adjustedOffset = frameIndex == 0
+                             ? row
+                             : IntMath.checkedSubtract(row, cumulativeRowCount.get(frameIndex - 1));
         offset.setCurrentOffset(adjustedOffset);
         return columnValueSelectors.get(frameIndex).getObject();
       }
@@ -272,6 +274,7 @@ public class FrameBasedIndexedTable implements IndexedTable
     };
   }
 
+  // TODO: Create the cache key
   @Override
   public boolean isCacheable()
   {
@@ -279,7 +282,7 @@ public class FrameBasedIndexedTable implements IndexedTable
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
 
   }

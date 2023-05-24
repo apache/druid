@@ -121,38 +121,28 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
   @Test
   public void testStringKeyColumn()
   {
-    // lets try a few values out
-    final String[] vals = new String[]{"spot", "total_market", "upfront"};
-    checkIndexAndReader(STRING_COL_1, vals);
+    checkIndexAndReader(STRING_COL_1);
   }
 
   @Test
   public void testLongKeyColumn()
   {
-    final Long[] vals = new Long[]{NullHandling.replaceWithDefault() ? 0L : null, 10L, 20L};
-    checkIndexAndReader(LONG_COL_1, vals);
+    checkIndexAndReader(LONG_COL_1);
   }
 
   @Test
   public void testFloatKeyColumn()
   {
-    final Float[] vals = new Float[]{NullHandling.replaceWithDefault() ? 0.0f : null, 10.0f, 20.0f};
-    checkIndexAndReader(FLOAT_COL_1, vals);
+    checkIndexAndReader(FLOAT_COL_1);
   }
 
   @Test
   public void testDoubleKeyColumn()
   {
-    final Double[] vals = new Double[]{NullHandling.replaceWithDefault() ? 0.0 : null, 10.0, 20.0};
-    checkIndexAndReader(DOUBLE_COL_1, vals);
+    checkIndexAndReader(DOUBLE_COL_1);
   }
 
-  private void checkIndexAndReader(String columnName, Object[] vals)
-  {
-    checkIndexAndReader(columnName, vals, new Object[0]);
-  }
-
-  private void checkIndexAndReader(String columnName, Object[] vals, Object[] nonmatchingVals)
+  private void checkIndexAndReader(String columnName)
   {
     checkColumnReader(columnName);
   }

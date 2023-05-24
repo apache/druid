@@ -211,15 +211,4 @@ public class FrameBasedInlineDataSource implements DataSource
   {
     return new DataSourceAnalysis(this, null, null, Collections.emptyList());
   }
-
-  /**
-   * This materializes all the rows in the datasource and creates an {@link InlineDataSource} out of it. This can be a
-   * potentially expensive call because we are materializing all the rows in the frames. Currently, this is only used in
-   * {@link FrameBasedInlineJoinableFactory} to create a joinable from the frames backed
-   * inline datasource, since we can't create a {@link org.apache.druid.segment.join.Joinable} directly from it.
-   */
-  public InlineDataSource toInlineDataSource()
-  {
-    return InlineDataSource.fromIterable(getRowsAsList(), rowSignature);
-  }
 }

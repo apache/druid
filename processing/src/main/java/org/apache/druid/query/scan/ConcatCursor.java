@@ -42,7 +42,7 @@ import java.util.List;
  * Combines multiple cursors and iterates over them. It skips over the empty cursors
  * The {@link DimensionSelector} and {@link ColumnValueSelector} it generates hold the reference to the original object
  * because the cursor might be advanced independently after extracting out the {@link ColumnSelectorFactory} like in
- * {@link org.apache.druid.frame.segment.FrameCursorUtils#cursorToFrame}. This ensures that the selectors always return
+ * {@link org.apache.druid.frame.segment.FrameCursorUtils#cursorToFrames}. This ensures that the selectors always return
  * the value pointed by the {@link #currentCursor}.
  */
 public class ConcatCursor implements Cursor

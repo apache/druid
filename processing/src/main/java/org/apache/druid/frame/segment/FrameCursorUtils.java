@@ -84,7 +84,6 @@ public class FrameCursorUtils
    * @param cursor                 Cursor to write to the frame
    * @param frameWriterFactory     Frame writer factory to write to the frame.
    *                               Determines the signature of the rows that are written to the frames
-   * @param memoryAllocatorFactory Allocator factory which creates the frames for the result sequence
    */
   public static Sequence<Frame> cursorToFrames(
       Cursor cursor,

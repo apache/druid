@@ -35,9 +35,6 @@ import java.util.Set;
  */
 public class FrameBasedInlineJoinableFactory implements JoinableFactory
 {
-  private final InlineJoinableFactory INLINE_JOINABLE_FACTORY = new InlineJoinableFactory();
-
-
   @Override
   public boolean isDirectlyJoinable(DataSource dataSource)
   {
