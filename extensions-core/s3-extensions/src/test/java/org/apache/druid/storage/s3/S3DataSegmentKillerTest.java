@@ -61,6 +61,30 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   private static final Exception RECOVERABLE_EXCEPTION = new SdkClientException(new IOException());
   private static final Exception NON_RECOVERABLE_EXCEPTION = new SdkClientException(new NullPointerException());
 
+  private static final DataSegment DATA_SEGMENT_1 = new DataSegment(
+      "test",
+      Intervals.of("2015-04-12/2015-04-13"),
+      "1",
+      ImmutableMap.of("bucket", TEST_BUCKET, "key", KEY_1_PATH),
+      null,
+      null,
+      NoneShardSpec.instance(),
+      0,
+      1
+  );
+
+  private static final DataSegment DATA_SEGMENT_2 = new DataSegment(
+      "test",
+      Intervals.of("2015-04-13/2015-04-14"),
+      "1",
+      ImmutableMap.of("bucket", TEST_BUCKET, "key", KEY_2_PATH),
+      null,
+      null,
+      NoneShardSpec.instance(),
+      0,
+      1
+  );
+
   @Mock
   private ServerSideEncryptingAmazonS3 s3Client;
   @Mock
@@ -381,28 +405,4 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
       Assert.assertEquals("Unable to delete from bucket [test_bucket]", exc.getMessage());
     }
   }
-
-  private static final DataSegment DATA_SEGMENT_1 = new DataSegment(
-      "test",
-      Intervals.of("2015-04-12/2015-04-13"),
-      "1",
-      ImmutableMap.of("bucket", TEST_BUCKET, "key", KEY_1_PATH),
-      null,
-      null,
-      NoneShardSpec.instance(),
-      0,
-      1
-  );
-
-  private static final DataSegment DATA_SEGMENT_2 = new DataSegment(
-      "test",
-      Intervals.of("2015-04-13/2015-04-14"),
-      "1",
-      ImmutableMap.of("bucket", TEST_BUCKET, "key", KEY_2_PATH),
-      null,
-      null,
-      NoneShardSpec.instance(),
-      0,
-      1
-  );
 }

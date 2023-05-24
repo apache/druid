@@ -63,10 +63,10 @@ public interface DataSegmentKiller
    * storage is unable to authenticate itself and segment loading exception doesn't encode enough information in it to \
    * understand why it failed.
    * <p>
-   * If a segment or segments do not exist in deep storage method should not throw an exception.
+   * If a segment or segments does not exist in deep storage, the method should not throw an exception.
    * <p>
-   * This version Kill must not require additional permissions on the deep storage beyond what the single-arg
-   * form of kill @link org.apache.druid.segment.loading.DataSegmentKiller requires.
+   * This version of kill must **NOT** require additional permissions on the deep storage beyond what
+   * {@link #kill(DataSegment)} requires. requires.
    * @param segments The list of segments to kill
    * @throws SegmentLoadingException If there is an exception during deletion such as a segment in the list could not be
    * completely removed
