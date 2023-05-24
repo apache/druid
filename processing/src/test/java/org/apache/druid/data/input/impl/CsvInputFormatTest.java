@@ -192,7 +192,7 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
   {
     final CsvInputFormat format = new CsvInputFormat(null, null, true, null, 0);
     final long unweightedSize = 100L;
-    Assert.assertEquals(unweightedSize, format.getWeightedSize(null, unweightedSize));
+    Assert.assertEquals(unweightedSize, format.getWeightedSize("file.csv", unweightedSize));
   }
 
   @Test
@@ -200,6 +200,9 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
   {
     final CsvInputFormat format = new CsvInputFormat(null, null, true, null, 0);
     final long unweightedSize = 100L;
-    Assert.assertEquals(unweightedSize * 4L, format.getWeightedSize(CompressionUtils.Format.GZ, unweightedSize));
+    Assert.assertEquals(
+        unweightedSize * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR,
+        format.getWeightedSize("file.csv.gz", unweightedSize)
+    );
   }
 }

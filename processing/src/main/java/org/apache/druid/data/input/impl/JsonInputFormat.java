@@ -20,7 +20,6 @@
 package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser.Feature;
@@ -158,12 +157,12 @@ public class JsonInputFormat extends NestedInputFormat
     }
   }
 
-  @JsonIgnore
   @Override
-  public long getWeightedSize(@Nullable CompressionUtils.Format compressionFormat, long size)
+  public long getWeightedSize(String path, long size)
   {
+    CompressionUtils.Format compressionFormat = CompressionUtils.Format.fromFileName(path);
     if (CompressionUtils.Format.GZ == compressionFormat) {
-      return size * 4L;
+      return size * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR;
     }
     return size;
   }

@@ -20,7 +20,6 @@
 package org.apache.druid.data.input.parquet;
 
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,14 +31,9 @@ public class ParquetInputFormatTest
   {
     final ParquetInputFormat format = new ParquetInputFormat(JSONPathSpec.DEFAULT, false, new Configuration());
     long unweightedSize = 100L;
-    Assert.assertEquals(unweightedSize * 8L, format.getWeightedSize(null, unweightedSize));
-  }
-
-  @Test
-  public void test_getWeightedSize_withGzCompression()
-  {
-    final ParquetInputFormat format = new ParquetInputFormat(JSONPathSpec.DEFAULT, false, new Configuration());
-    final long unweightedSize = 100L;
-    Assert.assertEquals(unweightedSize * 8L, format.getWeightedSize(CompressionUtils.Format.GZ, unweightedSize));
+    Assert.assertEquals(
+        unweightedSize * ParquetInputFormat.SCALE_FACTOR,
+        format.getWeightedSize("file.parquet", unweightedSize)
+    );
   }
 }

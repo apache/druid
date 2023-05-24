@@ -22,7 +22,6 @@ package org.apache.druid.msq.input.external;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.InputFileAttribute;
-import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
@@ -33,7 +32,6 @@ import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.SlicerUtils;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -82,12 +80,7 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
     if (externalInputSpec.getInputSource().isSplittable()) {
       return sliceSplittableInputSource(
           externalInputSpec,
-          new DynamicSplitHintSpec(
-              maxNumSlices,
-              maxFilesPerSlice,
-              maxBytesPerSlice,
-              externalInputSpec.getInputFormat()
-          ),
+          new DynamicSplitHintSpec(maxNumSlices, maxFilesPerSlice, maxBytesPerSlice),
           maxNumSlices
       );
     } else {
@@ -219,19 +212,12 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
     private final int maxNumSlices;
     private final int maxFilesPerSlice;
     private final long maxBytesPerSlice;
-    @Nullable
-    private final InputFormat inputFormat;
 
-    public DynamicSplitHintSpec(
-        final int maxNumSlices,
-        final int maxFilesPerSlice,
-        final long maxBytesPerSlice,
-        @Nullable final InputFormat inputFormat)
+    public DynamicSplitHintSpec(final int maxNumSlices, final int maxFilesPerSlice, final long maxBytesPerSlice)
     {
       this.maxNumSlices = maxNumSlices;
       this.maxFilesPerSlice = maxFilesPerSlice;
       this.maxBytesPerSlice = maxBytesPerSlice;
-      this.inputFormat = inputFormat;
     }
 
     @Override
@@ -243,16 +229,7 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
       return Iterators.filter(
           SlicerUtils.makeSlicesDynamic(
               inputIterator,
-              item -> {
-                if (null != inputFormat) {
-                  InputFileAttribute inputFileAttribute = inputAttributeExtractor.apply(item);
-                  return inputFormat.getWeightedSize(
-                      inputFileAttribute.getCompressionFormat(),
-                      inputFileAttribute.getSize());
-                } else {
-                  return inputAttributeExtractor.apply(item).getSize();
-                }
-              },
+              item -> inputAttributeExtractor.apply(item).getWeightedSize(),
               maxNumSlices,
               maxFilesPerSlice,
               maxBytesPerSlice

@@ -32,7 +32,6 @@ import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.utils.CompressionUtils;
 
-import javax.annotation.Nullable;
 import java.io.File;
 
 /**
@@ -77,13 +76,12 @@ public interface InputFormat
    * with scale factor 1. This means that when computing the byte weight that an uncompressed newline delimited
    * json input object has towards ingestion, we take the file size as is, 1:1.
    *
-   * @param compressionFormat The compression format of the input object, if any.
+   * @param path The path of the input object. Used to tell whether any compression is used.
    * @param size The size of the input object in bytes.
    *
    * @return The weighted size of the input object.
    */
-  @JsonIgnore
-  default long getWeightedSize(@Nullable CompressionUtils.Format compressionFormat, long size)
+  default long getWeightedSize(String path, long size)
   {
     return size;
   }

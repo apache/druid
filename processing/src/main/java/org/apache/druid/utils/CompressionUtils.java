@@ -119,6 +119,8 @@ public class CompressionUtils
       return EXTENSION_TO_COMPRESSION_FORMAT.get(extension);
     }
   }
+
+  public static final long COMPRESSED_TEXT_WEIGHT_FACTOR = 4L;
   private static final Logger log = new Logger(CompressionUtils.class);
   private static final int DEFAULT_RETRY_COUNT = 3;
   private static final int GZIP_BUFFER_SIZE = 8192; // Default is 512

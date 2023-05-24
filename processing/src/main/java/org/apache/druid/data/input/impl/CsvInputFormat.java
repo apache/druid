@@ -29,7 +29,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -81,16 +80,6 @@ public class CsvInputFormat extends FlatTextInputFormat
         getSkipHeaderRows(),
         line -> Arrays.asList(parser.parseLine(line))
     );
-  }
-
-  @JsonIgnore
-  @Override
-  public long getWeightedSize(@Nullable CompressionUtils.Format compressionFormat, long size)
-  {
-    if (CompressionUtils.Format.GZ == compressionFormat) {
-      return size * 4L;
-    }
-    return size;
   }
 
   public static RFC4180Parser createOpenCsvParser()

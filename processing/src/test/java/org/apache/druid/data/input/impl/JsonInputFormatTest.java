@@ -129,7 +129,7 @@ public class JsonInputFormatTest
         null
     );
     final long unweightedSize = 100L;
-    Assert.assertEquals(unweightedSize, format.getWeightedSize(null, unweightedSize));
+    Assert.assertEquals(unweightedSize, format.getWeightedSize("file.json", unweightedSize));
   }
 
   @Test
@@ -143,6 +143,9 @@ public class JsonInputFormatTest
         null
     );
     final long unweightedSize = 100L;
-    Assert.assertEquals(unweightedSize * 4L, format.getWeightedSize(CompressionUtils.Format.GZ, unweightedSize));
+    Assert.assertEquals(
+        unweightedSize * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR,
+        format.getWeightedSize("file.json.gz", unweightedSize)
+    );
   }
 }
