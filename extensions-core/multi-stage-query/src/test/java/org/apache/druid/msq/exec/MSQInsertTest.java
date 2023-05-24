@@ -173,7 +173,9 @@ public class MSQInsertTest extends MSQTestBase
                              + "    '{\"type\": \"json\"}',\n"
                              + "    '[{\"name\": \"__time\", \"type\": \"long\"}, {\"name\": \"flags\", \"type\": \"string\"}]'\n"
                              + "  )\n"
-                             + ") PARTITIONED BY day")
+                             + ")\n"
+                             + "WHERE __time > TIMESTAMP '1999-01-01 00:00:00'\n"
+                             + "PARTITIONED BY day")
                      .setQueryContext(context)
                      .setExpectedResultRows(expectedRows)
                      .setExpectedDataSource("foo1")

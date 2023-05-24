@@ -774,7 +774,6 @@ public class DruidQuery
    * Returns a pair of DataSource and Filtration object created on the query filter. In case the, data source is
    * a join datasource, the datasource may be altered and left filter of join datasource may
    * be rid of time filters.
-   * TODO: should we optimize the base table filter just like we do with query filters
    */
   @VisibleForTesting
   static Pair<DataSource, Filtration> getFiltration(
@@ -784,40 +783,58 @@ public class DruidQuery
       JoinableFactoryWrapper joinableFactoryWrapper
   )
   {
-    if (!(dataSource instanceof JoinDataSource)) {
-      return Pair.of(dataSource, toFiltration(filter, virtualColumnRegistry));
+    if (!canUseIntervalFiltering(dataSource)) {
+      return Pair.of(dataSource, toFiltration(filter, virtualColumnRegistry.getFullRowSignature(), false));
+    } else if (dataSource instanceof JoinDataSource && ((JoinDataSource) dataSource).getLeftFilter() != null) {
+      final JoinDataSource joinDataSource = (JoinDataSource) dataSource;
+
+      // If the join is left or inner, we can pull the intervals up to the query. This is done
+      // so that broker can prune the segments to query.
+      final Filtration leftFiltration = Filtration.create(joinDataSource.getLeftFilter())
+                                                  .optimize(virtualColumnRegistry.getFullRowSignature());
+
+      // Adds the intervals from the join left filter to query filtration
+      final Filtration queryFiltration = Filtration.create(filter, leftFiltration.getIntervals())
+                                                   .optimize(virtualColumnRegistry.getFullRowSignature());
+
+      final JoinDataSource newDataSource = JoinDataSource.create(
+          joinDataSource.getLeft(),
+          joinDataSource.getRight(),
+          joinDataSource.getRightPrefix(),
+          joinDataSource.getConditionAnalysis(),
+          joinDataSource.getJoinType(),
+          leftFiltration.getDimFilter(),
+          joinableFactoryWrapper
+      );
+
+      return Pair.of(newDataSource, queryFiltration);
+    } else {
+      return Pair.of(dataSource, toFiltration(filter, virtualColumnRegistry.getFullRowSignature(), true));
     }
-    JoinDataSource joinDataSource = (JoinDataSource) dataSource;
-    if (joinDataSource.getLeftFilter() == null) {
-      return Pair.of(dataSource, toFiltration(filter, virtualColumnRegistry));
-    }
-    //TODO: We should avoid promoting the time filter as interval for right outer and full outer joins. This is not
-    // done now as we apply the intervals to left base table today irrespective of the join type.
-
-    // If the join is left or inner, we can pull the intervals up to the query. This is done
-    // so that broker can prune the segments to query.
-    Filtration leftFiltration = Filtration.create(joinDataSource.getLeftFilter())
-                                          .optimize(virtualColumnRegistry.getFullRowSignature());
-    // Adds the intervals from the join left filter to query filtration
-    Filtration queryFiltration = Filtration.create(filter, leftFiltration.getIntervals())
-                                           .optimize(virtualColumnRegistry.getFullRowSignature());
-
-
-    JoinDataSource newDataSource = JoinDataSource.create(
-        joinDataSource.getLeft(),
-        joinDataSource.getRight(),
-        joinDataSource.getRightPrefix(),
-        joinDataSource.getConditionAnalysis(),
-        joinDataSource.getJoinType(),
-        leftFiltration.getDimFilter(),
-        joinableFactoryWrapper
-    );
-    return Pair.of(newDataSource, queryFiltration);
   }
 
-  private static Filtration toFiltration(DimFilter filter, VirtualColumnRegistry virtualColumnRegistry)
+  /**
+   * Whether the given datasource can make use of "intervals" based filtering. The is true for anything based on
+   * regular tables ({@link org.apache.druid.query.TableDataSource}).
+   */
+  private static boolean canUseIntervalFiltering(final DataSource dataSource)
   {
-    return Filtration.create(filter).optimize(virtualColumnRegistry.getFullRowSignature());
+    return dataSource.getAnalysis().isTableBased();
+  }
+
+  private static Filtration toFiltration(
+      final DimFilter filter,
+      final RowSignature rowSignature,
+      final boolean useIntervals
+  )
+  {
+    final Filtration filtration = Filtration.create(filter);
+
+    if (useIntervals) {
+      return filtration.optimize(rowSignature);
+    } else {
+      return filtration.optimizeFilterOnly(rowSignature);
+    }
   }
 
   /**
@@ -837,7 +854,7 @@ public class DruidQuery
       return true;
     }
 
-    if (dataSource.getAnalysis().isConcreteTableBased()) {
+    if (dataSource.getAnalysis().isConcreteAndTableBased()) {
       // Always OK: queries on concrete tables (regular Druid datasources) use segment-based storage adapters
       // (IncrementalIndex or QueryableIndex). These clip query interval to data interval, making wide query
       // intervals safer. They do not have special checks for granularity and interval safety.
@@ -1431,7 +1448,8 @@ public class DruidQuery
 
     if (!plannerContext.featureAvailable(EngineFeature.SCAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
       if (orderByColumns.size() > 1 || orderByColumns.stream()
-                                                     .anyMatch(orderBy -> !orderBy.getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME))) {
+                                                     .anyMatch(orderBy -> !orderBy.getColumnName()
+                                                                                  .equals(ColumnHolder.TIME_COLUMN_NAME))) {
         // Cannot handle this ordering.
         // Scan cannot ORDER BY non-time columns.
         plannerContext.setPlanningError(

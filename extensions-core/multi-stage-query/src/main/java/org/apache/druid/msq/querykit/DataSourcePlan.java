@@ -512,8 +512,11 @@ public class DataSourcePlan
    * interval {@link Intervals#ETERNITY}. If not, throw an {@link UnsupportedOperationException}.
    *
    * Anywhere this appears is a place that we do not support using the "intervals" parameter of a query
-   * (i.e., {@link org.apache.druid.query.BaseQuery#getQuerySegmentSpec()}) for time filtering. Ideally,
-   * we'd support this everywhere it appears, but we can get away without it for now.
+   * (i.e., {@link org.apache.druid.query.BaseQuery#getQuerySegmentSpec()}) for time filtering.
+   *
+   * We don't need to support this for anything that is not {@link DataSourceAnalysis#isTableBased()}, because
+   * the SQL layer avoids "intervals" in other cases. See
+   * {@link org.apache.druid.sql.calcite.rel.DruidQuery#canUseIntervalFiltering(DataSource)}.
    */
   private static void checkQuerySegmentSpecIsEternity(
       final DataSource dataSource,
