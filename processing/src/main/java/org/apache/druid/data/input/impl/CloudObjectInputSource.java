@@ -311,11 +311,14 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
                   long size = splitWidget.getObjectSize(o.getLocation());
                   return new InputFileAttribute(
                       size,
-                      inputFormat.getWeightedSize(o.getLocation().getPath(), size));
+                      inputFormat != null ? inputFormat.getWeightedSize(o.getLocation().getPath(), size) : size);
                 } else {
                   return new InputFileAttribute(
                       o.getSize(),
-                      inputFormat.getWeightedSize(o.getLocation().getPath(), o.getSize()));
+                      inputFormat != null
+                      ? inputFormat.getWeightedSize(o.getLocation().getPath(), o.getSize())
+                      : o.getSize()
+                  );
                 }
               }
               catch (IOException e) {

@@ -163,7 +163,12 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
     final Iterator<File> fileIterator = getFileIterator();
     return splitHintSpec.split(
         fileIterator,
-        file -> new InputFileAttribute(file.length(), inputFormat.getWeightedSize(file.getName(), file.length()))
+        file -> new InputFileAttribute(
+            file.length(),
+            inputFormat != null
+            ? inputFormat.getWeightedSize(file.getName(), file.length())
+            : file.length()
+        )
     );
   }
 
