@@ -28,7 +28,6 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
@@ -39,9 +38,6 @@ import java.util.stream.Collectors;
 
 public class LocalInputSourceAdapterTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -93,19 +89,23 @@ public class LocalInputSourceAdapterTest
   @Test
   public void testIllegalInputSourceGet()
   {
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Inputsource is not initialized yet!");
     LocalInputSourceAdapter localInputSourceAdapter = new LocalInputSourceAdapter();
-    localInputSourceAdapter.getInputSource();
+    Assert.assertThrows(
+        "Inputsource is not initialized yet!",
+        ISE.class,
+        () -> localInputSourceAdapter.getInputSource()
+    );
   }
 
   @Test
   public void testIllegalInputSourceSetup()
   {
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Inputsource is already initialized!");
     LocalInputSourceAdapter localInputSourceAdapter = new LocalInputSourceAdapter();
     localInputSourceAdapter.setupInputSource(Collections.emptyList());
-    localInputSourceAdapter.setupInputSource(Collections.emptyList());
+    Assert.assertThrows(
+        "Inputsource is already initialized!",
+        ISE.class,
+        () -> localInputSourceAdapter.setupInputSource(Collections.emptyList())
+    );
   }
 }

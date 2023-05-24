@@ -25,18 +25,13 @@ import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.expressions.Literal;
 import org.apache.iceberg.types.Types;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
 import java.util.Collections;
 
 public class IcebergAndFilterTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private final String INTERVAL_COLUMN = "eventTime";
   private final String COLUMN1 = "column1";
   private final String COLUMN2 = "column2";
@@ -72,9 +67,8 @@ public class IcebergAndFilterTest
   @Test
   public void testEmptyFilter()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    new IcebergAndFilter(null);
-    new IcebergAndFilter(Collections.emptyList());
+    Assert.assertThrows(IllegalArgumentException.class, () -> new IcebergAndFilter(null));
+    Assert.assertThrows(IllegalArgumentException.class, () -> new IcebergAndFilter(Collections.emptyList()));
   }
 
   @Test
@@ -87,9 +81,11 @@ public class IcebergAndFilterTest
                     new IcebergEqualsFilter(COLUMN1, "value1"),
                     new IcebergEqualsFilter(COLUMN2, "value2")
                 )),
-            new IcebergIntervalFilter(INTERVAL_COLUMN,
-                                      Collections.singletonList(Intervals.of(
-                                          "2022-01-01T00:00:00.000Z/2022-01-02T00:00:00.000Z")))
+            new IcebergIntervalFilter(
+                INTERVAL_COLUMN,
+                Collections.singletonList(Intervals.of(
+                    "2022-01-01T00:00:00.000Z/2022-01-02T00:00:00.000Z"))
+            )
         ));
     Expression expectedExpression = Expressions.and(
         Expressions.and(equalExpression1, equalExpression2),

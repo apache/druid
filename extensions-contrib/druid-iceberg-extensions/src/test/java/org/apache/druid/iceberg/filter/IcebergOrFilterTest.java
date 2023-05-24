@@ -25,18 +25,13 @@ import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.expressions.Literal;
 import org.apache.iceberg.types.Types;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
 import java.util.Collections;
 
 public class IcebergOrFilterTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private final String INTERVAL_COLUMN = "eventTime";
   private final String COLUMN1 = "column1";
   private final String COLUMN2 = "column2";
@@ -72,9 +67,8 @@ public class IcebergOrFilterTest
   @Test
   public void testEmptyFilter()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    new IcebergOrFilter(null);
-    new IcebergOrFilter(Collections.emptyList());
+    Assert.assertThrows(IllegalArgumentException.class, () -> new IcebergAndFilter(null));
+    Assert.assertThrows(IllegalArgumentException.class, () -> new IcebergAndFilter(Collections.emptyList()));
   }
 
   @Test
