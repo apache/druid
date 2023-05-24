@@ -83,7 +83,6 @@ public class S3DataSegmentKiller implements DataSegmentKiller
     if (segments.size() == 1) {
       kill(segments.get(0));
       return;
-
     }
 
     // we can assume that all segments are in the same bucket.
