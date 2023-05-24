@@ -146,7 +146,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
     return makeRequest(id, new RequestBuilder(HttpMethod.POST, "/stop" + (publish ? "?publish=true" : "")))
         .onSuccess(r -> true)
         .onHttpError(e -> {
-          log.warn("Task [%s] coundln't be stopped because of http request failure.", id);
+          log.warn("Task [%s] coundln't be stopped because of http request failure [%s].", id, e.getMessage());
           return Either.value(false);
         })
         .onNotAvailable(e -> {
