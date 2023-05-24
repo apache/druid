@@ -24,9 +24,8 @@ import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.ordering.StringComparators;
@@ -38,6 +37,8 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 public class FrameCursorUtils
 {
@@ -77,52 +78,57 @@ public class FrameCursorUtils
   }
 
   /**
-   * Writes a {@link Cursor} to a {@link Frame}. This method iterates over the rows of the cursor, and writes the columns
-   * to the cursor
-   * @param cursor Cursor to write to the frame
-   * @param frameWriterFactory Frame writer factory to write to the frame.
-   *                           Determines the signature of the rows that are written to the frames
-   * @param memoryLimitBytes Limit in bytes, if needs to be enforced while converting the cursor to the frame. If adding
-   *                         a row causes the frame size to exceed this limit, we throw an {@link ResourceLimitExceededException}
+   * Writes a {@link Cursor} to a sequence of {@link Frame}. This method iterates over the rows of the cursor,
+   * and writes the columns to the frames
+   *
+   * @param cursor                 Cursor to write to the frame
+   * @param frameWriterFactory     Frame writer factory to write to the frame.
+   *                               Determines the signature of the rows that are written to the frames
+   * @param memoryAllocatorFactory Allocator factory which creates the frames for the result sequence
    */
-  public static Frame cursorToFrame(
+  public static Sequence<Frame> cursorToFrames(
       Cursor cursor,
-      FrameWriterFactory frameWriterFactory,
-      @Nullable Long memoryLimitBytes
+      FrameWriterFactory frameWriterFactory
   )
   {
-    Frame frame;
 
-    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
-      while (!cursor.isDone()) {
-        if (!frameWriter.addSelection()) {
-          throw new ISE(
-              "Unable to append row to the frame. Allocator capacity: [%s]",
-              frameWriterFactory.allocatorCapacity()
-          );
+    return Sequences.simple(
+        () -> new Iterator<Frame>()
+        {
+          @Override
+          public boolean hasNext()
+          {
+            return !cursor.isDone();
+          }
+
+          @Override
+          public Frame next()
+          {
+            // Makes sure that cursor contains some elements prior. This ensures if no row is written, then the row size
+            // is larger than the MemoryAllocators returned by the provided factory
+            if (!hasNext()) {
+              throw new NoSuchElementException();
+            }
+            boolean firstRowWritten = false;
+            Frame frame;
+            try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
+              while (!cursor.isDone()) {
+                if (!frameWriter.addSelection()) {
+                  break;
+                }
+                firstRowWritten = true;
+                cursor.advance();
+              }
+
+              if (!firstRowWritten) {
+                throw new ISE("Row size is greater than the frame size.");
+              }
+
+              frame = Frame.wrap(frameWriter.toByteArray());
+            }
+            return frame;
+          }
         }
-
-        if (memoryLimitBytes != null && memoryLimitBytes < frameWriter.getTotalSize()) {
-          throw new ResourceLimitExceededException(
-              StringUtils.format(
-                  "Exceeded total bytes allocated for this subquery. "
-                  + "Current size [%d], total row count [%d], allocated size [%d]. "
-                  + "Please limit the amount of data that the results occupy, or increase the limit using the context "
-                  + "parameter [%s]",
-                  frameWriter.getTotalSize(),
-                  frameWriter.getNumRows(),
-                  memoryLimitBytes,
-                  QueryContexts.MAX_SUBQUERY_BYTES_KEY
-              )
-          );
-        }
-
-        cursor.advance();
-      }
-
-      frame = Frame.wrap(frameWriter.toByteArray());
-    }
-
-    return frame;
+    );
   }
 }

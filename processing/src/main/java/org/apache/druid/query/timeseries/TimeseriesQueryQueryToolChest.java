@@ -32,8 +32,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.HeapMemoryAllocator;
-import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
@@ -65,7 +64,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -470,7 +468,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       TimeseriesQuery query,
       Sequence<Result<TimeseriesResultValue>> resultSequence,
-      @Nullable Long memoryLimitBytes
+      MemoryAllocatorFactory memoryAllocatorFactory
   )
   {
     final RowSignature rowSignature = resultArraySignature(query);
@@ -481,17 +479,16 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 
     FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
-        new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+        memoryAllocatorFactory,
         rowSignature,
         new ArrayList<>(),
         true
     );
 
-    Frame frame = FrameCursorUtils.cursorToFrame(cursor, frameWriterFactory, memoryLimitBytes);
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory);
 
-    return Optional.of(
-        Sequences.simple(ImmutableList.of(new FrameSignaturePair(frame, rowSignature)))
-    );
+    // All frames are generated with the same signature therefore we can attach the row signature
+    return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, rowSignature)));
   }
 
   private Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makeComputeManipulatorFn(

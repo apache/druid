@@ -31,9 +31,7 @@ import org.apache.druid.segment.RowWalker;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 
-import javax.annotation.Nonnull;
 import java.util.Iterator;
-import java.util.function.Function;
 
 /**
  * Helper methods to create cursor from iterable of rows
@@ -47,21 +45,15 @@ public class IterableRowsCursorHelper
    */
   public static RowBasedCursor<Object[]> getCursorFromIterable(Iterable<Object[]> rows, RowSignature rowSignature)
   {
-    RowAdapter<Object[]> rowAdapter = new RowAdapter<Object[]>()
-    {
-      @Nonnull
-      @Override
-      public Function<Object[], Object> columnFunction(String columnName)
-      {
-        if (rowSignature == null) {
-          return row -> null;
-        }
-        final int columnIndex = rowSignature.indexOf(columnName);
-        if (columnIndex < 0) {
-          return row -> null;
-        }
-        return row -> row[columnIndex];
+    RowAdapter<Object[]> rowAdapter = columnName -> {
+      if (rowSignature == null) {
+        return row -> null;
       }
+      final int columnIndex = rowSignature.indexOf(columnName);
+      if (columnIndex < 0) {
+        return row -> null;
+      }
+      return row -> row[columnIndex];
     };
     RowWalker<Object[]> rowWalker = new RowWalker<>(Sequences.simple(rows), rowAdapter);
     return new RowBasedCursor<>(

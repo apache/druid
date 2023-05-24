@@ -30,8 +30,7 @@ import com.google.common.collect.PeekingIterator;
 import com.google.inject.Inject;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.HeapMemoryAllocator;
-import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
@@ -57,14 +56,11 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, ScanQuery>
 {
@@ -218,10 +214,9 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       final ScanQuery query,
       final Sequence<ScanResultValue> resultSequence,
-      @Nullable Long memoryLimitBytes
+      MemoryAllocatorFactory memoryAllocatorFactory
   )
   {
-    final AtomicLong memoryLimitAccumulator = memoryLimitBytes != null ? new AtomicLong(memoryLimitBytes) : null;
     final RowSignature defaultRowSignature = resultArraySignature(query);
     Iterator<ScanResultValue> resultSequenceIterator = new Iterator<ScanResultValue>()
     {
@@ -242,7 +237,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       }
     };
 
-    Iterable<FrameSignaturePair> retVal = () -> new Iterator<FrameSignaturePair>()
+    Iterable<Sequence<FrameSignaturePair>> retVal = () -> new Iterator<Sequence<FrameSignaturePair>>()
     {
       PeekingIterator<ScanResultValue> scanResultValuePeekingIterator = Iterators.peekingIterator(resultSequenceIterator);
 
@@ -253,7 +248,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       }
 
       @Override
-      public FrameSignaturePair next()
+      public Sequence<FrameSignaturePair> next()
       {
         final List<ScanResultValue> batch = new ArrayList<>();
         final ScanResultValue scanResultValue = scanResultValuePeekingIterator.next();
@@ -274,17 +269,17 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
             break;
           }
         }
-        return convertScanResultValuesToFrame(batch, rowSignature, query, memoryLimitAccumulator);
+        return convertScanResultValuesToFrame(batch, rowSignature, query, memoryAllocatorFactory);
       }
     };
-    return Optional.of(Sequences.simple(retVal));
+    return Optional.of(Sequences.concat(retVal));
   }
 
-  private FrameSignaturePair convertScanResultValuesToFrame(
+  private Sequence<FrameSignaturePair> convertScanResultValuesToFrame(
       List<ScanResultValue> batch,
-      @Nonnull RowSignature rowSignature,
+      RowSignature rowSignature,
       ScanQuery query,
-      AtomicLong memoryLimitAccumulator
+      MemoryAllocatorFactory memoryAllocatorFactory
   )
   {
     Preconditions.checkNotNull(rowSignature, "'rowSignature' must be provided");
@@ -304,7 +299,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
 
     FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
-        new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+        memoryAllocatorFactory,
         rowSignature,
         new ArrayList<>(),
         true
@@ -312,17 +307,12 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
 
 
     Cursor concatCursor = new ConcatCursor(cursors);
-    Frame frame = FrameCursorUtils.cursorToFrame(
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(
         concatCursor,
-        frameWriterFactory,
-        memoryLimitAccumulator != null ? memoryLimitAccumulator.get() : null
+        frameWriterFactory
     );
 
-    if (memoryLimitAccumulator != null) {
-      memoryLimitAccumulator.getAndAdd(-frame.numBytes());
-    }
-
-    return new FrameSignaturePair(frame, rowSignature);
+    return frames.map(frame -> new FrameSignaturePair(frame, rowSignature));
   }
 
   @Override

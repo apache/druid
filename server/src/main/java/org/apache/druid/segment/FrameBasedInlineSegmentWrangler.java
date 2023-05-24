@@ -26,9 +26,6 @@ import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
-import java.util.Iterator;
-import java.util.stream.Collectors;
-
 public class FrameBasedInlineSegmentWrangler implements SegmentWrangler
 {
 

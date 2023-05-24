@@ -31,6 +31,7 @@ import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -126,7 +127,7 @@ public class FrameBasedInlineDataSourceSerializerTest
         inlineDataSource.getRows(),
         rowSignature
     );
-    Frame frame = FrameCursorUtils.cursorToFrame(
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(
         cursor,
         FrameWriters.makeFrameWriterFactory(
             FrameType.ROW_BASED,
@@ -134,11 +135,10 @@ public class FrameBasedInlineDataSourceSerializerTest
             rowSignature,
             new ArrayList<>(),
             true
-        ),
-        null
+        )
     );
     return new FrameBasedInlineDataSource(
-        ImmutableList.of(new FrameSignaturePair(frame, rowSignature)),
+        frames.map(frame -> new FrameSignaturePair(frame, rowSignature)).toList(),
         rowSignature
     );
   }

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -345,16 +346,14 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * column in the final result might not be present in the individual ResultType (and subsequently Frame). Therefore,
    * this is done to preserve the space by not populating the column in that particular Frame and omitting it from its
    * signature
-   * 
-   * @param query Query being executed by the toolchest. Used to determine the rowSignature of the Frames
+   *  @param query Query being executed by the toolchest. Used to determine the rowSignature of the Frames
    * @param resultSequence results of the form returned by {@link #mergeResults(QueryRunner)}
-   * @param memoryLimitBytes Limit the memory results. Throws {@link ResourceLimitExceededException} if the result exceed
-   *                    the memoryLimitBytes
+   * @param memoryAllocatorFactory
    */
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       QueryType query,
       Sequence<ResultType> resultSequence,
-      @Nullable Long memoryLimitBytes
+      MemoryAllocatorFactory memoryAllocatorFactory
   )
   {
     return Optional.empty();

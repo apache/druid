@@ -22,15 +22,13 @@ package org.apache.druid.query.topn;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.allocation.HeapMemoryAllocator;
-import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
@@ -62,7 +60,6 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -569,7 +566,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       TopNQuery query,
       Sequence<Result<TopNResultValue>> resultSequence,
-      @Nullable Long memoryLimitBytes
+      MemoryAllocatorFactory memoryAllocatorFactory
   )
   {
     final RowSignature rowSignature = resultArraySignature(query);
@@ -580,17 +577,15 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
     FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
-        new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+        memoryAllocatorFactory,
         rowSignature,
         new ArrayList<>(),
         true
     );
 
-    Frame frame = FrameCursorUtils.cursorToFrame(cursor, frameWriterFactory, memoryLimitBytes);
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory);
 
-    return Optional.of(
-        Sequences.simple(ImmutableList.of(new FrameSignaturePair(frame, rowSignature)))
-    );
+    return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, rowSignature)));
   }
 
   static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>

@@ -19,13 +19,15 @@
 
 package org.apache.druid.segment.join;
 
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.segment.join.table.BroadcastSegmentIndexedTable;
+import org.apache.druid.segment.join.table.FrameBasedIndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Creates a joinable from the {@link FrameBasedInlineDataSource}. This materializes the datasource to an
@@ -47,10 +49,19 @@ public class FrameBasedInlineJoinableFactory implements JoinableFactory
   {
     FrameBasedInlineDataSource frameBasedInlineDataSource = (FrameBasedInlineDataSource) dataSource;
 
-    BroadcastSegmentIndexedTable broadcastSegmentIndexedTable = new BroadcastSegmentIndexedTable(
+    if (condition.canHashJoin()) {
+      final Set<String> rightKeyColumns = condition.getRightEquiConditionKeys();
+      return Optional.of(
+          new IndexedTableJoinable(
+              new FrameBasedIndexedTable(
+                  frameBasedInlineDataSource,
+                  rightKeyColumns,
+                  DateTimes.nowUtc().toString()
+              )
+          )
+      );
+    }
 
-    );
-
-    return Optional.of(new IndexedTableJoinable(broadcastSegmentIndexedTable));
+    return Optional.empty();
   }
 }

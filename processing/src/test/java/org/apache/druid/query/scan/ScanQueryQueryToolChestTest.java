@@ -21,14 +21,16 @@ package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.allocation.HeapMemoryAllocator;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.FrameBasedInlineDataSource;
+import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -214,7 +216,7 @@ public class ScanQueryQueryToolChestTest
         toolChest.resultsAsFrames(
             scanQuery,
             Sequences.concat(makeResults1(ScanQuery.ResultFormat.RESULT_FORMAT_LIST), results2(), results3()),
-            null
+            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited())
         ).get().toList();
 
 
@@ -268,7 +270,7 @@ public class ScanQueryQueryToolChestTest
                 results2(),
                 results3()
             ),
-            null
+            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited())
         ).get().toList();
 
 
@@ -330,7 +332,7 @@ public class ScanQueryQueryToolChestTest
         toolChest.resultsAsFrames(
             scanQuery,
             Sequences.concat(results2(), results2()),
-            null
+            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited())
         ).get().toList();
 
 

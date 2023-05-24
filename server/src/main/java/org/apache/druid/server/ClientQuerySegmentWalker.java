@@ -28,6 +28,8 @@ import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
+import org.apache.druid.frame.allocation.HeapMemoryAllocator;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -36,8 +38,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
-import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.FrameBasedInlineDataSource;
+import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.PostProcessingOperator;
@@ -641,7 +643,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         Optional<Sequence<FrameSignaturePair>> framesOptional = toolChest.resultsAsFrames(
             query,
             results,
-            memoryLimit - memoryLimitAccumulator.get()
+            // memoryLimit - memoryLimitAccumulator.get()
+            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited())
         );
 
         if (!framesOptional.isPresent()) {

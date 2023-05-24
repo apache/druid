@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
-import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -61,7 +60,7 @@ public class FrameWriters
   public static FrameWriterFactory makeFrameWriterFactory(
       final FrameType frameType,
       final MemoryAllocatorFactory allocatorFactory,
-      @Nonnull final RowSignature signature,
+      final RowSignature signature,
       final List<KeyColumn> sortColumns,
       final boolean allowNullColumnTypes
   )
