@@ -364,7 +364,10 @@ public class SegmentAllocationQueue
     final Set<DataSegment> updatedUsedSegments = retrieveUsedSegments(requestKey);
 
     if (updatedUsedSegments.equals(usedSegments)) {
-      requestBatch.failPendingRequests("Allocation failed probably due to conflicting segments.");
+      requestBatch.failPendingRequests(
+          "Allocation failed due to conflicting segments."
+          + " Cannot retry until the set of used segments for this interval changes."
+      );
       return true;
     } else {
       log.debug("Used segments have changed. Requeuing failed requests.");
@@ -390,6 +393,7 @@ public class SegmentAllocationQueue
     // Find requests whose row interval overlaps with an existing used segment
     final Set<SegmentAllocateRequest> allRequests = requestBatch.getRequests();
     final Set<SegmentAllocateRequest> requestsWithNoOverlappingSegment = new HashSet<>();
+    final List<SegmentAllocateRequest> requestsWithPartialOverlappingSegment = new ArrayList<>();
 
     if (usedSegments.isEmpty()) {
       requestsWithNoOverlappingSegment.addAll(allRequests);
@@ -415,36 +419,41 @@ public class SegmentAllocationQueue
           // There is no valid allocation interval for this request due to a
           // partially overlapping used segment. Need not do anything right now.
           // The request will be retried upon requeueing the batch.
+          requestsWithPartialOverlappingSegment.add(request);
         }
       }
 
       // Try to allocate segments for the identified used segment intervals.
       // Do not retry the failed requests with other intervals unless the batch is requeued.
       for (Map.Entry<Interval, List<SegmentAllocateRequest>> entry : overlapIntervalToRequests.entrySet()) {
-        successCount += allocateSegmentsForInterval(
-            entry.getKey(),
-            entry.getValue(),
-            requestBatch
-        );
+        successCount +=
+            allocateSegmentsForInterval(entry.getKey(), entry.getValue(), requestBatch);
       }
     }
 
     // For requests that do not overlap with a used segment, first try to allocate
-    // using the preferred granularity, then smaller granularities
+    // using the preferred granularity, then successively smaller granularities
     final Set<SegmentAllocateRequest> pendingRequests = new HashSet<>(requestsWithNoOverlappingSegment);
-    for (Granularity granularity :
-        Granularity.granularitiesFinerThan(requestBatch.key.preferredSegmentGranularity)) {
+    final List<Granularity> candidateGranularities
+        = Granularity.granularitiesFinerThan(requestBatch.key.preferredSegmentGranularity);
+    for (Granularity granularity : candidateGranularities) {
       Map<Interval, List<SegmentAllocateRequest>> requestsByInterval =
           getRequestsByInterval(pendingRequests, granularity);
 
       for (Map.Entry<Interval, List<SegmentAllocateRequest>> entry : requestsByInterval.entrySet()) {
-        successCount += allocateSegmentsForInterval(
-            entry.getKey(),
-            entry.getValue(),
-            requestBatch
-        );
+        successCount +=
+            allocateSegmentsForInterval(entry.getKey(), entry.getValue(), requestBatch);
         pendingRequests.retainAll(requestBatch.getRequests());
       }
+    }
+
+    if (!requestsWithPartialOverlappingSegment.isEmpty()) {
+      log.info(
+          "Found [%d] allocate requests with row intervals that partially overlap existing segments."
+          + " These cannot be processed until the set of used segments changes. Example request: [%s]",
+          requestsWithPartialOverlappingSegment.size(),
+          requestsWithPartialOverlappingSegment.get(0)
+      );
     }
 
     return successCount;
@@ -651,6 +660,7 @@ public class SegmentAllocationQueue
     private final boolean useNonRootGenPartitionSpace;
 
     private final int hash;
+    private final String serialized;
 
     /**
      * Creates a new key for the given request. The batch for a unique key will
@@ -681,6 +691,7 @@ public class SegmentAllocationQueue
           preferredAllocationInterval,
           lockGranularity
       );
+      this.serialized = serialize();
 
       this.maxWaitTimeMillis = maxWaitTimeMillis;
     }
@@ -728,13 +739,18 @@ public class SegmentAllocationQueue
     @Override
     public String toString()
     {
+      return serialized;
+    }
+
+    private String serialize()
+    {
       return "{" +
-             "ds='" + dataSource + '\'' +
-             ", gr='" + groupId + '\'' +
-             ", incId=" + batchIncrementalId +
+             "datasource='" + dataSource + '\'' +
+             ", groupId='" + groupId + '\'' +
+             ", batchId=" + batchIncrementalId +
              ", lock=" + lockGranularity +
-             ", invl=" + preferredAllocationInterval +
-             ", slc=" + skipSegmentLineageCheck +
+             ", allocInterval=" + preferredAllocationInterval +
+             ", skipLineageCheck=" + skipSegmentLineageCheck +
              '}';
     }
   }
