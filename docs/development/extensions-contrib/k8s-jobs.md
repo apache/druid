@@ -125,6 +125,7 @@ metadata:
 rules:
 - apiGroups:
   - ""
+  - batch
   resources:
   - pods
   - configmaps
