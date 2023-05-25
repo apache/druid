@@ -105,9 +105,9 @@ public class KafkaEmitterConfigTest
   @Test
   public void testDeserializeEventTypesWithDifferentCase() throws JsonProcessingException
   {
-    Assert.assertEquals(KafkaEmitterConfig.EventType.SEGMENT_METADATA, mapper.readValue("\"segmentMetadata\"", KafkaEmitterConfig.EventType.class));
+    Assert.assertEquals(KafkaEmitterConfig.EventType.SEGMENT_METADATA, mapper.readValue("\"segment_metadata\"", KafkaEmitterConfig.EventType.class));
     Assert.assertEquals(KafkaEmitterConfig.EventType.ALERTS, mapper.readValue("\"alerts\"", KafkaEmitterConfig.EventType.class));
-    Assert.assertThrows(ValueInstantiationException.class, () -> mapper.readValue("\"segment_metadata\"", KafkaEmitterConfig.EventType.class));
+    Assert.assertThrows(ValueInstantiationException.class, () -> mapper.readValue("\"segmentMetadata\"", KafkaEmitterConfig.EventType.class));
   }
 
   @Test
