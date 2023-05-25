@@ -1099,9 +1099,9 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
           ImmutableList.of()
       );
     }
-    catch (ClassCastException e) {
+    catch (IllegalArgumentException e) {
       Assert.assertTrue(
-          e.getMessage().contains("cannot be cast to org.apache.druid.query.aggregation.datasketches.theta.SketchHolder")
+          e.getMessage().contains("requires a ThetaSketch as the argument")
       );
     }
   }

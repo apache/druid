@@ -67,9 +67,13 @@ public class ThetaPostAggMacros
       if (valObj == null) {
         return ExprEval.of(null);
       }
-      SketchHolder thetaSketchHolder = (SketchHolder) valObj;
-      double estimate = thetaSketchHolder.getEstimate();
-      return ExprEval.of(estimate);
+      if (valObj instanceof SketchHolder) {
+        SketchHolder thetaSketchHolder = (SketchHolder) valObj;
+        double estimate = thetaSketchHolder.getEstimate();
+        return ExprEval.of(estimate);
+      } else {
+        throw new IllegalArgumentException("requires a ThetaSketch as the argument");
+      }
     }
 
     @Override
