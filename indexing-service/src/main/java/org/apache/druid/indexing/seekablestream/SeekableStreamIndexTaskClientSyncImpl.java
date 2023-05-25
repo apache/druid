@@ -87,7 +87,12 @@ public abstract class SeekableStreamIndexTaskClientSyncImpl<PartitionIdType, Seq
       );
       boolean isSuccess = isSuccess(response);
       if (!isSuccess) {
-        log.warn("Task [%s] coundln't be stopped because of http request failure.", id);
+        log.warn(
+            "Task [%s] coundln't be stopped because of http request failure. Error code [%d], description [%s].",
+            id,
+            response.getStatus().getCode(),
+            response.getStatus().getReasonPhrase()
+        );
       }
       return isSuccess;
     }
