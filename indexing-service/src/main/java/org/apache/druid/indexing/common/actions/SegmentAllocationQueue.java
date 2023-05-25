@@ -364,10 +364,11 @@ public class SegmentAllocationQueue
     final Set<DataSegment> updatedUsedSegments = retrieveUsedSegments(requestKey);
 
     if (updatedUsedSegments.equals(usedSegments)) {
-      requestBatch.failPendingRequests(
-          "Allocation failed due to conflicting segments."
-          + " Cannot retry until the set of used segments for this interval changes."
+      log.info(
+          "Allocation has failed due to conflicting segments. Cannot retry until"
+          + " the set of used segments for the allocation interval changes."
       );
+      requestBatch.completePendingRequestsWithNull();
       return true;
     } else {
       log.debug("Used segments have changed. Requeuing failed requests.");
@@ -599,6 +600,18 @@ public class SegmentAllocationQueue
       }
     }
 
+    synchronized void completePendingRequestsWithNull()
+    {
+      if (!requestToFuture.isEmpty()) {
+        log.warn("Completing [%d] failed requests in batch [%s] with null value.", size(), key);
+        requestToFuture.values().forEach(future -> future.complete(null));
+        requestToFuture.keySet().forEach(
+            request -> emitTaskMetric("task/action/failed/count", 1L, request)
+        );
+        requestToFuture.clear();
+      }
+    }
+
     synchronized void handleResult(SegmentAllocateResult result, SegmentAllocateRequest request)
     {
       request.incrementAttempts();
@@ -608,20 +621,16 @@ public class SegmentAllocationQueue
         requestToFuture.remove(request).complete(result.getSegmentId());
       } else if (request.canRetry()) {
         log.info(
-            "Allocation failed in attempt [%d] due to error [%s]. Can still retry. Action: %s",
-            request.getAttempts(),
-            result.getErrorMessage(),
-            request.getAction()
+            "Allocation failed on attempt [%d] due to error [%s]. Can still retry action [%s].",
+            request.getAttempts(), result.getErrorMessage(), request.getAction()
         );
       } else {
         emitTaskMetric("task/action/failed/count", 1L, request);
         log.error(
-            "Failing allocate action after [%d] attempts. Latest error [%s]. Action: %s",
-            request.getAttempts(),
-            result.getErrorMessage(),
-            request.getAction()
+            "Allocation failed in [%d] attempts with latest error [%s]. Completing action [%s] with a null value.",
+            request.getAttempts(), result.getErrorMessage(), request.getAction()
         );
-        requestToFuture.remove(request).completeExceptionally(new ISE(result.getErrorMessage()));
+        requestToFuture.remove(request).complete(null);
       }
     }
 
