@@ -338,9 +338,7 @@ public class SegmentAllocationQueue
 
     log.debug(
         "Processing [%d] requests for batch [%s], queue time [%s].",
-        requestBatch.size(),
-        requestKey,
-        requestKey.getQueueTime()
+        requestBatch.size(), requestKey, requestKey.getQueueTime()
     );
 
     final long startTimeMillis = System.currentTimeMillis();
@@ -368,7 +366,7 @@ public class SegmentAllocationQueue
           "Completing [%d] failed requests in batch [%s] with null value as there"
           + " are conflicting segments. Cannot retry allocation until the set of"
           + " used segments overlapping the allocation interval [%s] changes.",
-          size(), requestBatch, requestBatch.key.preferredAllocationInterval
+          size(), requestKey, requestKey.preferredAllocationInterval
       );
 
       requestBatch.completePendingRequestsWithNull();
@@ -486,9 +484,7 @@ public class SegmentAllocationQueue
     final AllocateRequestKey requestKey = requestBatch.key;
     log.debug(
         "Trying allocation for [%d] requests, interval [%s] in batch [%s]",
-        requests.size(),
-        tryInterval,
-        requestKey
+        requests.size(), tryInterval, requestKey
     );
 
     final List<SegmentAllocateResult> results = taskLockbox.allocateSegments(
