@@ -225,7 +225,7 @@ public class SegmentAllocationQueue
   {
     batch.key.resetQueueTime();
     if (!isLeader.get()) {
-      batch.failPendingRequests("Cannot allocate segment if not leader");
+      batch.failPendingRequests("Not leader anymore");
       return false;
     } else if (processingQueue.offer(batch.key)) {
       log.debug("Added a new batch [%s] to queue.", batch.key);
@@ -312,7 +312,7 @@ public class SegmentAllocationQueue
     while (nextKey != null && !isLeader.get()) {
       processingQueue.pollFirst();
       AllocateRequestBatch nextBatch = keyToBatch.remove(nextKey);
-      nextBatch.failPendingRequests("Cannot allocate segment if not leader");
+      nextBatch.failPendingRequests("Not leader anymore");
       ++failedBatches;
 
       nextKey = processingQueue.peekFirst();
@@ -332,7 +332,7 @@ public class SegmentAllocationQueue
     if (requestBatch.isEmpty()) {
       return true;
     } else if (!isLeader.get()) {
-      requestBatch.failPendingRequests("Cannot allocate segment if not leader");
+      requestBatch.failPendingRequests("Not leader anymore");
       return true;
     }
 
@@ -589,7 +589,7 @@ public class SegmentAllocationQueue
     synchronized void failPendingRequests(Throwable cause)
     {
       if (!requestToFuture.isEmpty()) {
-        log.warn("Failing [%d] requests in batch due to [%s]. Batch key: %s", size(), cause.getMessage(), key);
+        log.warn("Failing [%d] requests in batch [%s], reason [%s].", size(), cause.getMessage(), key);
         requestToFuture.values().forEach(future -> future.completeExceptionally(cause));
         requestToFuture.keySet().forEach(
             request -> emitTaskMetric("task/action/failed/count", 1L, request)
@@ -626,7 +626,8 @@ public class SegmentAllocationQueue
       } else {
         emitTaskMetric("task/action/failed/count", 1L, request);
         log.error(
-            "Allocation failed in [%d] attempts with latest error [%s]. Completing action [%s] with a null value.",
+            "Exhausted max attempts [%d] for allocation with latest error [%s]."
+            + " Completing action [%s] with a null value.",
             request.getAttempts(), result.getErrorMessage(), request.getAction()
         );
         requestToFuture.remove(request).complete(null);
