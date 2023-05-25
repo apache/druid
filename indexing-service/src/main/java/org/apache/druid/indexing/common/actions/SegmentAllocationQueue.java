@@ -364,10 +364,13 @@ public class SegmentAllocationQueue
     final Set<DataSegment> updatedUsedSegments = retrieveUsedSegments(requestKey);
 
     if (updatedUsedSegments.equals(usedSegments)) {
-      log.info(
-          "Allocation has failed due to conflicting segments. Cannot retry until"
-          + " the set of used segments for the allocation interval changes."
+      log.warn(
+          "Completing [%d] failed requests in batch [%s] with null value as there"
+          + " are conflicting segments. Cannot retry allocation until the set of"
+          + " used segments overlapping the allocation interval [%s] changes.",
+          size(), requestBatch, requestBatch.key.preferredAllocationInterval
       );
+
       requestBatch.completePendingRequestsWithNull();
       return true;
     } else {
@@ -394,7 +397,7 @@ public class SegmentAllocationQueue
     // Find requests whose row interval overlaps with an existing used segment
     final Set<SegmentAllocateRequest> allRequests = requestBatch.getRequests();
     final Set<SegmentAllocateRequest> requestsWithNoOverlappingSegment = new HashSet<>();
-    final List<SegmentAllocateRequest> requestsWithPartialOverlappingSegment = new ArrayList<>();
+    final List<SegmentAllocateRequest> requestsWithPartialOverlap = new ArrayList<>();
 
     if (usedSegments.isEmpty()) {
       requestsWithNoOverlappingSegment.addAll(allRequests);
@@ -420,7 +423,7 @@ public class SegmentAllocationQueue
           // There is no valid allocation interval for this request due to a
           // partially overlapping used segment. Need not do anything right now.
           // The request will be retried upon requeueing the batch.
-          requestsWithPartialOverlappingSegment.add(request);
+          requestsWithPartialOverlap.add(request);
         }
       }
 
@@ -448,12 +451,11 @@ public class SegmentAllocationQueue
       }
     }
 
-    if (!requestsWithPartialOverlappingSegment.isEmpty()) {
+    if (!requestsWithPartialOverlap.isEmpty()) {
       log.info(
-          "Found [%d] allocate requests with row intervals that partially overlap existing segments."
+          "Found [%d] requests in batch [%s] with row intervals that partially overlap existing segments."
           + " These cannot be processed until the set of used segments changes. Example request: [%s]",
-          requestsWithPartialOverlappingSegment.size(),
-          requestsWithPartialOverlappingSegment.get(0)
+          requestsWithPartialOverlap.size(), requestBatch.key, requestsWithPartialOverlap.get(0)
       );
     }
 
@@ -602,14 +604,15 @@ public class SegmentAllocationQueue
 
     synchronized void completePendingRequestsWithNull()
     {
-      if (!requestToFuture.isEmpty()) {
-        log.warn("Completing [%d] failed requests in batch [%s] with null value.", size(), key);
-        requestToFuture.values().forEach(future -> future.complete(null));
-        requestToFuture.keySet().forEach(
-            request -> emitTaskMetric("task/action/failed/count", 1L, request)
-        );
-        requestToFuture.clear();
+      if (requestToFuture.isEmpty()) {
+        return;
       }
+
+      requestToFuture.values().forEach(future -> future.complete(null));
+      requestToFuture.keySet().forEach(
+          request -> emitTaskMetric("task/action/failed/count", 1L, request)
+      );
+      requestToFuture.clear();
     }
 
     synchronized void handleResult(SegmentAllocateResult result, SegmentAllocateRequest request)
