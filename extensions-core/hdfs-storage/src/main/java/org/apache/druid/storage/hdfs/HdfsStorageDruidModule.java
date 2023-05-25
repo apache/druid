@@ -35,7 +35,6 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.inputsource.hdfs.HdfsInputSource;
 import org.apache.druid.inputsource.hdfs.HdfsInputSourceConfig;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.hadoop.conf.Configuration;
@@ -95,7 +94,7 @@ public class HdfsStorageDruidModule implements DruidModule
       FileSystem.get(conf);
     }
     catch (IOException ex) {
-      throw new ISE(ex, "Failed to access hdfs.");
+      throw new RuntimeException(ex);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
