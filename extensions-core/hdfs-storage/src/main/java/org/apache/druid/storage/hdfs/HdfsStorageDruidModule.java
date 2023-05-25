@@ -35,11 +35,11 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.inputsource.hdfs.HdfsInputSource;
 import org.apache.druid.inputsource.hdfs.HdfsInputSourceConfig;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -92,18 +92,10 @@ public class HdfsStorageDruidModule implements DruidModule
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-      FileSystem fs = FileSystem.get(conf);
-
-      // If cache is enabled, need to check the FileSystem object by access hdfs because FileSystem object will be used later, like in push stage.
-      // If FileSystem is invalid, the peon task should stop immediately.
-      // See https://github.com/apache/druid/pull/14276
-      boolean disableCache = conf.getBoolean("fs.hdfs.impl.disable.cache", false);
-      if (!disableCache) {
-        fs.exists(new Path("/"));
-      }
+      FileSystem.get(conf);
     }
     catch (IOException ex) {
-      throw new RuntimeException(ex);
+      throw new ISE(ex, "Failed to access hdfs.");
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
@@ -126,6 +118,8 @@ public class HdfsStorageDruidModule implements DruidModule
     JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HdfsKerberosConfig.class);
     binder.bind(HdfsStorageAuthentication.class).in(ManageLifecycle.class);
     LifecycleModule.register(binder, HdfsStorageAuthentication.class);
+    binder.bind(HdfsStorageAvailabilityChecker.class).in(ManageLifecycle.class);
+    LifecycleModule.register(binder, HdfsStorageAvailabilityChecker.class);
 
     JsonConfigProvider.bind(binder, "druid.ingestion.hdfs", HdfsInputSourceConfig.class);
   }
