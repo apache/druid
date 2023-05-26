@@ -220,7 +220,7 @@ public class KafkaEmitterConfig
   {
     return "KafkaEmitterConfig{" +
            "bootstrap.servers='" + bootstrapServers + '\'' +
-           ", event.types='" + eventTypes.toString() + '\'' +
+           ", event.types='" + eventTypes + '\'' +
            ", metric.topic='" + metricTopic + '\'' +
            ", alert.topic='" + alertTopic + '\'' +
            ", request.topic='" + requestTopic + '\'' +
