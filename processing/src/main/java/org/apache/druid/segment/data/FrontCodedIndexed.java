@@ -79,7 +79,7 @@ public final class FrontCodedIndexed implements Indexed<ByteBuffer>
 {
   public static final byte V0 = 0;
   public static final byte V1 = 1;
-  public static final byte DEFAULT_VERSION = V0;
+  public static final byte DEFAULT_VERSION = V1;
   public static final int DEFAULT_BUCKET_SIZE = 4;
 
   public static byte validateVersion(byte version)

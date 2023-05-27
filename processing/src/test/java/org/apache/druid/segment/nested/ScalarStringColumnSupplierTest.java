@@ -43,10 +43,14 @@ import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.NullValueIndex;
+import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.column.StringFrontCodedDictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
@@ -97,8 +101,10 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
   Closer closer = Closer.create();
 
   SmooshedFileMapper fileMapper;
+  SmooshedFileMapper fileMapperUtf8;
 
   ByteBuffer baseBuffer;
+  ByteBuffer baseBufferUtf8;
 
   @BeforeClass
   public static void staticSetup()
@@ -110,14 +116,31 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
   public void setup() throws IOException
   {
     final String fileNameBase = "test";
-    fileMapper = smooshify(fileNameBase, tempFolder.newFolder(), data);
+    fileMapper = smooshify(
+        fileNameBase,
+        tempFolder.newFolder(),
+        data,
+        IndexSpec.builder()
+                 .withStringDictionaryEncoding(
+                     new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.DEFAULT_VERSION)
+                 )
+                 .build()
+    );
     baseBuffer = fileMapper.mapFile(fileNameBase);
+    fileMapperUtf8 = smooshify(
+        fileNameBase,
+        tempFolder.newFolder(),
+        data,
+        IndexSpec.builder().withStringDictionaryEncoding(new StringEncodingStrategy.Utf8()).build()
+    );
+    baseBufferUtf8 = fileMapperUtf8.mapFile(fileNameBase);
   }
 
   private SmooshedFileMapper smooshify(
       String fileNameBase,
       File tmpFile,
-      List<?> data
+      List<?> data,
+      IndexSpec indexSpec
   )
       throws IOException
   {
@@ -125,7 +148,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
     try (final FileSmoosher smoosher = new FileSmoosher(tmpFile)) {
       ScalarStringColumnSerializer serializer = new ScalarStringColumnSerializer(
           fileNameBase,
-          IndexSpec.DEFAULT,
+          indexSpec,
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
           closer
       );
@@ -186,6 +209,23 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
         bob,
         NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
     );
+    try (StringFrontCodedDictionaryEncodedColumn column = (StringFrontCodedDictionaryEncodedColumn) supplier.get()) {
+      smokeTest(supplier, column);
+    }
+  }
+
+  @Test
+  public void testBasicFunctionalityUtf8() throws IOException
+  {
+    ColumnBuilder bob = new ColumnBuilder();
+    bob.setFileMapper(fileMapperUtf8);
+    ScalarStringColumnAndIndexSupplier supplier = ScalarStringColumnAndIndexSupplier.read(
+        ByteOrder.nativeOrder(),
+        bitmapSerdeFactory,
+        baseBufferUtf8,
+        bob,
+        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
+    );
     try (ScalarStringDictionaryEncodedColumn column = (ScalarStringDictionaryEncodedColumn) supplier.get()) {
       smokeTest(supplier, column);
     }
@@ -204,6 +244,15 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
         bob,
         NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
     );
+    ColumnBuilder bobUtf8 = new ColumnBuilder();
+    bobUtf8.setFileMapper(fileMapperUtf8);
+    ScalarStringColumnAndIndexSupplier utf8Supplier = ScalarStringColumnAndIndexSupplier.read(
+        ByteOrder.nativeOrder(),
+        bitmapSerdeFactory,
+        baseBufferUtf8,
+        bobUtf8,
+        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
+    );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);
 
@@ -219,8 +268,11 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
             try {
               threadsStartLatch.await();
               for (int iter = 0; iter < 5000; iter++) {
-                try (ScalarStringDictionaryEncodedColumn column = (ScalarStringDictionaryEncodedColumn) supplier.get()) {
+                try (StringFrontCodedDictionaryEncodedColumn column = (StringFrontCodedDictionaryEncodedColumn) supplier.get()) {
                   smokeTest(supplier, column);
+                }
+                try (ScalarStringDictionaryEncodedColumn column = (ScalarStringDictionaryEncodedColumn) utf8Supplier.get()) {
+                  smokeTest(utf8Supplier, column);
                 }
               }
             }
@@ -235,7 +287,10 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
     Assert.assertEquals(expectedReason, failureReason.get());
   }
 
-  private void smokeTest(ScalarStringColumnAndIndexSupplier supplier, ScalarStringDictionaryEncodedColumn column)
+  private <TColumn extends DictionaryEncodedColumn<String> & NestedCommonFormatColumn> void smokeTest(
+      ScalarStringColumnAndIndexSupplier supplier,
+      TColumn column
+  )
   {
     SimpleAscendingOffset offset = new SimpleAscendingOffset(data.size());
     ColumnValueSelector<?> valueSelector = column.makeColumnValueSelector(offset);

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -32,6 +33,7 @@ public class NoBitmapIndexMergerV9Test extends IndexMergerTestBase
       CompressionStrategy compressionStrategy,
       CompressionStrategy dimCompressionStrategy,
       LongEncodingStrategy longEncodingStrategy,
+      StringEncodingStrategy stringEncodingStrategy,
       SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   )
   {
@@ -39,7 +41,8 @@ public class NoBitmapIndexMergerV9Test extends IndexMergerTestBase
         null,
         compressionStrategy,
         dimCompressionStrategy,
-        longEncodingStrategy
+        longEncodingStrategy,
+        stringEncodingStrategy
     );
     indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
   }

@@ -48,13 +48,14 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.ImmutableBitmapValues;
 import org.apache.druid.segment.data.IncrementalIndexTest;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -91,7 +92,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
   protected IndexMerger indexMerger;
 
-  @Parameterized.Parameters(name = "{index}: metric compression={0}, dimension compression={1}, long encoding={2}, segment write-out medium={3}")
+  @Parameterized.Parameters(name = "{index}: metric compression={0}, dimension compression={1}, long encoding={2}, string encoding={3} segment write-out medium={4}")
   public static Collection<Object[]> data()
   {
     return Collections2.transform(
@@ -100,6 +101,11 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                 EnumSet.allOf(CompressionStrategy.class),
                 ImmutableSet.copyOf(CompressionStrategy.noNoneValues()),
                 EnumSet.allOf(CompressionFactory.LongEncodingStrategy.class),
+                ImmutableSet.of(
+                    new StringEncodingStrategy.Utf8(),
+                    new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V0),
+                    new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V1)
+                ),
                 SegmentWriteOutMediumFactory.builtInFactories()
             )
         ), new Function<List<?>, Object[]>()
@@ -148,7 +154,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
       @Nullable BitmapSerdeFactory bitmapSerdeFactory,
       CompressionStrategy compressionStrategy,
       CompressionStrategy dimCompressionStrategy,
-      CompressionFactory.LongEncodingStrategy longEncodingStrategy
+      CompressionFactory.LongEncodingStrategy longEncodingStrategy,
+      StringEncodingStrategy stringEncodingStrategy
   )
   {
     this.indexSpec = IndexSpec.builder()
@@ -156,6 +163,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                               .withDimensionCompression(dimCompressionStrategy)
                               .withMetricCompression(compressionStrategy)
                               .withLongEncoding(longEncodingStrategy)
+                              .withStringDictionaryEncoding(stringEncodingStrategy)
                               .build();
     this.indexIO = TestHelper.getTestIndexIO();
     this.useBitmapIndexes = bitmapSerdeFactory != null;
@@ -510,6 +518,12 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     } else {
       builder.withLongEncoding(CompressionFactory.LongEncodingStrategy.LONGS);
     }
+    if (StringEncodingStrategy.UTF8_ID == indexSpec.getStringDictionaryEncoding().getId()) {
+      builder.withStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1));
+    } else {
+      builder.withStringDictionaryEncoding(new StringEncodingStrategy.Utf8());
+    }
+
     IndexSpec newSpec = builder.build();
 
     AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{new CountAggregatorFactory("count")};
@@ -548,12 +562,12 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     DictionaryEncodedColumn encodedColumn = (DictionaryEncodedColumn) index.getColumnHolder("dim2").getColumn();
     Object obj;
     if (encodedColumn.hasMultipleValues()) {
-      Field field = StringDictionaryEncodedColumn.class.getDeclaredField("multiValueColumn");
+      Field field = encodedColumn.getClass().getDeclaredField("multiValueColumn");
       field.setAccessible(true);
 
       obj = field.get(encodedColumn);
     } else {
-      Field field = StringDictionaryEncodedColumn.class.getDeclaredField("column");
+      Field field = encodedColumn.getClass().getDeclaredField("column");
       field.setAccessible(true);
 
       obj = field.get(encodedColumn);

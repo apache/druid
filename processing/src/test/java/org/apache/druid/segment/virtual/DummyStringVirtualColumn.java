@@ -38,7 +38,7 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
+import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 
@@ -95,7 +95,7 @@ public class DummyStringVirtualColumn implements VirtualColumn
         return DimensionSelector.constant(null);
       }
 
-      StringDictionaryEncodedColumn stringCol = toStringDictionaryEncodedColumn(holder.getColumn());
+      DictionaryEncodedColumn<?> stringCol = toStringDictionaryEncodedColumn(holder.getColumn());
 
       DimensionSelector baseDimensionSelector = stringCol.makeDimensionSelector(
           offset,
@@ -145,7 +145,7 @@ public class DummyStringVirtualColumn implements VirtualColumn
         return NilColumnValueSelector.instance();
       }
 
-      StringDictionaryEncodedColumn stringCol = toStringDictionaryEncodedColumn(holder.getColumn());
+      DictionaryEncodedColumn<?> stringCol = toStringDictionaryEncodedColumn(holder.getColumn());
       return stringCol.makeColumnValueSelector(offset);
     } else {
       return null;
@@ -222,13 +222,13 @@ public class DummyStringVirtualColumn implements VirtualColumn
     return new byte[0];
   }
 
-  private StringDictionaryEncodedColumn toStringDictionaryEncodedColumn(BaseColumn column)
+  private DictionaryEncodedColumn<?> toStringDictionaryEncodedColumn(BaseColumn column)
   {
-    if (!(column instanceof StringDictionaryEncodedColumn)) {
+    if (!(column instanceof DictionaryEncodedColumn)) {
       throw new IAE("I can only work with StringDictionaryEncodedColumn");
     }
 
-    return (StringDictionaryEncodedColumn) column;
+    return (DictionaryEncodedColumn<?>) column;
   }
 
   private DimensionSelector disableValueMatchers(DimensionSelector base)

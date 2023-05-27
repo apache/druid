@@ -36,12 +36,13 @@ import java.util.Objects;
 })
 public interface StringEncodingStrategy
 {
-  Utf8 DEFAULT = new Utf8();
   String UTF8 = "utf8";
   String FRONT_CODED = "frontCoded";
-
   byte UTF8_ID = 0x00;
   byte FRONT_CODED_ID = 0x01;
+  int DEFAULT_BUCKET_SIZE = 4;
+
+  StringEncodingStrategy DEFAULT = new FrontCoded(DEFAULT_BUCKET_SIZE, null);
 
   String getType();
 
