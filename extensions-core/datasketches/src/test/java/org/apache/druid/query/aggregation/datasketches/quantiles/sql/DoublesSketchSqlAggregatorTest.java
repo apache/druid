@@ -263,7 +263,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
     if (NullHandling.replaceWithDefault()) {
       expectedResults = ImmutableList.of(
           new Object[]{
-              1.0,
+              0.0,
               0.0,
               10.1,
               10.1,
@@ -276,7 +276,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
     } else {
       expectedResults = ImmutableList.of(
           new Object[]{
-              0.0,
+              1.0,
               2.0,
               10.1,
               10.1,
