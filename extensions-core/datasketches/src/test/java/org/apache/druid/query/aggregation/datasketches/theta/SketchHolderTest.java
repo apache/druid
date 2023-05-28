@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
-import org.apache.datasketches.Family;
+import org.apache.datasketches.common.Family;
 import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
 import org.apache.druid.java.util.common.StringUtils;
