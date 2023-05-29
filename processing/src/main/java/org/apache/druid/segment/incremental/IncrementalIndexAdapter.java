@@ -159,10 +159,10 @@ public class IncrementalIndexAdapter implements IndexableAdapter
       );
     }
     if (indexer instanceof AutoTypeColumnIndexer) {
-      AutoTypeColumnIndexer standardIndexer = (AutoTypeColumnIndexer) indexer;
+      AutoTypeColumnIndexer autoIndexer = (AutoTypeColumnIndexer) indexer;
       return new NestedColumnMergable(
-          standardIndexer.getSortedValueLookups(),
-          standardIndexer.getFieldTypeInfo()
+          autoIndexer.getSortedValueLookups(),
+          autoIndexer.getFieldTypeInfo()
       );
     }
     return null;

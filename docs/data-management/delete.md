@@ -38,7 +38,7 @@ Deletion by time range happens in two steps:
    you have a backup.
 
 For documentation on disabling segments using the Coordinator API, see the
-[Coordinator API reference](../operations/api-reference.md#coordinator-datasources).
+[Coordinator API reference](../api-reference/api-reference.md#coordinator-datasources).
 
 A data deletion tutorial is available at [Tutorial: Deleting data](../tutorials/tutorial-delete-data.md).
 
@@ -65,7 +65,7 @@ For example, to delete records where `userName` is `'bob'` with native batch ind
 To delete the same records using SQL, use [REPLACE](../multi-stage-query/concepts.md#replace) with `WHERE userName <> 'bob'`.
 
 To reindex using [native batch](../ingestion/native-batch.md), use the [`druid` input
-source](../ingestion/native-batch-input-source.md#druid-input-source). If needed,
+source](../ingestion/input-sources.md#druid-input-source). If needed,
 [`transformSpec`](../ingestion/ingestion-spec.md#transformspec) can be used to filter or modify data during the
 reindexing job. To reindex with SQL, use [`REPLACE <table> OVERWRITE`](../multi-stage-query/reference.md#replace)
 with `SELECT ... FROM <table>`. (Druid does not have `UPDATE` or `ALTER TABLE` statements.) Any SQL SELECT query can be

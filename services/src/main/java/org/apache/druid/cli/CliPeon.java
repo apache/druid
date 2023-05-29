@@ -109,6 +109,7 @@ import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.OmniDataSegmentArchiver;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.OmniDataSegmentMover;
+import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.PeonAppenderatorsManager;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -126,6 +127,7 @@ import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.eclipse.jetty.server.Server;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.List;
@@ -254,13 +256,7 @@ public class CliPeon extends GuiceRunnable
             LifecycleModule.register(binder, Server.class);
 
             if ("true".equals(loadBroadcastSegments)) {
-              binder.bind(SegmentManager.class).in(LazySingleton.class);
-              binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
-              Jerseys.addResource(binder, HistoricalResource.class);
-
-              if (isZkEnabled) {
-                LifecycleModule.register(binder, ZkCoordinator.class);
-              }
+              binder.install(new BroadcastSegmentLoadingModule());
             }
           }
 
@@ -491,5 +487,29 @@ public class CliPeon extends GuiceRunnable
     );
     shuffleClientBiddy.addBinding("local").to(HttpShuffleClient.class).in(LazySingleton.class);
     shuffleClientBiddy.addBinding("deepstore").to(DeepStorageShuffleClient.class).in(LazySingleton.class);
+  }
+
+  public class BroadcastSegmentLoadingModule implements Module
+  {
+    @Override
+    public void configure(Binder binder)
+    {
+      binder.bind(SegmentManager.class).in(LazySingleton.class);
+      binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
+      Jerseys.addResource(binder, HistoricalResource.class);
+
+      if (isZkEnabled) {
+        LifecycleModule.register(binder, ZkCoordinator.class);
+      }
+    }
+
+    @Provides
+    @LazySingleton
+    public List<StorageLocation> getCliPeonStorageLocations(TaskConfig config)
+    {
+      File broadcastStorage = new File(new File(taskDirPath, "broadcast"), "segments");
+
+      return ImmutableList.of(new StorageLocation(broadcastStorage, config.getTmpStorageBytesPerTask(), null));
+    }
   }
 }

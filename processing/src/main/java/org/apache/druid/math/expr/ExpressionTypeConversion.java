@@ -19,7 +19,6 @@
 
 package org.apache.druid.math.expr;
 
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
@@ -83,7 +82,7 @@ public class ExpressionTypeConversion
     }
     if (type.isArray() || other.isArray()) {
       if (!Objects.equals(type, other)) {
-        throw new IAE("Cannot implicitly cast %s to %s", type, other);
+        throw new Types.IncompatibleTypeException(type, other);
       }
       return type;
     }
@@ -95,7 +94,7 @@ public class ExpressionTypeConversion
         return type;
       }
       if (!Objects.equals(type, other)) {
-        throw new IAE("Cannot implicitly cast %s to %s", type, other);
+        throw new Types.IncompatibleTypeException(type, other);
       }
       return type;
     }
@@ -128,7 +127,7 @@ public class ExpressionTypeConversion
     // arrays cannot be auto converted
     if (type.isArray() || other.isArray()) {
       if (!Objects.equals(type, other)) {
-        throw new IAE("Cannot implicitly cast %s to %s", type, other);
+        throw new Types.IncompatibleTypeException(type, other);
       }
       return type;
     }
@@ -140,7 +139,7 @@ public class ExpressionTypeConversion
         return type;
       }
       if (!Objects.equals(type, other)) {
-        throw new IAE("Cannot implicitly cast %s to %s", type, other);
+        throw new Types.IncompatibleTypeException(type, other);
       }
       return type;
     }
@@ -177,7 +176,7 @@ public class ExpressionTypeConversion
       return ExpressionTypeFactory.getInstance().ofArray(newElementType);
     }
 
-    throw new IAE("Cannot implicitly cast %s to %s", type, other);
+    throw new Types.IncompatibleTypeException(type, other);
   }
 
 

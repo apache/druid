@@ -465,3 +465,26 @@ export function tickIcon(checked: boolean): IconName {
 export function generate8HexId(): string {
   return (Math.random() * 1e10).toString(16).replace('.', '').slice(0, 8);
 }
+
+export function offsetToRowColumn(
+  str: string,
+  offset: number,
+): { row: number; column: number } | undefined {
+  // Ensure offset is within the string length
+  if (offset < 0 || offset > str.length) return;
+
+  const lines = str.split('\n');
+  for (let row = 0; row < lines.length; row++) {
+    const line = lines[row];
+    if (offset < line.length) {
+      return {
+        row,
+        column: offset,
+      };
+    }
+
+    offset -= line.length + 1;
+  }
+
+  return;
+}

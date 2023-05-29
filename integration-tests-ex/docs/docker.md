@@ -211,6 +211,37 @@ when it starts. If you start, then restart the MySQL container, you *must*
 remove the `db` directory before restart or MySQL will fail due to existing
 files.
 
+### Per-test Extensions
+
+The image build includes a standard set of extensions. Contrib or custom extensions
+may wish to add additional extensions. This is most easily done not by altering the
+image, but by adding the extensions at cluster startup. If the shared directory has
+an `extensions` subdirectory, then that directory is added to the extension search
+path on container startup. To add an extension `my-extension`, your shared directory
+should look like this:
+
+```text
+shared
++- ...
++- extensions
+   +- my-extension
+      +- my-extension-<version>.jar
++- ...
+```
+
+The `extensions` directory should be created within the per-cluster `setup.sh` script
+which is when starting your test cluster.
+
+Be sure to also include the extension in the load list in your `docker-compose.py` template.
+To load the extension on all nodes:
+
+```python
+    def extend_druid_service(self, service):
+        self.add_env(service, 'druid_test_loadList', 'my-extension')
+```
+
+Note that the above requires Druid and IT features added in early March, 2023.
+
 ### Third-Party Logs
 
 The three third-party containers are configured to log to the `/shared`

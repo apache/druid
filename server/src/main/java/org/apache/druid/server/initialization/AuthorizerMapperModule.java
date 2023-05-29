@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.initialization;
 
-import com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -122,11 +121,7 @@ public class AuthorizerMapperModule implements DruidModule
 
         authorizerProvider.inject(adjustedProps, configurator);
 
-        Supplier<Authorizer> authorizerSupplier = authorizerProvider.get();
-        if (authorizerSupplier == null) {
-          throw new ISE("Could not create authorizer with name: %s", authorizerName);
-        }
-        Authorizer authorizer = authorizerSupplier.get();
+        Authorizer authorizer = authorizerProvider.get();
         authorizerMap.put(authorizerName, authorizer);
       }
 
