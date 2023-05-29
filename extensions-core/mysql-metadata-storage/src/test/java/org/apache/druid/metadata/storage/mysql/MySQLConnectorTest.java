@@ -29,6 +29,7 @@ import org.junit.Test;
 
 import java.sql.SQLException;
 import java.sql.SQLTransientConnectionException;
+import java.sql.SQLTransientException;
 
 public class MySQLConnectorTest
 {
@@ -89,6 +90,33 @@ public class MySQLConnectorTest
     );
     Assert.assertFalse(
         connector.connectorIsTransientException(new SQLTransientConnectionException("transient"))
+    );
+  }
+
+  @Test
+  public void testIsRootCausePacketTooBigException()
+  {
+    MySQLConnector connector = new MySQLConnector(
+        CONNECTOR_CONFIG_SUPPLIER,
+        TABLES_CONFIG_SUPPLIER,
+        new MySQLConnectorSslConfig(),
+        MYSQL_DRIVER_CONFIG
+    );
+
+    // The test method should return true only for
+    // mariadb.MaxAllowedPacketException or mysql.PacketTooBigException.
+    // Verifying this requires creating a mock Class object, but Class is final
+    // and has only a private constructor. It would be overkill to try to mock it.
+
+    // Verify some of the false cases
+    Assert.assertFalse(
+        connector.isRootCausePacketTooBigException(new SQLException())
+    );
+    Assert.assertFalse(
+        connector.isRootCausePacketTooBigException(new SQLTransientException())
+    );
+    Assert.assertFalse(
+        connector.isRootCausePacketTooBigException(new MySQLTransientException())
     );
   }
 

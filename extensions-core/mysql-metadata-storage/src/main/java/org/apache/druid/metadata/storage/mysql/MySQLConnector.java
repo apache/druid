@@ -50,6 +50,8 @@ public class MySQLConnector extends SQLMetadataConnector
       = "com.mysql.jdbc.exceptions.MySQLTransientException";
   private static final String MARIA_DB_PACKET_EXCEPTION_CLASS_NAME
       = "org.mariadb.jdbc.internal.util.exceptions.MaxAllowedPacketException";
+  private static final String MYSQL_PACKET_EXCEPTION_CLASS_NAME
+      = "com.mysql.jdbc.PacketTooBigException";
 
   @Nullable
   private final Class<?> myTransientExceptionClass;
@@ -222,21 +224,16 @@ public class MySQLConnector extends SQLMetadataConnector
   }
 
   @Override
-  protected boolean connectorIsNonTransientException(Throwable e)
-  {
-    // Check only for packet exception as other non-transient exceptions would
-    // already be filtered out
-    return isRootCausePacketException(e);
-  }
-
-  private boolean isRootCausePacketException(Throwable t)
+  protected boolean isRootCausePacketTooBigException(Throwable t)
   {
     if (t == null) {
       return false;
     }
 
-    return MARIA_DB_PACKET_EXCEPTION_CLASS_NAME.equals(t.getClass().getName())
-           || isRootCausePacketException(t.getCause());
+    final String className = t.getClass().getName();
+    return MARIA_DB_PACKET_EXCEPTION_CLASS_NAME.equals(className)
+           || MYSQL_PACKET_EXCEPTION_CLASS_NAME.equals(className)
+           || isRootCausePacketTooBigException(t.getCause());
   }
 
   @Override

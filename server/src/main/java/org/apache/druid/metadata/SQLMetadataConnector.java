@@ -162,46 +162,20 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
   }
 
-  /**
-   * Returns true for errors that are definitely transient. An error can be
-   * confirmed to be transient iff:
-   * <ul>
-   *   <li>Either: {@link #connectorIsTransientException(Throwable)} returns true</li>
-   *   <li>Or: {@link #couldBeTransientException(Throwable)} returns true and
-   *   {@link #connectorIsNonTransientException(Throwable)} returns false.</li>
-   * </ul>
-   */
   public final boolean isTransientException(Throwable e)
   {
-    return connectorIsTransientException(e)
-        || (couldBeTransientException(e) && !connectorIsNonTransientException(e));
+    return e != null && (e instanceof RetryTransactionException
+                         || e instanceof SQLTransientException
+                         || e instanceof SQLRecoverableException
+                         || e instanceof UnableToObtainConnectionException
+                         || (e instanceof UnableToExecuteStatementException && isTransientException(e.getCause()))
+                         || connectorIsTransientException(e)
+                         || (e instanceof SQLException && isTransientException(e.getCause()))
+                         || (e instanceof DBIException && isTransientException(e.getCause())));
   }
 
   /**
-   * Checks if the given error could potentially be transient.
-   * An error for which this method returns true is then tested against
-   * {@link #connectorIsNonTransientException(Throwable)} for confirmation.
-   */
-  private boolean couldBeTransientException(Throwable e)
-  {
-    if (e == null) {
-      return false;
-    }
-
-    return e instanceof RetryTransactionException
-           || e instanceof SQLTransientException
-           || e instanceof SQLRecoverableException
-           || e instanceof UnableToObtainConnectionException
-           || (e instanceof UnableToExecuteStatementException && isTransientException(e.getCause()))
-           || (e instanceof SQLException && isTransientException(e.getCause()))
-           || (e instanceof DBIException && isTransientException(e.getCause()));
-  }
-
-  /**
-   * Vendor specific errors that are not covered by {@link #couldBeTransientException(Throwable)}.
-   * This method takes precedence over {@link #connectorIsNonTransientException(Throwable)}
-   * i.e. an error for which both of these methods return true is categorized
-   * as transient.
+   * Vendor specific errors that are not covered by {@link #isTransientException(Throwable)}.
    */
   protected boolean connectorIsTransientException(Throwable e)
   {
@@ -209,11 +183,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
-   * Returns true if a given vendor specific error is definitely not transient.
-   * This method is called only for errors that are potentially transient,
-   * i.e. errors for which {@link #couldBeTransientException(Throwable)} returns true.
+   * Checks if the root cause of the given exception is a PacketTooBigException.
+   *
+   * @return false by default. Specific implementations should override this method
+   * to correctly classify their packet exceptions.
    */
-  protected boolean connectorIsNonTransientException(Throwable e)
+  protected boolean isRootCausePacketTooBigException(Throwable t)
   {
     return false;
   }

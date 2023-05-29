@@ -28,6 +28,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import org.apache.druid.common.exception.DruidException;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.java.util.common.DateTimes;
@@ -164,8 +165,9 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   ) throws EntryExistsException
   {
     try {
-      getConnector().retryWithHandle(
-          (HandleCallback<Void>) handle -> {
+      executeWithRetryForTask(
+          id,
+          handle -> {
             final String sql = StringUtils.format(
                 "INSERT INTO %s (id, created_date, datasource, payload, type, group_id, active, status_payload) "
                 + "VALUES (:id, :created_date, :datasource, :payload, :type, :group_id, :active, :status_payload)",
@@ -182,17 +184,12 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                   .bind("status_payload", jsonMapper.writeValueAsBytes(status))
                   .execute();
             return null;
-          },
-          e -> getConnector().isTransientException(e) && !(isStatementException(e) && getEntry(id).isPresent())
+          }
       );
     }
     catch (Exception e) {
-      if (isStatementException(e) && getEntry(id).isPresent()) {
-        throw new EntryExistsException(id, e);
-      } else {
-        Throwables.propagateIfPossible(e);
-        throw new RuntimeException(e);
-      }
+      Throwables.propagateIfPossible(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -304,10 +301,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
             final Query<Map<String, Object>> query;
             switch (entry.getKey()) {
               case ACTIVE:
-                query = createActiveTaskStreamingQuery(
-                    handle,
-                    dataSource
-                );
+                query = createActiveTaskStreamingQuery(handle, dataSource);
                 tasks.addAll(query.map(taskInfoMapper).list());
                 break;
               case COMPLETE:
@@ -387,6 +381,44 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         },
         3,
         SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+  }
+
+  /**
+   * Executes the given callback for the specified taskId. If the execution fails,
+   * the exception thrown is always a DruidException. If the thrown DruidException
+   * is found to be transient, the execution is retried.
+   */
+  private <T> void executeWithRetryForTask(String taskId, HandleCallback<T> callback)
+  {
+    connector.retryWithHandle(
+        handle -> {
+          try {
+            return callback.withHandle(handle);
+          }
+          catch (Throwable t) {
+            if (isStatementException(t) && getEntry(taskId).isPresent()) {
+              throw new EntryExistsException("Task", taskId);
+            } else if (connector.isRootCausePacketTooBigException(t)) {
+              throw new DruidException(
+                  StringUtils.format(
+                      "Payload for task [%s] exceeds the packet limit."
+                      + " Update the max_allowed_packet on your metadata store"
+                      + " server or in the connection properties.",
+                      taskId
+                  ),
+                  DruidException.HTTP_CODE_BAD_REQUEST,
+                  t
+              );
+            } else {
+              throw new DruidException(
+                  StringUtils.format("Encountered metadata exception for task [%s]", taskId),
+                  t
+              );
+            }
+          }
+        },
+        e -> e instanceof DruidException && ((DruidException) e).isTransient()
     );
   }
 
@@ -1016,7 +1048,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   {
     ExecutorService executorService = Executors.newSingleThreadExecutor();
     taskMigrationCompleteFuture = executorService.submit(
-        () -> populateTaskTypeAndGroupId()
+        this::populateTaskTypeAndGroupId
     );
   }
 
