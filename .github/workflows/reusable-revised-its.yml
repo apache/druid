@@ -66,6 +66,8 @@ env:
   AWS_ACCESS_KEY_ID: ${{ inputs.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ inputs.AWS_SECRET_ACCESS_KEY }}
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
+  DOCKER_CLIENT_TIMEOUT: 120
+  COMPOSE_HTTP_TIMEOUT: 120
 
 jobs:
   test: # GitHub job that runs a given revised/new IT against retrieved cached druid docker image
@@ -122,6 +124,12 @@ jobs:
         run: |
           docker load --input druid-container-jdk${{ inputs.build_jdk }}.tar.gz
           docker images
+
+      - name: Stop and remove docker containers
+        run: |
+          echo "Force stopping all containers and pruning"
+          docker ps -aq | xargs -r docker rm -f
+          docker system prune -af --volumes
 
       - name: Run IT
         run: ${{ inputs.script }}
