@@ -825,4 +825,12 @@
     <!-- this one seems to apply to backend server - https://nvd.nist.gov/vuln/detail/CVE-2023-25613 -->
     <cve>CVE-2023-25613</cve>
   </suppress>
+  <suppress>
+    <notes><![CDATA[
+     file name: ranger-plugins-*-2.0.0.jar
+     ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.ranger/ranger\-plugins\-.*@2.0.0$</packageUrl>
+    <!-- applies to ranger-hive-plugin which afaict we do not use https://nvd.nist.gov/vuln/detail/CVE-2021-40331 -->
+    <cve>CVE-2021-40331</cve>
+  </suppress>
 </suppressions>

@@ -164,6 +164,10 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         fields.put(entry.getKey(), entry.getValue().getTypes());
       }
     }
+    // special handling for when column only has arrays with null elements, treat it as a string array
+    if (fields.isEmpty() && fieldIndexers.size() == 1) {
+      fields.put(fieldIndexers.firstKey(), new FieldTypeInfo.MutableTypeSet().add(ColumnType.STRING_ARRAY));
+    }
     return fields;
   }
 
@@ -282,6 +286,10 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
 
   private ColumnType getLogicalType()
   {
+    if (fieldIndexers.isEmpty()) {
+      // we didn't see anything, so we can be anything, so why not a string?
+      return ColumnType.STRING;
+    }
     if (fieldIndexers.size() == 1 && fieldIndexers.containsKey(NestedPathFinder.JSON_PATH_ROOT)) {
       FieldIndexer rootField = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
       ColumnType singleType = rootField.getTypes().getSingleType();

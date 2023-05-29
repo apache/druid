@@ -27,15 +27,17 @@ set -e
 # Enable for debugging
 #set -x
 
-export MODULE_DIR=$(cd $(dirname $0) && pwd)
+export BASE_MODULE_DIR=$(cd $(dirname $0) && pwd)
+
+# The location of the tests, which may be different than
+# the location of this file.
+export MODULE_DIR=${IT_MODULE_DIR:-$BASE_MODULE_DIR}
 
 function usage {
   cat <<EOF
 Usage: $0 cmd [category]
   -h, help
       Display this message
-  prepare category
-      Generate the docker-compose.yaml file for the category for debugging.
   up category
       Start the cluster
   down category
@@ -45,7 +47,7 @@ Usage: $0 cmd [category]
   compose-cmd category
       Pass the command to Docker compose. Cluster should already be up.
   gen category
-      Generate docker-compose.yaml files (only.) Done automatically as
+      Generate docker-compose.yaml file (only.) Done automatically as
       part of up. Use only for debugging.
 EOF
 }
@@ -60,7 +62,7 @@ CMD=$1
 shift
 
 function check_env_file {
-  export ENV_FILE=$MODULE_DIR/../image/target/env.sh
+  export ENV_FILE=$BASE_MODULE_DIR/../image/target/env.sh
   if [ ! -f $ENV_FILE ]; then
     echo "Please build the Docker test image before testing" 1>&2
     exit 1
@@ -127,33 +129,33 @@ function show_status {
 function build_shared_dir {
   mkdir -p $SHARED_DIR
   # Must start with an empty DB to keep MySQL happy
-  rm -rf $SHARED_DIR/db
+  sudo rm -rf $SHARED_DIR/db
   mkdir -p $SHARED_DIR/logs
   mkdir -p $SHARED_DIR/tasklogs
   mkdir -p $SHARED_DIR/db
   mkdir -p $SHARED_DIR/kafka
   mkdir -p $SHARED_DIR/resources
-  cp $MODULE_DIR/assets/log4j2.xml $SHARED_DIR/resources
+  cp $BASE_MODULE_DIR/assets/log4j2.xml $SHARED_DIR/resources
   # Permissions in some build setups are screwed up. See above. The user
   # which runs Docker does not have permission to write into the /shared
   # directory. Force ownership to allow writing.
-  chmod -R a+rwx $SHARED_DIR
+  sudo chmod -R a+rwx $SHARED_DIR
 }
 
 # Either generate the docker-compose file, or use "static" versions.
 function docker_file {
 
-  # If a template exists, generate the docker-compose.yaml file. Copy over the Common
-  # folder.
-  TEMPLATE_DIR=$MODULE_DIR/templates
-  TEMPLATE_SCRIPT=${DRUID_INTEGRATION_TEST_GROUP}.py
-  if [ -f "$TEMPLATE_DIR/$TEMPLATE_SCRIPT" ]; then
+  # If a template exists, generate the docker-compose.yaml file.
+  # Copy over the Common folder.
+  TEMPLATE_SCRIPT=docker-compose.py
+  if [ -f "$CLUSTER_DIR/$TEMPLATE_SCRIPT" ]; then
+    export PYTHONPATH=$BASE_MODULE_DIR/cluster
     export COMPOSE_DIR=$TARGET_DIR/cluster/$DRUID_INTEGRATION_TEST_GROUP
     mkdir -p $COMPOSE_DIR
-    pushd $TEMPLATE_DIR > /dev/null
+    pushd $CLUSTER_DIR > /dev/null
     python3 $TEMPLATE_SCRIPT
     popd > /dev/null
-    cp -r $MODULE_DIR/cluster/Common $TARGET_DIR/cluster
+    cp -r $BASE_MODULE_DIR/cluster/Common $TARGET_DIR/cluster
   else
     # Else, use the existing non-template file in place.
     if [ ! -d $CLUSTER_DIR ]; then
@@ -205,6 +207,13 @@ function verify_docker_file {
   fi
 }
 
+function run_setup {
+  SETUP_SCRIPT="$CLUSTER_DIR/setup.sh"
+  if [ -f "$SETUP_SCRIPT" ]; then
+    source "$SETUP_SCRIPT"
+  fi
+}
+
 # Determine if docker-compose is available. If not, assume Docker supports
 # the compose subcommand
 set +e
@@ -219,17 +228,6 @@ set -e
 # Print environment for debugging
 #env
 
-# Determine if docker-compose is available. If not, assume Docker supports
-# the compose subcommand
-set +e
-if which docker-compose > /dev/null
-then
-  DOCKER_COMPOSE='docker-compose'
-else
-  DOCKER_COMPOSE='docker compose'
-fi
-set -e
-
 case $CMD in
   "-h" )
     usage
@@ -238,17 +236,11 @@ case $CMD in
     usage
     $DOCKER_COMPOSE help
     ;;
-  "prepare" )
-    check_env_file
-    category $*
-    build_shared_dir
-    docker_file
-    ;;
   "gen" )
     category $*
     build_shared_dir
     docker_file
-    echo "Generated file is in $COMPOSE_DIR"
+    echo "Generated file is $COMPOSE_DIR/docker-compose.yaml"
     ;;
   "up" )
     check_env_file
@@ -256,6 +248,7 @@ case $CMD in
     echo "Starting cluster $DRUID_INTEGRATION_TEST_GROUP"
     build_shared_dir
     docker_file
+    run_setup
     cd $COMPOSE_DIR
     $DOCKER_COMPOSE $DOCKER_ARGS up -d
     # Enable the following for debugging

@@ -23,7 +23,7 @@ title: "Kafka Emitter"
   -->
 
 
-To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `kafka-emitter` in the extensions load list.
+To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `kafka-emitter` in the extensions load list.
 
 ## Introduction
 

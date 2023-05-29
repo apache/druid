@@ -136,7 +136,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       }
 
       // no data, we don't need to write this column
-      if (mergedFields.size() == 0) {
+      if (numMergeIndex == 0 && mergedFields.size() == 0) {
         hasOnlyNulls = true;
         return;
       }

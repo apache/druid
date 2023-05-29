@@ -49,7 +49,7 @@ If your Kafka cluster enables consumer-group based ACLs, you can set `group.id` 
 
 ## Load the Kafka indexing service
 
-To use the Kafka indexing service, load the `druid-kafka-indexing-service` extension on both the Overlord and the MiddleManagers. See [Loading extensions](../extensions.md#loading-extensions) for instructions on how to configure extensions.
+To use the Kafka indexing service, load the `druid-kafka-indexing-service` extension on both the Overlord and the MiddleManagers. See [Loading extensions](../../configuration/extensions.md) for instructions on how to configure extensions.
 
 ## Define a supervisor spec
 
@@ -153,7 +153,13 @@ You would configure it as follows:
 
 - `valueFormat`: Define how to parse the payload value. Set this to the payload parsing input format (`{ "type": "json" }`).
 - `timestampColumnName`: Supply a custom name for the Kafka timestamp in the Druid schema to avoid conflicts with columns from the payload. The default is `kafka.timestamp`.
-- `headerFormat`: The default "string" decodes UTF8-encoded strings from the Kafka header. If you need another format, you can implement your own parser.
+- `headerFormat`: The default value `string` decodes strings in UTF-8 encoding from the Kafka header.
+   Other supported encoding formats include the following:
+   - `ISO-8859-1`: ISO Latin Alphabet No. 1, that is, ISO-LATIN-1.
+   - `US-ASCII`: Seven-bit ASCII. Also known as ISO646-US. The Basic Latin block of the Unicode character set.
+   - `UTF-16`: Sixteen-bit UCS Transformation Format, byte order identified by an optional byte-order mark.
+   - `UTF-16BE`: Sixteen-bit UCS Transformation Format, big-endian byte order.
+   - `UTF-16LE`: Sixteen-bit UCS Transformation Format, little-endian byte order.
 - `headerColumnPrefix`: Supply a prefix to the Kafka headers to avoid any conflicts with columns from the payload. The default is `kafka.header.`.
   Considering the header from the example, Druid maps the headers to the following columns: `kafka.header.env`, `kafka.header.zone`.
 - `keyFormat`: Supply an input format to parse the key. Only the first value will be used.

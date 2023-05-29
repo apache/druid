@@ -27,7 +27,7 @@ class TaskClient:
     '''
     Client for Overlord task-related APIs.
 
-    See https://druid.apache.org/docs/latest/operations/api-reference.html#tasks
+    See https://druid.apache.org/docs/latest/api-reference/api-reference.html#tasks
     '''
 
     def __init__(self, rest_client):

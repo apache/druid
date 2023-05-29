@@ -29,7 +29,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.indexing.overlord.helpers.OverlordHelper;
+import org.apache.druid.indexing.overlord.duty.OverlordDuty;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.indexing.DurableStorageCleaner;
 import org.apache.druid.msq.indexing.DurableStorageCleanerConfig;
@@ -94,7 +94,7 @@ public class MSQDurableStorageModule implements DruidModule
             DurableStorageCleanerConfig.class
         );
 
-        Multibinder.newSetBinder(binder, OverlordHelper.class)
+        Multibinder.newSetBinder(binder, OverlordDuty.class)
                    .addBinding()
                    .to(DurableStorageCleaner.class);
       }

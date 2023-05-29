@@ -58,7 +58,7 @@ public final class JsonConfigTesterBaseTest
     propertyValues.put(getPropertyKey("map"), "{\"k1\": \"v1\", \"k2\": \"v2\"}");
     testProperties.putAll(propertyValues);
     configProvider.inject(testProperties, configurator);
-    Sample results = configProvider.get().get();
+    Sample results = configProvider.get();
 
     Assert.assertEquals(1, results.getPrimitiveInt());
     Assert.assertTrue(results.getPrimitiveBoolean());
