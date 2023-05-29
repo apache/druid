@@ -165,31 +165,62 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   ) throws EntryExistsException
   {
     try {
-      executeWithRetryForTask(
-          id,
-          handle -> {
-            final String sql = StringUtils.format(
-                "INSERT INTO %s (id, created_date, datasource, payload, type, group_id, active, status_payload) "
-                + "VALUES (:id, :created_date, :datasource, :payload, :type, :group_id, :active, :status_payload)",
-                getEntryTable()
-            );
-            handle.createStatement(sql)
-                  .bind("id", id)
-                  .bind("created_date", timestamp.toString())
-                  .bind("datasource", dataSource)
-                  .bind("payload", jsonMapper.writeValueAsBytes(entry))
-                  .bind("type", type)
-                  .bind("group_id", groupId)
-                  .bind("active", active)
-                  .bind("status_payload", jsonMapper.writeValueAsBytes(status))
-                  .execute();
-            return null;
-          }
+      getConnector().retryWithHandle(
+          handle -> insertEntryWithHandle(handle, id, timestamp, dataSource, entry, active, status, type, groupId),
+          this::isTransientException
       );
     }
+    catch (CallbackFailedException e) {
+      propageError(e.getCause());
+    }
     catch (Exception e) {
-      Throwables.propagateIfPossible(e);
-      throw new RuntimeException(e);
+      propageError(e);
+    }
+  }
+
+  private void propageError(Throwable t)
+  {
+    Throwables.propagateIfPossible(t);
+    throw new RuntimeException(t);
+  }
+
+  /**
+   * Inserts the given entry into the metadata store. Any exception thrown by a
+   * HandleCallback is wrapped in a {@link DruidException} wrapped in a
+   * {@link CallbackFailedException}.
+   */
+  private int insertEntryWithHandle(
+      Handle handle,
+      String entryId,
+      DateTime timestamp,
+      String dataSource,
+      EntryType entry,
+      boolean active,
+      StatusType status,
+      String type,
+      String groupId
+  )
+  {
+    try {
+      final String sql = StringUtils.format(
+          "INSERT INTO %s (id, created_date, datasource, payload, type, group_id, active, status_payload) "
+          + "VALUES (:id, :created_date, :datasource, :payload, :type, :group_id, :active, :status_payload)",
+          getEntryTable()
+      );
+      handle.createStatement(sql)
+            .bind("id", entryId)
+            .bind("created_date", timestamp.toString())
+            .bind("datasource", dataSource)
+            .bind("payload", jsonMapper.writeValueAsBytes(entry))
+            .bind("type", type)
+            .bind("group_id", groupId)
+            .bind("active", active)
+            .bind("status_payload", jsonMapper.writeValueAsBytes(status))
+            .execute();
+      return 1;
+    }
+    catch (Throwable t) {
+      throw wrapInDruidException(entryId, t);
     }
   }
 
@@ -197,6 +228,17 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   {
     return e instanceof StatementException ||
            (e instanceof CallbackFailedException && e.getCause() instanceof StatementException);
+  }
+
+  private boolean isTransientException(Throwable t)
+  {
+    if (t instanceof CallbackFailedException) {
+      return isTransientException(t.getCause());
+    } else if (t instanceof DruidException) {
+      return ((DruidException) t).isTransient();
+    }
+
+    return false;
   }
 
   @Override
@@ -385,41 +427,26 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   /**
-   * Executes the given callback for the specified taskId. If the execution fails,
-   * the exception thrown is always a DruidException. If the thrown DruidException
-   * is found to be transient, the execution is retried.
+   * Wraps the given error in a user friendly DruidException.
    */
-  private <T> void executeWithRetryForTask(String taskId, HandleCallback<T> callback)
+  private DruidException wrapInDruidException(String taskId, Throwable t)
   {
-    connector.retryWithHandle(
-        handle -> {
-          try {
-            return callback.withHandle(handle);
-          }
-          catch (Throwable t) {
-            if (isStatementException(t) && getEntry(taskId).isPresent()) {
-              throw new EntryExistsException("Task", taskId);
-            } else if (connector.isRootCausePacketTooBigException(t)) {
-              throw new DruidException(
-                  StringUtils.format(
-                      "Payload for task [%s] exceeds the packet limit."
-                      + " Update the max_allowed_packet on your metadata store"
-                      + " server or in the connection properties.",
-                      taskId
-                  ),
-                  DruidException.HTTP_CODE_BAD_REQUEST,
-                  t
-              );
-            } else {
-              throw new DruidException(
-                  StringUtils.format("Encountered metadata exception for task [%s]", taskId),
-                  t
-              );
-            }
-          }
-        },
-        e -> e instanceof DruidException && ((DruidException) e).isTransient()
-    );
+    if (isStatementException(t) && getEntry(taskId).isPresent()) {
+      return new EntryExistsException("Task", taskId);
+    } else if (connector.isRootCausePacketTooBigException(t)) {
+      return new DruidException(
+          StringUtils.format(
+              "Payload for task [%s] exceeds the packet limit."
+              + " Update the max_allowed_packet on your metadata store"
+              + " server or in the connection properties.",
+              taskId
+          ),
+          DruidException.HTTP_CODE_BAD_REQUEST,
+          t
+      );
+    } else {
+      return new DruidException(StringUtils.format("Encountered metadata exception for task [%s]", taskId), t);
+    }
   }
 
   /**
