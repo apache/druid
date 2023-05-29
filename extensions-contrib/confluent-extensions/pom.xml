@@ -17,7 +17,7 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>24.0.2</version>
+    <version>25.0.0</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
