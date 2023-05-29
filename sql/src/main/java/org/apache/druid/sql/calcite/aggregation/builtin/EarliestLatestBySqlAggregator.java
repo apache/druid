@@ -168,12 +168,12 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
           InferTypes.RETURN_TYPE,
           OperandTypes.or(
               OperandTypes.sequence(
-                  "'" + aggregatorType.name() + "(expr, timeColumn)'\n",
+                  "'" + StringUtils.format("%s_BY", aggregatorType.name()) + "(expr, timeColumn)'\n",
                   OperandTypes.ANY,
                   OperandTypes.family(SqlTypeFamily.TIMESTAMP)
               ),
               OperandTypes.sequence(
-                  "'" + aggregatorType.name() + "(expr, timeColumn, maxBytesPerString)'\n",
+                  "'" + StringUtils.format("%s_BY", aggregatorType.name()) + "(expr, timeColumn, maxBytesPerString)'\n",
                   OperandTypes.ANY,
                   OperandTypes.family(SqlTypeFamily.TIMESTAMP),
                   OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL)

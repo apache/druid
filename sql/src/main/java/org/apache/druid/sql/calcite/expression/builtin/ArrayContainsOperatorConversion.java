@@ -52,7 +52,7 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
       .operatorBuilder("ARRAY_CONTAINS")
       .operandTypeChecker(
           OperandTypes.sequence(
-              "(array,array)",
+              "ARRAY_CONTAINS(array,array)",
               OperandTypes.or(
                   OperandTypes.family(SqlTypeFamily.ARRAY),
                   OperandTypes.family(SqlTypeFamily.STRING)

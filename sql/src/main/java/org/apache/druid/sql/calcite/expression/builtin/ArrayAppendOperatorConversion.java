@@ -33,7 +33,7 @@ public class ArrayAppendOperatorConversion extends DirectOperatorConversion
       .operatorBuilder("ARRAY_APPEND")
       .operandTypeChecker(
           OperandTypes.sequence(
-              "(array,expr)",
+              "ARRAY_APPEND(array,expr)",
               OperandTypes.or(
                   OperandTypes.family(SqlTypeFamily.ARRAY),
                   OperandTypes.family(SqlTypeFamily.STRING)
