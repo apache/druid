@@ -604,13 +604,14 @@ ${title} uncompressed size: ${formatBytesCompact(
                     {dataProcessedShuffle(stage)}
                   </>
                 )}
-                {stages.hasCounterForStage(stage, 'segmentGenerationProgress') && (
-                  <>
-                    <div className="counter-spacer extend-left" />
-                    {dataProcessedSegmentGeneration(stage, 'rowsMerged')}
-                    {dataProcessedSegmentGeneration(stage, 'rowsPushed')}
-                  </>
-                )}
+                {stages.hasCounterForStage(stage, 'segmentGenerationProgress') &&
+                  stages.getTotalSegmentGenerationProgressForStage(stage, 'rowsMerged') > 0 && (
+                    <>
+                      <div className="counter-spacer extend-left" />
+                      {dataProcessedSegmentGeneration(stage, 'rowsMerged')}
+                      {dataProcessedSegmentGeneration(stage, 'rowsPushed')}
+                    </>
+                  )}
               </>
             );
           },

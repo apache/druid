@@ -75,6 +75,7 @@ import org.apache.druid.utils.Throwables;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -305,7 +306,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     handlerContext.hook().captureBindableRel(bindableRel);
     PlannerContext plannerContext = handlerContext.plannerContext();
     if (explain != null) {
-      return planExplanation(bindableRel, false);
+      return planExplanation(rootQueryRel, bindableRel, false);
     } else {
       final BindableRel theRel = bindableRel;
       final DataContext dataContext = plannerContext.createDataContext(
@@ -352,9 +353,10 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   }
 
   /**
-   * Construct a {@link PlannerResult} for an 'explain' query from a {@link RelNode}
+   * Construct a {@link PlannerResult} for an 'explain' query from a {@link RelNode} and root {@link RelRoot}
    */
   protected PlannerResult planExplanation(
+      final RelRoot relRoot,
       final RelNode rel,
       final boolean isDruidConventionExplanation
   )
@@ -368,15 +370,18 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
         if (plannerContext.getPlannerConfig().isUseNativeQueryExplain()) {
           DruidRel<?> druidRel = (DruidRel<?>) rel;
           try {
-            explanation = explainSqlPlanAsNativeQueries(druidRel);
+            explanation = explainSqlPlanAsNativeQueries(relRoot, druidRel);
           }
           catch (Exception ex) {
             log.warn(ex, "Unable to translate to a native Druid query. Resorting to legacy Druid explain plan.");
           }
         }
       }
-      final Set<Resource> resources =
-          plannerContext.getResourceActions().stream().map(ResourceAction::getResource).collect(Collectors.toSet());
+      final List<Resource> resources = plannerContext.getResourceActions()
+          .stream()
+          .map(ResourceAction::getResource)
+          .sorted(Comparator.comparing(Resource::getName))
+          .collect(Collectors.toList());
       resourcesString = plannerContext.getJsonMapper().writeValueAsString(resources);
     }
     catch (JsonProcessingException jpe) {
@@ -407,11 +412,12 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
    * and not indicative of the native Druid Queries which will get executed.
    * This method assumes that the Planner has converted the RelNodes to DruidRels, and thereby we can implicitly cast it
    *
+   * @param relRoot  The rel root.
    * @param rel Instance of the root {@link DruidRel} which is formed by running the planner transformations on it
    * @return A string representing an array of native queries that correspond to the given SQL query, in JSON format
    * @throws JsonProcessingException
    */
-  private String explainSqlPlanAsNativeQueries(DruidRel<?> rel) throws JsonProcessingException
+  private String explainSqlPlanAsNativeQueries(final RelRoot relRoot, DruidRel<?> rel) throws JsonProcessingException
   {
     ObjectMapper jsonMapper = handlerContext.jsonMapper();
     List<DruidQuery> druidQueryList;
@@ -429,8 +435,11 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     for (DruidQuery druidQuery : druidQueryList) {
       Query<?> nativeQuery = druidQuery.getQuery();
       ObjectNode objectNode = jsonMapper.createObjectNode();
-      objectNode.put("query", jsonMapper.convertValue(nativeQuery, ObjectNode.class));
-      objectNode.put("signature", jsonMapper.convertValue(druidQuery.getOutputRowSignature(), ArrayNode.class));
+      objectNode.set("query", jsonMapper.convertValue(nativeQuery, ObjectNode.class));
+      objectNode.set("signature", jsonMapper.convertValue(druidQuery.getOutputRowSignature(), ArrayNode.class));
+      objectNode.set(
+          "columnMappings",
+          jsonMapper.convertValue(QueryUtils.buildColumnMappings(relRoot.fields, druidQuery), ArrayNode.class));
       nativeQueriesArrayNode.add(objectNode);
     }
 
@@ -517,7 +526,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     handlerContext.hook().captureDruidRel(druidRel);
 
     if (explain != null) {
-      return planExplanation(druidRel, true);
+      return planExplanation(possiblyLimitedRoot, druidRel, true);
     } else {
       // Compute row type.
       final RelDataType rowType = prepareResult.getReturnedRowType();

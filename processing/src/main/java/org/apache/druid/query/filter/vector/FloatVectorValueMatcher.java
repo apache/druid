@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.filter.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -30,7 +29,6 @@ import javax.annotation.Nullable;
 public class FloatVectorValueMatcher implements VectorValueMatcherFactory
 {
   private final VectorValueSelector selector;
-  private final boolean canHaveNulls = !NullHandling.replaceWithDefault();
 
   public FloatVectorValueMatcher(final VectorValueSelector selector)
   {
@@ -40,7 +38,7 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
   @Override
   public VectorValueMatcher makeMatcher(@Nullable final String value)
   {
-    if (value == null && canHaveNulls) {
+    if (value == null) {
       return makeNullValueMatcher(selector);
     }
 
@@ -62,7 +60,7 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
         final float[] vector = selector.getFloatVector();
         final int[] selection = match.getSelection();
         final boolean[] nulls = selector.getNullVector();
-        final boolean hasNulls = canHaveNulls && nulls != null;
+        final boolean hasNulls = nulls != null;
 
         int numRows = 0;
 
@@ -98,7 +96,7 @@ public class FloatVectorValueMatcher implements VectorValueMatcherFactory
         final float[] vector = selector.getFloatVector();
         final int[] selection = match.getSelection();
         final boolean[] nulls = selector.getNullVector();
-        final boolean hasNulls = canHaveNulls && nulls != null;
+        final boolean hasNulls = nulls != null;
 
         int numRows = 0;
 

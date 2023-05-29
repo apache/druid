@@ -32,6 +32,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -41,20 +42,12 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
-import org.skife.jdbi.v2.FoldController;
-import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
-import org.skife.jdbi.v2.StatementContext;
-import org.skife.jdbi.v2.TransactionCallback;
-import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.Update;
 import org.skife.jdbi.v2.tweak.HandleCallback;
-import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
 import java.io.IOException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -174,6 +167,12 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     Preconditions.checkNotNull(config.getAlertThreshold().toStandardDuration());
     Preconditions.checkNotNull(config.getPollDuration().toStandardDuration());
 
+    String defaultRule = config.getDefaultRule();
+    Preconditions.checkState(
+        defaultRule != null && !defaultRule.isEmpty(),
+        "If specified, 'druid.manager.rules.defaultRule' must have a non-empty value."
+    );
+
     this.rules = new AtomicReference<>(ImmutableMap.of());
   }
 
@@ -194,26 +193,18 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
 
       createDefaultRule(dbi, getRulesTable(), config.getDefaultRule(), jsonMapper);
       exec.scheduleWithFixedDelay(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              try {
-                // poll() is synchronized together with start() and stop() to ensure that when stop() exits, poll()
-                // won't actually run anymore after that (it could only enter the synchronized section and exit
-                // immediately because the localStartedOrder doesn't match the new currentStartOrder). It's needed
-                // to avoid flakiness in SQLMetadataRuleManagerTest.
-                // See https://github.com/apache/druid/issues/6028
-                synchronized (lock) {
-                  if (localStartedOrder == currentStartOrder) {
-                    poll();
-                  }
+          () -> {
+            try {
+              // Do not poll if already stopped
+              // See https://github.com/apache/druid/issues/6028
+              synchronized (lock) {
+                if (localStartedOrder == currentStartOrder) {
+                  poll();
                 }
               }
-              catch (Exception e) {
-                log.error(e, "uncaught exception in rule manager polling thread");
-              }
+            }
+            catch (Exception e) {
+              log.error(e, "uncaught exception in rule manager polling thread");
             }
           },
           0,
@@ -246,73 +237,45 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     
       ImmutableMap<String, List<Rule>> newRules = ImmutableMap.copyOf(
           dbi.withHandle(
-              new HandleCallback<Map<String, List<Rule>>>()
-              {
-                @Override
-                public Map<String, List<Rule>> withHandle(Handle handle)
-                {
-                  return handle.createQuery(
-                      // Return latest version rule by dataSource
-                      StringUtils.format(
-                          "SELECT r.dataSource, r.payload "
-                          + "FROM %1$s r "
-                          + "INNER JOIN(SELECT dataSource, max(version) as version FROM %1$s GROUP BY dataSource) ds "
-                          + "ON r.datasource = ds.datasource and r.version = ds.version",
-                          getRulesTable()
-                      )
-                  ).map(
-                      new ResultSetMapper<Pair<String, List<Rule>>>()
-                      {
-                        @Override
-                        public Pair<String, List<Rule>> map(int index, ResultSet r, StatementContext ctx)
-                            throws SQLException
-                        {
-                          try {
-                            return Pair.of(
-                                r.getString("dataSource"),
-                                jsonMapper.readValue(
-                                    r.getBytes("payload"), new TypeReference<List<Rule>>()
-                                    {
-                                    }
-                                )
-                            );
-                          }
-                          catch (IOException e) {
-                            throw new RuntimeException(e);
-                          }
-                        }
-                      }
+              handle -> handle.createQuery(
+                  // Return latest version rule by dataSource
+                  StringUtils.format(
+                      "SELECT r.dataSource, r.payload "
+                      + "FROM %1$s r "
+                      + "INNER JOIN(SELECT dataSource, max(version) as version FROM %1$s GROUP BY dataSource) ds "
+                      + "ON r.datasource = ds.datasource and r.version = ds.version",
+                      getRulesTable()
                   )
-                               .fold(
-                                   new HashMap<>(),
-                                   new Folder3<Map<String, List<Rule>>, Pair<String, List<Rule>>>()
-                                   {
-                                     @Override
-                                     public Map<String, List<Rule>> fold(
-                                         Map<String, List<Rule>> retVal,
-                                         Pair<String, List<Rule>> stringObjectMap,
-                                         FoldController foldController,
-                                         StatementContext statementContext
-                                     )
-                                     {
-                                       try {
-                                         String dataSource = stringObjectMap.lhs;
-                                         retVal.put(dataSource, stringObjectMap.rhs);
-                                         return retVal;
-                                       }
-                                       catch (Exception e) {
-                                         throw new RuntimeException(e);
-                                       }
-                                     }
-                                   }
-                               );
-                }
-              }
+              ).map(
+                  (index, r, ctx) -> {
+                    try {
+                      return Pair.of(
+                          r.getString("dataSource"),
+                          jsonMapper.readValue(r.getBytes("payload"), new TypeReference<List<Rule>>() {})
+                      );
+                    }
+                    catch (IOException e) {
+                      throw new RuntimeException(e);
+                    }
+                  }
+              ).fold(
+                  new HashMap<>(),
+                  (retVal, stringObjectMap, foldController, statementContext) -> {
+                    try {
+                      String dataSource = stringObjectMap.lhs;
+                      retVal.put(dataSource, stringObjectMap.rhs);
+                      return retVal;
+                    }
+                    catch (Exception e) {
+                      throw new RuntimeException(e);
+                    }
+                  }
+              )
           )
       );
 
       final int newRuleCount = newRules.values().stream().mapToInt(List::size).sum();
-      log.info("Polled and found %,d rule(s) for %,d datasource(s)", newRuleCount, newRules.size());
+      log.info("Polled and found [%d] rule(s) for [%d] datasource(s).", newRuleCount, newRules.size());
 
       rules.set(newRules);
       failStartTimeMs = 0;
@@ -322,9 +285,9 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
         failStartTimeMs = System.currentTimeMillis();
       }
 
-      if (System.currentTimeMillis() - failStartTimeMs > config.getAlertThreshold().toStandardDuration().getMillis()) {
-        log.makeAlert(e, "Exception while polling for rules")
-           .emit();
+      final long alertPeriodMillis = config.getAlertThreshold().toStandardDuration().getMillis();
+      if (System.currentTimeMillis() - failStartTimeMs > alertPeriodMillis) {
+        log.makeAlert(e, "Exception while polling for rules").emit();
         failStartTimeMs = 0;
       } else {
         log.error(e, "Exception while polling for rules");
@@ -362,6 +325,12 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   @Override
   public boolean overrideRule(final String dataSource, final List<Rule> newRules, final AuditInfo auditInfo)
   {
+    if (newRules == null) {
+      throw new IAE("Rules cannot be null.");
+    } else if (newRules.isEmpty() && config.getDefaultRule().equals(dataSource)) {
+      throw new IAE("Cluster-level rules cannot be empty.");
+    }
+
     final String ruleString;
     try {
       ruleString = jsonMapper.writeValueAsString(newRules);
@@ -374,39 +343,35 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     synchronized (lock) {
       try {
         dbi.inTransaction(
-            new TransactionCallback<Void>()
-            {
-              @Override
-              public Void inTransaction(Handle handle, TransactionStatus transactionStatus) throws Exception
-              {
-                final DateTime auditTime = DateTimes.nowUtc();
-                auditManager.doAudit(
-                    AuditEntry.builder()
-                              .key(dataSource)
-                              .type("rules")
-                              .auditInfo(auditInfo)
-                              .payload(ruleString)
-                              .auditTime(auditTime)
-                              .build(),
-                    handle
-                );
-                // Note that the method removeRulesForEmptyDatasourcesOlderThan depends on the version field
-                // to be a timestamp
-                String version = auditTime.toString();
-                handle.createStatement(
-                    StringUtils.format(
-                        "INSERT INTO %s (id, dataSource, version, payload) VALUES (:id, :dataSource, :version, :payload)",
-                        getRulesTable()
-                    )
-                )
-                      .bind("id", StringUtils.format("%s_%s", dataSource, version))
-                      .bind("dataSource", dataSource)
-                      .bind("version", version)
-                      .bind("payload", jsonMapper.writeValueAsBytes(newRules))
-                      .execute();
+            (handle, transactionStatus) -> {
+              final DateTime auditTime = DateTimes.nowUtc();
+              auditManager.doAudit(
+                  AuditEntry.builder()
+                            .key(dataSource)
+                            .type("rules")
+                            .auditInfo(auditInfo)
+                            .payload(ruleString)
+                            .auditTime(auditTime)
+                            .build(),
+                  handle
+              );
+              // Note that the method removeRulesForEmptyDatasourcesOlderThan
+              // depends on the version field to be a timestamp
+              String version = auditTime.toString();
+              handle.createStatement(
+                  StringUtils.format(
+                      "INSERT INTO %s (id, dataSource, version, payload)"
+                      + " VALUES (:id, :dataSource, :version, :payload)",
+                      getRulesTable()
+                  )
+              )
+                    .bind("id", StringUtils.format("%s_%s", dataSource, version))
+                    .bind("dataSource", dataSource)
+                    .bind("version", version)
+                    .bind("payload", jsonMapper.writeValueAsBytes(newRules))
+                    .execute();
 
-                return null;
-              }
+              return null;
             }
         );
       }
@@ -438,7 +403,8 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                 // However, since currently this query is run very infrequent (by default once a day by the KillRules Coordinator duty)
                 // and the inner query on segment table is a READ (no locking), it is keep this way.
                 StringUtils.format(
-                    "DELETE FROM %1$s WHERE datasource NOT IN (SELECT DISTINCT datasource from %2$s) and datasource!=:default_rule and version < :date_time",
+                    "DELETE FROM %1$s WHERE datasource NOT IN (SELECT DISTINCT datasource from %2$s)"
+                    + " and datasource!=:default_rule and version < :date_time",
                     getRulesTable(),
                     getSegmentsTable()
                 )

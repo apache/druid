@@ -117,7 +117,7 @@ public class IndexMergeBenchmark
 
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
     indexMergerV9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, getSegmentWriteOutMediumFactory(factoryType));
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
 
     indexesToMerge = new ArrayList<>();
 

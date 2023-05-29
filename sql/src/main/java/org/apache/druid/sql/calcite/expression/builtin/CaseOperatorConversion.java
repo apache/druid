@@ -67,7 +67,7 @@ public class CaseOperatorConversion implements SqlOperatorConversion
     // at the native layer
     // this conversion won't help if the condition expression is only part of then expression, like if the input
     // expression to coalesce was an expression itself, but this is better than nothing
-    if (druidExpressions.size() == 3) {
+    if (druidExpressions != null && druidExpressions.size() == 3) {
       final DruidExpression condition = druidExpressions.get(0);
       final DruidExpression thenExpression = druidExpressions.get(1);
       final DruidExpression elseExpression = druidExpressions.get(2);
@@ -109,7 +109,7 @@ public class CaseOperatorConversion implements SqlOperatorConversion
 
     // rewrite case_searched(notnull(someColumn), then, else) into better native filters
     //    or(then, and(else, isNull(someColumn))
-    if (druidExpressions.size() == 3) {
+    if (druidExpressions != null && druidExpressions.size() == 3) {
       final DruidExpression condition = druidExpressions.get(0);
       final DruidExpression thenExpression = druidExpressions.get(1);
       final DruidExpression elseExpression = druidExpressions.get(2);
@@ -124,15 +124,10 @@ public class CaseOperatorConversion implements SqlOperatorConversion
 
         if (call.getOperands().get(1) instanceof RexCall) {
           final RexCall thenCall = (RexCall) call.getOperands().get(1);
-          final SqlOperatorConversion thenConversion = plannerContext.getPlannerToolbox()
-                                                                     .operatorTable()
-                                                                     .lookupOperatorConversion(thenCall.getOperator());
-          if (thenConversion != null) {
-            thenFilter = thenConversion.toDruidFilter(plannerContext, rowSignature, virtualColumnRegistry, thenCall);
-          }
+          thenFilter = Expressions.toFilter(plannerContext, rowSignature, virtualColumnRegistry, thenCall);
         }
 
-        if (call.getOperands().get(2) instanceof RexLiteral) {
+        if (thenFilter != null && call.getOperands().get(2) instanceof RexLiteral) {
           if (call.getOperands().get(2).isAlwaysTrue()) {
             return new OrDimFilter(thenFilter, isNull);
           } else {
@@ -141,12 +136,7 @@ public class CaseOperatorConversion implements SqlOperatorConversion
           }
         } else if (call.getOperands().get(2) instanceof RexCall) {
           RexCall elseCall = (RexCall) call.getOperands().get(2);
-          SqlOperatorConversion elseConversion = plannerContext.getPlannerToolbox()
-                                                               .operatorTable()
-                                                               .lookupOperatorConversion(elseCall.getOperator());
-          if (elseConversion != null) {
-            elseFilter = elseConversion.toDruidFilter(plannerContext, rowSignature, virtualColumnRegistry, elseCall);
-          }
+          elseFilter = Expressions.toFilter(plannerContext, rowSignature, virtualColumnRegistry, elseCall);
         }
 
         // if either then or else filters produced a native filter (that wasn't just another expression filter)
