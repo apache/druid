@@ -139,13 +139,6 @@ public class MetadataTaskStorage implements TaskStorage
         status.getId()
     );
 
-    /*if (task.getType().contains("merge")) {
-      log.info("Kashif bloating up task [%s]", task.getId());
-      for (int i = 0; i < 10000; ++i) {
-        task.getContext().put("key_" + i, "value_" + i);
-      }
-    }*/
-
     log.info("Inserting task [%s] with status [%s].", task.getId(), status);
 
     try {
