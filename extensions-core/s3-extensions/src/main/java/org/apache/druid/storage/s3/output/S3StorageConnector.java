@@ -280,8 +280,11 @@ public class S3StorageConnector implements StorageConnector
   public void deleteFile(String path) throws IOException
   {
     try {
+      final String fullPath = objectPath(path);
+      log.debug("Deleting file at bucket: %s, path: %s", config.getBucket(), fullPath);
+
       S3Utils.retryS3Operation(() -> {
-        s3Client.deleteObject(config.getBucket(), objectPath(path));
+        s3Client.deleteObject(config.getBucket(), fullPath);
         return null;
       }, config.getMaxRetry());
     }
@@ -298,8 +301,11 @@ public class S3StorageConnector implements StorageConnector
     List<DeleteObjectsRequest.KeyVersion> versions = new ArrayList<>();
 
     for (String path : paths) {
+      final String fullPath = objectPath(path);
+      log.debug("Deleting file at bucket: %s, path: %s", config.getBucket(), fullPath);
+
       // appending base path to each path
-      versions.add(new DeleteObjectsRequest.KeyVersion(objectPath(path)));
+      versions.add(new DeleteObjectsRequest.KeyVersion(fullPath));
       currentItemSize++;
       if (currentItemSize == MAX_NUMBER_OF_LISTINGS) {
         deleteKeys(versions);
@@ -329,11 +335,14 @@ public class S3StorageConnector implements StorageConnector
   public void deleteRecursively(String dirName) throws IOException
   {
     try {
+      final String fullPath = objectPath(dirName);
+      log.debug("Deleting directory at bucket: %s, path: %s", config.getBucket(), fullPath);
+
       S3Utils.deleteObjectsInPath(
           s3Client,
           MAX_NUMBER_OF_LISTINGS,
           config.getBucket(),
-          objectPath(dirName),
+          fullPath,
           Predicates.alwaysTrue(),
           config.getMaxRetry()
       );
