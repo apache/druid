@@ -120,16 +120,16 @@ jobs:
           echo $DRUID_IT_IMAGE_NAME
           docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ inputs.build_jdk }}.tar.gz
 
-      - name: Load docker image
-        run: |
-          docker load --input druid-container-jdk${{ inputs.build_jdk }}.tar.gz
-          docker images
-
       - name: Stop and remove docker containers
         run: |
           echo "Force stopping all containers and pruning"
           docker ps -aq | xargs -r docker rm -f
           docker system prune -af --volumes
+
+      - name: Load docker image
+        run: |
+          docker load --input druid-container-jdk${{ inputs.build_jdk }}.tar.gz
+          docker images
 
       - name: Run IT
         run: ${{ inputs.script }}
