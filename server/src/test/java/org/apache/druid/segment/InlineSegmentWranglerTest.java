@@ -34,12 +34,12 @@ import org.junit.rules.ExpectedException;
 
 import java.util.List;
 
-public class IterableBasedInlineSegmentWranglerTest
+public class InlineSegmentWranglerTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  private final IterableBasedInlineSegmentWrangler factory = new IterableBasedInlineSegmentWrangler();
+  private final InlineSegmentWrangler factory = new InlineSegmentWrangler();
 
   private final InlineDataSource inlineDataSource = InlineDataSource.fromIterable(
       ImmutableList.of(

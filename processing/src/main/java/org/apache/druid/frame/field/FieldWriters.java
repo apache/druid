@@ -28,7 +28,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
@@ -58,15 +57,10 @@ public class FieldWriters
   public static FieldWriter create(
       final ColumnSelectorFactory columnSelectorFactory,
       final String columnName,
-      final ColumnType columnType,
-      final boolean allowNullColumnType
+      final ColumnType columnType
   )
   {
     if (columnType == null) {
-      // Returning Complex<Json> writer since we do not know the type of column.
-      if (allowNullColumnType) {
-        return makeComplexWriter(columnSelectorFactory, columnName, NestedDataComplexTypeSerde.TYPE_NAME);
-      }
       throw new UnsupportedColumnTypeException(columnName, null);
     }
 

@@ -35,6 +35,7 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -468,7 +469,8 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       TimeseriesQuery query,
       Sequence<Result<TimeseriesResultValue>> resultSequence,
-      MemoryAllocatorFactory memoryAllocatorFactory
+      MemoryAllocatorFactory memoryAllocatorFactory,
+      boolean useNestedForUnknownTypes
   )
   {
     final RowSignature rowSignature = resultArraySignature(query);
@@ -477,18 +479,18 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         rowSignature
     );
 
+    RowSignature modifiedRowSignature = FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature);
     FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
         memoryAllocatorFactory,
-        rowSignature,
-        new ArrayList<>(),
-        true
+        modifiedRowSignature,
+        new ArrayList<>()
     );
 
     Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory);
 
     // All frames are generated with the same signature therefore we can attach the row signature
-    return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, rowSignature)));
+    return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));
   }
 
   private Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>> makeComputeManipulatorFn(

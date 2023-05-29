@@ -41,6 +41,7 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -722,17 +723,18 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       GroupByQuery query,
       Sequence<ResultRow> resultSequence,
-      MemoryAllocatorFactory memoryAllocatorFactory
+      MemoryAllocatorFactory memoryAllocatorFactory,
+      boolean useNestedForUnknownTypes
   )
   {
     RowSignature rowSignature = resultArraySignature(query);
+    RowSignature modifiedRowSignature = FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature);
 
     FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
         memoryAllocatorFactory,
-        rowSignature,
-        new ArrayList<>(),
-        true
+        modifiedRowSignature,
+        new ArrayList<>()
     );
 
 
@@ -743,7 +745,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
     Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory);
 
-    return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, rowSignature)));
+    return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));
   }
 
   /**

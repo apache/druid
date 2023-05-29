@@ -28,6 +28,7 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.segment.FrameCursorUtils;
+import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -127,19 +128,19 @@ public class FrameBasedInlineDataSourceSerializerTest
         inlineDataSource.getRows(),
         rowSignature
     );
+    RowSignature modifiedRowSignature = FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature);
     Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(
         cursor,
         FrameWriters.makeFrameWriterFactory(
             FrameType.ROW_BASED,
             new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
-            rowSignature,
-            new ArrayList<>(),
-            true
+            modifiedRowSignature,
+            new ArrayList<>()
         )
     );
     return new FrameBasedInlineDataSource(
         frames.map(frame -> new FrameSignaturePair(frame, rowSignature)).toList(),
-        rowSignature
+        modifiedRowSignature
     );
   }
 

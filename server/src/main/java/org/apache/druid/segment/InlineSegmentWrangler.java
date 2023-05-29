@@ -33,7 +33,7 @@ import java.util.Collections;
  *
  * It is not valid to pass any other DataSource type to the "getSegmentsForIntervals" method.
  */
-public class IterableBasedInlineSegmentWrangler implements SegmentWrangler
+public class InlineSegmentWrangler implements SegmentWrangler
 {
   private static final String SEGMENT_ID = "inline";
 

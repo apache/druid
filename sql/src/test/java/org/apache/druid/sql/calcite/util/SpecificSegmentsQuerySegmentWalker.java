@@ -34,7 +34,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
-import org.apache.druid.segment.IterableBasedInlineSegmentWrangler;
+import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.LookupSegmentWrangler;
 import org.apache.druid.segment.MapSegmentWrangler;
 import org.apache.druid.segment.QueryableIndex;
@@ -130,7 +130,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         conglomerate,
         new MapSegmentWrangler(
             ImmutableMap.<Class<? extends DataSource>, SegmentWrangler>builder()
-                        .put(InlineDataSource.class, new IterableBasedInlineSegmentWrangler())
+                        .put(InlineDataSource.class, new InlineSegmentWrangler())
                         .put(FrameBasedInlineDataSource.class, new FrameBasedInlineSegmentWrangler())
                         .put(
                             LookupDataSource.class,

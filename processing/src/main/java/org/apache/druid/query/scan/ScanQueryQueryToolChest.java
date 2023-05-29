@@ -33,6 +33,7 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
@@ -214,7 +215,8 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       final ScanQuery query,
       final Sequence<ScanResultValue> resultSequence,
-      MemoryAllocatorFactory memoryAllocatorFactory
+      MemoryAllocatorFactory memoryAllocatorFactory,
+      boolean useNestedForUnknownTypes
   )
   {
     final RowSignature defaultRowSignature = resultArraySignature(query);
@@ -297,12 +299,12 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       ));
     }
 
+    RowSignature modifiedRowSignature = FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature);
     FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
         memoryAllocatorFactory,
-        rowSignature,
-        new ArrayList<>(),
-        true
+        modifiedRowSignature,
+        new ArrayList<>()
     );
 
 
@@ -312,7 +314,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         frameWriterFactory
     );
 
-    return frames.map(frame -> new FrameSignaturePair(frame, rowSignature));
+    return frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature));
   }
 
   @Override

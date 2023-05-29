@@ -30,7 +30,7 @@ import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
-import org.apache.druid.segment.IterableBasedInlineSegmentWrangler;
+import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.LookupSegmentWrangler;
 import org.apache.druid.segment.MapSegmentWrangler;
 import org.apache.druid.segment.SegmentWrangler;
@@ -48,7 +48,7 @@ public class SegmentWranglerModule implements Module
   @VisibleForTesting
   static final Map<Class<? extends DataSource>, Class<? extends SegmentWrangler>> WRANGLER_MAPPINGS =
       ImmutableMap.of(
-          InlineDataSource.class, IterableBasedInlineSegmentWrangler.class,
+          InlineDataSource.class, InlineSegmentWrangler.class,
           FrameBasedInlineDataSource.class, FrameBasedInlineSegmentWrangler.class,
           LookupDataSource.class, LookupSegmentWrangler.class
       );

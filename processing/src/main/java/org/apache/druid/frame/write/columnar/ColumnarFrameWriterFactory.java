@@ -44,7 +44,6 @@ public class ColumnarFrameWriterFactory implements FrameWriterFactory
   private final MemoryAllocatorFactory allocatorFactory;
   private final RowSignature signature;
   private final List<KeyColumn> keyColumns;
-  private final boolean allowNullTypes;
 
   /**
    * Create a ColumnarFrameWriterFactory.
@@ -58,14 +57,12 @@ public class ColumnarFrameWriterFactory implements FrameWriterFactory
   public ColumnarFrameWriterFactory(
       final MemoryAllocatorFactory allocatorFactory,
       final RowSignature signature,
-      final List<KeyColumn> keyColumns,
-      final boolean allowNullTypes
+      final List<KeyColumn> keyColumns
   )
   {
     this.allocatorFactory = Preconditions.checkNotNull(allocatorFactory, "allocatorFactory");
     this.signature = signature;
     this.keyColumns = Preconditions.checkNotNull(keyColumns, "sortColumns");
-    this.allowNullTypes = allowNullTypes;
 
     if (!keyColumns.isEmpty()) {
       throw new IAE("Columnar frames cannot be sorted");
@@ -89,7 +86,7 @@ public class ColumnarFrameWriterFactory implements FrameWriterFactory
         final String column = signature.getColumnName(i);
         // note: null type won't work, but we'll get a nice error from FrameColumnWriters.create
         final ColumnType columnType = signature.getColumnType(i).orElse(null);
-        columnWriters.add(FrameColumnWriters.create(columnSelectorFactory, allocator, column, columnType, allowNullTypes));
+        columnWriters.add(FrameColumnWriters.create(columnSelectorFactory, allocator, column, columnType));
       }
     }
     catch (Throwable e) {

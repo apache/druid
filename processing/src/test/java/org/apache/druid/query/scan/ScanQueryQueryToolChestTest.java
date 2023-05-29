@@ -216,7 +216,8 @@ public class ScanQueryQueryToolChestTest
         toolChest.resultsAsFrames(
             scanQuery,
             Sequences.concat(makeResults1(ScanQuery.ResultFormat.RESULT_FORMAT_LIST), results2(), results3()),
-            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited())
+            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+            true
         ).get().toList();
 
 
@@ -270,7 +271,8 @@ public class ScanQueryQueryToolChestTest
                 results2(),
                 results3()
             ),
-            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited())
+            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+            true
         ).get().toList();
 
 
@@ -332,7 +334,8 @@ public class ScanQueryQueryToolChestTest
         toolChest.resultsAsFrames(
             scanQuery,
             Sequences.concat(results2(), results2()),
-            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited())
+            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+            true
         ).get().toList();
 
 

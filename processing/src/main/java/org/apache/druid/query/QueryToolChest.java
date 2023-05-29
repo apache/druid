@@ -349,11 +349,13 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    *  @param query Query being executed by the toolchest. Used to determine the rowSignature of the Frames
    * @param resultSequence results of the form returned by {@link #mergeResults(QueryRunner)}
    * @param memoryAllocatorFactory
+   * @param useNestedForUnknownTypes true if the unknown types in the results can be serded using complex types
    */
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       QueryType query,
       Sequence<ResultType> resultSequence,
-      MemoryAllocatorFactory memoryAllocatorFactory
+      MemoryAllocatorFactory memoryAllocatorFactory,
+      boolean useNestedForUnknownTypes
   )
   {
     return Optional.empty();

@@ -29,7 +29,6 @@ import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.segment.columnar.FrameQueryableIndex;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -45,7 +44,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -58,12 +56,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class FrameBasedIndexedTable implements IndexedTable
 {
-  private static final Logger LOG = new Logger(BroadcastSegmentIndexedTable.class);
+  private static final Logger LOG = new Logger(FrameBasedIndexedTable.class);
 
   private final Set<String> keyColumns;
   private final RowSignature rowSignature;
@@ -117,7 +114,7 @@ public class FrameBasedIndexedTable implements IndexedTable
       indexBuilders.add(m);
     }
 
-    final Sequence<Pair<Cursor, Function<String, ColumnCapabilities>>> cursors = Sequences.concat(
+    final Sequence<Cursor> cursors = Sequences.concat(
         frameBasedInlineDataSource
             .getFrames()
             .stream()
@@ -125,20 +122,22 @@ public class FrameBasedIndexedTable implements IndexedTable
               Frame frame = frameSignaturePair.getFrame();
               RowSignature rowSignature = frameSignaturePair.getRowSignature();
               FrameStorageAdapter frameStorageAdapter =
-                  new FrameStorageAdapter(frame, FrameReader.create(rowSignature, true), Intervals.ETERNITY);
-              return frameStorageAdapter.makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null)
-                  .map(cursor ->
-                           Pair.<Cursor, Function<String, ColumnCapabilities>>of(cursor, frameStorageAdapter::getColumnCapabilities
-                  ));
+                  new FrameStorageAdapter(frame, FrameReader.create(rowSignature), Intervals.ETERNITY);
+              return frameStorageAdapter.makeCursors(
+                                            null,
+                                            Intervals.ETERNITY,
+                                            VirtualColumns.EMPTY,
+                                            Granularities.ALL,
+                                            false,
+                                            null
+                                        );
             })
             .collect(Collectors.toList())
     );
 
     final Sequence<Integer> sequence = Sequences.map(
         cursors,
-        cursorWithColumnCapabilities -> {
-          Cursor cursor = cursorWithColumnCapabilities.lhs;
-          Function<String, ColumnCapabilities> columnCapabilitiesFunction = cursorWithColumnCapabilities.rhs;
+        cursor -> {
           if (cursor == null) {
             return 0;
           }
@@ -149,13 +148,7 @@ public class FrameBasedIndexedTable implements IndexedTable
           // indexes, but, an optimization for another day
           final List<BaseObjectColumnValueSelector> selectors = keyColumnNames
               .stream()
-              .map(columnName -> {
-                // multi-value dimensions are not currently supported
-                if (columnCapabilitiesFunction.apply(columnName).hasMultipleValues().isMaybeTrue()) {
-                  return NilColumnValueSelector.instance();
-                }
-                return columnSelectorFactory.makeColumnValueSelector(columnName);
-              })
+              .map(columnSelectorFactory::makeColumnValueSelector)
               .collect(Collectors.toList());
 
           while (!cursor.isDone()) {
@@ -274,11 +267,10 @@ public class FrameBasedIndexedTable implements IndexedTable
     };
   }
 
-  // TODO: Create the cache key
   @Override
   public boolean isCacheable()
   {
-    return true;
+    return false;
   }
 
   @Override
@@ -290,7 +282,10 @@ public class FrameBasedIndexedTable implements IndexedTable
   @Override
   public Optional<Closeable> acquireReferences()
   {
-    return Optional.empty();
+    return Optional.of(
+        () -> {
+        }
+    );
   }
 
   private List<FrameColumnReader> createColumnReaders(RowSignature rowSignature)

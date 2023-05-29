@@ -31,6 +31,7 @@ import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.querykit.LazyResourceHolder;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.timeline.SegmentId;
 
@@ -38,7 +39,7 @@ import java.util.function.Consumer;
 
 /**
  * Reads {@link InlineInputSlice} using {@link SegmentWrangler} (which is expected to contain an
- * {@link org.apache.druid.segment.IterableBasedInlineSegmentWrangler}).
+ * {@link InlineSegmentWrangler}).
  */
 public class InlineInputSliceReader implements InputSliceReader
 {

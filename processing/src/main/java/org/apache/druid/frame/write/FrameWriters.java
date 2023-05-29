@@ -53,28 +53,7 @@ public class FrameWriters
    * @param signature        signature of the frames
    * @param sortColumns      sort columns for the frames. If nonempty, {@link FrameSort#sort} is used to sort the
    *                         resulting frames.
-   * @param allowNullColumnTypes to allow null ColumnType in the signature. This should only be enabled when the user
-   *                             knows that the column objects exist as native Java POJOs (LinkedList, Maps etc), which
-   *                             can be serded using the Druid's nested columns
    */
-  public static FrameWriterFactory makeFrameWriterFactory(
-      final FrameType frameType,
-      final MemoryAllocatorFactory allocatorFactory,
-      final RowSignature signature,
-      final List<KeyColumn> sortColumns,
-      final boolean allowNullColumnTypes
-  )
-  {
-    switch (Preconditions.checkNotNull(frameType, "frameType")) {
-      case COLUMNAR:
-        return new ColumnarFrameWriterFactory(allocatorFactory, signature, sortColumns, allowNullColumnTypes);
-      case ROW_BASED:
-        return new RowBasedFrameWriterFactory(allocatorFactory, signature, sortColumns, allowNullColumnTypes);
-      default:
-        throw new ISE("Unrecognized frame type [%s]", frameType);
-    }
-  }
-
   public static FrameWriterFactory makeFrameWriterFactory(
       final FrameType frameType,
       final MemoryAllocatorFactory allocatorFactory,
@@ -82,7 +61,14 @@ public class FrameWriters
       final List<KeyColumn> sortColumns
   )
   {
-    return makeFrameWriterFactory(frameType, allocatorFactory, signature, sortColumns, false);
+    switch (Preconditions.checkNotNull(frameType, "frameType")) {
+      case COLUMNAR:
+        return new ColumnarFrameWriterFactory(allocatorFactory, signature, sortColumns);
+      case ROW_BASED:
+        return new RowBasedFrameWriterFactory(allocatorFactory, signature, sortColumns);
+      default:
+        throw new ISE("Unrecognized frame type [%s]", frameType);
+    }
   }
 
   /**

@@ -64,7 +64,7 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
-import org.apache.druid.segment.IterableBasedInlineSegmentWrangler;
+import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.MapSegmentWrangler;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.RowBasedSegment;
@@ -74,6 +74,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
+import org.apache.druid.segment.join.FrameBasedInlineJoinableFactory;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
@@ -1346,7 +1347,7 @@ public class ClientQuerySegmentWalkerTest
 
     final SegmentWrangler segmentWrangler = new MapSegmentWrangler(
         ImmutableMap.<Class<? extends DataSource>, SegmentWrangler>builder()
-                    .put(InlineDataSource.class, new IterableBasedInlineSegmentWrangler())
+                    .put(InlineDataSource.class, new InlineSegmentWrangler())
                     .put(FrameBasedInlineDataSource.class, new FrameBasedInlineSegmentWrangler())
                     .build()
     );
@@ -1367,11 +1368,12 @@ public class ClientQuerySegmentWalkerTest
     };
 
     final JoinableFactory joinableFactory = new MapJoinableFactory(
-        ImmutableSet.of(globalFactory, new InlineJoinableFactory()),
+        ImmutableSet.of(globalFactory, new InlineJoinableFactory(), new FrameBasedInlineJoinableFactory()),
         ImmutableMap.<Class<? extends JoinableFactory>, Class<? extends DataSource>>builder()
-            .put(InlineJoinableFactory.class, InlineDataSource.class)
-            .put(globalFactory.getClass(), GlobalTableDataSource.class)
-            .build()
+                    .put(InlineJoinableFactory.class, InlineDataSource.class)
+                    .put(FrameBasedInlineJoinableFactory.class, FrameBasedInlineDataSource.class)
+                    .put(globalFactory.getClass(), GlobalTableDataSource.class)
+                    .build()
     );
     final JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
 

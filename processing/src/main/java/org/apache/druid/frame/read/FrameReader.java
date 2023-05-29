@@ -75,10 +75,8 @@ public class FrameReader
    * the data that we receive can be serded generically using the nested data. It is currently used in the brokers to
    * store the data with unknown types into frames.
    * @param signature signature used to generate the reader
-   * @param allowNullTypes if ColumnTypes can be null. The column types that are null would be interpreted
-   *                       as Complex JSON types
    */
-  public static FrameReader create(final RowSignature signature, final boolean allowNullTypes)
+  public static FrameReader create(final RowSignature signature)
   {
     // Double-check that the frame does not have any disallowed field names. Generally, we expect this to be
     // caught on the write side, but we do it again here for safety.
@@ -91,28 +89,18 @@ public class FrameReader
     final List<FieldReader> fieldReaders = new ArrayList<>(signature.size());
 
     for (int columnNumber = 0; columnNumber < signature.size(); columnNumber++) {
-      ColumnType columnType;
-      if (!allowNullTypes) {
-        columnType =
-            Preconditions.checkNotNull(
-                signature.getColumnType(columnNumber).orElse(null),
-                "Type for column [%s]",
-                signature.getColumnName(columnNumber)
-            );
-      } else {
-        columnType = signature.getColumnType(columnNumber).orElse(ColumnType.NESTED_DATA);
-      }
+      final ColumnType columnType =
+          Preconditions.checkNotNull(
+              signature.getColumnType(columnNumber).orElse(null),
+              "Type for column [%s]",
+              signature.getColumnName(columnNumber)
+          );
 
       columnReaders.add(FrameColumnReaders.create(columnNumber, columnType));
       fieldReaders.add(FieldReaders.create(signature.getColumnName(columnNumber), columnType));
     }
 
     return new FrameReader(signature, columnReaders, fieldReaders);
-  }
-
-  public static FrameReader create(final RowSignature signature)
-  {
-    return create(signature, false);
   }
 
   public RowSignature signature()

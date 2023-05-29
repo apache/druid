@@ -31,6 +31,7 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -566,7 +567,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       TopNQuery query,
       Sequence<Result<TopNResultValue>> resultSequence,
-      MemoryAllocatorFactory memoryAllocatorFactory
+      MemoryAllocatorFactory memoryAllocatorFactory,
+      boolean useNestedForUnknownTypes
   )
   {
     final RowSignature rowSignature = resultArraySignature(query);
@@ -575,17 +577,17 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         rowSignature
     );
 
+    RowSignature modifiedRowSignature = FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature);
     FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
         memoryAllocatorFactory,
         rowSignature,
-        new ArrayList<>(),
-        true
+        new ArrayList<>()
     );
 
     Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory);
 
-    return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, rowSignature)));
+    return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));
   }
 
   static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>
