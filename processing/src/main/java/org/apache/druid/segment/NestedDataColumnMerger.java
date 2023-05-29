@@ -93,6 +93,9 @@ public class NestedDataColumnMerger implements DimensionMergerV9
         final IndexableAdapter.NestedColumnMergable mergable = closer.register(
             adapter.getNestedColumnMergeables(name)
         );
+        if (mergable == null) {
+          continue;
+        }
         final SortedValueDictionary dimValues = mergable.getValueDictionary();
 
         boolean allNulls = dimValues == null || dimValues.allNull();

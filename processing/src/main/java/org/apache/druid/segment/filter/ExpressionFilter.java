@@ -123,6 +123,12 @@ public class ExpressionFilter implements Filter
             ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr)
         ).makeMatcher(predicateFactory);
       default:
+        if (ExpressionType.NESTED_DATA.equals(outputType)) {
+          return VectorValueMatcherColumnProcessorFactory.instance().makeObjectProcessor(
+              ColumnCapabilitiesImpl.createDefault().setType(ExpressionType.toColumnType(outputType)).setHasNulls(true),
+              ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr)
+          ).makeMatcher(predicateFactory);
+        }
         throw new UOE("Vectorized expression matchers not implemented for type: [%s]", outputType);
     }
   }
@@ -301,6 +307,12 @@ public class ExpressionFilter implements Filter
       public DruidDoublePredicate makeDoublePredicate()
       {
         return Evals::asBoolean;
+      }
+
+      @Override
+      public Predicate<Object> makeObjectPredicate()
+      {
+        return Evals::objectAsBoolean;
       }
 
       // The hashcode and equals are to make SubclassesMustOverrideEqualsAndHashCodeTest stop complaining..

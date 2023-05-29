@@ -550,4 +550,4 @@ This filter allows for more flexibility, but it might be less performant than a 
 }
 ```
 
-See the [Druid expression system](../misc/math-expr.md) for more details.
+See the [Druid expression system](math-expr.md) for more details.

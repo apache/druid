@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+name: "Unit tests workflow"
 on:
   workflow_call:
     inputs:
@@ -25,6 +26,16 @@ on:
         type: boolean
         default: true
         description: 'For SQL compatibility'
+    outputs:
+      continue_tests:
+        description: 'Flag to decide if next tests need to run incase coverage issue failures'
+        value: |
+          ${{
+            (jobs.indexing_modules_test.result == 'success' || fromJson(jobs.indexing_modules_test.outputs.coverage_failure)) &&
+            (jobs.processing_modules_test.result == 'success' || fromJson(jobs.processing_modules_test.outputs.coverage_failure)) &&
+            (jobs.server_modules_test.result == 'success' || fromJson(jobs.server_modules_test.outputs.coverage_failure)) &&
+            (jobs.other_modules_test.result == 'success' || fromJson(jobs.other_modules_test.outputs.coverage_failure))
+          }}
 
 jobs:
   indexing_modules_test:

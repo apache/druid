@@ -52,7 +52,7 @@ is used to perform schema changes, repartition data, filter out unwanted data, e
 behaves just like any other [overwrite](#overwrite) with regard to atomic updates and locking.
 
 With [native batch](../ingestion/native-batch.md), use the [`druid` input
-source](../ingestion/native-batch-input-source.md#druid-input-source). If needed,
+source](../ingestion/input-sources.md#druid-input-source). If needed,
 [`transformSpec`](../ingestion/ingestion-spec.md#transformspec) can be used to filter or modify data during the
 reindexing job.
 

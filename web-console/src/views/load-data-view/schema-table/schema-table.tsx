@@ -28,6 +28,7 @@ import {
   getDimensionSpecType,
   getMetricSpecName,
   inflateDimensionSpec,
+  TIME_COLUMN,
 } from '../../../druid-models';
 import {
   DEFAULT_TABLE_CLASS_NAME,
@@ -109,7 +110,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             },
           };
         } else {
-          const isTimestamp = columnName === '__time';
+          const isTimestamp = columnName === TIME_COLUMN;
           const dimensionSpecIndex = dimensions
             ? dimensions.findIndex(d => getDimensionSpecName(d) === columnName)
             : -1;
@@ -151,7 +152,7 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
             width: isTimestamp ? 200 : 140,
             accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
             Cell: function SchemaTableCell(row: RowRenderProps) {
-              return <TableCell value={isTimestamp ? new Date(row.value) : row.value} />;
+              return <TableCell value={isTimestamp ? new Date(Number(row.value)) : row.value} />;
             },
           };
         }

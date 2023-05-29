@@ -37,6 +37,7 @@ public class DruidK8sConstants
   public static final String JAVA_OPTS = "JAVA_OPTS";
   public static final String DRUID_HOST_ENV = "druid_host";
   public static final String DRUID_HOSTNAME_ENV = "HOSTNAME";
-  static final String LABEL_KEY = "druid.k8s.peons";
+  public static final String LABEL_KEY = "druid.k8s.peons";
+  public static final String DRUID_LABEL_PREFIX = "druid.";
   static final Predicate<Throwable> IS_TRANSIENT = e -> e instanceof KubernetesResourceNotFoundException;
 }

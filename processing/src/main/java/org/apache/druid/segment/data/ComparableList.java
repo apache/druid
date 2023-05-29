@@ -29,7 +29,6 @@ import java.util.List;
 
 public class ComparableList<T extends Comparable> implements Comparable<ComparableList>
 {
-
   private final List<T> delegate;
 
   public ComparableList(List<T> input)

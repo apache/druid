@@ -117,7 +117,7 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnBuilder setStandardTypeColumnSupplier(Supplier<? extends NestedCommonFormatColumn> columnSupplier)
+  public ColumnBuilder setNestedCommonFormatColumnSupplier(Supplier<? extends NestedCommonFormatColumn> columnSupplier)
   {
     checkColumnSupplierNotSet();
     this.columnSupplier = columnSupplier;

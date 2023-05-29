@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
@@ -35,11 +36,18 @@ import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 
 public class WorkerInputsTest
 {
@@ -59,7 +67,8 @@ public class WorkerInputsTest
         stageDef,
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.MAX
+        WorkerAssignmentStrategy.MAX,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
     Assert.assertEquals(
@@ -87,7 +96,8 @@ public class WorkerInputsTest
         stageDef,
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.MAX
+        WorkerAssignmentStrategy.MAX,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
     Assert.assertEquals(
@@ -115,7 +125,8 @@ public class WorkerInputsTest
         stageDef,
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.AUTO
+        WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
     Assert.assertEquals(
@@ -140,7 +151,8 @@ public class WorkerInputsTest
         stageDef,
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.AUTO
+        WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
     Assert.assertEquals(
@@ -166,7 +178,8 @@ public class WorkerInputsTest
         stageDef,
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.AUTO
+        WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
     Assert.assertEquals(
@@ -191,7 +204,8 @@ public class WorkerInputsTest
         stageDef,
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.AUTO
+        WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
     Assert.assertEquals(
@@ -216,7 +230,8 @@ public class WorkerInputsTest
         stageDef,
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.AUTO
+        WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
     Assert.assertEquals(
@@ -242,7 +257,8 @@ public class WorkerInputsTest
         stageDef,
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.AUTO
+        WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
     Assert.assertEquals(
@@ -274,7 +290,8 @@ public class WorkerInputsTest
         stageDef,
         Int2IntMaps.EMPTY_MAP,
         new TestInputSpecSlicer(true),
-        WorkerAssignmentStrategy.AUTO
+        WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
     Assert.assertEquals(
@@ -286,6 +303,127 @@ public class WorkerInputsTest
                     .build(),
         inputs.assignmentsMap()
     );
+  }
+
+  @Test
+  public void test_max_shouldAlwaysSplitStatic()
+  {
+    TestInputSpec inputSpecToSplit = new TestInputSpec(4_000_000_000L);
+    final StageDefinition stageDef =
+        StageDefinition.builder(0)
+                       .inputs(inputSpecToSplit)
+                       .maxWorkerCount(3)
+                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .build(QUERY_ID);
+
+    TestInputSpecSlicer testInputSpecSlicer = spy(new TestInputSpecSlicer(true));
+
+    final WorkerInputs inputs = WorkerInputs.create(
+        stageDef,
+        Int2IntMaps.EMPTY_MAP,
+        testInputSpecSlicer,
+        WorkerAssignmentStrategy.MAX,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
+    );
+
+    Mockito.verify(testInputSpecSlicer, times(0)).canSliceDynamic(inputSpecToSplit);
+    Mockito.verify(testInputSpecSlicer, times(1)).sliceStatic(any(), anyInt());
+
+    Assert.assertEquals(
+        ImmutableMap.<Integer, List<InputSlice>>builder()
+                    .put(
+                        0,
+                        Collections.singletonList(new TestInputSlice(4_000_000_000L))
+                    )
+                    .put(
+                        1,
+                        Collections.singletonList(new TestInputSlice())
+                    )
+                    .put(
+                        2,
+                        Collections.singletonList(new TestInputSlice())
+                    )
+                    .build(),
+        inputs.assignmentsMap()
+    );
+
+  }
+
+  @Test
+  public void test_auto_shouldSplitDynamicIfPossible()
+  {
+    TestInputSpec inputSpecToSplit = new TestInputSpec(1_000_000_000L, 1_000_000_000L, 1_000_000_000L);
+    final StageDefinition stageDef =
+        StageDefinition.builder(0)
+                       .inputs(inputSpecToSplit)
+                       .maxWorkerCount(3)
+                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .build(QUERY_ID);
+
+    TestInputSpecSlicer testInputSpecSlicer = spy(new TestInputSpecSlicer(true));
+
+    final WorkerInputs inputs = WorkerInputs.create(
+        stageDef,
+        Int2IntMaps.EMPTY_MAP,
+        testInputSpecSlicer,
+        WorkerAssignmentStrategy.AUTO,
+        100
+    );
+
+    Mockito.verify(testInputSpecSlicer, times(1)).canSliceDynamic(inputSpecToSplit);
+    Mockito.verify(testInputSpecSlicer, times(1)).sliceDynamic(any(), anyInt(), anyInt(), anyLong());
+
+    Assert.assertEquals(
+        ImmutableMap.<Integer, List<InputSlice>>builder()
+                    .put(
+                        0,
+                        Collections.singletonList(new TestInputSlice(1_000_000_000L))
+                    )
+                    .put(
+                        1,
+                        Collections.singletonList(new TestInputSlice(1_000_000_000L))
+                    )
+                    .put(
+                        2,
+                        Collections.singletonList(new TestInputSlice(1_000_000_000L))
+                    )
+                    .build(),
+        inputs.assignmentsMap()
+    );
+  }
+
+  @Test
+  public void test_auto_shouldUseLeastWorkersPossible()
+  {
+    TestInputSpec inputSpecToSplit = new TestInputSpec(1_000_000_000L, 1_000_000_000L, 1_000_000_000L);
+    final StageDefinition stageDef =
+        StageDefinition.builder(0)
+                       .inputs(inputSpecToSplit)
+                       .maxWorkerCount(3)
+                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .build(QUERY_ID);
+
+    TestInputSpecSlicer testInputSpecSlicer = spy(new TestInputSpecSlicer(true));
+
+    final WorkerInputs inputs = WorkerInputs.create(
+        stageDef,
+        Int2IntMaps.EMPTY_MAP,
+        testInputSpecSlicer,
+        WorkerAssignmentStrategy.AUTO,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
+    );
+
+    Assert.assertEquals(
+        ImmutableMap.<Integer, List<InputSlice>>builder()
+                    .put(
+                        0,
+                        Collections.singletonList(new TestInputSlice(1_000_000_000L, 1_000_000_000L, 1_000_000_000L))
+                    )
+                    .build(),
+        inputs.assignmentsMap()
+    );
+
+    Mockito.verify(testInputSpecSlicer, times(1)).canSliceDynamic(inputSpecToSplit);
   }
 
   @Test
