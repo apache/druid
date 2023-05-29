@@ -53,9 +53,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 
 /**
  * Helps tests make segments.
@@ -72,7 +74,7 @@ public class IndexBuilder
   private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory = OffHeapMemorySegmentWriteOutMediumFactory.instance();
   private IndexMerger indexMerger;
   private File tmpDir;
-  private IndexSpec indexSpec = new IndexSpec();
+  private IndexSpec indexSpec = IndexSpec.DEFAULT;
   private int maxRows = DEFAULT_MAX_ROWS;
   private int intermediatePersistSize = ROWS_PER_INDEX_FOR_MERGING;
   private IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
@@ -96,7 +98,7 @@ public class IndexBuilder
 
   public static IndexBuilder create()
   {
-    return new IndexBuilder(TestHelper.JSON_MAPPER, TestHelper.NO_CACHE_COLUMN_CONFIG);
+    return new IndexBuilder(TestHelper.JSON_MAPPER, TestHelper.NO_CACHE_ALWAYS_USE_INDEXES_COLUMN_CONFIG);
   }
 
   public static IndexBuilder create(ColumnConfig columnConfig)
@@ -106,7 +108,7 @@ public class IndexBuilder
 
   public static IndexBuilder create(ObjectMapper jsonMapper)
   {
-    return new IndexBuilder(jsonMapper, TestHelper.NO_CACHE_COLUMN_CONFIG);
+    return new IndexBuilder(jsonMapper, TestHelper.NO_CACHE_ALWAYS_USE_INDEXES_COLUMN_CONFIG);
   }
 
   public static IndexBuilder create(ObjectMapper jsonMapper, ColumnConfig columnConfig)
@@ -124,6 +126,12 @@ public class IndexBuilder
   {
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     this.indexMerger = new IndexMergerV9(jsonMapper, indexIO, segmentWriteOutMediumFactory);
+    return this;
+  }
+
+  public IndexBuilder writeNullColumns(boolean shouldWriteNullColumns)
+  {
+    this.indexMerger = new IndexMergerV9(jsonMapper, indexIO, segmentWriteOutMediumFactory, shouldWriteNullColumns);
     return this;
   }
 
@@ -202,6 +210,12 @@ public class IndexBuilder
     return this;
   }
 
+  public IndexBuilder mapSchema(Function<IncrementalIndexSchema, IncrementalIndexSchema> f)
+  {
+    this.schema = f.apply(this.schema);
+    return this;
+  }
+
   public IncrementalIndex buildIncrementalIndex()
   {
     if (inputSource != null) {
@@ -222,15 +236,34 @@ public class IndexBuilder
     Preconditions.checkNotNull(indexMerger, "indexMerger");
     Preconditions.checkNotNull(tmpDir, "tmpDir");
     try (final IncrementalIndex incrementalIndex = buildIncrementalIndex()) {
+      List<IndexableAdapter> adapters = Collections.singletonList(
+          new QueryableIndexIndexableAdapter(
+              indexIO.loadIndex(
+                  indexMerger.persist(
+                      incrementalIndex,
+                      new File(
+                          tmpDir,
+                          StringUtils.format("testIndex-%s", ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE))
+                      ),
+                      indexSpec,
+                      null
+                  )
+              )
+          )
+      );
+      // Do a 'merge' of the persisted segment even though there is only one; this time it will be reading from the
+      // queryable index instead of the incremental index, which also mimics the behavior of real ingestion tasks
+      // which persist incremental indexes as intermediate segments and then merges all the intermediate segments to
+      // publish
       return indexIO.loadIndex(
-          indexMerger.persist(
-              incrementalIndex,
-              new File(
-                  tmpDir,
-                  StringUtils.format("testIndex-%s", ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE))
-              ),
+          indexMerger.merge(
+              adapters,
+              schema.isRollup(),
+              schema.getMetrics(),
+              tmpDir,
+              schema.getDimensionsSpec(),
               indexSpec,
-              null
+              Integer.MAX_VALUE
           )
       );
     }
@@ -238,6 +271,7 @@ public class IndexBuilder
       throw new RuntimeException(e);
     }
   }
+
 
   public QueryableIndex buildMMappedMergedIndex()
   {

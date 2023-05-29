@@ -122,6 +122,6 @@ public abstract class CalciteTestBase
 
   protected static ResourceAction externalRead(final String inputSourceType)
   {
-    return new ResourceAction(new Resource(ResourceType.EXTERNAL, inputSourceType), Action.READ);
+    return new ResourceAction(new Resource(inputSourceType, ResourceType.EXTERNAL), Action.READ);
   }
 }

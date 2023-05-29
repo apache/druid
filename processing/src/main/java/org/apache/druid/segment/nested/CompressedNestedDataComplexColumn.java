@@ -44,6 +44,10 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringEncodingStrategies;
+import org.apache.druid.segment.column.TypeStrategies;
+import org.apache.druid.segment.column.TypeStrategy;
+import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ColumnarDoubles;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarLongs;
@@ -73,58 +77,72 @@ import org.apache.druid.utils.CloseableUtils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Implementation of {@link NestedDataComplexColumn} which uses a {@link CompressedVariableSizedBlobColumn} for the
- * 'raw' {@link StructuredData} values and provides selectors for nested 'literal' field columns.
+ * 'raw' {@link StructuredData} values and provides selectors for nested field columns specified by ordered lists of
+ * {@link NestedPathPart}.
+ * <p>
+ * The list of available nested paths is stored in {@link #fields}, and their associated types stored in
+ * {@link #fieldInfo} which can be accessed by the index of the field in {@link #fields}.
+ * <p>
+ * In the case that the nested column has only a single field, and that field is the 'root' path, specified by
+ * {@link #rootFieldPath}, the selectors created for the complex column itself will use the 'root' path selectors
+ * instead.
  */
 public abstract class CompressedNestedDataComplexColumn<TStringDictionary extends Indexed<ByteBuffer>>
-    extends NestedDataComplexColumn
+    extends NestedDataComplexColumn implements NestedCommonFormatColumn
 {
-  private final NestedDataColumnMetadata metadata;
+  private static final ObjectStrategy<Object> STRATEGY = NestedDataComplexTypeSerde.INSTANCE.getObjectStrategy();
+  public static final IntTypeStrategy INT_TYPE_STRATEGY = new IntTypeStrategy();
+  private final ColumnConfig columnConfig;
   private final Closer closer;
   private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
-  private CompressedVariableSizedBlobColumn compressedRawColumn;
   private final ImmutableBitmap nullValues;
-
   private final GenericIndexed<String> fields;
-  private final NestedFieldTypeInfo fieldInfo;
-
+  private final FieldTypeInfo fieldInfo;
   private final Supplier<TStringDictionary> stringDictionarySupplier;
   private final Supplier<FixedIndexed<Long>> longDictionarySupplier;
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
   private final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
-
   private final SmooshedFileMapper fileMapper;
-
   private final String rootFieldPath;
-
+  private final ColumnType logicalType;
+  private final String columnName;
+  private final BitmapSerdeFactory bitmapSerdeFactory;
+  private final ByteOrder byteOrder;
   private final ConcurrentHashMap<Integer, ColumnHolder> columns = new ConcurrentHashMap<>();
-
-  private static final ObjectStrategy<Object> STRATEGY = NestedDataComplexTypeSerde.INSTANCE.getObjectStrategy();
+  private CompressedVariableSizedBlobColumn compressedRawColumn;
 
   public CompressedNestedDataComplexColumn(
-      NestedDataColumnMetadata metadata,
+      String columnName,
+      ColumnType logicalType,
       @SuppressWarnings("unused") ColumnConfig columnConfig,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
       GenericIndexed<String> fields,
-      NestedFieldTypeInfo fieldInfo,
+      FieldTypeInfo fieldInfo,
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
-      Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
+      @Nullable Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier,
       SmooshedFileMapper fileMapper,
+      BitmapSerdeFactory bitmapSerdeFactory,
+      ByteOrder byteOrder,
       String rootFieldPath
   )
   {
-    this.metadata = metadata;
+    this.columnName = columnName;
+    this.logicalType = logicalType;
     this.nullValues = nullValues;
     this.fields = fields;
     this.fieldInfo = fieldInfo;
@@ -135,7 +153,10 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     this.fileMapper = fileMapper;
     this.closer = Closer.create();
     this.compressedRawColumnSupplier = compressedRawColumnSupplier;
+    this.bitmapSerdeFactory = bitmapSerdeFactory;
+    this.byteOrder = byteOrder;
     this.rootFieldPath = rootFieldPath;
+    this.columnConfig = columnConfig;
   }
 
   public abstract List<NestedPathPart> parsePath(String path);
@@ -144,9 +165,22 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
 
   public abstract String getFieldFileName(String fileNameBase, String field, int fieldIndex);
 
-  public GenericIndexed<String> getFields()
+  @Override
+  public SortedMap<String, FieldTypeInfo.MutableTypeSet> getFieldTypeInfo()
   {
-    return fields;
+    SortedMap<String, FieldTypeInfo.MutableTypeSet> fieldMap = new TreeMap<>();
+    for (int i = 0; i < fields.size(); i++) {
+      String fieldPath = fields.get(i);
+      FieldTypeInfo.TypeSet types = fieldInfo.getTypes(i);
+      fieldMap.put(fieldPath, new FieldTypeInfo.MutableTypeSet(types.getByteValue()));
+    }
+    return fieldMap;
+  }
+
+  @Override
+  public ColumnType getLogicalType()
+  {
+    return logicalType;
   }
 
   @Override
@@ -159,33 +193,36 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     return fieldParts;
   }
 
-  public NestedFieldTypeInfo getFieldInfo()
-  {
-    return fieldInfo;
-  }
 
-  public TStringDictionary getStringDictionary()
+  public TStringDictionary getUtf8BytesDictionary()
   {
     return stringDictionarySupplier.get();
   }
 
-  public FixedIndexed<Long> getLongDictionary()
+  @Override
+  public Indexed<String> getStringDictionary()
+  {
+    return new StringEncodingStrategies.Utf8ToStringIndexed(stringDictionarySupplier.get());
+  }
+
+  @Override
+  public Indexed<Long> getLongDictionary()
   {
     return longDictionarySupplier.get();
   }
 
-  public FixedIndexed<Double> getDoubleDictionary()
+  @Override
+  public Indexed<Double> getDoubleDictionary()
   {
     return doubleDictionarySupplier.get();
   }
 
-  public FrontCodedIntArrayIndexed getArrayDictionary()
+  @Override
+  public Indexed<Object[]> getArrayDictionary()
   {
-    return arrayDictionarySupplier.get();
-  }
-
-  public Iterable<Object[]> getArraysIterable()
-  {
+    if (arrayDictionarySupplier == null) {
+      return Indexed.empty();
+    }
     Iterable<Object[]> arrays = () -> {
       final TStringDictionary stringDictionary = stringDictionarySupplier.get();
       final FixedIndexed<Long> longDictionary = longDictionarySupplier.get();
@@ -230,7 +267,39 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
         }
       };
     };
-    return arrays;
+    return new Indexed<Object[]>()
+    {
+      @Override
+      public int size()
+      {
+        return arrayDictionarySupplier.get().size();
+      }
+
+      @Nullable
+      @Override
+      public Object[] get(int index)
+      {
+        throw new UnsupportedOperationException("get not supported");
+      }
+
+      @Override
+      public int indexOf(@Nullable Object[] value)
+      {
+        throw new UnsupportedOperationException("indexOf not supported");
+      }
+
+      @Override
+      public Iterator<Object[]> iterator()
+      {
+        return arrays.iterator();
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // meh
+      }
+    };
   }
 
   public ImmutableBitmap getNullValues()
@@ -582,7 +651,8 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
                 if (maybeArray instanceof Object[]) {
                   Object[] anArray = (Object[]) maybeArray;
                   if (elementNumber < anArray.length) {
-                    elements[i] = anArray[elementNumber];
+                    final Object element = anArray[elementNumber];
+                    elements[i] = element;
                   } else {
                     elements[i] = null;
                   }
@@ -754,7 +824,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     if (index < 0) {
       return null;
     }
-    return NestedFieldTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
+    return FieldTypeInfo.convertToSet(fieldInfo.getTypes(index).getByteValue());
   }
 
   @Nullable
@@ -808,15 +878,15 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       if (fieldIndex < 0) {
         return null;
       }
-      final NestedFieldTypeInfo.TypeSet types = fieldInfo.getTypes(fieldIndex);
-      final String fieldFileName = getFieldFileName(metadata.getFileNameBase(), field, fieldIndex);
+      final FieldTypeInfo.TypeSet types = fieldInfo.getTypes(fieldIndex);
+      final String fieldFileName = getFieldFileName(columnName, field, fieldIndex);
       final ByteBuffer dataBuffer = fileMapper.mapFile(fieldFileName);
       if (dataBuffer == null) {
         throw new ISE(
             "Can't find field [%s] with name [%s] in [%s] file.",
             field,
             fieldFileName,
-            metadata.getFileNameBase()
+            columnName
         );
       }
 
@@ -837,29 +907,29 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
 
       final Supplier<FixedIndexed<Integer>> localDictionarySupplier = FixedIndexed.read(
           dataBuffer,
-          NestedDataColumnSerializer.INT_TYPE_STRATEGY,
-          metadata.getByteOrder(),
+          INT_TYPE_STRATEGY,
+          byteOrder,
           Integer.BYTES
       );
-      ByteBuffer bb = dataBuffer.asReadOnlyBuffer().order(metadata.getByteOrder());
+      ByteBuffer bb = dataBuffer.asReadOnlyBuffer().order(byteOrder);
       int longsLength = bb.getInt();
       int doublesLength = bb.getInt();
       dataBuffer.position(dataBuffer.position() + Integer.BYTES + Integer.BYTES);
       int pos = dataBuffer.position();
       final Supplier<ColumnarLongs> longs = longsLength > 0 ? CompressedColumnarLongsSupplier.fromByteBuffer(
           dataBuffer,
-          metadata.getByteOrder()
+          byteOrder
       ) : () -> null;
       dataBuffer.position(pos + longsLength);
       pos = dataBuffer.position();
       final Supplier<ColumnarDoubles> doubles = doublesLength > 0 ? CompressedColumnarDoublesSuppliers.fromByteBuffer(
           dataBuffer,
-          metadata.getByteOrder()
+          byteOrder
       ) : () -> null;
       dataBuffer.position(pos + doublesLength);
       final WritableSupplier<ColumnarInts> ints;
       if (version == DictionaryEncodedColumnPartSerde.VERSION.COMPRESSED) {
-        ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(dataBuffer, metadata.getByteOrder());
+        ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(dataBuffer, byteOrder);
       } else {
         ints = VSizeColumnarInts.readFromByteBuffer(dataBuffer);
       }
@@ -868,7 +938,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
 
       GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
           dataBuffer,
-          metadata.getBitmapSerdeFactory().getObjectStrategy(),
+          bitmapSerdeFactory.getObjectStrategy(),
           columnBuilder.getFileMapper()
       );
       final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
@@ -876,13 +946,13 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       if (dataBuffer.hasRemaining()) {
         arrayElementDictionarySupplier = FixedIndexed.read(
             dataBuffer,
-            NestedDataColumnSerializer.INT_TYPE_STRATEGY,
-            metadata.getByteOrder(),
+            INT_TYPE_STRATEGY,
+            byteOrder,
             Integer.BYTES
         );
         arrayElementBitmaps = GenericIndexed.read(
             dataBuffer,
-            metadata.getBitmapSerdeFactory().getObjectStrategy(),
+            bitmapSerdeFactory.getObjectStrategy(),
             columnBuilder.getFileMapper()
         );
       } else {
@@ -904,23 +974,30 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
             localDict,
             hasNull
             ? rBitmaps.get(0)
-            : metadata.getBitmapSerdeFactory().getBitmapFactory().makeEmptyImmutableBitmap()
+            : bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap()
         ));
       };
       columnBuilder.setHasMultipleValues(false)
                    .setHasNulls(hasNull)
                    .setDictionaryEncodedColumnSupplier(columnSupplier);
+
+      final int size;
+      try (ColumnarInts throwAway = ints.get()) {
+        size = throwAway.size();
+      }
       columnBuilder.setIndexSupplier(
           new NestedFieldColumnIndexSupplier(
               types,
-              metadata.getBitmapSerdeFactory().getBitmapFactory(),
+              bitmapSerdeFactory.getBitmapFactory(),
+              columnConfig,
               rBitmaps,
               localDictionarySupplier,
               stringDictionarySupplier,
               longDictionarySupplier,
               doubleDictionarySupplier,
               arrayElementDictionarySupplier,
-              arrayElementBitmaps
+              arrayElementBitmaps,
+              size
           ),
           true,
           false
@@ -929,6 +1006,52 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     }
     catch (IOException ex) {
       throw new RE(ex, "Failed to read data for [%s]", field);
+    }
+  }
+
+  private static final class IntTypeStrategy implements TypeStrategy<Integer>
+  {
+    @Override
+    public int estimateSizeBytes(Integer value)
+    {
+      return Integer.BYTES;
+    }
+
+    @Override
+    public Integer read(ByteBuffer buffer)
+    {
+      return buffer.getInt();
+    }
+
+    @Override
+    public Integer read(ByteBuffer buffer, int offset)
+    {
+      return buffer.getInt(offset);
+    }
+
+    @Override
+    public boolean readRetainsBufferReference()
+    {
+      return false;
+    }
+
+    @Override
+    public int write(ByteBuffer buffer, Integer value, int maxSizeBytes)
+    {
+      TypeStrategies.checkMaxSize(buffer.remaining(), maxSizeBytes, ColumnType.LONG);
+      final int sizeBytes = Integer.BYTES;
+      final int remaining = maxSizeBytes - sizeBytes;
+      if (remaining >= 0) {
+        buffer.putInt(value);
+        return sizeBytes;
+      }
+      return remaining;
+    }
+
+    @Override
+    public int compare(Object o1, Object o2)
+    {
+      return Integer.compare(((Number) o1).intValue(), ((Number) o2).intValue());
     }
   }
 }

@@ -28,6 +28,7 @@ import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testsEx.categories.MultiStageQuery;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -111,6 +112,7 @@ public class ITMultiStageQuery
   }
 
   @Test
+  @Ignore("localfiles() is disabled")
   public void testMsqIngestionAndQueryingWithLocalFn() throws Exception
   {
     String datasource = "dst";

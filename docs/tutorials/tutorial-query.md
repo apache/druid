@@ -1,7 +1,7 @@
 ---
 id: tutorial-query
-title: "Tutorial: Querying data"
-sidebar_label: "Querying data"
+title: Query data
+sidebar_label: Query data
 ---
 
 <!--
@@ -30,9 +30,9 @@ It assumes that you've completed the [Quickstart](../tutorials/index.md)
 or one of the following tutorials, since we'll query datasources that you would have created
 by following one of them:
 
-* [Tutorial: Loading a file](../tutorials/tutorial-batch.md)
-* [Tutorial: Loading stream data from Kafka](../tutorials/tutorial-kafka.md)
-* [Tutorial: Loading a file using Hadoop](../tutorials/tutorial-batch-hadoop.md)
+* [Load a file](../tutorials/tutorial-batch.md)
+* [Load stream data from Kafka](../tutorials/tutorial-kafka.md)
+* [Load a file using Hadoop](../tutorials/tutorial-batch-hadoop.md)
 
 There are various ways to run Druid SQL queries: from the web console, using a command line utility
 and by posting the query by HTTP. We'll look at each of these. 
@@ -144,18 +144,19 @@ performance issues. For more information, see [Native queries](../querying/query
 9. Finally, click  `...`  and **Edit context** to see how you can add additional parameters controlling the execution of the query execution. In the field, enter query context options as JSON key-value pairs, as described in [Context flags](../querying/query-context.md).  
 
 That's it! We've built a simple query using some of the query builder features built into the web console. The following
-sections provide a few more example queries you can try. Also, see [Other ways to invoke SQL queries](#other-ways-to-invoke-sql-queries) to learn how
-to run Druid SQL from the command line or over HTTP. 
+sections provide a few more example queries you can try.
+
+See [Query SQL over HTTP](#query-sql-over-http) for an example of how to use the Druid SQL HTTP API. 
 
 ## More Druid SQL examples
 
-Here is a collection of queries to try out:
+Try the following queries to learn a few more Druid SQL tricks:
 
 ### Query over time
 
 ```sql
 SELECT FLOOR(__time to HOUR) AS HourTime, SUM(deleted) AS LinesDeleted
-FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2015-09-12/2015-09-13')
+FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2016-06-27/2016-06-28')
 GROUP BY 1
 ```
 
@@ -165,58 +166,21 @@ GROUP BY 1
 
 ```sql
 SELECT channel, page, SUM(added)
-FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2015-09-12/2015-09-13')
+FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2016-06-27/2016-06-28')
 GROUP BY channel, page
 ORDER BY SUM(added) DESC
 ```
 
 ![Query example](../assets/tutorial-query-07.png "Query example")
 
-
-## Other ways to invoke SQL queries
-
-### Query SQL via dsql
-
-For convenience, the Druid package includes a SQL command-line client, located at `bin/dsql` in the Druid package root.
-
-Let's now run `bin/dsql`; you should see the following prompt:
-
-```bash
-Welcome to dsql, the command-line client for Druid SQL.
-Type "\h" for help.
-dsql>
-```
-
-To submit the query, paste it to the `dsql` prompt and press enter:
-
-```bash
-dsql> SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE TIME_IN_INTERVAL("__time", '2015-09-12/2015-09-13') GROUP BY page ORDER BY Edits DESC LIMIT 10;
-┌──────────────────────────────────────────────────────────┬───────┐
-│ page                                                     │ Edits │
-├──────────────────────────────────────────────────────────┼───────┤
-│ Wikipedia:Vandalismusmeldung                             │    33 │
-│ User:Cyde/List of candidates for speedy deletion/Subpage │    28 │
-│ Jeremy Corbyn                                            │    27 │
-│ Wikipedia:Administrators' noticeboard/Incidents          │    21 │
-│ Flavia Pennetta                                          │    20 │
-│ Total Drama Presents: The Ridonculous Race               │    18 │
-│ User talk:Dudeperson176123                               │    18 │
-│ Wikipédia:Le Bistro/12 septembre 2015                    │    18 │
-│ Wikipedia:In the news/Candidates                         │    17 │
-│ Wikipedia:Requests for page protection                   │    17 │
-└──────────────────────────────────────────────────────────┴───────┘
-Retrieved 10 rows in 0.06s.
-```
+## Query SQL over HTTP
 
 
-### Query SQL over HTTP
-
-
-You can submit native queries [directly to the Druid Broker over HTTP](../querying/sql-api.md#submit-a-query). The request body should be a JSON object, with the value for the key `query` containing text of the query:
+You can submit native queries [directly to the Druid Broker over HTTP](../api-reference/sql-api.md#submit-a-query). The request body should be a JSON object, with the value for the key `query` containing text of the query:
 
 ```json
 {
-  "query": "SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE TIME_IN_INTERVAL(\"__time\", '2015-09-12/2015-09-13') GROUP BY page ORDER BY Edits DESC LIMIT 10"
+  "query": "SELECT page, COUNT(*) AS Edits FROM wikipedia WHERE TIME_IN_INTERVAL(\"__time\", '2016-06-27/2016-06-28') GROUP BY page ORDER BY Edits DESC LIMIT 10"
 }
 ```
 
@@ -230,46 +194,46 @@ The following results should be returned:
 
 ```json
 [
-  {
-    "page": "Wikipedia:Vandalismusmeldung",
-    "Edits": 33
-  },
-  {
-    "page": "User:Cyde/List of candidates for speedy deletion/Subpage",
-    "Edits": 28
-  },
-  {
-    "page": "Jeremy Corbyn",
-    "Edits": 27
-  },
-  {
-    "page": "Wikipedia:Administrators' noticeboard/Incidents",
-    "Edits": 21
-  },
-  {
-    "page": "Flavia Pennetta",
-    "Edits": 20
-  },
-  {
-    "page": "Total Drama Presents: The Ridonculous Race",
-    "Edits": 18
-  },
-  {
-    "page": "User talk:Dudeperson176123",
-    "Edits": 18
-  },
-  {
-    "page": "Wikipédia:Le Bistro/12 septembre 2015",
-    "Edits": 18
-  },
-  {
-    "page": "Wikipedia:In the news/Candidates",
-    "Edits": 17
-  },
-  {
-    "page": "Wikipedia:Requests for page protection",
-    "Edits": 17
-  }
+    {
+        "page": "Copa América Centenario",
+        "Edits": 29
+    },
+    {
+        "page": "User:Cyde/List of candidates for speedy deletion/Subpage",
+        "Edits": 16
+    },
+    {
+        "page": "Wikipedia:Administrators' noticeboard/Incidents",
+        "Edits": 16
+    },
+    {
+        "page": "2016 Wimbledon Championships – Men's Singles",
+        "Edits": 15
+    },
+    {
+        "page": "Wikipedia:Administrator intervention against vandalism",
+        "Edits": 15
+    },
+    {
+        "page": "Wikipedia:Vandalismusmeldung",
+        "Edits": 15
+    },
+    {
+        "page": "The Winds of Winter (Game of Thrones)",
+        "Edits": 12
+    },
+    {
+        "page": "ولاية الجزائر",
+        "Edits": 12
+    },
+    {
+        "page": "Copa América",
+        "Edits": 10
+    },
+    {
+        "page": "Lionel Messi",
+        "Edits": 10
+    }
 ]
 ```
 

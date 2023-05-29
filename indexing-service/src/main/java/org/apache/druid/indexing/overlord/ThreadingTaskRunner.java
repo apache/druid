@@ -155,8 +155,21 @@ public class ThreadingTaskRunner
                         @Override
                         public TaskStatus call()
                         {
+                          final TaskStorageDirTracker.StorageSlot storageSlot;
+                          try {
+                            storageSlot = getTracker().pickStorageSlot(task.getId());
+                          }
+                          catch (RuntimeException e) {
+                            LOG.error(e, "Failed to get directory for task [%s], cannot schedule.", task.getId());
+                            return TaskStatus.failure(
+                                task.getId(),
+                                StringUtils.format("Could not schedule due to error [%s]", e.getMessage())
+                            );
+
+                          }
+                          final File taskDir = new File(storageSlot.getDirectory(), task.getId());
+
                           final String attemptUUID = UUID.randomUUID().toString();
-                          final File taskDir = dirTracker.getTaskDir(task.getId());
                           final File attemptDir = new File(taskDir, attemptUUID);
 
                           final TaskLocation taskLocation = TaskLocation.create(
@@ -199,7 +212,11 @@ public class ThreadingTaskRunner
                                   .setName(StringUtils.format("[%s]-%s", task.getId(), priorThreadName));
 
                             TaskStatus taskStatus;
-                            final TaskToolbox toolbox = toolboxFactory.build(task);
+                            final TaskToolbox toolbox = toolboxFactory.build(
+                                config -> config.withBaseTaskDir(storageSlot.getDirectory())
+                                                .withTmpStorageBytesPerTask(storageSlot.getNumBytes()),
+                                task
+                            );
                             TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
                             TaskRunnerUtils.notifyStatusChanged(
                                 listeners,
@@ -212,10 +229,13 @@ public class ThreadingTaskRunner
                               taskStatus = task.run(toolbox);
                             }
                             catch (Throwable t) {
-                              LOGGER.error(t, "Exception caught while running the task.");
+                              LOGGER.error(t, "Exception caught while running task [%s].", task.getId());
                               taskStatus = TaskStatus.failure(
                                   task.getId(),
-                                  "Failed with an exception. See indexer logs for more details."
+                                  StringUtils.format(
+                                      "Failed with exception [%s]. See indexer logs for details.",
+                                      t.getMessage()
+                                  )
                               );
                             }
                             finally {
@@ -244,6 +264,8 @@ public class ThreadingTaskRunner
                                   saveRunningTasks();
                                 }
                               }
+
+                              getTracker().returnStorageSlot(storageSlot);
 
                               try {
                                 if (!stopping && taskDir.exists()) {
@@ -414,7 +436,6 @@ public class ThreadingTaskRunner
     }
 
     appenderatorsManager.shutdown();
-    super.stop();
   }
 
   @Override

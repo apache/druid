@@ -45,7 +45,6 @@ import {
 import './console-application.scss';
 
 export interface ConsoleApplicationProps {
-  exampleManifestsUrl?: string;
   defaultQueryContext?: Record<string, any>;
   mandatoryQueryContext?: Record<string, any>;
 }
@@ -68,8 +67,9 @@ export class ConsoleApplication extends React.PureComponent<
       timeout: 120000,
       message: (
         <>
-          It appears that the service serving this console is not responding. The console will not
-          function at the moment.
+          Some backend druid services are not responding. The console will not function at the
+          moment. Make sure that all your Druid services are up and running. Check the logs of
+          individual services for troubleshooting.
         </>
       ),
     });
@@ -213,15 +213,12 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private readonly wrappedDataLoaderView = () => {
-    const { exampleManifestsUrl } = this.props;
-
     return this.wrapInViewContainer(
       'data-loader',
       <LoadDataView
         mode="all"
         initTaskId={this.taskId}
         initSupervisorId={this.supervisorId}
-        exampleManifestsUrl={exampleManifestsUrl}
         goToIngestion={this.goToIngestionWithTaskGroupId}
       />,
       'narrow-pad',
@@ -241,14 +238,11 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private readonly wrappedClassicBatchDataLoaderView = () => {
-    const { exampleManifestsUrl } = this.props;
-
     return this.wrapInViewContainer(
       'classic-batch-data-loader',
       <LoadDataView
         mode="batch"
         initTaskId={this.taskId}
-        exampleManifestsUrl={exampleManifestsUrl}
         goToIngestion={this.goToIngestionWithTaskGroupId}
       />,
       'narrow-pad',

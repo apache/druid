@@ -51,13 +51,6 @@ import java.util.stream.Collectors;
  * List of context parameters not present in external docs:
  * <br></br>
  * <ol>
- * <li><b>composedIntermediateSuperSorterStorageEnabled</b>: Whether to enable automatic fallback to durable storage from
- * local storage for sorting's intermediate data. Requires to set-up `intermediateSuperSorterStorageMaxLocalBytes` limit
- * for local storage and durable shuffle storage feature as well. Default value is <b>false</b>.</li>
- *
- * <li><b>intermediateSuperSorterStorageMaxLocalBytes</b>: Whether to enable a byte limit on local storage for
- * sorting's intermediate data. If that limit is crossed,the task fails with {@link org.apache.druid.query.ResourceLimitExceededException}`.
- * Default value is <b>9223372036854775807</b> </li>
  *
  * <li><b>maxInputBytesPerWorker</b>: Should be used in conjunction with taskAssignment `auto` mode. When dividing the
  * input of a stage among the workers, this parameter determines the maximum size in bytes that are given to a single worker
@@ -70,6 +63,11 @@ import java.util.stream.Collectors;
  * <li><b>clusterStatisticsMergeMode</b>: Whether to use parallel or sequential mode for merging of the worker sketches.
  * Can be <b>PARALLEL</b>, <b>SEQUENTIAL</b> or <b>AUTO</b>. See {@link ClusterStatisticsMergeMode} for more information on each mode.
  * Default value is <b>PARALLEL</b></li>
+ *
+ * <li><b>useAutoColumnSchemas</b>: Temporary flag to allow experimentation using
+ * {@link org.apache.druid.segment.AutoTypeColumnSchema} for all 'standard' type columns during segment generation,
+ * see {@link DimensionSchemaUtils#createDimensionSchema} for more details.
+ *
  * </ol>
  **/
 public class MultiStageQueryContext
@@ -97,19 +95,16 @@ public class MultiStageQueryContext
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.PARALLEL.toString();
 
-  public static final String CTX_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES =
-      "intermediateSuperSorterStorageMaxLocalBytes";
-  public static final String CTX_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE =
-      "composedIntermediateSuperSorterStorageEnabled";
-  private static final boolean DEFAULT_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE = false;
-  private static final long DEFAULT_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES = Long.MAX_VALUE;
-
   public static final String CTX_DESTINATION = "destination";
   private static final String DEFAULT_DESTINATION = null;
 
   public static final String CTX_ROWS_PER_SEGMENT = "rowsPerSegment";
+  static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
 
   public static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
+  // Lower than the default to minimize the impact of per-row overheads that are not accounted for by
+  // OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
+  static final int DEFAULT_ROWS_IN_MEMORY = 100000;
 
   /**
    * Controls sort order within segments. Normally, this is the same as the overall order of the query (from the
@@ -118,6 +113,8 @@ public class MultiStageQueryContext
   public static final String CTX_SORT_ORDER = "segmentSortOrder";
 
   public static final String CTX_INDEX_SPEC = "indexSpec";
+
+  public static final String CTX_USE_AUTO_SCHEMAS = "useAutoColumnSchemas";
 
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
@@ -150,22 +147,6 @@ public class MultiStageQueryContext
     return queryContext.getLong(
         CTX_MAX_INPUT_BYTES_PER_WORKER,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
-    );
-  }
-
-  public static boolean isComposedIntermediateSuperSorterStorageEnabled(final QueryContext queryContext)
-  {
-    return queryContext.getBoolean(
-        CTX_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE,
-        DEFAULT_COMPOSED_INTERMEDIATE_SUPER_SORTER_STORAGE
-    );
-  }
-
-  public static long getIntermediateSuperSorterStorageMaxLocalBytes(final QueryContext queryContext)
-  {
-    return queryContext.getLong(
-        CTX_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES,
-        DEFAULT_INTERMEDIATE_SUPER_SORTER_STORAGE_MAX_LOCAL_BYTES
     );
   }
 
@@ -215,20 +196,17 @@ public class MultiStageQueryContext
     );
   }
 
-  public static int getRowsPerSegment(final QueryContext queryContext, int defaultRowsPerSegment)
+  public static int getRowsPerSegment(final QueryContext queryContext)
   {
     return queryContext.getInt(
         CTX_ROWS_PER_SEGMENT,
-        defaultRowsPerSegment
+        DEFAULT_ROWS_PER_SEGMENT
     );
   }
 
-  public static int getRowsInMemory(final QueryContext queryContext, int defaultRowsInMemory)
+  public static int getRowsInMemory(final QueryContext queryContext)
   {
-    return queryContext.getInt(
-        CTX_ROWS_IN_MEMORY,
-        defaultRowsInMemory
-    );
+    return queryContext.getInt(CTX_ROWS_IN_MEMORY, DEFAULT_ROWS_IN_MEMORY);
   }
 
   public static List<String> getSortOrder(final QueryContext queryContext)
@@ -240,6 +218,11 @@ public class MultiStageQueryContext
   public static IndexSpec getIndexSpec(final QueryContext queryContext, final ObjectMapper objectMapper)
   {
     return decodeIndexSpec(queryContext.get(CTX_INDEX_SPEC), objectMapper);
+  }
+
+  public static boolean useAutoColumnSchemas(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(CTX_USE_AUTO_SCHEMAS, false);
   }
 
   /**

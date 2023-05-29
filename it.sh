@@ -85,7 +85,7 @@ function tail_logs
   ls *.log | while read log;
   do
     echo "----- $CATEGORY/$log -----"
-    tail -20 $log
+    tail -100 $log
   done
   popd > /dev/null
 }

@@ -26,7 +26,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>26.0.0-SNAPSHOT</version>
+        <version>27.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -235,7 +235,10 @@
         <profile>
             <id>hadoop2</id>
             <activation>
-                <activeByDefault>true</activeByDefault>
+                <property>
+                    <name>hadoop2.enabled</name>
+                    <value>true</value>
+                </property>
             </activation>
             <dependencies>
                 <dependency>
@@ -491,10 +494,7 @@
         <profile>
             <id>hadoop3</id>
             <activation>
-                <property>
-                    <name>hadoop3.enabled</name>
-                    <value>true</value>
-                </property>
+                <activeByDefault>true</activeByDefault>
             </activation>
             <dependencies>
                 <dependency>
@@ -512,7 +512,7 @@
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-client-runtime</artifactId>
                     <version>${hadoop.compile.version}</version>
-                    <scope>test</scope>
+                    <scope>runtime</scope>
                 </dependency>
             </dependencies>
         </profile>

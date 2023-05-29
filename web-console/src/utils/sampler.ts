@@ -20,6 +20,7 @@ import { dedupe } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 
 import type {
+  DimensionSpec,
   DimensionsSpec,
   IngestionSpec,
   IngestionType,
@@ -31,22 +32,22 @@ import type {
   TransformSpec,
 } from '../druid-models';
 import {
+  DETECTION_TIMESTAMP_SPEC,
   getDimensionNamesFromTransforms,
+  getDimensionSpecName,
   getSpecType,
   getTimestampSchema,
   isDruidSource,
   PLACEHOLDER_TIMESTAMP_SPEC,
   REINDEX_TIMESTAMP_SPEC,
   TIME_COLUMN,
-  upgradeSpec,
 } from '../druid-models';
 import { Api } from '../singletons';
 
 import { getDruidErrorMessage, queryDruidRune } from './druid-query';
-import { arrangeWithPrefixSuffix, EMPTY_ARRAY, filterMap } from './general';
+import { EMPTY_ARRAY, filterMap } from './general';
 import { deepGet, deepSet } from './object-change';
 
-const SAMPLER_URL = `/druid/indexer/v1/sampler`;
 const BASE_SAMPLER_CONFIG: SamplerConfig = {
   numRows: 500,
   timeoutMs: 15000,
@@ -63,6 +64,53 @@ export interface SamplerConfig {
 
 export interface SampleResponse {
   data: SampleEntry[];
+  logicalSegmentSchema: { name: string; type: string }[];
+  logicalDimensions: DimensionSpec[];
+  physicalDimensions: DimensionSpec[];
+  numRowsIndexed: number;
+  numRowsRead: number;
+}
+
+export function getHeaderNamesFromSampleResponse(
+  sampleResponse: SampleResponse,
+  timeColumnAction: 'preserve' | 'ignore' | 'ignoreIfZero' = 'preserve',
+): string[] {
+  return getHeaderFromSampleResponse(sampleResponse, timeColumnAction).map(s => s.name);
+}
+
+export function getHeaderFromSampleResponse(
+  sampleResponse: SampleResponse,
+  timeColumnAction: 'preserve' | 'ignore' | 'ignoreIfZero' = 'preserve',
+): { name: string; type: string }[] {
+  const ignoreTimeColumn =
+    timeColumnAction === 'ignore' ||
+    (timeColumnAction === 'ignoreIfZero' &&
+      !sampleResponse.data.some(d => {
+        const t = d.parsed?.[TIME_COLUMN];
+        return typeof t === 'number' && t > 0;
+      }));
+
+  return sampleResponse.logicalSegmentSchema.filter(
+    s => !ignoreTimeColumn || s.name !== TIME_COLUMN,
+  );
+}
+
+export function guessDimensionsFromSampleResponse(sampleResponse: SampleResponse): DimensionSpec[] {
+  const { logicalDimensions, physicalDimensions, data } = sampleResponse;
+  return logicalDimensions.map(d => {
+    // Boolean column are currently reported as "long" so let's turn them into "string"
+    if (
+      d.type === 'long' &&
+      physicalDimensions.find(_ => _.name === d.name)?.type === 'json' &&
+      typeof data[0]?.input?.[d.name] === 'boolean'
+    ) {
+      return {
+        name: d.name,
+        type: 'string',
+      };
+    }
+    return d;
+  });
 }
 
 export type CacheRows = Record<string, any>[];
@@ -79,17 +127,6 @@ export interface SampleEntry {
   parsed?: Record<string, any>;
   unparseable?: boolean;
   error?: string;
-}
-
-export interface SampleHeaderAndRows {
-  header: string[];
-  rows: SampleEntry[];
-}
-
-export interface ExampleManifest {
-  name: string;
-  description: string;
-  spec: any;
 }
 
 export function getCacheRowsFromSampleResponse(sampleResponse: SampleResponse): CacheRows {
@@ -126,46 +163,6 @@ export function applyCache(sampleSpec: SampleSpec, cacheRows: CacheRows) {
   return sampleSpec;
 }
 
-export interface HeaderFromSampleResponseOptions {
-  sampleResponse: SampleResponse;
-  ignoreTimeColumn?: boolean;
-  columnOrder?: string[];
-  suffixColumnOrder?: string[];
-  useInput?: boolean;
-}
-
-export function headerFromSampleResponse(options: HeaderFromSampleResponseOptions): string[] {
-  const { sampleResponse, ignoreTimeColumn, columnOrder, suffixColumnOrder, useInput } = options;
-
-  const key = useInput ? 'input' : 'parsed';
-  let columns = arrangeWithPrefixSuffix(
-    dedupe(sampleResponse.data.flatMap(s => (s[key] ? Object.keys(s[key]!) : []))),
-    columnOrder || [TIME_COLUMN],
-    suffixColumnOrder || [],
-  );
-
-  if (ignoreTimeColumn) {
-    columns = columns.filter(c => c !== TIME_COLUMN);
-  }
-
-  return columns;
-}
-
-export interface HeaderAndRowsFromSampleResponseOptions extends HeaderFromSampleResponseOptions {
-  parsedOnly?: boolean;
-}
-
-export function headerAndRowsFromSampleResponse(
-  options: HeaderAndRowsFromSampleResponseOptions,
-): SampleHeaderAndRows {
-  const { sampleResponse, parsedOnly } = options;
-
-  return {
-    header: headerFromSampleResponse(options),
-    rows: parsedOnly ? sampleResponse.data.filter(d => d.parsed) : sampleResponse.data,
-  };
-}
-
 export async function getProxyOverlordModules(): Promise<string[]> {
   let statusResp: any;
   try {
@@ -174,7 +171,10 @@ export async function getProxyOverlordModules(): Promise<string[]> {
     throw new Error(getDruidErrorMessage(e));
   }
 
-  return statusResp.data.modules.map((m: any) => m.artifact);
+  const { modules } = statusResp.data;
+  if (!Array.isArray(modules)) throw new Error('unexpected result from overlord/status');
+
+  return modules.map((m: any) => m.artifact);
 }
 
 export async function postToSampler(
@@ -185,7 +185,7 @@ export async function postToSampler(
 
   let sampleResp: any;
   try {
-    sampleResp = await Api.instance.post(`${SAMPLER_URL}?for=${forStr}`, sampleSpec);
+    sampleResp = await Api.instance.post(`/druid/indexer/v1/sampler?for=${forStr}`, sampleSpec);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -229,6 +229,23 @@ function fixSamplerTypes(sampleSpec: SampleSpec): SampleSpec {
   return sampleSpec;
 }
 
+const WHOLE_ROW_INPUT_FORMAT: InputFormat = {
+  type: 'regex',
+  pattern: '([\\s\\S]*)', // Match the entire line, every single character
+  listDelimiter: '56616469-6de2-9da4-efb8-8f416e6e6965', // Just a UUID to disable the list delimiter, let's hope we do not see this UUID in the data
+  columns: ['raw'],
+};
+
+const KAFKA_SAMPLE_INPUT_FORMAT: InputFormat = {
+  type: 'kafka',
+  headerFormat: {
+    type: 'string',
+    encoding: 'UTF-8',
+  },
+  keyFormat: WHOLE_ROW_INPUT_FORMAT,
+  valueFormat: WHOLE_ROW_INPUT_FORMAT,
+};
+
 export async function sampleForConnect(
   spec: Partial<IngestionSpec>,
   sampleStrategy: SampleStrategy,
@@ -242,12 +259,11 @@ export async function sampleForConnect(
 
   const reingestMode = isDruidSource(spec);
   if (!reingestMode) {
-    ioConfig = deepSet(ioConfig, 'inputFormat', {
-      type: 'regex',
-      pattern: '([\\s\\S]*)', // Match the entire line, every single character
-      listDelimiter: '56616469-6de2-9da4-efb8-8f416e6e6965', // Just a UUID to disable the list delimiter, let's hope we do not see this UUID in the data
-      columns: ['raw'],
-    });
+    ioConfig = deepSet(
+      ioConfig,
+      'inputFormat',
+      samplerType === 'kafka' ? KAFKA_SAMPLE_INPUT_FORMAT : WHOLE_ROW_INPUT_FORMAT,
+    );
   }
 
   const sampleSpec: SampleSpec = {
@@ -331,8 +347,10 @@ export async function sampleForParser(
       ioConfig,
       dataSchema: {
         dataSource: 'sample',
-        timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
-        dimensionsSpec: {},
+        timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : DETECTION_TIMESTAMP_SPEC,
+        dimensionsSpec: {
+          useSchemaDiscovery: true,
+        },
         granularitySpec: {
           rollup: false,
         },
@@ -359,7 +377,9 @@ export async function sampleForTimestamp(
       ioConfig: deepGet(spec, 'spec.ioConfig'),
       dataSchema: {
         dataSource: 'sample',
-        dimensionsSpec: {},
+        dimensionsSpec: {
+          useSchemaDiscovery: true,
+        },
         timestampSpec: timestampSchema === 'column' ? PLACEHOLDER_TIMESTAMP_SPEC : timestampSpec,
         granularitySpec: {
           rollup: false,
@@ -380,7 +400,7 @@ export async function sampleForTimestamp(
   const transforms: Transform[] =
     deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || EMPTY_ARRAY;
 
-  // If we are trying to parts a column then get a bit fancy:
+  // If we are trying to parse a column then get a bit fancy:
   // Query the same sample again (same cache key)
   const sampleSpec: SampleSpec = {
     type: samplerType,
@@ -388,7 +408,9 @@ export async function sampleForTimestamp(
       ioConfig: deepGet(spec, 'spec.ioConfig'),
       dataSchema: {
         dataSource: 'sample',
-        dimensionsSpec: {},
+        dimensionsSpec: {
+          useSchemaDiscovery: true,
+        },
         timestampSpec,
         transformSpec: {
           transforms: transforms.filter(transform => transform.name === TIME_COLUMN),
@@ -430,8 +452,8 @@ export async function sampleForTransform(
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
   const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
 
-  // Extra step to simulate auto detecting dimension with transforms
-  let specialDimensionSpec: DimensionsSpec = {};
+  // Extra step to simulate auto-detecting dimension with transforms
+  let specialDimensionSpec: DimensionsSpec = { useSchemaDiscovery: true };
   if (transforms && transforms.length) {
     const sampleSpecHack: SampleSpec = {
       type: samplerType,
@@ -440,7 +462,9 @@ export async function sampleForTransform(
         dataSchema: {
           dataSource: 'sample',
           timestampSpec,
-          dimensionsSpec: {},
+          dimensionsSpec: {
+            useSchemaDiscovery: true,
+          },
           granularitySpec: {
             rollup: false,
           },
@@ -458,10 +482,10 @@ export async function sampleForTransform(
       specialDimensionSpec,
       'dimensions',
       dedupe(
-        headerFromSampleResponse({
-          sampleResponse: sampleResponseHack,
-          ignoreTimeColumn: true,
-        }).concat(getDimensionNamesFromTransforms(transforms)),
+        (
+          guessDimensionsFromSampleResponse(sampleResponseHack) as (DimensionSpec | string)[]
+        ).concat(getDimensionNamesFromTransforms(transforms)),
+        getDimensionSpecName,
       ),
     );
   }
@@ -497,8 +521,8 @@ export async function sampleForFilter(
   const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
   const filter: any = deepGet(spec, 'spec.dataSchema.transformSpec.filter');
 
-  // Extra step to simulate auto detecting dimension with transforms
-  let specialDimensionSpec: DimensionsSpec = {};
+  // Extra step to simulate auto-detecting dimension with transforms
+  let specialDimensionSpec: DimensionsSpec = { useSchemaDiscovery: true };
   if (transforms && transforms.length) {
     const sampleSpecHack: SampleSpec = {
       type: samplerType,
@@ -507,7 +531,9 @@ export async function sampleForFilter(
         dataSchema: {
           dataSource: 'sample',
           timestampSpec,
-          dimensionsSpec: {},
+          dimensionsSpec: {
+            useSchemaDiscovery: true,
+          },
           granularitySpec: {
             rollup: false,
           },
@@ -525,10 +551,9 @@ export async function sampleForFilter(
       specialDimensionSpec,
       'dimensions',
       dedupe(
-        headerFromSampleResponse({
-          sampleResponse: sampleResponseHack,
-          ignoreTimeColumn: true,
-        }).concat(getDimensionNamesFromTransforms(transforms)),
+        getHeaderNamesFromSampleResponse(sampleResponseHack, 'ignore').concat(
+          getDimensionNamesFromTransforms(transforms),
+        ),
       ),
     );
   }
@@ -590,56 +615,4 @@ export async function sampleForSchema(
   };
 
   return postToSampler(applyCache(sampleSpec, cacheRows), 'schema');
-}
-
-export async function sampleForExampleManifests(
-  exampleManifestUrl: string,
-): Promise<ExampleManifest[]> {
-  const exampleSpec: SampleSpec = {
-    type: 'index_parallel',
-    spec: {
-      ioConfig: {
-        type: 'index_parallel',
-        inputSource: { type: 'http', uris: [exampleManifestUrl] },
-        inputFormat: { type: 'tsv', findColumnsFromHeader: true },
-      },
-      dataSchema: {
-        dataSource: 'sample',
-        timestampSpec: {
-          column: 'timestamp',
-          missingValue: '2010-01-01T00:00:00Z',
-        },
-        dimensionsSpec: {},
-      },
-    },
-    samplerConfig: { numRows: 50, timeoutMs: 10000 },
-  };
-
-  const exampleData = await postToSampler(exampleSpec, 'example-manifest');
-
-  return filterMap(exampleData.data, datum => {
-    const parsed = datum.parsed;
-    if (!parsed) return;
-    let { name, description, spec } = parsed;
-    try {
-      spec = JSON.parse(spec);
-    } catch {
-      return;
-    }
-
-    if (
-      typeof name === 'string' &&
-      typeof description === 'string' &&
-      spec &&
-      typeof spec === 'object'
-    ) {
-      return {
-        name: parsed.name,
-        description: parsed.description,
-        spec: upgradeSpec(spec),
-      };
-    } else {
-      return;
-    }
-  });
 }

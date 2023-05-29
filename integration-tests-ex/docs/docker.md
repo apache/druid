@@ -229,7 +229,7 @@ shared
 +- ...
 ```
 
-The the `extensions` directory should be created within the per-cluster `setup.sh` script
+The `extensions` directory should be created within the per-cluster `setup.sh` script
 which is when starting your test cluster.
 
 Be sure to also include the extension in the load list in your `docker-compose.py` template.

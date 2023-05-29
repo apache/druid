@@ -19,17 +19,18 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.google.common.collect.ImmutableList;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.UpdateStatusAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -50,13 +51,24 @@ import static org.mockito.Mockito.when;
 
 public class AbstractTaskTest
 {
+  private ObjectMapper objectMapper;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+  @Before
+  public void setup()
+  {
+    objectMapper = new TestUtils().getTestObjectMapper();
+  }
+
   @Test
   public void testSetupAndCleanupIsCalledWtihParameter() throws Exception
   {
+    // These tests apparently use Mockito.  Mockito is bad as we've seen it rewrite byte code and effectively cause
+    // impact to other totally unrelated tests.  Mockito needs to be completely erradicated from the codebase.  This
+    // comment is here to either cause me to do it in this commit or just for posterity so that it is clear that it
+    // should happen in the future.
     TaskToolbox toolbox = mock(TaskToolbox.class);
     when(toolbox.getAttemptId()).thenReturn("1");
 
@@ -68,11 +80,10 @@ public class AbstractTaskTest
 
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(true);
+    File folder = temporaryFolder.newFolder();
+    when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(
-        ImmutableList.of(temporaryFolder.newFolder().getAbsolutePath())
-    );
-    when(toolbox.getDirTracker()).thenReturn(dirTracker);
+    when(toolbox.getJsonMapper()).thenReturn(objectMapper);
 
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
@@ -87,12 +98,11 @@ public class AbstractTaskTest
       {
         // create a reports file to test the taskLogPusher pushes task reports
         String result = super.setup(toolbox);
-        File attemptDir = Paths.get(
-            dirTracker.getTaskDir("myID").getAbsolutePath(),
-            "attempt", toolbox.getAttemptId()
-        ).toFile();
+        File attemptDir = Paths.get(folder.getAbsolutePath(), "attempt", toolbox.getAttemptId()).toFile();
         File reportsDir = new File(attemptDir, "report.json");
+        File statusDir = new File(attemptDir, "status.json");
         FileUtils.write(reportsDir, "foo", StandardCharsets.UTF_8);
+        FileUtils.write(statusDir, "{}", StandardCharsets.UTF_8);
         return result;
       }
     };
@@ -101,6 +111,7 @@ public class AbstractTaskTest
     // call it 3 times, once to update location in setup, then one for status and location in cleanup
     Mockito.verify(taskActionClient, times(3)).submit(any());
     verify(pusher, times(1)).pushTaskReports(eq("myID"), any());
+    verify(pusher, times(1)).pushTaskStatus(eq("myID"), any());
   }
 
   @Test
@@ -118,9 +129,9 @@ public class AbstractTaskTest
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(false);
     File folder = temporaryFolder.newFolder();
+    when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(ImmutableList.of(folder.getAbsolutePath()));
-    when(toolbox.getDirTracker()).thenReturn(dirTracker);
+    when(toolbox.getJsonMapper()).thenReturn(objectMapper);
 
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
@@ -163,9 +174,9 @@ public class AbstractTaskTest
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(true);
     File folder = temporaryFolder.newFolder();
-    TaskStorageDirTracker dirTracker = new TaskStorageDirTracker(ImmutableList.of(folder.getAbsolutePath()));
+    when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
-    when(toolbox.getDirTracker()).thenReturn(dirTracker);
+    when(toolbox.getJsonMapper()).thenReturn(objectMapper);
 
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
@@ -174,7 +185,7 @@ public class AbstractTaskTest
     AbstractTask task = new NoopTask("myID", null, null, 1, 0, null, null, null)
     {
       @Override
-      public TaskStatus runTask(TaskToolbox toolbox) 
+      public TaskStatus runTask(TaskToolbox toolbox)
       {
         return TaskStatus.failure("myId", "failed");
       }

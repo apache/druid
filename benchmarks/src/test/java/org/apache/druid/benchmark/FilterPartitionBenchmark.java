@@ -152,7 +152,7 @@ public class FilterPartitionBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
 
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 
@@ -179,7 +179,7 @@ public class FilterPartitionBenchmark
     indexFile = INDEX_MERGER_V9.persist(
         incIndex,
         tmpDir,
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     qIndex = INDEX_IO.loadIndex(indexFile);

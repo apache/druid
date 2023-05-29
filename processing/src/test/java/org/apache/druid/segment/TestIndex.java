@@ -146,14 +146,14 @@ public class TestIndex
       new DoubleMaxAggregatorFactory(DOUBLE_METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
-  public static final IndexSpec INDEX_SPEC = new IndexSpec();
+  public static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
 
   public static final IndexMerger INDEX_MERGER =
       TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
   public static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
   static {
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
   }
 
   private static Supplier<IncrementalIndex> realtimeIndex = Suppliers.memoize(
@@ -215,15 +215,11 @@ public class TestIndex
   private static Supplier<QueryableIndex> frontCodedMmappedIndex = Suppliers.memoize(
       () -> persistRealtimeAndLoadMMapped(
           realtimeIndex.get(),
-          new IndexSpec(
-              null,
-              null,
-              new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1),
-              null,
-              null,
-              null,
-              null
-          )
+          IndexSpec.builder()
+                   .withStringDictionaryEncoding(
+                       new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1)
+                   )
+                   .build()
       )
   );
 

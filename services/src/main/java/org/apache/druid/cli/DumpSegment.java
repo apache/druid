@@ -475,9 +475,9 @@ public class DumpSegment extends GuiceRunnable
                 }
                 jg.writeEndArray();
 
-                Indexed<ByteBuffer> globalStringDictionary = nestedDataColumn.getStringDictionary();
-                FixedIndexed<Long> globalLongDictionary = nestedDataColumn.getLongDictionary();
-                FixedIndexed<Double> globalDoubleDictionary = nestedDataColumn.getDoubleDictionary();
+                Indexed<ByteBuffer> globalStringDictionary = nestedDataColumn.getUtf8BytesDictionary();
+                Indexed<Long> globalLongDictionary = nestedDataColumn.getLongDictionary();
+                Indexed<Double> globalDoubleDictionary = nestedDataColumn.getDoubleDictionary();
                 jg.writeFieldName("dictionaries");
                 jg.writeStartObject();
                 {

@@ -57,6 +57,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -121,6 +122,17 @@ public class SqlInputSourceTest
     final String valueString = mapper.writeValueAsString(sqlInputSource);
     final SqlInputSource inputSourceFromJson = mapper.readValue(valueString, SqlInputSource.class);
     Assert.assertEquals(sqlInputSource, inputSourceFromJson);
+  }
+
+  @Test
+  public void testGetTypes()
+  {
+    mapper.registerSubtypes(TestSerdeFirehoseConnector.class);
+    final SqlInputSourceTest.TestSerdeFirehoseConnector testSerdeFirehoseConnector = new SqlInputSourceTest.TestSerdeFirehoseConnector(
+        new MetadataStorageConnectorConfig());
+    final SqlInputSource sqlInputSource =
+        new SqlInputSource(SqlTestUtils.selectFrom(TABLE_1), true, testSerdeFirehoseConnector, mapper);
+    Assert.assertEquals(Collections.singleton(SqlInputSource.TYPE_KEY), sqlInputSource.getTypes());
   }
 
   @Test

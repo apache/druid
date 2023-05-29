@@ -76,7 +76,7 @@ public class SchemalessIndexTest
       new CountAggregatorFactory("count")
   };
 
-  private static final IndexSpec INDEX_SPEC = new IndexSpec();
+  private static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
 
   private static final List<Map<String, Object>> EVENTS = new ArrayList<>();
 
@@ -88,7 +88,7 @@ public class SchemalessIndexTest
   private static QueryableIndex mergedIndex = null;
 
   static {
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
   }
 
   private final IndexMerger indexMerger;

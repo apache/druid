@@ -27,7 +27,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteStreams;
@@ -154,10 +153,20 @@ public class ForkingTaskRunner
                 @Override
                 public TaskStatus call()
                 {
+                  final TaskStorageDirTracker.StorageSlot storageSlot;
+                  try {
+                    storageSlot = getTracker().pickStorageSlot(task.getId());
+                  }
+                  catch (RuntimeException e) {
+                    LOG.warn(e, "Failed to get storage slot for task [%s], cannot schedule.", task.getId());
+                    return TaskStatus.failure(
+                        task.getId(),
+                        StringUtils.format("Failed to get storage slot due to error [%s]", e.getMessage())
+                    );
+                  }
 
-                  final String attemptId = String.valueOf(getNextAttemptID(dirTracker, task.getId()));
-                  final String baseTaskDir = dirTracker.getBaseTaskDir(task.getId()).getAbsolutePath();
-                  final File taskDir = dirTracker.getTaskDir(task.getId());
+                  final File taskDir = new File(storageSlot.getDirectory(), task.getId());
+                  final String attemptId = String.valueOf(getNextAttemptID(taskDir));
                   final File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", attemptId).toFile();
 
                   final ProcessHolder processHolder;
@@ -203,7 +212,7 @@ public class ForkingTaskRunner
                           throw new ISE("TaskInfo already has processHolder for task[%s]!", task.getId());
                         }
 
-                        final List<String> command = new ArrayList<>();
+                        final CommandListBuilder command = new CommandListBuilder();
                         final String taskClasspath;
                         if (task.getClasspathPrefix() != null && !task.getClasspathPrefix().isEmpty()) {
                           taskClasspath = Joiner.on(File.pathSeparator).join(
@@ -225,18 +234,15 @@ public class ForkingTaskRunner
 
                         command.add(StringUtils.format("-XX:ActiveProcessorCount=%d", numProcessorsPerTask));
 
-                        Iterables.addAll(command, new QuotableWhiteSpaceSplitter(config.getJavaOpts()));
-                        Iterables.addAll(command, config.getJavaOptsArray());
+                        command.addAll(new QuotableWhiteSpaceSplitter(config.getJavaOpts()));
+                        command.addAll(config.getJavaOptsArray());
 
                         // Override task specific javaOpts
                         Object taskJavaOpts = task.getContextValue(
                             ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY
                         );
                         if (taskJavaOpts != null) {
-                          Iterables.addAll(
-                              command,
-                              new QuotableWhiteSpaceSplitter((String) taskJavaOpts)
-                          );
+                          command.addAll(new QuotableWhiteSpaceSplitter((String) taskJavaOpts));
                         }
 
                         // Override task specific javaOptsArray
@@ -246,7 +252,7 @@ public class ForkingTaskRunner
                               new TypeReference<List<String>>() {}
                           );
                           if (taskJavaOptsArray != null) {
-                            Iterables.addAll(command, taskJavaOptsArray);
+                            command.addAll(taskJavaOptsArray);
                           }
                         }
                         catch (Exception e) {
@@ -264,13 +270,7 @@ public class ForkingTaskRunner
                                 && !ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY.equals(propName)
                                 && !ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY.equals(propName)
                             ) {
-                              command.add(
-                                  StringUtils.format(
-                                  "-D%s=%s",
-                                  propName,
-                                  props.getProperty(propName)
-                                )
-                              );
+                              command.addSystemProperty(propName, props.getProperty(propName));
                             }
                           }
                         }
@@ -278,12 +278,9 @@ public class ForkingTaskRunner
                         // Override child JVM specific properties
                         for (String propName : props.stringPropertyNames()) {
                           if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
-                            command.add(
-                                StringUtils.format(
-                                "-D%s=%s",
+                            command.addSystemProperty(
                                 propName.substring(CHILD_PROPERTY_PREFIX.length()),
                                 props.getProperty(propName)
-                              )
                             );
                           }
                         }
@@ -293,87 +290,53 @@ public class ForkingTaskRunner
                         if (context != null) {
                           for (String propName : context.keySet()) {
                             if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
-                              command.add(
-                                  StringUtils.format(
-                                  "-D%s=%s",
+                              command.addSystemProperty(
                                   propName.substring(CHILD_PROPERTY_PREFIX.length()),
                                   task.getContextValue(propName)
-                                )
                               );
                             }
                           }
                         }
 
                         // add the attemptId as a system property
-                        command.add(
-                            StringUtils.format(
-                                "-D%s=%s",
-                                "attemptId",
-                                "1"
-                            )
-                        );
+                        command.addSystemProperty("attemptId", "1");
 
                         // Add dataSource, taskId and taskType for metrics or logging
-                        command.add(
-                            StringUtils.format(
-                            "-D%s%s=%s",
-                            MonitorsConfig.METRIC_DIMENSION_PREFIX,
-                            DruidMetrics.DATASOURCE,
+                        command.addSystemProperty(
+                            MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.DATASOURCE,
                             task.getDataSource()
-                          )
                         );
-                        command.add(
-                            StringUtils.format(
-                            "-D%s%s=%s",
-                            MonitorsConfig.METRIC_DIMENSION_PREFIX,
-                            DruidMetrics.TASK_ID,
+                        command.addSystemProperty(
+                            MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.TASK_ID,
                             task.getId()
-                          )
                         );
-                        command.add(
-                            StringUtils.format(
-                            "-D%s%s=%s",
-                            MonitorsConfig.METRIC_DIMENSION_PREFIX,
-                            DruidMetrics.TASK_TYPE,
+                        command.addSystemProperty(
+                            MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.TASK_TYPE,
                             task.getType()
-                          )
                         );
 
-                        command.add(StringUtils.format("-Ddruid.host=%s", childHost));
-                        command.add(StringUtils.format("-Ddruid.plaintextPort=%d", childPort));
-                        command.add(StringUtils.format("-Ddruid.tlsPort=%d", tlsChildPort));
+
+                        command.addSystemProperty("druid.host", childHost);
+                        command.addSystemProperty("druid.plaintextPort", childPort);
+                        command.addSystemProperty("druid.tlsPort", tlsChildPort);
 
                         // Let tasks know where they are running on.
                         // This information is used in native parallel indexing with shuffle.
-                        command.add(StringUtils.format("-Ddruid.task.executor.service=%s", node.getServiceName()));
-                        command.add(StringUtils.format("-Ddruid.task.executor.host=%s", node.getHost()));
-                        command.add(
-                            StringUtils.format("-Ddruid.task.executor.plaintextPort=%d", node.getPlaintextPort())
-                        );
-                        command.add(
-                            StringUtils.format(
-                                "-Ddruid.task.executor.enablePlaintextPort=%s",
-                                node.isEnablePlaintextPort()
-                            )
-                        );
-                        command.add(StringUtils.format("-Ddruid.task.executor.tlsPort=%d", node.getTlsPort()));
-                        command.add(
-                            StringUtils.format("-Ddruid.task.executor.enableTlsPort=%s", node.isEnableTlsPort())
-                        );
-                        command.add(StringUtils.format("-Dlog4j2.configurationFactory=%s", ConsoleLoggingEnforcementConfigurationFactory.class.getName()));
+                        command.addSystemProperty("druid.task.executor.service", node.getServiceName());
+                        command.addSystemProperty("druid.task.executor.host", node.getHost());
+                        command.addSystemProperty("druid.task.executor.plaintextPort", node.getPlaintextPort());
+                        command.addSystemProperty("druid.task.executor.enablePlaintextPort", node.isEnablePlaintextPort());
+                        command.addSystemProperty("druid.task.executor.tlsPort", node.getTlsPort());
+                        command.addSystemProperty("druid.task.executor.enableTlsPort", node.isEnableTlsPort());
+                        command.addSystemProperty("log4j2.configurationFactory", ConsoleLoggingEnforcementConfigurationFactory.class.getName());
 
-                        // These are not enabled per default to allow the user to either set or not set them
-                        // Users are highly suggested to be set in druid.indexer.runner.javaOpts
-                        // See org.apache.druid.concurrent.TaskThreadPriority#getThreadPriorityFromTaskPriority(int)
-                        // for more information
-                        // command.add("-XX:+UseThreadPriorities");
-                        // command.add("-XX:ThreadPriorityPolicy=42");
+                        command.addSystemProperty("druid.indexer.task.baseTaskDir", storageSlot.getDirectory().getAbsolutePath());
+                        command.addSystemProperty("druid.indexer.task.tmpStorageBytesPerTask", storageSlot.getNumBytes());
 
                         command.add("org.apache.druid.cli.Main");
                         command.add("internal");
                         command.add("peon");
-                        command.add(baseTaskDir);
-                        command.add(task.getId());
+                        command.add(taskDir.toString());
                         command.add(attemptId);
                         String nodeType = task.getNodeType();
                         if (nodeType != null) {
@@ -394,9 +357,9 @@ public class ForkingTaskRunner
 
                         LOGGER.info(
                             "Running command: %s",
-                            getMaskedCommand(startupLoggingConfig.getMaskProperties(), command)
+                            getMaskedCommand(startupLoggingConfig.getMaskProperties(), command.getCommandList())
                         );
-                        taskWorkItem.processHolder = runTaskProcess(command, logFile, taskLocation);
+                        taskWorkItem.processHolder = runTaskProcess(command.getCommandList(), logFile, taskLocation);
 
                         processHolder = taskWorkItem.processHolder;
                         processHolder.registerWithCloser(closer);
@@ -466,6 +429,8 @@ public class ForkingTaskRunner
                         portFinder.markPortUnused(tlsChildPort);
                       }
 
+                      getTracker().returnStorageSlot(storageSlot);
+
                       try {
                         if (!stopping && taskDir.exists()) {
                           FileUtils.deleteDirectory(taskDir);
@@ -484,6 +449,7 @@ public class ForkingTaskRunner
                     }
                   }
                 }
+
               }
             )
           )
@@ -499,9 +465,7 @@ public class ForkingTaskRunner
     return new ProcessHolder(
         new ProcessBuilder(ImmutableList.copyOf(command)).redirectErrorStream(true).start(),
         logFile,
-        taskLocation.getHost(),
-        taskLocation.getPort(),
-        taskLocation.getTlsPort()
+        taskLocation
     );
   }
 
@@ -578,7 +542,6 @@ public class ForkingTaskRunner
     } else {
       LOGGER.warn("Ran out of time, not waiting for executor to finish!");
     }
-    super.stop();
   }
 
   @Override
@@ -841,7 +804,7 @@ public class ForkingTaskRunner
       if (processHolder == null) {
         return TaskLocation.unknown();
       } else {
-        return TaskLocation.create(processHolder.host, processHolder.port, processHolder.tlsPort);
+        return processHolder.location;
       }
     }
 
@@ -858,42 +821,34 @@ public class ForkingTaskRunner
     }
   }
 
-  @VisibleForTesting
-  static class ProcessHolder
+  public static class ProcessHolder
   {
     private final Process process;
     private final File logFile;
-    private final String host;
-    private final int port;
-    private final int tlsPort;
+    private final TaskLocation location;
 
-    private ProcessHolder(Process process, File logFile, String host, int port, int tlsPort)
+    public ProcessHolder(Process process, File logFile, TaskLocation location)
     {
       this.process = process;
       this.logFile = logFile;
-      this.host = host;
-      this.port = port;
-      this.tlsPort = tlsPort;
+      this.location = location;
     }
 
-    @VisibleForTesting
-    void registerWithCloser(Closer closer)
+    private void registerWithCloser(Closer closer)
     {
       closer.register(process.getInputStream());
       closer.register(process.getOutputStream());
     }
 
-    @VisibleForTesting
-    void shutdown()
+    private void shutdown()
     {
       process.destroy();
     }
   }
 
   @VisibleForTesting
-  static int getNextAttemptID(TaskStorageDirTracker dirTracker, String taskId)
+  static int getNextAttemptID(File taskDir)
   {
-    File taskDir = dirTracker.getTaskDir(taskId);
     File attemptDir = new File(taskDir, "attempt");
     try {
       FileUtils.mkdirp(attemptDir);
@@ -914,6 +869,51 @@ public class ForkingTaskRunner
       throw new ISE("Error creating directory", e);
     }
     return maxAttempt + 1;
+  }
+
+  public static class CommandListBuilder
+  {
+    ArrayList<String> commandList = new ArrayList<>();
+
+    public CommandListBuilder add(String arg)
+    {
+      commandList.add(arg);
+      return this;
+    }
+
+    public CommandListBuilder addSystemProperty(String property, int value)
+    {
+      return addSystemProperty(property, String.valueOf(value));
+    }
+
+    public CommandListBuilder addSystemProperty(String property, long value)
+    {
+      return addSystemProperty(property, String.valueOf(value));
+    }
+
+    public CommandListBuilder addSystemProperty(String property, boolean value)
+    {
+      return addSystemProperty(property, String.valueOf(value));
+    }
+
+    public CommandListBuilder addSystemProperty(String property, String value)
+    {
+      return add(StringUtils.format("-D%s=%s", property, value));
+    }
+
+    public CommandListBuilder addAll(Iterable<String> args)
+    {
+      for (String arg : args) {
+        add(arg);
+      }
+      return this;
+    }
+
+    public ArrayList<String> getCommandList()
+    {
+      return commandList;
+    }
+
   }
 }
 

@@ -20,29 +20,40 @@
 package org.apache.druid.k8s.overlord.common;
 
 import io.fabric8.kubernetes.client.Config;
-import io.fabric8.kubernetes.client.DefaultKubernetesClient;
+import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 
 public class DruidKubernetesClient implements KubernetesClientApi
 {
 
   private final Config config;
+  private final KubernetesClient kubernetesClient;
 
   public DruidKubernetesClient()
   {
-    this(Config.autoConfigure(null));
+    this(new ConfigBuilder().build());
   }
 
   public DruidKubernetesClient(Config config)
   {
     this.config = config;
+    this.kubernetesClient = new KubernetesClientBuilder().withConfig(config).build();
   }
 
   @Override
   public <T> T executeRequest(KubernetesExecutor<T> executor) throws KubernetesResourceNotFoundException
   {
-    try (KubernetesClient client = new DefaultKubernetesClient(config)) {
-      return executor.executeRequest(client);
-    }
+    return executor.executeRequest(kubernetesClient);
+  }
+
+  /** This client automatically gets closed by the druid lifecycle, it should not be closed when used as it is
+   * meant to be reused.
+   * @return re-useable KubernetesClient
+   */
+  @Override
+  public KubernetesClient getClient()
+  {
+    return this.kubernetesClient;
   }
 }

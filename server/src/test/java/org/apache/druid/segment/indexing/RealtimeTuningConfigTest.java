@@ -84,8 +84,8 @@ public class RealtimeTuningConfigTest
     Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
     Assert.assertEquals(0, config.getAlertTimeout());
-    Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
-    Assert.assertEquals(new IndexSpec(), config.getIndexSpecForIntermediatePersists());
+    Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpec());
+    Assert.assertEquals(IndexSpec.DEFAULT, config.getIndexSpecForIntermediatePersists());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(new NumberedShardSpec(0, 1), config.getShardSpec());
     Assert.assertEquals(0, config.getMaxPendingPersists());
@@ -137,9 +137,12 @@ public class RealtimeTuningConfigTest
     Assert.assertEquals(100, config.getPersistThreadPriority());
     Assert.assertEquals(new Period("PT1H"), config.getWindowPeriod());
     Assert.assertEquals(true, config.isReportParseExceptions());
-    Assert.assertEquals(new IndexSpec(null, null, CompressionStrategy.NONE, null), config.getIndexSpec());
     Assert.assertEquals(
-        new IndexSpec(null, CompressionStrategy.UNCOMPRESSED, null, null),
+        IndexSpec.builder().withMetricCompression(CompressionStrategy.NONE).build(),
+        config.getIndexSpec()
+    );
+    Assert.assertEquals(
+        IndexSpec.builder().withDimensionCompression(CompressionStrategy.UNCOMPRESSED).build(),
         config.getIndexSpecForIntermediatePersists()
     );
 

@@ -278,6 +278,13 @@ export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | un
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }
 
+export function findMap<T, Q>(
+  xs: readonly T[],
+  f: (x: T, i: number) => Q | undefined,
+): Q | undefined {
+  return filterMap(xs, f)[0];
+}
+
 export function compact<T>(xs: (T | undefined | false | null | '')[]): T[] {
   return xs.filter(Boolean) as T[];
 }
@@ -457,4 +464,27 @@ export function tickIcon(checked: boolean): IconName {
 
 export function generate8HexId(): string {
   return (Math.random() * 1e10).toString(16).replace('.', '').slice(0, 8);
+}
+
+export function offsetToRowColumn(
+  str: string,
+  offset: number,
+): { row: number; column: number } | undefined {
+  // Ensure offset is within the string length
+  if (offset < 0 || offset > str.length) return;
+
+  const lines = str.split('\n');
+  for (let row = 0; row < lines.length; row++) {
+    const line = lines[row];
+    if (offset < line.length) {
+      return {
+        row,
+        column: offset,
+      };
+    }
+
+    offset -= line.length + 1;
+  }
+
+  return;
 }

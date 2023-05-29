@@ -17,18 +17,19 @@
  */
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
+import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 import AceEditor from 'react-ace';
 
 import { Execution } from '../../../druid-models';
 import { AppToaster } from '../../../singletons';
-import { validJson } from '../../../utils';
+import { offsetToRowColumn } from '../../../utils';
 
 import './execution-submit-dialog.scss';
 
 export interface ExecutionSubmitDialogProps {
-  onSubmit: (execution: Execution) => void;
-  onClose: () => void;
+  onSubmit(execution: Execution): void;
+  onClose(): void;
 }
 
 export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
@@ -37,15 +38,18 @@ export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
   const { onClose, onSubmit } = props;
   const [archive, setArchive] = useState('');
 
-  function submitProfile(): void {
-    if (!validJson(archive)) return;
+  function handleSubmit(): void {
     let parsed: any;
     try {
-      parsed = JSON.parse(archive);
+      parsed = JSONBig.parse(archive);
     } catch (e) {
+      const rowColumn = typeof e.at === 'number' ? offsetToRowColumn(archive, e.at) : undefined;
       AppToaster.show({
         intent: Intent.DANGER,
-        message: `Could not parse JSON: ${e.message}`,
+        message: `Could not parse JSON: ${e.message}${
+          rowColumn ? ` (at line ${rowColumn.row + 1}, column ${rowColumn.column + 1})` : ''
+        }`,
+        timeout: 5000,
       });
       return;
     }
@@ -129,8 +133,8 @@ export const ExecutionSubmitDialog = React.memo(function ExecutionSubmitDialog(
           <Button
             text="Submit"
             intent={Intent.PRIMARY}
-            onClick={submitProfile}
-            disabled={!validJson(archive)}
+            onClick={handleSubmit}
+            disabled={!archive}
           />
         </div>
       </div>

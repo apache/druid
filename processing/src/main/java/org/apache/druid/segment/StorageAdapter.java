@@ -66,7 +66,29 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
    * (or null) values.
    */
   int getDimensionCardinality(String column);
+
+  /**
+   * Metadata-only operation that returns a lower bound on
+   * {@link org.apache.druid.segment.column.ColumnHolder#TIME_COLUMN_NAME} values for this adapter. May be earlier than
+   * the actual minimum data timestamp.
+   *
+   * For {@link QueryableIndexStorageAdapter} and {@link org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter}
+   * specifically, which back regular tables (i.e. {@link org.apache.druid.query.TableDataSource}), this method
+   * contract is tighter: it does return the actual minimum data timestamp. This fact is leveraged by
+   * {@link org.apache.druid.query.timeboundary.TimeBoundaryQuery} to return results using metadata only.
+   */
   DateTime getMinTime();
+
+  /**
+   * Metadata-only operation that returns an upper bound on
+   * {@link org.apache.druid.segment.column.ColumnHolder#TIME_COLUMN_NAME} values for this adapter. May be later than
+   * the actual maximum data timestamp.
+   *
+   * For {@link QueryableIndexStorageAdapter} and {@link org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter}
+   * specifically, which back regular tables (i.e. {@link org.apache.druid.query.TableDataSource}), this method
+   * contract is tighter: it does return the actual maximum data timestamp. This fact is leveraged by
+   * {@link org.apache.druid.query.timeboundary.TimeBoundaryQuery} to return results using metadata only.
+   */
   DateTime getMaxTime();
 
   /**
@@ -116,6 +138,14 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
    * the number of rows in the base adapter even though this method returns true.
    */
   default boolean hasBuiltInFilters()
+  {
+    return false;
+  }
+
+  /**
+   * @return true if this index was created from a tombstone or false otherwise
+   */
+  default boolean isFromTombstone()
   {
     return false;
   }

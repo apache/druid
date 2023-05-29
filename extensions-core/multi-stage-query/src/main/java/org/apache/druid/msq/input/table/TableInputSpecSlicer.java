@@ -20,8 +20,6 @@
 package org.apache.druid.msq.input.table;
 
 import com.google.common.base.Preconditions;
-import com.google.common.math.LongMath;
-import com.google.common.primitives.Ints;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
@@ -33,7 +31,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 import org.joda.time.Interval;
 
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -63,8 +60,13 @@ public class TableInputSpecSlicer implements InputSpecSlicer
   public List<InputSlice> sliceStatic(InputSpec inputSpec, int maxNumSlices)
   {
     final TableInputSpec tableInputSpec = (TableInputSpec) inputSpec;
-    final Set<DataSegmentWithInterval> prunedSegmentSet = getPrunedSegmentSet(tableInputSpec);
-    return makeSlices(tableInputSpec, prunedSegmentSet, maxNumSlices);
+    final List<List<DataSegmentWithInterval>> assignments =
+        SlicerUtils.makeSlicesStatic(
+            getPrunedSegmentSet(tableInputSpec).iterator(),
+            segment -> segment.getSegment().getSize(),
+            maxNumSlices
+        );
+    return makeSlices(tableInputSpec, assignments);
   }
 
   @Override
@@ -76,30 +78,15 @@ public class TableInputSpecSlicer implements InputSpecSlicer
   )
   {
     final TableInputSpec tableInputSpec = (TableInputSpec) inputSpec;
-    final Set<DataSegmentWithInterval> prunedSegmentSet = getPrunedSegmentSet(tableInputSpec);
-
-    if (prunedSegmentSet.isEmpty()) {
-      return Collections.emptyList();
-    }
-
-    int totalFiles = 0;
-    long totalBytes = 0;
-
-    for (DataSegmentWithInterval segmentWithInterval : prunedSegmentSet) {
-      totalFiles++;
-      totalBytes += segmentWithInterval.getSegment().getSize();
-    }
-
-    final int numSlices =
-        Math.min(
+    final List<List<DataSegmentWithInterval>> assignments =
+        SlicerUtils.makeSlicesDynamic(
+            getPrunedSegmentSet(tableInputSpec).iterator(),
+            segment -> segment.getSegment().getSize(),
             maxNumSlices,
-            Math.max(
-                Ints.checkedCast(LongMath.divide(totalFiles, maxFilesPerSlice, RoundingMode.CEILING)),
-                Ints.checkedCast(LongMath.divide(totalBytes, maxBytesPerSlice, RoundingMode.CEILING))
-            )
+            maxFilesPerSlice,
+            maxBytesPerSlice
         );
-
-    return makeSlices(tableInputSpec, prunedSegmentSet, numSlices);
+    return makeSlices(tableInputSpec, assignments);
   }
 
   private Set<DataSegmentWithInterval> getPrunedSegmentSet(final TableInputSpec tableInputSpec)
@@ -116,6 +103,7 @@ public class TableInputSpecSlicer implements InputSpecSlicer
                         .flatMap(
                             holder ->
                                 StreamSupport.stream(holder.getObject().spliterator(), false)
+                                             .filter(chunk -> !chunk.getObject().isTombstone())
                                              .map(
                                                  chunk ->
                                                      new DataSegmentWithInterval(
@@ -133,27 +121,16 @@ public class TableInputSpecSlicer implements InputSpecSlicer
     }
   }
 
-  private List<InputSlice> makeSlices(
+  private static List<InputSlice> makeSlices(
       final TableInputSpec tableInputSpec,
-      final Set<DataSegmentWithInterval> prunedSegmentSet,
-      final int maxNumSlices
+      final List<List<DataSegmentWithInterval>> assignments
   )
   {
-    if (prunedSegmentSet.isEmpty()) {
-      return Collections.emptyList();
-    }
+    final List<InputSlice> retVal = new ArrayList<>(assignments.size());
 
-    final List<List<DataSegmentWithInterval>> assignments = SlicerUtils.makeSlices(
-        prunedSegmentSet.iterator(),
-        segment -> segment.getSegment().getSize(),
-        maxNumSlices
-    );
-
-    final List<InputSlice> retVal = new ArrayList<>();
-
-    for (final List<DataSegmentWithInterval> dataSegmentWithIntervals : assignments) {
+    for (final List<DataSegmentWithInterval> assignment : assignments) {
       final List<RichSegmentDescriptor> descriptors = new ArrayList<>();
-      for (final DataSegmentWithInterval dataSegmentWithInterval : dataSegmentWithIntervals) {
+      for (final DataSegmentWithInterval dataSegmentWithInterval : assignment) {
         descriptors.add(dataSegmentWithInterval.toRichSegmentDescriptor());
       }
 

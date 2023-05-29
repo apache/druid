@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.external;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.rel.type.RelDataType;
@@ -55,6 +56,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -297,7 +299,7 @@ public class Externals
                     + "Please change the column name to something other than __time");
     }
 
-    return toExternalTable(spec, jsonMapper, spec.inputSourceType);
+    return toExternalTable(spec, jsonMapper, spec.inputSourceTypesSupplier);
   }
 
   public static ResourceAction externalRead(String name)
@@ -308,7 +310,7 @@ public class Externals
   public static ExternalTable toExternalTable(
       ExternalTableSpec spec,
       ObjectMapper jsonMapper,
-      String inputSourceType
+      Supplier<Set<String>> inputSourceTypesSupplier
   )
   {
     return new ExternalTable(
@@ -319,7 +321,7 @@ public class Externals
           ),
         spec.signature,
         jsonMapper,
-        inputSourceType
+        inputSourceTypesSupplier
     );
   }
 

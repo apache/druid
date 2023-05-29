@@ -74,6 +74,14 @@ public class GoogleTaskLogs implements TaskLogs
     pushTaskFile(reportFile, taskKey);
   }
 
+  @Override
+  public void pushTaskStatus(String taskid, File statusFile) throws IOException
+  {
+    final String taskKey = getTaskStatusKey(taskid);
+    LOG.info("Pushing task status %s to: %s", statusFile, taskKey);
+    pushTaskFile(statusFile, taskKey);
+  }
+
   private void pushTaskFile(final File logFile, final String taskKey) throws IOException
   {
     try (final InputStream fileStream = Files.newInputStream(logFile.toPath())) {
@@ -112,6 +120,13 @@ public class GoogleTaskLogs implements TaskLogs
   public Optional<InputStream> streamTaskReports(String taskid) throws IOException
   {
     final String taskKey = getTaskReportKey(taskid);
+    return streamTaskFile(taskid, 0, taskKey);
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskStatus(String taskid) throws IOException
+  {
+    final String taskKey = getTaskStatusKey(taskid);
     return streamTaskFile(taskid, 0, taskKey);
   }
 
@@ -154,6 +169,11 @@ public class GoogleTaskLogs implements TaskLogs
   private String getTaskReportKey(String taskid)
   {
     return config.getPrefix() + "/" + taskid.replace(':', '_') + ".report.json";
+  }
+
+  private String getTaskStatusKey(String taskid)
+  {
+    return config.getPrefix() + "/" + taskid.replace(':', '_') + ".status.json";
   }
 
   @Override

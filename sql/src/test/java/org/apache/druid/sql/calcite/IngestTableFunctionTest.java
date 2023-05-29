@@ -34,8 +34,8 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.Externals;
@@ -107,6 +107,65 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
          )
+        .expectLogicalPlanFrom("httpExtern")
+        .verify();
+  }
+
+  /**
+   * Http function
+   */
+  @Test
+  public void testHttpFunction()
+  {
+    String extern = "TABLE(http("
+             + "userName => 'bob',"
+             + "password => 'secret',"
+             + "uris => ARRAY['http://foo.com/bar.csv'],"
+             + "format => 'csv'))"
+             + "  (x VARCHAR, y VARCHAR, z BIGINT)";
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", extern)
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("dst", httpDataSource.getSignature())
+        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(httpDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .expectLogicalPlanFrom("httpExtern")
+        .verify();
+  }
+
+  /**
+   * Http function
+   */
+  @Test
+  public void testHttpFunctionWithInputsourceSecurity()
+  {
+    String extern = "TABLE(http("
+                    + "userName => 'bob',"
+                    + "password => 'secret',"
+                    + "uris => ARRAY['http://foo.com/bar.csv'],"
+                    + "format => 'csv'))"
+                    + "  (x VARCHAR, y VARCHAR, z BIGINT)";
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", extern)
+        .authConfig(AuthConfig.newBuilder().setEnableInputSourceSecurity(true).build())
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("dst", httpDataSource.getSignature())
+        .expectResources(dataSourceWrite("dst"), externalRead("http"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(httpDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "y", "z")
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
         .expectLogicalPlanFrom("httpExtern")
         .verify();
   }
@@ -256,8 +315,10 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         "\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\"," +
         "\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}," +
         "\"granularity\":{\"type\":\"all\"}}," +
-        "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]}]";
+        "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]," +
+        "\"columnMappings\":[{\"queryColumn\":\"x\",\"outputColumn\":\"x\"},{\"queryColumn\":\"y\",\"outputColumn\":\"y\"},{\"queryColumn\":\"z\",\"outputColumn\":\"z\"}]}]";
     final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\"}";
 
     testQuery(
         PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
@@ -265,7 +326,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
-            new Object[]{explanation, resources}
+            new Object[]{explanation, resources, attributes}
         )
     );
     didTest = true;
@@ -337,7 +398,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         RowSignature.builder()
                     .add("x", ColumnType.STRING)
                     .add("y", ColumnType.STRING)
-                    .add("z", NestedDataComplexTypeSerde.TYPE)
+                    .add("z", ColumnType.NESTED_DATA)
                     .build()
         );
     testIngestionQuery()

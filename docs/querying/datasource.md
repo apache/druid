@@ -333,7 +333,7 @@ Native join datasources have the following properties. All are required.
 |`left`|Left-hand datasource. Must be of type `table`, `join`, `lookup`, `query`, or `inline`. Placing another join as the left datasource allows you to join arbitrarily many datasources.|
 |`right`|Right-hand datasource. Must be of type `lookup`, `query`, or `inline`. Note that this is more rigid than what Druid SQL requires.|
 |`rightPrefix`|String prefix that will be applied to all columns from the right-hand datasource, to prevent them from colliding with columns from the left-hand datasource. Can be any string, so long as it is nonempty and is not be a prefix of the string `__time`. Any columns from the left-hand side that start with your `rightPrefix` will be shadowed. It is up to you to provide a prefix that will not shadow any important columns from the left side.|
-|`condition`|[Expression](../misc/math-expr.md) that must be an equality where one side is an expression of the left-hand side, and the other side is a simple column reference to the right-hand side. Note that this is more rigid than what Druid SQL requires: here, the right-hand reference must be a simple column reference; in SQL it can be an expression.|
+|`condition`|[Expression](math-expr.md) that must be an equality where one side is an expression of the left-hand side, and the other side is a simple column reference to the right-hand side. Note that this is more rigid than what Druid SQL requires: here, the right-hand reference must be a simple column reference; in SQL it can be an expression.|
 |`joinType`|`INNER` or `LEFT`.|
 
 #### Join performance
@@ -397,7 +397,7 @@ When you use the `unnest` datasource, the unnested column looks like this:
 When unnesting data, keep the following in mind:
 
 - The total number of rows will grow to accommodate the new rows that the unnested data occupy.
-- You can unnest the values in more than one column in a single `unnest` datasource. This can lead to a very large number of new rows depending on your dataset. You can see an example of this in the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md#unnest-multiple-columns).
+- You can unnest the values in more than one column in a single `unnest` datasource, but this can lead to a very large number of new rows depending on your dataset.
 
 The `unnest` datasource uses the following syntax:
 
@@ -410,9 +410,10 @@ The `unnest` datasource uses the following syntax:
     },
     "virtualColumn": {
       "type": "expression",
+      "name": "output_column",
       "expression": "\"column_reference\""
     },
-    "outputName": "unnested_target_column"
+    "unnestFilter": "optional_filter"
   }
 ```
 
@@ -420,5 +421,6 @@ The `unnest` datasource uses the following syntax:
 * `dataSource.base`: Defines the datasource you want to unnest.
   * `dataSource.base.type`: The type of datasource you want to unnest, such as a table.
 * `dataSource.virtualColumn`: [Virtual column](virtual-columns.md) that references the nested values. The output name of this column is reused as the name of the column that contains unnested values. You can replace the source column with the unnested column by specifying the source column's name or a new column by specifying a different name. Outputting it to a new column can help you verify that you get the results that you expect but isn't required.
+* `unnestFilter`: A filter only on the output column. You can omit this or set it to null if there are no filters.
 
-To learn more about how to use the `unnest` datasource, see the [unnest tutorial](../tutorials/tutorial-unnest-datasource.md).
+To learn more about how to use the `unnest` datasource, see the [unnest tutorial](../tutorials/tutorial-unnest-arrays.md).

@@ -107,7 +107,7 @@ public class DelimitedInputFormatTest
   public void testMissingFindColumnsFromHeaderWithMissingColumnsThrowingError()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("At least one of [Property{name='hasHeaderRow', value=null}");
+    expectedException.expectMessage("Either [columns] or [findColumnsFromHeader] must be set");
     new DelimitedInputFormat(null, null, "delim", null, null, 0);
   }
 
@@ -129,7 +129,7 @@ public class DelimitedInputFormatTest
   public void testHasHeaderRowWithMissingFindColumnsThrowingError()
   {
     expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("At most one of [Property{name='hasHeaderRow', value=true}");
+    expectedException.expectMessage("Cannot accept both [findColumnsFromHeader] and [hasHeaderRow]");
     new DelimitedInputFormat(null, null, "delim", true, false, 0);
   }
 
