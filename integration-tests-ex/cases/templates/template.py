@@ -59,6 +59,10 @@ def generate(template_path, template):
     # The target location for the output file is <module>/target/cluster/<cluster>/docker-compose.yaml
     target_dir = module_dir.joinpath("target")
     target_file = target_dir.joinpath('cluster', cluster, 'docker-compose.yaml')
+    # Uncomment the following for debugging
+    #print("template_path:", template_path)
+    #print("module_dir:", module_dir)
+    #print("target_file:", target_file)
 
     # Defer back to the template class to create the output into the docker-compose.yaml file.
     with target_file.open("w") as f:
@@ -197,10 +201,17 @@ class BaseTemplate:
 
     def add_env(self, service, var, value):
         '''
+        Adds an environment variable & value to a service.
+        '''
+        self.add_env_pair(service, var + '=' + value)
+
+    def add_env_pair(self, service, pair):
+        '''
         Adds an environment variable to a service.
+        Entry is of the form var=value.
         '''
         vars = service.setdefault('environment', [])
-        vars.append(var + '=' + value)
+        vars.append(pair)
 
     def add_property(self, service, prop, value):
         '''

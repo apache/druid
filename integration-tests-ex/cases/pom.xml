@@ -19,8 +19,8 @@
   -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.apache.druid.integration-tests</groupId>
@@ -36,7 +36,7 @@
     </parent>
 
     <properties>
-    	<it.category>MustSetACategory</it.category>
+        <it.category>MustSetACategory</it.category>
     </properties>
 
     <dependencies>
@@ -143,13 +143,10 @@
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-core</artifactId>
-            <version>${aws.sdk.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.api-client</groupId>
             <artifactId>google-api-client</artifactId>
-            <version>${com.google.apis.client.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.google.apis</groupId>
@@ -188,14 +185,10 @@
         <dependency>
             <groupId>com.google.http-client</groupId>
             <artifactId>google-http-client</artifactId>
-            <version>${com.google.apis.client.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.google.http-client</groupId>
             <artifactId>google-http-client-jackson2</artifactId>
-            <version>${com.google.apis.client.version}</version>
-            <scope>provided</scope>
         </dependency>
         <!-- Tests can choose either the MySQL or MariaDB driver. -->
         <dependency>
@@ -223,19 +216,15 @@
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-azure-extensions</artifactId>
             <version>${project.parent.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-s3</artifactId>
-            <version>${aws.sdk.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-s3-extensions</artifactId>
             <version>${project.parent.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
@@ -253,14 +242,12 @@
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-google-extensions</artifactId>
             <version>${project.parent.version}</version>
-            <scope>provided</scope>
         </dependency>
-         <dependency>
-             <groupId>org.apache.druid</groupId>
-             <artifactId>druid-gcp-common</artifactId>
-             <version>${project.parent.version}</version>
-             <scope>provided</scope>
-         </dependency>
+        <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-gcp-common</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.druid</groupId>
@@ -271,13 +258,11 @@
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-multi-stage-query</artifactId>
             <version>${project.parent.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-catalog</artifactId>
             <version>${project.parent.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -314,13 +299,12 @@
         <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-client</artifactId>
-            <version>5.4.0</version>
         </dependency>
     </dependencies>
 
-    <!-- Exclude ITs from surefire. Required because they end with "Test". -->
     <build>
         <plugins>
+            <!-- Exclude ITs from surefire. Required because they end with "Test". -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -338,8 +322,8 @@
                       ~ The analysis gets confused between javax.xml.bind:jaxb-api and jakarta.xml.bind:jakarta.xml.bind-api.
                       ~ The latter is a transitive dependency of jackson 2.10+.
                       -->
-                     <ignoredUsedUndeclaredDependencies>
-                         <ignoredUsedUndeclaredDependency>org.glassfish.hk2.external:jakarta.inject</ignoredUsedUndeclaredDependency>
+                    <ignoredUsedUndeclaredDependencies>
+                        <ignoredUsedUndeclaredDependency>org.glassfish.hk2.external:jakarta.inject</ignoredUsedUndeclaredDependency>
                     </ignoredUsedUndeclaredDependencies>
                     <!-- Dynamically loaded. -->
                     <ignoredUnusedDeclaredDependencies>
@@ -354,36 +338,47 @@
                     <skip>true</skip>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
     <profiles>
         <profile>
-          <id>IT-HighAvailability</id>
+            <id>IT-HighAvailability</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
-        <properties>
-          <it.category>HighAvailability</it.category>
-        </properties>
+            <properties>
+                <it.category>HighAvailability</it.category>
+            </properties>
         </profile>
         <profile>
-          <id>IT-BatchIndex</id>
+            <id>IT-BatchIndex</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
-        <properties>
-          <it.category>BatchIndex</it.category>
-        </properties>
+            <properties>
+                <it.category>BatchIndex</it.category>
+            </properties>
         </profile>
         <profile>
-          <id>IT-InputSource</id>
+            <id>IT-InputSource</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
-        <properties>
-          <it.category>InputSource</it.category>
-        </properties>
+            <properties>
+                <it.category>InputSource</it.category>
+            </properties>
         </profile>
         <profile>
             <id>IT-InputFormat</id>
@@ -449,84 +444,49 @@
             </properties>
         </profile>
         <profile>
+            <!-- Run the integration tests in Docker. Assumes that the cluster has been
+                 started via $DRUID_DEV/it.sh up <Category> or $DRUID_DEV/it.sh test <Category>
+                 Cluster start/stop is not done here to avoid duplicating functionality.
+                 Builds should invoke ITs using it.sh, not directy using Maven.
+                 -->
             <id>docker-tests</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
             <build>
                 <plugins>
-                     <plugin>
+                    <plugin>
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <version>3.0.0-M7</version>
                         <dependencies>
-                          <!-- Required to force Failsafe to use JUnit instead of TestNG.
-                               junit47 is required to use test categories. -->
-                          <dependency>
-                            <groupId>org.apache.maven.surefire</groupId>
-                            <artifactId>surefire-junit47</artifactId>
-                            <version>3.0.0-M7</version>
-                          </dependency>
+                            <!-- Required to force Failsafe to use JUnit instead of TestNG.
+                                 junit47 is required to use test categories. -->
+                            <dependency>
+                                <groupId>org.apache.maven.surefire</groupId>
+                                <artifactId>surefire-junit47</artifactId>
+                                <version>3.0.0-M7</version>
+                            </dependency>
                         </dependencies>
                         <executions>
-                          <execution>
-                            <id>functional-test</id>
-                            <phase>integration-test</phase>
-                            <goals>
-                                <goal>integration-test</goal>
-                            </goals>
-                            <configuration>
-                                <!-- Turning on logs so that travis does not time out tests for not providing any output.  -->
-                                <redirectTestOutputToFile>False</redirectTestOutputToFile>
-                                <!-- Can run only one test category per Maven run. -->
-                                <groups>org.apache.druid.testsEx.categories.${it.category}</groups>
-                             </configuration>
-                          </execution>
-                          <execution>
-                            <id>verify</id>
-                            <phase>verify</phase>
-                            <goals>
-                              <goal>verify</goal>
-                            </goals>
-                          </execution>
-                        </executions>
-                    </plugin>
-
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>exec-maven-plugin</artifactId>
-                        <executions>
                             <execution>
-                                <id>start-cluster</id>
-                                <phase>pre-integration-test</phase>
+                                <id>functional-test</id>
+                                <phase>integration-test</phase>
                                 <goals>
-                                    <goal>exec</goal>
+                                    <goal>integration-test</goal>
                                 </goals>
                                 <configuration>
-                                    <workingDirectory>${project.basedir}</workingDirectory>
-                                    <executable>bash</executable>
-                                    <arguments>
-                                        <argument>cluster.sh</argument>
-                                        <argument>up</argument>
-                                        <argument>${it.category}</argument>
-                                    </arguments>
+                                    <!-- Turning on logs so that travis does not time out tests for not providing any output.  -->
+                                    <redirectTestOutputToFile>False</redirectTestOutputToFile>
+                                    <!-- Can run only one test category per Maven run. -->
+                                    <groups>org.apache.druid.testsEx.categories.${it.category}</groups>
                                 </configuration>
                             </execution>
-
                             <execution>
-                                <id>stop-cluster</id>
-                                <phase>post-integration-test</phase>
+                                <id>verify</id>
+                                <phase>verify</phase>
                                 <goals>
-                                    <goal>exec</goal>
+                                    <goal>verify</goal>
                                 </goals>
-                                <configuration>
-                                    <workingDirectory>${project.basedir}</workingDirectory>
-                                    <executable>bash</executable>
-                                    <arguments>
-                                        <argument>cluster.sh</argument>
-                                        <argument>down</argument>
-                                        <argument>${it.category}</argument>
-                                    </arguments>
-                                </configuration>
                             </execution>
                         </executions>
                     </plugin>

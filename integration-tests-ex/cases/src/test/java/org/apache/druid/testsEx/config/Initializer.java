@@ -60,7 +60,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.LoggingEmitter;
 import org.apache.druid.java.util.emitter.core.LoggingEmitterConfig;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.auth.BasicCredentials;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageProvider;
@@ -173,13 +175,18 @@ public class Initializer
 
     @Provides
     @TestClient
+    @LazySingleton
     public HttpClient getHttpClient(
         IntegrationTestingConfig config,
         Lifecycle lifecycle,
         @Client HttpClient delegate
     )
     {
-      return delegate;
+      if (config.getUsername() != null) {
+        return new CredentialedHttpClient(new BasicCredentials(config.getUsername(), config.getPassword()), delegate);
+      } else {
+        return new CredentialedHttpClient(new BasicCredentials("admin", "priest"), delegate);
+      }
     }
 
     @Provides

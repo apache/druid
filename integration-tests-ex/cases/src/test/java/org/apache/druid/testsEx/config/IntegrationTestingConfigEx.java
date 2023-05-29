@@ -319,13 +319,13 @@ class IntegrationTestingConfigEx implements IntegrationTestingConfig
   @Override
   public String getUsername()
   {
-    return getProperty("username");
+    return (String) config.properties().get("username");
   }
 
   @Override
   public String getPassword()
   {
-    return getProperty("password");
+    return (String) config.properties().get("password");
   }
 
   @Override
