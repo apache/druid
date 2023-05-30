@@ -78,7 +78,7 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
       throw new SamplerException(e, "Thread interrupted while seeking to partitions");
     }
     catch (StreamException e) {
-      throw new SamplerException(e, "Exception while seeking to partitions while creating RecordSupplierInputSource: %s", Throwables.getRootCause(e).getMessage());
+      throw new SamplerException(e, "Exception creating RecordSupplierInputSource while seeking to partitions: %s", Throwables.getRootCause(e).getMessage());
     }
   }
 
