@@ -447,6 +447,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
   useEffect(() => {
     if (!previewResultState.data) return;
     lastWorkingQueryPattern.current = ingestQueryPattern;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- excluding 'ingestQueryPattern'
   }, [previewResultState]);
 
   const unusedColumns = ingestQueryPattern
