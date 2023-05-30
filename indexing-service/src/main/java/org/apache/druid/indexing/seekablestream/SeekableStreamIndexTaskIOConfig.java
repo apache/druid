@@ -44,7 +44,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   private final InputFormat inputFormat;
 
   public SeekableStreamIndexTaskIOConfig(
-      @Nullable final Integer taskGroupId, // can be null for backward compabitility
+      @Nullable final Integer taskGroupId, // can be null for backward compatibility
       final String baseSequenceName,
       final SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> startSequenceNumbers,
       final SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> endSequenceNumbers,
