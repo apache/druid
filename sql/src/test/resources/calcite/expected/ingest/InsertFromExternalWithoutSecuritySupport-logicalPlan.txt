@@ -1,3 +1,0 @@
-LogicalInsert(target=[dst], partitionedBy=[AllGranularity], clusteredBy=[<none>])
-  LogicalProject(x=[$0], y=[$1], z=[$2])
-    ExternalTableScan(dataSource=[{"type":"external","inputSource":{"type":"CalciteIngestionDmlTest$TestFileInputSource","files":["/tmp/foo.csv"]},"inputFormat":{"type":"csv","columns":["x","y","z"]},"signature":[{"name":"x","type":"STRING"},{"name":"y","type":"STRING"},{"name":"z","type":"LONG"}]}])

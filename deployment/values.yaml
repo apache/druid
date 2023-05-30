@@ -1,0 +1,890 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Default values for druid.
+
+image:
+#  repository: "{{.Values.globalValues.accountId}}.dkr.ecr.eu-central-1.amazonaws.com/apache-druid"     #apache/druid
+  tag: 24.0.0-mysql #24.0.0-mysql # 0.22.1 # 24.0.0-mysql
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+configMap:
+  ## If false, configMap will not be applied
+  ##
+  enabled: true
+
+# Required if using kubernetes extensions which modify resources like 'druid-kubernetes-extensions' or 'druid-kubernetes-overlord-extensions'
+rbac:
+  create: true
+
+
+
+  tolerations:
+    - key: "kava"
+      operator: "Equal"
+      value: "kava"
+      effect: "NoSchedule"
+
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: nodeAffinity
+                operator: In
+                values:
+                  - "kava"
+
+
+
+
+## Define the key value pairs in the configmap
+configVars:
+
+  DRUID_USE_CONTAINER_IP: "true"
+
+  druid_extensions_loadList: '["druid-s3-extensions", "druid-histogram", "druid-datasketches", "druid-lookups-cached-global", "mysql-metadata-storage", "druid-kafka-indexing-service"]'
+  druid_metadata_storage_type: mysql
+  druid_metadata_storage_connector_connectURI: jdbc:mysql://kava-druid-rds.{{.Values.globalValues.envName}}.ovp.kaltura.prod:3306/druid
+  druid_metadata_storage_connector_user: kaltura
+  druid_metadata_storage_connector_password: mPzPhXv7bOaqMXNC
+  druid_storage_type: s3
+  druid_storage_bucket: "{{.Values.globalValues.envName}}-kava-analitics11"
+  druid_storage_baseKey: druid/segments
+  druid_indexer_logs_type: s3
+  druid_indexer_logs_s3Bucket: "{{.Values.globalValues.envName}}-kava-analitics11"
+  druid_indexer_logs_s3Prefix: druid/indexing-logs
+  druid_startup_logging_logProperties: "true"
+  druid_selectors_indexing_serviceName: druid/overlord
+  druid_selectors_coordinator_serviceName: druid/coordinator
+
+gCloudStorage:
+  enabled: false
+  secretName: google-cloud-key
+
+broker:
+  ## If false, broker will not be installed
+  ##
+  enabled: true
+  name: broker
+  replicaCount: 1
+  port: 8082
+  serviceType: ClusterIP
+
+  config:
+    druid_indexer_runner_javaOptsArray: '["-server", "-Xms512m", "-Xmx512m", "-XX:MaxDirectMemorySize=256m", "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8", "-Djava.io.tmpdir=var/tmp", "-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager"]'
+
+  ingress:
+    enabled: false
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+    path: /
+    hosts:
+      - chart-example.local
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+  resources: {}
+    # limits:
+    #   cpu: 1
+    #   memory: 1Gi
+    # requests:
+    #   cpu: 250m
+    #   memory: 512Mi
+
+  serviceAccount:
+    # -- Create a service account for the broker
+    create: true
+    # -- Service Account name
+    name:
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Labels applied to created service account
+    labels: {}
+    # -- Automount API credentials for the service account
+    automountServiceAccountToken: true
+
+  nodeSelector: {}
+
+  tolerations:
+    - key: "kava"
+      operator: "Equal"
+      value: "kava"
+      effect: "NoSchedule"
+
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: nodeAffinity
+                operator: In
+                values:
+                  - "kava"
+
+  podAnnotations: {}
+
+coordinator:
+  ## If false, coordinator will not be installed
+  ##
+  enabled: true
+  name: coordinator
+  replicaCount: 1
+  port: 8081
+  serviceType: ClusterIP
+
+  config:
+    DRUID_XMX: 256m
+    DRUID_XMS: 256m
+    druid_monitoring_monitors: '["com.metamx.metrics.JvmMonitor"]'
+    druid_coordinator_asOverlord_enabled: true
+    druid_coordinator_asOverlord_overlordService: druid/overlord
+#    druid_indexer_runner_type: remote
+
+
+  ingress:
+    enabled: false
+    annotations:
+      kubernetes.io/ingress.class: alb
+      alb.ingress.kubernetes.io/scheme: internal
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/healthcheck-path: /status/health
+      alb.ingress.kubernetes.io/inbound-cidrs: 10.210.0.0/16
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 8081}]'
+      alb.ingress.kubernetes.io/load-balancer-name: '{{.Values.globalValues.envName}}-eks-operations-kava-coordinator'
+      alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket={{.Values.globalValues.envName}}-kalt-ovp-awslogs,access_logs.s3.prefix=kava-coordinator
+#      external-dns.alpha.kubernetes.io/ttl: "60"
+#      external-dns.alpha.kubernetes.io/hostname: kava-coordinator.{{.Values.globalValues.envName}}.ovp.kaltura.prod
+      # kubernetes.io/tls-acme: "true"
+    path: /*
+    hosts:
+      - kava-coordinator.{{.Values.globalValues.envName}}.ovp.kaltura.prod
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+  resources: {}
+    # limits:
+    #   cpu: 500m
+    #   memory: 1Gi
+    # requests:
+    #   cpu: 250m
+    #   memory: 512Mi
+
+  serviceAccount:
+    # -- Create a service account for the coordinator
+    create: true
+    # -- Service Account name
+    name:
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Labels applied to created service account
+    labels: {}
+    # -- Automount API credentials for the service account
+    automountServiceAccountToken: true
+
+  nodeSelector: {}
+
+  tolerations:
+    - key: "kava"
+      operator: "Equal"
+      value: "kava"
+      effect: "NoSchedule"
+
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: nodeAffinity
+                operator: In
+                values:
+                  - "kava"
+
+  podAnnotations: {}
+
+overlord:
+  ## If true, the separate overlord will be installed
+  ##
+  enabled: false
+  name: overlord
+  replicaCount: 1
+  port: 8090
+  serviceType: ClusterIP
+#
+#  env:
+#    ZK_SERVER_PORT: 2181
+
+
+
+
+
+
+  config:
+    druid_indexer_runner_javaOptsArray: '["-server", "-Xms2g", "-Xmx2g",  "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8", "-Djava.io.tmpdir=var/tmp", "-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager"]'
+    druid_indexer_queue_startDelay: PT30S
+    druid_indexer_runner_type: remote
+    druid_indexer_storage_type: metadata
+
+
+  ingress:
+    enabled: false
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+    path: /
+    hosts:
+      - chart-example.local
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+  resources: {}
+
+  serviceAccount:
+    # -- Create a service account for the overlord
+    create: true
+    # -- Service Account name
+    name:
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Labels applied to created service account
+    labels: {}
+    # -- Automount API credentials for the service account
+    automountServiceAccountToken: true
+
+  nodeSelector: {}
+
+  tolerations:
+    - key: "kava"
+      operator: "Equal"
+      value: "kava"
+      effect: "NoSchedule"
+
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: nodeAffinity
+                operator: In
+                values:
+                  - "kava"
+
+  podAnnotations: {}
+
+historicalcold:
+  ## If false, historicalcold will not be installed
+  ##
+  enabled: true
+  name: historicalcold
+  replicaCount: 1
+  port: 8083
+  serviceType: ClusterIP
+
+  config:
+    druid_indexer_runner_javaOptsArray: '["-server", "-Xms512m", "-Xmx512m", "-XX:MaxDirectMemorySize=256m", "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8", "-Djava.io.tmpdir=var/tmp", "-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager"]'
+    druid_server_http_numThreads: 25
+    druid_processing_buffer_sizeBytes: '53687'
+    druid_processing_numThreads: 7
+    druid_segmentCache_locations: '[{"path":"var/druid/segment-cache"}]'
+    druid_server_maxSize: 1927
+    druid_server_tier: cold
+
+  ingress:
+    enabled: false
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+    path: /
+    hosts:
+      - chart-example.local
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: "4Gi"
+    # storageClass: "ssd"
+
+  antiAffinity: "soft"
+
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: nodeAffinity
+              operator: In
+              values:
+                - "kava"
+
+  nodeSelector: {}
+
+  securityContext:
+    fsGroup: 1000
+
+  tolerations:
+    - key: "kava"
+      operator: "Equal"
+      value: "kava"
+      effect: "NoSchedule"
+
+  resources: {}
+    # limits:
+    #   cpu: 2
+    #   memory: 2Gi
+    # requests:
+    #   cpu: 500m
+    #   memory: 512Mi
+
+  serviceAccount:
+    # -- Create a service account for the overlord
+    create: true
+    # -- Service Account name
+    name:
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Labels applied to created service account
+    labels: {}
+    # -- Automount API credentials for the service account
+    automountServiceAccountToken: true
+
+  livenessProbeInitialDelaySeconds: 60
+  readinessProbeInitialDelaySeconds: 60
+
+  ## (dict) If specified, apply these annotations to each master Pod
+  podAnnotations: {}
+
+  podDisruptionBudget:
+    enabled: false
+    # minAvailable: 2
+    maxUnavailable: 1
+
+  updateStrategy:
+    type: RollingUpdate
+
+
+historicalhot:
+  ## If false, historicalhot will not be installed
+  ##
+  enabled: true
+  name: historicalhot
+  replicaCount: 1
+  port: 8083
+  serviceType: ClusterIP
+
+  config:
+    druid_indexer_runner_javaOptsArray: '["-server", "-Xms512m", "-Xmx512m", "-XX:MaxDirectMemorySize=256m", "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8", "-Djava.io.tmpdir=var/tmp", "-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager"]'
+    druid_server_http_numThreads: 25
+    druid_processing_buffer_sizeBytes: '53687'
+    druid_processing_numThreads: 15
+    druid_segmentCache_locations: '[{"path":"var/druid/segment-cache"}]'
+    druid_server_maxSize: 698
+
+
+  ingress:
+    enabled: false
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+    path: /
+    hosts:
+      - chart-example.local
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: "4Gi"
+    # storageClass: "ssd"
+
+  antiAffinity: "soft"
+
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: nodeAffinity
+              operator: In
+              values:
+                - "kava"
+
+  nodeSelector: {}
+
+  securityContext:
+    fsGroup: 1000
+
+  tolerations:
+    - key: "kava"
+      operator: "Equal"
+      value: "kava"
+      effect: "NoSchedule"
+
+  resources: {}
+    # limits:
+    #   cpu: 2
+    #   memory: 2Gi
+    # requests:
+    #   cpu: 500m
+    #   memory: 512Mi
+
+  serviceAccount:
+    # -- Create a service account for the overlord
+    create: true
+    # -- Service Account name
+    name:
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Labels applied to created service account
+    labels: {}
+    # -- Automount API credentials for the service account
+    automountServiceAccountToken: true
+
+  livenessProbeInitialDelaySeconds: 60
+  readinessProbeInitialDelaySeconds: 60
+
+  ## (dict) If specified, apply these annotations to each master Pod
+  podAnnotations: {}
+
+  podDisruptionBudget:
+    enabled: false
+    # minAvailable: 2
+    maxUnavailable: 1
+
+  updateStrategy:
+    type: RollingUpdate
+
+
+historicalmiddle:
+  ## If false, historicalmiddle will not be installed
+  ##
+  enabled: true
+  name: historicalmiddle
+  replicaCount: 1
+  port: 8083
+  serviceType: ClusterIP
+
+  config:
+    druid_indexer_runner_javaOptsArray: '["-server", "-Xms512m", "-Xmx512m", "-XX:MaxDirectMemorySize=256m", "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8", "-Djava.io.tmpdir=var/tmp", "-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager"]'
+    druid_server_http_numThreads: 25
+    druid_processing_buffer_sizeBytes: '53687'
+    druid_processing_numThreads: 15
+    druid_segmentCache_locations: '[{"path":"var/druid/segment-cache"}]'
+    druid_server_maxSize: 1927
+    druid_server_tier: middle
+
+  ingress:
+    enabled: false
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+    path: /
+    hosts:
+      - chart-example.local
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: "4Gi"
+    # storageClass: "ssd"
+
+  antiAffinity: "soft"
+
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: nodeAffinity
+              operator: In
+              values:
+                - "kava"
+
+  nodeSelector: {}
+
+  securityContext:
+    fsGroup: 1000
+
+  tolerations:
+    - key: "kava"
+      operator: "Equal"
+      value: "kava"
+      effect: "NoSchedule"
+
+  resources: {}
+    # limits:
+    #   cpu: 2
+    #   memory: 2Gi
+    # requests:
+    #   cpu: 500m
+    #   memory: 512Mi
+
+  serviceAccount:
+    # -- Create a service account for the overlord
+    create: true
+    # -- Service Account name
+    name:
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Labels applied to created service account
+    labels: {}
+    # -- Automount API credentials for the service account
+    automountServiceAccountToken: true
+
+  livenessProbeInitialDelaySeconds: 60
+  readinessProbeInitialDelaySeconds: 60
+
+  ## (dict) If specified, apply these annotations to each master Pod
+  podAnnotations: {}
+
+  podDisruptionBudget:
+    enabled: false
+    # minAvailable: 2
+    maxUnavailable: 1
+
+  updateStrategy:
+    type: RollingUpdate
+
+
+historicaloffline:
+  ## If false, historicaloffline will not be installed
+  ##
+  enabled: true
+  name: historicaloffline
+  replicaCount: 1
+  port: 8083
+  serviceType: ClusterIP
+
+  config:
+    druid_indexer_runner_javaOptsArray: '["-server", "-Xms512m", "-Xmx512m", "-XX:MaxDirectMemorySize=256m", "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8", "-Djava.io.tmpdir=var/tmp", "-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager"]'
+    druid_server_http_numThreads: 25
+    druid_processing_buffer_sizeBytes: '53687'
+    druid_processing_numThreads: 15
+    druid_segmentCache_locations: '[{"path":"var/druid/segment-cache"}]'
+    druid_server_maxSize: 1927
+    druid_server_tier: offline
+
+  ingress:
+    enabled: false
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+    path: /
+    hosts:
+      - chart-example.local
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: "4Gi"
+    # storageClass: "ssd"
+
+  antiAffinity: "soft"
+
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: nodeAffinity
+              operator: In
+              values:
+                - "kava"
+
+  nodeSelector: {}
+
+  securityContext:
+    fsGroup: 1000
+
+  tolerations:
+    - key: "kava"
+      operator: "Equal"
+      value: "kava"
+      effect: "NoSchedule"
+
+  resources: {}
+    # limits:
+    #   cpu: 2
+    #   memory: 2Gi
+    # requests:
+    #   cpu: 500m
+    #   memory: 512Mi
+
+  serviceAccount:
+    # -- Create a service account for the overlord
+    create: true
+    # -- Service Account name
+    name:
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Labels applied to created service account
+    labels: {}
+    # -- Automount API credentials for the service account
+    automountServiceAccountToken: true
+
+  livenessProbeInitialDelaySeconds: 60
+  readinessProbeInitialDelaySeconds: 60
+
+  ## (dict) If specified, apply these annotations to each master Pod
+  podAnnotations: {}
+
+  podDisruptionBudget:
+    enabled: false
+    # minAvailable: 2
+    maxUnavailable: 1
+
+  updateStrategy:
+    type: RollingUpdate
+
+
+
+
+middlemanager:
+  ## If false, middlemanager will not be installed
+  ##
+  enabled: true
+  name: middlemanager
+  replicaCount: 1
+  port: 8091
+  serviceType: ClusterIP
+
+  config:
+    druid_indexer_runner_javaOptsArray: '["-server", "-Xmx512m", "-XX:MaxDirectMemorySize=256m", "-Duser.timezone=UTC", "-Dfile.encoding=UTF-8", "-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager"]'
+    druid_worker_capacity: 5
+    druid_indexer_task_baseTaskDir: var/druid/task
+    druid_server_http_numThreads: 25
+    druid_processing_buffer_sizeBytes: '53687'
+    druid_processing_numThreads: 2
+    druid_indexer_task_hadoopWorkingPath: /tmp/druid-indexing
+    druid_indexer_task_defaultHadoopCoordinates: '["org.apache.hadoop:hadoop-client:2.3.0"]'
+    druid_indexer_task_restoreTasksOnRestart: true
+
+
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 60
+
+  ingress:
+    enabled: false
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+    path: /
+    hosts:
+      - chart-example.local
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: "4Gi"
+    # storageClass: "ssd"
+
+  antiAffinity: "soft"
+
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: nodeAffinity
+              operator: In
+              values:
+                - "kava"
+
+  nodeSelector: {}
+
+  securityContext:
+    fsGroup: 1000
+
+  tolerations:
+    - key: "kava"
+      operator: "Equal"
+      value: "kava"
+      effect: "NoSchedule"
+
+  resources: {}
+    # limits:
+    #   cpu: 500m
+    #   memory: 1Gi
+    # requests:
+    #   cpu: 250m
+    #   memory: 256Mi
+
+  serviceAccount:
+    # -- Create a service account for the overlord
+    create: true
+    # -- Service Account name
+    name:
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Labels applied to created service account
+    labels: {}
+    # -- Automount API credentials for the service account
+    automountServiceAccountToken: true
+
+  ## (dict) If specified, apply these annotations to each master Pod
+  podAnnotations: {}
+
+  podDisruptionBudget:
+    enabled: false
+    # minAvailable: 2
+    maxUnavailable: 1
+
+  updateStrategy:
+    type: RollingUpdate
+
+router:
+  ## If false, router will not be installed
+  ##
+  enabled: false
+  name: router
+  replicaCount: 1
+  port: 8888
+  serviceType: ClusterIP
+
+  config:
+    DRUID_XMX: 128m
+    DRUID_XMS: 128m
+    DRUID_MAXDIRECTMEMORYSIZE: 128m
+
+  ingress:
+    enabled: false
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+    path: /
+    hosts:
+      - chart-example.local
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+  resources: {}
+    # limits:
+    #   cpu: 250m
+    #   memory: 256Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  serviceAccount:
+    # -- Create a service account for the overlord
+    create: true
+    # -- Service Account name
+    name:
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Labels applied to created service account
+    labels: {}
+    # -- Automount API credentials for the service account
+    automountServiceAccountToken: true
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+  podAnnotations: {}
+
+# ------------------------------------------------------------------------------
+# Zookeeper:
+# ------------------------------------------------------------------------------
+
+# If using a zookeeper installed outside of this chart you must uncomment and set this line
+#zkHosts: z-3.nvq2kavakafkacluster.cd7mgr.c12.kafka.us-east-1.amazonaws.com:2181,z-1.nvq2kavakafkacluster.cd7mgr.c12.kafka.us-east-1.amazonaws.com:2181,z-2.nvq2kavakafkacluster.cd7mgr.c12.kafka.us-east-1.amazonaws.com:2181
+
+#zookeeper:
+#  enabled: true
+#  ## Environmental variables to set in Zookeeper
+#  ##
+#  env:
+#    ## The JVM heap size to allocate to Zookeeper
+#    ZK_HEAP_SIZE: "512M"
+#  ## Configure Zookeeper headless
+#  headless:
+#    publishNotReadyAddresses: true
+
+
+# ------------------------------------------------------------------------------
+# MySQL:
+# ------------------------------------------------------------------------------
+#mysql:
+#  enabled: false
+#  mysqlRootPassword: druidroot
+#  mysqlUser: druid
+#  mysqlPassword: druid
+#  mysqlDatabase: druid
+#  configurationFiles:
+#    mysql_collate.cnf: |-
+#      [mysqld]
+#      character-set-server=utf8
+#      collation-server=utf8_unicode_ci
+#
+## ------------------------------------------------------------------------------
+## postgres:
+## ------------------------------------------------------------------------------
+#postgresql:
+#  enabled: true
+#  postgresqlUsername: druid
+#  postgresqlPassword: druid
+#  postgresqlDatabase: druid
+#  service:
+#    port: 5432
+
+# Secrets
+prometheus:
+  enabled: false
+  #pick the any port what you want
+  port: 9090
+  annotation:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"

@@ -1,8 +1,0 @@
-{"timestamp": "2023-01-01", "str":"a", "long":1, "double":1.0, "variant": 1}
-{"timestamp": "2023-01-01", "str":"", "long":2, "variant": "b"}
-{"timestamp": "2023-01-01", "str":"null", "long":3, "double":2.0, "variant": 3.0}
-{"timestamp": "2023-01-01", "str":"b", "long":4, "double":3.3, "variant": "4"}
-{"timestamp": "2023-01-01", "str":"c", "long": null, "double":4.4, "variant": "hello"}
-{"timestamp": "2023-01-01", "str":"d", "long":5, "double":5.9}
-{"timestamp": "2023-01-01", "str":null, "double":null, "variant": 51}
-{"timestamp": "2023-01-01", "long":6, "double":1.0, "variant": null}

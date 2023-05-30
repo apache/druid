@@ -1,15 +1,0 @@
-
-õ
-metrics.proto"Û
-Metrics
-unit (	Runit
-http_method (	R
-httpMethod
-value (Rvalue
-	timestamp (	R	timestamp
-	http_code (	RhttpCode
-page (	Rpage
-
-metricType (	R
-metricType
-server (	Rserverbproto3

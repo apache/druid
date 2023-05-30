@@ -1,9 +1,0 @@
-[
-  {
-    "query": {
-      "query": "SELECT count(*) from wikipedia_editstream",
-      "context": %%CONTEXT%%
-    },
-    "expectedResults": []
-  }
-]
