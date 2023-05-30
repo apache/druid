@@ -66,10 +66,10 @@ public interface DataSegmentKiller
    * If a segment or segments does not exist in deep storage, the method should not throw an exception.
    * <p>
    * This version of kill must **NOT** require additional permissions on the deep storage beyond what
-   * {@link #kill(DataSegment)} requires. requires.
-   * @param segments The list of segments to kill
+   * {@link #kill(DataSegment)} requires.
+   * @param segments The list of segments to kill.
    * @throws SegmentLoadingException If there is an exception during deletion such as a segment in the list could not be
-   * completely removed
+   * completely removed.
    */
   default void kill(List<DataSegment> segments) throws SegmentLoadingException
   {
