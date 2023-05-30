@@ -40,6 +40,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexer.TaskLocation;
@@ -657,8 +658,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           return;
         }
         final Map<PartitionIdType, SequenceOffsetType> newCheckpoint = checkpointTaskGroup(taskGroup, false).get();
-        taskGroup.addNewCheckpoint(newCheckpoint);
-        log.info("Handled checkpoint notice, new checkpoint is [%s] for taskGroup [%s]", newCheckpoint, taskGroupId);
+        if (MapUtils.isNotEmpty(newCheckpoint)) {
+          taskGroup.addNewCheckpoint(newCheckpoint);
+          log.info("Handled checkpoint notice, new checkpoint is [%s] for taskGroup [%s]", newCheckpoint, taskGroupId);
+        } else {
+          log.warn("New checkpoint is null for taskGroup [%s]", taskGroupId);
+        }
       }
     }
 
