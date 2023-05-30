@@ -78,7 +78,7 @@ public class OrcInputFormatTest
   }
 
   @Test
-  public void test_getWeightedSize_withoutCompression() throws Exception
+  public void test_getWeightedSize_withoutCompression()
   {
     final OrcInputFormat format = new OrcInputFormat(null, null, null);
     long unweightedSize = 100L;

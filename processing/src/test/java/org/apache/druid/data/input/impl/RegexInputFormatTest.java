@@ -72,7 +72,7 @@ public class RegexInputFormatTest
   }
 
   @Test
-  public void test_getWeightedSize_withoutCompression() throws IOException
+  public void test_getWeightedSize_withoutCompression()
   {
     final RegexInputFormat format = new RegexInputFormat(
         "//[^\\r\\n]*[\\r\\n]",
