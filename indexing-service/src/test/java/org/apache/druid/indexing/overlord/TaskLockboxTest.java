@@ -427,7 +427,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testSyncWithUnknownTaskTypesFromModuleNotLoaded() throws Exception
+  public void testSyncWithUnknownTaskTypesFromModuleNotLoaded()
   {
     // ensure that if we don't know how to deserialize a task it won't explode the lockbox
     // (or anything else that uses taskStorage.getActiveTasks() and doesn't expect null which is most things)
@@ -1201,7 +1201,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testGetLockedIntervalsForLowPriorityTask() throws Exception
+  public void testGetLockedIntervalsForLowPriorityTask()
   {
     // Acquire lock for a low priority task
     final Task lowPriorityTask = NoopTask.create(5);
@@ -1221,7 +1221,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testGetLockedIntervalsForEqualPriorityTask() throws Exception
+  public void testGetLockedIntervalsForEqualPriorityTask()
   {
     // Acquire lock for a low priority task
     final Task task = NoopTask.create(5);
@@ -1663,7 +1663,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testFailedToReacquireTaskLock() throws Exception
+  public void testFailedToReacquireTaskLock()
   {
     // Tasks to be failed have a group id with the substring "FailingLockAcquisition"
     // Please refer to NullLockPosseTaskLockbox
@@ -1785,7 +1785,7 @@ public class TaskLockboxTest
       }
     }
 
-    private TaskLock tryTaskLock(TaskLockType type, Interval interval, int priority) throws Exception
+    private TaskLock tryTaskLock(TaskLockType type, Interval interval, int priority)
     {
       final Task task = NoopTask.create(priority);
       tasks.add(task);

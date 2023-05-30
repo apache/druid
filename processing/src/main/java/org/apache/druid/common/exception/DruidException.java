@@ -32,19 +32,9 @@ public class DruidException extends RuntimeException
   private final int responseCode;
   private final boolean isTransient;
 
-  public DruidException(String message)
-  {
-    this(message, DEFAULT_HTTP_CODE, null, DEFAULT_CAN_RETRY);
-  }
-
   public DruidException(String message, Throwable cause)
   {
     this(message, DEFAULT_HTTP_CODE, cause, DEFAULT_CAN_RETRY);
-  }
-
-  public DruidException(String message, int responseCode)
-  {
-    this(message, responseCode, null, DEFAULT_CAN_RETRY);
   }
 
   public DruidException(String message, int responseCode, Throwable cause)
