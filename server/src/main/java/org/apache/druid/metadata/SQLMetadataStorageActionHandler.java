@@ -167,18 +167,18 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     try {
       getConnector().retryWithHandle(
           handle -> insertEntryWithHandle(handle, id, timestamp, dataSource, entry, active, status, type, groupId),
-          this::isTransientException
+          this::isTransientDruidException
       );
     }
     catch (CallbackFailedException e) {
-      propageError(e.getCause());
+      propageAsRuntimeException(e.getCause());
     }
     catch (Exception e) {
-      propageError(e);
+      propageAsRuntimeException(e);
     }
   }
 
-  private void propageError(Throwable t)
+  private void propageAsRuntimeException(Throwable t)
   {
     Throwables.propagateIfPossible(t);
     throw new RuntimeException(t);
@@ -230,10 +230,10 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
            (e instanceof CallbackFailedException && e.getCause() instanceof StatementException);
   }
 
-  private boolean isTransientException(Throwable t)
+  private boolean isTransientDruidException(Throwable t)
   {
     if (t instanceof CallbackFailedException) {
-      return isTransientException(t.getCause());
+      return isTransientDruidException(t.getCause());
     } else if (t instanceof DruidException) {
       return ((DruidException) t).isTransient();
     }

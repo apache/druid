@@ -59,6 +59,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private static final Logger log = new Logger(SQLMetadataConnector.class);
   private static final String PAYLOAD_TYPE = "BLOB";
   private static final String COLLATION = "";
+
   static final int DEFAULT_MAX_TRIES = 10;
 
   private final Supplier<MetadataStorageConnectorConfig> config;
@@ -175,7 +176,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
-   * Vendor specific errors that are not covered by {@link #isTransientException(Throwable)}.
+   * Vendor specific errors that are not covered by {@link #isTransientException(Throwable)}
    */
   protected boolean connectorIsTransientException(Throwable e)
   {

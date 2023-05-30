@@ -1619,7 +1619,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testGetLockedIntervalsForRevokedLocks() throws Exception
+  public void testGetLockedIntervalsForRevokedLocks()
   {
     // Acquire lock for a low priority task
     final Task lowPriorityTask = NoopTask.create(5);
@@ -1744,7 +1744,7 @@ public class TaskLockboxTest
       this.taskStorage = taskStorage;
     }
 
-    public TaskLock expectLockCreated(TaskLockType type, Interval interval, int priority) throws Exception
+    public TaskLock expectLockCreated(TaskLockType type, Interval interval, int priority)
     {
       final TaskLock lock = tryTaskLock(type, interval, priority);
       Assert.assertNotNull(lock);
@@ -1757,7 +1757,7 @@ public class TaskLockboxTest
       lockbox.revokeLock(lockToTaskIdMap.get(lock), lock);
     }
 
-    public void expectLockNotGranted(TaskLockType type, Interval interval, int priority) throws Exception
+    public void expectLockNotGranted(TaskLockType type, Interval interval, int priority)
     {
       final TaskLock lock = tryTaskLock(type, interval, priority);
       Assert.assertNull(lock);

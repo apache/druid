@@ -301,7 +301,7 @@ public class SQLMetadataStorageActionHandlerTest
 
 
   @Test
-  public void testLocks() throws Exception
+  public void testLocks()
   {
     final String entryId = "ABC123";
     Map<String, Object> entry = ImmutableMap.of("a", 1);
