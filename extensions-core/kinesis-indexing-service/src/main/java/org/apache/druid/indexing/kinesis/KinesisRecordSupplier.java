@@ -214,7 +214,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
         OrderedPartitionableRecord<String, String, ByteEntity> currRecord;
 
         try {
-
           if (shardIterator == null) {
             log.info("shardIterator[%s] has been closed and has no more records", streamPartition.getPartitionId());
 
@@ -419,7 +418,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
   private final boolean backgroundFetchEnabled;
   private volatile boolean closed = false;
-  private AtomicBoolean partitionsFetchStarted = new AtomicBoolean();
+  private final AtomicBoolean partitionsFetchStarted = new AtomicBoolean();
 
   public KinesisRecordSupplier(
       AmazonKinesis amazonKinesis,
@@ -745,18 +744,18 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
 
   private Set<Shard> getShards(String stream)
   {
-    if (useListShards) {
-      return getShardsUsingListShards(stream);
-    }
-    return getShardsUsingDescribeStream(stream);
+    return (useListShards)
+      ? getShardsUsingListShards(stream)
+      : getShardsUsingDescribeStream(stream);
   }
 
   /**
    * Default method to avoid incompatibility when user doesn't have sufficient IAM permissions on AWS
    * Not advised. getShardsUsingListShards is recommended instead if sufficient permissions are present.
    *
-   * @param stream name of stream
-   * @return Immutable set of shards
+   * @param stream Name of Kinesis stream
+   *
+   * @return Set of shards
    */
   private Set<Shard> getShardsUsingDescribeStream(String stream)
   {
@@ -777,14 +776,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   }
 
   /**
-   * If the user has the IAM policy for listShards, and useListShards is true:
+   * If the user has the IAM policy for listShards, and {@code useListShards} is true:
    * Use the API listShards which is the recommended way instead of describeStream
    * listShards can return 1000 shards per call and has a limit of 100TPS
    * This makes the method resilient to LimitExceeded exceptions (compared to 100 shards, 10 TPS of describeStream)
    *
-   * @param stream name of stream
+   * @param stream Name of Kinesis stream
    *
-   * @return Set of Shard ids
+   * @return Set of shards
    */
   private Set<Shard> getShardsUsingListShards(String stream)
   {
@@ -892,7 +891,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
    * {@link #GET_SEQUENCE_NUMBER_RECORD_COUNT} records and return the first sequence number from the result set.
    * This method is thread safe as it does not depend on the internal state of the supplier (it doesn't use the
    * {@link PartitionResource} which have been assigned to the supplier), and the Kinesis client is thread safe.
-   *
+   * <p>
    * When there are no records at the offset corresponding to the ShardIteratorType,
    *    If shard is closed, return custom EOS sequence marker
    *    While getting the earliest sequence number, return a custom marker corresponding to TRIM_HORIZON
@@ -1011,10 +1010,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
             offsetToUse
     ).getShardIterator();
 
-    GetRecordsResult recordsResult = kinesis.getRecords(
+    return kinesis.getRecords(
             new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1)
     );
-    return recordsResult;
   }
 
   /**
@@ -1030,7 +1028,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   /**
    * This method must be called before a seek operation ({@link #seek}, {@link #seekToLatest}, or
    * {@link #seekToEarliest}).
-   *
+   * <p>
    * When called, it will nuke the {@link #scheduledExec} that is shared by all {@link PartitionResource}, filters
    * records from the buffer for partitions which will have a seek operation performed, and stops background fetch for
    * each {@link PartitionResource} to prepare for the seek. If background fetch is not currently running, the
@@ -1068,6 +1066,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     records = newQ;
 
     // restart fetching threads
-    partitionResources.values().forEach(x -> x.stopBackgroundFetch());
+    partitionResources.values().forEach(PartitionResource::stopBackgroundFetch);
   }
 }

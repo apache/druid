@@ -34,16 +34,13 @@ public class SamplerExceptionMapper implements ExceptionMapper<SamplerException>
   @Override
   public Response toResponse(SamplerException exception)
   {
-    String message = exception.getMessage() == null ? "The sampler encountered an issue" : exception.getMessage();
+    final String message = exception.getMessage() == null ? "The sampler encountered an issue" : exception.getMessage();
 
     // Logging the stack trace and returning the exception message in the response
     LOG.error(exception, message);
 
     return Response.status(Response.Status.BAD_REQUEST)
-                   .entity(ImmutableMap.of(
-                       "error",
-                       message
-                   ))
+                   .entity(ImmutableMap.of("error", message))
                    .build();
   }
 }
