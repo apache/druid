@@ -301,11 +301,8 @@ public class S3StorageConnector implements StorageConnector
     List<DeleteObjectsRequest.KeyVersion> versions = new ArrayList<>();
 
     for (String path : paths) {
-      final String fullPath = objectPath(path);
-      log.debug("Deleting file at bucket: %s, path: %s", config.getBucket(), fullPath);
-
       // appending base path to each path
-      versions.add(new DeleteObjectsRequest.KeyVersion(fullPath));
+      versions.add(new DeleteObjectsRequest.KeyVersion(objectPath(path)));
       currentItemSize++;
       if (currentItemSize == MAX_NUMBER_OF_LISTINGS) {
         deleteKeys(versions);
@@ -326,6 +323,7 @@ public class S3StorageConnector implements StorageConnector
       S3Utils.deleteBucketKeys(s3Client, config.getBucket(), versions, config.getMaxRetry());
     }
     catch (Exception e) {
+      log.error("Error occurred while deleting files from S3. Error: [%s]", e.getMessage());
       throw new IOException(e);
     }
   }
@@ -335,14 +333,11 @@ public class S3StorageConnector implements StorageConnector
   public void deleteRecursively(String dirName) throws IOException
   {
     try {
-      final String fullPath = objectPath(dirName);
-      log.debug("Deleting directory at bucket: %s, path: %s", config.getBucket(), fullPath);
-
       S3Utils.deleteObjectsInPath(
           s3Client,
           MAX_NUMBER_OF_LISTINGS,
           config.getBucket(),
-          fullPath,
+          objectPath(dirName),
           Predicates.alwaysTrue(),
           config.getMaxRetry()
       );
