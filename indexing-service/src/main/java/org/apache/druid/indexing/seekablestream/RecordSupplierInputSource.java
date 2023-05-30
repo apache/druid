@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import com.google.common.base.Throwables;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFormat;
@@ -30,6 +31,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -68,16 +70,20 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
     this.recordSupplier = recordSupplier;
     this.useEarliestOffset = useEarliestOffset;
     this.iteratorTimeoutMs = iteratorTimeoutMs;
+
     try {
       assignAndSeek(recordSupplier);
     }
     catch (InterruptedException e) {
-      throw new SamplerException(e, "Exception while seeking to partitions");
+      throw new SamplerException(e, "Thread interrupted while seeking to partitions");
+    }
+    catch (StreamException e) {
+      throw new SamplerException(e, "Exception while seeking to partitions while creating RecordSupplierInputSource: %s", Throwables.getRootCause(e).getMessage());
     }
   }
 
   private void assignAndSeek(RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier)
-      throws InterruptedException
+      throws InterruptedException, StreamException
   {
     final Set<StreamPartition<PartitionIdType>> partitions = recordSupplier
         .getPartitionIds(topic)
