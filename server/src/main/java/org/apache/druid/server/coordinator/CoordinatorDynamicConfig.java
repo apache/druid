@@ -539,14 +539,14 @@ public class CoordinatorDynamicConfig
     static final long LEADING_MILLIS_BEFORE_MARK_UNUSED = TimeUnit.MINUTES.toMillis(15);
     static final long MERGE_BYTES_LIMIT = 524_288_000L;
     static final int MERGE_SEGMENTS_LIMIT = 100;
-    static final int MAX_SEGMENTS_TO_MOVE = 5;
+    static final int MAX_SEGMENTS_TO_MOVE = 100;
     static final double PERCENT_OF_SEGMENTS_TO_CONSIDER_PER_MOVE = 100;
     static final int REPLICANT_LIFETIME = 15;
-    static final int REPLICATION_THROTTLE_LIMIT = 10;
+    static final int REPLICATION_THROTTLE_LIMIT = 500;
     static final int BALANCER_COMPUTE_THREADS = 1;
     static final boolean EMIT_BALANCING_STATS = false;
     static final boolean USE_BATCHED_SEGMENT_SAMPLER = true;
-    static final int MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 100;
+    static final int MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 500;
     static final int DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
     static final boolean PAUSE_COORDINATION = false;
     static final boolean REPLICATE_AFTER_LOAD_TIMEOUT = false;

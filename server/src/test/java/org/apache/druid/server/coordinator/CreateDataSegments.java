@@ -73,6 +73,12 @@ public class CreateDataSegments
     return this;
   }
 
+  public CreateDataSegments startingAt(long startOfFirstInterval)
+  {
+    this.startTime = DateTimes.utc(startOfFirstInterval);
+    return this;
+  }
+
   public CreateDataSegments withNumPartitions(int numPartitions)
   {
     this.numPartitions = numPartitions;

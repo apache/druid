@@ -138,7 +138,7 @@ describe('object-change', () => {
     });
 
     it('works with arrays', () => {
-      expect(JSON.parse(JSONBig.stringify(deepDelete(thing, 'hello.wow.0')))).toEqual({
+      expect(JSONBig.parse(JSONBig.stringify(deepDelete(thing, 'hello.wow.0')))).toEqual({
         hello: {
           moon: 1,
           wow: [
