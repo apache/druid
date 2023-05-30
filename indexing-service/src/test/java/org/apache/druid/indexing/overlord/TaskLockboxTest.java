@@ -149,7 +149,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testLock() throws Exception
+  public void testLock()
   {
     validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
@@ -176,7 +176,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testTrySharedLock() throws Exception
+  public void testTrySharedLock()
   {
     final Interval interval = Intervals.of("2017-01/2017-02");
 
@@ -1245,7 +1245,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testExclusiveLockCompatibility() throws Exception
+  public void testExclusiveLockCompatibility()
   {
     final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
@@ -1282,7 +1282,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testExclusiveLockCanRevokeAllIncompatible() throws Exception
+  public void testExclusiveLockCanRevokeAllIncompatible()
   {
     final TaskLockboxValidator validator = new TaskLockboxValidator(lockbox, taskStorage);
 
@@ -1325,7 +1325,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testSharedLockCompatibility() throws Exception
+  public void testSharedLockCompatibility()
   {
     final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.SHARED,
@@ -1374,7 +1374,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testSharedLockCanRevokeAllIncompatible() throws Exception
+  public void testSharedLockCanRevokeAllIncompatible()
   {
     final TaskLock exclusiveLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
@@ -1415,7 +1415,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testAppendLockCompatibility() throws Exception
+  public void testAppendLockCompatibility()
   {
     final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.APPEND,
@@ -1473,7 +1473,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testAppendLockCanRevokeAllIncompatible() throws Exception
+  public void testAppendLockCanRevokeAllIncompatible()
   {
     final TaskLock sharedLock = validator.expectLockCreated(
         TaskLockType.SHARED,
@@ -1521,7 +1521,7 @@ public class TaskLockboxTest
 
 
   @Test
-  public void testReplaceLockCompatibility() throws Exception
+  public void testReplaceLockCompatibility()
   {
     final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.REPLACE,
@@ -1566,7 +1566,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testReplaceLockCanRevokeAllIncompatible() throws Exception
+  public void testReplaceLockCanRevokeAllIncompatible()
   {
     final TaskLock appendLock0 = validator.expectLockCreated(
         TaskLockType.APPEND,
@@ -1704,7 +1704,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testConflictsWithOverlappingSharedLocks() throws Exception
+  public void testConflictsWithOverlappingSharedLocks()
   {
     TaskLock conflictingLock = validator.expectLockCreated(
         TaskLockType.SHARED,
