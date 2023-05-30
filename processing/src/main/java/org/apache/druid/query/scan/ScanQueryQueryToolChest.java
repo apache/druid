@@ -271,7 +271,13 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
             break;
           }
         }
-        return convertScanResultValuesToFrame(batch, rowSignature, query, memoryAllocatorFactory);
+        return convertScanResultValuesToFrame(
+            batch,
+            rowSignature,
+            query,
+            memoryAllocatorFactory,
+            useNestedForUnknownTypes
+        );
       }
     };
     return Optional.of(Sequences.concat(retVal));
@@ -281,7 +287,8 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       List<ScanResultValue> batch,
       RowSignature rowSignature,
       ScanQuery query,
-      MemoryAllocatorFactory memoryAllocatorFactory
+      MemoryAllocatorFactory memoryAllocatorFactory,
+      boolean useNestedForUnknownTypes
   )
   {
     Preconditions.checkNotNull(rowSignature, "'rowSignature' must be provided");
@@ -299,7 +306,9 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       ));
     }
 
-    RowSignature modifiedRowSignature = FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature);
+    RowSignature modifiedRowSignature = useNestedForUnknownTypes
+                                        ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
+                                        : rowSignature;
     FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
         memoryAllocatorFactory,
