@@ -1,0 +1,7 @@
+on:
+  release:
+    types:
+      - created
+jobs:
+  helm-release:
+    uses: kaltura/ovp-pipelines/.github/workflows/helm_chart_build.yml@1.4.1
