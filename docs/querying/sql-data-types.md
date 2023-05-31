@@ -31,26 +31,20 @@ Druid associates each column with a specific data type. This topic describes sup
 ## Standard types
 
 Druid natively supports the following basic column types:
-* LONG: (64 bit signed int)
-* FLOAT (32 bit float)
-* DOUBLE: (64 bit float)
-* STRING: (UTF-8 encoded strings and string arrays)
+
+* LONG: 64-bit signed int
+* FLOAT: 32-bit float
+* DOUBLE: 64-bit float
+* STRING: UTF-8 encoded strings and string arrays
 * COMPLEX: non-standard data types, such as nested JSON, hyperUnique and approxHistogram, and DataSketches
 * ARRAY: arrays composed of any of these types
 
 Druid treats timestamps (including the `__time` column) as LONG, with the value being the number of
 milliseconds since 1970-01-01 00:00:00 UTC, not counting leap seconds. Therefore, timestamps in Druid do not carry any
-timezone information, but only carry information about the exact moment in time they represent. See
+timezone information. They only carry information about the exact moment in time they represent. See
 [Time functions](sql-scalar.md#date-and-time-functions) for more information about timestamp handling.
 
-Casts between two SQL types with the same Druid runtime type have no effect, other than the exceptions noted in the following table. Casts between two SQL types that have different Druid runtime types generate a runtime cast in
-Druid. If a value cannot be cast to the target type, as in `CAST('foo' AS BIGINT)`, Druid either substitutes a default
-value (when `druid.generic.useDefaultValueForNull = true`, the default mode), or substitutes [NULL](#null-values) (when
-`druid.generic.useDefaultValueForNull = false`). NULL values cast to non-nullable types are also substituted with a
-default value. For example, if `druid.generic.useDefaultValueForNull = true`, a null VARCHAR cast to BIGINT is converted
-to a zero.
-
-The following table describes how Druid maps SQL types onto native types when running queries.
+The following table describes how Druid maps SQL types onto native types when running queries:
 
 |SQL type|Druid runtime type|Default value<sup>*</sup>|Notes|
 |--------|------------------|-------------|-----|
@@ -65,12 +59,20 @@ The following table describes how Druid maps SQL types onto native types when ru
 |SMALLINT|LONG|`0`||
 |INTEGER|LONG|`0`||
 |BIGINT|LONG|`0`|Druid LONG columns (except `__time`) are reported as BIGINT|
-|TIMESTAMP|LONG|`0`, meaning 1970-01-01 00:00:00 UTC|Druid's `__time` column is reported as TIMESTAMP. Casts between string and timestamp types assume standard SQL formatting&mdash;for example, `2000-01-02 03:04:05`&mdash;not ISO 8601 formatting. For handling other formats, use one of the [time functions](sql-scalar.md#date-and-time-functions).|
+|TIMESTAMP|LONG|`0`, meaning 1970-01-01 00:00:00 UTC|Druid's `__time` column is reported as TIMESTAMP. Casts between string and timestamp types assume standard SQL formatting, such as `2000-01-02 03:04:05`, not ISO 8601 formatting. For handling other formats, use one of the [time functions](sql-scalar.md#date-and-time-functions).|
 |DATE|LONG|`0`, meaning 1970-01-01|Casting TIMESTAMP to DATE rounds down the timestamp to the nearest day. Casts between string and date types assume standard SQL formatting&mdash;for example, `2000-01-02`. For handling other formats, use one of the [time functions](sql-scalar.md#date-and-time-functions).|
 |ARRAY|ARRAY|`NULL`|Druid native array types work as SQL arrays, and multi-value strings can be converted to arrays. See [Arrays](#arrays) for more information.|
 |OTHER|COMPLEX|none|May represent various Druid column types such as hyperUnique, approxHistogram, etc.|
 
 <sup>*</sup> Default value applies if `druid.generic.useDefaultValueForNull = true` (the default mode). Otherwise, the default value is `NULL` for all types.
+
+Casts between two SQL types with the same Druid runtime type have no effect other than the exceptions noted in the table.
+
+Casts between two SQL types that have different Druid runtime types generate a runtime cast in Druid.
+
+If a value cannot be cast to the target type, as in `CAST('foo' AS BIGINT)`, Druid either substitutes a default
+value (when `druid.generic.useDefaultValueForNull = true`, the default mode), or substitutes [NULL](#null-values) (when
+`druid.generic.useDefaultValueForNull = false`). NULL values cast to non-nullable types are also substituted with a default value. For example, if `druid.generic.useDefaultValueForNull = true`, a null VARCHAR cast to BIGINT is converted to a zero.
 
 ## Multi-value strings
 
