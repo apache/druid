@@ -30,6 +30,7 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -73,6 +74,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Stack;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -173,7 +175,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
     final int maxSubqueryRows = query.context().getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
-    final long maxSubqueryMemory = query.context().getMaxSubqueryMemoryBytes(-1L);
+    final long maxSubqueryMemory = query.context().getMaxSubqueryMemoryBytes(serverConfig.getMaxSubqueryBytes());
     final boolean useNestedForUnknownTypeInSubquery = query.context().isUseNestedForUnknownTypeInSubquery();
 
     final DataSource inlineDryRun = inlineIfNecessary(
@@ -181,6 +183,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         toolChest,
         new AtomicInteger(),
         new AtomicLong(),
+        new AtomicBoolean(false),
         maxSubqueryRows,
         maxSubqueryMemory,
         useNestedForUnknownTypeInSubquery,
@@ -200,6 +203,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         toolChest,
         new AtomicInteger(),
         memoryLimitAcc,
+        new AtomicBoolean(false),
         maxSubqueryRows,
         maxSubqueryMemory,
         useNestedForUnknownTypeInSubquery,
@@ -335,6 +339,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       @Nullable final QueryToolChest toolChestIfOutermost,
       final AtomicInteger subqueryRowLimitAccumulator,
       final AtomicLong subqueryMemoryLimitAccumulator,
+      final AtomicBoolean cannotMaterializeToFrames,
       final int maxSubqueryRows,
       final long maxSubqueryMemory,
       final boolean useNestedForUnknownTypeInSubquery,
@@ -365,6 +370,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             null,
             subqueryRowLimitAccumulator,
             subqueryMemoryLimitAccumulator,
+            cannotMaterializeToFrames,
             maxSubqueryRows,
             maxSubqueryMemory,
             useNestedForUnknownTypeInSubquery,
@@ -388,6 +394,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
               toolChestIfOutermost,
               subqueryRowLimitAccumulator,
               subqueryMemoryLimitAccumulator,
+              cannotMaterializeToFrames,
               maxSubqueryRows,
               maxSubqueryMemory,
               useNestedForUnknownTypeInSubquery,
@@ -415,6 +422,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             warehouse.getToolChest(subQuery),
             subqueryRowLimitAccumulator,
             subqueryMemoryLimitAccumulator,
+            cannotMaterializeToFrames,
             maxSubqueryRows,
             maxSubqueryMemory,
             useNestedForUnknownTypeInSubquery
@@ -429,6 +437,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                         null,
                         subqueryRowLimitAccumulator,
                         subqueryMemoryLimitAccumulator,
+                        cannotMaterializeToFrames,
                         maxSubqueryRows,
                         maxSubqueryMemory,
                         useNestedForUnknownTypeInSubquery,
@@ -439,6 +448,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             toolChestIfOutermost,
             subqueryRowLimitAccumulator,
             subqueryMemoryLimitAccumulator,
+            cannotMaterializeToFrames,
             maxSubqueryRows,
             maxSubqueryMemory,
             useNestedForUnknownTypeInSubquery,
@@ -455,6 +465,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                         null,
                         subqueryRowLimitAccumulator,
                         subqueryMemoryLimitAccumulator,
+                        cannotMaterializeToFrames,
                         maxSubqueryRows,
                         maxSubqueryMemory,
                         useNestedForUnknownTypeInSubquery,
@@ -626,97 +637,140 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final QueryToolChest<T, QueryType> toolChest,
       final AtomicInteger limitAccumulator,
       final AtomicLong memoryLimitAccumulator,
+      final AtomicBoolean cannotMaterializeToFrames,
       final int limit,
       long memoryLimit,
       boolean useNestedForUnknownTypeInSubquery
   )
   {
     final int rowLimitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
-    boolean memoryLimitSet = memoryLimit >= 0;
-
-    if (limitAccumulator.get() >= rowLimitToUse) {
-      throw ResourceLimitExceededException.withMessage(
-          "Cannot issue the query, subqueries generated results beyond maximum[%d] rows",
-          rowLimitToUse
-      );
-    }
-
-    if (memoryLimitSet && memoryLimitAccumulator.get() >= memoryLimit) {
-      throw ResourceLimitExceededException.withMessage(
-          "Cannot issue the query, subqueries generated results beyond maximum[%d] bytes",
-          memoryLimit
-      );
-    }
 
     DataSource dataSource;
-    // Try to serialize the results into a frame only if the memory limit is set on the server or the query
-    if (memoryLimitSet) {
-      try {
-        Optional<Sequence<FrameSignaturePair>> framesOptional = toolChest.resultsAsFrames(
+
+    switch (ClientQuerySegmentWalkerUtils.getLimitType(memoryLimit, cannotMaterializeToFrames.get())) {
+      case ROW_LIMIT:
+        if (limitAccumulator.get() >= rowLimitToUse) {
+          throw ResourceLimitExceededException.withMessage(
+              "Cannot issue the query, subqueries generated results beyond maximum[%d] rows",
+              rowLimitToUse
+          );
+        }
+        dataSource = materializeResultsAsArray(
             query,
             results,
-            // memoryLimit - memoryLimitAccumulator.get()
-            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+            toolChest,
+            limitAccumulator,
+            limit
+        );
+        break;
+      case MEMORY_LIMIT:
+        if (memoryLimitAccumulator.get() >= memoryLimit) {
+          throw ResourceLimitExceededException.withMessage(
+              "Cannot issue the query, subqueries generated results beyond maximum[%d] bytes",
+              memoryLimit
+          );
+        }
+        Optional<DataSource> maybeDataSource = materializeResultsAsFrames(
+            query,
+            results,
+            toolChest,
+            limitAccumulator,
+            memoryLimitAccumulator,
+            memoryLimit,
             useNestedForUnknownTypeInSubquery
         );
-
-        if (!framesOptional.isPresent()) {
-          throw new ISE("The memory of the subqueries cannot be estimated correctly");
-        }
-
-        Sequence<FrameSignaturePair> frames = framesOptional.get();
-        List<FrameSignaturePair> frameSignaturePairs = new ArrayList<>();
-        frames.forEach(
-            frame -> {
-              if (memoryLimitAccumulator.addAndGet(frame.getFrame().numBytes()) >= memoryLimit) {
-                throw ResourceLimitExceededException.withMessage(
-                    "Subquery generated results beyond maximum[%d] bytes",
-                    memoryLimit
-                );
-
-              }
-              if (limitAccumulator.addAndGet(frame.getFrame().numRows()) >= rowLimitToUse) {
-                throw ResourceLimitExceededException.withMessage(
-                    "Subquery generated results beyond maximum[%d] rows",
-                    rowLimitToUse
-                );
-              }
-              frameSignaturePairs.add(frame);
-            }
-        );
-        dataSource = new FrameBasedInlineDataSource(frameSignaturePairs, toolChest.resultArraySignature(query));
-      }
-      catch (ResourceLimitExceededException rlee) {
-        throw rlee;
-      }
-      catch (Exception e) {
-        log.info(
-            "Unable to write the subquery results to a frame. Results won't be accounted for in the memory "
-            + "calculation"
-        );
-        throw e;
-      }
-    } else {
-      final RowSignature signature = toolChest.resultArraySignature(query);
-
-      final ArrayList<Object[]> resultList = new ArrayList<>();
-
-      toolChest.resultsAsArrays(query, results).accumulate(
-          resultList,
-          (acc, in) -> {
-            if (limitAccumulator.getAndIncrement() >= rowLimitToUse) {
-              throw ResourceLimitExceededException.withMessage(
-                  "Subquery generated results beyond maximum[%d] rows",
-                  rowLimitToUse
-              );
-            }
-            acc.add(in);
-            return acc;
+        if (!maybeDataSource.isPresent()) {
+          cannotMaterializeToFrames.set(true);
+          // Check if the previous row limit accumulator has exceeded the memory results
+          if (memoryLimitAccumulator.get() >= memoryLimit) {
+            throw ResourceLimitExceededException.withMessage(
+                "Cannot issue the query, subqueries generated results beyond maximum[%d] bytes",
+                memoryLimit
+            );
           }
-      );
-      dataSource = InlineDataSource.fromIterable(resultList, signature);
+          dataSource = materializeResultsAsArray(
+              query,
+              results,
+              toolChest,
+              limitAccumulator,
+              limit
+          );
+        } else {
+          dataSource = maybeDataSource.get();
+        }
+        break;
+      default:
+        throw new IAE("Only row based and memory based limiting is supported");
     }
     return dataSource;
+  }
+
+  private static <T, QueryType extends Query<T>> Optional<DataSource> materializeResultsAsFrames(
+      final QueryType query,
+      final Sequence<T> results,
+      final QueryToolChest<T, QueryType> toolChest,
+      final AtomicInteger limitAccumulator,
+      final AtomicLong memoryLimitAccumulator,
+      long memoryLimit,
+      boolean useNestedForUnknownTypeInSubquery
+  )
+  {
+    Optional<Sequence<FrameSignaturePair>> framesOptional = toolChest.resultsAsFrames(
+        query,
+        results,
+        new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+        useNestedForUnknownTypeInSubquery
+    );
+
+    if (!framesOptional.isPresent()) {
+      return Optional.empty();
+    }
+
+    Sequence<FrameSignaturePair> frames = framesOptional.get();
+    List<FrameSignaturePair> frameSignaturePairs = new ArrayList<>();
+    frames.forEach(
+        frame -> {
+          limitAccumulator.addAndGet(frame.getFrame().numRows());
+          if (memoryLimitAccumulator.addAndGet(frame.getFrame().numBytes()) >= memoryLimit) {
+            throw ResourceLimitExceededException.withMessage(
+                "Subquery generated results beyond maximum[%d] bytes",
+                memoryLimit
+            );
+
+          }
+          frameSignaturePairs.add(frame);
+        }
+    );
+    return Optional.of(new FrameBasedInlineDataSource(frameSignaturePairs, toolChest.resultArraySignature(query)));
+  }
+
+  private static <T, QueryType extends Query<T>> DataSource materializeResultsAsArray(
+      final QueryType query,
+      final Sequence<T> results,
+      final QueryToolChest<T, QueryType> toolChest,
+      final AtomicInteger limitAccumulator,
+      final int limit
+  )
+  {
+    final int rowLimitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
+    final RowSignature signature = toolChest.resultArraySignature(query);
+
+    final ArrayList<Object[]> resultList = new ArrayList<>();
+
+    toolChest.resultsAsArrays(query, results).accumulate(
+        resultList,
+        (acc, in) -> {
+          if (limitAccumulator.getAndIncrement() >= rowLimitToUse) {
+            throw ResourceLimitExceededException.withMessage(
+                "Subquery generated results beyond maximum[%d] rows",
+                rowLimitToUse
+            );
+          }
+          acc.add(in);
+          return acc;
+        }
+    );
+    return InlineDataSource.fromIterable(resultList, signature);
   }
 
   /**
