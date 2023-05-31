@@ -80,7 +80,7 @@ syntactically used like any other VARCHAR. Regular string functions that refer t
 You can treat multi-value string dimensions as arrays using special
 [multi-value string functions](sql-multivalue-string-functions.md), which perform powerful array-aware operations, but retain their VARCHAR type and behavior.
 
-When grouping on a multi-value dimension, Druid uses all values from matching rows to generate one group per value, similar to using the UNNEST operator on an ARRAY type. See [Grouping](multi-value-dimensions.md#grouping) for more information.
+Grouping by a multi-value expression observes the native Druid multi-value aggregation behavior, which is similar to an implicit SQL UNNEST. See [Grouping](multi-value-dimensions.md#grouping) for more information.
 
 > Because the SQL planner treats multi-value dimensions as VARCHAR, there are some inconsistencies between how they are handled in Druid SQL and in native queries. For instance, expressions involving multi-value dimensions may be incorrectly optimized by the Druid SQL planner. For example, `multi_val_dim = 'a' AND multi_val_dim = 'b'` is optimized to
 `false`, even though it is possible for a single row to have both `'a'` and `'b'` as values for `multi_val_dim`.
