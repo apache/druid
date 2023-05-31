@@ -260,7 +260,9 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
           segment.getShardSpec() == null ? null : segment.getShardSpec().getType()
       );
       toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
-      // Emit the segment related metadata using the configured emitters
+      // Emit the segment related metadata using the configured emitters.
+      // There is a possibility that some segments' metadata event might get missed if the
+      // server crashes after commiting segment but before emitting the event.
       this.emitSegmentMetadata(segment, toolbox);
     }
 

@@ -140,12 +140,12 @@ public class KafkaEmitter implements Emitter
       scheduler.schedule(this::sendSegmentMetadataToKafka, sendInterval, TimeUnit.SECONDS);
     }
     scheduler.scheduleWithFixedDelay(() -> {
-      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], invalidLost=[%d] segmentMetadataLost=[%d]",
+      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], segmentMetadataLost=[%d], invalidLost=[%d]",
           metricLost.get(),
           alertLost.get(),
           requestLost.get(),
-          invalidLost.get(),
-          segmentMetadataLost.get()
+          segmentMetadataLost.get(),
+          invalidLost.get()
       );
     }, DEFAULT_SEND_LOST_INTERVAL_MINUTES, DEFAULT_SEND_LOST_INTERVAL_MINUTES, TimeUnit.MINUTES);
     log.info("Starting Kafka Emitter.");
@@ -193,8 +193,8 @@ public class KafkaEmitter implements Emitter
         EventMap map = event.toMap();
         if (config.getClusterName() != null) {
           map = map.asBuilder()
-              .put("clusterName", config.getClusterName())
-              .build();
+                   .put("clusterName", config.getClusterName())
+                   .build();
         }
 
         String resultJson = jsonMapper.writeValueAsString(map);

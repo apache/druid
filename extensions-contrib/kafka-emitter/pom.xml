@@ -86,6 +86,7 @@
       <artifactId>slf4j-api</artifactId>
       <scope>provided</scope>
     </dependency>
+
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>

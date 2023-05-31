@@ -24,6 +24,9 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.core.EventMap;
 import org.joda.time.DateTime;
 
+/**
+ * The event that gets generated whenever a segment is committed
+ */
 public class SegmentMetadataEvent implements Event
 {
   public static final String FEED = "feed";
@@ -34,11 +37,29 @@ public class SegmentMetadataEvent implements Event
   public static final String VERSION = "version";
   public static final String IS_COMPACTED = "isCompacted";
 
+  /**
+   * Time at which the segment metadata event is created
+   */
   private final DateTime createdTime;
+  /**
+   * Datasource for which the segment is committed
+   */
   private final String dataSource;
+  /**
+   * Start interval of the committed segment
+   */
   private final DateTime startTime;
+  /**
+   * End interval of the committed segment
+   */
   private final DateTime endTime;
+  /**
+   * Version of the committed segment
+   */
   private final String version;
+  /**
+   * Is the segment, a compacted segment or not
+   */
   private final boolean isCompacted;
 
   public SegmentMetadataEvent(
