@@ -364,7 +364,7 @@ If the `useListShards` flag is set to `true`, you need following permissions:
 
 **Example policy**
 
-```
+```json
 [
   {
     "Effect": "Allow",
@@ -388,7 +388,7 @@ If the `useListShards` flag is set to `false`, you need following permissions:
 
 **Example policy**
 
-```
+```json
 [
   {
     "Effect": "Allow",
