@@ -261,7 +261,7 @@ public class S3Utils
   )
       throws Exception
   {
-    log.debug("Deleting directory at bucket: %s, path: %s", bucket, prefix);
+    log.debug("Deleting directory at bucket: [%s], path: [%s]", bucket, prefix);
 
     final List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>(maxListingLength);
     final ObjectSummaryIterator iterator = new ObjectSummaryIterator(
@@ -296,7 +296,7 @@ public class S3Utils
   {
     if (keysToDelete != null && log.isDebugEnabled()) {
       List<String> keys = keysToDelete.stream().map(DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.toList());
-      log.debug("Deleting keys from bucket: %s, keys: %s", bucket, keys);
+      log.debug("Deleting keys from bucket: [%s], keys: [%s]", bucket, keys);
     }
     DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucket).withKeys(keysToDelete);
     S3Utils.retryS3Operation(() -> {

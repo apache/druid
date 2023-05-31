@@ -281,7 +281,7 @@ public class S3StorageConnector implements StorageConnector
   {
     try {
       final String fullPath = objectPath(path);
-      log.debug("Deleting file at bucket: %s, path: %s", config.getBucket(), fullPath);
+      log.debug("Deleting file at bucket: [%s], path: [%s]", config.getBucket(), fullPath);
 
       S3Utils.retryS3Operation(() -> {
         s3Client.deleteObject(config.getBucket(), fullPath);

@@ -113,7 +113,7 @@ public class LocalFileStorageConnector implements StorageConnector
   @Override
   public void deleteFile(String path) throws IOException
   {
-    log.debug("Deleting file at path: %s", path);
+    log.debug("Deleting file at path: [%s]", path);
     File toDelete = fileWithBasePath(path);
     if (toDelete.isDirectory()) {
       throw new IAE(StringUtils.format(
@@ -132,7 +132,7 @@ public class LocalFileStorageConnector implements StorageConnector
   public void deleteFiles(Iterable<String> paths) throws IOException
   {
     for (String path : paths) {
-      log.debug("Deleting file at path: %s", path);
+      log.debug("Deleting file at path: [%s]", path);
       deleteFile(path);
     }
   }
@@ -146,7 +146,7 @@ public class LocalFileStorageConnector implements StorageConnector
   @Override
   public void deleteRecursively(String dirName) throws IOException
   {
-    log.debug("Deleting directory at path: %s", dirName);
+    log.debug("Deleting directory at path: [%s]", dirName);
     FileUtils.deleteDirectory(fileWithBasePath(dirName));
   }
 
