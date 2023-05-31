@@ -715,12 +715,19 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       boolean useNestedForUnknownTypeInSubquery
   )
   {
-    Optional<Sequence<FrameSignaturePair>> framesOptional = toolChest.resultsAsFrames(
-        query,
-        results,
-        new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
-        useNestedForUnknownTypeInSubquery
-    );
+    Optional<Sequence<FrameSignaturePair>> framesOptional;
+
+    try {
+      framesOptional = toolChest.resultsAsFrames(
+          query,
+          results,
+          new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+          useNestedForUnknownTypeInSubquery
+      );
+    }
+    catch (Exception e) {
+      return Optional.empty();
+    }
 
     if (!framesOptional.isPresent()) {
       return Optional.empty();
