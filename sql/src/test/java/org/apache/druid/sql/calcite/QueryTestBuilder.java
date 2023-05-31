@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -118,7 +119,7 @@ public class QueryTestBuilder
 
   public QueryTestBuilder queryContext(Map<String, Object> queryContext)
   {
-    this.queryContext = queryContext;
+    this.queryContext = QueryContexts.override(this.baseQueryContext, queryContext);
     return this;
   }
 

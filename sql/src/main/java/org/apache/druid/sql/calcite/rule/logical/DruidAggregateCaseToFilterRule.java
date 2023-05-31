@@ -94,18 +94,13 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule
   {
     final Aggregate aggregate = call.rel(0);
     final Project project = call.rel(1);
-    final RexBuilder rexBuilder = aggregate.getCluster().getRexBuilder();
     final List<AggregateCall> newCalls =
         new ArrayList<>(aggregate.getAggCallList().size());
-    List<RexNode> newProjects = new ArrayList<>(project.getProjects());
-    final List<RexNode> newCasts = new ArrayList<>();
+    List<RexNode> newProjects;
 
     // TODO : fix grouping columns
     Set<Integer> groupUsedFields = new HashSet<>();
     for (int fieldNumber : aggregate.getGroupSet()) {
-      newCasts.add(
-          rexBuilder.makeInputRef(
-              project.getProjects().get(fieldNumber).getType(), fieldNumber));
       groupUsedFields.add(fieldNumber);
     }
 
@@ -122,15 +117,7 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule
           transform(aggregateCall, project, newProjects);
 
       // Possibly CAST the new aggregator to an appropriate type.
-      final int i = newCasts.size();
-      final RelDataType oldType =
-          aggregate.getRowType().getFieldList().get(i).getType();
-      if (newCall == null) {
-        newCalls.add(aggregateCall);
-        newCasts.add(rexBuilder.makeInputRef(oldType, i));
-      } else {
-        newCalls.add(newCall);
-      }
+      newCalls.add(newCall);
     }
     final RelBuilder relBuilder = call.builder()
                                       .push(project.getInput())

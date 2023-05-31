@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -29,11 +31,10 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
   protected QueryTestBuilder testBuilder()
   {
     return new QueryTestBuilder(new CalciteTestConfig())
-        .plannerConfig(
-            new PlannerConfig.Builder(BaseCalciteQueryTest.PLANNER_CONFIG_DEFAULT)
-                .nativeQuerySqlPlanningMode(PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
-                .build()
-        )
+        .queryContext(ImmutableMap.of(
+            PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED,
+            QueryContexts.ENABLE_DEBUG, true
+        ))
         .cannotVectorize(cannotVectorize)
         .skipVectorize(skipVectorize);
   }
@@ -41,13 +42,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
   @Override
   @Ignore
   public void testGroupByWithSelectAndOrderByProjections()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testTopNWithSelectProjections()
   {
 
   }
@@ -222,13 +216,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 
   @Override
   @Ignore
-  public void testExactCountDistinctWithGroupingAndOtherAggregators()
-  {
-
-  }
-
-  @Override
-  @Ignore
   public void testExactCountDistinctUsingSubqueryOnUnionAllTables()
   {
 
@@ -319,7 +306,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
   }
 
   @Override
-  @Ignore
   public void testRequireTimeConditionSemiJoinNegative()
   {
 
@@ -341,13 +327,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 
   @Override
   @Ignore
-  public void testPlanWithInFilterLessThanInSubQueryThreshold()
-  {
-
-  }
-
-  @Override
-  @Ignore
   public void testSubqueryTypeMismatchWithLiterals()
   {
 
@@ -363,13 +342,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
   @Override
   @Ignore
   public void testGroupBySortPushDown()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testCaseFilteredAggregationWithGroupBy()
   {
 
   }
@@ -405,13 +377,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 
   @Override
   @Ignore
-  public void testCountDistinctOfCaseWhen()
-  {
-
-  }
-
-  @Override
-  @Ignore
   public void testOrderByAlongWithInternalScanQueryNoDistinct()
   {
 
@@ -426,14 +391,7 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 
   @Override
   @Ignore
-  public void testFilteredAggregations()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testCountNullableExpression()
+  public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
   {
 
   }

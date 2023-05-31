@@ -70,7 +70,9 @@ public class DruidProject extends Project implements DruidLogicalNode
         cost += CostEstimates.COST_EXPRESSION;
       }
     }
-    return planner.getCostFactory().makeCost(0, cost * rowCount, 0);
+    // adding atleast 1e-6 cost since zero cost is converted to a tiny cost by the planner which is (1 row, 1 cpu, 0 io)
+    // that becomes a significant cost in some cases.
+    return planner.getCostFactory().makeCost(0, Math.max(cost * rowCount, 1e-6), 0);
   }
 
   @Override
