@@ -88,11 +88,12 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
   {
     final InputSource inputSource;
     final InputFormat inputFormat;
-    if (dataSchema != null && dataSchema.getParser() != null) {
+    if (dataSchema.getParser() != null) {
       inputSource = new SeekableStreamSamplerInputSource(dataSchema.getParser());
       inputFormat = null;
     } else {
-      final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
+      RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
+
       try {
         recordSupplier = createRecordSupplier();
       }

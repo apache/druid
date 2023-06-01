@@ -159,7 +159,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
     if (newStartSequenceNumbers == null) {
       Preconditions.checkNotNull(
           oldStartSequenceNumbers,
-          "Either startSequenceNumbers or startPartitions shouldn't be null"
+          "Either startSequenceNumbers or startPartitions shoulnd't be null"
       );
 
       return new SeekableStreamStartSequenceNumbers<>(
@@ -173,7 +173,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
   }
 
   /**
-   * This method is for compatibility so that newer version of KinesisIndexTaskIOConfig can be read by
+   * This method is for compatibilty so that newer version of KinesisIndexTaskIOConfig can be read by
    * old version of Druid. Note that this method returns end sequence numbers instead of start. This is because
    * {@link SeekableStreamStartSequenceNumbers} didn't exist before.
    *
@@ -192,7 +192,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
   }
 
   /**
-   * This method is for compatibility so that newer version of KinesisIndexTaskIOConfig can be read by
+   * This method is for compatibilty so that newer version of KinesisIndexTaskIOConfig can be read by
    * old version of Druid.
    */
   @JsonProperty

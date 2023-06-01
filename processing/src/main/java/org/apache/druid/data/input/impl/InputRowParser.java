@@ -40,7 +40,7 @@ import java.util.List;
 public interface InputRowParser<T>
 {
   /**
-   * Parse an input into list of {@link InputRow}. List can contain null for rows that should be thrown away,
+   * Parse an input into list of {@link InputRow}. List can contains null for rows that should be thrown away,
    * or throws {@code ParseException} if the input is unparseable. This method should never return null otherwise
    * lots of things will break.
    */

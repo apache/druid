@@ -116,8 +116,8 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
 
   private List<Map<String, Object>> mapOfRows;
   private InputSourceSampler inputSourceSampler;
-  private final ParserType parserType;
-  private final boolean useInputFormatApi;
+  private ParserType parserType;
+  private boolean useInputFormatApi;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();

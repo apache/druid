@@ -71,6 +71,7 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
 
   private final int compression;
 
+  @Nonnull
   private final byte cacheTypeId;
 
   public static final String TYPE_NAME = "tDigestSketch";
