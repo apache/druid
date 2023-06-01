@@ -582,8 +582,8 @@ and new set of segments will be created for further events. This means that the 
 without accumulating old segments locally on Middle Manager processes, and it is encouraged to do so.
 
 Kinesis Indexing Service may still produce some small segments. Let's say the task duration is 4 hours, segment granularity
-is set to an HOUR and Supervisor was started at 9:10 then after 4 hours at 13:10. The new set of tasks will be started and
-events for the interval 13:00 - 14:00 may be split across a previous and new set of tasks. If you see it becoming a problem then
+is set to an HOUR and Supervisor was started at 9:10. Then after 4 hours at 13:10, the new set of tasks will be started and
+events for the interval 13:00 - 14:00 may be split across the previous and the new set of tasks. If you see it becoming a problem then
 one can schedule re-indexing tasks be run to merge segments together into new segments of an ideal size (in the range of ~500-700 MB per segment).
 Details on how to optimize the segment size can be found on [Segment size optimization](../../operations/segment-optimization.md).
 There is also ongoing work to support automatic segment compaction of sharded segments as well as compaction not requiring
@@ -624,7 +624,8 @@ If the above limits are exceeded, Kinesis throws ProvisionedThroughputExceededEx
 Kinesis tasks pause by `fetchDelayMillis` or 3 seconds, whichever is larger, and then attempt the call again.
 
 In most cases, the default settings for fetch parameters are sufficient to achieve good performance without excessive
-memory usage. However, in some cases, you may need to adjust these parameters to more finely control fetch rate
+memory usage. However, in some cases, you may need to adjust these parameters to control fetch rate
+and memory usage more finely.
 and memory usage. Optimal values depend on the average size of a record and the number of consumers you have reading
 from a given shard, which will be `replicas` unless you have other consumers also reading from this Kinesis stream.
 
