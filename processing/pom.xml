@@ -37,6 +37,7 @@
     <sigar.base.version>1.6.5</sigar.base.version>
     <sigar.version>${sigar.base.version}.132</sigar.version>
     <ipaddress.version>5.3.4</ipaddress.version>
+    <oshi.version>6.4.2</oshi.version>
   </properties>
 
   <dependencies>
@@ -334,6 +335,11 @@
       <!-- "Provided" because this dependency is used only during the build itself: some files from this
       dependency are copied as resources. See maven-dependency-plugin configuration and <resources> below. -->
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.oshi</groupId>
+      <artifactId>oshi-core</artifactId>
+      <version>${oshi.version}</version>
     </dependency>
 
 
