@@ -145,9 +145,13 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
            .thenThrow(new StreamException(new Exception("Something bad happened")));
 
     //noinspection ResultOfObjectAllocationIgnored
-    Assert.assertThrows(
+    final SamplerException exception = Assert.assertThrows(
         SamplerException.class,
         () -> new RecordSupplierInputSource<>("test-stream", supplier, false, null)
+    );
+    Assert.assertEquals(
+        "Exception while seeking to the [latest] offset of partitions in topic [test-stream]: Something bad happened",
+        exception.getMessage()
     );
   }
 
