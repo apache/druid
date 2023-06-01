@@ -1259,7 +1259,7 @@ Collects all values of an expression into a single string.
 
 **Function type:** [Array](sql-array-functions.md)
 
-Splits `str1` into an array on the delimiter specified by `str2`, which is a regular rexpression.
+Splits `str1` into an array on the delimiter specified by `str2`, which is a regular expression.
 
 
 ## STRING_FORMAT
