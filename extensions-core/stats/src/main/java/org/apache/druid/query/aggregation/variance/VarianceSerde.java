@@ -38,13 +38,15 @@ import java.util.List;
  */
 public class VarianceSerde extends ComplexMetricSerde
 {
+  public static final String TYPE_NAME = "variance";
+
   private static final Ordering<VarianceAggregatorCollector> COMPARATOR =
       Ordering.from(VarianceAggregatorCollector.COMPARATOR).nullsFirst();
 
   @Override
   public String getTypeName()
   {
-    return "variance";
+    return TYPE_NAME;
   }
 
   @Override

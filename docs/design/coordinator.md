@@ -31,7 +31,7 @@ For basic tuning guidance for the Coordinator process, see [Basic cluster tuning
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Coordinator, see [Coordinator API](../operations/api-reference.md#coordinator).
+For a list of API endpoints supported by the Coordinator, see [Coordinator API](../api-reference/api-reference.md#coordinator).
 
 ### Overview
 
@@ -92,7 +92,7 @@ Once some segments are found, it issues a [compaction task](../ingestion/tasks.m
 The maximum number of running compaction tasks is `min(sum of worker capacity * slotRatio, maxSlots)`.
 Note that even if `min(sum of worker capacity * slotRatio, maxSlots) = 0`, at least one compaction task is always submitted
 if the compaction is enabled for a dataSource.
-See [Automatic compaction configuration API](../operations/api-reference.md#automatic-compaction-configuration) and [Automatic compaction configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) to enable and configure automatic compaction.
+See [Automatic compaction configuration API](../api-reference/api-reference.md#automatic-compaction-configuration) and [Automatic compaction configuration](../configuration/index.md#automatic-compaction-dynamic-configuration) to enable and configure automatic compaction.
 
 Compaction tasks might fail due to the following reasons:
 

@@ -61,7 +61,7 @@ FROM TABLE(
 
 `EXTERN` consists of the following parts:
 
-1. Any [Druid input source](../ingestion/native-batch-input-source.md) as a JSON-encoded string.
+1. Any [Druid input source](../ingestion/input-sources.md) as a JSON-encoded string.
 2. Any [Druid input format](../ingestion/data-formats.md) as a JSON-encoded string.
 3. A row signature, as a JSON-encoded array of column descriptors. Each column descriptor must have a
    `name` and a `type`. The type can be `string`, `long`, `double`, or `float`. This row signature is
@@ -192,12 +192,13 @@ The following ISO 8601 periods are supported for `TIME_FLOOR` and the string con
 - PT1H
 - PT6H
 - P1D
-- P1W
+- P1W*
 - P1M
 - P3M
 - P1Y
 
-For more information about partitioning, see [Partitioning](concepts.md#partitioning-by-time).
+For more information about partitioning, see [Partitioning](concepts.md#partitioning-by-time). <br /><br />
+*Avoid  partitioning by week, `P1W`, because weeks don't align neatly with months and years, making it difficult to partition by coarser granularities later.
 
 ### `CLUSTERED BY`
 
@@ -344,9 +345,8 @@ the storage connector to work upon the durable storage. The durable storage loca
 for cluster's MSQ tasks. If the location contains other files or directories, then they will get cleaned up as well.
 
 Enabling durable storage also enables the use of local disk to store temporary files, such as the intermediate files produced
-by the super sorter. The limit set by `druid.indexer.task.tmpStorageBytesPerTask` for maximum number of bytes of local
-storage to be used per task will be respected by MSQ tasks. If the configured limit is too low, `NotEnoughTemporaryStorageFault`
-may be thrown.
+by the super sorter.  Tasks will use whatever has been configured for their temporary usage as described in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes)
+If the configured limit is too low, `NotEnoughTemporaryStorageFault` may be thrown.
 
 ### Enable durable storage
 
@@ -433,7 +433,7 @@ The following table describes error codes you may encounter in the `multiStageQu
 | <a name="error_QueryNotSupported">`QueryNotSupported`</a> | QueryKit could not translate the provided native query to a multi-stage query.<br /> <br />This can happen if the query uses features that aren't supported, like GROUPING SETS. | |
 | <a name="error_QueryRuntimeError">`QueryRuntimeError`</a> | MSQ uses the native query engine to run the leaf stages. This error tells MSQ that error is in native query runtime.<br /> <br /> Since this is a generic error, the user needs to look at logs for the error message and stack trace to figure out the next course of action. If the user is stuck, consider raising a `github` issue for assistance. |  `baseErrorMessage` error message from the native query runtime. |
 | <a name="error_RowTooLarge">`RowTooLarge`</a> | The query tried to process a row that was too large to write to a single frame. See the [Limits](#limits) table for specific limits on frame size. Note that the effective maximum row size is smaller than the maximum frame size due to alignment considerations during frame writing. | `maxFrameSize`: The limit on the frame size. |
-| <a name="error_TaskStartTimeout">`TaskStartTimeout`</a> | Unable to launch `numTasksNotStarted` worker out of total `totalTasks` workers tasks within `timeout` seconds of the last successful worker launch.<br /><br />There may be insufficient available slots to start all the worker tasks simultaneously. Try splitting up your query into smaller chunks using a smaller value of [`maxNumTasks`](#context-parameters). Another option is to increase capacity. | `numTasksNotStarted`: Number of tasks not yet started.<br /><br />`totalTasks`: The number of tasks attempted to launch.<br /><br />`timeout`: Timeout, in milliseconds, that was exceeded. |
+| <a name="error_TaskStartTimeout">`TaskStartTimeout`</a> | Unable to launch `pendingTasks` worker out of total `totalTasks` workers tasks within `timeout` seconds of the last successful worker launch.<br /><br />There may be insufficient available slots to start all the worker tasks simultaneously. Try splitting up your query into smaller chunks using a smaller value of [`maxNumTasks`](#context-parameters). Another option is to increase capacity. | `pendingTasks`: Number of tasks not yet started.<br /><br />`totalTasks`: The number of tasks attempted to launch.<br /><br />`timeout`: Timeout, in milliseconds, that was exceeded. |
 | <a name="error_TooManyAttemptsForJob">`TooManyAttemptsForJob`</a> | Total relaunch attempt count across all workers exceeded max relaunch attempt limit. See the [Limits](#limits) table for the specific limit. | `maxRelaunchCount`: Max number of relaunches across all the workers defined in the [Limits](#limits) section. <br /><br /> `currentRelaunchCount`: current relaunch counter for the job across all workers. <br /><br /> `taskId`: Latest task id which failed <br /> <br /> `rootErrorMessage`: Error message of the latest failed task.|
 | <a name="error_TooManyAttemptsForWorker">`TooManyAttemptsForWorker`</a> | Worker exceeded maximum relaunch attempt count as defined in the [Limits](#limits) section. |`maxPerWorkerRelaunchCount`: Max number of relaunches allowed per worker as defined in the [Limits](#limits) section. <br /><br /> `workerNumber`: the worker number for which the task failed <br /><br /> `taskId`: Latest task id which failed <br /> <br /> `rootErrorMessage`: Error message of the latest failed task.|
 | <a name="error_TooManyBuckets">`TooManyBuckets`</a> | Exceeded the maximum number of partition buckets for a stage (5,000 partition buckets).<br />< br />Partition buckets are created for each [`PARTITIONED BY`](#partitioned-by) time chunk for INSERT and REPLACE queries. The most common reason for this error is that your `PARTITIONED BY` is too narrow relative to your data. | `maxBuckets`: The limit on partition buckets. |

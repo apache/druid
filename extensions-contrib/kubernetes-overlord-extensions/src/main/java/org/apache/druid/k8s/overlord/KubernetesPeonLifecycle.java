@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.client.dsl.LogWatch;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.TaskLocation;
@@ -37,6 +38,7 @@ import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -77,6 +79,9 @@ public class KubernetesPeonLifecycle
   private final TaskLogs taskLogs;
   private final KubernetesPeonClient kubernetesClient;
   private final ObjectMapper mapper;
+
+  @MonotonicNonNull
+  private LogWatch logWatch;
 
   protected KubernetesPeonLifecycle(
       Task task,
@@ -151,16 +156,15 @@ public class KubernetesPeonLifecycle
           TimeUnit.MILLISECONDS
       );
 
-      saveLogs();
-
       return getTaskStatus(jobResponse.getJobDuration());
     }
     finally {
       try {
+        saveLogs();
         shutdown();
       }
       catch (Exception e) {
-        log.warn(e, "Task [%s] shutdown failed", taskId);
+        log.warn(e, "Task [%s] cleanup failed", taskId);
       }
 
       state.set(State.STOPPED);
@@ -265,14 +269,31 @@ public class KubernetesPeonLifecycle
     return taskStatus.withDuration(duration);
   }
 
-  private void saveLogs()
+  protected void startWatchingLogs()
+  {
+    if (logWatch != null) {
+      log.debug("There is already a log watcher for %s", taskId.getOriginalTaskId());
+      return;
+    }
+    try {
+      Optional<LogWatch> maybeLogWatch = kubernetesClient.getPeonLogWatcher(taskId);
+      if (maybeLogWatch.isPresent()) {
+        logWatch = maybeLogWatch.get();
+      }
+    }
+    catch (Exception e) {
+      log.error(e, "Error watching logs from task: %s", taskId);
+    }
+  }
+
+  protected void saveLogs()
   {
     try {
       Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
       try {
-        Optional<InputStream> maybeLogStream = streamLogs();
-        if (maybeLogStream.isPresent()) {
-          FileUtils.copyInputStreamToFile(maybeLogStream.get(), file.toFile());
+        startWatchingLogs();
+        if (logWatch != null) {
+          FileUtils.copyInputStreamToFile(logWatch.getOutput(), file.toFile());
         } else {
           log.debug("Log stream not found for %s", taskId.getOriginalTaskId());
         }
@@ -282,6 +303,9 @@ public class KubernetesPeonLifecycle
         log.error(e, "Failed to stream logs for task [%s]", taskId.getOriginalTaskId());
       }
       finally {
+        if (logWatch != null) {
+          logWatch.close();
+        }
         Files.deleteIfExists(file);
       }
     }

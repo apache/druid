@@ -17,41 +17,40 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.guice;
 
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.dsl.LogWatch;
+import com.google.common.base.Supplier;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.Provider;
 
-import java.io.IOException;
-import java.io.InputStream;
 
 /**
- * This wraps the InputStream for k8s client
- * When you call close on the stream, it will also close the open
- * http connections and the client
+ * A Provider of a Supplier that uses a Provider to implement the Supplier.
  */
-public class LogWatchInputStream extends InputStream
+public class ProviderBasedGoogleSupplierProvider<T> implements Provider<Supplier<T>>
 {
+  private final Key<T> supplierKey;
+  private Provider<T> instanceProvider;
 
-  private final KubernetesClient client;
-  private final LogWatch logWatch;
-
-  public LogWatchInputStream(KubernetesClient client, LogWatch logWatch)
+  public ProviderBasedGoogleSupplierProvider(
+      Key<T> instanceKey
+  )
   {
-    this.client = client;
-    this.logWatch = logWatch;
+    this.supplierKey = instanceKey;
   }
 
-  @Override
-  public int read() throws IOException
+  @Inject
+  public void configure(Injector injector)
   {
-    return logWatch.getOutput().read();
+    this.instanceProvider = injector.getProvider(supplierKey);
   }
 
+
   @Override
-  public void close()
+  public Supplier<T> get()
   {
-    logWatch.close();
-    client.close();
+    return instanceProvider::get;
   }
 }

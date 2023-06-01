@@ -66,7 +66,7 @@ The [EXPLAIN PLAN](sql.md#explain-plan) functionality can help you understand ho
 be translated to native.
 EXPLAIN PLAN statements return:
 - a `PLAN` column that contains a JSON array of native queries that Druid will run
-- a `RESOURCES` column that describes the resource being queried as well as a `PLAN` column that contains a JSON array of native queries that Druid will run
+- a `RESOURCES` column that describes the resources used in the query
 - a `ATTRIBUTES` column that describes the attributes of a query, such as the statement type and target data source
 
 For example, consider the following query:
@@ -375,7 +375,7 @@ Additionally, some Druid native query features are not supported by the SQL lang
 include:
 
 - [Inline datasources](datasource.md#inline).
-- [Spatial filters](../development/geo.md).
+- [Spatial filters](geo.md).
 - [Multi-value dimensions](sql-data-types.md#multi-value-strings) are only partially implemented in Druid SQL. There are known
 inconsistencies between their behavior in SQL queries and in native queries due to how they are currently treated by
 the SQL planner.

@@ -1,7 +1,7 @@
 ---
 id: sql-jdbc
-title: "SQL JDBC driver API"
-sidebar_label: "JDBC driver API"
+title: SQL JDBC driver API
+sidebar_label: SQL JDBC driver
 ---
 
 <!--
@@ -23,11 +23,11 @@ sidebar_label: "JDBC driver API"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+> Apache Druid supports two query languages: Druid SQL and [native queries](../querying/querying.md).
 > This document describes the SQL language.
 
 
-You can make [Druid SQL](./sql.md) queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/). We recommend using Avatica JDBC driver version 1.17.0 or later. Note that as of the time of this writing, Avatica 1.17.0, the latest version, does not support passing connection string parameters from the URL to Druid, so you must pass them using a `Properties` object. Once you've downloaded the Avatica client jar, add it to your classpath and use the connect string `jdbc:avatica:remote:url=http://BROKER:8082/druid/v2/sql/avatica/`.
+You can make [Druid SQL](../querying/sql.md) queries using the [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/). We recommend using Avatica JDBC driver version 1.17.0 or later. Note that as of the time of this writing, Avatica 1.17.0, the latest version, does not support passing connection string parameters from the URL to Druid, so you must pass them using a `Properties` object. Once you've downloaded the Avatica client jar, add it to your classpath and use the connect string `jdbc:avatica:remote:url=http://BROKER:8082/druid/v2/sql/avatica/`.
 
 When using the JDBC connector for the [examples](#examples) or in general, it's helpful to understand the parts of the connect string stored in the `url` variable:
 
@@ -60,7 +60,7 @@ try (Connection connection = DriverManager.getConnection(url, connectionProperti
 For a runnable example that includes a query that you might run, see [Examples](#examples).
 
 It is also possible to use a protocol buffers JDBC connection with Druid, this offer reduced bloat and potential performance
-improvements for larger result sets. To use it apply the following connection url instead, everything else remains the same
+improvements for larger result sets. To use it apply the following connection URL instead, everything else remains the same
 ```
 String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica-protobuf/;serialization=protobuf";
 ```
@@ -68,7 +68,7 @@ String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica
 > The protobuf endpoint is also known to work with the official [Golang Avatica driver](https://github.com/apache/calcite-avatica-go)
 
 Table metadata is available over JDBC using `connection.getMetaData()` or by querying the
-["INFORMATION_SCHEMA" tables](sql-metadata-tables.md). For an example of this, see [Get the metadata for a datasource](#get-the-metadata-for-a-datasource).
+[INFORMATION_SCHEMA tables](../querying/sql-metadata-tables.md). For an example of this, see [Get the metadata for a datasource](#get-the-metadata-for-a-datasource).
 
 ## Connection stickiness
 
@@ -82,7 +82,7 @@ Note that the non-JDBC [JSON over HTTP](sql-api.md#submit-a-query) API is statel
 
 ## Dynamic parameters
 
-You can use [parameterized queries](sql.md#dynamic-parameters) in JDBC code, as in this example:
+You can use [parameterized queries](../querying/sql.md#dynamic-parameters) in JDBC code, as in this example:
 
 ```java
 PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) AS cnt FROM druid.foo WHERE dim1 = ? OR dim1 = ?");

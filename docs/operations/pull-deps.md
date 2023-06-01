@@ -136,4 +136,4 @@ java -classpath "/my/druid/lib/*" org.apache.druid.cli.Main tools pull-deps --de
 
 > Please note to use the pull-deps tool you must know the Maven groupId, artifactId, and version of your extension.
 >
-> For Druid community extensions listed [here](../development/extensions.md), the groupId is "org.apache.druid.extensions.contrib" and the artifactId is the name of the extension.
+> For Druid community extensions listed [here](../configuration/extensions.md), the groupId is "org.apache.druid.extensions.contrib" and the artifactId is the name of the extension.
