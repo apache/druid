@@ -557,8 +557,8 @@ fail-overs.
 A supervisor is stopped via the `POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` endpoint. This places a
 tombstone marker in the database (to prevent the supervisor from being reloaded on a restart) and then gracefully
 shuts down the currently running supervisor. When a supervisor is shut down in this way, it will instruct its
-managed tasks to stop reading and begin publishing its segments immediately. The call to the shutdown endpoint will
-return after all tasks have been signalled to stop but before the tasks finish publishing their segments.
+managed tasks to stop reading. The tasks will begin publishing their segments immediately. The call to the shutdown
+endpoint will return after all tasks have been signalled to stop but before the tasks finish publishing their segments.
 
 ### Schema/Configuration Changes
 
@@ -625,9 +625,9 @@ Kinesis tasks pause by `fetchDelayMillis` or 3 seconds, whichever is larger, and
 
 In most cases, the default settings for fetch parameters are sufficient to achieve good performance without excessive
 memory usage. However, in some cases, you may need to adjust these parameters to control fetch rate
-and memory usage more finely.
-and memory usage. Optimal values depend on the average size of a record and the number of consumers you have reading
-from a given shard, which will be `replicas` unless you have other consumers also reading from this Kinesis stream.
+and memory usage more finely. Optimal values depend on the average size of a record and the number of consumers you
+have reading from a given shard, which will be `replicas` unless you have other consumers also reading from this
+Kinesis stream.
 
 ## Deaggregation
 
