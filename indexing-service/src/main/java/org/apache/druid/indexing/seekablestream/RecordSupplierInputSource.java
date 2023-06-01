@@ -31,7 +31,6 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
-import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -71,32 +70,33 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
     this.useEarliestOffset = useEarliestOffset;
     this.iteratorTimeoutMs = iteratorTimeoutMs;
 
-    try {
-      assignAndSeek(recordSupplier);
-    }
-    catch (InterruptedException e) {
-      throw new SamplerException(e, "Thread interrupted while seeking to partitions");
-    }
-    catch (StreamException e) {
-      throw new SamplerException(e, "Exception creating RecordSupplierInputSource while seeking to partitions: %s", Throwables.getRootCause(e).getMessage());
-    }
+    assignAndSeek(recordSupplier);
   }
 
   private void assignAndSeek(RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier)
-      throws InterruptedException, StreamException
   {
-    final Set<StreamPartition<PartitionIdType>> partitions = recordSupplier
-        .getPartitionIds(topic)
-        .stream()
-        .map(partitionId -> StreamPartition.of(topic, partitionId))
-        .collect(Collectors.toSet());
+    try {
+      final Set<StreamPartition<PartitionIdType>> partitions = recordSupplier
+          .getPartitionIds(topic)
+          .stream()
+          .map(partitionId -> StreamPartition.of(topic, partitionId))
+          .collect(Collectors.toSet());
 
-    recordSupplier.assign(partitions);
+      recordSupplier.assign(partitions);
 
-    if (useEarliestOffset) {
-      recordSupplier.seekToEarliest(partitions);
-    } else {
-      recordSupplier.seekToLatest(partitions);
+      if (useEarliestOffset) {
+        recordSupplier.seekToEarliest(partitions);
+      } else {
+        recordSupplier.seekToLatest(partitions);
+      }
+    }
+    catch (Exception e) {
+      throw new SamplerException(
+          e,
+          "Exception while assigning/seeking partitions for topic [%s]: %s",
+          topic,
+          Throwables.getRootCause(e).getMessage()
+      );
     }
   }
 
