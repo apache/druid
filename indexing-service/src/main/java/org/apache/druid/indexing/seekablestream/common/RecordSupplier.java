@@ -130,7 +130,7 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
    *
    * @return set of partitions
    */
-  Set<PartitionIdType> getPartitionIds(String stream) throws StreamException;
+  Set<PartitionIdType> getPartitionIds(String stream);
 
   /**
    * close the RecordSupplier
