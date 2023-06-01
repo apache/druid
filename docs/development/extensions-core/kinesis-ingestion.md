@@ -254,7 +254,7 @@ The following example demonstrates a supervisor spec with `lagBased` autoScaler 
 Kinesis indexing service supports both [`inputFormat`](../../ingestion/data-formats.md#input-format) and [`parser`](../../ingestion/data-formats.md#parser) to specify the data format.
 Use the `inputFormat` to specify the data format for Kinesis indexing service unless you need a format only supported by the legacy `parser`.
 
-Supported `inputFormat`s include:
+Supported values for `inputFormat` include:
 
 - `csv`
 - `delimited`
