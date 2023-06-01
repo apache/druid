@@ -19,43 +19,32 @@
 
 package org.apache.druid.data.input;
 
-/**
- * A class storing some attributes of an input file.
- * This information is used to make splits in the parallel indexing.
- *
- * @see SplitHintSpec
- * @see org.apache.druid.data.input.impl.SplittableInputSource
- */
-public class InputFileAttribute
+import org.junit.Assert;
+import org.junit.Test;
+
+import java.io.File;
+
+public class InputFormatTest
 {
-  /**
-   * The size of the input file.
-   */
-  private final long size;
-
-  /**
-   * The weighted size of the input file.
-   */
-  private final long weightedSize;
-
-  public InputFileAttribute(long size)
+  private static final InputFormat INPUT_FORMAT = new InputFormat()
   {
-    this(size, size);
-  }
+    @Override
+    public boolean isSplittable()
+    {
+      return false;
+    }
 
-  public InputFileAttribute(long size, long weightedSize)
-  {
-    this.size = size;
-    this.weightedSize = weightedSize;
-  }
+    @Override
+    public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
+    {
+      return null;
+    }
+  };
 
-  public long getWeightedSize()
+  @Test
+  public void test_getWeightedSize_withoutCompression()
   {
-    return weightedSize;
-  }
-
-  public long getSize()
-  {
-    return size;
+    final long unweightedSize = 100L;
+    Assert.assertEquals(unweightedSize, INPUT_FORMAT.getWeightedSize("file.json", unweightedSize));
   }
 }
