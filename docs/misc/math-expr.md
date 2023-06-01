@@ -280,6 +280,14 @@ For the IPv4 address functions, the `address` argument accepts either an IPv4 do
 | ipv4_parse(address) | Parses `address` into an IPv4 address stored as a long. Returns `address` if it is already a valid IPv4 integer address.  Returns null if `address` cannot be represented as an IPv4 address. |
 | ipv4_stringify(address) | Converts `address` into an IPv4 address dotted-decimal string. Returns `address` if it is already a valid IPv4 dotted-decimal string. Returns null if `address` cannot be represented as an IPv4 address.|
 
+## Datasketch functions
+
+
+| function                                          | description                                                                                                                                                                                                                                           |
+|---------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| hll_sketch_estimate(expr[, round])                | Returns the distinct count estimate from an HLL sketch. expr must return an HLL sketch. The optional round boolean parameter will round the estimate if set to true, with a default of false.|                                                         |
+| theta_sketch_estimate(expr[, round])              | Returns the distinct count estimate from a theta sketch. expr must return a theta sketch.The optional round boolean parameter will round the estimate if set to true, with a default of false.|                                                                                                                                                             |
+
 ## Other functions
 
 | function | description |
