@@ -134,7 +134,7 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 |`period`|ISO8601 Period|How often the supervisor will execute its management logic. Note that the supervisor will also run in response to certain events (such as tasks succeeding, failing, and reaching their taskDuration) so this value specifies the maximum time between iterations.|no (default == PT30S)|
 |`useEarliestSequenceNumber`|Boolean|If a supervisor is managing a dataSource for the first time, it will obtain a set of starting sequence numbers from Kinesis. This flag determines whether it retrieves the earliest or latest sequence numbers in Kinesis. Under normal circumstances, subsequent tasks will start from where the previous segments ended so this flag will only be used on first run.|no (default == false)|
 |`completionTimeout`|ISO8601 Period|The length of time to wait before declaring a publishing task as failed and terminating it. If this is set too low, your tasks may never publish. The publishing clock for a task begins roughly after `taskDuration` elapses.|no (default == PT6H)|
-|`lateMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps earlier than this period before the task was created; for example if this is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline).|no (default == none)|
+|`lateMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps earlier than this period before the task was created; for example if this is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a streaming and a nightly batch ingestion pipeline).|no (default == none)|
 |`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*. Messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting `earlyMessageRejectionPeriod` too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
 |`recordsPerFetch`|Integer|The number of records to request per call to fetch records from Kinesis. See [Determining fetch settings](#determining-fetch-settings).|no (see [Determining fetch settings](#determining-fetch-settings) for defaults)|
 |`fetchDelayMillis`|Integer|Time in milliseconds to wait between subsequent calls to fetch records from Kinesis. See [Determining fetch settings](#determining-fetch-settings).|no (default == 0)|
@@ -417,7 +417,7 @@ Indexing Service, Kinesis reports lag metrics measured in time difference in mil
 The status report also contains the supervisor's state and a list of recently thrown exceptions (reported as
 `recentErrors`, whose max size can be controlled using the `druid.supervisor.maxStoredExceptionEvents` configuration).
 There are two fields related to the supervisor's state - `state` and `detailedState`. The `state` field will always be
-one of a small number of generic states that are applicable to any type of supervisor, while the `detailedState` field
+one of a small number of generic states that apply to any type of supervisor, while the `detailedState` field
 will contain a more descriptive, implementation-specific state that may provide more insight into the supervisor's
 activities than the generic `state` field.
 
@@ -490,11 +490,11 @@ to be skipped or read twice, resulting in missing or duplicate data.
 
 The reason for using this operation is to recover from a state in which the supervisor
 ceases operating due to missing sequence numbers. The indexing service keeps track of the latest
-persisted sequence number in order to provide exactly-once ingestion guarantees across
+persisted sequence number to provide exactly-once ingestion guarantees across
 tasks.
 
-Subsequent tasks must start reading from where the previous task completed in
-order for the generated segments to be accepted. If the messages at the expected starting sequence numbers are
+Subsequent tasks must start reading from where the previous task completed
+for the generated segments to be accepted. If the messages at the expected starting sequence numbers are
 no longer available in Kinesis (typically because the message retention period has elapsed or the topic was
 removed and re-created) the supervisor will refuse to start and in-flight tasks will fail. This operation
 enables you to recover from this condition.
@@ -516,7 +516,7 @@ Kinesis indexing tasks run on MiddleManagers and are thus limited by the resourc
 cluster. In particular, you should make sure that you have sufficient worker capacity (configured using the
 `druid.worker.capacity` property) to handle the configuration in the supervisor spec. Note that worker capacity is
 shared across all types of indexing tasks, so you should plan your worker capacity to handle your total indexing load
-(e.g. batch processing, realtime tasks, merging tasks, etc.). If your workers run out of capacity, Kinesis indexing tasks
+(e.g. batch processing, streaming tasks, merging tasks, etc.). If your workers run out of capacity, Kinesis indexing tasks
 will queue and wait for the next available worker. This may cause queries to return partial results but will not result
 in data loss (assuming the tasks run before Kinesis purges those sequence numbers).
 
@@ -557,7 +557,7 @@ fail-overs.
 A supervisor is stopped via the `POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` endpoint. This places a
 tombstone marker in the database (to prevent the supervisor from being reloaded on a restart) and then gracefully
 shuts down the currently running supervisor. When a supervisor is shut down in this way, it will instruct its
-managed tasks to stop reading and begin publishing their segments immediately. The call to the shutdown endpoint will
+managed tasks to stop reading and begin publishing its segments immediately. The call to the shutdown endpoint will
 return after all tasks have been signalled to stop but before the tasks finish publishing their segments.
 
 ### Schema/Configuration Changes
@@ -574,7 +574,7 @@ In this way, configuration changes can be applied without requiring any pause in
 #### On the Subject of Segments
 
 Each Kinesis Indexing Task puts events consumed from Kinesis Shards assigned to it in a single segment for each segment
-granular interval until maxRowsPerSegment, maxTotalRows or intermediateHandoffPeriod limit is reached, at this point a new shard
+granular interval until maxRowsPerSegment, maxTotalRows or intermediateHandoffPeriod limit is reached. At this point, a new shard
 for this segment granularity is created for further events. Kinesis Indexing Task also does incremental hand-offs which
 means that all the segments created by a task will not be held up till the task duration is over. As soon as maxRowsPerSegment,
 maxTotalRows or intermediateHandoffPeriod limit is hit, all the segments held by the task at that point in time will be handed-off
@@ -583,7 +583,7 @@ without accumulating old segments locally on Middle Manager processes, and it is
 
 Kinesis Indexing Service may still produce some small segments. Let's say the task duration is 4 hours, segment granularity
 is set to an HOUR and Supervisor was started at 9:10 then after 4 hours at 13:10. The new set of tasks will be started and
-events for the interval 13:00 - 14:00 may be split across previous and new set of tasks. If you see it becoming a problem then
+events for the interval 13:00 - 14:00 may be split across a previous and new set of tasks. If you see it becoming a problem then
 one can schedule re-indexing tasks be run to merge segments together into new segments of an ideal size (in the range of ~500-700 MB per segment).
 Details on how to optimize the segment size can be found on [Segment size optimization](../../operations/segment-optimization.md).
 There is also ongoing work to support automatic segment compaction of sharded segments as well as compaction not requiring
@@ -624,7 +624,7 @@ If the above limits are exceeded, Kinesis throws ProvisionedThroughputExceededEx
 Kinesis tasks pause by `fetchDelayMillis` or 3 seconds, whichever is larger, and then attempt the call again.
 
 In most cases, the default settings for fetch parameters are sufficient to achieve good performance without excessive
-memory usage. However, in some cases, you may need to adjust these parameters in order to more finely control fetch rate
+memory usage. However, in some cases, you may need to adjust these parameters to more finely control fetch rate
 and memory usage. Optimal values depend on the average size of a record and the number of consumers you have reading
 from a given shard, which will be `replicas` unless you have other consumers also reading from this Kinesis stream.
 
