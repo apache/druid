@@ -34,10 +34,12 @@ sidebar_label: "Array functions"
 > Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
 > This document describes the SQL language.
 
-This page describes the operations you can perform on arrays using [Druid SQL](./sql.md). See [`ARRAY` data type documentation](./sql-data-types.md#arrays) for additional details.
+This page describes the operations you can perform on arrays using [Druid SQL](./sql.md). See [`ARRAY` data type documentation](./sql-data-types.md#arrays) for additional details. 
 
 All array references in the array function documentation can refer to multi-value string columns or `ARRAY` literals. These functions are largely
 identical to the [multi-value string functions](sql-multivalue-string-functions.md), but use `ARRAY` types and behavior.
+
+The following table describes array functions. To learn more about array aggregation functions, see [SQL aggregation functions](./sql-aggregations.md).
 
 |Function|Description|
 |--------|-----|
@@ -54,4 +56,4 @@ identical to the [multi-value string functions](sql-multivalue-string-functions.
 |`ARRAY_CONCAT(arr1, arr2)`|Concatenates `arr2` to `arr1`. The resulting array type is determined by the type of `arr1`.|
 |`ARRAY_SLICE(arr, start, end)`|Returns the subarray of `arr` from the 0-based index `start` (inclusive) to `end` (exclusive). Returns `null`, if `start` is less than 0, greater than length of `arr`, or greater than `end`.|
 |`ARRAY_TO_STRING(arr, str)`|Joins all elements of `arr` by the delimiter specified by `str`.|
-|`STRING_TO_ARRAY(str1, str2)`|Splits `str1` into an array on the delimiter specified by `str2`.|
+|`STRING_TO_ARRAY(str1, str2)`|Splits `str1` into an array on the delimiter specified by `str2`, which is a regular expression.|
