@@ -36,7 +36,7 @@ public class CuratorConfigTest extends JsonConfigTesterBase<CuratorConfig>
     propertyValues.put(getPropertyKey("maxZkRetries"), "20");
     testProperties.putAll(propertyValues);
     configProvider.inject(testProperties, configurator);
-    CuratorConfig config = configProvider.get().get();
+    CuratorConfig config = configProvider.get();
     Assert.assertEquals("fooHost", config.getZkHosts());
     Assert.assertEquals(true, config.getEnableAcl());
     Assert.assertEquals("test-zk-user", config.getZkUser());

@@ -518,14 +518,14 @@ public class CoordinatorDynamicConfig
         TimeUnit.MINUTES.toMillis(15);
     private static final long DEFAULT_MERGE_BYTES_LIMIT = 524_288_000L;
     private static final int DEFAULT_MERGE_SEGMENTS_LIMIT = 100;
-    private static final int DEFAULT_MAX_SEGMENTS_TO_MOVE = 5;
+    private static final int DEFAULT_MAX_SEGMENTS_TO_MOVE = 100;
     private static final double DEFAULT_PERCENT_OF_SEGMENTS_TO_CONSIDER_PER_MOVE = 100;
     private static final int DEFAULT_REPLICANT_LIFETIME = 15;
-    private static final int DEFAULT_REPLICATION_THROTTLE_LIMIT = 10;
+    private static final int DEFAULT_REPLICATION_THROTTLE_LIMIT = 500;
     private static final int DEFAULT_BALANCER_COMPUTE_THREADS = 1;
     private static final boolean DEFAULT_EMIT_BALANCING_STATS = false;
     private static final boolean DEFAULT_USE_BATCHED_SEGMENT_SAMPLER = true;
-    private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 100;
+    private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 500;
     private static final int DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
     private static final boolean DEFAULT_PAUSE_COORDINATION = false;
     private static final boolean DEFAULT_REPLICATE_AFTER_LOAD_TIMEOUT = false;

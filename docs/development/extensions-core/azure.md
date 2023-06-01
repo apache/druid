@@ -23,7 +23,7 @@ title: "Microsoft Azure"
   -->
 
 
-To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `druid-azure-extensions` in the extensions load list.
+To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-azure-extensions` in the extensions load list.
 
 ## Deep Storage
 

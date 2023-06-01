@@ -23,7 +23,7 @@ title: "Ambari Metrics Emitter"
   -->
 
 
-To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `ambari-metrics-emitter` in the extensions load list.
+To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `ambari-metrics-emitter` in the extensions load list.
 
 ## Introduction
 

@@ -80,7 +80,7 @@ public class LookupListeningAnnouncerConfigTest
         LookupListeningAnnouncerConfig.class
     );
     configProvider.inject(properties, configurator);
-    final LookupListeningAnnouncerConfig config = configProvider.get().get();
+    final LookupListeningAnnouncerConfig config = configProvider.get();
     Assert.assertEquals(LookupListeningAnnouncerConfig.DEFAULT_TIER, config.getLookupTier());
   }
 
@@ -95,7 +95,7 @@ public class LookupListeningAnnouncerConfigTest
         LookupListeningAnnouncerConfig.class
     );
     configProvider.inject(properties, configurator);
-    final LookupListeningAnnouncerConfig config = configProvider.get().get();
+    final LookupListeningAnnouncerConfig config = configProvider.get();
     Assert.assertEquals(lookupTier, config.getLookupTier());
   }
 
@@ -109,7 +109,7 @@ public class LookupListeningAnnouncerConfigTest
         LookupListeningAnnouncerConfig.class
     );
     configProvider.inject(properties, configurator);
-    final LookupListeningAnnouncerConfig config = configProvider.get().get();
+    final LookupListeningAnnouncerConfig config = configProvider.get();
     config.getLookupTier();
   }
 
@@ -123,7 +123,7 @@ public class LookupListeningAnnouncerConfigTest
         LookupListeningAnnouncerConfig.class
     );
     configProvider.inject(properties, configurator);
-    final LookupListeningAnnouncerConfig config = configProvider.get().get();
+    final LookupListeningAnnouncerConfig config = configProvider.get();
     Assert.assertEquals("some_datasource", config.getLookupTier());
   }
 
@@ -139,7 +139,7 @@ public class LookupListeningAnnouncerConfigTest
         LookupListeningAnnouncerConfig.class
     );
     configProvider.inject(properties, configurator);
-    final LookupListeningAnnouncerConfig config = configProvider.get().get();
+    final LookupListeningAnnouncerConfig config = configProvider.get();
     Assert.assertEquals(lookupTier, config.getLookupTier());
   }
 }

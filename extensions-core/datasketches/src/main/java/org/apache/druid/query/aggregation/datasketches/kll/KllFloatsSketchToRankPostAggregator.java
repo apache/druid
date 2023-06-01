@@ -83,7 +83,7 @@ public class KllFloatsSketchToRankPostAggregator implements PostAggregator
   public Object compute(final Map<String, Object> combinedAggregators)
   {
     final KllFloatsSketch sketch = (KllFloatsSketch) field.compute(combinedAggregators);
-    return sketch.getRank(value);
+    return sketch.isEmpty() ? Double.NaN : sketch.getRank(value);
   }
 
   @Override

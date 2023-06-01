@@ -42,6 +42,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.schemarepo.Avro1124RESTRepositoryClientWrapper;
 import org.apache.druid.data.input.schemarepo.Avro1124SubjectAndIdConverter;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -200,6 +201,21 @@ public class AvroStreamInputFormatTest extends InitializedNullHandlingTest
         NestedInputFormat.class
     );
     Assert.assertEquals(inputFormat, inputFormat2);
+  }
+
+  @Test
+  public void testMissingAvroBytesDecoderRaisesIAE()
+  {
+    Assert.assertThrows(
+        "avroBytesDecoder is required to decode Avro records",
+        IAE.class,
+        () -> new AvroStreamInputFormat(
+            flattenSpec,
+            null,
+            true,
+            true
+        )
+    );
   }
 
   @Test

@@ -896,7 +896,7 @@ public class QueryResourceTest
     assertAsyncResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
         waitAllFinished,
-        response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
+        response -> Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus())
     );
     waitTwoScheduled.await();
     assertSynchronousResponseAndCountdownOrBlockForever(
@@ -1043,19 +1043,21 @@ public class QueryResourceTest
         return (queryPlus, responseContext) -> {
           beforeScheduler.forEach(CountDownLatch::countDown);
 
-          return scheduler.run(
-              scheduler.prioritizeAndLaneQuery(queryPlus, ImmutableSet.of()),
-              new LazySequence<T>(() -> {
-                inScheduler.forEach(CountDownLatch::countDown);
-                try {
-                  // pretend to be a query that is waiting on results
-                  Thread.sleep(500);
-                }
-                catch (InterruptedException ignored) {
-                }
-                // all that waiting for nothing :(
-                return Sequences.empty();
-              })
+          return Sequences.simple(
+              scheduler.run(
+                  scheduler.prioritizeAndLaneQuery(queryPlus, ImmutableSet.of()),
+                  new LazySequence<T>(() -> {
+                    inScheduler.forEach(CountDownLatch::countDown);
+                    try {
+                      // pretend to be a query that is waiting on results
+                      Thread.sleep(500);
+                    }
+                    catch (InterruptedException ignored) {
+                    }
+                    // all that waiting for nothing :(
+                    return Sequences.empty();
+                  })
+              ).toList()
           );
         };
       }
