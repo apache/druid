@@ -101,6 +101,7 @@
           "querying/sql-operators",
           "querying/sql-scalar",
           "querying/sql-aggregations",
+          "querying/sql-array-functions",
           "querying/sql-multivalue-string-functions",
           "querying/sql-json-functions",
           "querying/sql-functions",
