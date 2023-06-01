@@ -363,11 +363,12 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     MultiObjectDeleteException multiObjectDeleteException = new MultiObjectDeleteException(
         ImmutableList.of(deleteError),
         ImmutableList.of());
-    deleteError.setKey(KEY_2_PATH);
-    MultiObjectDeleteException multiObjectDeleteException2 = new MultiObjectDeleteException(
-        ImmutableList.of(deleteError),
-        ImmutableList.of());
     EasyMock.expectLastCall().andThrow(multiObjectDeleteException).once();
+    MultiObjectDeleteException.DeleteError deleteError2 = new MultiObjectDeleteException.DeleteError();
+    deleteError2.setKey(KEY_2_PATH);
+    MultiObjectDeleteException multiObjectDeleteException2 = new MultiObjectDeleteException(
+        ImmutableList.of(deleteError2),
+        ImmutableList.of());
     EasyMock.expectLastCall().andThrow(multiObjectDeleteException2).once();
 
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
