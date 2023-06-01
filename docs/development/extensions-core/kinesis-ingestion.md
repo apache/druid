@@ -344,7 +344,7 @@ For all supervisor APIs, check [Supervisor APIs](../../api-reference/api-referen
 
 To authenticate with AWS, you must provide your AWS access key and AWS secret key via `runtime.properties`, for example:
 
-```
+```text
 -Ddruid.kinesis.accessKey=123 -Ddruid.kinesis.secretKey=456
 ```
 
@@ -531,7 +531,7 @@ be used instead. When `taskDuration` elapses, these tasks will transition to pub
 new reading tasks will be created. Therefore, to allow for reading tasks and publishing tasks to run concurrently, there
 should be a minimum capacity of:
 
-```
+```text
 workerCapacity = 2 * replicas * taskCount
 ```
 
