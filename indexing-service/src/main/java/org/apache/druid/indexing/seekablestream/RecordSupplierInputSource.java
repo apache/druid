@@ -93,7 +93,8 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
     catch (Exception e) {
       throw new SamplerException(
           e,
-          "Exception while assigning/seeking partitions for topic [%s]: %s",
+          "Exception while seeking to the [%s] offset of partitions in topic [%s]: %s",
+          useEarliestOffset ? "earliest" : "latest",
           topic,
           Throwables.getRootCause(e).getMessage()
       );
