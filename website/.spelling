@@ -64,6 +64,7 @@ dimensionsSpec
 DimensionSpec
 DimensionSpecs
 Dockerfile
+Docusaurus
 DogStatsD
 DOCTYPE
 Double.NEGATIVE_INFINITY
@@ -494,6 +495,7 @@ substring
 subtask
 subtasks
 supervisorTaskId
+SVG
 symlink
 syntaxes
 tiering
@@ -583,6 +585,7 @@ NUMERIC_PRECISION
 NUMERIC_PRECISION_RADIX
 NUMERIC_SCALE
 ORDINAL_POSITION
+PNG
 POSIX
 P1M
 P1Y
