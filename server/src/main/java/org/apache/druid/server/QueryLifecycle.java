@@ -221,27 +221,16 @@ public class QueryLifecycle
    */
   public Access authorize(HttpServletRequest req)
   {
-    transition(State.INITIALIZED, State.AUTHORIZING);
-    final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
-        Iterables.transform(
-            baseQuery.getDataSource().getTableNames(),
-            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
-        ),
-        Iterables.transform(
-            authConfig.contextKeysToAuthorize(userContextKeys),
-            contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
-        )
-    );
-    return doAuthorize(
-        AuthorizationUtils.authenticationResultFromRequest(req),
-        AuthorizationUtils.authorizeAllResourceActions(
-            req,
-            resourcesToAuthorize,
-            authorizerMapper
-        )
-    );
+    return authorize(AuthorizationUtils.authenticationResultFromRequest(req));
   }
 
+  /**
+   * Authorize the query using the authentication result.
+   * Will return an Access object denoting whether the query is authorized or not.
+   *
+   * @param authenticationResult authentication result indicating identity of the requester
+   * @return authorization result of requester
+   */
   public Access authorize(AuthenticationResult authenticationResult)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
