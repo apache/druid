@@ -187,9 +187,6 @@ public class AppenderatorImpl implements Appenderator
    */
   private final Map<FireHydrant, Pair<File, SegmentId>> persistedHydrantMetadata =
       Collections.synchronizedMap(new IdentityHashMap<>());
-
-  private int persistThreads = 1;
-
   /**
    * This constructor allows the caller to provide its own SinkQuerySegmentWalker.
    *
@@ -249,18 +246,6 @@ public class AppenderatorImpl implements Appenderator
     } else {
       log.debug("Running closed segments appenderator");
     }
-
-    try {
-      String pThreads = System.getProperty("druid.exp.persist.threads");
-      if (pThreads != null) {
-        persistThreads = Integer.parseInt(pThreads);
-      }
-    }
-    catch (Exception e) {
-      log.warn(e, "Error getting persist threads, defaulting");
-    }
-
-    log.info("Number of persist threads [%d]", persistThreads);
   }
 
   @Override
@@ -1162,7 +1147,7 @@ public class AppenderatorImpl implements Appenderator
       persistExecutor = MoreExecutors.listeningDecorator(
           Execs.newBlockingThreaded(
               "[" + StringUtils.encodeForFormat(myId) + "]-appenderator-persist",
-              persistThreads, maxPendingPersists
+              tuningConfig.getNumPersistThreads(), maxPendingPersists
           )
       );
     }
