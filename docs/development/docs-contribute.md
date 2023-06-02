@@ -22,7 +22,7 @@ title: "Contribute to Druid docs"
   ~ under the License.
   -->
 
-Druid is a [community-led project](https://druid.apache.org/community/), and we are delighted to receive contributions of anything from minor fixes to docs to big new features.
+Druid is a [community-led project](https://druid.apache.org/community/). We are delighted to receive contributions to the docs ranging from minor fixes to big new features.
 
 Druid docs contributors:
 
@@ -37,11 +37,11 @@ The open source Druid docs are located here:
 https://druid.apache.org/docs/latest/design/index.html
 
 
-If you need to update a Druid doc, locate and update the doc in the Druid repo, following the instructions below.
+If you need to update a Druid doc, locate and update the doc in the Druid repo following the instructions below.
 
 ## Druid repo branches
 
-The Druid team works on the `master` branch and then branches for a release, such as 25.0
+The Druid team works on the `master` branch and then branches for a release, such as `26.0.0`.
 
 See [`CONTRIBUTING.md`](https://github.com/apache/incubator-druid/blob/master/CONTRIBUTING.md) for instructions on contributing to Apache Druid.
 
@@ -54,6 +54,7 @@ Before you can contribute to the Druid docs for the first time, you must complet
    ```bash
    git clone git@github.com:GITHUB_USERNAME/druid.git
    ```
+   Replace `GITHUB_USERNAME` with your GitHub username.
 3. In the directory where you cloned your fork, set up `apache/druid`  as your your remote `upstream` repo:
    
    ```bash
@@ -77,7 +78,7 @@ Before you can contribute to the Druid docs for the first time, you must complet
    
 ## Contributing
 
-Before you contribute, it's a good idea to make sure your local branch of `master` and the upstream Apache branch are up-to-date and in sync. This can help you avoid merge conflicts. Run the following commands on your fork's `master` branch:
+Before you contribute, make sure your local branch of `master` and the upstream Apache branch are up-to-date and in sync. This can help you avoid merge conflicts. Run the following commands on your fork's `master` branch:
 
 ```bash
 git fetch origin
@@ -100,9 +101,10 @@ Now you're up to date, and you can make your changes.
    git checkout -b MY-BRANCH
    ```
 
-2. Find the file that you want to make changes to. All the source files for the docs are written in markdown and located in the `docs` directory. The URL for the page includes the subdirectory the source file is in. For example, the SQL-based ingestion tutorial found at `https://druid.apache.org/docs/latest/tutorials/tutorial-msq-extern.html` is in the `tutorials` subdirectory.
+Provide a name for your feature branch in `MY-BRANCH`.
+2. Find the file that you want to make changes to. All the source files for the docs are written in Markdown and located in the `docs` directory. The URL for the page includes the subdirectory the source file is in. For example, the SQL-based ingestion tutorial found at `https://druid.apache.org/docs/latest/tutorials/tutorial-msq-extern.html` is in the `tutorials` subdirectory.
    
-   If you're adding a page, you'll need to create a new markdown file in the appropriate subdirectory. Then, copy the front matter and Apache license from an existing file. Update the `title` and `id` fields. Don't forget to add it to `website/sidebars.json` so that your new page shows up in the navigation.
+   If you're adding a page, create a new Markdown file in the appropriate subdirectory. Then, copy the front matter and Apache license from an existing file. Update the `title` and `id` fields. Don't forget to add it to `website/sidebars.json` so that your new page shows up in the navigation.
 
 4. Test changes locally by building the site and navigating to your changes. In the `website` directory, run `docusaurus-start`. By default, this starts the site on `localhost:3000`. If port `3000` is already in use, it'll increment the port number from there.
    
@@ -141,13 +143,13 @@ Here are some general guidelines:
 * Avoid using a present participle or gerund as the first word in a heading or title. A shortcut for this is to not start with a word that ends in `-ing`. For example, don't use "Configuring Druid." Use "Configure Druid."
 * Use sentence case in document titles and headings.
 * Don’t use images of text or code samples.
-* Use SVG over PNG for images if you can
-* Provide alt text or an equivalent text explanation with each image
+* Use SVG over PNG for images if you can.
+* Provide alt text or an equivalent text explanation with each image.
 * Use the appropriate text-formatting. For example, make sure code snippets and property names are in code font and UI elements are bold. Generally, you should  avoid using bold or italics to emphasize certain words unless there's a good reason.
 * Put conditional clauses before instructions. In the following example, "to drop a segment" is the conditional clause: to drop a segment, do the following.
-* Avoid gender-specific pronouns, instead use they.
-* Use second person singular — you instead of we.
+* Avoid gender-specific pronouns, instead use "they."
+* Use second person singular — "you" instead of "we."
 * When American spelling is different from Commonwealth/"British" spelling, use the American spelling.
-* Don’t use terms considered disrespectful. Refer to a list like Google’s [Word list](https://developers.google.com/style/word-list) for guidance and alternatives
+* Don’t use terms considered disrespectful. Refer to a list like Google’s [Word list](https://developers.google.com/style/word-list) for guidance and alternatives.
 * Use straight quotation marks and straight apostrophes instead of the curly versions.
 * Introduce a list, a table, or a procedure with an introductory sentence that prepares the reader for what they're about to read.
