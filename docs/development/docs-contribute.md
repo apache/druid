@@ -62,7 +62,7 @@ Before you can contribute to the Druid docs for the first time, you must complet
 4. Confirm that your fork shows up as the origin repo and `apache/druid` shows up as the upstream repo:   
 
    ```bash
-   git config --list --show-origin
+   git remote -v
    ```
 
 5. Verify that you have your email configured for GitHub:
