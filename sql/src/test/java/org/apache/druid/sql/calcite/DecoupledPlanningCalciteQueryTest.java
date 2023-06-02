@@ -30,10 +30,11 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
   @Override
   protected QueryTestBuilder testBuilder()
   {
-    return new QueryTestBuilder(new CalciteTestConfig())
-        .queryContext(ImmutableMap.of(
-            PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED,
-            QueryContexts.ENABLE_DEBUG, true
+    return new QueryTestBuilder(
+        new CalciteTestConfig(
+            ImmutableMap.of(
+                PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED,
+                QueryContexts.ENABLE_DEBUG, true)
         ))
         .cannotVectorize(cannotVectorize)
         .skipVectorize(skipVectorize);
@@ -392,6 +393,20 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
   @Override
   @Ignore
   public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testFilterOnCurrentTimestampWithIntervalArithmetic()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testFilterOnCurrentTimestampOnView()
   {
 
   }

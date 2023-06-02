@@ -80,11 +80,13 @@ public class QueryTestBuilder
     ResultsVerifier defaultResultsVerifier(List<Object[]> expectedResults, RowSignature expectedResultSignature);
 
     boolean isRunningMSQ();
+
+    Map<String, Object> baseQueryContext();
   }
 
   protected final QueryTestConfig config;
   protected PlannerConfig plannerConfig = BaseCalciteQueryTest.PLANNER_CONFIG_DEFAULT;
-  protected Map<String, Object> queryContext = BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT;
+  protected Map<String, Object> queryContext;
   protected List<SqlParameter> parameters = CalciteTestBase.DEFAULT_PARAMETERS;
   protected String sql;
   protected AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
@@ -109,6 +111,12 @@ public class QueryTestBuilder
   public QueryTestBuilder(final QueryTestConfig config)
   {
     this.config = config;
+    // Done to maintain backwards compat. So,
+    // 1. If no base context is provided in config, the queryContext is set to the default one
+    // 2. If some base context is provided in config, we set that context as the queryContext
+    // 3. If someone overrides the context, we merge the context with the empty/non-empty base context provided in the config
+    this.queryContext =
+        config.baseQueryContext() == null ? BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT : config.baseQueryContext();
   }
 
   public QueryTestBuilder plannerConfig(PlannerConfig plannerConfig)
@@ -119,7 +127,7 @@ public class QueryTestBuilder
 
   public QueryTestBuilder queryContext(Map<String, Object> queryContext)
   {
-    this.queryContext = QueryContexts.override(this.baseQueryContext, queryContext);
+    this.queryContext = QueryContexts.override(config.baseQueryContext(), queryContext);
     return this;
   }
 
