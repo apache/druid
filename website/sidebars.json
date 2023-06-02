@@ -233,6 +233,7 @@
       "development/javascript",
       "development/build",
       "development/versioning",
+      "development/contribute-to-docs",
       "development/experimental"
     ],
     "Misc": [
