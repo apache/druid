@@ -53,6 +53,7 @@ public class ServerConfigTest
         defaultConfig.getMaxScatterGatherBytes(),
         defaultConfig.getMaxSubqueryRows(),
         defaultConfig.getMaxSubqueryBytes(),
+        defaultConfig.isuseNestedForUnknownTypeInSubquery(),
         defaultConfig.getMaxQueryTimeout(),
         defaultConfig.getMaxRequestHeaderSize(),
         defaultConfig.getGracefulShutdownTimeout(),
