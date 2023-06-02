@@ -22,7 +22,7 @@ title: "Contribute to Druid docs"
   ~ under the License.
   -->
 
-Druid is a [community-led project](https://druid.apache.org/community/). We are delighted to receive contributions to the docs ranging from minor fixes to big new features.
+Apache Druid is a [community-led project](https://druid.apache.org/community/). We are delighted to receive contributions to the docs ranging from minor fixes to big new features.
 
 Druid docs contributors:
 
