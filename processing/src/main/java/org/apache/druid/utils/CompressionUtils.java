@@ -22,6 +22,7 @@ package org.apache.druid.utils;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
@@ -30,6 +31,7 @@ import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorInputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
 import org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStream;
+import org.apache.commons.compress.utils.FileNameUtils;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -40,6 +42,7 @@ import org.apache.druid.java.util.common.StreamUtils;
 import org.apache.druid.java.util.common.io.NativeIO;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -53,6 +56,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -64,14 +68,61 @@ import java.util.zip.ZipOutputStream;
 @PublicApi
 public class CompressionUtils
 {
+
+  public enum Format
+  {
+    BZ2(".bz2", "bz2"),
+    GZ(".gz", "gz"),
+    SNAPPY(".sz", "sz"),
+    XZ(".xz", "xz"),
+    ZIP(".zip", "zip"),
+    ZSTD(".zst", "zst");
+
+    private static final Map<String, Format> EXTENSION_TO_COMPRESSION_FORMAT;
+
+    static {
+      ImmutableMap.Builder<String, Format> builder = ImmutableMap.builder();
+      builder.put(BZ2.getExtension(), BZ2);
+      builder.put(GZ.getExtension(), GZ);
+      builder.put(SNAPPY.getExtension(), SNAPPY);
+      builder.put(XZ.getExtension(), XZ);
+      builder.put(ZIP.getExtension(), ZIP);
+      builder.put(ZSTD.getExtension(), ZSTD);
+      EXTENSION_TO_COMPRESSION_FORMAT = builder.build();
+    }
+
+    private final String suffix;
+    private final String extension;
+    Format(String suffix, String extension)
+    {
+      this.suffix = suffix;
+      this.extension = extension;
+    }
+
+    public String getSuffix()
+    {
+      return suffix;
+    }
+
+    public String getExtension()
+    {
+      return extension;
+    }
+
+    @Nullable
+    public static Format fromFileName(@Nullable String fileName)
+    {
+      String extension = FileNameUtils.getExtension(fileName);
+      if (null == extension) {
+        return null;
+      }
+      return EXTENSION_TO_COMPRESSION_FORMAT.get(extension);
+    }
+  }
+
+  public static final long COMPRESSED_TEXT_WEIGHT_FACTOR = 4L;
   private static final Logger log = new Logger(CompressionUtils.class);
   private static final int DEFAULT_RETRY_COUNT = 3;
-  private static final String BZ2_SUFFIX = ".bz2";
-  private static final String GZ_SUFFIX = ".gz";
-  private static final String XZ_SUFFIX = ".xz";
-  private static final String ZIP_SUFFIX = ".zip";
-  private static final String SNAPPY_SUFFIX = ".sz";
-  private static final String ZSTD_SUFFIX = ".zst";
   private static final int GZIP_BUFFER_SIZE = 8192; // Default is 512
 
   /**
@@ -198,7 +249,7 @@ public class CompressionUtils
         throw Throwables.propagate(e);
       }
     } else {
-      final File tmpFile = File.createTempFile("compressionUtilZipCache", ZIP_SUFFIX);
+      final File tmpFile = File.createTempFile("compressionUtilZipCache", Format.ZIP.getSuffix());
       try {
         FileUtils.retryCopy(
             byteSource,
@@ -527,7 +578,7 @@ public class CompressionUtils
     if (Strings.isNullOrEmpty(fName)) {
       return false;
     }
-    return fName.endsWith(ZIP_SUFFIX); // Technically a file named `.zip` would be fine
+    return fName.endsWith(Format.ZIP.getSuffix()); // Technically a file named `.zip` would be fine
   }
 
   /**
@@ -542,7 +593,7 @@ public class CompressionUtils
     if (Strings.isNullOrEmpty(fName)) {
       return false;
     }
-    return fName.endsWith(GZ_SUFFIX) && fName.length() > GZ_SUFFIX.length();
+    return fName.endsWith(Format.GZ.getSuffix()) && fName.length() > Format.GZ.getSuffix().length();
   }
 
   /**
@@ -568,17 +619,17 @@ public class CompressionUtils
    */
   public static InputStream decompress(final InputStream in, final String fileName) throws IOException
   {
-    if (fileName.endsWith(GZ_SUFFIX)) {
+    if (fileName.endsWith(Format.GZ.getSuffix())) {
       return gzipInputStream(in);
-    } else if (fileName.endsWith(BZ2_SUFFIX)) {
+    } else if (fileName.endsWith(Format.BZ2.getSuffix())) {
       return new BZip2CompressorInputStream(in, true);
-    } else if (fileName.endsWith(XZ_SUFFIX)) {
+    } else if (fileName.endsWith(Format.XZ.getSuffix())) {
       return new XZCompressorInputStream(in, true);
-    } else if (fileName.endsWith(SNAPPY_SUFFIX)) {
+    } else if (fileName.endsWith(Format.SNAPPY.getSuffix())) {
       return new FramedSnappyCompressorInputStream(in);
-    } else if (fileName.endsWith(ZSTD_SUFFIX)) {
+    } else if (fileName.endsWith(Format.ZSTD.getSuffix())) {
       return new ZstdCompressorInputStream(in);
-    } else if (fileName.endsWith(ZIP_SUFFIX)) {
+    } else if (fileName.endsWith(Format.ZIP.getSuffix())) {
       // This reads the first file in the archive.
       final ZipInputStream zipIn = new ZipInputStream(in, StandardCharsets.UTF_8);
       try {

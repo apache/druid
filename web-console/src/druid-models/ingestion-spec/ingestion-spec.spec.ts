@@ -757,7 +757,7 @@ describe('spec utils', () => {
   });
 
   it('updateSchemaWithSample', () => {
-    const withRollup = updateSchemaWithSample(ingestionSpec, JSON_SAMPLE, 'specific', true);
+    const withRollup = updateSchemaWithSample(ingestionSpec, JSON_SAMPLE, 'fixed', true);
 
     expect(withRollup).toMatchInlineSnapshot(`
       Object {
@@ -822,7 +822,7 @@ describe('spec utils', () => {
       }
     `);
 
-    const noRollup = updateSchemaWithSample(ingestionSpec, JSON_SAMPLE, 'specific', false);
+    const noRollup = updateSchemaWithSample(ingestionSpec, JSON_SAMPLE, 'fixed', false);
 
     expect(noRollup).toMatchInlineSnapshot(`
       Object {

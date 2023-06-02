@@ -42,8 +42,6 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -58,9 +56,7 @@ public class SQLAuditManagerTest
 
   private TestDerbyConnector connector;
   private AuditManager auditManager;
-  private final String PAYLOAD_DIMENSION_KEY = "payload";
   private ConfigSerde<String> stringConfigSerde;
-
 
   private final ObjectMapper mapper = new DefaultObjectMapper();
 
@@ -105,36 +101,13 @@ public class SQLAuditManagerTest
     };
   }
 
-  @Test(timeout = 60_000L)
-  public void testAuditEntrySerde() throws IOException
-  {
-    AuditEntry entry = new AuditEntry(
-        "testKey",
-        "testType",
-        new AuditInfo(
-            "testAuthor",
-            "testComment",
-            "127.0.0.1"
-        ),
-        "testPayload",
-        DateTimes.of("2013-01-01T00:00:00Z")
-    );
-    ObjectMapper mapper = new DefaultObjectMapper();
-    AuditEntry serde = mapper.readValue(mapper.writeValueAsString(entry), AuditEntry.class);
-    Assert.assertEquals(entry, serde);
-  }
-
   @Test
   public void testAuditMetricEventBuilderConfig()
   {
     AuditEntry entry = new AuditEntry(
         "testKey",
         "testType",
-        new AuditInfo(
-            "testAuthor",
-            "testComment",
-            "127.0.0.1"
-        ),
+        new AuditInfo("testAuthor", "testComment", "127.0.0.1"),
         "testPayload",
         DateTimes.of("2013-01-01T00:00:00Z")
     );
@@ -155,10 +128,11 @@ public class SQLAuditManagerTest
     );
 
     ServiceMetricEvent.Builder auditEntryBuilder = ((SQLAuditManager) auditManager).getAuditMetricEventBuilder(entry);
-    Assert.assertEquals(null, auditEntryBuilder.getDimension(PAYLOAD_DIMENSION_KEY));
+    final String payloadDimensionKey = "payload";
+    Assert.assertNull(auditEntryBuilder.getDimension(payloadDimensionKey));
 
     ServiceMetricEvent.Builder auditEntryBuilderWithPayload = auditManagerWithPayloadAsDimension.getAuditMetricEventBuilder(entry);
-    Assert.assertEquals("testPayload", auditEntryBuilderWithPayload.getDimension(PAYLOAD_DIMENSION_KEY));
+    Assert.assertEquals("testPayload", auditEntryBuilderWithPayload.getDimension(payloadDimensionKey));
   }
 
   @Test(timeout = 60_000L)
@@ -166,11 +140,7 @@ public class SQLAuditManagerTest
   {
     String entry1Key = "testKey";
     String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo(
-        "testAuthor",
-        "testComment",
-        "127.0.0.1"
-    );
+    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
     String entry1Payload = "testPayload";
 
     auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
@@ -193,11 +163,7 @@ public class SQLAuditManagerTest
   {
     String entry1Key = "testKey";
     String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo(
-        "testAuthor",
-        "testComment",
-        "127.0.0.1"
-    );
+    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
     String entry1Payload = "testPayload";
 
     auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
@@ -226,29 +192,17 @@ public class SQLAuditManagerTest
   {
     String entry1Key = "testKey1";
     String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo(
-        "testAuthor",
-        "testComment",
-        "127.0.0.1"
-    );
+    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
     String entry1Payload = "testPayload";
 
     String entry2Key = "testKey2";
     String entry2Type = "testType";
-    AuditInfo entry2AuditInfo = new AuditInfo(
-        "testAuthor",
-        "testComment",
-        "127.0.0.1"
-    );
+    AuditInfo entry2AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
     String entry2Payload = "testPayload";
 
     auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
     auditManager.doAudit(entry2Key, entry2Type, entry2AuditInfo, entry2Payload, stringConfigSerde);
-    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(
-        "testKey1",
-        "testType",
-        1
-    );
+    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory("testKey1", "testType", 1);
     Assert.assertEquals(1, auditEntries.size());
     Assert.assertEquals(entry1Key, auditEntries.get(0).getKey());
     Assert.assertEquals(entry1Payload, auditEntries.get(0).getPayload());
@@ -261,11 +215,7 @@ public class SQLAuditManagerTest
   {
     String entry1Key = "testKey";
     String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo(
-        "testAuthor",
-        "testComment",
-        "127.0.0.1"
-    );
+    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
     String entry1Payload = "testPayload";
 
     auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
@@ -298,11 +248,7 @@ public class SQLAuditManagerTest
   {
     String entry1Key = "testKey";
     String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo(
-        "testAuthor",
-        "testComment",
-        "127.0.0.1"
-    );
+    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
     String entry1Payload = "testPayload";
 
     auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
@@ -338,39 +284,24 @@ public class SQLAuditManagerTest
   {
     String entry1Key = "testKey";
     String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo(
-        "testAuthor",
-        "testComment",
-        "127.0.0.1"
-    );
+    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
     String entry1Payload = "testPayload1";
 
     String entry2Key = "testKey";
     String entry2Type = "testType";
-    AuditInfo entry2AuditInfo = new AuditInfo(
-        "testAuthor",
-        "testComment",
-        "127.0.0.1"
-    );
+    AuditInfo entry2AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
     String entry2Payload = "testPayload2";
 
     String entry3Key = "testKey";
     String entry3Type = "testType";
-    AuditInfo entry3AuditInfo = new AuditInfo(
-        "testAuthor",
-        "testComment",
-        "127.0.0.1"
-    );
+    AuditInfo entry3AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
     String entry3Payload = "testPayload3";
 
     auditManager.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload, stringConfigSerde);
     auditManager.doAudit(entry2Key, entry2Type, entry2AuditInfo, entry2Payload, stringConfigSerde);
     auditManager.doAudit(entry3Key, entry3Type, entry3AuditInfo, entry3Payload, stringConfigSerde);
 
-    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(
-        "testType",
-        2
-    );
+    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory("testType", 2);
     Assert.assertEquals(2, auditEntries.size());
     Assert.assertEquals(entry3Key, auditEntries.get(0).getKey());
     Assert.assertEquals(entry3Payload, auditEntries.get(0).getPayload());
@@ -416,15 +347,15 @@ public class SQLAuditManagerTest
 
     String entry1Key = "testKey";
     String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo(
-        "testAuthor",
-        "testComment",
-        "127.0.0.1"
-    );
+    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
     String entry1Payload = "payload audit to store";
 
-    auditManagerWithMaxPayloadSizeBytes.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload,
-                                                stringConfigSerde
+    auditManagerWithMaxPayloadSizeBytes.doAudit(
+        entry1Key,
+        entry1Type,
+        entry1AuditInfo,
+        entry1Payload,
+        stringConfigSerde
     );
 
     byte[] payload = connector.lookup(
@@ -461,15 +392,15 @@ public class SQLAuditManagerTest
     );
     String entry1Key = "testKey";
     String entry1Type = "testType";
-    AuditInfo entry1AuditInfo = new AuditInfo(
-        "testAuthor",
-        "testComment",
-        "127.0.0.1"
-    );
+    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
     String entry1Payload = "payload audit to store";
 
-    auditManagerWithMaxPayloadSizeBytes.doAudit(entry1Key, entry1Type, entry1AuditInfo, entry1Payload,
-                                                stringConfigSerde
+    auditManagerWithMaxPayloadSizeBytes.doAudit(
+        entry1Key,
+        entry1Type,
+        entry1AuditInfo,
+        entry1Payload,
+        stringConfigSerde
     );
 
     byte[] payload = connector.lookup(
@@ -507,11 +438,7 @@ public class SQLAuditManagerTest
 
     String entry1Key = "test1Key";
     String entry1Type = "test1Type";
-    AuditInfo entry1AuditInfo = new AuditInfo(
-        "testAuthor",
-        "testComment",
-        "127.0.0.1"
-    );
+    AuditInfo entry1AuditInfo = new AuditInfo("testAuthor", "testComment", "127.0.0.1");
     // Entry 1 payload has a null field for one of the property
     Map<String, String> entryPayload1WithNull = new HashMap<>();
     entryPayload1WithNull.put("version", "x");
@@ -529,17 +456,12 @@ public class SQLAuditManagerTest
 
   private void dropTable(final String tableName)
   {
-    Assert.assertNull(connector.getDBI().withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
-                  .execute();
-            return null;
-          }
-        }
-    ));
+    Assert.assertEquals(
+        0,
+        connector.getDBI().withHandle(
+            handle -> handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
+                        .execute()
+        ).intValue()
+    );
   }
 }

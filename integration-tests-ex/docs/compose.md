@@ -37,9 +37,37 @@ See also:
 
 ## File Structure
 
-Docker Compose files live in the `druid-it-cases` module (`test-cases` folder)
+Docker Compose files live in the `druid-it-cases` module (`cases` folder)
 in the `cluster` directory. There is a separate subdirectory for each cluster type
 (subset of test categories), plus a `Common` folder for shared files.
+
+### Cluster Directory
+
+Each test category uses an associated cluster. In some cases, multiple tests use
+the same cluster definition. Each cluster is defined by a directory in
+`$MODULE/cluster/$CLUSTER_NAME`. The directory contains a variety of files, most
+of which are optional:
+
+* `docker-compose.yaml` - Docker composes file, if created explicitly.
+* `docker-compose.py` - Docker compose "template" if generated. The Python template
+  format is preferred. (One of the `docker-compose.*` files is required)
+* `verify.sh` - Verify the environment for the cluster. Cloud tests require that a
+  number of environment variables be set to pass keys and other setup to tests.
+  (Optional)
+* `setup.sh` - Additional cluster setup, such as populating the "shared" directory
+  with test-specific items. (Optional)
+
+The `verify.sh` and `setup.sh` scripts are sourced into one of the "master"
+scripts and can thus make use of environment variables already set:
+
+* `BASE_MODULE_DIR` points to `integration-tests-ex/cases` where the "base" set
+  of scripts and cluster definitions reside.
+* `MODULE_DIR` points to the Maven module folder that contains the test.
+* `CATEGORY` gives the name of the test category.
+* `DRUID_INTEGRATION_TEST_GROUP` is the cluster name. Often the same as `CATEGORY`,
+  but not always.
+
+The `set -e` option is in effect so that an any errors fail the test.
 
 ## Shared Directory
 

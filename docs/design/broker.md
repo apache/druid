@@ -31,7 +31,7 @@ For basic tuning guidance for the Broker process, see [Basic cluster tuning](../
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Broker, see [Broker API](../operations/api-reference.md#broker).
+For a list of API endpoints supported by the Broker, see [Broker API](../api-reference/api-reference.md#broker).
 
 ### Overview
 

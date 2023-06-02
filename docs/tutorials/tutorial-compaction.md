@@ -1,7 +1,7 @@
 ---
 id: tutorial-compaction
-title: "Tutorial: Compacting segments"
-sidebar_label: "Compacting segments"
+title: Compact segments
+sidebar_label: Compact segments
 ---
 
 <!--

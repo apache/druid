@@ -62,7 +62,7 @@ public class Limits
   /**
    * Maximum number of input bytes per worker in case number of tasks is determined automatically.
    */
-  public static final long DEFAULT_MAX_INPUT_BYTES_PER_WORKER = 10 * 1024 * 1024 * 1024L;
+  public static final long DEFAULT_MAX_INPUT_BYTES_PER_WORKER = 1024 * 1024 * 512L;
 
   /**
    * Maximum size of the kernel manipulation queue in {@link org.apache.druid.msq.indexing.MSQControllerTask}.

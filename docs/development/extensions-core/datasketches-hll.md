@@ -27,7 +27,7 @@ This module provides Apache Druid aggregators for distinct counting based on HLL
 the estimate of the number of distinct values presented to the sketch. You can also use post aggregators to produce a union of sketch columns in the same row.
 You can use the HLL sketch aggregator on any column to estimate its cardinality.
 
-To use this aggregator, make sure you [include](../../development/extensions.md#loading-extensions) the extension in your config file:
+To use this aggregator, make sure you [include](../../configuration/extensions.md#loading-extensions) the extension in your config file:
 
 ```
 druid.extensions.loadList=["druid-datasketches"]
@@ -65,7 +65,7 @@ For additional sketch types supported in Druid, see [DataSketches extension](dat
 The `HLLSketchBuild` aggregator builds an HLL sketch object from the specified input column. When used during ingestion, Druid stores pre-generated HLL sketch objects in the datasource instead of the raw data from the input column.
 When applied at query time on an existing dimension, you can use the resulting column as an intermediate dimension by the [post-aggregators](#post-aggregators).
 
-> It is very common to use `HLLSketchBuild` in combination with [rollup](../../ingestion/rollup.md) to create a [metric](../../ingestion/ingestion-spec.html#metricsspec) on high-cardinality columns.  In this example, a metric called `userid_hll` is included in the `metricsSpec`.  This will perform a HLL sketch on the `userid` field at ingestion time, allowing for highly-performant approximate `COUNT DISTINCT` query operations and improving roll-up ratios when `userid` is then left out of the `dimensionsSpec`.
+> It is very common to use `HLLSketchBuild` in combination with [rollup](../../ingestion/rollup.md) to create a [metric](../../ingestion/ingestion-spec.md#metricsspec) on high-cardinality columns.  In this example, a metric called `userid_hll` is included in the `metricsSpec`.  This will perform a HLL sketch on the `userid` field at ingestion time, allowing for highly-performant approximate `COUNT DISTINCT` query operations and improving roll-up ratios when `userid` is then left out of the `dimensionsSpec`.
 >
 > ```
 > "metricsSpec": [

@@ -167,10 +167,11 @@ class ControllerStageTracker
       final Int2IntMap stageWorkerCountMap,
       final InputSpecSlicer slicer,
       final WorkerAssignmentStrategy assignmentStrategy,
-      final int maxRetainedPartitionSketchBytes
+      final int maxRetainedPartitionSketchBytes,
+      final long maxInputBytesPerWorker
   )
   {
-    final WorkerInputs workerInputs = WorkerInputs.create(stageDef, stageWorkerCountMap, slicer, assignmentStrategy);
+    final WorkerInputs workerInputs = WorkerInputs.create(stageDef, stageWorkerCountMap, slicer, assignmentStrategy, maxInputBytesPerWorker);
     return new ControllerStageTracker(
         stageDef,
         workerInputs,

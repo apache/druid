@@ -20,9 +20,8 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.sql.calcite.schema.SegmentMetadataCache;
 import org.joda.time.Period;
-
-import java.util.Objects;
 
 /**
  * Configuration properties for the Broker-side cache of segment metadata
@@ -33,6 +32,9 @@ import java.util.Objects;
 public class SegmentMetadataCacheConfig
 {
   @JsonProperty
+  private boolean awaitInitializationOnStart = true;
+
+  @JsonProperty
   private boolean metadataSegmentCacheEnable = false;
 
   @JsonProperty
@@ -42,7 +44,8 @@ public class SegmentMetadataCacheConfig
   private Period metadataRefreshPeriod = new Period("PT1M");
 
   @JsonProperty
-  private boolean awaitInitializationOnStart = true;
+  private SegmentMetadataCache.ColumnTypeMergePolicy metadataColumnTypeMergePolicy =
+      new SegmentMetadataCache.LeastRestrictiveTypeMergePolicy();
 
   public static SegmentMetadataCacheConfig create()
   {
@@ -78,31 +81,9 @@ public class SegmentMetadataCacheConfig
     return metadataSegmentPollPeriod;
   }
 
-  @Override
-  public boolean equals(final Object o)
+  public SegmentMetadataCache.ColumnTypeMergePolicy getMetadataColumnTypeMergePolicy()
   {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    final SegmentMetadataCacheConfig that = (SegmentMetadataCacheConfig) o;
-    return awaitInitializationOnStart == that.awaitInitializationOnStart &&
-           metadataSegmentCacheEnable == that.metadataSegmentCacheEnable &&
-           metadataSegmentPollPeriod == that.metadataSegmentPollPeriod &&
-           Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(
-        metadataRefreshPeriod,
-        awaitInitializationOnStart,
-        metadataSegmentCacheEnable,
-        metadataSegmentPollPeriod
-    );
+    return metadataColumnTypeMergePolicy;
   }
 
   @Override
@@ -113,6 +94,7 @@ public class SegmentMetadataCacheConfig
            ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
            ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", awaitInitializationOnStart=" + awaitInitializationOnStart +
+           ", metadataColumnTypeMergePolicy=" + metadataColumnTypeMergePolicy +
            '}';
   }
 }

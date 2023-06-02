@@ -54,9 +54,12 @@ import java.util.BitSet;
  * {@link DictionaryEncodedColumn<String>} for a column which uses a {@link FrontCodedIndexed} to store its value
  * dictionary, which 'delta encodes' strings (instead of {@link org.apache.druid.segment.data.GenericIndexed} like
  * {@link StringDictionaryEncodedColumn}).
- *
+ * <p>
  * This class is otherwise nearly identical to {@link StringDictionaryEncodedColumn} other than the dictionary
  * difference.
+ * <p>
+ * Implements {@link NestedCommonFormatColumn} so it can be used as a reader for single value string specializations
+ * of {@link org.apache.druid.segment.AutoTypeColumnIndexer}.
  */
 public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncodedColumn<String>,
     NestedCommonFormatColumn

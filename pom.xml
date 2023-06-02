@@ -87,8 +87,8 @@
           Also, CalcitePlanner is a clone of Calcite's PlannerImpl and may require updates when
           Calcite is upgrade. -->
         <calcite.version>1.21.0</calcite.version>
-        <datasketches.version>3.2.0</datasketches.version>
-        <datasketches.memory.version>2.0.0</datasketches.memory.version>
+        <datasketches.version>4.0.0</datasketches.version>
+        <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
         <errorprone.version>2.11.0</errorprone.version>
@@ -109,7 +109,6 @@
         <protobuf.version>3.21.7</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
         <slf4j.version>1.7.36</slf4j.version>
-        <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>3.3.5</hadoop.compile.version>
         <mockito.version>4.3.1</mockito.version>
         <aws.sdk.version>1.12.317</aws.sdk.version>
