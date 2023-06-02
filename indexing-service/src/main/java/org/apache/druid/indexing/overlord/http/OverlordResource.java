@@ -232,10 +232,6 @@ public class OverlordResource
                            .entity(ImmutableMap.of("error", e.getMessage()))
                            .build();
           }
-          catch (Exception e) {
-            log.info("Got final exception [%s]", e.getClass());
-            throw e;
-          }
         }
     );
   }

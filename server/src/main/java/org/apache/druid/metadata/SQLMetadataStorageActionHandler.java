@@ -171,25 +171,25 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       );
     }
     catch (CallbackFailedException e) {
-      propageAsRuntimeException(e.getCause());
+      propagateAsRuntimeException(e.getCause());
     }
     catch (Exception e) {
-      propageAsRuntimeException(e);
+      propagateAsRuntimeException(e);
     }
   }
 
-  private void propageAsRuntimeException(Throwable t)
+  private void propagateAsRuntimeException(Throwable t)
   {
     Throwables.propagateIfPossible(t);
     throw new RuntimeException(t);
   }
 
   /**
-   * Inserts the given entry into the metadata store. Any exception thrown by a
-   * HandleCallback is wrapped in a {@link DruidException} wrapped in a
-   * {@link CallbackFailedException}.
+   * Inserts the given entry into the metadata store. This method wraps any
+   * exception thrown in a {@link DruidException}. When used in a HandleCallback,
+   * that exception is further wrapped in a {@link CallbackFailedException}.
    */
-  private int insertEntryWithHandle(
+  private Void insertEntryWithHandle(
       Handle handle,
       String entryId,
       DateTime timestamp,
@@ -217,7 +217,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
             .bind("active", active)
             .bind("status_payload", jsonMapper.writeValueAsBytes(status))
             .execute();
-      return 1;
+      return null;
     }
     catch (Throwable t) {
       throw wrapInDruidException(entryId, t);
