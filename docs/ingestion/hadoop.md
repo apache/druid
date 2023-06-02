@@ -28,7 +28,7 @@ instance of a Druid [Overlord](../design/overlord.md). Please refer to our [Hado
 comparisons between Hadoop-based, native batch (simple), and native batch (parallel) ingestion.
 
 To run a Hadoop-based ingestion task, write an ingestion spec as specified below. Then POST it to the
-[`/druid/indexer/v1/task`](../api-reference/api-reference.md#tasks) endpoint on the Overlord, or use the
+[`/druid/indexer/v1/task`](../api-reference/tasks-api.md) endpoint on the Overlord, or use the
 `bin/post-index-task` script included with Druid.
 
 ## Tutorial

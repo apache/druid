@@ -36,7 +36,7 @@ For basic tuning guidance for the Router process, see [Basic cluster tuning](../
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Router, see [Router API](../api-reference/api-reference.md#router).
+For a list of API endpoints supported by the Router, see [Legacy metadata API reference](../api-reference/legacy-metadata-api.md#datasource-information).
 
 ### Running
 

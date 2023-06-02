@@ -38,7 +38,7 @@ Retention rules are persistent: they remain in effect until you change them. Dru
 
 ## Set retention rules
 
-You can use the Druid [web console](./web-console.md) or the [Coordinator API](../api-reference/api-reference.md#coordinator) to create and manage retention rules.
+You can use the Druid [web console](./web-console.md) or the [Service status API reference](../api-reference/service-status-api.md#coordinator) to create and manage retention rules.
 
 ### Use the web console
 

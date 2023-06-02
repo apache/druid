@@ -31,7 +31,7 @@ For basic tuning guidance for the MiddleManager process, see [Basic cluster tuni
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the MiddleManager, please see the [API reference](../api-reference/api-reference.md#middlemanager).
+For a list of API endpoints supported by the MiddleManager, please see the [Service status API reference](../api-reference/service-status-api.md#middlemanager).
 
 ### Overview
 

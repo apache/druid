@@ -57,15 +57,15 @@ Make sure to include the `druid-hdfs-storage` and all the hadoop configuration, 
 
 You can verify if segments created by a recent ingestion task are loaded onto historicals and available for querying using the following workflow.
 1. Submit your ingestion task.
-2. Repeatedly poll the [Overlord's tasks API](../api-reference/api-reference.md#tasks) ( `/druid/indexer/v1/task/{taskId}/status`) until your task is shown to be successfully completed.
-3. Poll the [Segment Loading by Datasource API](../api-reference/api-reference.md#segment-loading-by-datasource) (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with 
+2. Repeatedly poll the [Overlord's tasks API](../api-reference/tasks-api.md) ( `/druid/indexer/v1/task/{taskId}/status`) until your task is shown to be successfully completed.
+3. Poll the [Segment Loading by Datasource API](../api-reference/legacy-metadata-api.md#segment-loading-by-datasource) (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with 
 `forceMetadataRefresh=true` and `interval=<INTERVAL_OF_INGESTED_DATA>` once. 
 (Note: `forceMetadataRefresh=true` refreshes Coordinator's metadata cache of all datasources. This can be a heavy operation in terms of the load on the metadata store but is necessary to make sure that we verify all the latest segments' load status)
 If there are segments not yet loaded, continue to step 4, otherwise you can now query the data.
-4. Repeatedly poll the [Segment Loading by Datasource API](../api-reference/api-reference.md#segment-loading-by-datasource) (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with 
+4. Repeatedly poll the [Segment Loading by Datasource API](../api-reference/legacy-metadata-api.md#segment-loading-by-datasource) (`/druid/coordinator/v1/datasources/{dataSourceName}/loadstatus`) with 
 `forceMetadataRefresh=false` and `interval=<INTERVAL_OF_INGESTED_DATA>`. 
 Continue polling until all segments are loaded. Once all segments are loaded you can now query the data. 
-Note that this workflow only guarantees that the segments are available at the time of the [Segment Loading by Datasource API](../api-reference/api-reference.md#segment-loading-by-datasource) call. Segments can still become missing because of historical process failures or any other reasons afterward.
+Note that this workflow only guarantees that the segments are available at the time of the [Segment Loading by Datasource API](../api-reference/legacy-metadata-api.md#segment-loading-by-datasource) call. Segments can still become missing because of historical process failures or any other reasons afterward.
 
 ## I don't see my Druid segments on my Historical processes
 

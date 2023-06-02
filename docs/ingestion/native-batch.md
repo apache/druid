@@ -41,7 +41,7 @@ For related information on batch indexing, see:
 
 To run either kind of native batch indexing task you can:
 - Use the **Load Data** UI in the web console to define and submit an ingestion spec.
-- Define an ingestion spec in JSON based upon the [examples](#parallel-indexing-example) and reference topics for batch indexing. Then POST the ingestion spec to the [Indexer API endpoint](../api-reference/api-reference.md#tasks), 
+- Define an ingestion spec in JSON based upon the [examples](#parallel-indexing-example) and reference topics for batch indexing. Then POST the ingestion spec to the [Tasks API endpoint](../api-reference/tasks-api.md), 
 `/druid/indexer/v1/task`, the Overlord service. Alternatively you can use the indexing script included with Druid at `bin/post-index-task`.
 
 ## Parallel task indexing

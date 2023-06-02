@@ -998,7 +998,7 @@ These configuration options control Coordinator lookup management. See [dynamic 
 ##### Automatic compaction dynamic configuration
 
 You can set or update [automatic compaction](../data-management/automatic-compaction.md) properties dynamically using the
-[Coordinator API](../api-reference/api-reference.md#automatic-compaction-configuration) without restarting Coordinators.
+[Automatic compaction API](../api-reference/automatic-compaction-api.md) without restarting Coordinators.
 
 For details about segment compaction, see [Segment size optimization](../operations/segment-optimization.md).
 

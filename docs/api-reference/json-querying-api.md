@@ -1,7 +1,7 @@
 ---
-id: api-reference
-title: HTTP API endpoints reference
-sidebar_label: API endpoints reference
+id: json-querying-api
+title: Druid JSON querying API
+sidebar_label: Druid JSON querying API
 ---
 
 <!--
@@ -23,25 +23,12 @@ sidebar_label: API endpoints reference
   ~ under the License.
   -->
 
-<TBD TURN INTO THE INDEX PAGE>
+#### Queries
 
-This topic documents all of the API endpoints for each Druid service type.
+`POST /druid/v2/`
 
-### Topics
-* [Automatic compaction](./automatic-compaction-api.md)
-* [Data management](./data-management-api.md)
-* [Dynamic configuration](./dynamic-configuration-api.md)
-* [JSON querying](./json-querying-api.md)
-* [Lookups](./lookups-api.md)
-* [Retention rules](./retention-rules-api.md)
-* [Service status](./service-status-api.md)
-* [Druid SQL queries](./sql-api.md)
-* [SQL JDBC driver](./sql-jdbc.md)
-* [Supervisor](./supervisor-api.md)
-* [Tasks](./tasks-api.md)
-* [Legacy metadata](./legacy-metadata-api.md)
+The endpoint for submitting queries. Accepts an option `?pretty` that pretty prints the results.
 
+`POST /druid/v2/candidates/`
 
-
-
-
+Returns segment information lists including server locations for the given query..
