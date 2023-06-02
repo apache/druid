@@ -48,7 +48,6 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.IngestHandler;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
@@ -857,6 +856,11 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
 
+    final String query = StringUtils.format(
+        "EXPLAIN PLAN FOR INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME",
+        externSql(externalDataSource)
+    );
+
     ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
     final ScanQuery expectedQuery = newScanQueryBuilder()
         .dataSource(externalDataSource)
@@ -870,27 +874,166 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .build();
 
-    final String expectedExplanation =
+    final String legacyExplanation =
         "DruidQueryRel(query=["
         + queryJsonMapper.writeValueAsString(expectedQuery)
         + "], signature=[{x:STRING, y:STRING, z:LONG}])\n";
 
+    final String explanation =
+        "["
+        + "{\"query\":{\"queryType\":\"scan\","
+        + "\"dataSource\":{\"type\":\"external\",\"inputSource\":{\"type\":\"inline\",\"data\":\"a,b,1\\nc,d,2\\n\"},"
+        + "\"inputFormat\":{\"type\":\"csv\",\"columns\":[\"x\",\"y\",\"z\"]},"
+        + "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]},"
+        + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
+        + "\"resultFormat\":\"compactedList\",\"columns\":[\"x\",\"y\",\"z\"],\"legacy\":false,"
+        + "\"context\":{\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
+        + "\"granularity\":{\"type\":\"all\"}},\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}],"
+        + "\"columnMappings\":[{\"queryColumn\":\"x\",\"outputColumn\":\"x\"},{\"queryColumn\":\"y\",\"outputColumn\":\"y\"},{\"queryColumn\":\"z\",\"outputColumn\":\"z\"}]"
+        + "}]";
+
+    final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\"}";
+
+
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(
-        PlannerConfig.builder().useNativeQueryExplain(false).build(),
+        PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
         ImmutableMap.of("sqlQueryId", "dummy"),
         Collections.emptyList(),
-        StringUtils.format(
-            "EXPLAIN PLAN FOR INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME",
-            externSql(externalDataSource)
-        ),
+        query,
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(),
         new DefaultResultsVerifier(
             ImmutableList.of(
                 new Object[]{
-                    expectedExplanation,
-                    "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]"
+                    legacyExplanation,
+                    resources,
+                    attributes
+                }
+            ),
+            null
+        ),
+        null
+    );
+
+
+    testQuery(
+        PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
+        ImmutableMap.of("sqlQueryId", "dummy"),
+        Collections.emptyList(),
+        query,
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        new DefaultResultsVerifier(
+            ImmutableList.of(
+                new Object[]{
+                    explanation,
+                    resources,
+                    attributes
+                }
+            ),
+            null
+        ),
+        null
+    );
+
+    // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
+    didTest = true;
+  }
+
+  @Test
+  public void testExplainPlanForInsertWithClusteredBy() throws JsonProcessingException
+  {
+    skipVectorize();
+
+    final String query = "EXPLAIN PLAN FOR INSERT INTO druid.dst "
+                       + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
+                       + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 DESC, CEIL(m2)";
+
+    ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
+    final ScanQuery expectedQuery = newScanQueryBuilder()
+        .dataSource("foo")
+        .intervals(querySegmentSpec(Filtration.eternity()))
+        .columns("__time", "dim1", "v0", "v1")
+        .virtualColumns(
+            expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT),
+            expressionVirtualColumn("v1", "ceil(\"m2\")", ColumnType.DOUBLE)
+        )
+        .orderBy(
+            ImmutableList.of(
+                new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
+                new ScanQuery.OrderBy("dim1", ScanQuery.Order.DESCENDING),
+                new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
+            )
+        )
+        .context(
+            queryJsonMapper.readValue(
+                "{\"sqlInsertSegmentGranularity\":\"\\\"DAY\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}",
+                JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+            )
+        )
+        .build();
+
+
+    final String legacyExplanation =
+        "DruidQueryRel(query=["
+        + queryJsonMapper.writeValueAsString(expectedQuery)
+        + "], signature=[{__time:LONG, v0:FLOAT, dim1:STRING, v1:DOUBLE}])\n";
+
+    final String explanation =
+        "["
+        + "{\"query\":{\"queryType\":\"scan\","
+        + "\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
+        + "\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\",\"expression\":\"floor(\\\"m1\\\")\",\"outputType\":\"FLOAT\"},"
+        + "{\"type\":\"expression\",\"name\":\"v1\",\"expression\":\"ceil(\\\"m2\\\")\",\"outputType\":\"DOUBLE\"}],"
+        + "\"resultFormat\":\"compactedList\","
+        + "\"orderBy\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},{\"columnName\":\"dim1\",\"order\":\"descending\"},"
+        + "{\"columnName\":\"v1\",\"order\":\"ascending\"}],\"columns\":[\"__time\",\"dim1\",\"v0\",\"v1\"],\"legacy\":false,"
+        + "\"context\":{\"sqlInsertSegmentGranularity\":\"\\\"DAY\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}},"
+        + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"v0\",\"type\":\"FLOAT\"},{\"name\":\"dim1\",\"type\":\"STRING\"},"
+        + "{\"name\":\"v1\",\"type\":\"DOUBLE\"}],"
+        + "\"columnMappings\":[{\"queryColumn\":\"__time\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"v0\",\"outputColumn\":\"floor_m1\"},"
+        + "{\"queryColumn\":\"dim1\",\"outputColumn\":\"dim1\"},{\"queryColumn\":\"v1\",\"outputColumn\":\"ceil_m2\"}]"
+        + "}]";
+
+    final String resources = "[{\"name\":\"dst\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"druid.dst\"}";
+
+    // Use testQuery for EXPLAIN (not testIngestionQuery).
+    testQuery(
+        PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
+        ImmutableMap.of("sqlQueryId", "dummy"),
+        Collections.emptyList(),
+        query,
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        new DefaultResultsVerifier(
+            ImmutableList.of(
+                new Object[]{
+                    legacyExplanation,
+                    resources,
+                    attributes
+                }
+            ),
+            null
+        ),
+        null
+    );
+
+    testQuery(
+        PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
+        ImmutableMap.of("sqlQueryId", "dummy"),
+        Collections.emptyList(),
+        query,
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        new DefaultResultsVerifier(
+            ImmutableList.of(
+                new Object[]{
+                    explanation,
+                    resources,
+                    attributes
                 }
             ),
             null

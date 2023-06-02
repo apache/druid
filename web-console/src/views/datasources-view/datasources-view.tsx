@@ -250,8 +250,6 @@ export interface DatasourcesViewState {
   datasourceFilter: Filter[];
   datasourcesAndDefaultRulesState: QueryState<DatasourcesAndDefaultRules>;
 
-  tiersState: QueryState<string[]>;
-
   showUnused: boolean;
   retentionDialogOpenOn?: RetentionDialogOpenOn;
   compactionDialogOpenOn?: CompactionConfigDialogOpenOn;
@@ -349,8 +347,6 @@ ORDER BY 1`;
     DatasourcesAndDefaultRules
   >;
 
-  private readonly tiersQueryManager: QueryManager<Capabilities, string[]>;
-
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
 
@@ -362,8 +358,6 @@ ORDER BY 1`;
     this.state = {
       datasourceFilter,
       datasourcesAndDefaultRulesState: QueryState.INIT,
-
-      tiersState: QueryState.INIT,
 
       showUnused: false,
       useUnuseAction: 'unuse',
@@ -525,26 +519,11 @@ ORDER BY 1`;
         });
       },
     });
-
-    this.tiersQueryManager = new QueryManager({
-      processQuery: async capabilities => {
-        if (capabilities.hasCoordinatorAccess()) {
-          const tiersResp = await Api.instance.get('/druid/coordinator/v1/tiers');
-          return tiersResp.data;
-        } else {
-          throw new Error(`must have coordinator access`);
-        }
-      },
-      onStateChange: tiersState => {
-        this.setState({ tiersState });
-      },
-    });
   }
 
   private readonly refresh = (auto: boolean): void => {
     if (auto && hasPopoverOpen()) return;
     this.datasourceQueryManager.rerunLastQuery(auto);
-    this.tiersQueryManager.rerunLastQuery(auto);
   };
 
   private fetchDatasourceData() {
@@ -554,14 +533,11 @@ ORDER BY 1`;
   }
 
   componentDidMount(): void {
-    const { capabilities } = this.props;
     this.fetchDatasourceData();
-    this.tiersQueryManager.runQuery(capabilities);
   }
 
   componentWillUnmount(): void {
     this.datasourceQueryManager.terminate();
-    this.tiersQueryManager.terminate();
   }
 
   renderUnuseAction() {
@@ -876,10 +852,18 @@ ORDER BY 1`;
         {
           icon: IconNames.EXPORT,
           title: 'Mark as used all segments',
-
           onAction: () =>
             this.setState({
               datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn: datasource,
+            }),
+        },
+        {
+          icon: IconNames.EXPORT,
+          title: 'Mark as used segments by interval',
+          onAction: () =>
+            this.setState({
+              datasourceToMarkSegmentsByIntervalIn: datasource,
+              useUnuseAction: 'use',
             }),
         },
         {
@@ -929,7 +913,6 @@ ORDER BY 1`;
           {
             icon: IconNames.EXPORT,
             title: 'Mark as used segments by interval',
-
             onAction: () =>
               this.setState({
                 datasourceToMarkSegmentsByIntervalIn: datasource,
@@ -939,7 +922,6 @@ ORDER BY 1`;
           {
             icon: IconNames.IMPORT,
             title: 'Mark as unused segments by interval',
-
             onAction: () =>
               this.setState({
                 datasourceToMarkSegmentsByIntervalIn: datasource,
@@ -964,7 +946,8 @@ ORDER BY 1`;
   }
 
   private renderRetentionDialog(): JSX.Element | undefined {
-    const { retentionDialogOpenOn, tiersState, datasourcesAndDefaultRulesState } = this.state;
+    const { capabilities } = this.props;
+    const { retentionDialogOpenOn, datasourcesAndDefaultRulesState } = this.state;
     const defaultRules = datasourcesAndDefaultRulesState.data?.defaultRules;
     if (!retentionDialogOpenOn || !defaultRules) return;
 
@@ -972,7 +955,7 @@ ORDER BY 1`;
       <RetentionDialog
         datasource={retentionDialogOpenOn.datasource}
         rules={retentionDialogOpenOn.rules}
-        tiers={tiersState.data || []}
+        capabilities={capabilities}
         onEditDefaults={this.editDefaultRules}
         defaultRules={defaultRules}
         onCancel={() => this.setState({ retentionDialogOpenOn: undefined })}
@@ -1497,6 +1480,7 @@ ORDER BY 1`;
                   onDetail={() => {
                     this.onDetail(original);
                   }}
+                  disableDetail={unused}
                   actions={datasourceActions}
                 />
               );

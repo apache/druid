@@ -415,7 +415,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     // initialize variables
     announcedSinks = 0;
     pushedSegments = 0;
-    indexSpec = new IndexSpec();
+    indexSpec = IndexSpec.DEFAULT;
     emitter = newMockEmitter();
     EmittingLogger.registerEmitter(emitter);
     mapper = TEST_UTILS.getTestObjectMapper();
@@ -611,6 +611,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         .setBaseDir(temporaryFolder.newFolder().toString())
         .setDefaultRowFlushBoundary(50000)
         .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .setTmpStorageBytesPerTask(-1L)
         .build();
 
     return new TaskToolboxFactory(

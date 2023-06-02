@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import org.apache.datasketches.SketchesArgumentException;
+import org.apache.datasketches.common.SketchesArgumentException;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
@@ -53,7 +53,7 @@ public class HllSketchObjectStrategyTest
 
       final ByteBuffer buf2 = ByteBuffer.wrap(garbage2).order(ByteOrder.LITTLE_ENDIAN);
       Assert.assertThrows(
-          IndexOutOfBoundsException.class,
+          Exception.class, // can throw either SketchesArgumentException or IndexOutOfBoundsException
           () -> objectStrategy.fromByteBufferSafe(buf2, garbage2.length).getSketch().copy()
       );
     }
@@ -62,7 +62,7 @@ public class HllSketchObjectStrategyTest
     final byte[] garbage = new byte[]{0x01, 0x02};
     final ByteBuffer buf3 = ByteBuffer.wrap(garbage).order(ByteOrder.LITTLE_ENDIAN);
     Assert.assertThrows(
-        IndexOutOfBoundsException.class,
+        SketchesArgumentException.class,
         () -> objectStrategy.fromByteBufferSafe(buf3, garbage.length).getSketch().copy()
     );
 

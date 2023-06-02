@@ -30,8 +30,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.msq.indexing.ColumnMapping;
-import org.apache.druid.msq.indexing.ColumnMappings;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
@@ -67,6 +65,8 @@ import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
+import org.apache.druid.sql.calcite.planner.ColumnMapping;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
@@ -655,7 +655,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(
             ImmutableList.of(
-                new Object[]{null, 3L},
+                new Object[]{NullHandling.defaultStringValue(), 3L},
                 new Object[]{"xabc", 1L}
             )
         )

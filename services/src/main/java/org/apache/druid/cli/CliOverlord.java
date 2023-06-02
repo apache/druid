@@ -85,9 +85,9 @@ import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningSt
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
-import org.apache.druid.indexing.overlord.helpers.OverlordHelper;
-import org.apache.druid.indexing.overlord.helpers.TaskLogAutoCleaner;
-import org.apache.druid.indexing.overlord.helpers.TaskLogAutoCleanerConfig;
+import org.apache.druid.indexing.overlord.duty.OverlordDuty;
+import org.apache.druid.indexing.overlord.duty.TaskLogAutoCleaner;
+import org.apache.druid.indexing.overlord.duty.TaskLogAutoCleanerConfig;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerResource;
 import org.apache.druid.indexing.overlord.http.OverlordRedirectInfo;
@@ -198,16 +198,11 @@ public class CliOverlord extends ServerRunnable
             binder.bind(TaskCountStatsProvider.class).to(TaskMaster.class);
             binder.bind(TaskSlotCountStatsProvider.class).to(TaskMaster.class);
 
-            binder.bind(TaskLogStreamer.class).to(SwitchingTaskLogStreamer.class).in(LazySingleton.class);
-            binder.bind(
-                new TypeLiteral<List<TaskLogStreamer>>()
-                {
-                }
-            )
-                  .toProvider(
-                      new ListProvider<TaskLogStreamer>()
-                          .add(TaskLogs.class)
-                  )
+            binder.bind(TaskLogStreamer.class)
+                  .to(SwitchingTaskLogStreamer.class)
+                  .in(LazySingleton.class);
+            binder.bind(new TypeLiteral<List<TaskLogStreamer>>() {})
+                  .toProvider(new ListProvider<TaskLogStreamer>().add(TaskLogs.class))
                   .in(LazySingleton.class);
 
             binder.bind(TaskLogStreamer.class)
@@ -389,7 +384,7 @@ public class CliOverlord extends ServerRunnable
           private void configureOverlordHelpers(Binder binder)
           {
             JsonConfigProvider.bind(binder, "druid.indexer.logs.kill", TaskLogAutoCleanerConfig.class);
-            Multibinder.newSetBinder(binder, OverlordHelper.class)
+            Multibinder.newSetBinder(binder, OverlordDuty.class)
                        .addBinding()
                        .to(TaskLogAutoCleaner.class);
           }

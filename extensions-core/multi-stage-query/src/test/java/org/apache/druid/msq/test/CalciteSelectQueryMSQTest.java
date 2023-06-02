@@ -94,10 +94,9 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
   protected QueryTestBuilder testBuilder()
   {
     return new QueryTestBuilder(new CalciteTestConfig(true))
-        .addCustomVerification(new VerifyMSQSupportedNativeQueriesFactory())
         .addCustomRunner(new ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
         .skipVectorize(true)
-        .verifyNativeQueries(false)
+        .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate())
         .msqCompatible(msqCompatible);
   }
 

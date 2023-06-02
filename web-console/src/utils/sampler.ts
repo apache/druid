@@ -32,6 +32,7 @@ import type {
   TransformSpec,
 } from '../druid-models';
 import {
+  DETECTION_TIMESTAMP_SPEC,
   getDimensionNamesFromTransforms,
   getDimensionSpecName,
   getSpecType,
@@ -72,10 +73,25 @@ export interface SampleResponse {
 
 export function getHeaderNamesFromSampleResponse(
   sampleResponse: SampleResponse,
-  ignoreTimeColumn = false,
-) {
-  return filterMap(sampleResponse.logicalSegmentSchema, s =>
-    ignoreTimeColumn && s.name === '__time' ? undefined : s.name,
+  timeColumnAction: 'preserve' | 'ignore' | 'ignoreIfZero' = 'preserve',
+): string[] {
+  return getHeaderFromSampleResponse(sampleResponse, timeColumnAction).map(s => s.name);
+}
+
+export function getHeaderFromSampleResponse(
+  sampleResponse: SampleResponse,
+  timeColumnAction: 'preserve' | 'ignore' | 'ignoreIfZero' = 'preserve',
+): { name: string; type: string }[] {
+  const ignoreTimeColumn =
+    timeColumnAction === 'ignore' ||
+    (timeColumnAction === 'ignoreIfZero' &&
+      !sampleResponse.data.some(d => {
+        const t = d.parsed?.[TIME_COLUMN];
+        return typeof t === 'number' && t > 0;
+      }));
+
+  return sampleResponse.logicalSegmentSchema.filter(
+    s => !ignoreTimeColumn || s.name !== TIME_COLUMN,
   );
 }
 
@@ -155,7 +171,10 @@ export async function getProxyOverlordModules(): Promise<string[]> {
     throw new Error(getDruidErrorMessage(e));
   }
 
-  return statusResp.data.modules.map((m: any) => m.artifact);
+  const { modules } = statusResp.data;
+  if (!Array.isArray(modules)) throw new Error('unexpected result from overlord/status');
+
+  return modules.map((m: any) => m.artifact);
 }
 
 export async function postToSampler(
@@ -328,7 +347,7 @@ export async function sampleForParser(
       ioConfig,
       dataSchema: {
         dataSource: 'sample',
-        timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
+        timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : DETECTION_TIMESTAMP_SPEC,
         dimensionsSpec: {
           useSchemaDiscovery: true,
         },
@@ -532,7 +551,7 @@ export async function sampleForFilter(
       specialDimensionSpec,
       'dimensions',
       dedupe(
-        getHeaderNamesFromSampleResponse(sampleResponseHack, true).concat(
+        getHeaderNamesFromSampleResponse(sampleResponseHack, 'ignore').concat(
           getDimensionNamesFromTransforms(transforms),
         ),
       ),

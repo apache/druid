@@ -73,6 +73,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -171,7 +172,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
   }
 
-  private static final IndexSpec INDEX_SPEC = new IndexSpec();
+  private static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
   private final ObjectMapper jsonMapper;
   private final IndexIO indexIO;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
@@ -214,7 +215,7 @@ public class IndexTaskTest extends IngestionTestBase
   }
 
   @Test
-  public void testCorrectInputSourceTypes() throws IOException
+  public void testCorrectInputSourceResources() throws IOException
   {
     File tmpDir = temporaryFolder.newFolder();
     IndexTask indexTask = new IndexTask(
@@ -254,8 +255,8 @@ public class IndexTaskTest extends IngestionTestBase
     Assert.assertEquals(
         Collections.singleton(
             new ResourceAction(new Resource(
-                ResourceType.EXTERNAL,
-                LocalInputSource.TYPE_KEY
+                LocalInputSource.TYPE_KEY,
+                ResourceType.EXTERNAL
             ), Action.READ)),
         indexTask.getInputSourceResources()
     );
@@ -2983,7 +2984,12 @@ public class IndexTaskTest extends IngestionTestBase
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.forClass(IndexTuningConfig.class)
-        .usingGetClass()
-        .verify();
+                  .withPrefabValues(
+                      IndexSpec.class,
+                      IndexSpec.DEFAULT,
+                      IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
+                  )
+                  .usingGetClass()
+                  .verify();
   }
 }

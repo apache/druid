@@ -147,7 +147,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, Kafka
   public Set<ResourceAction> getInputSourceResources()
   {
     return Collections.singleton(new ResourceAction(
-        new Resource(ResourceType.EXTERNAL, INPUT_SOURCE_TYPE),
+        new Resource(INPUT_SOURCE_TYPE, ResourceType.EXTERNAL),
         Action.READ
     ));
   }

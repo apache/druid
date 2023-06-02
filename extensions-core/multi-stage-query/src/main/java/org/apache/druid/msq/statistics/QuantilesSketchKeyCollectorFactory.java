@@ -23,7 +23,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.datasketches.ArrayOfItemsSerDe;
+import org.apache.datasketches.common.ArrayOfItemsSerDe;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.datasketches.quantiles.ItemsSketch;
@@ -56,7 +56,7 @@ public class QuantilesSketchKeyCollectorFactory
   @Override
   public QuantilesSketchKeyCollector newKeyCollector()
   {
-    return new QuantilesSketchKeyCollector(comparator, ItemsSketch.getInstance(SKETCH_INITIAL_K, comparator), 0);
+    return new QuantilesSketchKeyCollector(comparator, ItemsSketch.getInstance(byte[].class, SKETCH_INITIAL_K, comparator), 0);
   }
 
   @Override
@@ -87,7 +87,7 @@ public class QuantilesSketchKeyCollectorFactory
     final String encodedSketch = snapshot.getEncodedSketch();
     final byte[] bytes = StringUtils.decodeBase64String(encodedSketch);
     final ItemsSketch<byte[]> sketch =
-        ItemsSketch.getInstance(Memory.wrap(bytes), comparator, ByteRowKeySerde.INSTANCE);
+        ItemsSketch.getInstance(byte[].class, Memory.wrap(bytes), comparator, ByteRowKeySerde.INSTANCE);
     return new QuantilesSketchKeyCollector(comparator, sketch, snapshot.getAverageKeyLength());
   }
 

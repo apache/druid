@@ -34,7 +34,7 @@ import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
 
-import type { ColumnMetadata } from '../../utils';
+import type { ColumnMetadata, RowColumn } from '../../utils';
 import { deleteKeys, generate8HexId } from '../../utils';
 import type { DruidEngine } from '../druid-engine/druid-engine';
 import { validDruidEngine } from '../druid-engine/druid-engine';
@@ -225,6 +225,12 @@ export class WorkbenchQuery {
     return orderByExpressions.length ? SqlOrderByClause.create(orderByExpressions) : undefined;
   }
 
+  static getRowColumnFromIssue(issue: string): RowColumn | undefined {
+    const m = issue.match(/at line (\d+),(\d+)/);
+    if (!m) return;
+    return { match: '', row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
+  }
+
   public readonly queryParts: WorkbenchQueryPart[];
   public readonly queryContext: QueryContext;
   public readonly engine?: DruidEngine;
@@ -351,13 +357,12 @@ export class WorkbenchQuery {
     return this.getLastPart().isEmptyQuery();
   }
 
-  public isValid(): boolean {
+  public getIssue(): string | undefined {
     const lastPart = this.getLastPart();
-    if (lastPart.isJsonLike() && !lastPart.validJson()) {
-      return false;
+    if (lastPart.isJsonLike()) {
+      return lastPart.issueWithJson();
     }
-
-    return true;
+    return;
   }
 
   public canPrettify(): boolean {

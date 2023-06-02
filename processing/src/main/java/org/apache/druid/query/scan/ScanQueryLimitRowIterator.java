@@ -77,7 +77,7 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
           @Override
           public ScanResultValue accumulate(ScanResultValue accumulated, ScanResultValue in)
           {
-            yield();
+            this.yield();
             return in;
           }
         }
