@@ -58,6 +58,7 @@ public class ServerConfig
       long maxScatterGatherBytes,
       int maxSubqueryRows,
       long maxSubqueryBytes,
+      boolean useNestedForUnknownTypeInSubquery,
       long maxQueryTimeout,
       int maxRequestHeaderSize,
       @NotNull Period gracefulShutdownTimeout,
@@ -80,6 +81,7 @@ public class ServerConfig
     this.maxScatterGatherBytes = HumanReadableBytes.valueOf(maxScatterGatherBytes);
     this.maxSubqueryRows = maxSubqueryRows;
     this.maxSubqueryBytes = maxSubqueryBytes;
+    this.useNestedForUnknownTypeInSubquery = useNestedForUnknownTypeInSubquery;
     this.maxQueryTimeout = maxQueryTimeout;
     this.maxRequestHeaderSize = maxRequestHeaderSize;
     this.gracefulShutdownTimeout = gracefulShutdownTimeout;
@@ -129,6 +131,9 @@ public class ServerConfig
 
   @JsonProperty
   private long maxSubqueryBytes = -1;
+
+  @JsonProperty
+  private boolean useNestedForUnknownTypeInSubquery = false;
 
   @JsonProperty
   @Min(1)
@@ -214,6 +219,11 @@ public class ServerConfig
     return maxSubqueryBytes;
   }
 
+  public boolean isuseNestedForUnknownTypeInSubquery()
+  {
+    return useNestedForUnknownTypeInSubquery;
+  }
+
   public long getMaxQueryTimeout()
   {
     return maxQueryTimeout;
@@ -291,6 +301,7 @@ public class ServerConfig
            defaultQueryTimeout == that.defaultQueryTimeout &&
            maxSubqueryRows == that.maxSubqueryRows &&
            maxSubqueryBytes == that.maxSubqueryBytes &&
+           useNestedForUnknownTypeInSubquery == that.useNestedForUnknownTypeInSubquery &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
            inflateBufferSize == that.inflateBufferSize &&
@@ -319,6 +330,7 @@ public class ServerConfig
         maxScatterGatherBytes,
         maxSubqueryRows,
         maxSubqueryBytes,
+        useNestedForUnknownTypeInSubquery,
         maxQueryTimeout,
         maxRequestHeaderSize,
         gracefulShutdownTimeout,
@@ -346,6 +358,7 @@ public class ServerConfig
            ", maxScatterGatherBytes=" + maxScatterGatherBytes +
            ", maxSubqueryRows=" + maxSubqueryRows +
            ", maxSubqueryBytes=" + maxSubqueryBytes +
+           ", useNestedForUnknownTypeInSubquery=" + useNestedForUnknownTypeInSubquery +
            ", maxQueryTimeout=" + maxQueryTimeout +
            ", maxRequestHeaderSize=" + maxRequestHeaderSize +
            ", gracefulShutdownTimeout=" + gracefulShutdownTimeout +

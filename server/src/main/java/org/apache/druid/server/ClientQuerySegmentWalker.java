@@ -176,7 +176,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
     final int maxSubqueryRows = query.context().getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
     final long maxSubqueryMemory = query.context().getMaxSubqueryMemoryBytes(serverConfig.getMaxSubqueryBytes());
-    final boolean useNestedForUnknownTypeInSubquery = query.context().isUseNestedForUnknownTypeInSubquery();
+    final boolean useNestedForUnknownTypeInSubquery = query.context()
+                                                           .isUseNestedForUnknownTypeInSubquery(serverConfig.isuseNestedForUnknownTypeInSubquery());
 
     final DataSource inlineDryRun = inlineIfNecessary(
         freeTradeDataSource,
