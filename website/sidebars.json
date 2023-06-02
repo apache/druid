@@ -46,7 +46,8 @@
           "ingestion/input-sources",
           "ingestion/schema-model",
           "ingestion/rollup",
-          "ingestion/partitioning"
+          "ingestion/partitioning",
+          "ingestion/tasks"
         ]
       },
       {
