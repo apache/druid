@@ -112,7 +112,7 @@ public class SegmentGenerator implements Closeable
       final int numRows
   )
   {
-    return generate(dataSegment, schemaInfo, schemaInfo.getDimensionsSpec(), TransformSpec.NONE, new IndexSpec(), granularity, numRows);
+    return generate(dataSegment, schemaInfo, schemaInfo.getDimensionsSpec(), TransformSpec.NONE, IndexSpec.DEFAULT, granularity, numRows);
   }
 
   public QueryableIndex generate(
@@ -137,7 +137,7 @@ public class SegmentGenerator implements Closeable
   )
   {
     // In case we need to generate hyperUniques or json
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
     NestedDataModule.registerHandlersAndSerde();
 
     final String dataHash = Hashing.sha256()
@@ -260,7 +260,7 @@ public class SegmentGenerator implements Closeable
   )
   {
     // In case we need to generate hyperUniques.
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
 
     final String dataHash = Hashing.sha256()
                                    .newHasher()

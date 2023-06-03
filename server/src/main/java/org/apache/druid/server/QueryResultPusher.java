@@ -297,7 +297,7 @@ public abstract class QueryResultPusher
     /**
      * Gets the results of running the query.  {@link #start} must be called before this method is called.
      *
-     * @return the results of running the query as preparted by the {@link #start()} method
+     * @return the results of running the query as prepared by the {@link #start()} method
      */
     QueryResponse<Object> getQueryResponse();
 

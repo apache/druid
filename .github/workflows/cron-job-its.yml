@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Cron Job ITs
+name: "Cron Job ITs"
 on:
   schedule: # Runs by default on master branch
     - cron: '0 3 * * *' # Runs every day at 3:00 AM UTC
@@ -22,7 +22,8 @@ on:
       - 'owasp-dependency-check-suppressions.xml'
     branches:
       - master
-      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
 
 jobs:
   build:

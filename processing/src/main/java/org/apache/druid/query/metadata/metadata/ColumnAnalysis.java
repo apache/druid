@@ -24,8 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -34,9 +36,17 @@ public class ColumnAnalysis
 {
   private static final String ERROR_PREFIX = "error:";
 
+  public static <T> Builder<T> builder()
+  {
+    return new Builder<T>();
+  }
+
   public static ColumnAnalysis error(String reason)
   {
-    return new ColumnAnalysis(ColumnType.STRING, "STRING", false, false, -1, null, null, null, ERROR_PREFIX + reason);
+    return builder().withType(ColumnType.STRING)
+                    .withSize(-1)
+                    .withErrorMessage(reason)
+                    .build();
   }
 
   private final String type;
@@ -182,17 +192,15 @@ public class ColumnAnalysis
       newMin = NullHandling.nullToEmptyIfNeeded((String) newMin);
       newMax = NullHandling.nullToEmptyIfNeeded((String) newMax);
     }
-    return new ColumnAnalysis(
-        typeSignature,
-        type,
-        multipleValues,
-        hasNulls || rhs.hasNulls,
-        size + rhs.getSize(),
-        cardinality,
-        newMin,
-        newMax,
-        null
-    );
+    return builder().withType(typeSignature)
+                    .withTypeName(type)
+                    .hasMultipleValues(multipleValues)
+                    .hasNulls(hasNulls || rhs.hasNulls)
+                    .withSize(size + rhs.getSize())
+                    .withCardinality(cardinality)
+                    .withMinValue(newMin)
+                    .withMaxValue(newMax)
+                    .build();
   }
 
   private <T extends Comparable> T choose(T obj1, T obj2, boolean max)
@@ -258,5 +266,95 @@ public class ColumnAnalysis
         maxValue,
         errorMessage
     );
+  }
+
+  public static class Builder<T>
+  {
+    private ColumnType typeSignature;
+    private String typeName;
+    private boolean hasMultipleValues;
+    private boolean hasNulls;
+    private long size;
+    private Integer cardinality;
+    private Comparable<T> minValue;
+    private Comparable<T> maxValue;
+    private String errorMessage;
+
+    public Builder withCapabilities(ColumnCapabilities capabilities)
+    {
+
+      return withType(capabilities.toColumnType()).hasMultipleValues(capabilities.hasMultipleValues().isTrue())
+                                                  // if we don't know for sure, then we should plan to check for nulls
+                                                  .hasNulls(capabilities.hasNulls().isMaybeTrue());
+    }
+
+    public Builder withType(ColumnType columnType)
+    {
+      this.typeSignature = columnType;
+      return this;
+    }
+
+    public Builder withTypeName(String typeName)
+    {
+      this.typeName = typeName;
+      return this;
+    }
+
+    public Builder hasMultipleValues(boolean hasMultipleValues)
+    {
+      this.hasMultipleValues = hasMultipleValues;
+      return this;
+    }
+
+    public Builder hasNulls(boolean hasNulls)
+    {
+      this.hasNulls = hasNulls;
+      return this;
+    }
+
+    public Builder withSize(long size)
+    {
+      this.size = size;
+      return this;
+    }
+
+    public Builder withCardinality(@Nullable Integer cardinality)
+    {
+      this.cardinality = cardinality;
+      return this;
+    }
+
+    public Builder withMinValue(Comparable<T> minValue)
+    {
+      this.minValue = minValue;
+      return this;
+    }
+
+    public Builder withMaxValue(Comparable<T> maxValue)
+    {
+      this.maxValue = maxValue;
+      return this;
+    }
+
+    public Builder withErrorMessage(String errorMessage)
+    {
+      this.errorMessage = ERROR_PREFIX + errorMessage;
+      return this;
+    }
+
+    public ColumnAnalysis build()
+    {
+      return new ColumnAnalysis(
+          typeSignature,
+          typeName == null ? typeSignature.getType().name() : typeName,
+          hasMultipleValues,
+          hasNulls,
+          size,
+          cardinality,
+          minValue,
+          maxValue,
+          errorMessage
+      );
+    }
   }
 }

@@ -60,6 +60,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Period;
 
@@ -302,13 +303,13 @@ public class SegmentGeneratorFrameProcessorFactory
       public IndexSpec getIndexSpecForIntermediatePersists()
       {
         // Disable compression for intermediate persists to reduce direct memory usage.
-        return new IndexSpec(
-            null,
-            CompressionStrategy.UNCOMPRESSED, // Dimensions don't support NONE, so use UNCOMPRESSED
-            CompressionStrategy.NONE, // NONE is more efficient than UNCOMPRESSED
-            CompressionFactory.LongEncodingStrategy.LONGS,
-            null
-        );
+        return IndexSpec.builder()
+                        // Dimensions don't support NONE, so use UNCOMPRESSED
+                        .withDimensionCompression(CompressionStrategy.UNCOMPRESSED)
+                        // NONE is more efficient than UNCOMPRESSED
+                        .withMetricCompression(CompressionStrategy.NONE)
+                        .withLongEncoding(CompressionFactory.LongEncodingStrategy.LONGS)
+                        .build();
       }
 
       @Override

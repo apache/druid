@@ -439,10 +439,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
     Assert.assertEquals(
         Collections.singleton(new ResourceAction(
-            new Resource(ResourceType.EXTERNAL, KafkaSupervisorSpec.TASK_TYPE),
+            new Resource(KafkaSupervisorSpec.TASK_TYPE, ResourceType.EXTERNAL),
             Action.READ
         )),
-        testableSupervisorSpec.getInputSourceTypes()
+        testableSupervisorSpec.getInputSourceResources()
     );
 
     autoscaler.reset();

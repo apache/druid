@@ -92,7 +92,7 @@ The constant post-aggregator always returns the specified value.
 
 
 ### Expression post-aggregator
-The expression post-aggregator is defined using a Druid [expression](../misc/math-expr.md).
+The expression post-aggregator is defined using a Druid [expression](math-expr.md).
 
 ```json
 {

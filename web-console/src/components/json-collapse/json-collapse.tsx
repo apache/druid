@@ -31,7 +31,7 @@ export const JsonCollapse = React.memo(function JsonCollapse(props: JsonCollapse
   const { stringValue, buttonText } = props;
   const [isOpen, setIsOpen] = useState(false);
 
-  const prettyValue = JSONBig.stringify(JSON.parse(stringValue), undefined, 2);
+  const prettyValue = JSONBig.stringify(JSONBig.parse(stringValue), undefined, 2);
   return (
     <div className="json-collapse">
       <div className="collapse-buttons">

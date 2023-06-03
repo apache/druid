@@ -55,7 +55,7 @@ public class BucketingAccumulator extends YieldingAccumulator<RowBucket, Row>
       rows.add(in);
       RowBucket nextBucket = new RowBucket(in.getTimestamp(), rows);
       accumulated.setNextBucket(nextBucket);
-      yield();
+      this.yield();
     } else {
       // still on the same day
       rows = accumulated.getRows();

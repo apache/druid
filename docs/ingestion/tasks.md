@@ -1,6 +1,7 @@
 ---
 id: tasks
-title: "Task reference"
+title: Task reference
+sidebar_label: Task reference
 ---
 
 <!--
@@ -25,7 +26,7 @@ title: "Task reference"
 Tasks do all [ingestion](index.md)-related work in Druid.
 
 For batch ingestion, you will generally submit tasks directly to Druid using the
-[Task APIs](../operations/api-reference.md#tasks). For streaming ingestion, tasks are generally submitted for you by a
+[Task APIs](../api-reference/api-reference.md#tasks). For streaming ingestion, tasks are generally submitted for you by a
 supervisor.
 
 ## Task API
@@ -33,7 +34,7 @@ supervisor.
 Task APIs are available in two main places:
 
 - The [Overlord](../design/overlord.md) process offers HTTP APIs to submit tasks, cancel tasks, check their status,
-review logs and reports, and more. Refer to the [Tasks API reference page](../operations/api-reference.md#tasks) for a
+review logs and reports, and more. Refer to the [Tasks API reference page](../api-reference/api-reference.md#tasks) for a
 full list.
 - Druid SQL includes a [`sys.tasks`](../querying/sql-metadata-tables.md#tasks-table) table that provides information about currently
 running tasks. This table is read-only, and has a limited (but useful!) subset of the full information available through
@@ -45,7 +46,7 @@ the Overlord APIs.
 
 A report containing information about the number of rows ingested, and any parse exceptions that occurred is available for both completed tasks and running tasks.
 
-The reporting feature is supported by [native batch tasks](../ingestion/native-batch.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks.
+The reporting feature is supported by [native batch tasks](native-batch.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks.
 
 ### Completion report
 
@@ -176,7 +177,7 @@ the `rowStats` map contains information about row counts. There is one entry for
 - `processed`: Number of rows successfully ingested without parsing errors
 - `processedBytes`: Total number of uncompressed bytes processed by the task. This reports the total byte size of all rows i.e. even those that are included in `processedWithError`, `unparseable` or `thrownAway`.
 - `processedWithError`: Number of rows that were ingested, but contained a parsing error within one or more columns. This typically occurs where input rows have a parseable structure but invalid types for columns, such as passing in a non-numeric String value for a numeric column.
-- `thrownAway`: Number of rows skipped. This includes rows with timestamps that were outside of the ingestion task's defined time interval and rows that were filtered out with a [`transformSpec`](./ingestion-spec.md#transformspec), but doesn't include the rows skipped by explicit user configurations. For example, the rows skipped by `skipHeaderRows` or `hasHeaderRow` in the CSV format are not counted.
+- `thrownAway`: Number of rows skipped. This includes rows with timestamps that were outside of the ingestion task's defined time interval and rows that were filtered out with a [`transformSpec`](ingestion-spec.md#transformspec), but doesn't include the rows skipped by explicit user configurations. For example, the rows skipped by `skipHeaderRows` or `hasHeaderRow` in the CSV format are not counted.
 - `unparseable`: Number of rows that could not be parsed at all and were discarded. This tracks input rows without a parseable structure, such as passing in non-JSON data when using a JSON parser.
 
 The `errorMsg` field shows a message describing the error that caused a task to fail. It will be null if the task was successful.
@@ -185,7 +186,7 @@ The `errorMsg` field shows a message describing the error that caused a task to 
 
 ### Row stats
 
-The [native batch task](./native-batch.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks support retrieval of row stats while the task is running.
+The [native batch task](native-batch.md), the Hadoop batch task, and Kafka and Kinesis ingestion tasks support retrieval of row stats while the task is running.
 
 The live report can be accessed with a GET to the following URL on a Peon running a task:
 
@@ -249,7 +250,7 @@ http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/<task-id>/unparse
 ```
 
 Note that this functionality is not supported by all task types. Currently, it is only supported by the
-non-parallel [native batch task](../ingestion/native-batch.md) (type `index`) and the tasks created by the Kafka
+non-parallel [native batch task](native-batch.md) (type `index`) and the tasks created by the Kafka
 and Kinesis indexing services.
 
 <a name="locks"></a>
@@ -386,38 +387,52 @@ The settings get passed into the `context` field of the compaction tasks issued 
 
 The following parameters apply to all task types.
 
-|property|default|description|
+|Property|Description|Default|
 |--------|-------|-----------|
-|`taskLockTimeout`|300000|Task lock timeout in milliseconds. For more details, see [Locking](#locking).<br/><br/>When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result. As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of Overlords.|
-|`forceTimeChunkLock`|true|_Setting this to false is still experimental_<br/> Force to always use time chunk lock. If not set, each task automatically chooses a lock type to use. If set, this parameter overwrites `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.md#overlord-operations). See [Locking](#locking) for more details.|
-|`priority`|Different based on task types. See [Priority](#priority).|Task priority|
-|`useLineageBasedSegmentAllocation`|false in 0.21 or earlier, true in 0.22 or later|Enable the new lineage-based segment allocation protocol for the native Parallel task with dynamic partitioning. This option should be off during the replacing rolling upgrade from one of the Druid versions between 0.19 and 0.21 to Druid 0.22 or higher. Once the upgrade is done, it must be set to true to ensure data correctness.|
-|`storeEmptyColumns`|true|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](ingestion-spec.md#dimensionsspec). If you use schemaless ingestion and don't specify any dimensions to ingest, you must also set [`includeAllDimensions`](ingestion-spec.md#dimensionsspec) for Druid to store empty columns.<br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest dummy data for empty columns or else not query on empty columns.<br/><br/>When set in the task context, `storeEmptyColumns` overrides the system property [`druid.indexer.task.storeEmptyColumns`](../configuration/index.md#additional-peon-configuration).|
+|`forceTimeChunkLock`|_Setting this to false is still experimental._<br/> Force to use time chunk lock. When `true`, this parameter overrides the overlord runtime property `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.md#overlord-operations). If neither this parameter nor the runtime property is `true`, each task automatically chooses a lock type to use. See [Locking](#locking) for more details.|`true`|
+|`priority`|Task priority|Depends on the task type. See [Priority](#priority) for more details.|
+|`storeCompactionState`|Enables the task to store the compaction state of created segments in the metadata store. When `true`, the segments created by the task fill `lastCompactionState` in the segment metadata. This parameter is set automatically on compaction tasks. |`true` for compaction tasks, `false` for other task types|
+|`storeEmptyColumns`|Enables the task to store empty columns during ingestion. When `true`, Druid stores every column specified in the [`dimensionsSpec`](ingestion-spec.md#dimensionsspec). When `false`, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest dummy data for empty columns or else not query on empty columns.<br/><br/>When set in the task context, `storeEmptyColumns` overrides the system property [`druid.indexer.task.storeEmptyColumns`](../configuration/index.md#additional-peon-configuration).|`true`|
+|`taskLockTimeout`|Task lock timeout in milliseconds. For more details, see [Locking](#locking).<br/><br/>When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result. As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of Overlords.|300000|
+|`useLineageBasedSegmentAllocation`|Enables the new lineage-based segment allocation protocol for the native Parallel task with dynamic partitioning. This option should be off during the replacing rolling upgrade from one of the Druid versions between 0.19 and 0.21 to Druid 0.22 or higher. Once the upgrade is done, it must be set to `true` to ensure data correctness.|`false` in 0.21 or earlier, `true` in 0.22 or later|
 
 ## Task logs
 
-Logs are created by ingestion tasks as they run.  You can configure Druid to push these into a repository for long-term storage after they complete.
+Logs are created by ingestion tasks as they run. You can configure Druid to push these into a repository for long-term storage after they complete.
 
-Once the task has been submitted to the Overlord it remains `WAITING` for locks to be acquired.  Worker slot allocation is then `PENDING` until the task can actually start executing.
+Once the task has been submitted to the Overlord it remains `WAITING` for locks to be acquired. Worker slot allocation is then `PENDING` until the task can actually start executing.
 
-The task then starts creating logs in a local directory of the middle manager (or indexer) in a `log` directory for the specific `taskId` at [`druid.indexer.task.baseTaskDirPaths`] (../configuration/index.md#additional-peon-configuration).
+The task then starts creating logs in a local directory of the middle manager (or indexer) in a `log` directory for the specific `taskId` at [`druid.worker.baseTaskDirs`] (../configuration/index.md#middlemanager-configuration).
 
 When the task completes - whether it succeeds or fails - the middle manager (or indexer) will push the task log file into the location specified in [`druid.indexer.logs`](../configuration/index.md#task-logging).
 
-Task logs on the Druid web console are retrieved via an [API](../operations/api-reference.md#overlord) on the Overlord.  It automatically detects where the log file is, either in the middleManager / indexer or in long-term storage, and passes it back.
+Task logs on the Druid web console are retrieved via an [API](../api-reference/api-reference.md#overlord) on the Overlord. It automatically detects where the log file is, either in the middleManager / indexer or in long-term storage, and passes it back.
 
 If you don't see the log file in long-term storage, it means either:
 
 1. the middleManager / indexer failed to push the log file to deep storage or
 2. the task did not complete.
 
-You can check the middleManager / indexer logs locally to see if there was a push failure.  If there was not, check the Overlord's own process logs to see why the task failed before it started.
+You can check the middleManager / indexer logs locally to see if there was a push failure. If there was not, check the Overlord's own process logs to see why the task failed before it started.
 
 > If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store, Google Cloud Storage or HDFS.
 
 You can configure retention periods for logs in milliseconds by setting `druid.indexer.logs.kill` properties in [configuration](../configuration/index.md#task-logging).  The Overlord will then automatically manage task logs in log directories along with entries in task-related metadata storage tables.
 
-> Automatic log file deletion typically works based on the log file's 'modified' timestamp in the back-end store.  Large clock skews between Druid processes and the long-term store might result in unintended behavior.
+> Automatic log file deletion typically works based on the log file's 'modified' timestamp in the back-end store. Large clock skews between Druid processes and the long-term store might result in unintended behavior.
+
+## Configuring task storage sizes
+
+Tasks sometimes need to use local disk for storage of things while the task is active.  For example, for realtime ingestion tasks to accept broadcast segments for broadcast joins.  Or intermediate data sets for Multi-stage Query jobs
+
+Task storage sizes are configured through a combination of three properties:
+1. `druid.worker.capacity` - i.e. the "number of task slots"
+2. `druid.worker.baseTaskDirs` - i.e. the list of directories to use for task storage. 
+3. `druid.worker.baseTaskDirSize` - i.e. the amount of storage to use on each storage location
+
+While it seems like one task might use multiple directories, only one directory from the list of base directories will be used for any given task, as such, each task is only given a singular directory for scratch space.
+
+The actual amount of memory assigned to any given task is computed by determining the largest size that enables all task slots to be given an equivalent amount of disk storage.  For example, with 5 slots, 2 directories (A and B) and a size of 300 GB, 3 slots would be given to directory A, 2 slots to directory B and each slot would be allowed 100 GB 
 
 ## All task types
 

@@ -31,7 +31,7 @@ For basic tuning guidance for the Historical process, see [Basic cluster tuning]
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Historical, please see the [API reference](../operations/api-reference.md#historical).
+For a list of API endpoints supported by the Historical, please see the [API reference](../api-reference/api-reference.md#historical).
 
 ### Running
 
@@ -45,7 +45,7 @@ Each Historical process copies or "pulls" segment files from Deep Storage to loc
 
 See the [Tuning Guide](../operations/basic-cluster-tuning.md#segment-cache-size) for more information.
 
-The [Coordinator](../design/coordinator.html) controls the assignment of segments to Historicals and the balance of segments between Historicals. Historical processes do not communicate directly with each other, nor do they communicate directly with the Coordinator.  Instead, the Coordinator creates ephemeral entries in Zookeeper in a [load queue path](../configuration/index.md#path-configuration). Each Historical process maintains a connection to Zookeeper, watching those paths for segment information.
+The [Coordinator](../design/coordinator.md) controls the assignment of segments to Historicals and the balance of segments between Historicals. Historical processes do not communicate directly with each other, nor do they communicate directly with the Coordinator.  Instead, the Coordinator creates ephemeral entries in Zookeeper in a [load queue path](../configuration/index.md#path-configuration). Each Historical process maintains a connection to Zookeeper, watching those paths for segment information.
 
 For more information about how the Coordinator assigns segments to Historical processes, see [Coordinator](../design/coordinator.md).
 

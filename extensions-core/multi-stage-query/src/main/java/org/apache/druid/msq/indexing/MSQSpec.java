@@ -24,8 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.Query;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.Objects;
 
 public class MSQSpec
@@ -85,6 +87,21 @@ public class MSQSpec
   public MSQTuningConfig getTuningConfig()
   {
     return tuningConfig;
+  }
+
+  public MSQSpec withOverriddenContext(Map<String, Object> contextOverride)
+  {
+    if (contextOverride == null || contextOverride.isEmpty()) {
+      return this;
+    } else {
+      return new MSQSpec(
+          query.withOverriddenContext(contextOverride),
+          columnMappings,
+          destination,
+          assignmentStrategy,
+          tuningConfig
+      );
+    }
   }
 
   @Override

@@ -229,7 +229,7 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
       return Iterators.filter(
           SlicerUtils.makeSlicesDynamic(
               inputIterator,
-              item -> inputAttributeExtractor.apply(item).getSize(),
+              item -> inputAttributeExtractor.apply(item).getWeightedSize(),
               maxNumSlices,
               maxFilesPerSlice,
               maxBytesPerSlice

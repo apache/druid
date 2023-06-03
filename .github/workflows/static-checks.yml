@@ -13,19 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Static Checks CI
+name: "Static Checks CI"
 on:
   push:
     branches:
       - master
-      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
   pull_request:
     branches:
       - master
-      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
+      - '[0-9]+.[0-9]+.[0-9]+' # release branches
+      - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
 
 concurrency:
-  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
   cancel-in-progress: true
 
 env:
@@ -51,7 +53,8 @@ jobs:
           echo "java_version=${jdk:3}" >> $GITHUB_ENV
 
       - name: setup ${{ matrix.java }}
-        run: export JAVA_HOME=$JAVA_HOME_${{ env.java_version }}_X64
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_${{ env.java_version }}_X64" >> $GITHUB_ENV
 
       - name: packaging check
         run: |
@@ -79,14 +82,12 @@ jobs:
           ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
           ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
 
+      - name: checkstyle
+        if: ${{ matrix.java == 'jdk8' }}
+        run: ${MVN} checkstyle:checkstyle --fail-at-end
+
       - name: license checks
         if: ${{ matrix.java == 'jdk8' }}
-        run: ./.github/scripts/license_checks_script.sh
-
-      - name: license checks for hadoop3
-        if: ${{ matrix.java == 'jdk8' }}
-        env:
-          HADOOP_PROFILE: -Phadoop3
         run: ./.github/scripts/license_checks_script.sh
 
       - name: analyze dependencies
@@ -94,20 +95,16 @@ jobs:
         run: |
           ./.github/scripts/analyze_dependencies_script.sh
 
-      - name: analyze dependencies for hadoop3
+      - name: analyze dependencies for hadoop2
         if: ${{ matrix.java == 'jdk8' }}
         env:
-          HADOOP_PROFILE: -Phadoop3
+          HADOOP_PROFILE: -Phadoop2
         run: |
           ./.github/scripts/analyze_dependencies_script.sh
 
       - name: animal sniffer checks
         if: ${{ matrix.java == 'jdk8' }}
         run: ${MVN} animal-sniffer:check --fail-at-end
-
-      - name: checkstyle
-        if: ${{ matrix.java == 'jdk8' }}
-        run: ${MVN} checkstyle:checkstyle --fail-at-end
 
       - name: enforcer checks
         if: ${{ matrix.java == 'jdk8' }}
@@ -131,20 +128,31 @@ jobs:
           docker run --rm \
           -v $(pwd):/project \
           -v ~/.m2:/home/inspect/.m2 \
+          -v $(pwd)/.idea/misc-for-inspection.xml:/project/.idea/misc.xml \
           ccaominh/intellij-inspect:1.0.0 \
           /project/pom.xml \
           /project/.idea/inspectionProfiles/Druid.xml \
           --levels ERROR \
           --scope JavaInspectionsScope
 
+  web-checks:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout branch
+        uses: actions/checkout@v3
+
+      - name: setup JDK11
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_11_X64" >> $GITHUB_ENV
+
       - name: setup node
-        if: ${{ matrix.java == 'jdk8' }}
         uses: actions/setup-node@v3
         with:
           node-version: 16.17.0
 
       - name: docs
-        if: ${{ matrix.java == 'jdk8' }}
         run: |
           (cd website && npm install)
           cd website
@@ -152,14 +160,12 @@ jobs:
           npm run spellcheck
 
       - name: web console
-        if: ${{ matrix.java == 'jdk8' }}
         run: |
           ${MVN} test -pl 'web-console'
           cd web-console
           { for i in 1 2 3; do npm run codecov && break || sleep 15; done }
 
       - name: web console end-to-end test
-        if: ${{ matrix.java == 'jdk8' }}
         run: |
           ./.github/scripts/setup_generate_license.sh
           web-console/script/druid build
