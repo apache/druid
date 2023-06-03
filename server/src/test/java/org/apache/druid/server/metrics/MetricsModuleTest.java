@@ -44,10 +44,10 @@ import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
 import org.apache.druid.java.util.metrics.ClockDriftSafeMonitorScheduler;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.java.util.metrics.NoopOshiSysMonitor;
 import org.apache.druid.java.util.metrics.NoopSysMonitor;
-import org.apache.druid.java.util.metrics.NoopSysMonitorOshi;
+import org.apache.druid.java.util.metrics.OshiSysMonitor;
 import org.apache.druid.java.util.metrics.SysMonitor;
-import org.apache.druid.java.util.metrics.SysMonitorOshi;
 import org.apache.druid.server.DruidNode;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
@@ -201,27 +201,27 @@ public class MetricsModuleTest
     Mockito.verify(emitter, Mockito.atLeastOnce()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
   @Test
-  public void testGetSysMonitorOshiViaInjector()
+  public void testGetOshiSysMonitorViaInjector()
   {
 
     final Injector injector = createInjector(new Properties(), ImmutableSet.of(NodeRole.PEON));
-    final SysMonitorOshi sysMonitor = injector.getInstance(SysMonitorOshi.class);
+    final OshiSysMonitor sysMonitor = injector.getInstance(OshiSysMonitor.class);
     final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
     sysMonitor.doMonitor(emitter);
 
-    Assert.assertTrue(sysMonitor instanceof NoopSysMonitorOshi);
+    Assert.assertTrue(sysMonitor instanceof NoopOshiSysMonitor);
     Mockito.verify(emitter, Mockito.never()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
   @Test
-  public void testGetSysMonitorOshiWhenNull()
+  public void testGetOshiSysMonitorWhenNull()
   {
 
     Injector injector = createInjector(new Properties(), ImmutableSet.of());
-    final SysMonitorOshi sysMonitor = injector.getInstance(SysMonitorOshi.class);
+    final OshiSysMonitor sysMonitor = injector.getInstance(OshiSysMonitor.class);
     final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
     sysMonitor.doMonitor(emitter);
 
-    Assert.assertFalse(sysMonitor instanceof NoopSysMonitorOshi);
+    Assert.assertFalse(sysMonitor instanceof NoopOshiSysMonitor);
     Mockito.verify(emitter, Mockito.atLeastOnce()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
 

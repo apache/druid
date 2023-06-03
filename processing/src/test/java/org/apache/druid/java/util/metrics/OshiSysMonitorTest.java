@@ -29,14 +29,14 @@ import oshi.util.Util;
 
 import java.util.List;
 
-public class SysMonitorOshiTest
+public class OshiSysMonitorTest
 {
   @Test
   public void testDoMonitor()
   {
 
     ServiceEmitter serviceEmitter = Mockito.mock(ServiceEmitter.class);
-    SysMonitorOshi sysMonitorOshi = new SysMonitorOshi();
+    OshiSysMonitor sysMonitorOshi = new OshiSysMonitor();
     serviceEmitter.start();
     sysMonitorOshi.monitor(serviceEmitter);
 
@@ -47,7 +47,7 @@ public class SysMonitorOshiTest
   public void testDefaultFeedSysMonitorOshi()
   {
     StubServiceEmitter emitter = new StubServiceEmitter("dev/monitor-test", "localhost:0000");
-    SysMonitorOshi m = new SysMonitorOshi();
+    OshiSysMonitor m = new OshiSysMonitor();
     m.start();
     m.monitor(emitter);
     // Sleep for 2 sec to get all metrics which are difference of prev and now metrics

@@ -43,10 +43,24 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-
-public class SysMonitorOshi extends FeedDefiningMonitor
+/**
+ * SysMonitor implemented using {@link oshi}
+ *
+ *  Following stats are emitted:
+ *  <ul>
+ *    <li>{@link MemStats} for Memory related metrics</li>
+ *    <li>{@link SwapStats} for swap storage related metrics</li>
+ *    <li>{@link FsStats} for File System related Metrics</li>
+ *    <li>{@link DiskStats} for Disk level metrics</li>
+ *    <li>{@link NetStats} for Network Interface and related metrics</li>
+ *    <li>{@link CpuStats} for CPU usage and stats metrics</li>
+ *    <li>{@link SysStats} for overall system metrics(uptime, avg load)</li>
+ *    <li>{@link TcpStats} for TCP related metrics</li>
+ *  </ul>
+ */
+public class OshiSysMonitor extends FeedDefiningMonitor
 {
-  private static final Logger log = new Logger(SysMonitorOshi.class);
+  private static final Logger log = new Logger(OshiSysMonitor.class);
   private final SystemInfo si = new SystemInfo();
   private final HardwareAbstractionLayer hal = si.getHardware();
   private final OperatingSystem os = si.getOperatingSystem();
@@ -56,17 +70,17 @@ public class SysMonitorOshi extends FeedDefiningMonitor
 
   private final Map<String, String[]> dimensions;
 
-  public SysMonitorOshi()
+  public OshiSysMonitor()
   {
     this(ImmutableMap.of());
   }
 
-  public SysMonitorOshi(Map<String, String[]> dimensions)
+  public OshiSysMonitor(Map<String, String[]> dimensions)
   {
     this(dimensions, DEFAULT_METRICS_FEED);
   }
 
-  public SysMonitorOshi(Map<String, String[]> dimensions, String feed)
+  public OshiSysMonitor(Map<String, String[]> dimensions, String feed)
   {
     super(feed);
     Preconditions.checkNotNull(dimensions);
@@ -96,6 +110,11 @@ public class SysMonitorOshi extends FeedDefiningMonitor
     return true;
   }
 
+  /**
+   * Interface to implement Stats
+   *
+   * Define a method {@link #emit(ServiceEmitter)} to emit metrices in emiters
+   */
   private interface Stats
   {
     void emit(ServiceEmitter emitter);
@@ -109,9 +128,9 @@ public class SysMonitorOshi extends FeedDefiningMonitor
       GlobalMemory mem = hal.getMemory();
       if (mem != null) {
         final Map<String, Long> stats = ImmutableMap.of(
-            "sysO/mem/max", mem.getTotal(),
-            "sysO/mem/used", mem.getTotal() - mem.getAvailable(),
-            "sysO/mem/free", mem.getAvailable()
+            "sys/mem/max", mem.getTotal(),
+            "sys/mem/used", mem.getTotal() - mem.getAvailable(),
+            "sys/mem/free", mem.getAvailable()
         );
         final ServiceMetricEvent.Builder builder = builder();
         MonitorUtils.addDimensionsToBuilder(builder, dimensions);
@@ -136,10 +155,10 @@ public class SysMonitorOshi extends FeedDefiningMonitor
         long currPageIn = swap.getSwapPagesIn();
         long currPageOut = swap.getSwapPagesOut();
         final Map<String, Long> stats = ImmutableMap.of(
-            "sysO/swap/pageIn", currPageIn - prevPageIn,
-            "sysO/swap/pageOut", currPageOut - prevPageOut,
-            "sysO/swap/max", swap.getSwapTotal(),
-            "sysO/swap/free", swap.getSwapTotal() - swap.getSwapUsed()
+            "sys/swap/pageIn", currPageIn - prevPageIn,
+            "sys/swap/pageOut", currPageOut - prevPageOut,
+            "sys/swap/max", swap.getSwapTotal(),
+            "sys/swap/free", swap.getSwapTotal() - swap.getSwapUsed()
         );
 
         final ServiceMetricEvent.Builder builder = builder();
@@ -162,18 +181,19 @@ public class SysMonitorOshi extends FeedDefiningMonitor
       FileSystem fileSystem = os.getFileSystem();
       for (OSFileStore fs : fileSystem.getFileStores()) {
         final String name = fs.getName();
-        if (fsTypeWhitelist.contains(fs.getType())) {
+        final String type = fs.getOptions().contains("local") ? "local" : "none";
+        if (fsTypeWhitelist.contains(type)) {
           final Map<String, Long> stats = ImmutableMap.<String, Long>builder()
-                                                      .put("sysO/fs/max", fs.getTotalSpace())
-                                                      .put("sysO/fs/used", fs.getUsableSpace())
-                                                      .put("sysO/fs/files/count", fs.getTotalInodes())
-                                                      .put("sysO/fs/files/free", fs.getFreeInodes())
+                                                      .put("sys/fs/max", fs.getTotalSpace())
+                                                      .put("sys/fs/used", fs.getUsableSpace())
+                                                      .put("sys/fs/files/count", fs.getTotalInodes())
+                                                      .put("sys/fs/files/free", fs.getFreeInodes())
                                                       .build();
           final ServiceMetricEvent.Builder builder = builder()
-              .setDimension("fsDevName", fs.getName())
-              .setDimension("fsDirName", fs.getVolume())
-              .setDimension("fsTypeName", fs.getType())
-              .setDimension("fsSysTypeName", fs.getDescription())
+              .setDimension("fsDevName", fs.getVolume())
+              .setDimension("fsDirName", fs.getMount())
+              .setDimension("fsTypeName", type)
+              .setDimension("fsSysTypeName", fs.getType())
               .setDimension("fsOptions", fs.getOptions().split(","));
           MonitorUtils.addDimensionsToBuilder(builder, dimensions);
           for (Map.Entry<String, Long> entry : stats.entrySet()) {
@@ -196,12 +216,12 @@ public class SysMonitorOshi extends FeedDefiningMonitor
       // Will have to add logic for that
       for (HWDiskStore disk : disks) {
         final Map<String, Long> stats = ImmutableMap.<String, Long>builder()
-                                                    .put("sysO/disk/read/size", disk.getReads())
-                                                    .put("sysO/disk/read/count", disk.getReadBytes())
-                                                    .put("sysO/disk/write/size", disk.getWrites())
-                                                    .put("sysO/disk/write/count", disk.getWriteBytes())
-                                                    .put("sysO/disk/queue", disk.getCurrentQueueLength())
-                                                    .put("sysO/disk/transferTime", disk.getTransferTime())
+                                                    .put("sys/disk/read/size", disk.getReads())
+                                                    .put("sys/disk/read/count", disk.getReadBytes())
+                                                    .put("sys/disk/write/size", disk.getWrites())
+                                                    .put("sys/disk/write/count", disk.getWriteBytes())
+                                                    .put("sys/disk/queue", disk.getCurrentQueueLength())
+                                                    .put("sys/disk/transferTime", disk.getTransferTime())
                                                     .build();
         final ServiceMetricEvent.Builder builder = builder()
             .setDimension("diskName", disk.getName())
@@ -236,21 +256,21 @@ public class SysMonitorOshi extends FeedDefiningMonitor
           final Map<String, Long> stats = diff.to(
               name,
               ImmutableMap.<String, Long>builder()
-                          .put("sysO/net/read/size", net.getBytesRecv())
-                          .put("sysO/net/read/packets", net.getPacketsRecv())
-                          .put("sysO/net/read/errors", net.getInErrors())
-                          .put("sysO/net/read/dropped", net.getInDrops())
-                          .put("sysO/net/write/size", net.getBytesSent())
-                          .put("sysO/net/write/packets", net.getPacketsSent())
-                          .put("sysO/net/write/errors", net.getOutErrors())
-                          .put("sysO/net/write/collisions", net.getCollisions())
+                          .put("sys/net/read/size", net.getBytesRecv())
+                          .put("sys/net/read/packets", net.getPacketsRecv())
+                          .put("sys/net/read/errors", net.getInErrors())
+                          .put("sys/net/read/dropped", net.getInDrops())
+                          .put("sys/net/write/size", net.getBytesSent())
+                          .put("sys/net/write/packets", net.getPacketsSent())
+                          .put("sys/net/write/errors", net.getOutErrors())
+                          .put("sys/net/write/collisions", net.getCollisions())
                           .build()
           );
           if (stats != null) {
             final ServiceMetricEvent.Builder builder = builder()
                 .setDimension("netName", net.getName())
-                .setDimension("netAddress", net.getMacaddr())
-                .setDimension("netHwaddr", Arrays.toString(net.getIPv6addr()));
+                .setDimension("netAddress", Arrays.toString(net.getIPv4addr()))
+                .setDimension("netHwaddr", net.getMacaddr());
             MonitorUtils.addDimensionsToBuilder(builder, dimensions);
             for (Map.Entry<String, Long> entry : stats.entrySet()) {
               emitter.emit(builder.build(entry.getKey(), entry.getValue()));
@@ -305,7 +325,7 @@ public class SysMonitorOshi extends FeedDefiningMonitor
             MonitorUtils.addDimensionsToBuilder(builder, dimensions);
             if (total != 0) {
               // prevent divide by 0 exception and don't emit such events
-              emitter.emit(builder.build("sysO/cpu", entry.getValue() * 100 / total)); // [0,100]
+              emitter.emit(builder.build("sys/cpu", entry.getValue() * 100 / total)); // [0,100]
             }
 
           }
@@ -325,7 +345,7 @@ public class SysMonitorOshi extends FeedDefiningMonitor
       long uptime = os.getSystemUptime();
 
       final Map<String, Number> stats = ImmutableMap.of(
-          "sysO/uptime", uptime
+          "sys/uptime", uptime
       );
       for (Map.Entry<String, Number> entry : stats.entrySet()) {
         emitter.emit(builder.build(entry.getKey(), entry.getValue()));
@@ -335,9 +355,9 @@ public class SysMonitorOshi extends FeedDefiningMonitor
 
       if (la != null) {
         final Map<String, Number> statsCpuLoadAverage = ImmutableMap.of(
-            "sysO/la/1", la[0],
-            "sysO/la/5", la[1],
-            "sysO/la/15", la[2]
+            "sys/la/1", la[0],
+            "sys/la/5", la[1],
+            "sys/la/15", la[2]
         );
         for (Map.Entry<String, Number> entry : statsCpuLoadAverage.entrySet()) {
           emitter.emit(builder.build(entry.getKey(), entry.getValue()));
@@ -362,37 +382,15 @@ public class SysMonitorOshi extends FeedDefiningMonitor
       if (tcpv4 != null) {
         final Map<String, Long> stats = diff.to(
             "tcpv4", ImmutableMap.<String, Long>builder()
-                                 .put("sysO/tcpv4/activeOpens", tcpv4.getConnectionsActive())
-                                 .put("sysO/tcpv4/passiveOpens", tcpv4.getConnectionsPassive())
-                                 .put("sysO/tcpv4/attemptFails", tcpv4.getConnectionFailures())
-                                 .put("sysO/tcpv4/estabResets", tcpv4.getConnectionsReset())
-                                 .put("sysO/tcpv4/in/segs", tcpv4.getSegmentsReceived())
-                                 .put("sysO/tcpv4/in/errs", tcpv4.getInErrors())
-                                 .put("sysO/tcpv4/out/segs", tcpv4.getSegmentsSent())
-                                 .put("sysO/tcpv4/out/rsts", tcpv4.getOutResets())
-                                 .put("sysO/tcpv4/retrans/segs", tcpv4.getSegmentsRetransmitted())
-                                 .build()
-        );
-        if (stats != null) {
-          for (Map.Entry<String, Long> entry : stats.entrySet()) {
-            emitter.emit(builder.build(entry.getKey(), entry.getValue()));
-          }
-        }
-      }
-      InternetProtocolStats.TcpStats tcpv6 = ipstats.getTCPv6Stats();
-
-      if (tcpv6 != null) {
-        final Map<String, Long> stats = diff.to(
-            "tcpv6", ImmutableMap.<String, Long>builder()
-                                 .put("sysO/tcpv6/activeOpens", tcpv6.getConnectionsActive())
-                                 .put("sysO/tcpv6/passiveOpens", tcpv6.getConnectionsPassive())
-                                 .put("sysO/tcpv6/attemptFails", tcpv6.getConnectionFailures())
-                                 .put("sysO/tcpv6/estabResets", tcpv6.getConnectionsReset())
-                                 .put("sysO/tcpv6/in/segs", tcpv6.getSegmentsReceived())
-                                 .put("sysO/tcpv6/in/errs", tcpv6.getInErrors())
-                                 .put("sysO/tcpv6/out/segs", tcpv6.getSegmentsSent())
-                                 .put("sysO/tcpv6/out/rsts", tcpv6.getOutResets())
-                                 .put("sysO/tcpv6/retrans/segs", tcpv6.getSegmentsRetransmitted())
+                                 .put("sys/tcpv4/activeOpens", tcpv4.getConnectionsActive())
+                                 .put("sys/tcpv4/passiveOpens", tcpv4.getConnectionsPassive())
+                                 .put("sys/tcpv4/attemptFails", tcpv4.getConnectionFailures())
+                                 .put("sys/tcpv4/estabResets", tcpv4.getConnectionsReset())
+                                 .put("sys/tcpv4/in/segs", tcpv4.getSegmentsReceived())
+                                 .put("sys/tcpv4/in/errs", tcpv4.getInErrors())
+                                 .put("sys/tcpv4/out/segs", tcpv4.getSegmentsSent())
+                                 .put("sys/tcpv4/out/rsts", tcpv4.getOutResets())
+                                 .put("sys/tcpv4/retrans/segs", tcpv4.getSegmentsRetransmitted())
                                  .build()
         );
         if (stats != null) {

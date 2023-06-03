@@ -1591,7 +1591,7 @@ name: Java Native Access (JNA)
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.5.1
+version: 5.13.0
 libraries:
   - net.java.dev.jna: jna
 
@@ -2347,7 +2347,7 @@ module: java-core
 license_name: MIT License
 version: 6.4.2
 libraries:
-  - com.github: oshi
+  - com.github.oshi: oshi-core
 license_file_path: licenses/bin/oshi.MIT
 
 ---
@@ -4925,7 +4925,7 @@ libraries:
 
 name: net.java.dev.jna jna-platform
 license_category: binary
-version: 5.2.0
+version: 5.13.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:

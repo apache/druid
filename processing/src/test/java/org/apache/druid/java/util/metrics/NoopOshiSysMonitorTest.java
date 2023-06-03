@@ -20,17 +20,19 @@
 package org.apache.druid.java.util.metrics;
 
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.junit.Assert;
+import org.junit.Test;
+import org.mockito.Mockito;
 
-public class NoopSysMonitorOshi extends SysMonitorOshi
+public class NoopOshiSysMonitorTest
 {
-  public NoopSysMonitorOshi()
+  @Test
+  public void testDoMonitor()
   {
-    super();
-  }
 
-  @Override
-  public boolean doMonitor(ServiceEmitter emitter)
-  {
-    return false;
+    ServiceEmitter serviceEmitter = Mockito.mock(ServiceEmitter.class);
+    NoopOshiSysMonitor noopOshiSysMonitor = new NoopOshiSysMonitor();
+
+    Assert.assertFalse(noopOshiSysMonitor.doMonitor(serviceEmitter));
   }
 }

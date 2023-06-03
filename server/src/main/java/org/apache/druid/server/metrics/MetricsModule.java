@@ -46,10 +46,10 @@ import org.apache.druid.java.util.metrics.JvmMonitor;
 import org.apache.druid.java.util.metrics.JvmThreadsMonitor;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.java.util.metrics.NoopOshiSysMonitor;
 import org.apache.druid.java.util.metrics.NoopSysMonitor;
-import org.apache.druid.java.util.metrics.NoopSysMonitorOshi;
+import org.apache.druid.java.util.metrics.OshiSysMonitor;
 import org.apache.druid.java.util.metrics.SysMonitor;
-import org.apache.druid.java.util.metrics.SysMonitorOshi;
 import org.apache.druid.query.ExecutorServiceMonitor;
 
 import java.time.Duration;
@@ -197,16 +197,16 @@ public class MetricsModule implements Module
 
   @Provides
   @ManageLifecycle
-  public SysMonitorOshi getSysMonitorOshi(DataSourceTaskIdHolder dataSourceTaskIdHolder, @Self Set<NodeRole> nodeRoles)
+  public OshiSysMonitor getOshiSysMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder, @Self Set<NodeRole> nodeRoles)
   {
     if (nodeRoles.contains(NodeRole.PEON)) {
-      return new NoopSysMonitorOshi();
+      return new NoopOshiSysMonitor();
     } else {
       Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
           dataSourceTaskIdHolder.getDataSource(),
           dataSourceTaskIdHolder.getTaskId()
       );
-      return new SysMonitorOshi(dimensions);
+      return new OshiSysMonitor(dimensions);
     }
   }
 }
