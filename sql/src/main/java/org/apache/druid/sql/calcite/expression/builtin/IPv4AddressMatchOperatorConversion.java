@@ -44,7 +44,7 @@ public class IPv4AddressMatchOperatorConversion extends DirectOperatorConversion
       .operatorBuilder(StringUtils.toUpperCase(IPv4AddressMatchExprMacro.FN_NAME))
       .operandTypeChecker(
           OperandTypes.sequence(
-              StringUtils.toUpperCase(IPv4AddressMatchExprMacro.FN_NAME) + "(expr,string)",
+              "'" + StringUtils.toUpperCase(IPv4AddressMatchExprMacro.FN_NAME) + "(expr, string)'",
               ADDRESS_OPERAND,
               SUBNET_OPERAND
           )

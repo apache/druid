@@ -52,7 +52,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
       .operatorBuilder("ARRAY_OVERLAP")
       .operandTypeChecker(
           OperandTypes.sequence(
-              "ARRAY_OVERLAP(array,array)",
+              "'ARRAY_OVERLAP(array, array)'",
               OperandTypes.or(
                   OperandTypes.family(SqlTypeFamily.ARRAY),
                   OperandTypes.family(SqlTypeFamily.STRING)

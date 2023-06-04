@@ -33,7 +33,7 @@ public class ArrayConcatOperatorConversion extends DirectOperatorConversion
       .operatorBuilder("ARRAY_CONCAT")
       .operandTypeChecker(
           OperandTypes.sequence(
-              "ARRAY_CONCAT(array,array)",
+              "'ARRAY_CONCAT(array, array)'",
               OperandTypes.or(
                   OperandTypes.family(SqlTypeFamily.ARRAY),
                   OperandTypes.family(SqlTypeFamily.STRING)
