@@ -110,6 +110,7 @@
         <resilience4j.version>1.3.1</resilience4j.version>
         <slf4j.version>1.7.36</slf4j.version>
         <jna.version>5.13.0</jna.version>
+        <jna-platform.version>5.13.0</jna-platform.version>
         <hadoop.compile.version>3.3.5</hadoop.compile.version>
         <mockito.version>4.3.1</mockito.version>
         <aws.sdk.version>1.12.317</aws.sdk.version>
@@ -884,6 +885,11 @@
                 <groupId>net.java.dev.jna</groupId>
                 <artifactId>jna</artifactId>
                 <version>${jna.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.java.dev.jna</groupId>
+                <artifactId>jna-platform</artifactId>
+                <version>${jna-platform.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
