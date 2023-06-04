@@ -1950,7 +1950,7 @@ name: Apache Yetus Audience Annotations Component
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.5.0
+version: 0.13.0
 libraries:
   - org.apache.yetus: audience-annotations
 notices:
