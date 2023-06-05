@@ -240,8 +240,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return 0;
     }
 
-    final SegmentTierStatus segmentStatus =
-        new SegmentTierStatus(segment, cluster.getHistoricalsByTier(tier));
+    final SegmentStatusInTier segmentStatus =
+        new SegmentStatusInTier(segment, cluster.getHistoricalsByTier(tier));
 
     // Cancel all moves in this tier if it does not need to have replicas
     if (shouldCancelMoves) {
@@ -376,7 +376,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       final int numToDrop,
       DataSegment segment,
       String tier,
-      SegmentTierStatus segmentStatus
+      SegmentStatusInTier segmentStatus
   )
   {
     if (numToDrop <= 0) {
@@ -451,7 +451,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       int numToLoad,
       DataSegment segment,
       String tier,
-      SegmentTierStatus segmentStatus,
+      SegmentStatusInTier segmentStatus,
       boolean isAlreadyLoadedOnTier
   )
   {
@@ -532,7 +532,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       SegmentAction action,
       int maxNumToCancel,
       DataSegment segment,
-      SegmentTierStatus segmentStatus
+      SegmentStatusInTier segmentStatus
   )
   {
     final List<ServerHolder> servers = segmentStatus.getServersPerforming(action);

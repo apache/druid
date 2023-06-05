@@ -30,7 +30,7 @@ public class Stats
     public static final CoordinatorStat ASSIGNED
         = new CoordinatorStat("assigned", "segment/assigned/count", CoordinatorStat.Level.INFO);
     public static final CoordinatorStat DROPPED
-        = new CoordinatorStat("dropped", "segment/dropped/count");
+        = new CoordinatorStat("dropped", "segment/dropped/count", CoordinatorStat.Level.INFO);
     public static final CoordinatorStat DELETED
         = new CoordinatorStat("deleted", "segment/deleted/count", CoordinatorStat.Level.INFO);
     public static final CoordinatorStat MOVED
@@ -118,7 +118,7 @@ public class Stats
         = new CoordinatorStat("compactSkipIntv", "interval/skipCompact/count");
   }
 
-  public static class Run
+  public static class CoordinatorRun
   {
     public static final CoordinatorStat DUTY_TIME
         = new CoordinatorStat("dutyRunTime", "coordinator/time");

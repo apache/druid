@@ -393,7 +393,7 @@ public class CoordinatorSimulationBuilder
     @Override
     public double getLoadPercentage(String datasource)
     {
-      return coordinator.getLoadStatus().get(datasource);
+      return coordinator.getDatasourceToLoadStatus().get(datasource);
     }
 
     @Override

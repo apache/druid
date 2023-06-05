@@ -1449,7 +1449,7 @@ public class DataSourcesResourceTest
     EasyMock.expect(segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(EasyMock.eq("datasource1"), EasyMock.anyObject(Interval.class), EasyMock.anyBoolean()))
             .andReturn(Optional.of(segments)).once();
     DruidCoordinator druidCoordinator = EasyMock.createMock(DruidCoordinator.class);
-    EasyMock.expect(druidCoordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegments(segments))
+    EasyMock.expect(druidCoordinator.getTierToDatasourceToUnderReplicatedCount(segments, false))
             .andReturn(underReplicationCountsPerDataSourcePerTier).once();
 
     EasyMock.replay(segmentsMetadataManager, druidCoordinator);
@@ -1506,7 +1506,7 @@ public class DataSourcesResourceTest
     EasyMock.expect(segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(EasyMock.eq("datasource1"), EasyMock.anyObject(Interval.class), EasyMock.anyBoolean()))
             .andReturn(Optional.of(segments)).once();
     DruidCoordinator druidCoordinator = EasyMock.createMock(DruidCoordinator.class);
-    EasyMock.expect(druidCoordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegmentsUsingClusterView(segments))
+    EasyMock.expect(druidCoordinator.getTierToDatasourceToUnderReplicatedCount(segments, true))
             .andReturn(underReplicationCountsPerDataSourcePerTier).once();
 
     EasyMock.replay(segmentsMetadataManager, druidCoordinator);

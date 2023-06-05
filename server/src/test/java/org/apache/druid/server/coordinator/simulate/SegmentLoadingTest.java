@@ -127,12 +127,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
                              .withSegments(Collections.singletonList(segment))
                              .withDynamicConfig(dynamicConfig)
                              .withRules(datasource, Load.on(Tier.T2, 3).forever())
-                             .withServers(
-                                 historicalT11,
-                                 historicalT12,
-                                 historicalT21,
-                                 historicalT22
-                             )
+                             .withServers(historicalT11, historicalT12, historicalT21, historicalT22)
                              .build();
 
     // At the start, T1 has the segment fully replicated
@@ -323,10 +318,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
                              .withSegments(segments)
                              .withServers(historicalT11, historicalT21)
                              .withDynamicConfig(dynamicConfig)
-                             .withRules(
-                                 datasource,
-                                 Load.on(Tier.T1, 1).andOn(Tier.T2, 1).forever()
-                             )
+                             .withRules(datasource, Load.on(Tier.T1, 1).andOn(Tier.T2, 1).forever())
                              .build();
 
     // Put the first replica of all the segments on T1

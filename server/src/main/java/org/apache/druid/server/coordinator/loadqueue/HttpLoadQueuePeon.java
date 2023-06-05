@@ -327,7 +327,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
             if (status.getState() == SegmentLoadDropHandler.Status.STATE.FAILED) {
               onRequestFailed(holder, status.getFailureCause());
             } else {
-              onRequestCompleted(holder, QueueStatus.SUCCESS);
+              onRequestCompleted(holder, SegmentStatusInQueue.SUCCESS);
             }
           }
         }, null
@@ -371,7 +371,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       stopped = true;
 
       // Cancel all queued requests
-      queuedSegments.forEach(holder -> onRequestCompleted(holder, QueueStatus.CANCELLED));
+      queuedSegments.forEach(holder -> onRequestCompleted(holder, SegmentStatusInQueue.CANCELLED));
       log.info("Cancelled [%d] requests queued on server [%s].", queuedSegments.size(), serverId);
 
       segmentsToDrop.clear();
@@ -411,7 +411,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         segmentsToLoad.put(segment, holder);
         queuedSegments.add(holder);
         processingExecutor.execute(this::doSegmentManagement);
-        incrementStat(holder, QueueStatus.ASSIGNED);
+        incrementStat(holder, SegmentStatusInQueue.ASSIGNED);
       } else {
         holder.addCallback(callback);
       }
@@ -440,7 +440,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         segmentsToDrop.put(segment, holder);
         queuedSegments.add(holder);
         processingExecutor.execute(this::doSegmentManagement);
-        incrementStat(holder, QueueStatus.ASSIGNED);
+        incrementStat(holder, SegmentStatusInQueue.ASSIGNED);
       } else {
         holder.addCallback(callback);
       }
@@ -484,13 +484,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   @Override
   public CoordinatorRunStats getAndResetStats()
   {
-    // There might be a race condition where we miss some stats added between
-    // accumulate and clear, but synchronizing here might be costly and we
-    // can afford to lose some metrics.
-    final CoordinatorRunStats collectedStats = new CoordinatorRunStats();
-    collectedStats.accumulate(stats);
-    stats.clear();
-    return collectedStats;
+    return stats.getSnapshotAndReset();
   }
 
   @Override
@@ -530,10 +524,10 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         "Server[%s] failed segment[%s] request[%s] with cause [%s].",
         serverId, holder.getSegment().getId(), holder.getAction(), failureCause
     );
-    onRequestCompleted(holder, QueueStatus.FAILED);
+    onRequestCompleted(holder, SegmentStatusInQueue.FAILED);
   }
 
-  private void onRequestCompleted(SegmentHolder holder, QueueStatus status)
+  private void onRequestCompleted(SegmentHolder holder, SegmentStatusInQueue status)
   {
     final SegmentAction action = holder.getAction();
     log.trace(
@@ -545,10 +539,10 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       queuedSize.addAndGet(-holder.getSegment().getSize());
     }
     incrementStat(holder, status);
-    executeCallbacks(holder, status == QueueStatus.SUCCESS);
+    executeCallbacks(holder, status == SegmentStatusInQueue.SUCCESS);
   }
 
-  private void incrementStat(SegmentHolder holder, QueueStatus status)
+  private void incrementStat(SegmentHolder holder, SegmentStatusInQueue status)
   {
     stats.add(status.getStatForAction(holder.getAction()), 1);
     if (status.datasourceStat != null) {
@@ -586,12 +580,12 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       }
 
       queuedSegments.remove(holder);
-      onRequestCompleted(holder, QueueStatus.CANCELLED);
+      onRequestCompleted(holder, SegmentStatusInQueue.CANCELLED);
       return true;
     }
   }
 
-  private enum QueueStatus
+  private enum SegmentStatusInQueue
   {
     ASSIGNED(Stats.SegmentQueue.ASSIGNED_ACTIONS),
     SUCCESS(Stats.SegmentQueue.COMPLETED_ACTIONS),
@@ -603,12 +597,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     final CoordinatorStat dropStat;
     final CoordinatorStat datasourceStat;
 
-    QueueStatus()
-    {
-      this(null);
-    }
-
-    QueueStatus(CoordinatorStat datasourceStat)
+    SegmentStatusInQueue(CoordinatorStat datasourceStat)
     {
       // These stats are not emitted and are tracked for debugging purposes only
       final String prefix = StringUtils.toLowerCase(name());

@@ -172,10 +172,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   @Override
   public CoordinatorRunStats getAndResetStats()
   {
-    final CoordinatorRunStats collectedStats = new CoordinatorRunStats();
-    collectedStats.accumulate(stats);
-    stats.clear();
-    return collectedStats;
+    return stats.getSnapshotAndReset();
   }
 
   @Override

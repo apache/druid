@@ -87,15 +87,15 @@ public class CoordinatorResource
   )
   {
     if (simple != null) {
-      return Response.ok(coordinator.computeNumsUnavailableUsedSegmentsPerDataSource()).build();
+      return Response.ok(coordinator.getDatasourceToUnavailableSegmentCount()).build();
     }
 
     if (full != null) {
-      return computeUsingClusterView != null
-             ? Response.ok(coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView()).build() :
-             Response.ok(coordinator.computeUnderReplicationCountsPerDataSourcePerTier()).build();
+      return Response.ok(
+          coordinator.getTierToDatasourceToUnderReplicatedCount(computeUsingClusterView != null)
+      ).build();
     }
-    return Response.ok(coordinator.getLoadStatus()).build();
+    return Response.ok(coordinator.getDatasourceToLoadStatus()).build();
   }
 
   @GET

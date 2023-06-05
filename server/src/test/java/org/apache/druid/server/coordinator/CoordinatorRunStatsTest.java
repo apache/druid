@@ -84,41 +84,34 @@ public class CoordinatorRunStatsTest
   }
 
   @Test
-  public void testAccumulate()
+  public void testGetSnapshotAndReset()
   {
     stats.add(STAT_1, 1);
-    stats.add(STAT_2, 1);
-    stats.add(STAT_1, Key.TIER_1, 1);
-    stats.add(STAT_1, Key.TIER_2, 1);
-    stats.add(STAT_2, Key.TIER_1, 1);
+    stats.add(STAT_2, 3);
+    stats.add(STAT_1, Key.TIER_1, 5);
+    stats.add(STAT_1, Key.DUTY_1, 7);
 
-    stats.add(STAT_1, Key.DUTY_1, 1);
-    stats.add(STAT_2, Key.DUTY_1, 1);
-    stats.add(STAT_1, Key.DUTY_2, 1);
+    final CoordinatorRunStats firstFlush = stats.getSnapshotAndReset();
+    Assert.assertEquals(1, firstFlush.get(STAT_1));
+    Assert.assertEquals(3, firstFlush.get(STAT_2));
+    Assert.assertEquals(5, firstFlush.get(STAT_1, Key.TIER_1));
+    Assert.assertEquals(7, firstFlush.get(STAT_1, Key.DUTY_1));
 
-    final CoordinatorRunStats stats2 = new CoordinatorRunStats();
-    stats2.add(STAT_1, 1);
-    stats2.add(STAT_1, Key.TIER_2, 1);
-    stats2.add(STAT_2, Key.TIER_2, 1);
-    stats2.add(STAT_3, Key.TIER_1, 1);
-    stats2.add(STAT_1, Key.DUTY_2, 1);
-    stats2.add(STAT_2, Key.DUTY_2, 1);
-    stats2.add(STAT_3, Key.DUTY_1, 1);
+    Assert.assertEquals(0, stats.rowCount());
 
-    stats.accumulate(stats2);
+    stats.add(STAT_1, 7);
+    stats.add(STAT_1, Key.TIER_1, 5);
+    stats.add(STAT_2, Key.DUTY_1, 3);
+    stats.add(STAT_3, Key.TIER_1, 1);
 
-    Assert.assertEquals(2, stats.get(STAT_1));
-    Assert.assertEquals(1, stats.get(STAT_2));
-    Assert.assertEquals(1, stats.get(STAT_1, Key.TIER_1));
-    Assert.assertEquals(2, stats.get(STAT_1, Key.TIER_2));
-    Assert.assertEquals(1, stats.get(STAT_2, Key.TIER_1));
-    Assert.assertEquals(1, stats.get(STAT_2, Key.TIER_2));
-    Assert.assertEquals(1, stats.get(STAT_3, Key.TIER_1));
-    Assert.assertEquals(1, stats.get(STAT_1, Key.DUTY_1));
-    Assert.assertEquals(2, stats.get(STAT_1, Key.DUTY_2));
-    Assert.assertEquals(1, stats.get(STAT_2, Key.DUTY_1));
-    Assert.assertEquals(1, stats.get(STAT_2, Key.DUTY_2));
-    Assert.assertEquals(1, stats.get(STAT_3, Key.DUTY_1));
+    final CoordinatorRunStats secondFlush = stats.getSnapshotAndReset();
+
+    Assert.assertEquals(7, secondFlush.get(STAT_1));
+    Assert.assertEquals(5, secondFlush.get(STAT_1, Key.TIER_1));
+    Assert.assertEquals(3, secondFlush.get(STAT_2, Key.DUTY_1));
+    Assert.assertEquals(1, secondFlush.get(STAT_3, Key.TIER_1));
+
+    Assert.assertEquals(0, stats.rowCount());
   }
 
   @Test

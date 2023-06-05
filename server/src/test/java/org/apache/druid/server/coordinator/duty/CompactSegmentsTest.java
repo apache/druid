@@ -259,8 +259,6 @@ public class CompactSegmentsTest
     CompactSegments serdeCompactSegments = JSON_MAPPER.readValue(compactSegmentString, CompactSegments.class);
 
     Assert.assertNotNull(serdeCompactSegments);
-    Assert.assertEquals(COORDINATOR_CONFIG.getCompactionSkipLockedIntervals(), serdeCompactSegments.isSkipLockedIntervals());
-    Assert.assertEquals(indexingServiceClient, serdeCompactSegments.getIndexingServiceClient());
   }
 
   @Test

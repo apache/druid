@@ -26,13 +26,15 @@ import javax.annotation.concurrent.ThreadSafe;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Contains statistics tracked during a single coordinator run or the runtime of
- * a single coordinator duty.
+ * Contains statistics typically tracked during a single coordinator run or the
+ * runtime of a single coordinator duty.
  */
 @ThreadSafe
 public class CoordinatorRunStats
@@ -46,6 +48,12 @@ public class CoordinatorRunStats
     this(null);
   }
 
+  /**
+   * Creates a new {@code CoordinatorRunStats}.
+   *
+   * @param debugDimensions Dimension values for which all metrics should be
+   *                        collected and logged.
+   */
   public CoordinatorRunStats(Map<Dimension, String> debugDimensions)
   {
     if (debugDimensions != null) {
@@ -110,21 +118,21 @@ public class CoordinatorRunStats
           final Map<CoordinatorStat, Long> errorStats = levelToStats
               .getOrDefault(CoordinatorStat.Level.ERROR, Collections.emptyMap());
           if (!errorStats.isEmpty()) {
-            log.error("There were errors for row[%s]: %s", rowKey, errorStats);
+            log.error("Errors for dimensions [%s]: %s", rowKey, errorStats);
           }
 
           // Log all the infos
           final Map<CoordinatorStat, Long> infoStats = levelToStats
               .getOrDefault(CoordinatorStat.Level.INFO, Collections.emptyMap());
           if (!infoStats.isEmpty()) {
-            log.info("Stats for row[%s] are [%s].", rowKey, infoStats);
+            log.info("Collected stats for dimensions [%s] are [%s].", rowKey, infoStats);
           }
 
           // Log all the debugs
           final Map<CoordinatorStat, Long> debugStats = levelToStats
               .getOrDefault(CoordinatorStat.Level.DEBUG, Collections.emptyMap());
           if (!debugStats.isEmpty() && hasDebugDimension(rowKey)) {
-            log.info("Debug stats for row[%s] are [%s].", rowKey, debugStats);
+            log.info("Debug stats for dimensions [%s] are [%s].", rowKey, debugStats);
           }
         }
     );
@@ -190,18 +198,29 @@ public class CoordinatorRunStats
             .mergeLong(stat, value, Math::max);
   }
 
-  public void accumulate(final CoordinatorRunStats other)
+  /**
+   * Creates a new {@code CoordinatorRunStats} which represents the snapshot of
+   * the stats collected so far in this instance.
+   * <p>
+   * While this method is in progress, any updates made to the stats of this
+   * instance by another thread are not guaranteed to be present in the snapshot.
+   * But the snapshots are consistent, i.e. stats present in the snapshot created
+   * in one invocation of this method are permanently removed from this instance
+   * and will not be present in subsequent snapshots.
+   *
+   * @return Snapshot of the current state of this {@code CoordinatorRunStats}.
+   */
+  public CoordinatorRunStats getSnapshotAndReset()
   {
-    other.allStats.forEach(
-        (rowKey, otherStatValues) -> {
-          Object2LongOpenHashMap<CoordinatorStat> statValues =
-              this.allStats.computeIfAbsent(rowKey, d -> new Object2LongOpenHashMap<>());
+    final CoordinatorRunStats snapshot = new CoordinatorRunStats(debugDimensions);
 
-          otherStatValues.object2LongEntrySet().fastForEach(
-              stat -> statValues.addTo(stat.getKey(), stat.getLongValue())
-          );
-        }
-    );
+    // Get a snapshot of all the keys, remove and copy each of them atomically
+    final Set<RowKey> keys = new HashSet<>(allStats.keySet());
+    for (RowKey key : keys) {
+      snapshot.allStats.put(key, allStats.remove(key));
+    }
+
+    return snapshot;
   }
 
   /**

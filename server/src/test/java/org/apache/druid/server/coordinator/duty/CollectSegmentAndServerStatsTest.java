@@ -54,9 +54,9 @@ public class CollectSegmentAndServerStatsTest
                                      .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null, null))
                                      .build();
 
-    Mockito.when(mockDruidCoordinator.computeNumsUnavailableUsedSegmentsPerDataSource())
+    Mockito.when(mockDruidCoordinator.getDatasourceToUnavailableSegmentCount())
            .thenReturn(Object2IntMaps.singleton("ds", 10));
-    Mockito.when(mockDruidCoordinator.computeUnderReplicationCountsPerDataSourcePerTier())
+    Mockito.when(mockDruidCoordinator.getTierToDatasourceToUnderReplicatedCount(false))
            .thenReturn(Collections.singletonMap("ds", Object2LongMaps.singleton("tier1", 100)));
 
     CoordinatorDuty duty = new CollectSegmentAndServerStats(mockDruidCoordinator);

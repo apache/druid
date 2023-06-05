@@ -24,11 +24,8 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.ReplicationThrottler;
-import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.Rule;
@@ -36,7 +33,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -71,7 +67,7 @@ public class RunRules implements CoordinatorDuty
     final Set<DataSegment> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
     final Set<DataSegment> usedSegments = params.getUsedSegments();
     log.info(
-        "Running rules for [%d] used segments. Skipping [%d] overshadowed segments.",
+        "Applying retention rules on [%d] used segments, skipping [%d] overshadowed segments.",
         usedSegments.size(), overshadowed.size()
     );
 
@@ -145,29 +141,5 @@ public class RunRules implements CoordinatorDuty
   {
     return params.getDatabaseRuleManager().getRulesWithDefault(datasource).stream()
                  .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
-  }
-
-  private ReplicationThrottler createReplicationThrottler(DruidCoordinatorRuntimeParams params)
-  {
-    final Set<String> tiersLoadingReplicas = new HashSet<>();
-
-    params.getDruidCluster().getHistoricals().forEach(
-        (tier, historicals) -> {
-          int numLoadingReplicas = historicals.stream().mapToInt(ServerHolder::getNumLoadingReplicas).sum();
-          if (numLoadingReplicas > 0) {
-            log.info(
-                "Tier [%s] will not be assigned replicas as it is already loading [%d] replicas.",
-                tier, numLoadingReplicas
-            );
-            tiersLoadingReplicas.add(tier);
-          }
-        }
-    );
-    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-    return new ReplicationThrottler(
-        tiersLoadingReplicas,
-        dynamicConfig.getReplicationThrottleLimit(),
-        dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
-    );
   }
 }

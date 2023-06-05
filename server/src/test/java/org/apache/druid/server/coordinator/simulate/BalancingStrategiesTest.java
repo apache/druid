@@ -55,7 +55,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
   }
 
   @Test
-  public void testFreshClusterGetsBalanced()
+  public void testNewClusterGetsBalanced()
   {
     final List<DruidServer> historicals = new ArrayList<>();
     for (int i = 0; i < 5; i++) {

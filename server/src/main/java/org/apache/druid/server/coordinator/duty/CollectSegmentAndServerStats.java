@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCluster;
@@ -34,6 +35,9 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Collects stats pertaining to segment availability on different servers.
@@ -52,7 +56,8 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    logServerAndLoadQueueStates(params.getDruidCluster());
+    params.getDruidCluster().getHistoricals()
+          .forEach(this::logServedSegmentStats);
     collectSegmentStats(params);
 
     StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
@@ -86,12 +91,12 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
       );
     });
 
-    coordinator.computeNumsUnavailableUsedSegmentsPerDataSource().forEach(
+    coordinator.getDatasourceToUnavailableSegmentCount().forEach(
         (dataSource, numUnavailable) ->
             stats.addToDatasourceStat(Stats.Segments.UNAVAILABLE, dataSource, numUnavailable)
     );
 
-    coordinator.computeUnderReplicationCountsPerDataSourcePerTier().forEach(
+    coordinator.getTierToDatasourceToUnderReplicatedCount(false).forEach(
         (tier, countsPerDatasource) -> countsPerDatasource.forEach(
             (dataSource, underReplicatedCount) ->
                 stats.addToSegmentStat(Stats.Segments.UNDER_REPLICATED, tier, dataSource, underReplicatedCount)
@@ -101,7 +106,8 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
     // Collect total segment stats
     params.getUsedSegmentsTimelinesPerDataSource().forEach(
         (dataSource, timeline) -> {
-          long totalSizeOfUsedSegments = timeline.iterateAllObjects().stream().mapToLong(DataSegment::getSize).sum();
+          long totalSizeOfUsedSegments = timeline.iterateAllObjects().stream()
+                                                 .mapToLong(DataSegment::getSize).sum();
           stats.addToDatasourceStat(Stats.Segments.USED_BYTES, dataSource, totalSizeOfUsedSegments);
           stats.addToDatasourceStat(Stats.Segments.USED, dataSource, timeline.getNumObjects());
         }
@@ -116,23 +122,33 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
     return builder.build();
   }
 
-  private void logServerAndLoadQueueStates(DruidCluster cluster)
+  private void logServedSegmentStats(String tier, Set<ServerHolder> historicals)
   {
-    for (ServerHolder serverHolder : cluster.getAllServers()) {
-      ImmutableDruidServer server = serverHolder.getServer();
-      LoadQueuePeon queuePeon = serverHolder.getPeon();
-      log.info(
-          "Server[%s], type[%s] in [%s] is serving [%d (%d MBs)], loading [%d (%d MBs)], dropping [%d] segments.",
-          server.getName(), server.getType(), server.getTier(),
-          server.getNumSegments(), server.getCurrSize() >> 20,
-          queuePeon.getSegmentsToLoad().size(), queuePeon.getSizeOfSegmentsToLoad() >> 20,
-          queuePeon.getSegmentsToDrop().size()
-      );
+    final AtomicInteger servedCount = new AtomicInteger();
+    final AtomicInteger loadingCount = new AtomicInteger();
+    final AtomicInteger droppingCount = new AtomicInteger();
 
-      if (log.isTraceEnabled()) {
-        log.trace("Segments to load: [%s]", queuePeon.getSegmentsToLoad());
-      }
-    }
+    final AtomicDouble usageSum = new AtomicDouble();
+    final AtomicLong currentBytesSum = new AtomicLong();
+
+    historicals.forEach(serverHolder -> {
+      final ImmutableDruidServer server = serverHolder.getServer();
+      servedCount.addAndGet(server.getNumSegments());
+      currentBytesSum.addAndGet(server.getCurrSize());
+      usageSum.addAndGet(100.0f * server.getCurrSize() / server.getMaxSize());
+
+      final LoadQueuePeon queuePeon = serverHolder.getPeon();
+      loadingCount.addAndGet(queuePeon.getSegmentsToLoad().size());
+      droppingCount.addAndGet(queuePeon.getSegmentsToDrop().size());
+    });
+
+    final int numHistoricals = historicals.size();
+    log.info(
+        "Tier [%s] is serving [%,d], loading [%,d] and dropping [%,d] segments"
+        + " across [%d] historicals with average usage [%d GBs], [%.1f%%].",
+        tier, servedCount.get(), loadingCount.get(), droppingCount.get(), numHistoricals,
+        (currentBytesSum.get() >> 30) / numHistoricals, usageSum.get() / numHistoricals
+    );
   }
 
 }

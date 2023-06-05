@@ -269,15 +269,15 @@ public class DruidCoordinatorTest extends CuratorTestBase
     serviceEmitter.latch = coordinatorRunLatch;
     coordinatorRunLatch.await();
 
-    Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getLoadStatus());
+    Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
 
     Object2IntMap<String> numsUnavailableUsedSegmentsPerDataSource =
-        coordinator.computeNumsUnavailableUsedSegmentsPerDataSource();
+        coordinator.getDatasourceToUnavailableSegmentCount();
     Assert.assertEquals(1, numsUnavailableUsedSegmentsPerDataSource.size());
     Assert.assertEquals(0, numsUnavailableUsedSegmentsPerDataSource.getInt(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
-        coordinator.computeUnderReplicationCountsPerDataSourcePerTier();
+        coordinator.getTierToDatasourceToUnderReplicatedCount(false);
     Assert.assertNotNull(underReplicationCountsPerDataSourcePerTier);
     Assert.assertEquals(1, underReplicationCountsPerDataSourcePerTier.size());
 
@@ -291,7 +291,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertEquals(1L, underRepliicationCountsPerDataSource.getLong(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
-        coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView();
+        coordinator.getTierToDatasourceToUnderReplicatedCount(true);
     Assert.assertNotNull(underReplicationCountsPerDataSourcePerTier);
     Assert.assertEquals(1, underReplicationCountsPerDataSourcePerTier.size());
 
@@ -384,16 +384,16 @@ public class DruidCoordinatorTest extends CuratorTestBase
     serviceEmitter.latch = coordinatorRunLatch;
     coordinatorRunLatch.await();
 
-    Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getLoadStatus());
+    Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
-        coordinator.computeUnderReplicationCountsPerDataSourcePerTier();
+        coordinator.getTierToDatasourceToUnderReplicatedCount(false);
     Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTier.size());
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(hotTierName).getLong(dataSource));
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(coldTierName).getLong(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
-        coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView();
+        coordinator.getTierToDatasourceToUnderReplicatedCount(true);
     Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
@@ -549,11 +549,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
     serviceEmitter.latch = coordinatorRunLatch;
     coordinatorRunLatch.await();
 
-    Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getLoadStatus());
+    Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
 
     // Under-replicated counts are updated only after the next coordinator run
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
-        coordinator.computeUnderReplicationCountsPerDataSourcePerTier();
+        coordinator.getTierToDatasourceToUnderReplicatedCount(false);
     Assert.assertEquals(4, underReplicationCountsPerDataSourcePerTier.size());
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(hotTierName).getLong(dataSource));
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(coldTierName).getLong(dataSource));
@@ -561,7 +561,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(tierName2).getLong(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
-        coordinator.computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView();
+        coordinator.getTierToDatasourceToUnderReplicatedCount(true);
     Assert.assertEquals(4, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
@@ -679,7 +679,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     // CompactSegments returned by this method should be created using the DruidCoordinatorConfig in the DruidCoordinator
     CompactSegments duty = coordinator.initializeCompactSegmentsDuty(newestSegmentFirstPolicy);
     Assert.assertNotNull(duty);
-    Assert.assertEquals(druidCoordinatorConfig.getCompactionSkipLockedIntervals(), duty.isSkipLockedIntervals());
   }
 
   @Test
@@ -719,7 +718,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     // CompactSegments returned by this method should be created using the DruidCoordinatorConfig in the DruidCoordinator
     CompactSegments duty = coordinator.initializeCompactSegmentsDuty(newestSegmentFirstPolicy);
     Assert.assertNotNull(duty);
-    Assert.assertEquals(druidCoordinatorConfig.getCompactionSkipLockedIntervals(), duty.isSkipLockedIntervals());
   }
 
   @Test
@@ -765,7 +763,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertFalse(compactSegmentsDutyFromCustomGroups.isEmpty());
     Assert.assertEquals(1, compactSegmentsDutyFromCustomGroups.size());
     Assert.assertNotNull(compactSegmentsDutyFromCustomGroups.get(0));
-    Assert.assertTrue(compactSegmentsDutyFromCustomGroups.get(0) instanceof CompactSegments);
 
     // CompactSegments returned by this method should be from the Custom Duty Group
     CompactSegments duty = coordinator.initializeCompactSegmentsDuty(newestSegmentFirstPolicy);

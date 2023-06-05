@@ -127,10 +127,6 @@ public class DruidCoordinatorRuntimeParams
     return segmentAssigner;
   }
 
-  /**
-   * Creates and returns a "dataSource -> VersionedIntervalTimeline[version String, DataSegment]" map with "used"
-   * segments.
-   */
   public Map<String, SegmentTimeline> getUsedSegmentsTimelinesPerDataSource()
   {
     Preconditions.checkState(dataSourcesSnapshot != null, "dataSourcesSnapshot or usedSegments must be set");
@@ -324,8 +320,8 @@ public class DruidCoordinatorRuntimeParams
     }
 
     /**
-     * Sets the {@link SegmentLoadQueueManager} which is used while constructing
-     * the {@link StrategicSegmentAssigner} used in the params.
+     * Sets the {@link SegmentLoadQueueManager} which is used to construct the
+     * {@link StrategicSegmentAssigner} for this run.
      */
     public Builder withSegmentAssignerUsing(SegmentLoadQueueManager loadQueueManager)
     {

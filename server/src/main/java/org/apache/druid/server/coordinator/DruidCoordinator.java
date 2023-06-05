@@ -66,7 +66,6 @@ import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
-import org.apache.druid.server.coordinator.duty.LogUsedSegments;
 import org.apache.druid.server.coordinator.duty.MarkAsUnusedOvershadowedSegments;
 import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
@@ -149,14 +148,13 @@ public class DruidCoordinator
   private final Set<CoordinatorDuty> indexingServiceDuties;
   private final Set<CoordinatorDuty> metadataStoreManagementDuties;
   private final CoordinatorCustomDutyGroups customDutyGroups;
-  private final BalancerStrategyFactory factory;
+  private final BalancerStrategyFactory balancerStrategyFactory;
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
   private final CompactSegments compactSegments;
 
   private volatile boolean started = false;
   private volatile SegmentReplicantLookup segmentReplicantLookup = null;
-  private volatile DruidCluster cluster = null;
 
   private int cachedBalancerThreadNumber;
   private ListeningExecutorService balancerExec;
@@ -183,7 +181,7 @@ public class DruidCoordinator
       @CoordinatorMetadataStoreManagementDuty Set<CoordinatorDuty> metadataStoreManagementDuties,
       @CoordinatorIndexingServiceDuty Set<CoordinatorDuty> indexingServiceDuties,
       CoordinatorCustomDutyGroups customDutyGroups,
-      BalancerStrategyFactory factory,
+      BalancerStrategyFactory balancerStrategyFactory,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
       CompactionSegmentSearchPolicy compactionSegmentSearchPolicy
@@ -206,7 +204,7 @@ public class DruidCoordinator
 
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
-    this.factory = factory;
+    this.balancerStrategyFactory = balancerStrategyFactory;
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
     this.compactSegments = initializeCompactSegmentsDuty(compactionSegmentSearchPolicy);
@@ -226,19 +224,10 @@ public class DruidCoordinator
   /**
    * @return tier -> { dataSource -> underReplicationCount } map
    */
-  public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTier()
+  public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicatedCount(boolean useClusterView)
   {
     final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
-    return computeUnderReplicated(dataSegments, false);
-  }
-
-  /**
-   * @return tier -> { dataSource -> underReplicationCount } map
-   */
-  public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTierUsingClusterView()
-  {
-    final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
-    return computeUnderReplicated(dataSegments, true);
+    return computeUnderReplicated(dataSegments, useClusterView);
   }
 
   /**
@@ -249,49 +238,35 @@ public class DruidCoordinator
    *
    * @return tier -> { dataSource -> underReplicationCount } map
    */
-  public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTierForSegments(
-      Iterable<DataSegment> dataSegments
+  public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicatedCount(
+      Iterable<DataSegment> dataSegments,
+      boolean useClusterView
   )
   {
-    return computeUnderReplicated(dataSegments, false);
+    return computeUnderReplicated(dataSegments, useClusterView);
   }
 
-  /**
-   * segmentReplicantLookup or cluster use in this method could potentially be stale since it is only updated on coordinator runs.
-   * However, this is ok as long as the {@param dataSegments} is refreshed/latest as this would at least still ensure
-   * that the stale data in segmentReplicantLookup and cluster would be under counting replication levels,
-   * rather than potentially falsely reporting that everything is available.
-   *
-   * @return tier -> { dataSource -> underReplicationCount } map
-   */
-  public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTierForSegmentsUsingClusterView(
-      Iterable<DataSegment> dataSegments
-  )
-  {
-    return computeUnderReplicated(dataSegments, true);
-  }
-
-  public Object2IntMap<String> computeNumsUnavailableUsedSegmentsPerDataSource()
+  public Object2IntMap<String> getDatasourceToUnavailableSegmentCount()
   {
     if (segmentReplicantLookup == null) {
       return Object2IntMaps.emptyMap();
     }
 
-    final Object2IntOpenHashMap<String> numsUnavailableUsedSegmentsPerDataSource = new Object2IntOpenHashMap<>();
+    final Object2IntOpenHashMap<String> datasourceToUnavailableSegments = new Object2IntOpenHashMap<>();
 
     final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
     for (DataSegment segment : dataSegments) {
       if (segmentReplicantLookup.getLoadedReplicas(segment.getId(), true) == 0) {
-        numsUnavailableUsedSegmentsPerDataSource.addTo(segment.getDataSource(), 1);
+        datasourceToUnavailableSegments.addTo(segment.getDataSource(), 1);
       } else {
-        numsUnavailableUsedSegmentsPerDataSource.addTo(segment.getDataSource(), 0);
+        datasourceToUnavailableSegments.addTo(segment.getDataSource(), 0);
       }
     }
 
-    return numsUnavailableUsedSegmentsPerDataSource;
+    return datasourceToUnavailableSegments;
   }
 
-  public Map<String, Double> getLoadStatus()
+  public Map<String, Double> getDatasourceToLoadStatus()
   {
     final Map<String, Double> loadStatus = new HashMap<>();
     final Collection<ImmutableDruidDataSource> dataSources =
@@ -339,21 +314,21 @@ public class DruidCoordinator
     return compactSegments.getAutoCompactionSnapshot();
   }
 
-  public CoordinatorDynamicConfig getDynamicConfigs()
+  private CoordinatorDynamicConfig getDynamicConfigs()
   {
     return CoordinatorDynamicConfig.current(configManager);
   }
 
-  public CoordinatorCompactionConfig getCompactionConfig()
+  private CoordinatorCompactionConfig getCompactionConfig()
   {
     return CoordinatorCompactionConfig.current(configManager);
   }
 
   public void markSegmentsAsUnused(String datasource, Set<SegmentId> segmentIds)
   {
-    log.debug("Marking [%d] segments of datasource [%s] as unused: %s", segmentIds.size(), datasource, segmentIds);
+    log.debug("Marking [%d] segments of datasource [%s] as unused.", segmentIds.size(), datasource);
     int updatedCount = segmentsMetadataManager.markSegmentsAsUnused(segmentIds);
-    log.info("Successfully marked [%d] segments of datasource [%s] as unused", updatedCount, datasource);
+    log.info("Successfully marked [%d] segments of datasource [%s] as unused.", updatedCount, datasource);
   }
 
   public String getCurrentLeader()
@@ -589,7 +564,6 @@ public class DruidCoordinator
   private List<CoordinatorDuty> makeHistoricalManagementDuties()
   {
     return ImmutableList.of(
-        new LogUsedSegments(),
         new UpdateCoordinatorStateAndPrepareCluster(),
         new RunRules(),
         new UnloadUnusedSegments(loadQueueManager),
@@ -602,16 +576,14 @@ public class DruidCoordinator
   @VisibleForTesting
   List<CoordinatorDuty> makeIndexingServiceDuties()
   {
-    List<CoordinatorDuty> duties = new ArrayList<>();
-    duties.add(new LogUsedSegments());
-    duties.addAll(indexingServiceDuties);
+    final List<CoordinatorDuty> duties = new ArrayList<>(indexingServiceDuties);
     // CompactSegmentsDuty should be the last duty as it can take a long time to complete
     // We do not have to add compactSegments if it is already enabled in the custom duty group
     if (getCompactSegmentsDutyFromCustomGroups().isEmpty()) {
       duties.addAll(makeCompactSegmentsDuty());
     }
     log.debug(
-        "Done making indexing service duties %s",
+        "Initialized indexing service duties [%s].",
         duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
     );
     return ImmutableList.copyOf(duties);
@@ -621,7 +593,7 @@ public class DruidCoordinator
   {
     List<CoordinatorDuty> duties = ImmutableList.copyOf(metadataStoreManagementDuties);
     log.debug(
-        "Done making metadata store management duties %s",
+        "Initialized metadata store management duties [%s].",
         duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
     );
     return duties;
@@ -721,6 +693,10 @@ public class DruidCoordinator
                 .withCompactionConfig(getCompactionConfig())
                 .withEmitter(emitter)
                 .build();
+        log.info(
+            "Initialized run params for group [%s] with [%,d] used segments in [%d] datasources.",
+            dutyGroupName, params.getUsedSegments().size(), dataSourcesSnapshot.getDataSourcesMap().size()
+        );
 
         boolean coordinationPaused = getDynamicConfigs().getPauseCoordination();
         if (coordinationPaused
@@ -742,11 +718,11 @@ public class DruidCoordinator
 
             final String dutyName = duty.getClass().getName();
             if (params == null) {
-              log.info("Finishing coordinator run since duty [%s] requested to stop run.", dutyName);
+              log.info("Stopping run for group [%s] on request of duty [%s].", dutyGroupName, dutyName);
               return;
             } else {
               final RowKey rowKey = RowKey.builder().add(Dimension.DUTY, dutyName).build();
-              params.getCoordinatorStats().add(Stats.Run.DUTY_TIME, rowKey, end - start);
+              params.getCoordinatorStats().add(Stats.CoordinatorRun.DUTY_TIME, rowKey, end - start);
             }
           }
         }
@@ -764,15 +740,15 @@ public class DruidCoordinator
               }
           );
           log.info(
-              "Collected [%d] rows of stats for group [%s]. Emitted [%d] stats.",
-              allStats.rowCount(), dutyGroupName, emittedCount.get()
+              "Emitted total [%d] stats for [%d] dimension keys while running group [%s].",
+              emittedCount.get(), allStats.rowCount(), dutyGroupName
           );
           allStats.logStatsAndErrors(log);
         }
 
         // Emit the runtime of the full DutiesRunnable
         final long runMillis = System.currentTimeMillis() - globalStart;
-        emitStat(Stats.Run.TOTAL_TIME, Collections.emptyMap(), runMillis);
+        emitStat(Stats.CoordinatorRun.TOTAL_TIME, Collections.emptyMap(), runMillis);
         log.info("Finished coordinator run for group [%s] in [%d] ms", dutyGroupName, runMillis);
       }
       catch (Exception e) {
@@ -823,18 +799,17 @@ public class DruidCoordinator
       startPeonsForNewServers(currentServers);
       stopPeonsForDisappearedServers(currentServers);
 
-      cluster = prepareCluster(params.getCoordinatorDynamicConfig(), currentServers);
+      final DruidCluster cluster = prepareCluster(params.getCoordinatorDynamicConfig(), currentServers);
       cancelLoadsOnDecommissioningServers(cluster);
 
       final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
 
       initBalancerExecutor();
-      final BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
+      final BalancerStrategy balancerStrategy = balancerStrategyFactory.createBalancerStrategy(balancerExec);
       log.info(
-          "Created balancer strategy [%s], round-robin assignment is [%s], debug dimensions are [%s].",
+          "Using balancer strategy [%s] with round-robin assignment [%s] and debug dimensions [%s].",
           balancerStrategy.getClass().getSimpleName(),
-          dynamicConfig.isUseRoundRobinSegmentAssignment(),
-          dynamicConfig.getDebugDimensions()
+          dynamicConfig.isUseRoundRobinSegmentAssignment(), dynamicConfig.getDebugDimensions()
       );
 
       params = params.buildFromExisting()
@@ -849,25 +824,34 @@ public class DruidCoordinator
     }
 
     /**
-     * Cancels all load/move operations on decommissioning servers. This is done
-     * before initializing the SegmentReplicantLookup so that under-replicated
-     * segments can be assigned in the current run itself.
+     * Cancels all load/move operations on decommissioning servers. This should
+     * be done before initializing the SegmentReplicantLookup so that
+     * under-replicated segments can be assigned in the current run itself.
      */
     private void cancelLoadsOnDecommissioningServers(DruidCluster cluster)
     {
       final AtomicInteger cancelledCount = new AtomicInteger(0);
-      cluster.getAllServers().stream().filter(ServerHolder::isDecommissioning).forEach(
-          server -> server.getQueuedSegments().forEach(
-              (segment, action) -> {
-                // Cancel the operation if it is a type of load action
-                if (action.isLoad() && server.cancelOperation(action, segment)) {
-                  cancelledCount.incrementAndGet();
-                }
+      final List<ServerHolder> decommissioningServers
+          = cluster.getAllServers().stream()
+                   .filter(ServerHolder::isDecommissioning)
+                   .collect(Collectors.toList());
+
+      for (ServerHolder server : decommissioningServers) {
+        server.getQueuedSegments().forEach(
+            (segment, action) -> {
+              // Cancel the operation if it is a type of load
+              if (action.isLoad() && server.cancelOperation(action, segment)) {
+                cancelledCount.incrementAndGet();
               }
-          )
-      );
+            }
+        );
+      }
+
       if (cancelledCount.get() > 0) {
-        log.info("Cancelled [%d] load/move operations on decommissioning servers.", cancelledCount.get());
+        log.info(
+            "Cancelled [%d] load/move operations on [%d] decommissioning servers.",
+            cancelledCount.get(), decommissioningServers.size()
+        );
       }
     }
 

@@ -32,7 +32,7 @@ import java.util.NavigableSet;
 /**
  * Maintains a map containing the state of a segment on all servers of a tier.
  */
-public class SegmentTierStatus
+public class SegmentStatusInTier
 {
   private final DataSegment segment;
 
@@ -41,7 +41,7 @@ public class SegmentTierStatus
 
   private final Map<SegmentAction, List<ServerHolder>> serversWithQueuedActions = new HashMap<>();
 
-  public SegmentTierStatus(DataSegment segment, NavigableSet<ServerHolder> historicals)
+  public SegmentStatusInTier(DataSegment segment, NavigableSet<ServerHolder> historicals)
   {
     this.segment = segment;
     historicals.forEach(this::handleServer);
