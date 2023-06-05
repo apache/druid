@@ -45,18 +45,18 @@ import java.util.Map;
 
 /**
  * SysMonitor implemented using {@link oshi}
- *
- *  Following stats are emitted:
- *  <ul>
- *    <li>{@link MemStats} for Memory related metrics</li>
- *    <li>{@link SwapStats} for swap storage related metrics</li>
- *    <li>{@link FsStats} for File System related Metrics</li>
- *    <li>{@link DiskStats} for Disk level metrics</li>
- *    <li>{@link NetStats} for Network Interface and related metrics</li>
- *    <li>{@link CpuStats} for CPU usage and stats metrics</li>
- *    <li>{@link SysStats} for overall system metrics(uptime, avg load)</li>
- *    <li>{@link TcpStats} for TCP related metrics</li>
- *  </ul>
+ * <p>
+ * Following stats are emitted:
+ * <ul>
+ *   <li>{@link MemStats} for Memory related metrics</li>
+ *   <li>{@link SwapStats} for swap storage related metrics</li>
+ *   <li>{@link FsStats} for File System related Metrics</li>
+ *   <li>{@link DiskStats} for Disk level metrics</li>
+ *   <li>{@link NetStats} for Network Interface and related metrics</li>
+ *   <li>{@link CpuStats} for CPU usage and stats metrics</li>
+ *   <li>{@link SysStats} for overall system metrics(uptime, avg load)</li>
+ *   <li>{@link TcpStats} for TCP related metrics</li>
+ * </ul>
  */
 public class OshiSysMonitor extends FeedDefiningMonitor
 {
@@ -66,6 +66,18 @@ public class OshiSysMonitor extends FeedDefiningMonitor
   private final OperatingSystem os = si.getOperatingSystem();
   private final List<String> fsTypeWhitelist = ImmutableList.of("local");
   private final List<String> netAddressBlacklist = ImmutableList.of("0.0.0.0", "127.0.0.1");
+  private final List<String> localFsSysTypes = ImmutableList.of(
+      "apfs",
+      "cvfs",
+      "msdos",
+      "minix",
+      "hpfs",
+      "vxfs",
+      "vfat",
+      "vfat",
+      "zfs",
+      "lifs"
+  );
   private final List<Stats> statsList;
 
   private final Map<String, String[]> dimensions;
@@ -112,7 +124,7 @@ public class OshiSysMonitor extends FeedDefiningMonitor
 
   /**
    * Interface to implement Stats
-   *
+   * <p>
    * Define a method {@link #emit(ServiceEmitter)} to emit metrices in emiters
    */
   private interface Stats
@@ -181,7 +193,7 @@ public class OshiSysMonitor extends FeedDefiningMonitor
       FileSystem fileSystem = os.getFileSystem();
       for (OSFileStore fs : fileSystem.getFileStores()) {
         final String name = fs.getName();
-        final String type = fs.getOptions().contains("local") ? "local" : "none";
+        final String type = localFsSysTypes.contains(fs.getType()) ? "local" : "unknown";
         if (fsTypeWhitelist.contains(type)) {
           final Map<String, Long> stats = ImmutableMap.<String, Long>builder()
                                                       .put("sys/fs/max", fs.getTotalSpace())
@@ -208,6 +220,9 @@ public class OshiSysMonitor extends FeedDefiningMonitor
 
   private class DiskStats implements Stats
   {
+    // Difference b/w metrics of two consecutive values. It tells Δmetric (increase/decrease in metrics value)
+    private final KeyedDiff diff = new KeyedDiff();
+
     @Override
     public void emit(ServiceEmitter emitter)
     {
@@ -215,20 +230,26 @@ public class OshiSysMonitor extends FeedDefiningMonitor
       // disk partitions can be mapped to file system but no inbuilt method is there to find relation b/w disks and file system
       // Will have to add logic for that
       for (HWDiskStore disk : disks) {
-        final Map<String, Long> stats = ImmutableMap.<String, Long>builder()
-                                                    .put("sys/disk/read/size", disk.getReads())
-                                                    .put("sys/disk/read/count", disk.getReadBytes())
-                                                    .put("sys/disk/write/size", disk.getWrites())
-                                                    .put("sys/disk/write/count", disk.getWriteBytes())
-                                                    .put("sys/disk/queue", disk.getCurrentQueueLength())
-                                                    .put("sys/disk/transferTime", disk.getTransferTime())
-                                                    .build();
-        final ServiceMetricEvent.Builder builder = builder()
-            .setDimension("diskName", disk.getName())
-            .setDimension("diskModel", disk.getModel());
-        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-        for (Map.Entry<String, Long> entry : stats.entrySet()) {
-          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+
+        final Map<String, Long> stats = diff.to(
+            disk.getName(),
+            ImmutableMap.<String, Long>builder()
+                        .put("sys/disk/read/size", disk.getReads())
+                        .put("sys/disk/read/count", disk.getReadBytes())
+                        .put("sys/disk/write/size", disk.getWrites())
+                        .put("sys/disk/write/count", disk.getWriteBytes())
+                        .put("sys/disk/queue", disk.getCurrentQueueLength())
+                        .put("sys/disk/transferTime", disk.getTransferTime())
+                        .build()
+        );
+        if (stats != null) {
+          final ServiceMetricEvent.Builder builder = builder()
+              .setDimension("diskName", disk.getName())
+              .setDimension("diskModel", disk.getModel());
+          MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+          for (Map.Entry<String, Long> entry : stats.entrySet()) {
+            emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+          }
         }
       }
     }
