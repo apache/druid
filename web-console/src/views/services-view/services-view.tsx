@@ -123,13 +123,14 @@ function formatQueues(
 }
 
 export interface ServicesViewProps {
+  filters: Filter[];
+  onFiltersChange(filters: Filter[]): void;
   goToQuery(queryWithContext: QueryWithContext): void;
   capabilities: Capabilities;
 }
 
 export interface ServicesViewState {
   servicesState: QueryState<ServiceResultRow[]>;
-  serviceFilter: Filter[];
   groupServicesBy?: 'service_type' | 'tier';
 
   middleManagerDisableWorkerHost?: string;
@@ -239,7 +240,6 @@ ORDER BY
     super(props);
     this.state = {
       servicesState: QueryState.INIT,
-      serviceFilter: [],
 
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SERVICE_TABLE_COLUMN_SELECTION,
@@ -323,14 +323,14 @@ ORDER BY
   }
 
   private renderFilterableCell(field: string) {
-    const { serviceFilter } = this.state;
+    const { filters, onFiltersChange } = this.props;
 
     return (row: { value: any }) => (
       <TableFilterableCell
         field={field}
         value={row.value}
-        filters={serviceFilter}
-        onFiltersChange={filters => this.setState({ serviceFilter: filters })}
+        filters={filters}
+        onFiltersChange={onFiltersChange}
       >
         {row.value}
       </TableFilterableCell>
@@ -338,8 +338,8 @@ ORDER BY
   }
 
   renderServicesTable() {
-    const { capabilities } = this.props;
-    const { servicesState, serviceFilter, groupServicesBy, visibleColumns } = this.state;
+    const { capabilities, filters, onFiltersChange } = this.props;
+    const { servicesState, groupServicesBy, visibleColumns } = this.state;
 
     const fillIndicator = (value: number) => {
       let formattedValue = (value * 100).toFixed(1);
@@ -361,10 +361,8 @@ ORDER BY
           servicesState.isEmpty() ? 'No historicals' : servicesState.getErrorMessage() || ''
         }
         filterable
-        filtered={serviceFilter}
-        onFilteredChange={filtered => {
-          this.setState({ serviceFilter: filtered });
-        }}
+        filtered={filters}
+        onFilteredChange={onFiltersChange}
         pivotBy={groupServicesBy ? [groupServicesBy] : []}
         defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}

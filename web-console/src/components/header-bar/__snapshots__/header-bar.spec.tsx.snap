@@ -110,10 +110,19 @@ exports[`HeaderBar matches snapshot 1`] = `
       active={false}
       className="header-entry"
       disabled={false}
-      href="#ingestion"
+      href="#supervisors"
+      icon="route"
+      minimal={true}
+      text="Supervisors"
+    />
+    <Blueprint4.AnchorButton
+      active={false}
+      className="header-entry"
+      disabled={false}
+      href="#tasks"
       icon="gantt-chart"
       minimal={true}
-      text="Ingestion"
+      text="Tasks"
     />
     <Blueprint4.AnchorButton
       active={false}

@@ -239,15 +239,15 @@ interface CompactionConfigDialogOpenOn {
 }
 
 export interface DatasourcesViewProps {
+  filters: Filter[];
+  onFiltersChange(filters: Filter[]): void;
   goToQuery(queryWithContext: QueryWithContext): void;
-  goToTask(datasource?: string, openDialog?: string): void;
+  goToTasks(datasource?: string): void;
   goToSegments(datasource: string, onlyUnavailable?: boolean): void;
   capabilities: Capabilities;
-  initDatasource?: string;
 }
 
 export interface DatasourcesViewState {
-  datasourceFilter: Filter[];
   datasourcesAndDefaultRulesState: QueryState<DatasourcesAndDefaultRules>;
 
   showUnused: boolean;
@@ -350,13 +350,7 @@ ORDER BY 1`;
   constructor(props: DatasourcesViewProps) {
     super(props);
 
-    const datasourceFilter: Filter[] = [];
-    if (props.initDatasource) {
-      datasourceFilter.push({ id: 'datasource', value: `=${props.initDatasource}` });
-    }
-
     this.state = {
-      datasourceFilter,
       datasourcesAndDefaultRulesState: QueryState.INIT,
 
       showUnused: false,
@@ -825,7 +819,7 @@ ORDER BY 1`;
     rules: Rule[] | undefined,
     compactionInfo: CompactionInfo | undefined,
   ): BasicAction[] {
-    const { goToQuery, goToTask, capabilities } = this.props;
+    const { goToQuery, goToTasks, capabilities } = this.props;
 
     const goToActions: BasicAction[] = [];
 
@@ -840,7 +834,7 @@ ORDER BY 1`;
     goToActions.push({
       icon: IconNames.GANTT_CHART,
       title: 'Go to tasks',
-      onAction: () => goToTask(datasource),
+      onAction: () => goToTasks(datasource),
     });
 
     if (!capabilities.hasCoordinatorAccess()) {
@@ -989,9 +983,8 @@ ORDER BY 1`;
   }
 
   private renderDatasourcesTable() {
-    const { goToSegments, capabilities } = this.props;
-    const { datasourcesAndDefaultRulesState, datasourceFilter, showUnused, visibleColumns } =
-      this.state;
+    const { goToSegments, capabilities, filters, onFiltersChange } = this.props;
+    const { datasourcesAndDefaultRulesState, showUnused, visibleColumns } = this.state;
 
     let { datasources, defaultRules } = datasourcesAndDefaultRulesState.data || { datasources: [] };
 
@@ -1034,10 +1027,8 @@ ORDER BY 1`;
             : '')
         }
         filterable
-        filtered={datasourceFilter}
-        onFilteredChange={filtered => {
-          this.setState({ datasourceFilter: filtered });
-        }}
+        filtered={filters}
+        onFilteredChange={onFiltersChange}
         defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
         showPagination={datasources.length > STANDARD_TABLE_PAGE_SIZE}

@@ -166,7 +166,23 @@ export function groupBy<T, Q>(
     buckets[key] = buckets[key] || [];
     buckets[key].push(value);
   }
-  return Object.keys(buckets).map(key => aggregateFn(buckets[key], key));
+  return Object.entries(buckets).map(([key, xs]) => aggregateFn(xs, key));
+}
+
+export function groupByAsMap<T, Q>(
+  array: readonly T[],
+  keyFn: (x: T, index: number) => string,
+  aggregateFn: (xs: readonly T[], key: string) => Q,
+): Record<string, Q> {
+  const buckets: Record<string, T[]> = {};
+  const n = array.length;
+  for (let i = 0; i < n; i++) {
+    const value = array[i];
+    const key = keyFn(value, i);
+    buckets[key] = buckets[key] || [];
+    buckets[key].push(value);
+  }
+  return mapRecord(buckets, aggregateFn);
 }
 
 export function uniq(array: readonly string[]): string[] {

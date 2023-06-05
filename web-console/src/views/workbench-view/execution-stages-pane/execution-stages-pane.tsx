@@ -108,13 +108,13 @@ export interface ExecutionStagesPaneProps {
   execution: Execution;
   onErrorClick?(): void;
   onWarningClick?(): void;
-  goToIngestion(taskId: string): void;
+  goToTask(taskId: string): void;
 }
 
 export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
   props: ExecutionStagesPaneProps,
 ) {
-  const { execution, onErrorClick, onWarningClick, goToIngestion } = props;
+  const { execution, onErrorClick, onWarningClick, goToTask } = props;
   const stages = execution.stages || new Stages([]);
   const error = execution.error;
 
@@ -201,7 +201,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                   hoverIcon={IconNames.SHARE}
                   title={`Go to task: ${taskId}`}
                   onClick={() => {
-                    goToIngestion(taskId);
+                    goToTask(taskId);
                   }}
                 >{`Worker${value}`}</TableClickableCell>
               );

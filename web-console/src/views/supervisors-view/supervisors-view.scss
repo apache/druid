@@ -16,31 +16,17 @@
  * limitations under the License.
  */
 
-import React from 'react';
+@import '../../variables';
+@import '../../blueprint-overrides/common/colors';
 
-import { EXECUTION_INGEST_ERROR } from '../../../druid-models/execution/execution-ingest-error.mock';
-import { shallow } from '../../../utils/shallow-renderer';
+.supervisors-view {
+  height: 100%;
+  width: 100%;
 
-import { ExecutionDetailsPane } from './execution-details-pane';
-
-describe('ExecutionDetailsPane', () => {
-  it('matches snapshot no init tab', () => {
-    const comp = shallow(
-      <ExecutionDetailsPane execution={EXECUTION_INGEST_ERROR} goToTask={() => {}} />,
-    );
-
-    expect(comp).toMatchSnapshot();
-  });
-
-  it('matches snapshot with init tab', () => {
-    const comp = shallow(
-      <ExecutionDetailsPane
-        execution={EXECUTION_INGEST_ERROR}
-        initTab="warnings"
-        goToTask={() => {}}
-      />,
-    );
-
-    expect(comp).toMatchSnapshot();
-  });
-});
+  .ReactTable {
+    position: absolute;
+    top: $view-control-bar-height + $standard-padding;
+    bottom: 0;
+    width: 100%;
+  }
+}
