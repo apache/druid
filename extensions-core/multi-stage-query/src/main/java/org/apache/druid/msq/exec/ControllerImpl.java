@@ -356,7 +356,9 @@ public class ControllerImpl implements Controller
         }
     );
 
-    workerTaskLauncher.waitForWorkerShutdown();
+    if (workerTaskLauncher != null) {
+      workerTaskLauncher.waitForWorkerShutdown();
+    }
   }
 
   public TaskStatus runTask(final Closer closer)
