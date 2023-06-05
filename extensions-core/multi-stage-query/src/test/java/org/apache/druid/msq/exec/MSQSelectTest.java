@@ -22,13 +22,16 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
@@ -1782,6 +1785,66 @@ public class MSQSelectTest extends MSQTestBase
       Mockito.verify(localFileStorageConnector, Mockito.times(2))
              .write(ArgumentMatchers.endsWith("__success"));
     }
+  }
+
+  @Test
+  public void testSelectRowsGetTruncatedInReports() throws IOException
+  {
+    RowSignature dummyRowSignature = RowSignature.builder().add("timestamp", ColumnType.LONG).build();
+
+    final int numFiles = 1000;
+
+    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+    String externalFiles = String.join(", ", Collections.nCopies(numFiles, toReadFileNameAsJson));
+
+    List<Object[]> result = new ArrayList<>();
+    for (int i = 0; i < Limits.MAX_SELECT_RESULT_ROWS; ++i) {
+      result.add(new Object[]{1});
+    }
+
+    testSelectQuery()
+        .setSql(StringUtils.format(
+            " SELECT 1 as \"timestamp\"\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{ \"files\": [%s],\"type\":\"local\"}',\n"
+            + "    '{\"type\": \"csv\", \"hasHeaderRow\": true}',\n"
+            + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}]'\n"
+            + "  )\n"
+            + ")",
+            externalFiles
+        ))
+        .setExpectedRowSignature(dummyRowSignature)
+        .setExpectedMSQSpec(
+            MSQSpec
+                .builder()
+                .query(newScanQueryBuilder()
+                           .dataSource(new ExternalDataSource(
+                               new LocalInputSource(null, null, Collections.nCopies(numFiles, toRead)),
+                               new CsvInputFormat(null, null, null, true, 0),
+                               RowSignature.builder().add("timestamp", ColumnType.STRING).build()
+                           ))
+                           .intervals(querySegmentSpec(Filtration.eternity()))
+                           .columns("v0")
+                           .virtualColumns(new ExpressionVirtualColumn("v0", ExprEval.of(1L).toExpr(), ColumnType.LONG))
+                           .context(defaultScanQueryContext(
+                               context,
+                               RowSignature.builder().add("v0", ColumnType.LONG).build()
+                           ))
+                           .build()
+                )
+                .columnMappings(new ColumnMappings(
+                    ImmutableList.of(
+                        new ColumnMapping("v0", "timestamp")
+                    )
+                ))
+                .tuningConfig(MSQTuningConfig.defaultConfig())
+                .build())
+        .setQueryContext(context)
+        .setExpectedResultRows(result)
+        .verifyResults();
   }
 
   @Test
