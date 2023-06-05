@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
@@ -53,7 +52,6 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
@@ -525,7 +523,7 @@ public class InformationSchema extends AbstractSchema
       log.info("Operator table size: %d", operatorList.size());
       log.info("All the operators: %s", operatorList);
 
-      for (SqlOperator sqlOperator: operatorList) {
+      for (SqlOperator sqlOperator : operatorList) {
         log.info("Getting stuff for operator %s", sqlOperator.getName());
         if (sqlOperator.getOperandTypeChecker() == null) {
           log.info("operand type checker is not implemented for operator=%s, so "
