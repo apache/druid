@@ -1,7 +1,7 @@
 ---
 id: retention-rules-api
-title: Coordinator retention rules API
-sidebar_label: Coordinator retention rules API
+title: Retention rules API
+sidebar_label: Retention rules
 ---
 
 <!--
@@ -22,7 +22,10 @@ sidebar_label: Coordinator retention rules API
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-#### Retention rules
+
+> This document describes the API endpoints for managing retention rules and retrieving intervals.
+
+## Retention rules
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/` as in `2016-06-27_2016-06-28`.
 
@@ -65,7 +68,7 @@ Optional Header Parameters for auditing the config change can also be specified.
 |`X-Druid-Author`| Author making the config change|`""`|
 |`X-Druid-Comment`| Comment describing the change being done|`""`|
 
-#### Intervals
+## Intervals
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/` as in `2016-06-27_2016-06-28`.
 

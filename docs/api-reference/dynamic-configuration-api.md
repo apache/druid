@@ -1,7 +1,7 @@
 ---
 id: dynamic-configuration-api
 title: Dynamic configuration API
-sidebar_label: Dynamic configuration API
+sidebar_label: Dynamic configuration
 ---
 
 <!--
@@ -23,6 +23,7 @@ sidebar_label: Dynamic configuration API
   ~ under the License.
   -->
 
+> This document describes the API endpoints for retrieving and managing dynamic configurations of the Coordinator and Overlord. 
 
 ## Coordinator dynamic configuration
 

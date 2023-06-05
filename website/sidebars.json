@@ -162,9 +162,19 @@
       }
     ],
     "API reference":[
+      "api-reference/automatic-compaction-api",
+      "api-reference/data-management-api",
+      "api-reference/dynamic-configuration-api",
+      "api-reference/json-querying-api",
+      "api-reference/legacy-metadata-api",
+      "api-reference/lookups-api",
+      "api-reference/retention-rules-api",
+      "api-reference/service-status-api",
       "api-reference/sql-api",
       "api-reference/sql-ingestion-api",
       "api-reference/sql-jdbc",
+      "api-reference/supervisor-api",
+      "api-reference/tasks-api",
       "api-reference/api-reference"
     ],
     "Configuration": [

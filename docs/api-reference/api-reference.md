@@ -23,11 +23,10 @@ sidebar_label: API endpoints reference
   ~ under the License.
   -->
 
-<TBD TURN INTO THE INDEX PAGE>
 
-This topic documents all of the API endpoints for each Druid service type.
+This index documents all of the API endpoints for Druid grouped by functionalities.
 
-### Topics
+## Categories
 * [Automatic compaction](./automatic-compaction-api.md)
 * [Data management](./data-management-api.md)
 * [Dynamic configuration](./dynamic-configuration-api.md)

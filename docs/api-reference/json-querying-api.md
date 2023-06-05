@@ -1,7 +1,7 @@
 ---
 id: json-querying-api
-title: Druid JSON querying API
-sidebar_label: Druid JSON querying API
+title: JSON querying API
+sidebar_label: JSON querying
 ---
 
 <!--
@@ -23,7 +23,9 @@ sidebar_label: Druid JSON querying API
   ~ under the License.
   -->
 
-#### Queries
+> This document describes the API endpoints for handling queries in Druid.
+
+## Queries
 
 `POST /druid/v2/`
 
@@ -31,4 +33,4 @@ The endpoint for submitting queries. Accepts an option `?pretty` that pretty pri
 
 `POST /druid/v2/candidates/`
 
-Returns segment information lists including server locations for the given query..
+Returns segment information lists including server locations for the given query.

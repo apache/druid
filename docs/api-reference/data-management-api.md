@@ -1,7 +1,7 @@
 ---
 id: data-management-api
 title: Data management API
-sidebar_label: Data management API
+sidebar_label: Data management
 ---
 
 <!--
@@ -23,8 +23,9 @@ sidebar_label: Data management API
   ~ under the License.
   -->
 
+> This document describes the API endpoints for data segment management.
 
-#### Note for Coordinator's POST and DELETE APIs
+## Note for Coordinator's POST and DELETE APIs
 
 While segments may be enabled by issuing POST requests for the datasources, the Coordinator may again disable segments if they match any configured [drop rules](../operations/rule-configuration.md#drop-rules). Even if segments are enabled by these APIs, you must configure a [load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes. If an indexing or kill task runs at the same time these APIs are invoked, the behavior is undefined. Some segments might be killed and others might be enabled. It's also possible that all segments might be disabled, but the indexing task can still read data from those segments and succeed.
 

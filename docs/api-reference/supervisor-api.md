@@ -1,7 +1,7 @@
 ---
 id: supervisor-api
 title: Supervisor API
-sidebar_label: Supervisor API
+sidebar_label: Supervisor
 ---
 
 <!--
@@ -23,7 +23,9 @@ sidebar_label: Supervisor API
   ~ under the License.
   -->
 
-#### Supervisors
+> This document describes the API endpoints for managing and monitoring supervisors, including information retrieval and life cycle management.
+
+## Supervisors
 
 `GET /druid/indexer/v1/supervisor`
 

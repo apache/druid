@@ -1,4 +1,31 @@
-#### Segment loading
+---
+id: legacy-metadata-api
+title: Legacy metadata API
+sidebar_label: Legacy metadata
+---
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
+> This document describes the API endpoints for legacy metadata. 
+
+## Segment loading
 
 `GET /druid/coordinator/v1/loadstatus`
 
@@ -32,7 +59,7 @@ Returns the number of segments to load and drop, as well as the total segment lo
 
 Returns the serialized JSON of segments to load and drop for each Historical process.
 
-#### Segment loading by datasource
+## Segment loading by datasource
 
 Note that all _interval_ query parameters are ISO 8601 strings&mdash;for example, 2016-06-27/2016-06-28.
 Also note that these APIs only guarantees that the segments are available at the time of the call.
@@ -70,7 +97,7 @@ You can pass the optional query parameter `computeUsingClusterView` to factor in
 the segments left to load. See [Coordinator Segment Loading](#segment-loading) for details.
 If no used segments are found for the given inputs, this API returns `204 No Content`
 
-#### Metadata store information
+## Metadata store information
 
 > Note: Much of this information is available in a simpler, easier-to-use form through the Druid SQL
 > [`sys.segments`](../querying/sql-metadata-tables.md#segments-table) table.
@@ -124,8 +151,6 @@ Returns a list of all segments for a datasource with the full segment metadata a
 Returns full segment metadata for a specific segment as stored in the metadata store, if the segment is used. If the
 segment is unused, or is unknown, a 404 response is returned.
 
-##### POST
-
 `GET /druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments`
 
 Returns a list of all segments, overlapping with any of given intervals,  for a datasource as stored in the metadata store. Request body is array of string IS0 8601 intervals like `[interval1, interval2,...]`&mdash;for example, `["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]`.
@@ -136,7 +161,7 @@ Returns a list of all segments, overlapping with any of given intervals, for a d
 
 <a name="coordinator-datasources"></a>
 
-#### Datasources
+## Datasources
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`&mdash;for example, `2016-06-27_2016-06-28`.
 
@@ -204,60 +229,7 @@ Returns full segment metadata for a specific segment in the cluster.
 
 Return the tiers that a datasource exists in.
 
-#### Note for Coordinator's POST and DELETE APIs
-
-While segments may be enabled by issuing POST requests for the datasources, the Coordinator may again disable segments if they match any configured [drop rules](../operations/rule-configuration.md#drop-rules). Even if segments are enabled by these APIs, you must configure a [load rule](../operations/rule-configuration.md#load-rules) to load them onto Historical processes. If an indexing or kill task runs at the same time these APIs are invoked, the behavior is undefined. Some segments might be killed and others might be enabled. It's also possible that all segments might be disabled, but the indexing task can still read data from those segments and succeed.
-
-> Avoid using indexing or kill tasks and these APIs at the same time for the same datasource and time chunk.
-
-`POST /druid/coordinator/v1/datasources/{dataSourceName}`
-
-Marks as used all segments belonging to a datasource. Returns a JSON object of the form
-`{"numChangedSegments": <number>}` with the number of segments in the database whose state has been changed (that is,
-the segments were marked as used) as the result of this API call.
-
-`POST /druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
-
-Marks as used a segment of a datasource. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
-the boolean indicating if the state of the segment has been changed (that is, the segment was marked as used) as the
-result of this API call.
-
-`POST /druid/coordinator/v1/datasources/{dataSourceName}/markUsed`
-
-`POST /druid/coordinator/v1/datasources/{dataSourceName}/markUnused`
-
-Marks segments (un)used for a datasource by interval or set of segment Ids. When marking used only segments that are not overshadowed will be updated.
-
-The request payload contains the interval or set of segment IDs to be marked unused.
-Either interval or segment IDs should be provided, if both or none are provided in the payload, the API would throw an error (400 BAD REQUEST).
-
-Interval specifies the start and end times as IS0 8601 strings. `interval=(start/end)` where start and end both are inclusive and only the segments completely contained within the specified interval will be disabled, partially overlapping segments will not be affected.
-
-JSON Request Payload:
-
- |Key|Description|Example|
-|----------|-------------|---------|
-|`interval`|The interval for which to mark segments unused|`"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"`|
-|`segmentIds`|Set of segment IDs to be marked unused|`["segmentId1", "segmentId2"]`|
-
-`DELETE /druid/coordinator/v1/datasources/{dataSourceName}`
-
-Marks as unused all segments belonging to a datasource. Returns a JSON object of the form
-`{"numChangedSegments": <number>}` with the number of segments in the database whose state has been changed (that is,
-the segments were marked as unused) as the result of this API call.
-
-`DELETE /druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}`
-`@Deprecated. /druid/coordinator/v1/datasources/{dataSourceName}?kill=true&interval={myInterval}`
-
-Runs a [Kill task](../ingestion/tasks.md) for a given interval and datasource.
-
-`DELETE /druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
-
-Marks as unused a segment of a datasource. Returns a JSON object of the form `{"segmentStateChanged": <boolean>}` with
-the boolean indicating if the state of the segment has been changed (that is, the segment was marked as unused) as the
-result of this API call.
-
-#### Server information
+## Server information
 
 `GET /druid/coordinator/v1/servers`
 
@@ -274,19 +246,6 @@ Returns a list of server data objects in which each object has the following key
 * `maxSize`: maximum storage size
 * `priority`
 * `tier`
-
-
-#### Leadership
-
-`GET /druid/indexer/v1/leader`
-
-Returns the current leader Overlord of the cluster. If you have multiple Overlords, just one is leading at any given time. The others are on standby.
-
-`GET /druid/indexer/v1/isLeader`
-
-This returns a JSON object with field `leader`, either true or false. In addition, this call returns HTTP 200 if the
-server is the current leader and HTTP 404 if not. This is suitable for use as a load balancer status check if you
-only want the active leader to be considered in-service at the load balancer.
 
 
 ## Query server

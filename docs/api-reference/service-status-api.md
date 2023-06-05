@@ -1,7 +1,7 @@
 ---
 id: service-status-api
 title: Service status API
-sidebar_label: Service status API
+sidebar_label: Service status
 ---
 
 <!--
@@ -22,6 +22,8 @@ sidebar_label: Service status API
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
+
+>  This document describes the API endpoints for retrieving process status, cluster information, and task management.
 
 ## Common
 
@@ -62,9 +64,6 @@ monitoring checks such as AWS load balancer health checks are not able to look a
 
 ## Master server
 
-This section documents the API endpoints for the processes that reside on Master servers (Coordinators and Overlords)
-in the suggested [three-server configuration](../design/processes.md#server-types).
-
 ### Coordinator
 
 #### Leadership
@@ -80,15 +79,23 @@ Coordinator of the cluster. In addition, returns HTTP 200 if the server is the c
 This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service
 at the load balancer.
 
-
 <a name="coordinator-segment-loading"></a>
 
+### Overlord
 
+#### Leadership
+
+`GET /druid/indexer/v1/leader`
+
+Returns the current leader Overlord of the cluster. If you have multiple Overlords, just one is leading at any given time. The others are on standby.
+
+`GET /druid/indexer/v1/isLeader`
+
+This returns a JSON object with field `leader`, either true or false. In addition, this call returns HTTP 200 if the
+server is the current leader and HTTP 404 if not. This is suitable for use as a load balancer status check if you
+only want the active leader to be considered in-service at the load balancer.
 
 ## Data server
-
-This section documents the API endpoints for the processes that reside on Data servers (MiddleManagers/Peons and Historicals)
-in the suggested [three-server configuration](../design/processes.md#server-types).
 
 ### MiddleManager
 
@@ -143,8 +150,8 @@ Shutdown a running task by `taskid`. Normal usage should prefer to use the `/dru
 ```
 
 
-#### Historical  
-##### Segment loading
+## Historical  
+### Segment loading
 
 `GET /druid/historical/v1/loadstatus`
 
@@ -158,7 +165,7 @@ Similar to `/druid/historical/v1/loadstatus`, but instead of returning JSON with
 in the local cache have been loaded, and 503 SERVICE UNAVAILABLE, if they haven't.
 
 
-#### Load Status Brokers
+## Load Status
 
 `GET /druid/broker/v1/loadstatus`
 

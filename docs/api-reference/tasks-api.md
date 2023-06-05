@@ -1,7 +1,7 @@
 ---
 id: tasks-api
 title: Tasks API
-sidebar_label: Tasks API
+sidebar_label: Tasks
 ---
 
 <!--
@@ -22,8 +22,10 @@ sidebar_label: Tasks API
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-  
-#### Tasks
+
+> This document describes the API endpoints for managing tasks, including task retrieval, submission, and deletion.
+
+## Tasks
 
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
 as in `2016-06-27_2016-06-28`.

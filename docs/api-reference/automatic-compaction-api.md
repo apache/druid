@@ -1,7 +1,7 @@
 ---
 id: automatic-compaction-api
 title: Automatic compaction API
-sidebar_label: Automatic compaction API
+sidebar_label: Automatic compaction
 ---
 
 <!--
@@ -23,7 +23,9 @@ sidebar_label: Automatic compaction API
   ~ under the License.
   -->
 
-#### Automatic compaction status
+> This document describes API endpoints associated with automatic compaction in Apache Druid, detailing the status and configuration endpoints.
+
+## Automatic compaction status
 
 `GET /druid/coordinator/v1/compaction/progress?dataSource={dataSource}`
 
@@ -51,7 +53,7 @@ The `latestStatus` object has the following keys:
 Similar to the API `/druid/coordinator/v1/compaction/status` above but filters response to only return information for the dataSource given.
 The dataSource must have auto-compaction enabled.
 
-#### Automatic compaction configuration
+## Automatic compaction configuration
 
 `GET /druid/coordinator/v1/config/compaction`
 
