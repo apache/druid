@@ -253,8 +253,8 @@ END AS "time_span"`,
 
   private lastTableState: TableState | undefined;
 
-  constructor(props: SegmentsViewProps, context: any) {
-    super(props, context);
+  constructor(props: SegmentsViewProps) {
+    super(props);
 
     const segmentFilter: Filter[] = [];
     if (props.datasource) segmentFilter.push({ id: 'datasource', value: `=${props.datasource}` });

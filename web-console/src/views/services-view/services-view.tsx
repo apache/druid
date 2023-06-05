@@ -235,8 +235,8 @@ ORDER BY
     });
   }
 
-  constructor(props: ServicesViewProps, context: any) {
-    super(props, context);
+  constructor(props: ServicesViewProps) {
+    super(props);
     this.state = {
       servicesState: QueryState.INIT,
       serviceFilter: [],

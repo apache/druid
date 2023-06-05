@@ -228,8 +228,8 @@ ORDER BY
   ) DESC,
   "created_time" DESC`;
 
-  constructor(props: IngestionViewProps, context: any) {
-    super(props, context);
+  constructor(props: IngestionViewProps) {
+    super(props);
 
     const taskFilter: Filter[] = [];
     if (props.taskId) taskFilter.push({ id: 'task_id', value: `=${props.taskId}` });
