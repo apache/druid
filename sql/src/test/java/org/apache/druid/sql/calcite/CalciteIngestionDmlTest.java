@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.Module;
@@ -40,6 +41,7 @@ import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.Query;
@@ -69,6 +71,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
@@ -77,6 +80,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
@@ -446,6 +450,14 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     TestFileInputSource(@JsonProperty("files") List<File> fileList)
     {
       files = fileList;
+    }
+
+    @Override
+    @JsonIgnore
+    @Nonnull
+    public Set<String> getTypes()
+    {
+      throw new UOE("This inputSource does not support input source based security");
     }
 
     @JsonProperty

@@ -30,8 +30,16 @@ import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorTuningConfi
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSamplerSpec;
+import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.Set;
 
 public class KinesisSamplerSpec extends SeekableStreamSamplerSpec
 {
@@ -76,5 +84,21 @@ public class KinesisSamplerSpec extends SeekableStreamSamplerSpec
         ioConfig.isUseEarliestSequenceNumber(),
         tuningConfig.isUseListShards()
     );
+  }
+
+  @Override
+  public String getType()
+  {
+    return KinesisIndexingServiceModule.SCHEME;
+  }
+
+  @Nonnull
+  @Override
+  public Set<ResourceAction> getInputSourceResources() throws UOE
+  {
+    return Collections.singleton(new ResourceAction(
+        new Resource(KinesisIndexingServiceModule.SCHEME, ResourceType.EXTERNAL),
+        Action.READ
+    ));
   }
 }

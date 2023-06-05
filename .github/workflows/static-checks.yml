@@ -128,6 +128,7 @@ jobs:
           docker run --rm \
           -v $(pwd):/project \
           -v ~/.m2:/home/inspect/.m2 \
+          -v $(pwd)/.idea/misc-for-inspection.xml:/project/.idea/misc.xml \
           ccaominh/intellij-inspect:1.0.0 \
           /project/pom.xml \
           /project/.idea/inspectionProfiles/Druid.xml \

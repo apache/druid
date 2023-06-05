@@ -17,45 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.data.input;
+package org.apache.druid.data.input.parquet;
 
-/**
- * A class storing some attributes of an input file.
- * This information is used to make splits in the parallel indexing.
- *
- * @see SplitHintSpec
- * @see org.apache.druid.data.input.impl.SplittableInputSource
- */
-public class InputFileAttribute
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.hadoop.conf.Configuration;
+import org.junit.Assert;
+import org.junit.Test;
+
+public class ParquetInputFormatTest
 {
-  /**
-   * The size of the input file.
-   */
-  private final long size;
-
-  /**
-   * The weighted size of the input file.
-   */
-  private final long weightedSize;
-
-  public InputFileAttribute(long size)
+  @Test
+  public void test_getWeightedSize_withoutCompression()
   {
-    this(size, size);
-  }
-
-  public InputFileAttribute(long size, long weightedSize)
-  {
-    this.size = size;
-    this.weightedSize = weightedSize;
-  }
-
-  public long getWeightedSize()
-  {
-    return weightedSize;
-  }
-
-  public long getSize()
-  {
-    return size;
+    final ParquetInputFormat format = new ParquetInputFormat(JSONPathSpec.DEFAULT, false, new Configuration());
+    long unweightedSize = 100L;
+    Assert.assertEquals(
+        unweightedSize * ParquetInputFormat.SCALE_FACTOR,
+        format.getWeightedSize("file.parquet", unweightedSize)
+    );
   }
 }

@@ -17,45 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.data.input;
+package org.apache.druid.indexing.common.task;
 
-/**
- * A class storing some attributes of an input file.
- * This information is used to make splits in the parallel indexing.
- *
- * @see SplitHintSpec
- * @see org.apache.druid.data.input.impl.SplittableInputSource
- */
-public class InputFileAttribute
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.Intervals;
+import org.junit.Assert;
+import org.junit.Test;
+
+public class MoveTaskTest
 {
-  /**
-   * The size of the input file.
-   */
-  private final long size;
-
-  /**
-   * The weighted size of the input file.
-   */
-  private final long weightedSize;
-
-  public InputFileAttribute(long size)
+  @Test
+  public void testGetInputSourceResources()
   {
-    this(size, size);
-  }
+    final MoveTask task = new MoveTask(
+        null,
+        "foo",
+        Intervals.of("2010-01-01/P1D"),
+        ImmutableMap.of("bucket", "hey", "baseKey", "what"),
+        null,
+        null
+    );
 
-  public InputFileAttribute(long size, long weightedSize)
-  {
-    this.size = size;
-    this.weightedSize = weightedSize;
-  }
-
-  public long getWeightedSize()
-  {
-    return weightedSize;
-  }
-
-  public long getSize()
-  {
-    return size;
+    Assert.assertTrue(task.getInputSourceResources().isEmpty());
   }
 }
