@@ -405,7 +405,7 @@ The task then starts creating logs in a local directory of the middle manager (o
 
 When the task completes - whether it succeeds or fails - the middle manager (or indexer) will push the task log file into the location specified in [`druid.indexer.logs`](../configuration/index.md#task-logging).
 
-Task logs on the Druid web console are retrieved via an [API](../api-reference/legacy-metadata-api.md#leadership) on the Overlord. It automatically detects where the log file is, either in the middleManager / indexer or in long-term storage, and passes it back.
+Task logs on the Druid web console are retrieved via an [API](../api-reference/service-status-api.md#overlord) on the Overlord. It automatically detects where the log file is, either in the middleManager / indexer or in long-term storage, and passes it back.
 
 If you don't see the log file in long-term storage, it means either:
 
