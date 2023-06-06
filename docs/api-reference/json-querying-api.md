@@ -23,7 +23,7 @@ sidebar_label: JSON querying
   ~ under the License.
   -->
 
-> This document describes the API endpoints for handling queries in Druid.
+This document describes the API endpoints to submit JSON-based [native queries](../querying/querying.md) to Apache Druid.
 
 ## Queries
 

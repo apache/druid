@@ -23,7 +23,7 @@ sidebar_label: Tasks
   ~ under the License.
   -->
 
-> This document describes the API endpoints for managing tasks, including task retrieval, submission, and deletion.
+This document describes the API endpoints for task retrieval, submission, and deletion for Apache Druid.
 
 ## Tasks
 

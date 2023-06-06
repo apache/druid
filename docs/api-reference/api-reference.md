@@ -24,9 +24,9 @@ sidebar_label: API endpoints reference
   -->
 
 
-This index documents all of the API endpoints for Druid grouped by functionalities.
+This topic is an index to the Apache Druid API documentation.
 
-## Categories
+## HTTP APIs
 * [Automatic compaction](./automatic-compaction-api.md)
 * [Data management](./data-management-api.md)
 * [Dynamic configuration](./dynamic-configuration-api.md)
@@ -35,11 +35,12 @@ This index documents all of the API endpoints for Druid grouped by functionaliti
 * [Retention rules](./retention-rules-api.md)
 * [Service status](./service-status-api.md)
 * [Druid SQL queries](./sql-api.md)
-* [SQL JDBC driver](./sql-jdbc.md)
 * [Supervisor](./supervisor-api.md)
 * [Tasks](./tasks-api.md)
 * [Legacy metadata](./legacy-metadata-api.md)
 
+## Java APIs
+* [SQL JDBC driver](./sql-jdbc.md)
 
 
 

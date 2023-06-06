@@ -23,7 +23,7 @@ sidebar_label: Data management
   ~ under the License.
   -->
 
-> This document describes the API endpoints for data segment management.
+This document describes the data management API endpoints for Apache Druid. This included information on how to mark segments as `used` or `unused` and delete them from Druid.
 
 ## Note for Coordinator's POST and DELETE APIs
 

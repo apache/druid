@@ -23,7 +23,7 @@ sidebar_label: Dynamic configuration
   ~ under the License.
   -->
 
-> This document describes the API endpoints for retrieving and managing dynamic configurations of the Coordinator and Overlord. 
+This document describes the API endpoints to retrieve and manage the dynamic configurations for the [Coordinator](../configuration/index.html#overlord-dynamic-configuration) and [Overlord](..//configuration/index.html#dynamic-configuration) in Apache Druid.
 
 ## Coordinator dynamic configuration
 

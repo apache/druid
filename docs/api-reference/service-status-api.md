@@ -23,7 +23,7 @@ sidebar_label: Service status
   ~ under the License.
   -->
 
->  This document describes the API endpoints for retrieving process status, cluster information, and task management.
+This document describes the API endpoints to retrieve service (process) status, cluster information for Apache Druid
 
 ## Common
 

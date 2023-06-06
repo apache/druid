@@ -23,7 +23,7 @@ sidebar_label: Retention rules
   ~ under the License.
   -->
 
-> This document describes the API endpoints for managing retention rules and retrieving intervals.
+This document describes the API endpoints for managing retention rules in Apache Druid.
 
 ## Retention rules
 

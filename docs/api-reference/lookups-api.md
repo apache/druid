@@ -23,7 +23,7 @@ sidebar_label: Lookups
   ~ under the License.
   -->
 
-> This document describes the API endpoints to configure, update, retrieve, and manage lookups.
+This document describes the API endpoints to configure, update, retrieve, and manage lookups for Apache Druid.
 
 ## Configure lookups
 

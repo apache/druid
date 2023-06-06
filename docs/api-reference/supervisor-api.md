@@ -23,7 +23,7 @@ sidebar_label: Supervisor
   ~ under the License.
   -->
 
-> This document describes the API endpoints for managing and monitoring supervisors, including information retrieval and life cycle management.
+This document describes the API endpoints to manage and monitor supervisors for Apache Druid.
 
 ## Supervisors
 

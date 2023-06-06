@@ -23,7 +23,7 @@ sidebar_label: Automatic compaction
   ~ under the License.
   -->
 
-> This document describes API endpoints associated with automatic compaction in Apache Druid, detailing the status and configuration endpoints.
+This document describes status and configuration API endpoints for [automatic compaction](../data-management/automatic-compaction.md) in Apache Druid.
 
 ## Automatic compaction status
 
