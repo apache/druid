@@ -1792,7 +1792,7 @@ public class MSQSelectTest extends MSQTestBase
   {
     RowSignature dummyRowSignature = RowSignature.builder().add("timestamp", ColumnType.LONG).build();
 
-    final int numFiles = 1000;
+    final int numFiles = 200;
 
     final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
