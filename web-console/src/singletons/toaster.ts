@@ -16,9 +16,16 @@
  * limitations under the License.
  */
 
+import type { ToasterInstance } from '@blueprintjs/core';
 import { OverlayToaster, Position } from '@blueprintjs/core';
 
-export const AppToaster = OverlayToaster.create({
-  className: 'recipe-toaster',
-  position: Position.TOP,
-});
+let toaster: ToasterInstance | undefined;
+
+export const AppToaster: { show: ToasterInstance['show'] } = {
+  show: (...args) => {
+    if (!toaster) {
+      toaster = OverlayToaster.create({ className: 'recipe-toaster', position: Position.TOP });
+    }
+    return toaster.show(...args);
+  },
+};
