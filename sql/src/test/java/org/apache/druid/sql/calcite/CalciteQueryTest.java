@@ -5866,7 +5866,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
           expected.expect(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
               "From line 1, column 38 to line 1, column 67: "
               + "Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(<TIMESTAMP(3)>, <VARCHAR>)'. "
-              + "Supported form(s): TIME_IN_INTERVAL(<TIMESTAMP>, <LITERAL ISO8601 INTERVAL>)")));
+              + "Supported form(s): 'TIME_IN_INTERVAL(<TIMESTAMP>, <LITERAL ISO8601 INTERVAL>)'")));
         }
     );
   }
