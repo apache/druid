@@ -225,6 +225,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"druid", CalciteTests.USERVISITDATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", "wikipedia", "TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
+                     .add(new Object[]{"INFORMATION_SCHEMA", "ROUTINES", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"lookup", "lookyloo", "TABLE", "YES", "YES"})
@@ -262,6 +263,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"druid", CalciteTests.USERVISITDATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", "wikipedia", "TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
+                     .add(new Object[]{"INFORMATION_SCHEMA", "ROUTINES", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE", "NO", "NO"})
                      .add(new Object[]{"lookup", "lookyloo", "TABLE", "YES", "YES"})
@@ -425,6 +427,22 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{8L, 1249L, 156L, -5L, 1111L}
+        )
+    );
+  }
+
+  @Test
+  public void testAggregatorOnInformationSchemaRoutines()
+  {
+    notMsqCompatible();
+    testQuery(
+        "SELECT\n"
+        + "  COUNT(*)\n"
+        + "FROM INFORMATION_SCHEMA.ROUTINES\n"
+        + "WHERE ROUTINE_TYPE = 'SPECIAL'",
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{14L}
         )
     );
   }
