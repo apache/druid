@@ -107,7 +107,7 @@
     "@awesome-code-style/stylelint-config": "^4.0.0",
     "@babel/core": "^7.14.3",
     "@babel/preset-env": "^7.14.4",
-    "@testing-library/react": "^8.0.9",
+    "@testing-library/react": "^14.0.0",
     "@types/classnames": "^2.2.9",
     "@types/d3-array": "^2.12.3",
     "@types/d3-axis": "^2.1.3",
