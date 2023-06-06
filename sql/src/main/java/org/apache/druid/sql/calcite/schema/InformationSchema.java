@@ -44,6 +44,7 @@ import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.security.Action;
@@ -72,6 +73,8 @@ public class InformationSchema extends AbstractSchema
   private static final EmittingLogger log = new EmittingLogger(InformationSchema.class);
 
   private static final String CATALOG_NAME = "druid";
+  private static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
+
   private static final String SCHEMATA_TABLE = "SCHEMATA";
   private static final String TABLES_TABLE = "TABLES";
   private static final String COLUMNS_TABLE = "COLUMNS";
@@ -136,12 +139,11 @@ public class InformationSchema extends AbstractSchema
       .add("COLLATION_NAME", SqlTypeName.VARCHAR, true)
       .add("JDBC_TYPE", SqlTypeName.BIGINT)
       .build();
-  private static final RelDataType ROUTINES_SIGNATURE = new RowTypeBuilder()
+  public static final RelDataType ROUTINES_SIGNATURE = new RowTypeBuilder()
       .add("ROUTINE_CATALOG", SqlTypeName.VARCHAR)
       .add("ROUTINE_SCHEMA", SqlTypeName.VARCHAR)
       .add("ROUTINE_NAME", SqlTypeName.VARCHAR)
       .add("ROUTINE_TYPE", SqlTypeName.VARCHAR)
-      .add("IS_DETERMINISTIC", SqlTypeName.VARCHAR)
       .add("IS_AGGREGATOR", SqlTypeName.VARCHAR)
       .add("SIGNATURES", SqlTypeName.VARCHAR)
       .build();
@@ -524,31 +526,31 @@ public class InformationSchema extends AbstractSchema
       log.info("All the operators: %s", operatorList);
 
       for (SqlOperator sqlOperator : operatorList) {
+        if (sqlOperator.getSyntax() != SqlSyntax.FUNCTION &&
+            sqlOperator.getSyntax() != SqlSyntax.FUNCTION_STAR
+            && sqlOperator.getSyntax() != SqlSyntax.SPECIAL
+        ) {
+          log.info("Skipping [%s] since it's a [%s]", sqlOperator.getName(), sqlOperator.getSyntax());
+          continue;
+        }
+
+        String allowedSignatures = null;
         log.info("Getting stuff for operator %s", sqlOperator.getName());
-        if (sqlOperator.getOperandTypeChecker() == null) {
+        if (sqlOperator.getOperandTypeChecker() != null) {
+          allowedSignatures = sqlOperator.getAllowedSignatures();
+        } else {
           log.info("operand type checker is not implemented for operator=%s, so "
                    + "calling sqlOperator.getAllowedSignatures() will throw an assertion error. Either can"
                    + "override the signature; or safely default to NA string for the signature", sqlOperator.getName());
-          log.info("Can we get signature from sql operator=%s, syntax=%s, isAggregator=%s, operand type checker=%s, type signature=NA, isDetermenistic=%s, nameAsId=%s",
-                   sqlOperator.getName(),
-                   sqlOperator.getSyntax(),
-                   sqlOperator.isAggregator(),
-                   sqlOperator.getOperandTypeChecker(),
-                   sqlOperator.isDeterministic(),
-                   sqlOperator.getNameAsId()
-          );
-
-          // Druid's name is just the lower case of
           continue;
         }
         Object[] row = new Object[]{
-            CATALOG_NAME,
-            "",
-            sqlOperator.getName(),
-            sqlOperator.getSyntax(),
-            sqlOperator.isDeterministic() ? INFO_TRUE : INFO_FALSE,
-            sqlOperator.isAggregator() ? INFO_TRUE : INFO_FALSE,
-            sqlOperator.getAllowedSignatures()
+            CATALOG_NAME, // ROUTINE_CATALOG
+            INFORMATION_SCHEMA_NAME, // ROUTINE_SCHEMA
+            sqlOperator.getName(), // ROUTINE_NAME
+            sqlOperator.getSyntax(), // ROUTINE_TYPE
+            sqlOperator.isAggregator() ? INFO_TRUE : INFO_FALSE, // IS_AGGREGATOR
+            allowedSignatures // SIGNATURES
         };
         rows.add(row);
       }
