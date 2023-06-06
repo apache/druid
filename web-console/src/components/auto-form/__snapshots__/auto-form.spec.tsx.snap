@@ -34,6 +34,7 @@ exports[`AutoForm matches snapshot 1`] = `
       onValueChange={[Function]}
       selectAllOnFocus={false}
       selectAllOnIncrement={false}
+      small={false}
       stepSize={1000}
     />
   </Memo(FormGroupWithInfo)>

@@ -13,6 +13,7 @@ exports[`NumericInputWithDefault matches snapshot 1`] = `
   onValueChange={[Function]}
   selectAllOnFocus={false}
   selectAllOnIncrement={false}
+  small={false}
   stepSize={1}
   value={5}
 />

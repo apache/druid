@@ -12,11 +12,13 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
       <span
         aria-haspopup="true"
         class="bp4-popover-target"
+        role="menuitem"
+        tabindex="0"
       >
         <a
           class="bp4-menu-item"
-          role="menuitem"
-          tabindex="0"
+          role="none"
+          tabindex="-1"
         >
           <span
             class="bp4-menu-item-icon"
@@ -78,11 +80,13 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
       <span
         aria-haspopup="true"
         class="bp4-popover-target"
+        role="menuitem"
+        tabindex="0"
       >
         <a
           class="bp4-menu-item"
-          role="menuitem"
-          tabindex="0"
+          role="none"
+          tabindex="-1"
         >
           <span
             class="bp4-menu-item-icon"
@@ -183,11 +187,13 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
       <span
         aria-haspopup="true"
         class="bp4-popover-target"
+        role="menuitem"
+        tabindex="0"
       >
         <a
           class="bp4-menu-item"
-          role="menuitem"
-          tabindex="0"
+          role="none"
+          tabindex="-1"
         >
           <span
             class="bp4-menu-item-icon"
@@ -254,11 +260,13 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
       <span
         aria-haspopup="true"
         class="bp4-popover-target"
+        role="menuitem"
+        tabindex="0"
       >
         <a
           class="bp4-menu-item"
-          role="menuitem"
-          tabindex="0"
+          role="none"
+          tabindex="-1"
         >
           <span
             class="bp4-menu-item-icon"
@@ -320,11 +328,13 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
       <span
         aria-haspopup="true"
         class="bp4-popover-target"
+        role="menuitem"
+        tabindex="0"
       >
         <a
           class="bp4-menu-item"
-          role="menuitem"
-          tabindex="0"
+          role="none"
+          tabindex="-1"
         >
           <span
             class="bp4-menu-item-icon"
@@ -386,11 +396,13 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
       <span
         aria-haspopup="true"
         class="bp4-popover-target"
+        role="menuitem"
+        tabindex="0"
       >
         <a
           class="bp4-menu-item"
-          role="menuitem"
-          tabindex="0"
+          role="none"
+          tabindex="-1"
         >
           <span
             class="bp4-menu-item-icon"

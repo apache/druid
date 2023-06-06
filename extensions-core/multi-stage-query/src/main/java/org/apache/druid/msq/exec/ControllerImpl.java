@@ -356,7 +356,9 @@ public class ControllerImpl implements Controller
         }
     );
 
-    workerTaskLauncher.waitForWorkerShutdown();
+    if (workerTaskLauncher != null) {
+      workerTaskLauncher.waitForWorkerShutdown();
+    }
   }
 
   public TaskStatus runTask(final Closer closer)
@@ -1859,18 +1861,16 @@ public class ControllerImpl implements Controller
     if (isRollupQuery) {
       // Populate aggregators from the native query when doing an ingest in rollup mode.
       for (AggregatorFactory aggregatorFactory : ((GroupByQuery) query).getAggregatorSpecs()) {
-        final int outputColumn = CollectionUtils.getOnlyElement(
-            columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName()),
-            xs -> new ISE("Expected single output for query column[%s] but got[%s]", aggregatorFactory.getName(), xs)
-        );
-        final String outputColumnName = columnMappings.getOutputColumnName(outputColumn);
-        if (outputColumnAggregatorFactories.containsKey(outputColumnName)) {
-          throw new ISE("There can only be one aggregation for column [%s].", outputColumn);
-        } else {
-          outputColumnAggregatorFactories.put(
-              outputColumnName,
-              aggregatorFactory.withName(outputColumnName).getCombiningFactory()
-          );
+        for (final int outputColumn : columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName())) {
+          final String outputColumnName = columnMappings.getOutputColumnName(outputColumn);
+          if (outputColumnAggregatorFactories.containsKey(outputColumnName)) {
+            throw new ISE("There can only be one aggregation for column [%s].", outputColumn);
+          } else {
+            outputColumnAggregatorFactories.put(
+                outputColumnName,
+                aggregatorFactory.withName(outputColumnName).getCombiningFactory()
+            );
+          }
         }
       }
     }
