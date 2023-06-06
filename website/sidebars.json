@@ -47,9 +47,9 @@
       "ingestion/ingestion-spec",
       "ingestion/schema-design",
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Stream ingestion",
-        "ids": [
+        "items": [
           "development/extensions-core/kafka-ingestion",
           "development/extensions-core/kafka-supervisor-reference",
           "development/extensions-core/kafka-supervisor-operations",
@@ -58,9 +58,9 @@
         ]
       },
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Batch ingestion",
-        "ids": [
+        "items": [
           "ingestion/native-batch",
           "ingestion/native-batch-input-sources",
           "ingestion/migrate-from-firehose",
@@ -69,9 +69,9 @@
         ]
       },
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "SQL-based ingestion \uD83C\uDD95",
-        "ids": [
+        "items": [
           "multi-stage-query/index",
           "multi-stage-query/concepts",
           "multi-stage-query/api",
@@ -94,9 +94,9 @@
     ],
     "Querying": [
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Druid SQL",
-        "ids": [
+        "items": [
           "querying/sql",
           "querying/sql-data-types",
           "querying/sql-operators",
@@ -117,9 +117,9 @@
       "querying/query-execution",
       "querying/troubleshooting",
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Concepts",
-        "ids": [
+        "items": [
           "querying/datasource",
           "querying/joins",
           "querying/lookups",
@@ -133,9 +133,9 @@
       },
 
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Native query types",
-        "ids": [
+        "items": [
           "querying/timeseriesquery",
           "querying/topnquery",
           "querying/groupbyquery",
@@ -147,9 +147,9 @@
         ]
       },
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Native query components",
-        "ids": [
+        "items": [
           "querying/filters",
           "querying/granularities",
           "querying/dimensionspecs",
@@ -174,9 +174,9 @@
       "operations/web-console",
       "operations/java",
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Security",
-        "ids": [
+        "items": [
           "operations/security-overview",
           "operations/security-user-auth",
           "operations/auth-ldap",
@@ -187,9 +187,9 @@
         ]
       },
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Performance tuning",
-        "ids": [
+        "items": [
           "operations/basic-cluster-tuning",
           "operations/segment-optimization",
           "operations/mixed-workloads",
@@ -198,9 +198,9 @@
         ]
       },
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Monitoring",
-        "ids": [
+        "items": [
           "operations/request-logging",
           "operations/metrics",
           "operations/alerts"
@@ -212,9 +212,9 @@
       "operations/rule-configuration",
       "operations/other-hadoop",
       {
-        "type": "subcategory",
+        "type": "category",
         "label": "Misc",
-        "ids": [
+        "items": [
           "operations/dump-segment",
           "operations/reset-cluster",
           "operations/insert-segment-to-db",
