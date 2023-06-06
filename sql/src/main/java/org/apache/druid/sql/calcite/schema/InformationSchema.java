@@ -139,7 +139,7 @@ public class InformationSchema extends AbstractSchema
       .add("COLLATION_NAME", SqlTypeName.VARCHAR, true)
       .add("JDBC_TYPE", SqlTypeName.BIGINT)
       .build();
-  public static final RelDataType ROUTINES_SIGNATURE = new RowTypeBuilder()
+  private static final RelDataType ROUTINES_SIGNATURE = new RowTypeBuilder()
       .add("ROUTINE_CATALOG", SqlTypeName.VARCHAR)
       .add("ROUTINE_SCHEMA", SqlTypeName.VARCHAR)
       .add("ROUTINE_NAME", SqlTypeName.VARCHAR)
@@ -522,35 +522,22 @@ public class InformationSchema extends AbstractSchema
     {
       final List<Object[]> rows = new ArrayList<>();
       List<SqlOperator> operatorList = operatorTable.getOperatorList();
-      log.info("Operator table size: %d", operatorList.size());
-      log.info("All the operators: %s", operatorList);
 
       for (SqlOperator sqlOperator : operatorList) {
         if (sqlOperator.getSyntax() != SqlSyntax.FUNCTION &&
             sqlOperator.getSyntax() != SqlSyntax.FUNCTION_STAR
             && sqlOperator.getSyntax() != SqlSyntax.SPECIAL
         ) {
-          log.info("Skipping [%s] since it's a [%s]", sqlOperator.getName(), sqlOperator.getSyntax());
           continue;
         }
 
-        String allowedSignatures = null;
-        log.info("Getting stuff for operator %s", sqlOperator.getName());
-        if (sqlOperator.getOperandTypeChecker() != null) {
-          allowedSignatures = sqlOperator.getAllowedSignatures();
-        } else {
-          log.info("operand type checker is not implemented for operator=%s, so "
-                   + "calling sqlOperator.getAllowedSignatures() will throw an assertion error. Either can"
-                   + "override the signature; or safely default to NA string for the signature", sqlOperator.getName());
-          continue;
-        }
         Object[] row = new Object[]{
             CATALOG_NAME, // ROUTINE_CATALOG
             INFORMATION_SCHEMA_NAME, // ROUTINE_SCHEMA
             sqlOperator.getName(), // ROUTINE_NAME
             sqlOperator.getSyntax(), // ROUTINE_TYPE
             sqlOperator.isAggregator() ? INFO_TRUE : INFO_FALSE, // IS_AGGREGATOR
-            allowedSignatures // SIGNATURES
+            sqlOperator.getOperandTypeChecker() == null ? null : sqlOperator.getAllowedSignatures() // SIGNATURES
         };
         rows.add(row);
       }
