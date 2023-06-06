@@ -56,8 +56,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.apache.druid.query.topn.InvertedTopNMetricSpec;
-import org.apache.druid.query.topn.NumericTopNMetricSpec;
+import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
@@ -1074,7 +1073,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
         "SELECT"
         + " HLL_SKETCH_ESTIMATE(hllsketch_dim1), COUNT(*)"
         + " FROM druid.foo"
-        + " GROUP BY 1 ORDER BY 2"
+        + " GROUP BY 1 ORDER BY 1"
         + " LIMIT 2",
         ImmutableList.of(
             new TopNQueryBuilder()
@@ -1088,7 +1087,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                     ColumnType.DOUBLE,
                     MACRO_TABLE
                 ))
-                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
                 .threshold(2)
                 .aggregators(new CountAggregatorFactory("a0"))
                 .context(QUERY_CONTEXT_DEFAULT)

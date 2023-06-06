@@ -43,8 +43,7 @@ public class ThetaSketchEstimateOperatorConversion implements SqlOperatorConvers
   private static final String FUNCTION_NAME = "theta_sketch_estimate";
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
-      .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.BOOLEAN)
-      .requiredOperands(1)
+      .operandTypes(SqlTypeFamily.ANY)
       .returnTypeInference(ReturnTypes.DOUBLE)
       .build();
 

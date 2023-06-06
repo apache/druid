@@ -27,7 +27,6 @@ import org.apache.druid.query.aggregation.datasketches.theta.SketchHolder;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class ThetaPostAggMacros
 {
@@ -39,9 +38,8 @@ public class ThetaPostAggMacros
     @Override
     public Expr apply(List<Expr> args)
     {
-      validationHelperCheckAnyOfArgumentCount(args, 1, 2);
-      //validationHelperCheckArgumentCount(args, 1);
-      return new ThetaSketchEstimateExpr(args);
+      validationHelperCheckArgumentCount(args, 1);
+      return new ThetaSketchEstimateExpr(args.get(0));
     }
 
     @Override
@@ -51,28 +49,20 @@ public class ThetaPostAggMacros
     }
   }
 
-  public static class ThetaSketchEstimateExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+  public static class ThetaSketchEstimateExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
   {
     private Expr estimateExpr;
-    private Expr isRound;
 
-    public ThetaSketchEstimateExpr(List<Expr> args)
+    public ThetaSketchEstimateExpr(Expr arg)
     {
-      super(THETA_SKETCH_ESTIMATE, args);
-      this.estimateExpr = args.get(0);
-      if (args.size() == 2) {
-        isRound = args.get(1);
-      }
+      super(THETA_SKETCH_ESTIMATE, arg);
+      this.estimateExpr = arg;
     }
 
     @Override
     public ExprEval eval(ObjectBinding bindings)
     {
       ExprEval eval = estimateExpr.eval(bindings);
-      boolean round = false;
-      if (isRound != null) {
-        round = isRound.eval(bindings).asBoolean();
-      }
       final Object valObj = eval.value();
       if (valObj == null) {
         return ExprEval.of(null);
@@ -80,7 +70,7 @@ public class ThetaPostAggMacros
       if (valObj instanceof SketchHolder) {
         SketchHolder thetaSketchHolder = (SketchHolder) valObj;
         double estimate = thetaSketchHolder.getEstimate();
-        return round ? ExprEval.of(Math.round(estimate)) : ExprEval.of(estimate);
+        return ExprEval.of(estimate);
       } else {
         throw new IllegalArgumentException("requires a ThetaSketch as the argument");
       }
@@ -89,8 +79,7 @@ public class ThetaPostAggMacros
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new ThetaSketchEstimateExpr(newArgs));
+      return shuttle.visit(new ThetaSketchEstimateExpr(arg));
     }
 
     @Nullable

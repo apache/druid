@@ -130,14 +130,6 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                                              false,
                                                              false,
                                                              null
-                                                         ),
-                                                         new SketchMergeAggregatorFactory(
-                                                             "thetasketch_dim3",
-                                                             "dim3",
-                                                             16,
-                                                             false,
-                                                             false,
-                                                             1
                                                          )
                                                      )
                                                      .withRollup(false)
@@ -1081,38 +1073,6 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test
-  public void testThetaSketchEstimateAsVirtualColumn2Args()
-  {
-    testQuery(
-        "SELECT"
-        + " THETA_SKETCH_ESTIMATE(thetasketch_dim3, FALSE)"
-        + " FROM foo",
-        ImmutableList.of(
-            newScanQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(new ExpressionVirtualColumn(
-                    "v0",
-                    "theta_sketch_estimate(\"thetasketch_dim3\",0)",
-                    ColumnType.DOUBLE,
-                    MACRO_TABLE
-                ))
-                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .columns("v0")
-                .context(QUERY_CONTEXT_DEFAULT)
-                .build()
-        ),
-        ImmutableList.of(
-            new Object[]{2.0D},
-            new Object[]{2.0D},
-            new Object[]{1.0D},
-            new Object[]{null},
-            new Object[]{null},
-            new Object[]{null}
-        )
-    );
-  }
   @Test
   public void testThetaEstimateAsVirtualColumnOnNonThetaCol()
   {
