@@ -213,8 +213,8 @@ public class QuantileSqlAggregator implements SqlAggregator
 
   private static class QuantileSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE1 = "'" + NAME + "(column, probability)'\n";
-    private static final String SIGNATURE2 = "'" + NAME + "(column, probability, resolution)'\n";
+    private static final String SIGNATURE1 = "'" + NAME + "(column, probability)'";
+    private static final String SIGNATURE2 = "'" + NAME + "(column, probability, resolution)'";
 
     QuantileSqlAggFunction()
     {

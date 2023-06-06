@@ -69,7 +69,7 @@ public class ThetaSketchApproxCountDistinctSqlAggregator extends ThetaSketchBase
 
   private static class ThetaSketchSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE = "'" + NAME + "(column, size)'\n";
+    private static final String SIGNATURE = "'" + NAME + "(column, size)'";
 
     ThetaSketchSqlAggFunction()
     {
