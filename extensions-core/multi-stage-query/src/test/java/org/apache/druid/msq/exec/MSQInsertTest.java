@@ -37,6 +37,7 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.NestedDataTestUtils;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
@@ -293,6 +294,45 @@ public class MSQInsertTest extends MSQTestBase
 
                      .verifyResults();
 
+  }
+
+  @Test
+  public void testInsertOnFoo1WithTwoCountAggregatorsWithRollupContext()
+  {
+    final List<Object[]> expectedRows = expectedFooRows();
+
+    // Add 1L to each expected row, since we have two count aggregators.
+    for (int i = 0; i < expectedRows.size(); i++) {
+      final Object[] expectedRow = expectedRows.get(i);
+      final Object[] newExpectedRow = new Object[expectedRow.length + 1];
+      System.arraycopy(expectedRow, 0, newExpectedRow, 0, expectedRow.length);
+      newExpectedRow[expectedRow.length] = 1L;
+      expectedRows.set(i, newExpectedRow);
+    }
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG)
+                                            .add("cnt2", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "insert into foo1\n"
+                         + "select  __time, dim1 , count(*) as cnt, count(*) as cnt2\n"
+                         + "from foo\n"
+                         + "where dim1 is not null\n"
+                         + "group by 1, 2\n"
+                         + "PARTITIONED by All")
+                     .setExpectedDataSource("foo1")
+                     .setQueryContext(QueryContexts.override(context, ROLLUP_CONTEXT_PARAMS))
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedResultRows(expectedRows)
+                     .setExpectedRollUp(true)
+                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
+                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt2", "cnt2"))
+                     .verifyResults();
   }
 
   @Test
