@@ -410,7 +410,6 @@ public class QueryLifecycleTest
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("fake", ResourceType.DATASOURCE), Action.READ))
             .andReturn(Access.OK)
             .times(2);
-
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("foo", ResourceType.QUERY_CONTEXT), Action.WRITE))
             .andReturn(Access.OK)
             .times(2);
