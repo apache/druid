@@ -236,9 +236,9 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       return isTransientDruidException(t.getCause());
     } else if (t instanceof DruidException) {
       return ((DruidException) t).isTransient();
+    } else {
+      return getConnector().isTransientException(t);
     }
-
-    return false;
   }
 
   @Override
@@ -445,7 +445,12 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
           t
       );
     } else {
-      return new DruidException(StringUtils.format("Encountered metadata exception for task [%s]", taskId), t);
+      return new DruidException(
+          StringUtils.format("Encountered metadata exception for task [%s]", taskId),
+          DruidException.HTTP_CODE_SERVER_ERROR,
+          t,
+          connector.isTransientException(t)
+      );
     }
   }
 

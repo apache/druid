@@ -24,18 +24,11 @@ package org.apache.druid.common.exception;
  */
 public class DruidException extends RuntimeException
 {
-  public static final int DEFAULT_HTTP_CODE = 500;
+  public static final int HTTP_CODE_SERVER_ERROR = 500;
   public static final int HTTP_CODE_BAD_REQUEST = 400;
-
-  private static final boolean DEFAULT_CAN_RETRY = false;
 
   private final int responseCode;
   private final boolean isTransient;
-
-  public DruidException(String message, Throwable cause)
-  {
-    this(message, DEFAULT_HTTP_CODE, cause, DEFAULT_CAN_RETRY);
-  }
 
   public DruidException(String message, int responseCode, Throwable cause)
   {
