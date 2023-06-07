@@ -138,6 +138,15 @@ public class RowSignature implements ColumnInspector
   }
 
   /**
+   * Returns true if the column is a numeric type ({@link ColumnType#isNumeric()}), otherwise false if the column
+   * is not a numeric type or is not present in the row signature.
+   */
+  public boolean isNumeric(final String columnName)
+  {
+    return getColumnType(columnName).map(ColumnType::isNumeric).orElse(false);
+  }
+
+  /**
    * Returns a list of column names in the order they appear in this signature.
    */
   public List<String> getColumnNames()

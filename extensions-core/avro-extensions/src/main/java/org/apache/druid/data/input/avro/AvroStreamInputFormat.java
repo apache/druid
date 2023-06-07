@@ -25,6 +25,7 @@ import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.NestedInputFormat;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 
 import javax.annotation.Nullable;
@@ -48,6 +49,9 @@ public class AvroStreamInputFormat extends NestedInputFormat
   )
   {
     super(flattenSpec);
+    if (avroBytesDecoder == null) {
+      throw new IAE("avroBytesDecoder is required to decode Avro records");
+    }
     this.avroBytesDecoder = avroBytesDecoder;
     this.binaryAsString = binaryAsString != null && binaryAsString;
     this.extractUnionsByType = extractUnionsByType != null && extractUnionsByType;

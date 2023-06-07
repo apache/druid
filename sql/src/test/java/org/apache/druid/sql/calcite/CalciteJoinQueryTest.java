@@ -5530,4 +5530,98 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
       return results;
     }
   }
+
+  @Test
+  public void testJoinsWithTwoConditions()
+  {
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    testQuery(
+        "SELECT t1.__time, t1.m1\n"
+        + "FROM foo t1\n"
+        + "JOIN (SELECT m1, MAX(__time) as latest_time FROM foo WHERE m1 IN (1,2) GROUP BY m1) t2\n"
+        + "ON t1.m1 = t2.m1 AND t1.__time = t2.latest_time\n",
+        context,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                        .setDimFilter(in("m1", ImmutableList.of("1", "2"), null))
+                                        .setDimensions(new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT))
+                                        .setAggregatorSpecs(aggregators(new LongMaxAggregatorFactory("a0", "__time")))
+                                        .setContext(context)
+                                        .build()
+                        ),
+                        "j0.",
+                        "((\"m1\" == \"j0.d0\") && (\"__time\" == \"j0.a0\"))",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "m1")
+                .context(context)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, 1.0f},
+            new Object[]{946771200000L, 2.0f}
+        )
+    );
+  }
+
+  @Test
+  public void testJoinsWithThreeConditions()
+  {
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    testQuery(
+        "SELECT t1.__time, t1.m1, t1.m2\n"
+        + "FROM foo t1\n"
+        + "JOIN (SELECT m1, m2, MAX(__time) as latest_time FROM foo WHERE m1 IN (1,2) AND m2 IN (1,2) GROUP by m1,m2) t2\n"
+        + "ON t1.m1 = t2.m1 AND t1.m2 = t2.m2 AND t1.__time = t2.latest_time\n",
+        context,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                        .setDimFilter(
+                                            and(
+                                                in("m1", ImmutableList.of("1", "2"), null),
+                                                in("m2", ImmutableList.of("1", "2"), null)
+                                                )
+                                        )
+                                        .setDimensions(
+                                            new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT),
+                                            new DefaultDimensionSpec("m2", "d1", ColumnType.DOUBLE)
+                                        )
+                                        .setAggregatorSpecs(aggregators(new LongMaxAggregatorFactory("a0", "__time")))
+                                        .setContext(context)
+                                        .build()
+                        ),
+                        "j0.",
+                        "((\"m1\" == \"j0.d0\") && (\"m2\" == \"j0.d1\") && (\"__time\" == \"j0.a0\"))",
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("__time", "m1", "m2")
+                .context(context)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, 1.0f, 1.0},
+            new Object[]{946771200000L, 2.0f, 2.0}
+        )
+    );
+  }
 }

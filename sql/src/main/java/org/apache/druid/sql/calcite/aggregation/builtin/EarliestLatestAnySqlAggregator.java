@@ -301,7 +301,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
               OperandTypes.NUMERIC,
               OperandTypes.BOOLEAN,
               OperandTypes.sequence(
-                  "'" + aggregatorType.name() + "(expr, maxBytesPerString)'\n",
+                  "'" + aggregatorType.name() + "(expr, maxBytesPerString)'",
                   OperandTypes.ANY,
                   OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL)
               )

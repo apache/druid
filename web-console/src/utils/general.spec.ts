@@ -28,6 +28,7 @@ import {
   moveElement,
   moveToIndex,
   objectHash,
+  offsetToRowColumn,
   parseCsvLine,
   swapElements,
 } from './general';
@@ -169,6 +170,21 @@ describe('general', () => {
   describe('objectHash', () => {
     it('works', () => {
       expect(objectHash({ hello: 'world1' })).toEqual('cc14ad13');
+    });
+  });
+
+  describe('offsetToRowColumn', () => {
+    it('works', () => {
+      expect(offsetToRowColumn('Hello\nThis is a test\nstring.', -6)).toBeUndefined();
+      expect(offsetToRowColumn('Hello\nThis is a test\nstring.', 666)).toBeUndefined();
+      expect(offsetToRowColumn('Hello\nThis is a test\nstring.', 3)).toEqual({
+        column: 3,
+        row: 0,
+      });
+      expect(offsetToRowColumn('Hello\nThis is a test\nstring.', 24)).toEqual({
+        column: 3,
+        row: 2,
+      });
     });
   });
 });

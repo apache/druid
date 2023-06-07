@@ -5866,7 +5866,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
           expected.expect(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
               "From line 1, column 38 to line 1, column 67: "
               + "Cannot apply 'TIME_IN_INTERVAL' to arguments of type 'TIME_IN_INTERVAL(<TIMESTAMP(3)>, <VARCHAR>)'. "
-              + "Supported form(s): TIME_IN_INTERVAL(<TIMESTAMP>, <LITERAL ISO8601 INTERVAL>)")));
+              + "Supported form(s): 'TIME_IN_INTERVAL(<TIMESTAMP>, <LITERAL ISO8601 INTERVAL>)'")));
         }
     );
   }
@@ -14639,6 +14639,38 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{978480000000L, 6.0f}
+        )
+    );
+  }
+
+  @Test
+  public void testFilterWithNVLAndNotIn()
+  {
+    testQuery(
+        "select __time, dim1 from druid.foo where nvl(dim1, '') NOT IN ('a' , '')",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .dataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .intervals(querySegmentSpec(Intervals.of(
+                    "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
+                .columns(ImmutableList.of("__time", "dim1"))
+                .filters(and(
+                    or(
+                        not(selector("dim1", "a", null)),
+                        selector("dim1", null, null)
+                    ),
+                    not(selector("dim1", NullHandling.sqlCompatible() ? "" : null, null))
+                ))
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946771200000L, "10.1"},
+            new Object[]{946857600000L, "2"},
+            new Object[]{978307200000L, "1"},
+            new Object[]{978393600000L, "def"},
+            new Object[]{978480000000L, "abc"}
         )
     );
   }

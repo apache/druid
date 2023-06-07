@@ -52,6 +52,10 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -64,6 +68,7 @@ import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -540,5 +545,64 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
     expectedException.expect(SamplerException.class);
     expectedException.expectMessage("Invalid url in bootstrap.servers");
     samplerSpec.sample();
+  }
+
+  @Test
+  public void testGetInputSourceResources()
+  {
+    KafkaSupervisorSpec supervisorSpec = new KafkaSupervisorSpec(
+        null,
+        DATA_SCHEMA,
+        null,
+        new KafkaSupervisorIOConfig(
+            TOPIC,
+            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
+            null,
+            null,
+            null,
+
+            // invalid bootstrap server
+            ImmutableMap.of("bootstrap.servers", "127.0.0.1"),
+
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    KafkaSamplerSpec samplerSpec = new KafkaSamplerSpec(
+        supervisorSpec,
+        new SamplerConfig(5, null, null, null),
+        new InputSourceSampler(OBJECT_MAPPER),
+        OBJECT_MAPPER
+    );
+
+    Assert.assertEquals(
+        Collections.singleton(
+            new ResourceAction(new Resource(
+                KafkaIndexTaskModule.SCHEME,
+                ResourceType.EXTERNAL
+            ), Action.READ)),
+        samplerSpec.getInputSourceResources()
+    );
   }
 }

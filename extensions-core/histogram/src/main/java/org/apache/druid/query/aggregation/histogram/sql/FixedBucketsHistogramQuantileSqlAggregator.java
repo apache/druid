@@ -259,11 +259,11 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
     private static final String SIGNATURE1 =
         "'"
         + NAME
-        + "(column, probability, numBuckets, lowerLimit, upperLimit)'\n";
+        + "(column, probability, numBuckets, lowerLimit, upperLimit)'";
     private static final String SIGNATURE2 =
         "'"
         + NAME
-        + "(column, probability, numBuckets, lowerLimit, upperLimit, outlierHandlingMode)'\n";
+        + "(column, probability, numBuckets, lowerLimit, upperLimit, outlierHandlingMode)'";
 
     FixedBucketsHistogramQuantileSqlAggFunction()
     {
