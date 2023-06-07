@@ -22,12 +22,21 @@ package org.apache.druid.sql.calcite.schema;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.linq4j.QueryProvider;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
+import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
@@ -35,7 +44,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class InformationSchemaTest extends BaseCalciteQueryTest
 {
@@ -81,16 +93,73 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
 
     List<Object[]> rows = routinesTable.scan(dataContext).toList();
 
-    List<SqlOperator> operatorList = operatorTable.getOperatorList();
+    Assert.assertTrue("There should be at least 10 functions", rows.size() > 10);
+    RelDataType rowType = routinesTable.getRowType(new JavaTypeFactoryImpl());
+    Assert.assertEquals(6, rowType.getFieldCount());
 
-    // todo: clean this up and perhaps check all rows?
-    Object[] row0 = rows.get(0);
-    Assert.assertEquals("druid", row0[0].toString());
-    Assert.assertEquals("INFORMATION_SCHEMA", row0[1].toString());
-    Assert.assertEquals(operatorList.get(0).getName(), row0[2].toString());
-    Assert.assertEquals(operatorList.get(0).getSyntax().toString(), row0[3].toString());
-    Assert.assertEquals(operatorList.get(0).isAggregator() ? "YES" : "NO", row0[4].toString());
-    Assert.assertEquals(operatorList.get(0).getAllowedSignatures(), row0[5].toString());
+    for (Object[] row: rows) {
+      Assert.assertEquals("druid", row[0]);
+      Assert.assertEquals("INFORMATION_SCHEMA", row[1]);
+      Assert.assertNotNull(row[2]);
+      Assert.assertNotNull(row[3]);
+      String isAggregator = row[4].toString();
+      Assert.assertTrue(isAggregator.contains("YES") || isAggregator.contains("NO"));
+    }
+  }
+
+  @Test
+  public void testCustomOperators()
+  {
+    DruidOperatorTable operatorTable1 = addCustomOperatorsToOperatorTable();
+    InformationSchema.RoutinesTable routinesTable = new InformationSchema.RoutinesTable(operatorTable1);
+    DataContext dataContext = createDataContext();
+
+    List<Object[]> rows = routinesTable.scan(dataContext).toList();
+
+    Assert.assertTrue(rows.size() > 2);
+    Object[] expectedRow1 = {"druid", "INFORMATION_SCHEMA", "FOO", "FUNCTION", "NO", "'FOO(<ANY>)'"};
+    Assert.assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow1)));
+
+    Object[] expectedRow2 = {"druid", "INFORMATION_SCHEMA", "BAR", "FUNCTION", "NO", "'BAR(<INTEGER>, <INTEGER>)'"};
+    Assert.assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow2)));
+  }
+
+  private static DruidOperatorTable addCustomOperatorsToOperatorTable()
+  {
+    final SqlOperator operator1 = OperatorConversions
+        .operatorBuilder("FOO")
+        .operandTypes(SqlTypeFamily.ANY)
+        .requiredOperands(0)
+        .returnTypeInference(
+            opBinding -> RowSignatures.makeComplexType(
+                opBinding.getTypeFactory(),
+                ColumnType.ofComplex("fooComplex"),
+                true
+            )
+        )
+        .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
+        .build();
+
+
+    final SqlOperator operator2 = OperatorConversions
+        .operatorBuilder("BAR")
+        .operandTypes(SqlTypeFamily.NUMERIC)
+        .operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER)
+        .requiredOperands(2)
+        .returnTypeInference(
+            opBinding -> RowSignatures.makeComplexType(
+                opBinding.getTypeFactory(),
+                ColumnType.ofComplex("barComplex"),
+                true
+            )
+        )
+        .functionCategory(SqlFunctionCategory.NUMERIC)
+        .build();
+
+    final Set<SqlOperatorConversion> extractionOperators = new HashSet<>();
+    extractionOperators.add(new DirectOperatorConversion(operator1, "foo_fn"));
+    extractionOperators.add(new DirectOperatorConversion(operator2, "bar_fn"));
+    return new DruidOperatorTable(ImmutableSet.of(), extractionOperators);
   }
 
   private DataContext createDataContext()
