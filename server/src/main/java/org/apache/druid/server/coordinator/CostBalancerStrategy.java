@@ -36,6 +36,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class CostBalancerStrategy implements BalancerStrategy
@@ -226,7 +227,7 @@ public class CostBalancerStrategy implements BalancerStrategy
 
     try {
       // results is an un-ordered list of a pair consisting of the 'cost' of a segment being on a server and the server
-      List<Pair<Double, ServerHolder>> results = resultsFuture.get();
+      List<Pair<Double, ServerHolder>> results = resultsFuture.get(5, TimeUnit.MINUTES);
       return results.stream()
                     // Comparator.comapringDouble will order by lowest cost...
                     // reverse it because we want to drop from the highest cost servers first
@@ -373,7 +374,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     final List<Pair<Double, ServerHolder>> bestServers = new ArrayList<>();
     bestServers.add(bestServer);
     try {
-      for (Pair<Double, ServerHolder> server : resultsFuture.get()) {
+      for (Pair<Double, ServerHolder> server : resultsFuture.get(5, TimeUnit.MINUTES)) {
         if (server.lhs <= bestServers.get(0).lhs) {
           if (server.lhs < bestServers.get(0).lhs) {
             bestServers.clear();
