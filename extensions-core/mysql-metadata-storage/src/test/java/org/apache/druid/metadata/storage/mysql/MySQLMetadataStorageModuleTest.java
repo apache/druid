@@ -62,7 +62,7 @@ public class MySQLMetadataStorageModuleTest
     properties.setProperty(propertyPrefix + ".enabledTLSProtocols", "[\"some\", \"protocols\"]");
     properties.setProperty(propertyPrefix + ".verifyServerCertificate", "true");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
-    final MySQLConnectorSslConfig config = provider.get().get();
+    final MySQLConnectorSslConfig config = provider.get();
     Assert.assertTrue(config.isUseSSL());
     Assert.assertEquals("url", config.getTrustCertificateKeyStoreUrl());
     Assert.assertEquals("type", config.getTrustCertificateKeyStoreType());
@@ -86,7 +86,7 @@ public class MySQLMetadataStorageModuleTest
     );
     final Properties properties = new Properties();
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
-    final MySQLConnectorDriverConfig config = provider.get().get();
+    final MySQLConnectorDriverConfig config = provider.get();
     Assert.assertEquals(new MySQLConnectorDriverConfig().getDriverClassName(), config.getDriverClassName());
   }
 
@@ -102,7 +102,7 @@ public class MySQLMetadataStorageModuleTest
     final Properties properties = new Properties();
     properties.setProperty(propertyPrefix + ".driverClassName", "some.driver.classname");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
-    final MySQLConnectorDriverConfig config = provider.get().get();
+    final MySQLConnectorDriverConfig config = provider.get();
     Assert.assertEquals("some.driver.classname", config.getDriverClassName());
   }
 

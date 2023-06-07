@@ -117,7 +117,7 @@ public class NestedDataOperatorConversions
         .operatorBuilder("JSON_KEYS")
         .operandTypeChecker(
             OperandTypes.sequence(
-                "(expr,path)",
+                "'JSON_KEYS(expr, path)'",
                 OperandTypes.ANY,
                 OperandTypes.and(OperandTypes.family(SqlTypeFamily.STRING), OperandTypes.LITERAL)
             )
@@ -428,7 +428,7 @@ public class NestedDataOperatorConversions
       return OperatorConversions.operatorBuilder(functionName)
                                 .operandTypeChecker(
                                     OperandTypes.sequence(
-                                        "(expr,path)",
+                                        "'" + functionName + "(expr, path)'",
                                         OperandTypes.family(SqlTypeFamily.ANY),
                                         OperandTypes.family(SqlTypeFamily.STRING)
                                     )
@@ -558,7 +558,7 @@ public class NestedDataOperatorConversions
       return OperatorConversions.operatorBuilder(functionName)
                                 .operandTypeChecker(
                                     OperandTypes.sequence(
-                                        "(expr,path)",
+                                        "'" + functionName + "(expr, path)'",
                                         OperandTypes.family(SqlTypeFamily.ANY),
                                         OperandTypes.family(SqlTypeFamily.STRING)
                                     )
@@ -610,7 +610,7 @@ public class NestedDataOperatorConversions
                            .operandTypeChecker(
                                OperandTypes.or(
                                    OperandTypes.sequence(
-                                       "(expr,path)",
+                                       "'JSON_VALUE_ANY(expr, path)'",
                                        OperandTypes.family(SqlTypeFamily.ANY),
                                        OperandTypes.family(SqlTypeFamily.STRING)
                                    ),

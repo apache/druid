@@ -182,7 +182,7 @@ public class BloomFilterSqlAggregator implements SqlAggregator
 
   private static class BloomFilterSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE1 = "'" + NAME + "(column, maxNumEntries)'\n";
+    private static final String SIGNATURE1 = "'" + NAME + "(column, maxNumEntries)'";
 
     BloomFilterSqlAggFunction()
     {

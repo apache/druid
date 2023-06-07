@@ -24,7 +24,7 @@ MAVEN_OPTS='-Xmx2500m' ${MVN} test -pl ${MAVEN_PROJECTS} \
 ${MAVEN_SKIP} -Ddruid.generic.useDefaultValueForNull=${DRUID_USE_DEFAULT_VALUE_FOR_NULL}
 sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
 free -m
-${MVN} -pl ${MAVEN_PROJECTS} jacoco:report
+${MVN} -pl ${MAVEN_PROJECTS} jacoco:report || { echo "coverage_failure=false" >> "$GITHUB_ENV" && false; }
 
 # Determine the modified files that match the maven projects being tested. We use maven project lists that
 # either exclude (starts with "!") or include (does not start with "!"), so both cases need to be handled.
@@ -70,7 +70,7 @@ then
   --log-template "totals-complete" \
   --log-template "errors" \
   -- ||
-  { printf "\n\n****FAILED****\nDiff code coverage check failed. To view coverage report, run 'mvn clean test jacoco:report' and open 'target/site/jacoco/index.html'\nFor more details on how to run code coverage locally, follow instructions here - https://github.com/apache/druid/blob/master/dev/code-review/code-coverage.md#running-code-coverage-locally\n\n" && false; }
+  { printf "\n\n****FAILED****\nDiff code coverage check failed. To view coverage report, run 'mvn clean test jacoco:report' and open 'target/site/jacoco/index.html'\nFor more details on how to run code coverage locally, follow instructions here - https://github.com/apache/druid/blob/master/dev/code-review/code-coverage.md#running-code-coverage-locally\n\n" && echo "coverage_failure=true" >> "$GITHUB_ENV" && false; }
 fi
 
 { for i in 1 2 3; do curl -o codecov.sh -s https://codecov.io/bash && break || sleep 15; done }

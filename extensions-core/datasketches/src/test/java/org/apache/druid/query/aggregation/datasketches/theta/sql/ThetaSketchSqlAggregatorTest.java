@@ -27,6 +27,7 @@ import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -44,8 +45,13 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.topn.DimensionTopNMetricSpec;
+import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
@@ -63,6 +69,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -74,6 +81,11 @@ import java.util.Properties;
 public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
   private static final String DATA_SOURCE = "foo";
+  private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(
+      ImmutableList.of(
+          new ThetaPostAggMacros.ThetaSketchEstimateExprMacro()
+      )
+  );
 
   @Override
   public void gatherProperties(Properties properties)
@@ -81,7 +93,10 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
     super.gatherProperties(properties);
 
     // Use APPROX_COUNT_DISTINCT_DS_THETA as APPROX_COUNT_DISTINCT impl for these tests.
-    properties.put(SqlModule.PROPERTY_SQL_APPROX_COUNT_DISTINCT_CHOICE, ThetaSketchApproxCountDistinctSqlAggregator.NAME);
+    properties.put(
+        SqlModule.PROPERTY_SQL_APPROX_COUNT_DISTINCT_CHOICE,
+        ThetaSketchApproxCountDistinctSqlAggregator.NAME
+    );
   }
 
   @Override
@@ -1018,8 +1033,160 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testThetaSketchIntersectOnScalarExpression()
   {
-    assertQueryIsUnplannable("SELECT THETA_SKETCH_INTERSECT(NULL, NULL) FROM foo",
+    assertQueryIsUnplannable(
+        "SELECT THETA_SKETCH_INTERSECT(NULL, NULL) FROM foo",
         "Possible error: THETA_SKETCH_INTERSECT can only be used on aggregates. " +
-            "It cannot be used directly on a column or on a scalar expression.");
+        "It cannot be used directly on a column or on a scalar expression."
+    );
+  }
+
+  @Test
+  public void testThetaSketchEstimateAsVirtualColumn()
+  {
+    testQuery(
+        "SELECT"
+        + " THETA_SKETCH_ESTIMATE(thetasketch_dim1)"
+        + " FROM foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(new ExpressionVirtualColumn(
+                    "v0",
+                    "theta_sketch_estimate(\"thetasketch_dim1\")",
+                    ColumnType.DOUBLE,
+                    MACRO_TABLE
+                ))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .columns("v0")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            NullHandling.replaceWithDefault() ? new Object[]{null} : new Object[]{0.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D}
+        )
+    );
+  }
+
+  @Test
+  public void testThetaEstimateAsVirtualColumnOnNonThetaCol()
+  {
+    try {
+      testQuery(
+          "SELECT"
+          + " THETA_SKETCH_ESTIMATE(dim2)"
+          + " FROM druid.foo",
+          ImmutableList.of(
+              newScanQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(new ExpressionVirtualColumn(
+                      "v0",
+                      "theta_sketch_estimate(\"dim2\")",
+                      ColumnType.DOUBLE,
+                      MACRO_TABLE
+                  ))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .columns("v0")
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+          ),
+          ImmutableList.of()
+      );
+    }
+    catch (IllegalArgumentException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("requires a ThetaSketch as the argument")
+      );
+    }
+  }
+
+  @Test
+  public void testThetaEstimateAsVirtualColumnWithGroupByOrderBy()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT"
+        + " THETA_SKETCH_ESTIMATE(thetasketch_dim1), count(*)"
+        + " FROM druid.foo"
+        + " GROUP BY 1"
+        + " ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(new ExpressionVirtualColumn(
+                            "v0",
+                            "theta_sketch_estimate(\"thetasketch_dim1\")",
+                            ColumnType.DOUBLE,
+                            MACRO_TABLE
+                        ))
+                        .setDimensions(
+                            new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new CountAggregatorFactory("a0")
+                            )
+                        )
+                        .setLimitSpec(
+                            DefaultLimitSpec
+                                .builder()
+                                .orderBy(
+                                    new OrderByColumnSpec(
+                                        "a0",
+                                        OrderByColumnSpec.Direction.DESCENDING,
+                                        StringComparators.NUMERIC
+                                    )
+                                )
+                                .build()
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1.0D, 5L},
+            new Object[]{0.0D, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testThetaEstimateAsVirtualColumnWithTopN()
+  {
+    testQuery(
+        "SELECT"
+        + " THETA_SKETCH_ESTIMATE(thetasketch_dim1)"
+        + " FROM druid.foo"
+        + " GROUP BY 1 ORDER BY 1"
+        + " LIMIT 2",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE))
+                .virtualColumns(new ExpressionVirtualColumn(
+                    "v0",
+                    "theta_sketch_estimate(\"thetasketch_dim1\")",
+                    ColumnType.DOUBLE,
+                    MACRO_TABLE
+                ))
+                .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+                .threshold(2)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{0.0D},
+            new Object[]{1.0D}
+        )
+    );
   }
 }

@@ -38,7 +38,7 @@ and at least one worker task. As an experimental feature, the MSQ task engine al
 batch tasks. The behavior and result format of plain SELECT (without INSERT or REPLACE) is subject to change.
 
 You can execute SQL statements using the MSQ task engine through the **Query** view in the [web
-console](../operations/web-console.md) or through the [`/druid/v2/sql/task` API](api.md).
+console](../operations/web-console.md) or through the [`/druid/v2/sql/task` API](../api-reference/sql-ingestion-api.md).
 
 For more details on how SQL queries are executed using the MSQ task engine, see [multi-stage query
 tasks](#multi-stage-query-tasks).
@@ -52,7 +52,7 @@ To support ingestion, additional SQL functionality is available through the MSQ 
 ### Read external data with `EXTERN`
 
 Query tasks can access external data through the `EXTERN` function, using any native batch [input
-source](../ingestion/native-batch-input-source.md) and [input format](../ingestion/data-formats.md#input-format).
+source](../ingestion/input-sources.md) and [input format](../ingestion/data-formats.md#input-format).
 
 `EXTERN` can read multiple files in parallel across different worker tasks. However, `EXTERN` does not split individual
 files across multiple worker tasks. If you have a small number of very large input files, you can increase query
@@ -126,7 +126,7 @@ The `__time` column is used for [partitioning by time](#partitioning-by-time). I
 column in your `INSERT` statement. However, Druid still creates a `__time` column in your Druid table and sets all
 timestamps to 1970-01-01 00:00:00.
 
-For more information, see [Primary timestamp](../ingestion/data-model.md#primary-timestamp).
+For more information, see [Primary timestamp](../ingestion/schema-model.md#primary-timestamp).
 
 <a name="partitioning"></a>
 
@@ -215,7 +215,7 @@ For an example, see [INSERT with rollup example](examples.md#insert-with-rollup)
 
 ### Execution flow
 
-When you execute a SQL statement using the task endpoint [`/druid/v2/sql/task`](api.md#submit-a-query), the following
+When you execute a SQL statement using the task endpoint [`/druid/v2/sql/task`](../api-reference/sql-ingestion-api.md#submit-a-query), the following
 happens:
 
 1. The Broker plans your SQL query into a native query, as usual.
