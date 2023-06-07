@@ -30,9 +30,9 @@ integration-tests/gen-scripts/
 *.hprof
 **/.ipynb_checkpoints/
 website/.yarn/
-website/node_modules
-website/.docusaurus
-website/build
+website/node_modules/
+website/.docusaurus/
+website/build/
 
 # Local Netlify folder
 .netlify
