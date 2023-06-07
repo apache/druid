@@ -108,7 +108,7 @@ For more information about the connection options, see [Client Reference](https:
 
 Make sure you meet the following requirements before trying these examples:
 
-- A supported Java version, such as Java 8
+- A supported [Java version](../operations/java.md)
 
 - [Avatica JDBC driver](https://calcite.apache.org/avatica/downloads/). You can add the JAR  to your `CLASSPATH` directly or manage it externally, such as through Maven and a `pom.xml` file.
 

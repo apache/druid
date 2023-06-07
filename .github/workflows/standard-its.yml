@@ -65,7 +65,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [8, 11]
+        jdk: [8, 17]
     uses: ./.github/workflows/reusable-standard-its.yml
     with:
       build_jdk: 8
