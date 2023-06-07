@@ -89,6 +89,10 @@ See the [latest documentation](https://druid.apache.org/docs/latest/) for the do
 
 Make documentation and tutorials updates in [`/docs`](https://github.com/apache/druid/tree/master/docs) using [MarkDown](https://www.markdownguide.org/) and contribute them using a pull request.
 
+The documentation site is built using Docusaurus2. Install Docusaurus2 with either `npm install` or `yarn install`. Then, run `npm start` or `yarn start` in `website/` to see a local preview of your changes.
+
+If you're looking to update non-doc pages like Use Cases, those files are in the [`druid-website-src`](https://github.com/apache/druid-website-src/tree/master) repo.
+
 ### Community
 
 Visit the official project [community](https://druid.apache.org/community/) page to read about getting involved in contributing to Apache Druid, and how we help one another use and operate Druid.
