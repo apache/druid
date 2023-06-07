@@ -259,7 +259,8 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                           );
                         }
                         catch (IOException e) {
-                          throw new RuntimeException(e);
+                          log.error(e, "Exception mapping SupervisorSpec for spec_id: [%s]", r.getString("spec_id"));
+                          return Pair.of(null, null);
                         }
                       }
                     }
@@ -276,7 +277,9 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                       )
                       {
                         try {
-                          retVal.put(stringObjectMap.lhs, stringObjectMap.rhs);
+                          if (null != stringObjectMap.lhs && null != stringObjectMap.rhs) {
+                            retVal.put(stringObjectMap.lhs, stringObjectMap.rhs);
+                          }
                           return retVal;
                         }
                         catch (Exception e) {
