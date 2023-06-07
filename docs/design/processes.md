@@ -43,7 +43,7 @@ Druid processes can be deployed any way you like, but for ease of deployment we 
 * **Query**
 * **Data**
 
-![](../assets/druid-architecture.png)
+![Druid architecture](../assets/druid-architecture.png)
 
 This section describes the Druid processes and the suggested Master/Query/Data server organization, as shown in the architecture diagram above.
 
