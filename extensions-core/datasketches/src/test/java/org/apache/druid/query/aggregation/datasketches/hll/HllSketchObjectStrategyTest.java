@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import org.apache.datasketches.SketchesArgumentException;
+import org.apache.datasketches.common.SketchesArgumentException;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
@@ -39,10 +39,10 @@ public class HllSketchObjectStrategyTest
     final byte[] bytes = sketch.toCompactByteArray();
 
     ByteBuffer buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
-    HllSketchObjectStrategy objectStrategy = new HllSketchObjectStrategy();
+    HllSketchHolderObjectStrategy objectStrategy = new HllSketchHolderObjectStrategy();
 
     // valid sketch should not explode when copied, which reads the memory
-    objectStrategy.fromByteBufferSafe(buf, bytes.length).copy();
+    objectStrategy.fromByteBufferSafe(buf, bytes.length).getSketch().copy();
 
     // corrupted sketch should fail with a regular java buffer exception
     for (int subset = 3; subset < bytes.length - 1; subset++) {
@@ -53,8 +53,8 @@ public class HllSketchObjectStrategyTest
 
       final ByteBuffer buf2 = ByteBuffer.wrap(garbage2).order(ByteOrder.LITTLE_ENDIAN);
       Assert.assertThrows(
-          IndexOutOfBoundsException.class,
-          () -> objectStrategy.fromByteBufferSafe(buf2, garbage2.length).copy()
+          Exception.class, // can throw either SketchesArgumentException or IndexOutOfBoundsException
+          () -> objectStrategy.fromByteBufferSafe(buf2, garbage2.length).getSketch().copy()
       );
     }
 
@@ -62,8 +62,8 @@ public class HllSketchObjectStrategyTest
     final byte[] garbage = new byte[]{0x01, 0x02};
     final ByteBuffer buf3 = ByteBuffer.wrap(garbage).order(ByteOrder.LITTLE_ENDIAN);
     Assert.assertThrows(
-        IndexOutOfBoundsException.class,
-        () -> objectStrategy.fromByteBufferSafe(buf3, garbage.length).copy()
+        SketchesArgumentException.class,
+        () -> objectStrategy.fromByteBufferSafe(buf3, garbage.length).getSketch().copy()
     );
 
     // non sketch that is long enough to check (this one doesn't actually need 'safe' read)
@@ -71,7 +71,7 @@ public class HllSketchObjectStrategyTest
     final ByteBuffer buf4 = ByteBuffer.wrap(garbageLonger).order(ByteOrder.LITTLE_ENDIAN);
     Assert.assertThrows(
         SketchesArgumentException.class,
-        () -> objectStrategy.fromByteBufferSafe(buf4, garbageLonger.length).copy()
+        () -> objectStrategy.fromByteBufferSafe(buf4, garbageLonger.length).getSketch().copy()
     );
   }
 }

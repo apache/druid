@@ -13,13 +13,11 @@ exports[`ColumnTree matches snapshot 1`] = `
     value={0}
   >
     <option
-      key="0"
       value={0}
     >
       druid
     </option>
     <option
-      key="1"
       value={1}
     >
       sys
@@ -53,6 +51,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                   hoverOpenDelay={150}
                   inheritDarkTheme={true}
                   interactionKind="click"
+                  matchTargetWidth={false}
                   minimal={false}
                   openOnTargetFocus={true}
                   position="right"
@@ -85,6 +84,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                   hoverOpenDelay={150}
                   inheritDarkTheme={true}
                   interactionKind="click"
+                  matchTargetWidth={false}
                   minimal={false}
                   openOnTargetFocus={true}
                   position="right"
@@ -98,7 +98,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                 </Blueprint4.Popover2>,
               },
               Object {
-                "icon": "numerical",
+                "icon": "floating-point",
                 "id": "addedBy10",
                 "label": <Blueprint4.Popover2
                   autoFocus={false}
@@ -117,6 +117,7 @@ exports[`ColumnTree matches snapshot 1`] = `
                   hoverOpenDelay={150}
                   inheritDarkTheme={true}
                   interactionKind="click"
+                  matchTargetWidth={false}
                   minimal={false}
                   openOnTargetFocus={true}
                   position="right"
@@ -150,6 +151,7 @@ exports[`ColumnTree matches snapshot 1`] = `
               hoverOpenDelay={150}
               inheritDarkTheme={true}
               interactionKind="click"
+              matchTargetWidth={false}
               minimal={false}
               openOnTargetFocus={true}
               position="right"

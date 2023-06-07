@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.write;
 
+import com.google.common.base.Throwables;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
@@ -27,7 +28,7 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.MemoryRange;
 import org.apache.druid.frame.field.FieldWriter;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -63,7 +64,7 @@ public class RowBasedFrameWriter implements FrameWriter
   static final int BASE_DATA_ALLOCATION_SIZE = 1 << 13; // 8 KB
 
   private final RowSignature signature;
-  private final List<SortColumn> sortColumns;
+  private final List<KeyColumn> sortColumns;
   private final List<FieldWriter> fieldWriters;
   private final Supplier<MemoryRange<Memory>> rowMemorySupplier;
   @Nullable // Null if frame will not need permutation
@@ -75,7 +76,7 @@ public class RowBasedFrameWriter implements FrameWriter
 
   public RowBasedFrameWriter(
       final RowSignature signature,
-      final List<SortColumn> sortColumns,
+      final List<KeyColumn> sortColumns,
       final List<FieldWriter> fieldWriters,
       @Nullable final Supplier<MemoryRange<Memory>> rowMemorySupplier,
       @Nullable final AppendableMemory rowOrderMemory,
@@ -125,6 +126,7 @@ public class RowBasedFrameWriter implements FrameWriter
       }
     }
     catch (Exception e) {
+      Throwables.propagateIfInstanceOf(e, ParseException.class);
       throw new ParseException("", e, "Unable to add the row to the frame. Type conversion might be required.");
     }
 

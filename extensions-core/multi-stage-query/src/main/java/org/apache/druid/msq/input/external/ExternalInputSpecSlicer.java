@@ -22,27 +22,23 @@ package org.apache.druid.msq.input.external;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterators;
 import org.apache.druid.data.input.InputFileAttribute;
-import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.input.MaxSizeSplitHintSpec;
+import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
-import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.SlicerUtils;
-import org.apache.druid.segment.column.RowSignature;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Slices {@link ExternalInputSpec} into {@link ExternalInputSlice} or {@link NilInputSlice}.
@@ -59,91 +55,193 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
   public List<InputSlice> sliceStatic(InputSpec inputSpec, int maxNumSlices)
   {
     final ExternalInputSpec externalInputSpec = (ExternalInputSpec) inputSpec;
-    final InputSource inputSource = externalInputSpec.getInputSource();
-    final InputFormat inputFormat = externalInputSpec.getInputFormat();
-    final RowSignature signature = externalInputSpec.getSignature();
 
-    // Worker number -> input source for that worker.
-    final List<List<InputSource>> workerInputSourcess;
-
-    // Figure out input splits for each worker.
-    if (inputSource.isSplittable()) {
-      //noinspection unchecked
-      final SplittableInputSource<Object> splittableInputSource = (SplittableInputSource<Object>) inputSource;
-
-      try {
-        workerInputSourcess = SlicerUtils.makeSlices(
-            splittableInputSource.createSplits(inputFormat, FilePerSplitHintSpec.INSTANCE)
-                                 .map(splittableInputSource::withSplit)
-                                 .iterator(),
-            maxNumSlices
-        );
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
+    if (externalInputSpec.getInputSource().isSplittable()) {
+      return sliceSplittableInputSource(
+          externalInputSpec,
+          new StaticSplitHintSpec(maxNumSlices),
+          maxNumSlices
+      );
     } else {
-      workerInputSourcess = Collections.singletonList(Collections.singletonList(inputSource));
+      return sliceUnsplittableInputSource(externalInputSpec);
     }
-
-    // Sanity check. It is a bug in this method if this exception is ever thrown.
-    if (workerInputSourcess.size() > maxNumSlices) {
-      throw new ISE("Generated too many slices [%d > %d]", workerInputSourcess.size(), maxNumSlices);
-    }
-
-    return IntStream.range(0, maxNumSlices)
-                    .mapToObj(
-                        workerNumber -> {
-                          final List<InputSource> workerInputSources;
-
-                          if (workerNumber < workerInputSourcess.size()) {
-                            workerInputSources = workerInputSourcess.get(workerNumber);
-                          } else {
-                            workerInputSources = Collections.emptyList();
-                          }
-
-                          if (workerInputSources.isEmpty()) {
-                            return NilInputSlice.INSTANCE;
-                          } else {
-                            return new ExternalInputSlice(workerInputSources, inputFormat, signature);
-                          }
-                        }
-                    )
-                    .collect(Collectors.toList());
   }
 
   @Override
   public List<InputSlice> sliceDynamic(
-      InputSpec inputSpec,
-      int maxNumSlices,
-      int maxFilesPerSlice,
-      long maxBytesPerSlice
+      final InputSpec inputSpec,
+      final int maxNumSlices,
+      final int maxFilesPerSlice,
+      final long maxBytesPerSlice
   )
   {
     final ExternalInputSpec externalInputSpec = (ExternalInputSpec) inputSpec;
 
-    if (!externalInputSpec.getInputSource().isSplittable()) {
-      return sliceStatic(inputSpec, 1);
+    if (externalInputSpec.getInputSource().isSplittable()) {
+      return sliceSplittableInputSource(
+          externalInputSpec,
+          new DynamicSplitHintSpec(maxNumSlices, maxFilesPerSlice, maxBytesPerSlice),
+          maxNumSlices
+      );
+    } else {
+      return sliceUnsplittableInputSource(externalInputSpec);
     }
+  }
 
-    final SplittableInputSource<?> inputSource = (SplittableInputSource<?>) externalInputSpec.getInputSource();
-    final MaxSizeSplitHintSpec maxSizeSplitHintSpec = new MaxSizeSplitHintSpec(
-        new HumanReadableBytes(maxBytesPerSlice),
-        maxFilesPerSlice
+  /**
+   * "Slice" an unsplittable input source into a single slice.
+   */
+  private static List<InputSlice> sliceUnsplittableInputSource(final ExternalInputSpec inputSpec)
+  {
+    return Collections.singletonList(
+        new ExternalInputSlice(
+            Collections.singletonList(inputSpec.getInputSource()),
+            inputSpec.getInputFormat(),
+            inputSpec.getSignature()
+        )
     );
+  }
 
-    final long numSlices;
+  /**
+   * Slice a {@link SplittableInputSource} using a {@link SplitHintSpec}.
+   */
+  private static List<InputSlice> sliceSplittableInputSource(
+      final ExternalInputSpec inputSpec,
+      final SplitHintSpec splitHintSpec,
+      final int maxNumSlices
+  )
+  {
+    final SplittableInputSource<Object> splittableInputSource =
+        (SplittableInputSource<Object>) inputSpec.getInputSource();
 
     try {
-      numSlices = inputSource.createSplits(externalInputSpec.getInputFormat(), maxSizeSplitHintSpec).count();
+      final List<InputSplit<Object>> splitList =
+          splittableInputSource.createSplits(inputSpec.getInputFormat(), splitHintSpec).collect(Collectors.toList());
+      final List<InputSlice> assignments = new ArrayList<>();
+
+      if (splitList.size() <= maxNumSlices) {
+        for (final InputSplit<Object> split : splitList) {
+          assignments.add(splitsToSlice(inputSpec, Collections.singletonList(split)));
+        }
+      } else {
+        // In some cases (for example, HttpInputSource) "createSplits" ignores our splitHintSpec. If this happens,
+        // the number of splits may be larger than maxNumSlices. Remix the splits ourselves.
+        final List<List<InputSplit<Object>>> splitsList =
+            SlicerUtils.makeSlicesStatic(splitList.iterator(), maxNumSlices);
+
+        for (List<InputSplit<Object>> splits : splitsList) {
+          //noinspection rawtypes, unchecked
+          assignments.add(splitsToSlice(inputSpec, (List) splits));
+        }
+      }
+
+      return assignments;
     }
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-
-    return sliceStatic(inputSpec, (int) Math.min(numSlices, maxNumSlices));
   }
 
+  /**
+   * Convert {@link InputSplit} (from {@link SplittableInputSource#createSplits}) into an {@link InputSlice}.
+   */
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  private static InputSlice splitsToSlice(
+      final ExternalInputSpec spec,
+      final List<InputSplit<?>> splits
+  )
+  {
+    try {
+      final SplittableInputSource<?> splittableInputSource = (SplittableInputSource) spec.getInputSource();
+      final List<InputSource> subSources = new ArrayList<>();
+
+      for (final InputSplit<?> split : splits) {
+        // Use FilePerSplitHintSpec to create an InputSource per file. This allows to us track progress at
+        // the level of reading individual files.
+        ((SplittableInputSource<?>) splittableInputSource.withSplit((InputSplit) split))
+            .createSplits(spec.getInputFormat(), FilePerSplitHintSpec.INSTANCE)
+            .map(subSplit -> splittableInputSource.withSplit((InputSplit) subSplit))
+            .forEach(s -> ((List) subSources).add(s));
+      }
+
+      if (subSources.isEmpty()) {
+        return NilInputSlice.INSTANCE;
+      } else {
+        return new ExternalInputSlice(subSources, spec.getInputFormat(), spec.getSignature());
+      }
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Split hint spec used by {@link #sliceStatic(InputSpec, int)}.
+   */
+  static class StaticSplitHintSpec implements SplitHintSpec
+  {
+    private final int maxNumSlices;
+
+    public StaticSplitHintSpec(final int maxNumSlices)
+    {
+      this.maxNumSlices = maxNumSlices;
+    }
+
+    @Override
+    public <T> Iterator<List<T>> split(
+        final Iterator<T> inputIterator,
+        final Function<T, InputFileAttribute> inputAttributeExtractor
+    )
+    {
+      return Iterators.filter(
+          SlicerUtils.makeSlicesStatic(
+              inputIterator,
+              item -> inputAttributeExtractor.apply(item).getSize(),
+              maxNumSlices
+          ).iterator(),
+          xs -> !xs.isEmpty()
+      );
+    }
+  }
+
+  /**
+   * Split hint spec used by {@link #sliceDynamic(InputSpec, int, int, long)}.
+   */
+  static class DynamicSplitHintSpec implements SplitHintSpec
+  {
+    private final int maxNumSlices;
+    private final int maxFilesPerSlice;
+    private final long maxBytesPerSlice;
+
+    public DynamicSplitHintSpec(final int maxNumSlices, final int maxFilesPerSlice, final long maxBytesPerSlice)
+    {
+      this.maxNumSlices = maxNumSlices;
+      this.maxFilesPerSlice = maxFilesPerSlice;
+      this.maxBytesPerSlice = maxBytesPerSlice;
+    }
+
+    @Override
+    public <T> Iterator<List<T>> split(
+        final Iterator<T> inputIterator,
+        final Function<T, InputFileAttribute> inputAttributeExtractor
+    )
+    {
+      return Iterators.filter(
+          SlicerUtils.makeSlicesDynamic(
+              inputIterator,
+              item -> inputAttributeExtractor.apply(item).getWeightedSize(),
+              maxNumSlices,
+              maxFilesPerSlice,
+              maxBytesPerSlice
+          ).iterator(),
+          xs -> !xs.isEmpty()
+      );
+    }
+  }
+
+  /**
+   * Assigns each input file to its own split.
+   */
   @VisibleForTesting
   static class FilePerSplitHintSpec implements SplitHintSpec
   {

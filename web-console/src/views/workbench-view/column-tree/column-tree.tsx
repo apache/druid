@@ -16,32 +16,28 @@
  * limitations under the License.
  */
 
-import { HTMLSelect, Menu, MenuItem, Position, Tree, TreeNodeInfo } from '@blueprintjs/core';
+import type { TreeNodeInfo } from '@blueprintjs/core';
+import { HTMLSelect, Menu, MenuItem, Position, Tree } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { SqlExpression } from 'druid-query-toolkit';
 import {
   C,
   F,
   N,
   SqlColumn,
   SqlComparison,
-  SqlExpression,
   SqlJoinPart,
   SqlQuery,
   SqlTable,
   T,
 } from 'druid-query-toolkit';
-import React, { ChangeEvent } from 'react';
+import type { ChangeEvent } from 'react';
+import React from 'react';
 
 import { Deferred, Loader } from '../../../components';
-import {
-  ColumnMetadata,
-  copyAndAlert,
-  dataTypeToIcon,
-  groupBy,
-  oneOf,
-  prettyPrintSql,
-} from '../../../utils';
+import type { ColumnMetadata } from '../../../utils';
+import { copyAndAlert, dataTypeToIcon, groupBy, oneOf, prettyPrintSql } from '../../../utils';
 
 import { NumberMenuItems, StringMenuItems, TimeMenuItems } from './column-tree-menu';
 
@@ -522,8 +518,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     return null;
   }
 
-  constructor(props: ColumnTreeProps, context: any) {
-    super(props, context);
+  constructor(props: ColumnTreeProps) {
+    super(props);
     this.state = {
       selectedTreeIndex: -1,
     };

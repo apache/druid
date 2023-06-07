@@ -53,6 +53,11 @@ public interface FieldReader
   );
 
   /**
+   * Whether the provided memory position points to a null value.
+   */
+  boolean isNull(Memory memory, long position);
+
+  /**
    * Whether this field is comparable. Comparable fields can be compared as unsigned bytes.
    */
   boolean isComparable();

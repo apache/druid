@@ -24,7 +24,7 @@ description: "Defines a strategy to maintain Druid metadata store performance by
   ~ under the License.
   -->
 
-Apache Druid relies on [metadata storage](../dependencies/metadata-storage.md) to track information on data storage, operations, and system configuration.
+Apache Druid relies on [metadata storage](../design/metadata-storage.md) to track information on data storage, operations, and system configuration.
 The metadata store includes the following:
 
 - Segment records
@@ -143,8 +143,11 @@ Datasource cleanup uses the following configuration:
 
 ### Indexer task logs
 
-You can configure the Overlord to delete indexer task log metadata and the indexer task logs from local disk or from cloud storage.
-Set these properties in the `overlord/runtime.properties` file.
+You can configure the Overlord to periodically delete indexer task logs and associated metadata. During cleanup, the Overlord removes the following:
+* Indexer task logs from deep storage.
+* Indexer task log metadata from the tasks and tasklogs tables in [metadata storage](../configuration/index.md#metadata-storage) (named `druid_tasks` and `druid_tasklogs` by default). Druid no longer uses the tasklogs table, and the table is always empty.
+
+To configure cleanup of task logs by the Overlord, set the following properties in the `overlord/runtime.properties` file.
 
 Indexer task log cleanup on the Overlord uses the following configuration:
 - `druid.indexer.logs.kill.enabled`: When `true`, enables cleanup of task logs.
@@ -227,5 +230,5 @@ druid.coordinator.kill.datasource.durationToRetain=P4D
 ## Learn more
 See the following topics for more information:
 - [Metadata management](../configuration/index.md#metadata-management) for metadata store configuration reference.
-- [Metadata storage](../dependencies/metadata-storage.md) for an overview of the metadata storage database.
+- [Metadata storage](../design/metadata-storage.md) for an overview of the metadata storage database.
 

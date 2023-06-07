@@ -112,35 +112,52 @@ public class SegmentAnalyzer
         capabilities = storageAdapter.getColumnCapabilities(columnName);
       }
 
-      final ColumnAnalysis analysis;
+      if (capabilities == null) {
+        log.warn("Unknown column type for column[%s]", columnName);
+        columns.put(columnName, ColumnAnalysis.error("unknown_type"));
+        continue;
+      }
 
-      switch (capabilities.getType()) {
-        case LONG:
-          final int bytesPerRow =
-              ColumnHolder.TIME_COLUMN_NAME.equals(columnName) ? NUM_BYTES_IN_TIMESTAMP : Long.BYTES;
+      ColumnAnalysis analysis;
+      try {
+        switch (capabilities.getType()) {
+          case LONG:
+            final int bytesPerRow =
+                ColumnHolder.TIME_COLUMN_NAME.equals(columnName) ? NUM_BYTES_IN_TIMESTAMP : Long.BYTES;
 
-          analysis = analyzeNumericColumn(capabilities, numRows, bytesPerRow);
-          break;
-        case FLOAT:
-          analysis = analyzeNumericColumn(capabilities, numRows, NUM_BYTES_IN_TEXT_FLOAT);
-          break;
-        case DOUBLE:
-          analysis = analyzeNumericColumn(capabilities, numRows, Double.BYTES);
-          break;
-        case STRING:
-          if (index != null) {
-            analysis = analyzeStringColumn(capabilities, index.getColumnHolder(columnName));
-          } else {
-            analysis = analyzeStringColumn(capabilities, storageAdapter, columnName);
-          }
-          break;
-        case COMPLEX:
-          final ColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
-          analysis = analyzeComplexColumn(capabilities, numRows, columnHolder);
-          break;
-        default:
-          log.warn("Unknown column type[%s].", capabilities.asTypeString());
-          analysis = ColumnAnalysis.error(StringUtils.format("unknown_type_%s", capabilities.asTypeString()));
+            analysis = analyzeNumericColumn(capabilities, numRows, bytesPerRow);
+            break;
+          case FLOAT:
+            analysis = analyzeNumericColumn(capabilities, numRows, NUM_BYTES_IN_TEXT_FLOAT);
+            break;
+          case DOUBLE:
+            analysis = analyzeNumericColumn(capabilities, numRows, Double.BYTES);
+            break;
+          case STRING:
+            if (index != null) {
+              analysis = analyzeStringColumn(capabilities, index.getColumnHolder(columnName));
+            } else {
+              analysis = analyzeStringColumn(capabilities, storageAdapter, columnName);
+            }
+            break;
+          case ARRAY:
+            analysis = analyzeArrayColumn(capabilities);
+            break;
+          case COMPLEX:
+            final ColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
+            analysis = analyzeComplexColumn(capabilities, numRows, columnHolder);
+            break;
+          default:
+            log.warn("Unknown column type[%s] for column[%s].", capabilities.asTypeString(), columnName);
+            analysis = ColumnAnalysis.error(StringUtils.format("unknown_type_%s", capabilities.asTypeString()));
+        }
+      }
+      catch (RuntimeException re) {
+        // eat the exception and add error analysis, this is preferrable to exploding since exploding results in
+        // the broker downstream SQL metadata cache left in a state where it is unable to completely finish
+        // the SQL schema relies on this stuff functioning, and so will continuously retry when it faces a failure
+        log.warn(re, "Error analyzing column[%s] of type[%s]", columnName, capabilities.asTypeString());
+        analysis = ColumnAnalysis.error(re.getMessage());
       }
 
       columns.put(columnName, analysis);
@@ -171,26 +188,16 @@ public class SegmentAnalyzer
   )
   {
     long size = 0;
+    final ColumnAnalysis.Builder bob = ColumnAnalysis.builder().withCapabilities(capabilities);
 
     if (analyzingSize()) {
       if (capabilities.hasMultipleValues().isTrue()) {
-        return ColumnAnalysis.error("multi_value");
+        return bob.withErrorMessage("multi_value").build();
       }
 
       size = ((long) length) * sizePerRow;
     }
-
-    return new ColumnAnalysis(
-        capabilities.toColumnType(),
-        capabilities.getType().name(),
-        capabilities.hasMultipleValues().isTrue(),
-        capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
-        size,
-        null,
-        null,
-        null,
-        null
-    );
+    return bob.withSize(size).build();
   }
 
   private ColumnAnalysis analyzeStringColumn(
@@ -234,23 +241,20 @@ public class SegmentAnalyzer
         }
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        return ColumnAnalysis.builder().withCapabilities(capabilities).withErrorMessage(e.getMessage()).build();
       }
     } else {
       cardinality = 0;
     }
 
-    return new ColumnAnalysis(
-        capabilities.toColumnType(),
-        capabilities.getType().name(),
-        capabilities.hasMultipleValues().isTrue(),
-        capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
-        size,
-        analyzingCardinality() ? cardinality : 0,
-        min,
-        max,
-        null
-    );
+    return ColumnAnalysis.builder()
+                         .withCapabilities(capabilities)
+                         .withSize(size)
+                         .withCardinality(analyzingCardinality() ? cardinality : 0)
+                         .withMinValue(min)
+                         .withMaxValue(max)
+                         .build();
+
   }
 
   private ColumnAnalysis analyzeStringColumn(
@@ -319,21 +323,17 @@ public class SegmentAnalyzer
       max = storageAdapter.getMaxValue(columnName);
     }
 
-    return new ColumnAnalysis(
-        capabilities.toColumnType(),
-        capabilities.getType().name(),
-        capabilities.hasMultipleValues().isTrue(),
-        capabilities.hasNulls().isMaybeTrue(), // if we don't know for sure, then we should plan to check for nulls
-        size,
-        cardinality,
-        min,
-        max,
-        null
-    );
+    return ColumnAnalysis.builder()
+                         .withCapabilities(capabilities)
+                         .withSize(size)
+                         .withCardinality(cardinality)
+                         .withMinValue(min)
+                         .withMaxValue(max)
+                         .build();
   }
 
   private ColumnAnalysis analyzeComplexColumn(
-      @Nullable final ColumnCapabilities capabilities,
+      final ColumnCapabilities capabilities,
       final int numCells,
       @Nullable final ColumnHolder columnHolder
   )
@@ -341,48 +341,51 @@ public class SegmentAnalyzer
     final TypeSignature<ValueType> typeSignature = capabilities == null ? ColumnType.UNKNOWN_COMPLEX : capabilities;
     final String typeName = typeSignature.getComplexTypeName();
 
-    try (final ComplexColumn complexColumn = columnHolder != null ? (ComplexColumn) columnHolder.getColumn() : null) {
-      final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues().isTrue();
-      final boolean hasNulls = capabilities != null && capabilities.hasNulls().isMaybeTrue();
-      long size = 0;
+    final ColumnAnalysis.Builder bob = ColumnAnalysis.builder()
+                                                     .withType(ColumnTypeFactory.ofType(typeSignature))
+                                                     .withTypeName(typeName);
 
+    try (final BaseColumn theColumn = columnHolder != null ? columnHolder.getColumn() : null) {
+      if (theColumn != null && !(theColumn instanceof ComplexColumn)) {
+        return bob.withErrorMessage(
+                    StringUtils.format(
+                        "[%s] is not a [%s]",
+                        theColumn.getClass().getName(),
+                        ComplexColumn.class.getName()
+                    )
+                  )
+                  .build();
+      }
+      final ComplexColumn complexColumn = (ComplexColumn) theColumn;
+
+      bob.hasMultipleValues(capabilities.hasMultipleValues().isTrue())
+         .hasNulls(capabilities.hasNulls().isMaybeTrue());
+
+      long size = 0;
       if (analyzingSize() && complexColumn != null) {
+
         final ComplexMetricSerde serde = typeName == null ? null : ComplexMetrics.getSerdeForType(typeName);
         if (serde == null) {
-          return ColumnAnalysis.error(StringUtils.format("unknown_complex_%s", typeName));
+          return bob.withErrorMessage(StringUtils.format("unknown_complex_%s", typeName)).build();
         }
 
         final Function<Object, Long> inputSizeFn = serde.inputSizeFn();
-        if (inputSizeFn == null) {
-          return new ColumnAnalysis(
-              ColumnTypeFactory.ofType(typeSignature),
-              typeName,
-              hasMultipleValues,
-              hasNulls,
-              0,
-              null,
-              null,
-              null,
-              null
-          );
-        }
+        if (inputSizeFn != null) {
 
-        for (int i = 0; i < numCells; ++i) {
-          size += inputSizeFn.apply(complexColumn.getRowValue(i));
+          for (int i = 0; i < numCells; ++i) {
+            size += inputSizeFn.apply(complexColumn.getRowValue(i));
+          }
         }
       }
-
-      return new ColumnAnalysis(
-          ColumnTypeFactory.ofType(typeSignature),
-          typeName,
-          hasMultipleValues,
-          hasNulls,
-          size,
-          null,
-          null,
-          null,
-          null
-      );
+      return bob.withSize(size).build();
     }
+    catch (IOException e) {
+      return bob.withErrorMessage(e.getMessage()).build();
+    }
+  }
+
+  private ColumnAnalysis analyzeArrayColumn(final ColumnCapabilities capabilities)
+  {
+    return ColumnAnalysis.builder().withCapabilities(capabilities).build();
   }
 }

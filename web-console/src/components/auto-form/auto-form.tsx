@@ -35,7 +35,7 @@ import { JsonInput } from '../json-input/json-input';
 import { NumericInputWithDefault } from '../numeric-input-with-default/numeric-input-with-default';
 import { PopoverText } from '../popover-text/popover-text';
 import { SuggestibleInput } from '../suggestible-input/suggestible-input';
-import { Suggestion } from '../suggestion-menu/suggestion-menu';
+import type { Suggestion } from '../suggestion-menu/suggestion-menu';
 
 import './auto-form.scss';
 
@@ -70,7 +70,7 @@ export interface Field<M> {
   hide?: Functor<M, boolean>;
   hideInMore?: Functor<M, boolean>;
   valueAdjustment?: (value: any) => any;
-  adjustment?: (model: Partial<M>) => Partial<M>;
+  adjustment?: (model: Partial<M>, oldModel: Partial<M>) => Partial<M>;
   issueWithValue?: (value: any) => string | undefined;
 
   customSummary?: (v: any) => string;
@@ -217,7 +217,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     }
 
     if (field.adjustment) {
-      newModel = field.adjustment(newModel);
+      newModel = field.adjustment(newModel, model);
     }
 
     this.modelChange(newModel);

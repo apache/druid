@@ -26,7 +26,7 @@ sidebar_label: "Query context"
 The query context is used for various query configuration parameters. Query context parameters can be specified in
 the following ways:
 
-- For [Druid SQL](sql-api.md), context parameters are provided either in a JSON object named `context` to the
+- For [Druid SQL](../api-reference/sql-api.md), context parameters are provided either in a JSON object named `context` to the
 HTTP POST API, or as properties to the JDBC connection.
 - For [native queries](querying.md), context parameters are provided in a JSON object named `context`.
 
@@ -49,7 +49,7 @@ Unless otherwise noted, the following parameters apply to all query types.
 |`useResultLevelCache`| `true`                      | Flag indicating whether to leverage the result level cache for this query. When set to false, it disables reading from the query cache for this query. When set to true, Druid uses `druid.broker.cache.useResultLevelCache` to determine whether or not to read from the result-level query cache |
 |`populateResultLevelCache`    | `true`                      | Flag indicating whether to save the results of the query to the result level cache. Primarily used for debugging. When set to false, it disables saving the results of this query to the query cache. When set to true, Druid uses `druid.broker.cache.populateResultLevelCache` to determine whether or not to save the results of this query to the result-level query cache |
 |`bySegment`        | `false`                                | Native queries only. Return "by segment" results. Primarily used for debugging, setting it to `true` returns results associated with the data segment they came from |
-|`finalize`         | `true`                                 | Flag indicating whether to "finalize" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator will return the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false` |
+|`finalize`         | `N/A`                                 | Flag indicating whether to "finalize" aggregation results. Primarily used for debugging. For instance, the `hyperUnique` aggregator returns the full HyperLogLog sketch instead of the estimated cardinality when this flag is set to `false` |
 |`maxScatterGatherBytes`| `druid.server.http.maxScatterGatherBytes` | Maximum number of bytes gathered from data processes such as Historicals and realtime processes to execute a query. This parameter can be used to further reduce `maxScatterGatherBytes` limit at query time. See [Broker configuration](../configuration/index.md#broker) for more details.|
 |`maxQueuedBytes`       | `druid.broker.http.maxQueuedBytes`        | Maximum number of bytes queued per query before exerting backpressure on the channel to the data server. Similar to `maxScatterGatherBytes`, except unlike that configuration, this one will trigger backpressure rather than query failure. Zero means disabled.|
 |`serializeDateTimeAsLong`| `false`       | If true, DateTime is serialized as long in the result returned by Broker and the data transportation between Broker and compute process|
@@ -108,12 +108,12 @@ batches of rows at a time. Not all queries can be vectorized. In particular, vec
 requirements:
 
 - All query-level filters must either be able to run on bitmap indexes or must offer vectorized row-matchers. These
-include "selector", "bound", "in", "like", "regex", "search", "and", "or", and "not".
+include `selector`, `bound`, `in`, `like`, `regex`, `search`, `and`, `or`, and `not`.
 - All filters in filtered aggregators must offer vectorized row-matchers.
-- All aggregators must offer vectorized implementations. These include "count", "doubleSum", "floatSum", "longSum", "longMin",
- "longMax", "doubleMin", "doubleMax", "floatMin", "floatMax", "longAny", "doubleAny", "floatAny", "stringAny",
- "hyperUnique", "filtered", "approxHistogram", "approxHistogramFold", and "fixedBucketsHistogram" (with numerical input). 
-- All virtual columns must offer vectorized implementations. Currently for expression virtual columns, support for vectorization is decided on a per expression basis, depending on the type of input and the functions used by the expression. See the currently supported list in the [expression documentation](../misc/math-expr.md#vectorization-support).
+- All aggregators must offer vectorized implementations. These include `count`, `doubleSum`, `floatSum`, `longSum`. `longMin`,
+ `longMax`, `doubleMin`, `doubleMax`, `floatMin`, `floatMax`, `longAny`, `doubleAny`, `floatAny`, `stringAny`,
+ `hyperUnique`, `filtered`, `approxHistogram`, `approxHistogramFold`, and `fixedBucketsHistogram` (with numerical input). 
+- All virtual columns must offer vectorized implementations. Currently for expression virtual columns, support for vectorization is decided on a per expression basis, depending on the type of input and the functions used by the expression. See the currently supported list in the [expression documentation](math-expr.md#vectorization-support).
 - For GroupBy: All dimension specs must be "default" (no extraction functions or filtered dimension specs).
 - For GroupBy: No multi-value dimensions.
 - For Timeseries: No "descending" order.

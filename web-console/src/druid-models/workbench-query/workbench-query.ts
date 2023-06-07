@@ -16,31 +16,35 @@
  * limitations under the License.
  */
 
+import type {
+  SqlClusteredByClause,
+  SqlExpression,
+  SqlPartitionedByClause,
+  SqlQuery,
+} from 'druid-query-toolkit';
 import {
   C,
   F,
-  SqlClusteredByClause,
-  SqlExpression,
   SqlLiteral,
   SqlOrderByClause,
   SqlOrderByExpression,
-  SqlPartitionedByClause,
-  SqlQuery,
   SqlTable,
 } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
 
-import { ColumnMetadata, deleteKeys, generate8HexId } from '../../utils';
-import { DruidEngine, validDruidEngine } from '../druid-engine/druid-engine';
-import { LastExecution } from '../execution/execution';
-import { ExternalConfig } from '../external-config/external-config';
+import type { ColumnMetadata, RowColumn } from '../../utils';
+import { deleteKeys, generate8HexId } from '../../utils';
+import type { DruidEngine } from '../druid-engine/druid-engine';
+import { validDruidEngine } from '../druid-engine/druid-engine';
+import type { LastExecution } from '../execution/execution';
+import type { ExternalConfig } from '../external-config/external-config';
 import {
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
 } from '../ingest-query-pattern/ingest-query-pattern';
-import { QueryContext } from '../query-context/query-context';
+import type { QueryContext } from '../query-context/query-context';
 
 import { WorkbenchQueryPart } from './workbench-query-part';
 
@@ -191,7 +195,7 @@ export class WorkbenchQuery {
       .map(line =>
         line.replace(
           /^(\s*)(INSERT\s+INTO|REPLACE\s+INTO|OVERWRITE|PARTITIONED\s+BY|CLUSTERED\s+BY)/i,
-          (_, spaces, thing) => `${spaces}--${thing.substr(2)}`,
+          (_, spaces, thing) => `${spaces}--${thing.slice(2)}`,
         ),
       )
       .join('\n');
@@ -219,6 +223,12 @@ export class WorkbenchQuery {
     }
 
     return orderByExpressions.length ? SqlOrderByClause.create(orderByExpressions) : undefined;
+  }
+
+  static getRowColumnFromIssue(issue: string): RowColumn | undefined {
+    const m = issue.match(/at line (\d+),(\d+)/);
+    if (!m) return;
+    return { match: '', row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
   }
 
   public readonly queryParts: WorkbenchQueryPart[];
@@ -347,13 +357,12 @@ export class WorkbenchQuery {
     return this.getLastPart().isEmptyQuery();
   }
 
-  public isValid(): boolean {
+  public getIssue(): string | undefined {
     const lastPart = this.getLastPart();
-    if (lastPart.isJsonLike() && !lastPart.validJson()) {
-      return false;
+    if (lastPart.isJsonLike()) {
+      return lastPart.issueWithJson();
     }
-
-    return true;
+    return;
   }
 
   public canPrettify(): boolean {

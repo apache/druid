@@ -19,12 +19,13 @@
 
 package org.apache.druid.frame.write.columnar;
 
+import com.google.common.base.Throwables;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.MemoryRange;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameSort;
 import org.apache.druid.frame.write.FrameWriter;
@@ -39,7 +40,7 @@ import java.util.List;
 public class ColumnarFrameWriter implements FrameWriter
 {
   private final RowSignature signature;
-  private final List<SortColumn> sortColumns;
+  private final List<KeyColumn> keyColumns;
   @Nullable // Null if frame will not need permutation
   private final AppendableMemory rowOrderMemory;
   private final List<FrameColumnWriter> columnWriters;
@@ -48,13 +49,13 @@ public class ColumnarFrameWriter implements FrameWriter
 
   public ColumnarFrameWriter(
       final RowSignature signature,
-      final List<SortColumn> sortColumns,
+      final List<KeyColumn> keyColumns,
       @Nullable final AppendableMemory rowOrderMemory,
       final List<FrameColumnWriter> columnWriters
   )
   {
     this.signature = signature;
-    this.sortColumns = sortColumns;
+    this.keyColumns = keyColumns;
     this.rowOrderMemory = rowOrderMemory;
     this.columnWriters = columnWriters;
   }
@@ -83,6 +84,7 @@ public class ColumnarFrameWriter implements FrameWriter
       }
     }
     catch (Exception e) {
+      Throwables.propagateIfInstanceOf(e, ParseException.class);
       throw new ParseException("", e, "Unable to add the row to the frame. Type conversion might be required.");
     }
 
@@ -161,7 +163,7 @@ public class ColumnarFrameWriter implements FrameWriter
     }
 
     if (mustSort()) {
-      FrameSort.sort(Frame.wrap(memory), FrameReader.create(signature), sortColumns);
+      FrameSort.sort(Frame.wrap(memory), FrameReader.create(signature), keyColumns);
     }
 
     written = true;

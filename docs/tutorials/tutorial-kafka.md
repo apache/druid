@@ -1,7 +1,7 @@
 ---
 id: tutorial-kafka
-title: "Tutorial: Load streaming data from Apache Kafka"
-sidebar_label: "Load from Apache Kafka"
+title: Load streaming data from Apache Kafka
+sidebar_label: Load from Apache Kafka
 ---
 
 <!--
@@ -46,7 +46,8 @@ Before you follow the steps in this tutorial, download Druid as described in the
 2. If you're already running Kafka on the machine you're using for this tutorial, delete or rename the `kafka-logs` directory in `/tmp`.
    
    > Druid and Kafka both rely on [Apache ZooKeeper](https://zookeeper.apache.org/) to coordinate and manage services. Because Druid is already running, Kafka attaches to the Druid ZooKeeper instance when it starts up.<br />
-   In a production environment where you're running Druid and Kafka on different machines, [start the Kafka ZooKeeper](https://kafka.apache.org/quickstart) before you start the Kafka broker.
+   > 
+   > In a production environment where you're running Druid and Kafka on different machines, [start the Kafka ZooKeeper](https://kafka.apache.org/quickstart) before you start the Kafka broker.
 
 3. In the Kafka root directory, run this command to start a Kafka broker:
 
@@ -127,7 +128,7 @@ To use the console data loader:
 
    ![Data loader schema](../assets/tutorial-kafka-data-loader-05.png "Data loader schema")
 
-7. In the **Configure schema** step, you can select data types for the columns and configure [dimensions](../ingestion/data-model.md#dimensions) and [metrics](../ingestion/data-model.md#metrics) to ingest into Druid. The console does most of this for you, but you need to create JSON-type dimensions for the three nested columns in the data. 
+7. In the **Configure schema** step, you can select data types for the columns and configure [dimensions](../ingestion/schema-model.md#dimensions) and [metrics](../ingestion/schema-model.md#metrics) to ingest into Druid. The console does most of this for you, but you need to create JSON-type dimensions for the three nested columns in the data. 
 
     Click **Add dimension** and enter the following information. You can only add one dimension at a time.
     - Name: `event`, Type: `json`

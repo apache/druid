@@ -22,43 +22,28 @@ package org.apache.druid.query.scan;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
-import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.DoubleColumnSelector;
-import org.apache.druid.segment.LongColumnSelector;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
-import org.apache.druid.segment.nested.NestedPathFinder;
-import org.apache.druid.segment.nested.NestedPathPart;
-import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
-import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
-import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
-import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
-import org.apache.druid.segment.vector.VectorCursor;
-import org.apache.druid.segment.vector.VectorObjectSelector;
-import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
@@ -74,14 +59,6 @@ import java.util.List;
 public class NestedDataScanQueryTest extends InitializedNullHandlingTest
 {
   private static final Logger LOG = new Logger(NestedDataScanQueryTest.class);
-  private static final String NESTED_LONG_FIELD = "long";
-  private static final String NESTED_DOUBLE_FIELD = "double";
-  private static final String NESTED_MIXED_NUMERIC_FIELD = "mixed_numeric";
-  private static final String NESTED_MIXED_FIELD = "mixed";
-  private static final String NESTED_SPARSE_LONG_FIELD = "sparse_long";
-  private static final String NESTED_SPARSE_DOUBLE_FIELD = "sparse_double";
-  private static final String NESTED_SPARSE_MIXED_NUMERIC_FIELD = "sparse_mixed_numeric";
-  private static final String NESTED_SPARSE_MIXED_FIELD = "sparse_mixed";
 
   private final AggregationTestHelper helper;
   private final Closer closer;
@@ -99,10 +76,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   {
     NestedDataModule.registerHandlersAndSerde();
     List<? extends Module> mods = NestedDataModule.getJacksonModulesList();
-    this.helper = AggregationTestHelper.createScanQueryAggregationTestHelper(
-        mods,
-        tempFolder
-    );
+    this.helper = AggregationTestHelper.createScanQueryAggregationTestHelper(mods, tempFolder);
     this.closer = Closer.create();
   }
 
@@ -125,7 +99,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
-    List<Segment> segs = NestedDataTestUtils.createDefaultHourlySegments(helper, tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleNestedTestDataSegments(tempFolder, closer);
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -154,15 +128,17 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .build();
     List<Segment> segs = ImmutableList.<Segment>builder().addAll(
         NestedDataTestUtils.createSegments(
-            helper,
             tempFolder,
             closer,
             NestedDataTestUtils.NUMERIC_DATA_FILE,
-            NestedDataTestUtils.NUMERIC_PARSER_FILE,
-            NestedDataTestUtils.SIMPLE_AGG_FILE,
+            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            NestedDataTestUtils.TIMESTAMP_SPEC,
+            NestedDataTestUtils.AUTO_DISCOVERY,
+            TransformSpec.NONE,
+            NestedDataTestUtils.COUNT,
             Granularities.YEAR,
             true,
-            1000
+            IndexSpec.DEFAULT
         )
     ).build();
 
@@ -188,16 +164,20 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  new NestedFieldVirtualColumn("nest", "$.x", "x"),
                                                  new NestedFieldVirtualColumn("nester", "$.x[0]", "x_0"),
                                                  new NestedFieldVirtualColumn("nester", "$.y.c[1]", "y_c_1"),
-                                                 new NestedFieldVirtualColumn("nester", "$.", "nester_root")
+                                                 new NestedFieldVirtualColumn("nester", "$.", "nester_root"),
+                                                 new NestedFieldVirtualColumn("dim", "$", "dim_root"),
+                                                 new NestedFieldVirtualColumn("dim", "$.x", "dim_path"),
+                                                 new NestedFieldVirtualColumn("count", "$", "count_root"),
+                                                 new NestedFieldVirtualColumn("count", "$.x", "count_path")
                                              )
                                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
     List<Segment> realtimeSegs = ImmutableList.of(
-        NestedDataTestUtils.createDefaultHourlyIncrementalIndex()
+        NestedDataTestUtils.createSimpleNestedTestDataIncrementalIndex(tempFolder)
     );
-    List<Segment> segs = NestedDataTestUtils.createDefaultHourlySegments(helper, tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleNestedTestDataSegments(tempFolder, closer);
 
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
@@ -209,7 +189,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     logResults(resultsRealtime);
     Assert.assertEquals(1, resultsRealtime.size());
     Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
-    Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+    }
   }
 
   @Test
@@ -236,7 +218,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  new NestedFieldVirtualColumn(
                                                      "nester",
                                                      "x_0",
-                                                     NestedDataComplexTypeSerde.TYPE,
+                                                     ColumnType.NESTED_DATA,
                                                      null,
                                                      true,
                                                      "$.x[0]",
@@ -245,7 +227,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  new NestedFieldVirtualColumn(
                                                      "nester",
                                                      "y_c_1",
-                                                     NestedDataComplexTypeSerde.TYPE,
+                                                     ColumnType.NESTED_DATA,
                                                      null,
                                                      true,
                                                      "$.y.c[1]",
@@ -254,7 +236,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                                  new NestedFieldVirtualColumn(
                                                      "nester",
                                                      "nester_root",
-                                                     NestedDataComplexTypeSerde.TYPE,
+                                                     ColumnType.NESTED_DATA,
                                                      null,
                                                      true,
                                                      "$.",
@@ -266,9 +248,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .context(ImmutableMap.of())
                                              .build();
     List<Segment> realtimeSegs = ImmutableList.of(
-        NestedDataTestUtils.createDefaultHourlyIncrementalIndex()
+        NestedDataTestUtils.createSimpleNestedTestDataIncrementalIndex(tempFolder)
     );
-    List<Segment> segs = NestedDataTestUtils.createDefaultHourlySegments(helper, tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleNestedTestDataSegments(tempFolder, closer);
 
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
@@ -281,6 +263,35 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, resultsRealtime.size());
     Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
     Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+  }
+
+  @Test
+  public void testIngestAndScanSegmentsTsvV4() throws Exception
+  {
+    Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
+                                             .dataSource("test_datasource")
+                                             .intervals(
+                                                 new MultipleIntervalSegmentSpec(
+                                                     Collections.singletonList(Intervals.ETERNITY)
+                                                 )
+                                             )
+                                             .virtualColumns(
+                                                 new NestedFieldVirtualColumn("nest", "$.x", "x"),
+                                                 new NestedFieldVirtualColumn("nester", "$.x[0]", "x_0"),
+                                                 new NestedFieldVirtualColumn("nester", "$.y.c[1]", "y_c_1")
+                                             )
+                                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                             .limit(100)
+                                             .context(ImmutableMap.of())
+                                             .build();
+    List<Segment> segs = NestedDataTestUtils.createSimpleSegmentsTsvV4(tempFolder, closer);
+
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+
+    List<ScanResultValue> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    Assert.assertEquals(8, ((List) results.get(0).getEvents()).size());
+    logResults(results);
   }
 
   @Test
@@ -302,7 +313,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
-    List<Segment> segs = NestedDataTestUtils.createDefaultHourlySegmentsTsv(helper, tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleSegmentsTsv(tempFolder, closer);
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -326,13 +337,80 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
-    List<Segment> segs = NestedDataTestUtils.createSegments(
-        helper,
+    List<Segment> segs = NestedDataTestUtils.createSegmentsForJsonInput(
         tempFolder,
         closer,
+        NestedDataTestUtils.SIMPLE_DATA_FILE,
         Granularities.HOUR,
         true,
-        3
+        IndexSpec.DEFAULT
+    );
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+
+    List<ScanResultValue> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    Assert.assertEquals(8, ((List) results.get(0).getEvents()).size());
+    logResults(results);
+  }
+
+  @Test
+  public void testIngestWithMoreMergesAndScanSegments() throws Exception
+  {
+    Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
+                                             .dataSource("test_datasource")
+                                             .intervals(
+                                                 new MultipleIntervalSegmentSpec(
+                                                     Collections.singletonList(Intervals.ETERNITY)
+                                                 )
+                                             )
+                                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                             .limit(100)
+                                             .context(ImmutableMap.of())
+                                             .build();
+
+
+    List<Segment> segs = NestedDataTestUtils.createSegmentsWithConcatenatedJsonInput(
+        tempFolder,
+        closer,
+        NestedDataTestUtils.SIMPLE_DATA_FILE,
+        Granularities.HOUR,
+        false,
+        10,
+        1
+    );
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+
+    List<ScanResultValue> results = seq.toList();
+    logResults(results);
+    Assert.assertEquals(1, results.size());
+    Assert.assertEquals(80, ((List) results.get(0).getEvents()).size());
+  }
+
+  @Test
+  public void testIngestWithMoreMergesAndScanSegmentsRollup() throws Exception
+  {
+    Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
+                                             .dataSource("test_datasource")
+                                             .intervals(
+                                                 new MultipleIntervalSegmentSpec(
+                                                     Collections.singletonList(Intervals.ETERNITY)
+                                                 )
+                                             )
+                                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                             .limit(100)
+                                             .context(ImmutableMap.of())
+                                             .build();
+
+
+    // same rows over and over so expect same 8 rows after rollup
+    List<Segment> segs = NestedDataTestUtils.createSegmentsWithConcatenatedJsonInput(
+        tempFolder,
+        closer,
+        NestedDataTestUtils.SIMPLE_DATA_FILE,
+        Granularities.YEAR,
+        true,
+        100,
+        1
     );
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -362,7 +440,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
-    List<Segment> segs = NestedDataTestUtils.createDefaultHourlySegments(helper, tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleNestedTestDataSegments(tempFolder, closer);
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -401,7 +479,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
-    List<Segment> segs = NestedDataTestUtils.createDefaultHourlySegments(helper, tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleNestedTestDataSegments(tempFolder, closer);
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
@@ -412,295 +490,253 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testExpectedTypes() throws Exception
+  public void testIngestAndScanSegmentsRealtimeSchemaDiscovery() throws Exception
   {
-    // "Line matches the illegal pattern 'ObjectColumnSelector, LongColumnSelector, FloatColumnSelector
-    // and DoubleColumnSelector must not be used in an instanceof statement, see Javadoc of those interfaces."
-    //CHECKSTYLE.OFF: Regexp
-    ColumnSelectorFactory columnSelectorFactory = getNumericColumnSelectorFactory(
-        makeNestedNumericVirtualColumns()
+    Query<ScanResultValue> scanQuery = Druids.newScanQueryBuilder()
+                                             .dataSource("test_datasource")
+                                             .intervals(
+                                                 new MultipleIntervalSegmentSpec(
+                                                     Collections.singletonList(Intervals.ETERNITY)
+                                                 )
+                                             )
+                                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                             .limit(100)
+                                             .context(ImmutableMap.of())
+                                             .build();
+    List<Segment> realtimeSegs = ImmutableList.of(
+        NestedDataTestUtils.createIncrementalIndex(
+            tempFolder,
+            NestedDataTestUtils.TYPES_DATA_FILE,
+            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            NestedDataTestUtils.TIMESTAMP_SPEC,
+            NestedDataTestUtils.AUTO_DISCOVERY,
+            TransformSpec.NONE,
+            NestedDataTestUtils.COUNT,
+            Granularities.DAY,
+            true
+        )
+    );
+    List<Segment> segs = NestedDataTestUtils.createSegments(
+        tempFolder,
+        closer,
+        NestedDataTestUtils.TYPES_DATA_FILE,
+        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        NestedDataTestUtils.TIMESTAMP_SPEC,
+        NestedDataTestUtils.AUTO_DISCOVERY,
+        TransformSpec.NONE,
+        NestedDataTestUtils.COUNT,
+        Granularities.DAY,
+        true,
+        IndexSpec.DEFAULT
     );
 
-    ColumnValueSelector longValueSelector = columnSelectorFactory.makeColumnValueSelector(
-        NESTED_LONG_FIELD
-    );
-    Assert.assertNotNull(longValueSelector);
-    Assert.assertTrue(longValueSelector instanceof LongColumnSelector);
 
-    ColumnValueSelector doubleValueSelector = columnSelectorFactory.makeColumnValueSelector(
-        NESTED_DOUBLE_FIELD
-    );
-    Assert.assertNotNull(doubleValueSelector);
-    Assert.assertTrue(doubleValueSelector instanceof DoubleColumnSelector);
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
+    final Sequence<ScanResultValue> seq2 = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
-    ColumnValueSelector mixedNumericValueSelector = columnSelectorFactory.makeColumnValueSelector(
-        NESTED_MIXED_NUMERIC_FIELD
-    );
-    Assert.assertNotNull(mixedNumericValueSelector);
-    Assert.assertTrue(mixedNumericValueSelector instanceof ColumnValueSelector);
-
-    ColumnValueSelector mixedValueSelector = columnSelectorFactory.makeColumnValueSelector(
-        NESTED_MIXED_FIELD
-    );
-    Assert.assertNotNull(mixedValueSelector);
-    Assert.assertTrue(mixedValueSelector instanceof ColumnValueSelector);
-
-
-    ColumnValueSelector sparseLongValueSelector = columnSelectorFactory.makeColumnValueSelector(
-        NESTED_SPARSE_LONG_FIELD
-    );
-    Assert.assertNotNull(sparseLongValueSelector);
-    Assert.assertTrue(sparseLongValueSelector instanceof LongColumnSelector);
-
-    ColumnValueSelector sparseDoubleValueSelector = columnSelectorFactory.makeColumnValueSelector(
-        NESTED_SPARSE_DOUBLE_FIELD
-    );
-    Assert.assertNotNull(sparseDoubleValueSelector);
-    Assert.assertTrue(sparseDoubleValueSelector instanceof DoubleColumnSelector);
-
-    ColumnValueSelector sparseMixedNumericValueSelector = columnSelectorFactory.makeColumnValueSelector(
-        NESTED_SPARSE_MIXED_NUMERIC_FIELD
-    );
-    Assert.assertNotNull(sparseMixedNumericValueSelector);
-    Assert.assertTrue(sparseMixedNumericValueSelector instanceof ColumnValueSelector);
-
-    ColumnValueSelector sparseMixedValueSelector = columnSelectorFactory.makeColumnValueSelector(
-        NESTED_SPARSE_MIXED_FIELD
-    );
-    Assert.assertNotNull(sparseMixedValueSelector);
-    Assert.assertTrue(sparseMixedValueSelector instanceof ColumnValueSelector);
-    //CHECKSTYLE.ON: Regexp
+    List<ScanResultValue> resultsRealtime = seq.toList();
+    List<ScanResultValue> resultsSegments = seq2.toList();
+    logResults(resultsSegments);
+    logResults(resultsRealtime);
+    Assert.assertEquals(1, resultsRealtime.size());
+    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assert.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
   }
 
   @Test
-  public void testExpectedTypesVectorSelectors() throws Exception
+  public void testIngestAndScanSegmentsRealtimeSchemaDiscoveryArrayTypes() throws Exception
   {
-    // "Line matches the illegal pattern 'ObjectColumnSelector, LongColumnSelector, FloatColumnSelector
-    // and DoubleColumnSelector must not be used in an instanceof statement, see Javadoc of those interfaces."
-    //CHECKSTYLE.OFF: Regexp
-    VectorColumnSelectorFactory factory = getVectorColumnSelectorFactory(
-        makeNestedNumericVirtualColumns()
-    );
+    Druids.ScanQueryBuilder builder = Druids.newScanQueryBuilder()
+                                            .dataSource("test_datasource")
+                                            .intervals(
+                                                new MultipleIntervalSegmentSpec(
+                                                    Collections.singletonList(Intervals.ETERNITY)
+                                                )
+                                            )
+                                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                            .limit(100)
+                                            .context(ImmutableMap.of());
 
-    // can make numeric value selectors for single typed numeric types
-    VectorValueSelector longValueSelector = factory.makeValueSelector(
-        NESTED_LONG_FIELD
-    );
-    Assert.assertNotNull(longValueSelector);
-    Assert.assertTrue(longValueSelector instanceof BaseLongVectorValueSelector);
-
-    VectorValueSelector doubleValueSelector = factory.makeValueSelector(
-        NESTED_DOUBLE_FIELD
-    );
-    Assert.assertNotNull(doubleValueSelector);
-    Assert.assertTrue(doubleValueSelector instanceof BaseDoubleVectorValueSelector);
-
-    Assert.assertThrows(UOE.class, () -> factory.makeValueSelector(NESTED_MIXED_NUMERIC_FIELD));
-    Assert.assertThrows(UOE.class, () -> factory.makeValueSelector(NESTED_MIXED_FIELD));
-
-    // can also make single value dimension selectors for all nested column types
-    SingleValueDimensionVectorSelector longDimensionSelector = factory.makeSingleValueDimensionSelector(
-        DefaultDimensionSpec.of(NESTED_LONG_FIELD)
-    );
-    Assert.assertNotNull(longDimensionSelector);
-
-    SingleValueDimensionVectorSelector doubleDimensionSelector = factory.makeSingleValueDimensionSelector(
-        DefaultDimensionSpec.of(NESTED_DOUBLE_FIELD)
-    );
-    Assert.assertNotNull(doubleDimensionSelector);
-
-    SingleValueDimensionVectorSelector mixedNumericValueSelector = factory.makeSingleValueDimensionSelector(
-        DefaultDimensionSpec.of(NESTED_MIXED_NUMERIC_FIELD)
-    );
-    Assert.assertNotNull(mixedNumericValueSelector);
-
-    SingleValueDimensionVectorSelector mixedValueSelector = factory.makeSingleValueDimensionSelector(
-        DefaultDimensionSpec.of(NESTED_MIXED_FIELD)
-    );
-    Assert.assertNotNull(mixedValueSelector);
-
-    // and object selectors
-    VectorObjectSelector longObjectSelector = factory.makeObjectSelector(
-        NESTED_LONG_FIELD
-    );
-    Assert.assertNotNull(longObjectSelector);
-
-    VectorObjectSelector doubleObjectSelector = factory.makeObjectSelector(
-        NESTED_DOUBLE_FIELD
-    );
-    Assert.assertNotNull(doubleObjectSelector);
-
-    VectorObjectSelector mixedNumericObjectSelector = factory.makeObjectSelector(
-        NESTED_MIXED_NUMERIC_FIELD
-    );
-    Assert.assertNotNull(mixedNumericObjectSelector);
-
-    VectorObjectSelector mixedObjectSelector = factory.makeObjectSelector(
-        NESTED_MIXED_FIELD
-    );
-    Assert.assertNotNull(mixedObjectSelector);
-    //CHECKSTYLE.ON: Regexp
-  }
-
-  private VirtualColumns makeNestedNumericVirtualColumns()
-  {
-    List<NestedPathPart> longParts = NestedPathFinder.parseJqPath(".long");
-    List<NestedPathPart> doubleParts = NestedPathFinder.parseJqPath(".double");
-    List<NestedPathPart> mixedNumericParts = NestedPathFinder.parseJqPath(".mixed_numeric");
-    List<NestedPathPart> mixedParts = NestedPathFinder.parseJqPath(".mixed");
-    List<NestedPathPart> sparseLongParts = NestedPathFinder.parseJqPath(".sparse_long");
-    List<NestedPathPart> sparseDoubleParts = NestedPathFinder.parseJqPath(".sparse_double");
-    List<NestedPathPart> sparseMixedNumericParts = NestedPathFinder.parseJqPath(".sparse_mixed_numeric");
-    List<NestedPathPart> sparseMixedParts = NestedPathFinder.parseJqPath(".sparse_mixed");
-
-    NestedFieldVirtualColumn longVirtualColumn = new NestedFieldVirtualColumn(
-        "nest",
-        NESTED_LONG_FIELD,
-        ColumnType.LONG,
-        longParts,
-        false,
-        null,
-        null
-    );
-    NestedFieldVirtualColumn doubleVirtualColumn = new NestedFieldVirtualColumn(
-        "nest",
-        NESTED_DOUBLE_FIELD,
-        ColumnType.DOUBLE,
-        doubleParts,
-        false,
-        null,
-        null
-    );
-    NestedFieldVirtualColumn mixedNumericVirtualColumn = new NestedFieldVirtualColumn(
-        "nest",
-        NESTED_MIXED_NUMERIC_FIELD,
-        null,
-        mixedNumericParts,
-        false,
-        null,
-        null
-    );
-    NestedFieldVirtualColumn mixedVirtualColumn = new NestedFieldVirtualColumn(
-        "nest",
-        NESTED_MIXED_FIELD,
-        null,
-        mixedParts,
-        false,
-        null,
-        null
-    );
-
-    NestedFieldVirtualColumn sparseLongVirtualColumn = new NestedFieldVirtualColumn(
-        "nest",
-        NESTED_SPARSE_LONG_FIELD,
-        ColumnType.LONG,
-        sparseLongParts,
-        false,
-        null,
-        null
-    );
-    NestedFieldVirtualColumn sparseDoubleVirtualColumn = new NestedFieldVirtualColumn(
-        "nest",
-        NESTED_SPARSE_DOUBLE_FIELD,
-        ColumnType.DOUBLE,
-        sparseDoubleParts,
-        false,
-        null,
-        null
-    );
-    NestedFieldVirtualColumn sparseMixedNumericVirtualColumn = new NestedFieldVirtualColumn(
-        "nest",
-        NESTED_SPARSE_MIXED_NUMERIC_FIELD,
-        null,
-        sparseMixedNumericParts,
-        false,
-        null,
-        null
-    );
-    NestedFieldVirtualColumn sparseMixedVirtualColumn = new NestedFieldVirtualColumn(
-        "nest",
-        NESTED_SPARSE_MIXED_FIELD,
-        null,
-        sparseMixedParts,
-        false,
-        null,
-        null
-    );
-
-    return VirtualColumns.create(
-        ImmutableList.of(
-            longVirtualColumn,
-            doubleVirtualColumn,
-            mixedNumericVirtualColumn,
-            mixedVirtualColumn,
-            sparseLongVirtualColumn,
-            sparseDoubleVirtualColumn,
-            sparseMixedNumericVirtualColumn,
-            sparseMixedVirtualColumn
+    Query<ScanResultValue> scanQuery = builder.build();
+    final AggregatorFactory[] aggs = new AggregatorFactory[]{new CountAggregatorFactory("count")};
+    List<Segment> realtimeSegs = ImmutableList.of(
+        NestedDataTestUtils.createIncrementalIndex(
+            tempFolder,
+            NestedDataTestUtils.ARRAY_TYPES_DATA_FILE,
+            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            NestedDataTestUtils.TIMESTAMP_SPEC,
+            NestedDataTestUtils.AUTO_DISCOVERY,
+            TransformSpec.NONE,
+            aggs,
+            Granularities.NONE,
+            true
         )
     );
-  }
-
-  private ColumnSelectorFactory getNumericColumnSelectorFactory(VirtualColumns virtualColumns) throws Exception
-  {
-    List<Segment> segments = NestedDataTestUtils.createSegments(
-        helper,
+    List<Segment> segs = NestedDataTestUtils.createSegments(
         tempFolder,
         closer,
-        NestedDataTestUtils.NUMERIC_DATA_FILE,
-        NestedDataTestUtils.NUMERIC_PARSER_FILE,
-        NestedDataTestUtils.SIMPLE_AGG_FILE,
-        Granularities.DAY,
+        NestedDataTestUtils.ARRAY_TYPES_DATA_FILE,
+        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        NestedDataTestUtils.TIMESTAMP_SPEC,
+        NestedDataTestUtils.AUTO_DISCOVERY,
+        TransformSpec.NONE,
+        aggs,
+        Granularities.NONE,
         true,
-        1000
+        IndexSpec.DEFAULT
     );
-    Assert.assertEquals(1, segments.size());
-    StorageAdapter storageAdapter = segments.get(0).asStorageAdapter();
-    Sequence<Cursor> cursorSequence = storageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        virtualColumns,
-        Granularities.DAY,
-        false,
-        null
-    );
-    final Yielder<Cursor> yielder = Yielders.each(cursorSequence);
-    closer.register(yielder);
-    final Cursor cursor = yielder.get();
-    return cursor.getColumnSelectorFactory();
+
+
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
+    final Sequence<ScanResultValue> seq2 = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+
+    List<ScanResultValue> resultsRealtime = seq.toList();
+    List<ScanResultValue> resultsSegments = seq2.toList();
+    logResults(resultsSegments);
+    logResults(resultsRealtime);
+    Assert.assertEquals(1, resultsRealtime.size());
+    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
   }
 
-  private VectorColumnSelectorFactory getVectorColumnSelectorFactory(VirtualColumns virtualColumns) throws Exception
+  @Test
+  public void testIngestAndScanSegmentsRealtimeSchemaDiscoveryMoreArrayTypes() throws Exception
   {
-    List<Segment> segments = NestedDataTestUtils.createSegments(
-        helper,
+    Druids.ScanQueryBuilder builder = Druids.newScanQueryBuilder()
+                                            .dataSource("test_datasource")
+                                            .intervals(
+                                                new MultipleIntervalSegmentSpec(
+                                                    Collections.singletonList(Intervals.ETERNITY)
+                                                )
+                                            )
+                                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                            .limit(100)
+                                            .context(ImmutableMap.of());
+    Query<ScanResultValue> scanQuery = builder.build();
+    final AggregatorFactory[] aggs = new AggregatorFactory[]{new CountAggregatorFactory("count")};
+    List<Segment> realtimeSegs = ImmutableList.of(
+        NestedDataTestUtils.createIncrementalIndex(
+            tempFolder,
+            NestedDataTestUtils.ARRAY_TYPES_DATA_FILE_2,
+            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            NestedDataTestUtils.TIMESTAMP_SPEC,
+            NestedDataTestUtils.AUTO_DISCOVERY,
+            TransformSpec.NONE,
+            aggs,
+            Granularities.NONE,
+            true
+        )
+    );
+    List<Segment> segs = NestedDataTestUtils.createSegments(
         tempFolder,
         closer,
-        NestedDataTestUtils.NUMERIC_DATA_FILE,
-        NestedDataTestUtils.NUMERIC_PARSER_FILE,
-        NestedDataTestUtils.SIMPLE_AGG_FILE,
-        Granularities.DAY,
+        NestedDataTestUtils.ARRAY_TYPES_DATA_FILE_2,
+        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        NestedDataTestUtils.TIMESTAMP_SPEC,
+        NestedDataTestUtils.AUTO_DISCOVERY,
+        TransformSpec.NONE,
+        aggs,
+        Granularities.NONE,
         true,
-        1000
+        IndexSpec.DEFAULT
     );
-    Assert.assertEquals(1, segments.size());
-    StorageAdapter storageAdapter = segments.get(0).asStorageAdapter();
-    VectorCursor cursor = storageAdapter.makeVectorCursor(
-        null,
-        Intervals.ETERNITY,
-        virtualColumns,
-        false,
-        512,
-        null
+
+
+    final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
+    final Sequence<ScanResultValue> seq2 = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+
+    List<ScanResultValue> resultsRealtime = seq.toList();
+    List<ScanResultValue> resultsSegments = seq2.toList();
+    logResults(resultsSegments);
+    logResults(resultsRealtime);
+    Assert.assertEquals(1, resultsRealtime.size());
+    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assert.assertEquals(
+        "["
+        + "[978652800000, [A, A], [null, null], [1, 1], [0.1, 0.1], [true, true], [null, null], {s_str1=[A, A], s_str2=[null, null], s_num_int=[1, 1], s_num_float=[0.1, 0.1], s_bool=[true, true], s_null=[null, null]}, 1], "
+        + "[978739200000, [A, A], [null, null], [1, 1], [0.1, 0.1], [true, true], [null, null], {s_str1=[A, A], s_str2=[null, null], s_num_int=[1, 1], s_num_float=[0.1, 0.1], s_bool=[true, true], s_null=[null, null]}, 1], "
+        + "[978825600000, [A, A], [null, null], [1, 1], [0.1, 0.1], [true, true], [null, null], {s_str1=[A, A], s_str2=[null, null], s_num_int=[1, 1], s_num_float=[0.1, 0.1], s_bool=[true, true], s_null=[null, null]}, 1], "
+        + "[978912000000, [A, A], [null, null], [1, 1], [0.1, 0.1], [true, true], [null, null], {s_str1=[A, A], s_str2=[null, null], s_num_int=[1, 1], s_num_float=[0.1, 0.1], s_bool=[true, true], s_null=[null, null]}, 1]]",
+        resultsSegments.get(0).getEvents().toString()
     );
-    return cursor.getColumnSelectorFactory();
+    Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+  }
+
+  @Test
+  public void testIngestAndScanSegmentsRealtimeSchemaDiscoveryMoreArrayTypesStrictBooleans() throws Exception
+  {
+    try {
+      ExpressionProcessing.initializeForStrictBooleansTests(true);
+      Druids.ScanQueryBuilder builder = Druids.newScanQueryBuilder()
+                                              .dataSource("test_datasource")
+                                              .intervals(
+                                                  new MultipleIntervalSegmentSpec(
+                                                      Collections.singletonList(Intervals.ETERNITY)
+                                                  )
+                                              )
+                                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                              .limit(100)
+                                              .context(ImmutableMap.of());
+      Query<ScanResultValue> scanQuery = builder.build();
+      final AggregatorFactory[] aggs = new AggregatorFactory[]{new CountAggregatorFactory("count")};
+      List<Segment> realtimeSegs = ImmutableList.of(
+          NestedDataTestUtils.createIncrementalIndex(
+              tempFolder,
+              NestedDataTestUtils.ARRAY_TYPES_DATA_FILE_2,
+              NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+              NestedDataTestUtils.TIMESTAMP_SPEC,
+              NestedDataTestUtils.AUTO_DISCOVERY,
+              TransformSpec.NONE,
+              aggs,
+              Granularities.NONE,
+              true
+          )
+      );
+      List<Segment> segs = NestedDataTestUtils.createSegments(
+          tempFolder,
+          closer,
+          NestedDataTestUtils.ARRAY_TYPES_DATA_FILE_2,
+          NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+          NestedDataTestUtils.TIMESTAMP_SPEC,
+          NestedDataTestUtils.AUTO_DISCOVERY,
+          TransformSpec.NONE,
+          aggs,
+          Granularities.NONE,
+          true,
+          IndexSpec.DEFAULT
+      );
+
+
+      final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
+      final Sequence<ScanResultValue> seq2 = helper.runQueryOnSegmentsObjs(segs, scanQuery);
+
+      List<ScanResultValue> resultsRealtime = seq.toList();
+      List<ScanResultValue> resultsSegments = seq2.toList();
+      logResults(resultsSegments);
+      logResults(resultsRealtime);
+      Assert.assertEquals(1, resultsRealtime.size());
+      Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
+      Assert.assertEquals(
+          "["
+          + "[978652800000, [A, A], [null, null], [1, 1], [0.1, 0.1], [1, 1], [null, null], {s_str1=[A, A], s_str2=[null, null], s_num_int=[1, 1], s_num_float=[0.1, 0.1], s_bool=[true, true], s_null=[null, null]}, 1], "
+          + "[978739200000, [A, A], [null, null], [1, 1], [0.1, 0.1], [1, 1], [null, null], {s_str1=[A, A], s_str2=[null, null], s_num_int=[1, 1], s_num_float=[0.1, 0.1], s_bool=[true, true], s_null=[null, null]}, 1], "
+          + "[978825600000, [A, A], [null, null], [1, 1], [0.1, 0.1], [1, 1], [null, null], {s_str1=[A, A], s_str2=[null, null], s_num_int=[1, 1], s_num_float=[0.1, 0.1], s_bool=[true, true], s_null=[null, null]}, 1], "
+          + "[978912000000, [A, A], [null, null], [1, 1], [0.1, 0.1], [1, 1], [null, null], {s_str1=[A, A], s_str2=[null, null], s_num_int=[1, 1], s_num_float=[0.1, 0.1], s_bool=[true, true], s_null=[null, null]}, 1]]",
+          resultsSegments.get(0).getEvents().toString()
+      );
+      Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+    }
+    finally {
+      ExpressionProcessing.initializeForTests();
+    }
   }
 
   private static void logResults(List<ScanResultValue> results)
   {
     StringBuilder bob = new StringBuilder();
+    int ctr = 0;
     for (Object event : (List) results.get(0).getEvents()) {
-      bob.append("[").append(event).append("]").append("\n");
+      bob.append("row:").append(++ctr).append(" - ").append(event).append("\n");
     }
     LOG.info("results:\n%s", bob);
   }

@@ -174,7 +174,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
 
     persistedSegmentDir = FileUtils.createTempDir();
     TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory)
-              .persist(incrementalIndex, persistedSegmentDir, new IndexSpec(), null);
+              .persist(incrementalIndex, persistedSegmentDir, IndexSpec.DEFAULT, null);
     queryableIndex = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDir);
 
 
@@ -207,7 +207,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     }
     persistedSegmentDirNullSampler = FileUtils.createTempDir();
     TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory)
-              .persist(incrementalIndexNullSampler, persistedSegmentDirNullSampler, new IndexSpec(), null);
+              .persist(incrementalIndexNullSampler, persistedSegmentDirNullSampler, IndexSpec.DEFAULT, null);
 
     queryableIndexNullSampler = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDirNullSampler);
   }
@@ -550,7 +550,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
       TestHelper.assertExpectedObjects(expectedResults, result.toList(), "expr-multi-multi");
     }
     finally {
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
   }
 
@@ -1019,7 +1019,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
   {
     expectedException.expect(RuntimeException.class);
     expectedException.expectMessage(
-        "Invalid expression: (concat [(map ([x] -> (concat [x, othertags])), [tags]), tags]); [tags] used as both scalar and array variables"
+        "Invalid expression: (concat [(cartesian_map ([x, othertags] -> (concat [x, othertags])), [tags, othertags]), tags]); [tags] used as both scalar and array variables"
     );
     GroupByQuery query = GroupByQuery
         .builder()

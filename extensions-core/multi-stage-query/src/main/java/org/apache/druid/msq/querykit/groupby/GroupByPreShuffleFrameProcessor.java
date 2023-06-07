@@ -48,8 +48,8 @@ import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
@@ -75,8 +75,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       final ReadableInput baseInput,
       final Int2ObjectMap<ReadableInput> sideChannels,
       final GroupByStrategySelector strategySelector,
-      final JoinableFactoryWrapper joinableFactory,
-      final ResourceHolder<WritableFrameChannel> outputChannel,
+      final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       final long memoryReservedForBroadcastJoin
   )
@@ -85,8 +84,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
         query,
         baseInput,
         sideChannels,
-        joinableFactory,
-        outputChannel,
+        outputChannelHolder,
         frameWriterFactoryHolder,
         memoryReservedForBroadcastJoin
     );
@@ -103,13 +101,13 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Long> runWithSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (resultYielder == null) {
-      closer.register(segment);
+      final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
 
       final Sequence<ResultRow> rowSequence =
           strategySelector.strategize(query)
                           .process(
                               query.withQuerySegmentSpec(new SpecificSegmentSpec(segment.getDescriptor())),
-                              mapSegment(segment.getOrLoadSegment()).asStorageAdapter(),
+                              mapSegment(segmentHolder.get()).asStorageAdapter(),
                               null
                           );
 

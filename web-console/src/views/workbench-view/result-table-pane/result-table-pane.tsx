@@ -20,20 +20,11 @@ import { Button, Icon, Intent, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
-import {
-  C,
-  Column,
-  F,
-  QueryResult,
-  SqlAlias,
-  SqlExpression,
-  SqlFunction,
-  SqlLiteral,
-  SqlQuery,
-  SqlStar,
-} from 'druid-query-toolkit';
+import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import { C, F, SqlAlias, SqlFunction, SqlLiteral, SqlStar } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React, { useEffect, useState } from 'react';
+import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
 
 import { BracedText, Deferred, TableCell } from '../../../components';
@@ -45,8 +36,10 @@ import {
   TIME_COLUMN,
 } from '../../../druid-models';
 import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../react-table';
+import type { Pagination, QueryAction } from '../../../utils';
 import {
   columnToIcon,
+  columnToSummary,
   columnToWidth,
   convertToGroupByExpression,
   copyAndAlert,
@@ -54,9 +47,7 @@ import {
   formatNumber,
   getNumericColumnBraces,
   oneOf,
-  Pagination,
   prettyPrintSql,
-  QueryAction,
   timeFormatToSql,
 } from '../../../utils';
 import { ExpressionEditorDialog } from '../../sql-data-loader-view/expression-editor-dialog/expression-editor-dialog';
@@ -175,10 +166,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
       // Casts
       if (selectExpression) {
         const underlyingExpression = selectExpression.getUnderlyingExpression();
-        if (
-          underlyingExpression instanceof SqlFunction &&
-          underlyingExpression.getEffectiveFunctionName() === 'CAST'
-        ) {
+        if (underlyingExpression instanceof SqlFunction && underlyingExpression.getCastType()) {
           menuItems.push(
             <MenuItem
               key="uncast"
@@ -600,7 +588,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                 return (
                   <Popover2 content={<Deferred content={() => getHeaderMenu(column, i)} />}>
                     <div className="clickable-cell">
-                      <div className="output-name">
+                      <div className="output-name" title={columnToSummary(column)}>
                         {icon && <Icon className="type-icon" icon={icon} size={12} />}
                         {h}
                         {hasFilterOnHeader(h, i) && (
@@ -616,7 +604,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
               },
               headerClassName: getHeaderClassName(h),
               accessor: String(i),
-              Cell(row) {
+              Cell(row: RowRenderProps) {
                 const value = row.value;
                 return (
                   <div>

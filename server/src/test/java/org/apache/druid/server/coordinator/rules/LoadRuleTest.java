@@ -574,9 +574,11 @@ public class LoadRuleTest
     mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
 
-    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
-            .andDelegateTo(balancerStrategy)
-            .times(1);
+    if (!useRoundRobinAssignment) {
+      EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+              .andDelegateTo(balancerStrategy)
+              .times(1);
+    }
 
     EasyMock.replay(throttler, mockPeon, mockBalancerStrategy);
 
@@ -596,6 +598,10 @@ public class LoadRuleTest
 
     final DataSegment segment = createDataSegment("foo");
 
+    final CoordinatorDynamicConfig dynamicConfig =
+        CoordinatorDynamicConfig.builder()
+                                .withUseRoundRobinSegmentAssignment(useRoundRobinAssignment)
+                                .build();
     CoordinatorStats stats = rule.run(
         null,
         CoordinatorRuntimeParamsTestHelpers
@@ -604,6 +610,7 @@ public class LoadRuleTest
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster(), false))
             .withReplicationManager(throttler)
             .withBalancerStrategy(mockBalancerStrategy)
+            .withDynamicConfigs(dynamicConfig)
             .withUsedSegmentsInTest(segment)
             .build(),
         segment
@@ -654,9 +661,11 @@ public class LoadRuleTest
   public void testMaxLoadingQueueSize()
   {
     final int maxSegmentsInLoadQueue = 2;
-    EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
-            .andDelegateTo(balancerStrategy)
-            .times(2);
+    if (!useRoundRobinAssignment) {
+      EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
+              .andDelegateTo(balancerStrategy)
+              .times(2);
+    }
 
     EasyMock.replay(throttler, mockBalancerStrategy);
 
@@ -692,6 +701,7 @@ public class LoadRuleTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withMaxSegmentsInNodeLoadingQueue(maxSegmentsInLoadQueue)
+                                    .withUseRoundRobinSegmentAssignment(useRoundRobinAssignment)
                                     .build()
         ).build();
 

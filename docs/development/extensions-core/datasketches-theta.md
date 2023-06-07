@@ -30,7 +30,7 @@ At ingestion time, the Theta sketch aggregator creates Theta sketch objects whic
 
 Note that you can use `thetaSketch` aggregator on columns which were not ingested using the same. It will return estimated cardinality of the column. It is recommended to use it at ingestion time as well to make querying faster.
 
-To use this aggregator, make sure you [include](../../development/extensions.md#loading-extensions) the extension in your config file:
+To use this aggregator, make sure you [include](../../configuration/extensions.md#loading-extensions) the extension in your config file:
 
 ```
 druid.extensions.loadList=["druid-datasketches"]
@@ -92,6 +92,49 @@ This returns a summary of the sketch that can be used for debugging. This is the
   "type"  : "thetaSketchToString",
   "name": <output name>,
   "field"  : <post aggregator that refers to a Theta sketch (fieldAccess or another post aggregator)>
+}
+```
+
+
+
+### Constant Theta Sketch 
+
+You can use the constant theta sketch post aggregator to add a Base64-encoded constant theta sketch value for use in other post-aggregators. For example,  `thetaSketchSetOp`.
+
+```json
+{
+  "type"  : "thetaSketchConstant",
+  "name": DESTINATION_COLUMN_NAME,
+  "value"  : CONSTANT_SKETCH_VALUE
+}
+```
+
+### Example using a constant Theta Sketch 
+
+Assume you have a datasource with a variety of a variety of users. Using `filters` and `aggregation`, you generate a theta sketch of all `football fans`.  
+
+A third-party provider has provided a constant theta sketch of all `cricket fans` and you want to `INTERSECT` both cricket fans and football fans in a `post-aggregation` stage to identify users who are interested in both `cricket`. Then you want to use `thetaSketchEstimate` to calculate the number of unique users.
+
+```json
+{
+   "type":"thetaSketchEstimate",
+   "name":"football_cricket_users_count",
+   "field":{
+      "type":"thetaSketchSetOp",
+      "name":"football_cricket_fans_users_theta_sketch",
+      "func":"INTERSECT",
+      "fields":[
+         {
+            "type":"fieldAccess",
+            "fieldName":"football_fans_users_theta_sketch"
+         },
+         {
+            "type":"thetaSketchConstant",
+            "name":"cricket_fans_users_theta_sketch",
+            "value":"AgMDAAAazJMCAAAAAACAPzz9j7pWTMdROWGf15uY1nI="
+         }
+      ]
+   }
 }
 ```
 

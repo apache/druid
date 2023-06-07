@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-import axios, { AxiosResponse } from 'axios';
+import type { AxiosResponse } from 'axios';
+import axios from 'axios';
 import { C } from 'druid-query-toolkit';
 
 import { Api } from '../singletons';
 
 import { assemble } from './general';
-import { RowColumn } from './query-cursor';
+import type { RowColumn } from './query-cursor';
 
 const CANCELED_MESSAGE = 'Query canceled by user.';
 
@@ -53,7 +54,10 @@ export function parseHtmlError(htmlStr: string): string | undefined {
 function getDruidErrorObject(e: any): DruidErrorResponse | string {
   if (e.response) {
     // This is a direct axios response error
-    return e.response.data || {};
+    let data = e.response.data || {};
+    // MSQ errors nest their error objects inside the error key. Yo dawg, I heard you like errors...
+    if (typeof data.error?.error === 'string') data = data.error;
+    return data;
   } else {
     return e; // Assume the error was passed in directly
   }

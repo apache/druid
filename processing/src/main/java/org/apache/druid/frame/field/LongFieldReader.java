@@ -20,6 +20,7 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -67,6 +68,12 @@ public class LongFieldReader implements FieldReader
   }
 
   @Override
+  public boolean isNull(Memory memory, long position)
+  {
+    return memory.getByte(position) == LongFieldWriter.NULL_BYTE;
+  }
+
+  @Override
   public boolean isComparable()
   {
     return true;
@@ -89,9 +96,9 @@ public class LongFieldReader implements FieldReader
     @Override
     public long getLong()
     {
-      assert !isNull();
+      assert NullHandling.replaceWithDefault() || !isNull();
       final long bits = memory.getLong(fieldPointer.position() + Byte.BYTES);
-      return Long.reverseBytes(bits) ^ Long.MIN_VALUE;
+      return LongFieldWriter.detransform(bits);
     }
 
     @Override

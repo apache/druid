@@ -48,6 +48,8 @@ services:
   overlord:
     image: ${DRUID_IT_IMAGE_NAME}
     container_name: overlord
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.10
@@ -61,10 +63,14 @@ services:
       - environment-configs/common.env
       - environment-configs/overlord.env
       - ${OVERRIDE_ENV}
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
 
   coordinator:
     image: ${DRUID_IT_IMAGE_NAME}
     container_name: coordinator
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.20
@@ -78,10 +84,14 @@ services:
       - environment-configs/common.env
       - environment-configs/coordinator.env
       - ${OVERRIDE_ENV}
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
 
   historical:
     image: ${DRUID_IT_IMAGE_NAME}
     container_name: historical
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.30
@@ -95,10 +105,14 @@ services:
       - environment-configs/common.env
       - environment-configs/historical.env
       - ${OVERRIDE_ENV}
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
 
   middlemanager:
     image: ${DRUID_IT_IMAGE_NAME}
     container_name: middlemanager
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.40
@@ -124,10 +138,14 @@ services:
       - environment-configs/common.env
       - environment-configs/middlemanager.env
       - ${OVERRIDE_ENV}
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
 
   indexer:
     image: ${DRUID_IT_IMAGE_NAME}
     container_name: indexer
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.50
@@ -141,10 +159,14 @@ services:
       - environment-configs/common.env
       - environment-configs/indexer.env
       - ${OVERRIDE_ENV}
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
 
   broker:
     image: ${DRUID_IT_IMAGE_NAME}
     container_name: broker
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.60
@@ -158,10 +180,14 @@ services:
       - environment-configs/common.env
       - environment-configs/broker.env
       - ${OVERRIDE_ENV}
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
 
   router:
     image: ${DRUID_IT_IMAGE_NAME}
     container_name: router
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.70
@@ -175,3 +201,5 @@ services:
       - environment-configs/common.env
       - environment-configs/router.env
       - ${OVERRIDE_ENV}
+    environment:
+      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}

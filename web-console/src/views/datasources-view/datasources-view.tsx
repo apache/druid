@@ -21,7 +21,8 @@ import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import { SqlQuery, T } from 'druid-query-toolkit';
 import React from 'react';
-import ReactTable, { Filter } from 'react-table';
+import type { Filter } from 'react-table';
+import ReactTable from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -38,22 +39,22 @@ import {
 } from '../../components';
 import {
   AsyncActionDialog,
-  CompactionDialog,
+  CompactionConfigDialog,
   KillDatasourceDialog,
   RetentionDialog,
 } from '../../dialogs';
 import { DatasourceTableActionDialog } from '../../dialogs/datasource-table-action-dialog/datasource-table-action-dialog';
-import {
+import type {
   CompactionConfig,
   CompactionInfo,
   CompactionStatus,
-  formatCompactionInfo,
   QueryWithContext,
-  zeroCompactionStatus,
 } from '../../druid-models';
-import { Capabilities, CapabilitiesMode } from '../../helpers';
+import { formatCompactionInfo, zeroCompactionStatus } from '../../druid-models';
+import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
+import type { NumberLike } from '../../utils';
 import {
   compact,
   countBy,
@@ -68,15 +69,15 @@ import {
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   lookupBy,
-  NumberLike,
   pluralIfNeeded,
   queryDruidSql,
   QueryManager,
   QueryState,
   twoLines,
 } from '../../utils';
-import { BasicAction } from '../../utils/basic-action';
-import { Rule, RuleUtil } from '../../utils/load-rule';
+import type { BasicAction } from '../../utils/basic-action';
+import type { Rule } from '../../utils/load-rule';
+import { RuleUtil } from '../../utils/load-rule';
 
 import './datasources-view.scss';
 
@@ -232,7 +233,7 @@ interface RetentionDialogOpenOn {
   readonly rules: Rule[];
 }
 
-interface CompactionDialogOpenOn {
+interface CompactionConfigDialogOpenOn {
   readonly datasource: string;
   readonly compactionConfig?: CompactionConfig;
 }
@@ -249,11 +250,9 @@ export interface DatasourcesViewState {
   datasourceFilter: Filter[];
   datasourcesAndDefaultRulesState: QueryState<DatasourcesAndDefaultRules>;
 
-  tiersState: QueryState<string[]>;
-
   showUnused: boolean;
   retentionDialogOpenOn?: RetentionDialogOpenOn;
-  compactionDialogOpenOn?: CompactionDialogOpenOn;
+  compactionDialogOpenOn?: CompactionConfigDialogOpenOn;
   datasourceToMarkAsUnusedAllSegmentsIn?: string;
   datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn?: string;
   killDatasource?: string;
@@ -348,10 +347,8 @@ ORDER BY 1`;
     DatasourcesAndDefaultRules
   >;
 
-  private readonly tiersQueryManager: QueryManager<Capabilities, string[]>;
-
-  constructor(props: DatasourcesViewProps, context: any) {
-    super(props, context);
+  constructor(props: DatasourcesViewProps) {
+    super(props);
 
     const datasourceFilter: Filter[] = [];
     if (props.initDatasource) {
@@ -361,8 +358,6 @@ ORDER BY 1`;
     this.state = {
       datasourceFilter,
       datasourcesAndDefaultRulesState: QueryState.INIT,
-
-      tiersState: QueryState.INIT,
 
       showUnused: false,
       useUnuseAction: 'unuse',
@@ -377,7 +372,7 @@ ORDER BY 1`;
       actions: [],
     };
 
-    this.datasourceQueryManager = new QueryManager({
+    this.datasourceQueryManager = new QueryManager<DatasourceQuery, DatasourcesAndDefaultRules>({
       processQuery: async (
         { capabilities, visibleColumns, showUnused },
         _cancelToken,
@@ -524,26 +519,11 @@ ORDER BY 1`;
         });
       },
     });
-
-    this.tiersQueryManager = new QueryManager({
-      processQuery: async capabilities => {
-        if (capabilities.hasCoordinatorAccess()) {
-          const tiersResp = await Api.instance.get('/druid/coordinator/v1/tiers');
-          return tiersResp.data;
-        } else {
-          throw new Error(`must have coordinator access`);
-        }
-      },
-      onStateChange: tiersState => {
-        this.setState({ tiersState });
-      },
-    });
   }
 
   private readonly refresh = (auto: boolean): void => {
     if (auto && hasPopoverOpen()) return;
     this.datasourceQueryManager.rerunLastQuery(auto);
-    this.tiersQueryManager.rerunLastQuery(auto);
   };
 
   private fetchDatasourceData() {
@@ -553,14 +533,11 @@ ORDER BY 1`;
   }
 
   componentDidMount(): void {
-    const { capabilities } = this.props;
     this.fetchDatasourceData();
-    this.tiersQueryManager.runQuery(capabilities);
   }
 
   componentWillUnmount(): void {
     this.datasourceQueryManager.terminate();
-    this.tiersQueryManager.terminate();
   }
 
   renderUnuseAction() {
@@ -817,6 +794,7 @@ ORDER BY 1`;
       intent: Intent.DANGER,
       action: {
         text: 'Confirm',
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
         onClick: async () => {
           try {
             await Api.instance.delete(
@@ -874,10 +852,18 @@ ORDER BY 1`;
         {
           icon: IconNames.EXPORT,
           title: 'Mark as used all segments',
-
           onAction: () =>
             this.setState({
               datasourceToMarkAllNonOvershadowedSegmentsAsUsedIn: datasource,
+            }),
+        },
+        {
+          icon: IconNames.EXPORT,
+          title: 'Mark as used segments by interval',
+          onAction: () =>
+            this.setState({
+              datasourceToMarkSegmentsByIntervalIn: datasource,
+              useUnuseAction: 'use',
             }),
         },
         {
@@ -927,7 +913,6 @@ ORDER BY 1`;
           {
             icon: IconNames.EXPORT,
             title: 'Mark as used segments by interval',
-
             onAction: () =>
               this.setState({
                 datasourceToMarkSegmentsByIntervalIn: datasource,
@@ -937,7 +922,6 @@ ORDER BY 1`;
           {
             icon: IconNames.IMPORT,
             title: 'Mark as unused segments by interval',
-
             onAction: () =>
               this.setState({
                 datasourceToMarkSegmentsByIntervalIn: datasource,
@@ -962,7 +946,8 @@ ORDER BY 1`;
   }
 
   private renderRetentionDialog(): JSX.Element | undefined {
-    const { retentionDialogOpenOn, tiersState, datasourcesAndDefaultRulesState } = this.state;
+    const { capabilities } = this.props;
+    const { retentionDialogOpenOn, datasourcesAndDefaultRulesState } = this.state;
     const defaultRules = datasourcesAndDefaultRulesState.data?.defaultRules;
     if (!retentionDialogOpenOn || !defaultRules) return;
 
@@ -970,7 +955,7 @@ ORDER BY 1`;
       <RetentionDialog
         datasource={retentionDialogOpenOn.datasource}
         rules={retentionDialogOpenOn.rules}
-        tiers={tiersState.data || []}
+        capabilities={capabilities}
         onEditDefaults={this.editDefaultRules}
         defaultRules={defaultRules}
         onCancel={() => this.setState({ retentionDialogOpenOn: undefined })}
@@ -979,12 +964,12 @@ ORDER BY 1`;
     );
   }
 
-  private renderCompactionDialog() {
+  private renderCompactionConfigDialog() {
     const { datasourcesAndDefaultRulesState, compactionDialogOpenOn } = this.state;
     if (!compactionDialogOpenOn || !datasourcesAndDefaultRulesState.data) return;
 
     return (
-      <CompactionDialog
+      <CompactionConfigDialog
         datasource={compactionDialogOpenOn.datasource}
         compactionConfig={compactionDialogOpenOn.compactionConfig}
         onClose={() => this.setState({ compactionDialogOpenOn: undefined })}
@@ -1495,6 +1480,7 @@ ORDER BY 1`;
                   onDetail={() => {
                     this.onDetail(original);
                   }}
+                  disableDetail={unused}
                   actions={datasourceActions}
                 />
               );
@@ -1569,7 +1555,7 @@ ORDER BY 1`;
         {this.renderUseUnuseActionByInterval()}
         {this.renderKillAction()}
         {this.renderRetentionDialog()}
-        {this.renderCompactionDialog()}
+        {this.renderCompactionConfigDialog()}
         {this.renderForceCompactAction()}
       </div>
     );

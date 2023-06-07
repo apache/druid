@@ -11,93 +11,61 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License.
+# limitations under the License
 
-name: (openjdk8) Unit Tests CI
+name: "Unit tests workflow"
 on:
-  push:
-    branches:
-      - master
-      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
-  pull_request:
-    branches:
-      - master
-      - /^\d+\.\d+\.\d+(-\S*)?$/ # release branches
-
-concurrency:
-  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
-  cancel-in-progress: true
-
-env:
-  MVN: mvn -B
-  MAVEN_SKIP: -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true
-  MAVEN_SKIP_TESTS: -P skip-tests
-  MAVEN_OPTS: -Xmx3000m
-  FORCE_COLOR: 2
+  workflow_call:
+    inputs:
+      jdk:
+        required: true
+        type: string
+        description: 'JDK version used to test Druid'
+      sql_compatibility:
+        required: false
+        type: boolean
+        default: true
+        description: 'For SQL compatibility'
+    outputs:
+      continue_tests:
+        description: 'Flag to decide if next tests need to run incase coverage issue failures'
+        value: |
+          ${{
+            (jobs.indexing_modules_test.result == 'success' || fromJson(jobs.indexing_modules_test.outputs.coverage_failure)) &&
+            (jobs.processing_modules_test.result == 'success' || fromJson(jobs.processing_modules_test.outputs.coverage_failure)) &&
+            (jobs.server_modules_test.result == 'success' || fromJson(jobs.server_modules_test.outputs.coverage_failure)) &&
+            (jobs.other_modules_test.result == 'success' || fromJson(jobs.other_modules_test.outputs.coverage_failure))
+          }}
 
 jobs:
-  unit-tests:
-    strategy:
-      matrix:
-        DRUID_USE_DEFAULT_VALUE_FOR_NULL: [ false, true ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout branch
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+  indexing_modules_test:
+    uses: ./.github/workflows/reusable-unit-tests.yml
+    with:
+      jdk: ${{ inputs.jdk }}
+      sql_compatibility: ${{ inputs.sql_compatibility }}
+      module: indexing
+      maven_projects: 'indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
 
-      - name: setup jdk8
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: 8
-          cache: 'maven'
+  processing_modules_test:
+    uses: ./.github/workflows/reusable-unit-tests.yml
+    with:
+      jdk: ${{ inputs.jdk }}
+      sql_compatibility: ${{ inputs.sql_compatibility }}
+      module: processing
+      maven_projects: 'processing'
 
-      - name: maven install
-        run: |
-          echo 'Running Maven install...' &&
-          ${MVN} clean install -q -ff -pl '!distribution,!:druid-it-image,!:druid-it-cases' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C &&
-          ${MVN} install -q -ff -pl 'distribution' ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS}
+  server_modules_test:
+    uses: ./.github/workflows/reusable-unit-tests.yml
+    with:
+      jdk: ${{ inputs.jdk }}
+      sql_compatibility: ${{ inputs.sql_compatibility }}
+      module: server
+      maven_projects: 'server'
 
-      - name: setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16.17.0
-
-      - name: setup variables
-        run: |
-          export base_ref=${{ github.base_ref }}
-          echo "GITHUB_BASE_REF=${base_ref}" >> $GITHUB_ENV
-          export druid_use_default_value_for_null=${{ matrix.DRUID_USE_DEFAULT_VALUE_FOR_NULL }}
-          echo "DRUID_USE_DEFAULT_VALUE_FOR_NULL=${druid_use_default_value_for_null}" >> $GITHUB_ENV
-
-      - name: fetch base branch for test coverage
-        if: ${{ github.base_ref != '' }}
-        run: |
-          # Add merge target branch to determine diff.
-          # This is not needed for build triggered by tags, since there will be no code diff.
-          git remote set-branches --add origin ${GITHUB_BASE_REF} && git fetch
-
-      - name: Setup diff-test-coverage
-        run: npm install @connectis/diff-test-coverage@1.5.3
-
-      - name: "(openjdk8) indexing modules test"
-        env:
-          MAVEN_PROJECTS: indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service
-        run: ./.github/scripts/unit_tests_script.sh
-
-      - name: "(openjdk8) processing module test"
-        env:
-          MAVEN_PROJECTS: processing
-        run: ./.github/scripts/unit_tests_script.sh
-
-      - name: "(openjdk8) server module test"
-        env:
-          MAVEN_PROJECTS: server
-        run: ./.github/scripts/unit_tests_script.sh
-
-      - name: "(openjdk8) other modules test"
-        env:
-          MAVEN_PROJECTS: '!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases'
-        run: ./.github/scripts/unit_tests_script.sh
+  other_modules_test:
+    uses: ./.github/workflows/reusable-unit-tests.yml
+    with:
+      jdk: ${{ inputs.jdk }}
+      sql_compatibility: ${{ inputs.sql_compatibility }}
+      module: other
+      maven_projects: '!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases'

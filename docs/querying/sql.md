@@ -26,7 +26,7 @@ sidebar_label: "Overview and syntax"
 > Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
 > This document describes the SQL language.
 
-You can query data in Druid datasources using [Druid SQL](./sql.md). Druid translates SQL queries into its [native query language](./querying.md). To learn about translation and how to get the best performance from Druid SQL, see [SQL query translation](./sql-translation.md).
+You can query data in Druid datasources using Druid SQL. Druid translates SQL queries into its [native query language](querying.md). To learn about translation and how to get the best performance from Druid SQL, see [SQL query translation](sql-translation.md).
 
 Druid SQL planning occurs on the Broker.
 Set [Broker runtime properties](../configuration/index.md#sql) to configure the query plan and JDBC querying.
@@ -42,8 +42,8 @@ For more information and SQL querying options see:
 - [Query translation](./sql-translation.md) for information about how Druid translates SQL queries to native queries before running them.
 
 For information about APIs, see:
-- [Druid SQL API](./sql-api.md) for information on the HTTP API.
-- [SQL JDBC driver API](./sql-jdbc.md) for information about the JDBC driver API.
+- [Druid SQL API](../api-reference/sql-api.md) for information on the HTTP API.
+- [SQL JDBC driver API](../api-reference/sql-jdbc.md) for information about the JDBC driver API.
 - [SQL query context](./sql-query-context.md) for information about the query context parameters that affect SQL planning.
 
 ## Syntax
@@ -55,6 +55,7 @@ Druid SQL supports SELECT queries with the following structure:
 [ WITH tableName [ ( column1, column2, ... ) ] AS ( query ) ]
 SELECT [ ALL | DISTINCT ] { * | exprs }
 FROM { <table> | (<subquery>) | <o1> [ INNER | LEFT ] JOIN <o2> ON condition }
+[, UNNEST(source_expression) as table_alias_name(column_alias_name) ]
 [ WHERE expr ]
 [ GROUP BY [ exprs | GROUPING SETS ( (exprs), ... ) | ROLLUP (exprs) | CUBE (exprs) ] ]
 [ HAVING expr ]
@@ -81,6 +82,43 @@ FROM clause, metadata tables are not considered datasources. They exist only in 
 
 For more information about table, lookup, query, and join datasources, refer to the [Datasources](datasource.md)
 documentation.
+
+## UNNEST
+
+> The UNNEST SQL function is [experimental](../development/experimental.md). Its API and behavior are subject
+> to change in future releases. It is not recommended to use this feature in production at this time.
+
+The UNNEST clause unnests array values. It's the SQL equivalent to the [unnest datasource](./datasource.md#unnest). The source for UNNEST can be an array or an input that's been transformed into an array, such as with helper functions like MV_TO_ARRAY or ARRAY.
+
+The following is the general syntax for UNNEST, specifically a query that returns the column that gets unnested:
+
+```sql
+SELECT column_alias_name FROM datasource, UNNEST(source_expression1) AS table_alias_name1(column_alias_name1), UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
+```
+
+* The `datasource` for UNNEST can be any Druid datasource, such as the following:
+  * A table, such as  `FROM a_table`.
+  * A subset of a table based on a query, a filter, or a JOIN. For example, `FROM (SELECT columnA,columnB,columnC from a_table)`.
+* The `source_expression` for the UNNEST function must be an array and can come from any expression. If the dimension you are unnesting is a multi-value dimension, you have to specify `MV_TO_ARRAY(dimension)` to convert it to an implicit ARRAY type. You can also specify any expression that has an SQL array datatype. For example, you can call UNNEST on the following:
+  * `ARRAY[dim1,dim2]` if you want to make an array out of two dimensions. 
+  * `ARRAY_CONCAT(dim1,dim2)` if you want to concatenate two multi-value dimensions. 
+* The `AS table_alias_name(column_alias_name)` clause  is not required but is highly recommended. Use it to specify the output, which can be an existing column or a new one. Replace `table_alias_name` and `column_alias_name` with a table and column name you want to alias the unnested results to. If you don't provide this, Druid uses a nondescriptive name, such as `EXPR$0`.
+
+Keep the following things in mind when writing your query:
+
+- You must include the context parameter `"enableUnnest": true`.
+- You can unnest multiple source expressions in a single query.
+- Notice the comma between the datasource and the UNNEST function. This is needed in most cases of the UNNEST function. Specifically, it is not needed when you're unnesting an inline array since the array itself is the datasource.
+- If you view the native explanation of a SQL UNNEST, you'll notice that Druid uses `j0.unnest` as a virtual column to perform the unnest. An underscore is added for each unnest, so you may notice virtual columns named `_j0.unnest` or `__j0.unnest`.
+- UNNEST preserves the ordering of the source array that is being unnested.
+
+For examples, see the [Unnest arrays tutorial](../tutorials/tutorial-unnest-arrays.md).
+
+The UNNEST function has the following limitations:
+
+- The function does not remove any duplicates or nulls in an array. Nulls will be treated as any other value in an array. If there are multiple nulls within the array, a record corresponding to each of the nulls gets created.
+- Arrays inside complex JSON types are not supported.
+- You cannot perform an UNNEST at ingestion time, including SQL-based ingestion using the MSQ task engine.
 
 ## WHERE
 
@@ -212,8 +250,8 @@ Add "EXPLAIN PLAN FOR" to the beginning of any query to get information about ho
 the query will not actually be executed. Refer to the [Query translation](sql-translation.md#interpreting-explain-plan-output)
 documentation for more information on the output of EXPLAIN PLAN.
 
-> Be careful when interpreting EXPLAIN PLAN output, and use [request logging](../configuration/index.md#request-logging) if in doubt.
-Request logs show the exact native query that will be run.
+> For the legacy plan, be careful when interpreting EXPLAIN PLAN output, and use [request logging](../configuration/index.md#request-logging) if in doubt.
+Request logs show the exact native query that will be run. Alternatively, to see the native query plan, set `useNativeQueryExplain` to true in the query context.
 
 ## Identifiers and literals
 
@@ -232,7 +270,7 @@ written like `INTERVAL '1' HOUR`, `INTERVAL '1 02:03' DAY TO MINUTE`, `INTERVAL 
 Druid SQL supports dynamic parameters using question mark (`?`) syntax, where parameters are bound to `?` placeholders
 at execution time. To use dynamic parameters, replace any literal in the query with a `?` character and provide a
 corresponding parameter value when you execute the query. Parameters are bound to the placeholders in the order in
-which they are passed. Parameters are supported in both the [HTTP POST](sql-api.md) and [JDBC](sql-jdbc.md) APIs.
+which they are passed. Parameters are supported in both the [HTTP POST](../api-reference/sql-api.md) and [JDBC](../api-reference/sql-jdbc.md) APIs.
 
 In certain cases, using dynamic parameters in expressions can cause type inference issues which cause your query to fail, for example:
 

@@ -21,10 +21,14 @@ package org.apache.druid.segment.transform;
 
 import org.apache.druid.data.input.Row;
 
+import java.util.List;
+
 /**
  * Interface for evaluating functions on rows. Used by {@link Transformer}.
  */
 public interface RowFunction
 {
   Object eval(Row row);
+
+  List<String> evalDimension(Row row);
 }

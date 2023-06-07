@@ -22,6 +22,7 @@ package org.apache.druid.server.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.AlertBuilder;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.DruidNode;
@@ -66,7 +67,6 @@ public class PreResponseAuthorizationCheckFilter implements Filter
   @Override
   public void init(FilterConfig filterConfig)
   {
-
   }
 
   @Override
@@ -90,7 +90,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       // (e.g. OverlordServletProxy), so this is not implemented for now.
       handleAuthorizationCheckError(
           StringUtils.format(
-              "Request did not have an authorization check performed, original response status[%s].",
+              "Request did not have an authorization check performed, original response status [%s].",
               response.getStatus()
           ),
           request,
@@ -110,7 +110,6 @@ public class PreResponseAuthorizationCheckFilter implements Filter
   @Override
   public void destroy()
   {
-
   }
 
   private void handleUnauthenticatedRequest(
@@ -148,16 +147,24 @@ public class PreResponseAuthorizationCheckFilter implements Filter
       HttpServletResponse servletResponse
   )
   {
-    final String queryId = servletResponse.getHeader(QueryResource.QUERY_ID_RESPONSE_HEADER);
-
     // Send out an alert so there's a centralized collection point for seeing errors of this nature
-    log.makeAlert(errorMsg)
-       .addData("uri", servletRequest.getRequestURI())
-       .addData("method", servletRequest.getMethod())
-       .addData("remoteAddr", servletRequest.getRemoteAddr())
-       .addData("remoteHost", servletRequest.getRemoteHost())
-       .addData("queryId", queryId)
-       .emit();
+    AlertBuilder builder = log.makeAlert(errorMsg)
+        .addData("uri", servletRequest.getRequestURI())
+        .addData("method", servletRequest.getMethod())
+        .addData("remoteAddr", servletRequest.getRemoteAddr());
+
+    // Omit the host name if it just repeats the IP address.
+    String remoteHost = servletRequest.getRemoteHost();
+    if (remoteHost != null && !remoteHost.equals(servletRequest.getRemoteAddr())) {
+      builder.addData("remoteHost", remoteHost);
+    }
+
+    // Omit the query ID if there is no ID.
+    final String queryId = servletResponse.getHeader(QueryResource.QUERY_ID_RESPONSE_HEADER);
+    if (queryId != null) {
+      builder.addData("queryId", queryId);
+    }
+    builder.emit();
 
     if (!servletResponse.isCommitted()) {
       try {
@@ -172,21 +179,10 @@ public class PreResponseAuthorizationCheckFilter implements Filter
 
   private static boolean statusShouldBeHidden(int status)
   {
-    // We allow 404s (not found) to not be rewritten to forbidden because consistently returning 404s is a way to leak
-    // less information when something wasn't able to be done anyway.  I.e. if we pretend that the thing didn't exist
-    // when the authorization fails, then there is no information about whether the thing existed.  If we return
-    // a 403 when authorization fails and a 404 when authorization succeeds, but it doesn't exist, then we have
-    // leaked that it could maybe exist, if the authentication credentials were good.
-    //
-    // We also allow 307s (temporary redirect) to not be hidden as they are used to redirect to the leader.
-    switch (status) {
-      case HttpServletResponse.SC_FORBIDDEN:
-      case HttpServletResponse.SC_NOT_FOUND:
-      case HttpServletResponse.SC_TEMPORARY_REDIRECT:
-        return false;
-      default:
-        return true;
-    }
+    // Hide any 200s because a 200 response could contain stuff that we don't want seen, so we hide that.  It's also
+    // possible that errors can leak information, but that's something we cannot truly fix here.  We choose to let
+    // those error messages through because this filter values giving the user good feedback instead.
+    return status / 100 == 2;
   }
 
   public static void sendJsonError(HttpServletResponse resp, int error, String errorJson, OutputStream outputStream)

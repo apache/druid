@@ -74,6 +74,7 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
   )
   {
     final RexNode inputOperand = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         aggregateCall.getArgList().get(0)
@@ -93,6 +94,7 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
     Integer compression = TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION;
     if (aggregateCall.getArgList().size() > 1) {
       RexNode compressionOperand = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(1)
@@ -146,7 +148,7 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
 
   private static class TDigestGenerateSketchSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE_WITH_COMPRESSION = "'" + NAME + "(column, compression)'\n";
+    private static final String SIGNATURE_WITH_COMPRESSION = "'" + NAME + "(column, compression)'";
 
     TDigestGenerateSketchSqlAggFunction()
     {

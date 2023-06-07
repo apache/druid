@@ -34,11 +34,11 @@ You can specify the data to retain or drop in the following ways:
 - Period: segment data specified as an offset from the present time.
 - Interval: a fixed time range.
 
-Retention rules are persistent: they remain in effect until you change them. Druid stores retention rules in its [metadata store](../dependencies/metadata-storage.md).
+Retention rules are persistent: they remain in effect until you change them. Druid stores retention rules in its [metadata store](../design/metadata-storage.md).
 
 ## Set retention rules
 
-You can use the Druid [web console](./web-console.md) or the [Coordinator API](./api-reference.md#coordinator) to create and manage retention rules.
+You can use the Druid [web console](./web-console.md) or the [Coordinator API](../api-reference/api-reference.md#coordinator) to create and manage retention rules.
 
 ### Use the web console
 
@@ -48,7 +48,7 @@ To set retention rules in the Druid web console:
 2. Click the name of your datasource to open the data window.
 3. Select **Actions > Edit retention rules**.
 4. Click **+New rule**.
-5. Select a rule type and set properties according to the rules reference.
+5. Select a rule type and set properties for the rule.
 6. Click **Next** and enter a description for the rule.
 7. Click **Save** to save and apply the rule to the datasource.
 
@@ -151,11 +151,12 @@ Period load rules have type `loadByPeriod`. The following example places one rep
 
 Set the following properties:
 
-- `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the present, or into the future if `includeFuture` is set to `true`.
+- `period`: a JSON object representing [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the present, or into the future if `includeFuture` is set to `true`.
 - `includeFuture`: a boolean flag to instruct Druid to match a segment if:
-<br />- the segment interval overlaps the rule interval, or
-<br />- the segment interval starts any time after the rule interval starts.
-<br />You can use this property to load segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
+  - the segment interval overlaps the rule interval, or
+  - the segment interval starts any time after the rule interval starts.
+
+  You can use this property to load segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
 - `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
 
 ### Interval load rule
@@ -177,7 +178,7 @@ Interval load rules have type `loadByInterval`. The following example places one
 
 Set the following properties:
 
-- `interval`: the load interval specified as an ISO-8601 [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
+- `interval`: the load interval specified as an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
 - `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
 
 ## Drop rules
@@ -214,11 +215,13 @@ Period drop rules have type `dropByPeriod` and the following JSON structure:
 
 Set the following properties:
 
-- `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the future or to the current time, depending on the `includeFuture` flag.
-- `includeFuture`: a boolean flag to instruct Druid to match a segment if:
-<br />- the segment interval overlaps the rule interval, or
-<br />- the segment interval starts any time after the rule interval starts.
-<br />You can use this property to drop segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
+- `period`: a JSON object representing [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the future or to the current time, depending on the `includeFuture` flag.
+- `includeFuture`: a boolean flag to instruct Druid to match a segment if one of the following conditions apply:
+
+  - the segment interval overlaps the rule interval
+  - the segment interval starts any time after the rule interval starts
+  
+  You can use this property to drop segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
 
 ### Period drop before rule
 
@@ -237,7 +240,7 @@ Period drop rules have type `dropBeforeByPeriod` and the following JSON structur
 
 Set the following property:
 
-- `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods.
+- `period`: a JSON object representing [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) periods.
 
 ### Interval drop rule
 
@@ -254,7 +257,7 @@ Interval drop rules have type `dropByInterval` and the following JSON structure:
 
 Set the following property:
 
-- `interval`: the drop interval specified as an ISO-8601 [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
+- `interval`: the drop interval specified as an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
 
 ## Broadcast rules
 
@@ -288,11 +291,12 @@ Period broadcast rules have type `broadcastByPeriod` and the following JSON stru
 
 Set the following properties:
 
-- `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the future or to the current time, depending on the `includeFuture` flag.
-- `includeFuture`: a boolean flag to instruct Druid to match a segment if:
-<br />- the segment interval overlaps the rule interval, or
-<br />- the segment interval starts any time after the rule interval starts.
-<br />You can use this property to broadcast segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
+- `period`: a JSON object representing [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the future or to the current time, depending on the `includeFuture` flag.
+- `includeFuture`: a boolean flag to instruct Druid to match a segment if one of the following conditions apply:
+  - the segment interval overlaps the rule interval
+  - the segment interval starts any time after the rule interval starts.
+
+  You can use this property to broadcast segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
 
 ### Interval broadcast rule
 
@@ -309,7 +313,7 @@ Interval broadcast rules have type `broadcastByInterval` and the following JSON 
 
 Set the following property:
 
-- `interval`: the broadcast interval specified as an ISO-8601 [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
+- `interval`: the broadcast interval specified as an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
 
 ## Permanently delete data
 

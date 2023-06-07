@@ -88,7 +88,7 @@ public class StringSqlAggregator implements SqlAggregator
     final List<DruidExpression> arguments = aggregateCall
         .getArgList()
         .stream()
-        .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
+        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
         .map(rexNode -> Expressions.toDruidExpression(plannerContext, rowSignature, rexNode))
         .collect(Collectors.toList());
 
@@ -97,6 +97,7 @@ public class StringSqlAggregator implements SqlAggregator
     }
 
     RexNode separatorNode = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         aggregateCall.getArgList().get(1)
@@ -115,6 +116,7 @@ public class StringSqlAggregator implements SqlAggregator
     Integer maxSizeBytes = null;
     if (arguments.size() > 2) {
       RexNode maxBytes = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(2)
@@ -220,7 +222,7 @@ public class StringSqlAggregator implements SqlAggregator
           OperandTypes.or(
               OperandTypes.and(
                   OperandTypes.sequence(
-                      StringUtils.format("'%s'(expr, separator)", NAME),
+                      StringUtils.format("'%s(expr, separator)'", NAME),
                       OperandTypes.ANY,
                       OperandTypes.STRING
                   ),
@@ -228,7 +230,7 @@ public class StringSqlAggregator implements SqlAggregator
               ),
               OperandTypes.and(
                   OperandTypes.sequence(
-                      StringUtils.format("'%s'(expr, separator, maxSizeBytes)", NAME),
+                      StringUtils.format("'%s(expr, separator, maxSizeBytes)'", NAME),
                       OperandTypes.ANY,
                       OperandTypes.STRING,
                       OperandTypes.POSITIVE_INTEGER_LITERAL

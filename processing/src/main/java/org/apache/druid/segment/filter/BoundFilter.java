@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Doubles;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BitmapResultFactory;
@@ -89,11 +90,13 @@ public class BoundFilter implements Filter
             boundDimFilter.getUpper(),
             boundDimFilter.isUpperStrict()
         );
-        // preserve sad backwards compatible behavior where bound filter matches 'null' if the lower bound is not set
-        if (boundDimFilter.hasLowerBound() && !NullHandling.isNullOrEquivalent(boundDimFilter.getLower())) {
-          return rangeBitmaps;
-        } else {
-          return wrapRangeIndexWithNullValueIndex(indexSupplier, rangeBitmaps);
+        if (rangeBitmaps != null) {
+          // preserve sad backwards compatible behavior where bound filter matches 'null' if the lower bound is not set
+          if (boundDimFilter.hasLowerBound() && !NullHandling.isNullOrEquivalent(boundDimFilter.getLower())) {
+            return rangeBitmaps;
+          } else {
+            return wrapRangeIndexWithNullValueIndex(indexSupplier, rangeBitmaps);
+          }
         }
       }
     }
@@ -104,22 +107,32 @@ public class BoundFilter implements Filter
       }
       final NumericRangeIndex rangeIndex = indexSupplier.as(NumericRangeIndex.class);
       if (rangeIndex != null) {
-        final Number lower = boundDimFilter.hasLowerBound() ? Double.parseDouble(boundDimFilter.getLower()) : null;
-        final Number upper = boundDimFilter.hasUpperBound() ? Double.parseDouble(boundDimFilter.getUpper()) : null;
-        final BitmapColumnIndex rangeBitmaps = rangeIndex.forRange(
-            lower,
-            boundDimFilter.isLowerStrict(),
-            upper,
-            boundDimFilter.isUpperStrict()
-        );
-        // preserve sad backwards compatible behavior where bound filter matches 'null' if the lower bound is not set
-        if (boundDimFilter.hasLowerBound() && !NullHandling.isNullOrEquivalent(boundDimFilter.getLower())) {
-          return rangeBitmaps;
-        } else {
-          return wrapRangeIndexWithNullValueIndex(indexSupplier, rangeBitmaps);
+        final Number lower = boundDimFilter.hasLowerBound() ? Doubles.tryParse(boundDimFilter.getLower()) : null;
+        final Number upper = boundDimFilter.hasUpperBound() ? Doubles.tryParse(boundDimFilter.getUpper()) : null;
+        // valid number bounds are required to use the range index, otherwise we need to fall back to the predicate
+        // index to get consistent behavior with the value matcher. in a better world this might be a much earlier
+        // validation error, but.. the bound filter doesn't live in that world
+        final boolean lowerValid = !(boundDimFilter.hasLowerBound() && lower == null);
+        final boolean upperValid = !(boundDimFilter.hasUpperBound() && upper == null);
+        if (lowerValid && upperValid) {
+          final BitmapColumnIndex rangeBitmaps = rangeIndex.forRange(
+              lower,
+              boundDimFilter.isLowerStrict(),
+              upper,
+              boundDimFilter.isUpperStrict()
+          );
+          if (rangeBitmaps != null) {
+            // preserve sad backwards compatible behavior where bound filter matches 'null' if the lower bound is not set
+            if (boundDimFilter.hasLowerBound() && !NullHandling.isNullOrEquivalent(boundDimFilter.getLower())) {
+              return rangeBitmaps;
+            } else {
+              return wrapRangeIndexWithNullValueIndex(indexSupplier, rangeBitmaps);
+            }
+          }
         }
       }
     }
+
     // fall back to predicate based index if it is available
     return Filters.makePredicateIndex(boundDimFilter.getDimension(), selector, getPredicateFactory());
   }
@@ -130,11 +143,15 @@ public class BoundFilter implements Filter
       BitmapColumnIndex rangeIndex
   )
   {
+
+
+    final BitmapColumnIndex nullBitmap;
     final NullValueIndex nulls = indexSupplier.as(NullValueIndex.class);
     if (nulls == null) {
       return null;
     }
-    final BitmapColumnIndex nullBitmap = nulls.forNull();
+    nullBitmap = nulls.forNull();
+
     return new BitmapColumnIndex()
     {
       @Override

@@ -18,12 +18,12 @@
 
 import { sum } from 'd3-array';
 
-import { CapacityInfo } from '../druid-models';
+import type { CapacityInfo } from '../druid-models';
 import { Api } from '../singletons';
 
 export async function getClusterCapacity(): Promise<CapacityInfo> {
   const workersResponse = await Api.instance.get('/druid/indexer/v1/workers', {
-    timeout: 500,
+    timeout: 5000,
   });
 
   const usedTaskSlots = sum(

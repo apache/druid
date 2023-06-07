@@ -3,12 +3,15 @@
 exports[`SuggestionMenu matches snapshot 1`] = `
 <ul
   class="bp4-menu suggestion-menu"
+  role="menu"
 >
   <li
     class=""
+    role="none"
   >
     <a
       class="bp4-menu-item bp4-popover-dismiss"
+      role="menuitem"
       tabindex="0"
     >
       <div
@@ -20,9 +23,11 @@ exports[`SuggestionMenu matches snapshot 1`] = `
   </li>
   <li
     class=""
+    role="none"
   >
     <a
       class="bp4-menu-item bp4-popover-dismiss"
+      role="menuitem"
       tabindex="0"
     >
       <div
@@ -34,9 +39,11 @@ exports[`SuggestionMenu matches snapshot 1`] = `
   </li>
   <li
     class=""
+    role="none"
   >
     <a
       class="bp4-menu-item bp4-popover-dismiss"
+      role="menuitem"
       tabindex="0"
     >
       <div
@@ -48,6 +55,7 @@ exports[`SuggestionMenu matches snapshot 1`] = `
   </li>
   <li
     class="bp4-submenu"
+    role="none"
   >
     <span
       class="bp4-popover-wrapper"
@@ -55,10 +63,13 @@ exports[`SuggestionMenu matches snapshot 1`] = `
       <span
         aria-haspopup="true"
         class="bp4-popover-target"
+        role="menuitem"
+        tabindex="0"
       >
         <a
           class="bp4-menu-item"
-          tabindex="0"
+          role="none"
+          tabindex="-1"
         >
           <div
             class="bp4-fill bp4-text-overflow-ellipsis"
@@ -66,18 +77,17 @@ exports[`SuggestionMenu matches snapshot 1`] = `
             Fruit
           </div>
           <span
+            aria-hidden="true"
             class="bp4-icon bp4-icon-caret-right bp4-submenu-icon"
             icon="caret-right"
           >
             <svg
               data-icon="caret-right"
               height="16"
+              role="img"
               viewBox="0 0 16 16"
               width="16"
             >
-              <desc>
-                Open sub menu
-              </desc>
               <path
                 d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 006 4.5v7a.495.495 0 00.83.37l4-3.5c.1-.09.17-.22.17-.37z"
                 fill-rule="evenodd"

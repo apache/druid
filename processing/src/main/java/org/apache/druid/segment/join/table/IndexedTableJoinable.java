@@ -20,7 +20,8 @@
 package org.apache.druid.segment.join.table;
 
 import com.google.common.collect.ImmutableSet;
-import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntBidirectionalIterator;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.io.Closer;
@@ -102,8 +103,7 @@ public class IndexedTableJoinable implements Joinable
     }
 
     try (final IndexedTable.Reader reader = table.columnReader(columnPosition)) {
-      // Sorted set to encourage "in" filters that result from this method to do dictionary lookups in order.
-      // The hopes are that this will improve locality and therefore improve performance.
+      // Use a SortedSet so InDimFilter doesn't need to create its own
       final Set<String> allValues = createValuesSet();
       boolean allUnique = true;
 
@@ -150,9 +150,10 @@ public class IndexedTableJoinable implements Joinable
         IndexedTable.Index index = table.columnIndex(filterColumnPosition);
         IndexedTable.Reader reader = table.columnReader(correlatedColumnPosition);
         closer.register(reader);
-        IntList rowIndex = index.find(searchColumnValue);
-        for (int i = 0; i < rowIndex.size(); i++) {
-          int rowNum = rowIndex.getInt(i);
+        final IntSortedSet rowIndex = index.find(searchColumnValue);
+        final IntBidirectionalIterator rowIterator = rowIndex.iterator();
+        while (rowIterator.hasNext()) {
+          int rowNum = rowIterator.nextInt();
           String correlatedDimVal = DimensionHandlerUtils.convertObjectToString(reader.read(rowNum));
           correlatedValues.add(correlatedDimVal);
 

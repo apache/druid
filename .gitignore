@@ -6,6 +6,7 @@ target
 *.tar.gz
 *.swp
 *.swo
+*.pyc
 .classpath
 .idea
 .project
@@ -35,3 +36,14 @@ website/build
 
 # Local Netlify folder
 .netlify
+*.pyc
+**/.ipython/
+**/.jupyter/
+**/.local/
+**/druidapi.egg-info/
+examples/quickstart/jupyter-notebooks/docker-jupyter/notebooks
+
+# ignore NetBeans IDE specific files
+nbproject
+nbactions.xml
+nb-configuration.xml

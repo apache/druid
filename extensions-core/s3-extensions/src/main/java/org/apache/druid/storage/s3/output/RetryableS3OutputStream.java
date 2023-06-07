@@ -33,7 +33,6 @@ import com.google.common.base.Stopwatch;
 import com.google.common.io.CountingOutputStream;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -126,9 +125,15 @@ public class RetryableS3OutputStream extends OutputStream
     this.s3 = s3;
     this.s3Key = s3Key;
 
-    final InitiateMultipartUploadResult result = s3.initiateMultipartUpload(
-        new InitiateMultipartUploadRequest(config.getBucket(), s3Key)
-    );
+    final InitiateMultipartUploadResult result;
+    try {
+      result = S3Utils.retryS3Operation(() -> s3.initiateMultipartUpload(
+          new InitiateMultipartUploadRequest(config.getBucket(), s3Key)
+      ), config.getMaxRetry());
+    }
+    catch (Exception e) {
+      throw new IOException("Unable to start multipart upload", e);
+    }
     this.uploadId = result.getUploadId();
     this.chunkStorePath = new File(config.getTempDir(), uploadId + UUID.randomUUID());
     FileUtils.mkdirp(this.chunkStorePath);
@@ -197,9 +202,6 @@ public class RetryableS3OutputStream extends OutputStream
     try {
       if (chunk.length() > 0) {
         resultsSize += chunk.length();
-        if (resultsSize > config.getMaxResultsSize()) {
-          throw new IOE("Exceeded max results size [%s]", config.getMaxResultsSize());
-        }
 
         pushStopwatch.start();
         pushResults.add(push(chunk));

@@ -79,6 +79,7 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
         plannerContext,
         rowSignature,
         Expressions.fromFieldAccess(
+            rexBuilder.getTypeFactory(),
             rowSignature,
             project,
             aggregateCall.getArgList().get(0)
@@ -91,6 +92,7 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
     final AggregatorFactory aggregatorFactory;
     final String histogramName = StringUtils.format("%s:agg", name);
     final RexNode probabilityArg = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         aggregateCall.getArgList().get(1)
@@ -106,6 +108,7 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
     final int numBuckets;
     if (aggregateCall.getArgList().size() >= 3) {
       final RexNode numBucketsArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(2)
@@ -124,6 +127,7 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
     final double lowerLimit;
     if (aggregateCall.getArgList().size() >= 4) {
       final RexNode lowerLimitArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(3)
@@ -142,6 +146,7 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
     final double upperLimit;
     if (aggregateCall.getArgList().size() >= 5) {
       final RexNode upperLimitArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(4)
@@ -160,6 +165,7 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
     final FixedBucketsHistogram.OutlierHandlingMode outlierHandlingMode;
     if (aggregateCall.getArgList().size() >= 6) {
       final RexNode outlierHandlingModeArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(5)
@@ -253,11 +259,11 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
     private static final String SIGNATURE1 =
         "'"
         + NAME
-        + "(column, probability, numBuckets, lowerLimit, upperLimit)'\n";
+        + "(column, probability, numBuckets, lowerLimit, upperLimit)'";
     private static final String SIGNATURE2 =
         "'"
         + NAME
-        + "(column, probability, numBuckets, lowerLimit, upperLimit, outlierHandlingMode)'\n";
+        + "(column, probability, numBuckets, lowerLimit, upperLimit, outlierHandlingMode)'";
 
     FixedBucketsHistogramQuantileSqlAggFunction()
     {

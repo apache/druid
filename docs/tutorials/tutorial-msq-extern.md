@@ -1,7 +1,7 @@
 ---
 id: tutorial-msq-extern
-title: "Tutorial: Load files with SQL-based ingestion"
-sidebar_label: "Load files using SQL 🆕"
+title: Load files with SQL-based ingestion
+sidebar_label: Load files using SQL
 description: How to generate a query that references externally hosted data
 ---
 

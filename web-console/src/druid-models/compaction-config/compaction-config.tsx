@@ -19,7 +19,7 @@
 import { Code } from '@blueprintjs/core';
 import React from 'react';
 
-import { Field } from '../../components';
+import type { Field } from '../../components';
 import { deepGet, deepSet, oneOf } from '../../utils';
 
 export interface CompactionConfig {

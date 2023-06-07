@@ -128,6 +128,22 @@ Constructs a SQL ARRAY literal from the expression arguments. The arguments must
 
 Returns an array of all values of the specified expression.
 
+## ARRAY_APPEND
+
+`ARRAY_APPEND(arr1, expr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Appends `expr` to `arr`, the resulting array type determined by the type of `arr1`.
+
+## ARRAY_CONCAT
+
+`ARRAY_CONCAT(arr1, arr2)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Concatenates `arr2` to `arr1`. The resulting array type is determined by the type of `arr1`.|
+
 ## ARRAY_CONCAT_AGG
 
 `ARRAY_CONCAT_AGG([DISTINCT] expr, [<NUMERIC>])`
@@ -135,6 +151,94 @@ Returns an array of all values of the specified expression.
 **Function type:** [Aggregation](sql-aggregations.md)
 
 Concatenates array inputs into a single array.
+
+## ARRAY_CONTAINS
+
+`ARRAY_CONTAINS(arr, expr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+If `expr` is a scalar type, returns 1 if `arr` contains `expr`. If `expr` is an array, returns 1 if `arr` contains all elements of `expr`. Otherwise returns 0.
+
+
+## ARRAY_LENGTH
+
+`ARRAY_LENGTH(arr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Returns length of the array expression.
+
+## ARRAY_OFFSET
+
+`ARRAY_OFFSET(arr, long)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Returns the array element at the 0-based index supplied, or null for an out of range index.
+
+## ARRAY_OFFSET_OF
+
+`ARRAY_OFFSET_OF(arr, expr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `-1` or `null` if `druid.generic.useDefaultValueForNull=false`.
+
+## ARRAY_ORDINAL
+
+**Function type:** [Array](./sql-array-functions.md)
+
+`ARRAY_ORDINAL(arr, long)`
+
+Returns the array element at the 1-based index supplied, or null for an out of range index.
+## ARRAY_ORDINAL_OF
+
+`ARRAY_ORDINAL_OF(arr, expr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `-1` or `null` if `druid.generic.useDefaultValueForNull=false`.|
+
+## ARRAY_OVERLAP
+
+`ARRAY_OVERLAP(arr1, arr2)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Returns 1 if `arr1` and `arr2` have any elements in common, else 0.|
+
+## ARRAY_PREPEND
+
+`ARRAY_PREPEND(expr, arr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Prepends `expr` to `arr` at the beginning, the resulting array type determined by the type of `arr`.
+
+## ARRAY_SLICE
+
+`ARRAY_SLICE(arr, start, end)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Returns the subarray of `arr` from the 0-based index `start` (inclusive) to `end` (exclusive). Returns `null`, if `start` is less than 0, greater than length of `arr`, or greater than `end`.
+
+## ARRAY_TO_MV
+
+`ARRAY_TO_MV(arr)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Converts an `ARRAY` of any type into a multi-value string `VARCHAR`.
+
+## ARRAY_TO_STRING
+
+`ARRAY_TO_STRING(arr, str)`
+
+**Function type:** [Array](./sql-array-functions.md)
+
+Joins all elements of `arr` by the delimiter specified by `str`.
 
 ## ASIN
 
@@ -490,6 +594,48 @@ Returns an approximate rank between 0 and 1 of a given value, in which the rank 
 **Function type:** [Aggregation](sql-aggregations.md)
 
 Creates a Theta sketch on a column containing Theta sketches or a regular column.
+
+## DS_TUPLE_DOUBLES
+
+`DS_TUPLE_DOUBLES(expr, [nominalEntries])`
+
+`DS_TUPLE_DOUBLES(dimensionColumnExpr, metricColumnExpr, ..., [nominalEntries])`
+
+**Function type:** [Aggregation](sql-aggregations.md)
+
+Creates a Tuple sketch which contains an array of double values as the Summary Object. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
+
+## DS_TUPLE_DOUBLES_INTERSECT
+
+`DS_TUPLE_DOUBLES_INTERSECT(expr, ..., [nominalEntries])`
+
+**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
+
+Returns an intersection of Tuple sketches which each contain an array of double values as their Summary Objects. The values contained in the Summary Objects are summed when combined. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
+
+## DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE
+
+`DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(expr)`
+
+**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
+
+Computes approximate sums of the values contained within a Tuple sketch which contains an array of double values as the Summary Object.
+
+## DS_TUPLE_DOUBLES_NOT
+
+`DS_TUPLE_DOUBLES_NOT(expr, ..., [nominalEntries])`
+
+**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
+
+Returns a set difference of Tuple sketches which each contain an array of double values as their Summary Objects. The values contained in the Summary Object are preserved as is. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
+
+## DS_TUPLE_DOUBLES_UNION
+
+`DS_TUPLE_DOUBLES_UNION(expr, ..., [nominalEntries])`
+
+**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
+
+Returns a union of Tuple sketches which each contain an array of double values as their Summary Objects. The values contained in the Summary Objects are summed when combined. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
 
 ## EARLIEST
 
@@ -1107,6 +1253,15 @@ Calculates the sample standard deviation of a set of values.
 
 Collects all values of an expression into a single string.
 
+## STRING_TO_ARRAY
+
+`STRING_TO_ARRAY(str1, str2)`
+
+**Function type:** [Array](sql-array-functions.md)
+
+Splits `str1` into an array on the delimiter specified by `str2`, which is a regular expression.
+
+
 ## STRING_FORMAT
 
 `STRING_FORMAT(pattern[, args...])`
@@ -1357,6 +1512,13 @@ Truncates a numerical expression to a specific number of decimal digits.
 
 Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is not a `VARCHAR` or it is invalid JSON, this function will result in a `NULL` value.
 
+## UNNEST
+
+`UNNEST(source_expression) as table_alias_name(column_alias_name)`
+
+Unnests a source expression that includes arrays into a target column with an aliased name. 
+
+For more information, see [UNNEST](./sql.md#unnest).
 
 ## UPPER
 

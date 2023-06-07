@@ -25,7 +25,7 @@ title: "DataSketches Tuple Sketch module"
 
 This module provides Apache Druid aggregators based on Tuple sketch from [Apache DataSketches](https://datasketches.apache.org/) library. ArrayOfDoublesSketch sketches extend the functionality of the count-distinct Theta sketches by adding arrays of double values associated with unique keys.
 
-To use this aggregator, make sure you [include](../../development/extensions.md#loading-extensions) the extension in your config file:
+To use this aggregator, make sure you [include](../../configuration/extensions.md#loading-extensions) the extension in your config file:
 
 ```
 druid.extensions.loadList=["druid-datasketches"]
@@ -205,5 +205,48 @@ Returns a human-readable summary of a given ArrayOfDoublesSketch. This is a stri
   "type"  : "arrayOfDoublesSketchToString",
   "name": <output name>,
   "field"  : <post aggregator that refers to an ArrayOfDoublesSketch (fieldAccess or another post aggregator)>
+}
+```
+
+
+### Constant ArrayOfDoublesSketch 
+
+This post aggregator adds a Base64-encoded constant ArrayOfDoublesSketch value that you can use in other post aggregators.
+```json
+{
+  "type": "arrayOfDoublesSketchConstant",
+  "name": DESTINATION_COLUMN_NAME,
+  "value": CONSTANT_SKETCH_VALUE
+}
+```
+
+### Base64 output of ArrayOfDoublesSketch 
+
+This post aggregator outputs an ArrayOfDoublesSketch as a Base64-encoded string storing the constant tuple sketch value that you can use in other post aggregators. 
+
+```json
+{
+  "type": "arrayOfDoublesSketchToBase64String",
+  "name": DESTINATION_COLUMN_NAME,
+  "field": <post aggregator that refers to a ArrayOfDoublesSketch (fieldAccess or another post aggregator)>
+}
+```
+
+### Estimated metrics values for each column of ArrayOfDoublesSketch
+
+For the key-value pairs in the given ArrayOfDoublesSketch, this post aggregator estimates the sum for each set of values across the keys. For example, the post aggregator returns `{3.0, 8.0}` for the following key-value pairs:
+
+```
+Key_1, {1.0, 3.0}
+Key_2, {2.0, 5.0}
+```
+
+The post aggregator returns _N_ double values, where _N_ is the number of values associated with each key.
+
+```json
+{
+  "type": "arrayOfDoublesSketchToMetricsSumEstimate",
+  "name": DESTINATION_COLUMN_NAME,
+  "field": <post aggregator that refers to a ArrayOfDoublesSketch (fieldAccess or another post aggregator)>
 }
 ```

@@ -16,12 +16,15 @@
  * limitations under the License.
  */
 
-import { SqlExpression, SqlQuery, SqlValues, SqlWithQuery, T } from 'druid-query-toolkit';
+import type { SqlValues, SqlWithQuery } from 'druid-query-toolkit';
+import { SqlExpression, SqlQuery, T } from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 
-import { ColumnMetadata, compact, filterMap, generate8HexId, sqlTypeFromDruid } from '../../utils';
-import { LastExecution, validateLastExecution } from '../execution/execution';
+import type { ColumnMetadata } from '../../utils';
+import { compact, filterMap, generate8HexId } from '../../utils';
+import type { LastExecution } from '../execution/execution';
+import { validateLastExecution } from '../execution/execution';
 import { fitExternalConfigPattern } from '../external-config/external-config';
 
 // -----------------------------
@@ -141,13 +144,13 @@ export class WorkbenchQueryPart {
     return this.queryString.trim().startsWith('{');
   }
 
-  public validJson(): boolean {
+  public issueWithJson(): string | undefined {
     try {
       Hjson.parse(this.queryString);
-      return true;
-    } catch {
-      return false;
+    } catch (e) {
+      return e.message;
     }
+    return;
   }
 
   public isSqlInJson(): boolean {
@@ -193,9 +196,9 @@ export class WorkbenchQueryPart {
     const { queryName, parsedQuery } = this;
     if (queryName && parsedQuery) {
       try {
-        return fitExternalConfigPattern(parsedQuery).signature.map(({ name, type }) => ({
-          COLUMN_NAME: name,
-          DATA_TYPE: sqlTypeFromDruid(type),
+        return fitExternalConfigPattern(parsedQuery).signature.map(columnDeclaration => ({
+          COLUMN_NAME: columnDeclaration.getColumnName(),
+          DATA_TYPE: columnDeclaration.columnType.getEffectiveType(),
           TABLE_NAME: queryName,
           TABLE_SCHEMA: 'druid',
         }));

@@ -31,7 +31,7 @@ public class StringSketchMerger implements StringDistributionMerger
 
   public StringSketchMerger()
   {
-    delegate = ItemsUnion.getInstance(StringSketch.SKETCH_K, StringSketch.STRING_TUPLE_COMPARATOR);
+    delegate = ItemsUnion.getInstance(StringTuple.class, StringSketch.SKETCH_K, StringSketch.STRING_TUPLE_COMPARATOR);
   }
 
   @Override
@@ -42,7 +42,7 @@ public class StringSketchMerger implements StringDistributionMerger
     }
 
     StringSketch stringSketch = (StringSketch) stringDistribution;
-    delegate.update(stringSketch.getDelegate());
+    delegate.union(stringSketch.getDelegate());
   }
 
   @Override

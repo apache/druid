@@ -58,7 +58,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
     indexMerger = TestHelper
         .getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
     indexIO = TestHelper.getTestIndexIO();
-    indexSpec = new IndexSpec();
+    indexSpec = IndexSpec.DEFAULT;
   }
 
   private void testStringFirstLastRollup(

@@ -645,7 +645,8 @@ public class QueryResourceTest
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     ((StreamingOutput) response.getEntity()).write(baos);
     QueryTimeoutException ex = jsonMapper.readValue(baos.toByteArray(), QueryTimeoutException.class);
-    Assert.assertEquals("Query Timed Out!", ex.getMessage());
+    Assert.assertEquals("Query did not complete within configured timeout period. You can " +
+        "increase query timeout or tune the performance of query.", ex.getMessage());
     Assert.assertEquals(QueryException.QUERY_TIMEOUT_ERROR_CODE, ex.getErrorCode());
     Assert.assertEquals(1, timeoutQueryResource.getTimedOutQueryCount());
 
@@ -895,7 +896,7 @@ public class QueryResourceTest
     assertAsyncResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
         waitAllFinished,
-        response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
+        response -> Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus())
     );
     waitTwoScheduled.await();
     assertSynchronousResponseAndCountdownOrBlockForever(
@@ -1042,19 +1043,21 @@ public class QueryResourceTest
         return (queryPlus, responseContext) -> {
           beforeScheduler.forEach(CountDownLatch::countDown);
 
-          return scheduler.run(
-              scheduler.prioritizeAndLaneQuery(queryPlus, ImmutableSet.of()),
-              new LazySequence<T>(() -> {
-                inScheduler.forEach(CountDownLatch::countDown);
-                try {
-                  // pretend to be a query that is waiting on results
-                  Thread.sleep(500);
-                }
-                catch (InterruptedException ignored) {
-                }
-                // all that waiting for nothing :(
-                return Sequences.empty();
-              })
+          return Sequences.simple(
+              scheduler.run(
+                  scheduler.prioritizeAndLaneQuery(queryPlus, ImmutableSet.of()),
+                  new LazySequence<T>(() -> {
+                    inScheduler.forEach(CountDownLatch::countDown);
+                    try {
+                      // pretend to be a query that is waiting on results
+                      Thread.sleep(500);
+                    }
+                    catch (InterruptedException ignored) {
+                    }
+                    // all that waiting for nothing :(
+                    return Sequences.empty();
+                  })
+              ).toList()
           );
         };
       }

@@ -21,18 +21,15 @@ import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import axios from 'axios';
 import classNames from 'classnames';
-import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
+import type { QueryResult } from 'druid-query-toolkit';
+import { QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import SplitterLayout from 'react-splitter-layout';
+import { useStore } from 'zustand';
 
 import { Loader, QueryErrorPane } from '../../../components';
-import {
-  DruidEngine,
-  Execution,
-  LastExecution,
-  QueryContext,
-  WorkbenchQuery,
-} from '../../../druid-models';
+import type { DruidEngine, LastExecution, QueryContext } from '../../../druid-models';
+import { Execution, WorkbenchQuery } from '../../../druid-models';
 import {
   executionBackgroundStatusCheck,
   maybeGetClusterCapacity,
@@ -43,22 +40,18 @@ import { usePermanentCallback, useQueryManager } from '../../../hooks';
 import { Api, AppToaster } from '../../../singletons';
 import { ExecutionStateCache } from '../../../singletons/execution-state-cache';
 import { WorkbenchHistory } from '../../../singletons/workbench-history';
+import type { WorkbenchRunningPromise } from '../../../singletons/workbench-running-promises';
+import { WorkbenchRunningPromises } from '../../../singletons/workbench-running-promises';
+import type { ColumnMetadata, QueryAction, RowColumn } from '../../../utils';
 import {
-  WorkbenchRunningPromise,
-  WorkbenchRunningPromises,
-} from '../../../singletons/workbench-running-promises';
-import {
-  ColumnMetadata,
   DruidError,
   localStorageGet,
   LocalStorageKeys,
   localStorageSet,
-  QueryAction,
   QueryManager,
-  RowColumn,
 } from '../../../utils';
 import { CapacityAlert } from '../capacity-alert/capacity-alert';
-import { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
+import type { ExecutionDetailsTab } from '../execution-details-pane/execution-details-pane';
 import { ExecutionErrorPane } from '../execution-error-pane/execution-error-pane';
 import { ExecutionProgressPane } from '../execution-progress-pane/execution-progress-pane';
 import { ExecutionStagesPane } from '../execution-stages-pane/execution-stages-pane';
@@ -67,10 +60,10 @@ import { ExecutionTimerPanel } from '../execution-timer-panel/execution-timer-pa
 import { FlexibleQueryInput } from '../flexible-query-input/flexible-query-input';
 import { HelperQuery } from '../helper-query/helper-query';
 import { IngestSuccessPane } from '../ingest-success-pane/ingest-success-pane';
-import { useMetadataStateStore } from '../metadata-state-store';
+import { metadataStateStore } from '../metadata-state-store';
 import { ResultTablePane } from '../result-table-pane/result-table-pane';
 import { RunPanel } from '../run-panel/run-panel';
-import { useWorkStateStore } from '../work-state-store';
+import { workStateStore } from '../work-state-store';
 
 import './query-tab.scss';
 
@@ -252,7 +245,10 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executionState.data, executionState.error]);
 
-  const incrementWorkVersion = useWorkStateStore(state => state.increment);
+  const incrementWorkVersion = useStore(
+    workStateStore,
+    useCallback(state => state.increment, []),
+  );
   useEffect(() => {
     incrementWorkVersion();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -260,7 +256,10 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
 
   const execution = executionState.data;
 
-  const incrementMetadataVersion = useMetadataStateStore(state => state.increment);
+  const incrementMetadataVersion = useStore(
+    metadataStateStore,
+    useCallback(state => state.increment, []),
+  );
   useEffect(() => {
     if (execution?.isSuccessfulInsert()) {
       incrementMetadataVersion();
@@ -275,7 +274,24 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   }
 
   const handleRun = usePermanentCallback(async (preview: boolean) => {
-    if (!query.isValid()) return;
+    const queryIssue = query.getIssue();
+    if (queryIssue) {
+      const position = WorkbenchQuery.getRowColumnFromIssue(queryIssue);
+
+      AppToaster.show({
+        icon: IconNames.ERROR,
+        intent: Intent.DANGER,
+        timeout: 90000,
+        message: queryIssue,
+        action: position
+          ? {
+              text: 'Go to issue',
+              onClick: () => moveToPosition(position),
+            }
+          : undefined,
+      });
+      return;
+    }
 
     if (query.getEffectiveEngine() !== 'sql-msq-task') {
       WorkbenchHistory.addQueryToHistory(query);

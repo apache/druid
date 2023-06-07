@@ -31,7 +31,7 @@ data:
 {{ toYaml .Values.configVars | indent 2 }}
 {{- if .Values.zookeeper.enabled }}
   druid_zk_service_host: {{ .Release.Name }}-zookeeper-headless:2181
-{{- else }}
+{{- else if .Values.zkHosts }}
   druid_zk_service_host: {{ .Values.zkHosts }}
 {{- end }}
 {{- if .Values.mysql.enabled }}

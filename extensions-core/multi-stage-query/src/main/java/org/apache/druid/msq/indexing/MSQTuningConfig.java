@@ -33,7 +33,7 @@ import java.util.Objects;
 public class MSQTuningConfig
 {
   /**
-   * Lower than {@link org.apache.druid.segment.indexing.TuningConfig#DEFAULT_MAX_ROWS_IN_MEMORY} to minimize the
+   * Lower than {@link org.apache.druid.segment.indexing.TuningConfig#DEFAULT_MAX_ROWS_IN_MEMORY_BATCH} to minimize the
    * impact of per-row overheads that are not accounted for by OnheapIncrementalIndex. For example: overheads
    * related to creating bitmaps during persist.
    *
@@ -122,7 +122,7 @@ public class MSQTuningConfig
 
   public IndexSpec getIndexSpec()
   {
-    return indexSpec != null ? indexSpec : new IndexSpec();
+    return indexSpec != null ? indexSpec : IndexSpec.DEFAULT;
   }
 
   @Override

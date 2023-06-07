@@ -23,8 +23,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.frame.key.ClusterBy;
-import org.apache.druid.frame.key.SortColumn;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReport;
@@ -35,7 +37,7 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
-import org.apache.druid.msq.kernel.MaxCountShuffleSpec;
+import org.apache.druid.msq.kernel.GlobalSortMaxCountShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
@@ -50,6 +52,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -65,8 +68,8 @@ public class MSQTaskReportTest
                   .builder(0)
                   .processorFactory(new OffsetLimitFrameProcessorFactory(0, 1L))
                   .shuffleSpec(
-                      new MaxCountShuffleSpec(
-                          new ClusterBy(ImmutableList.of(new SortColumn("s", false)), 0),
+                      new GlobalSortMaxCountShuffleSpec(
+                          new ClusterBy(ImmutableList.of(new KeyColumn("s", KeyOrder.ASCENDING)), 0),
                           2,
                           false
                       )
@@ -100,8 +103,8 @@ public class MSQTaskReportTest
             ),
             new CounterSnapshotsTree(),
             new MSQResultsReport(
-                RowSignature.builder().add("s", ColumnType.STRING).build(),
-                ImmutableList.of("VARCHAR"),
+                Collections.singletonList(new MSQResultsReport.ColumnAndType("s", ColumnType.STRING)),
+                ImmutableList.of(SqlTypeName.VARCHAR),
                 Yielders.each(Sequences.simple(results))
             )
         )
