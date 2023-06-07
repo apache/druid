@@ -29,7 +29,7 @@ Druid has a distributed architecture that is designed to be cloud-friendly and e
 
 The following diagram shows the services that make up the Druid architecture, how they are typically organized into servers, and how queries and data flow through this architecture.
 
-<img src="../assets/druid-architecture.png" width="800"/>
+![](../assets/druid-architecture.png)
 
 The following sections describe the components of this architecture. 
 
@@ -107,7 +107,7 @@ example, a single day, if your datasource is partitioned by day). Within a chunk
 [_segments_](../design/segments.md). Each segment is a single file, typically comprising up to a few million rows of data. Since segments are
 organized into time chunks, it's sometimes helpful to think of segments as living on a timeline like the following:
 
-<img src="../assets/druid-timeline.png" width="800" />
+![](../assets/druid-timeline.png)
 
 A datasource may have anywhere from just a few segments, up to hundreds of thousands and even millions of segments. Each
 segment is created by a MiddleManager as _mutable_ and _uncommitted_. Data is queryable as soon as it is added to
