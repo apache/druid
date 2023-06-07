@@ -41,6 +41,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
 {
   private InformationSchema informationSchema;
   private SqlTestFramework qf;
+
   @Before
   public void setUp() throws Exception
   {
