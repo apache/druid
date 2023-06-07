@@ -27,20 +27,20 @@ sidebar_label: API endpoints reference
 This topic is an index to the Apache Druid API documentation.
 
 ## HTTP APIs
-* [Automatic compaction](./automatic-compaction-api.md)
-* [Data management](./data-management-api.md)
-* [Dynamic configuration](./dynamic-configuration-api.md)
-* [JSON querying](./json-querying-api.md)
-* [Lookups](./lookups-api.md)
-* [Retention rules](./retention-rules-api.md)
-* [Service status](./service-status-api.md)
-* [Druid SQL queries](./sql-api.md)
-* [Supervisor](./supervisor-api.md)
-* [Tasks](./tasks-api.md)
-* [Legacy metadata](./legacy-metadata-api.md)
+* [Automatic compaction](./automatic-compaction-api.md) to optimize segment sizes after ingestion.
+* [Data management](./data-management-api.md) to manage data segments.
+* [Dynamic configuration](./dynamic-configuration-api.md) to configure the behavior of the Coordinator and Overlord processes.
+* [JSON querying](./json-querying-api.md) to submit JSON-based native queries.
+* [Lookups](./lookups-api.md) to manage and modify key-value transformations.
+* [Retention rules](./retention-rules-api.md) to define and manage data retention rules across datasources.
+* [Service status](./service-status-api.md) to monitor components within the Druid cluster. 
+* [Druid SQL queries](./sql-api.md) to submit SQL queries using the Druid SQL API.
+* [Supervisor](./supervisor-api.md) to manage supervisors for data ingestion lifecycle and data processing.
+* [Tasks](./tasks-api.md) to manage data ingestion operations.
+* [Legacy metadata](./legacy-metadata-api.md) to retrieve datasource metadata.
 
 ## Java APIs
-* [SQL JDBC driver](./sql-jdbc.md)
+* [SQL JDBC driver](./sql-jdbc.md) to connect to Druid and make Druid SQL queries using the Avatica JDBC driver.
 
 
 
