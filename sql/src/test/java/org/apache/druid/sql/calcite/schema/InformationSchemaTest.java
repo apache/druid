@@ -97,13 +97,14 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
     RelDataType rowType = routinesTable.getRowType(new JavaTypeFactoryImpl());
     Assert.assertEquals(6, rowType.getFieldCount());
 
-    for (Object[] row: rows) {
+    for (Object[] row : rows) {
       Assert.assertEquals("druid", row[0]);
       Assert.assertEquals("INFORMATION_SCHEMA", row[1]);
       Assert.assertNotNull(row[2]);
       Assert.assertNotNull(row[3]);
       String isAggregator = row[4].toString();
       Assert.assertTrue(isAggregator.contains("YES") || isAggregator.contains("NO"));
+      // nothing to validate for signatures as it may be not be present if operandTypeChecker is not defined.
     }
   }
 
