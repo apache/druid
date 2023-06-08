@@ -108,14 +108,14 @@ WHERE "TABLE_NAME" = 'foo'
 ### ROUTINES table
 `INFORMATION_SCHEMA.ROUTINES` provides a list of all known functions.
 
-|Column|Type| Notes                                                                                   |
-|------|----|-----------------------------------------------------------------------------------------|
-|ROUTINE_CATALOG|VARCHAR| The catalog that contains the routine. Always set as `druid`                            |
-|ROUTINE_SCHEMA|VARCHAR| The schema that contains the routine. Always set as `INFORMATION_SCHEMA`                |
-|ROUTINE_NAME|VARCHAR| THe routine name                                                                        |
-|ROUTINE_TYPE|VARCHAR| The routine type. Always set as `FUNCTION`                                              |
-|IS_AGGREGATOR|VARCHAR| If a routine is an aggregator function, then the value will be set to `YES`, else `NO`. |
-|SIGNATURES|VARCHAR| One or more routine signatures                                                          |
+|Column|Type| Notes|
+|------|----|------|
+|ROUTINE_CATALOG|VARCHAR| The catalog that contains the routine. Always set as `druid`|
+|ROUTINE_SCHEMA|VARCHAR| The schema that contains the routine. Always set as `INFORMATION_SCHEMA`|
+|ROUTINE_NAME|VARCHAR| THe routine name|
+|ROUTINE_TYPE|VARCHAR| The routine type. Always set as `FUNCTION`|
+|IS_AGGREGATOR|VARCHAR| If a routine is an aggregator function, then the value will be set to `YES`, else `NO`|
+|SIGNATURES|VARCHAR| One or more routine signatures|
 
 For example, this query returns information about all the aggregator functions:
 
