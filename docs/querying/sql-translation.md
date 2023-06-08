@@ -68,11 +68,11 @@ EXPLAIN PLAN statements return:
 - a `PLAN` column that contains a JSON array of native queries that Druid will run
 - a `RESOURCES` column that describes the resources used in the query
 - a `ATTRIBUTES` column that describes the attributes of a query. Attributes include:
-  - statementType
-  - targetDataSource
-  - partitionedBy
-  - clusteredBy
-  - replaceTimeChunks
+  - `statementType`
+  - `targetDataSource`
+  - `partitionedBy`
+  - `clusteredBy`
+  - `replaceTimeChunks`
 
 For example, consider the following query:
 
