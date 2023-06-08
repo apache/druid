@@ -177,7 +177,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           "accessor": "detailed_state",
           "id": "status",
           "show": true,
-          "width": 300,
+          "width": 250,
         },
         Object {
           "Cell": [Function],
@@ -186,7 +186,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           "filterable": false,
           "id": "running_tasks",
           "show": true,
-          "width": 300,
+          "width": 150,
         },
         Object {
           "Cell": [Function],

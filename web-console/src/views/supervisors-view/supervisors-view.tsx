@@ -152,7 +152,8 @@ export class SupervisorsView extends React.PureComponent<
 FROM sys.supervisors
 ORDER BY "supervisor_id"`;
 
-  static RUNNING_TASK_SQL = `SELECT "datasource", REPLACE("type", 'index_', '') AS "type", COUNT(*) AS "num_running_tasks"
+  static RUNNING_TASK_SQL = `SELECT
+  "datasource", "type", COUNT(*) AS "num_running_tasks"
 FROM sys.tasks WHERE "status" = 'RUNNING' AND "runner_status" = 'RUNNING'
 GROUP BY 1, 2`;
 
@@ -222,7 +223,7 @@ GROUP BY 1, 2`;
                 .data;
               runningTaskLookup = groupByAsMap(
                 taskList,
-                (t: any) => `${t.dataSource}_${t.type.replace(/^index_/, '')}`,
+                (t: any) => `${t.dataSource}_${t.type}`,
                 xs => xs.length,
               );
             } else {
@@ -231,7 +232,7 @@ GROUP BY 1, 2`;
 
             supervisors.forEach(supervisor => {
               supervisor.running_tasks =
-                runningTaskLookup[`${supervisor.supervisor_id}_${supervisor.type}`] || 0;
+                runningTaskLookup[`${supervisor.supervisor_id}_index_${supervisor.type}`] || 0;
             });
           } catch (e) {
             AppToaster.show({
@@ -537,7 +538,7 @@ GROUP BY 1, 2`;
           {
             Header: 'Status',
             id: 'status',
-            width: 300,
+            width: 250,
             accessor: 'detailed_state',
             Cell: row => (
               <TableFilterableCell
@@ -557,7 +558,7 @@ GROUP BY 1, 2`;
           {
             Header: 'Running tasks',
             id: 'running_tasks',
-            width: 300,
+            width: 150,
             accessor: 'running_tasks',
             filterable: false,
             Cell: ({ value, original }) => (
