@@ -41,7 +41,6 @@ import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../reac
 import { Api, AppToaster } from '../../singletons';
 import {
   deepGet,
-  filterMap,
   getDruidErrorMessage,
   groupByAsMap,
   hasPopoverOpen,
@@ -219,11 +218,11 @@ GROUP BY 1, 2`;
                 ({ num_running_tasks }) => num_running_tasks,
               );
             } else if (capabilities.hasOverlordAccess()) {
-              const taskList = (await Api.instance.get(`/druid/indexer/v1/tasks`)).data;
-              const runningTasks = filterMap(taskList, (t: any) => {
-                if (t.statusCode !== 'RUNNING' || t.runnerStatusCode !== 'RUNNING') return;
-                return `${t.dataSource}_${t.type.replace(/^index_/, '')}`;
-              });
+              const taskList = (await Api.instance.get(`/druid/indexer/v1/tasks?state=running`))
+                .data;
+              const runningTasks = taskList.map(
+                (t: any) => `${t.dataSource}_${t.type.replace(/^index_/, '')}`,
+              );
               runningTaskLookup = groupByAsMap(runningTasks, String, xs => xs.length);
             } else {
               throw new Error(`must have SQL or overlord access`);
