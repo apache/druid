@@ -79,7 +79,10 @@ public final class ExplainAttributes
     return targetDataSource == null ? null : targetDataSource.toString();
   }
 
-  // TODO: add javadocs
+  /**
+   * @return the time-based partitioning granularity specified in the <code>PARTITIONED BY</code> clause
+   * for an INSERT or REPLACE statement. Returns null for SELECT/non-DML statements.
+   */
   @Nullable
   @JsonProperty
   public Granularity getPartitionedBy()
@@ -87,6 +90,10 @@ public final class ExplainAttributes
     return partitionedBy;
   }
 
+  /**
+   * @return the clustering columns specified in the <code>CLUSTERED BY</code> clause
+   * for an INSERT or REPLACE statement. Returns null for SELECT/non-DML statements.
+   */
   @Nullable
   @JsonProperty
   public String getClusteredBy()
@@ -94,6 +101,10 @@ public final class ExplainAttributes
     return clusteredBy == null ? null : clusteredBy.toString();
   }
 
+  /**
+   * @return the time chunks specified in the <code>OVERWRITE</code> clause
+   * for a REPLACE statement. Returns null for INSERT and SELECT statements.
+   */
   @Nullable
   @JsonProperty
   public String getReplaceTimeChunks()
