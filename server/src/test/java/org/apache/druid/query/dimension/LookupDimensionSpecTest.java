@@ -54,6 +54,7 @@ public class LookupDimensionSpecTest
       EasyMock.createMock(LookupExtractorFactoryContainerProvider.class);
 
   static {
+    NullHandling.initializeForTests();
     EasyMock
         .expect(LOOKUP_REF_MANAGER.get(EasyMock.eq("lookupName")))
         .andReturn(
