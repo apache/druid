@@ -74,7 +74,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
     <Memo(TableColumnSelector)
       columns={
         Array [
-          "Datasource",
+          "Supervisor ID",
           "Type",
           "Topic/Stream",
           "Status",
@@ -153,7 +153,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
             </i>
           </React.Fragment>,
           "accessor": "supervisor_id",
-          "id": "datasource",
+          "id": "supervisor_id",
           "show": true,
           "width": 300,
         },
