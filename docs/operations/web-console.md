@@ -127,11 +127,11 @@ To display a timeline of segments, toggle the option for **Show segment timeline
 
 Like any view that is powered by a Druid SQL query, you can click **View SQL query for table** from the ellipsis menu to run the underlying SQL query directly.
 
-![datasources](../assets/web-console-04-datasources.png)
+![Datasources](../assets/web-console-04-datasources.png)
 
 You can view and edit retention rules to determine the general availability of a datasource.
 
-![retention](../assets/web-console-05-retention.png)
+![Retention](../assets/web-console-05-retention.png)
 
 ## Segments
 
@@ -139,12 +139,12 @@ The **Segments** view shows all the [segments](../design/segments.md) in the clu
 Each segment has a detail view that provides more information.
 The Segment ID is also conveniently broken down into Datasource, Start, End, Version, and Partition columns for ease of filtering and sorting.
 
-![segments](../assets/web-console-06-segments.png)
+![Segments](../assets/web-console-06-segments.png)
 
 ## Supervisors and tasks
 
 From this view, you can check the status of existing supervisors as well as suspend, resume, and reset them.
-The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that the scalability and replication requirements are maintained.
+The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that the scalability and replication requirements are maintained. Submit a supervisor manually by clicking the ellipsis icon and selecting **Submit JSON supervisor**.
 
 The tasks table allows you to see the currently running and recently completed tasks.
 To navigate your tasks more easily, you can group them by their **Type**, **Datasource**, or **Status**.
@@ -163,7 +163,7 @@ Click on the magnifying glass for any task to see more detail about it.
 ## Services
 
 The **Services** view lets you see the current status of the nodes making up your cluster.
-You can group the nodes by type or by tier to get meaningful summary statistics. 
+You can group the nodes by **Type** or by **Tier** to get meaningful summary statistics. 
 
 ![Services](../assets/web-console-10-servers.png)
 
