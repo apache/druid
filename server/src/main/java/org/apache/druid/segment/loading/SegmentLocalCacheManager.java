@@ -176,7 +176,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           );
           cleanupCacheFiles(location.getPath(), localStorageDir);
           location.removeSegmentDir(localStorageDir, segment);
-          break;
         } else {
           // Before returning, we also reserve the space. Refer to the StorageLocation#maybeReserve documentation for details.
           location.maybeReserve(storageDir, segment);
