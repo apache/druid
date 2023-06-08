@@ -117,6 +117,7 @@ public class IndexTaskUtils
         DruidMetrics.TAGS,
         task.<Map<String, Object>>getContextValue(DruidMetrics.TAGS)
     );
+    metricBuilder.setDimensionIfNotNull(DruidMetrics.GROUP_ID, task.getGroupId());
   }
 
   public static void setTaskDimensions(final ServiceMetricEvent.Builder metricBuilder, final AbstractTask task)
@@ -129,6 +130,7 @@ public class IndexTaskUtils
         DruidMetrics.TAGS,
         task.<Map<String, Object>>getContextValue(DruidMetrics.TAGS)
     );
+    metricBuilder.setDimensionIfNotNull(DruidMetrics.GROUP_ID, task.getGroupId());
   }
 
   public static void setTaskStatusDimensions(

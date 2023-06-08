@@ -36,6 +36,8 @@ import java.util.Map;
 public class IndexTaskUtilsTest
 {
   private static final Map<String, Object> METRIC_TAGS = ImmutableMap.of("k1", "v1", "k2", 20);
+
+  private static final String GROUP_ID = "groupId123";
   @Mock
   private Task task;
   @Mock
@@ -47,7 +49,9 @@ public class IndexTaskUtilsTest
   {
     metricBuilder = ServiceMetricEvent.builder();
     Mockito.when(task.getContextValue(DruidMetrics.TAGS)).thenReturn(METRIC_TAGS);
+    Mockito.when(task.getGroupId()).thenReturn(GROUP_ID);
     Mockito.when(abstractTask.getContextValue(DruidMetrics.TAGS)).thenReturn(METRIC_TAGS);
+    Mockito.when(abstractTask.getGroupId()).thenReturn(GROUP_ID);
   }
 
   @Test
@@ -78,5 +82,35 @@ public class IndexTaskUtilsTest
     Mockito.when(abstractTask.getContextValue(DruidMetrics.TAGS)).thenReturn(null);
     IndexTaskUtils.setTaskDimensions(metricBuilder, abstractTask);
     Assert.assertNull(metricBuilder.getDimension(DruidMetrics.TAGS));
+  }
+
+  @Test
+  public void testSetTaskDimensionsWithGroupIdShouldSetGroupId()
+  {
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    Assert.assertEquals(GROUP_ID, metricBuilder.getDimension(DruidMetrics.GROUP_ID));
+  }
+
+  @Test
+  public void testSetTaskDimensionsWithoutGroupIdShouldNotSetGroupId()
+  {
+    Mockito.when(task.getGroupId()).thenReturn(null);
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    Assert.assertNull(metricBuilder.getDimension(DruidMetrics.GROUP_ID));
+  }
+
+  @Test
+  public void testSetTaskDimensionsForAbstractTaskWithGroupIdShouldSetGroupId()
+  {
+    IndexTaskUtils.setTaskDimensions(metricBuilder, abstractTask);
+    Assert.assertEquals(GROUP_ID, metricBuilder.getDimension(DruidMetrics.GROUP_ID));
+  }
+
+  @Test
+  public void testSetTaskDimensionsForAbstractTaskWithoutGroupIdShouldNotSetGroupId()
+  {
+    Mockito.when(abstractTask.getGroupId()).thenReturn(null);
+    IndexTaskUtils.setTaskDimensions(metricBuilder, abstractTask);
+    Assert.assertNull(metricBuilder.getDimension(DruidMetrics.GROUP_ID));
   }
 }
