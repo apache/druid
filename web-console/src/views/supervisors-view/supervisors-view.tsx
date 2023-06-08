@@ -220,10 +220,11 @@ GROUP BY 1, 2`;
             } else if (capabilities.hasOverlordAccess()) {
               const taskList = (await Api.instance.get(`/druid/indexer/v1/tasks?state=running`))
                 .data;
-              const runningTasks = taskList.map(
+              runningTaskLookup = groupByAsMap(
+                taskList,
                 (t: any) => `${t.dataSource}_${t.type.replace(/^index_/, '')}`,
+                xs => xs.length,
               );
-              runningTaskLookup = groupByAsMap(runningTasks, String, xs => xs.length);
             } else {
               throw new Error(`must have SQL or overlord access`);
             }
