@@ -280,7 +280,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     if (frameWriter == null) {
       final FrameWriterFactory frameWriterFactory = getFrameWriterFactory();
       final ColumnSelectorFactory frameWriterColumnSelectorFactory =
-      wrapColumnSelectorFactoryIfNeeded(frameWriterVirtualColumns.wrap(cursor.getColumnSelectorFactory()));
+          wrapColumnSelectorFactoryIfNeeded(frameWriterVirtualColumns.wrap(cursor.getColumnSelectorFactory()));
       frameWriter = frameWriterFactory.newFrameWriter(frameWriterColumnSelectorFactory);
       currentAllocatorCapacity = frameWriterFactory.allocatorCapacity();
     }
@@ -316,8 +316,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 
   private ColumnSelectorFactory wrapColumnSelectorFactoryIfNeeded(final ColumnSelectorFactory baseColumnSelectorFactory)
   {
-    if(segment instanceof ExternalSegment)
-    {
+    if (segment instanceof ExternalSegment) {
       return new ExternalColumnSelectorFactory(
           baseColumnSelectorFactory,
           ((ExternalSegment) segment).externalInputSource(),

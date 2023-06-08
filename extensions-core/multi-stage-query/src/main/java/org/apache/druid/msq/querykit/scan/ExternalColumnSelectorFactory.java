@@ -38,7 +38,7 @@ import javax.annotation.Nullable;
 
 public class ExternalColumnSelectorFactory implements ColumnSelectorFactory
 {
-  private final static String ERROR_MESSAGE_FORMAT_STRING =
+  private static final String ERROR_MESSAGE_FORMAT_STRING =
       "Error while trying to read the external data source at inputSource [%s], rowNumber [%d], columnName [%s]";
 
   private final ColumnSelectorFactory delegate;

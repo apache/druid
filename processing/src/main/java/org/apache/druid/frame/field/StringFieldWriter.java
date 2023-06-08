@@ -21,7 +21,6 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.write.FrameWriterUtils;
-import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
