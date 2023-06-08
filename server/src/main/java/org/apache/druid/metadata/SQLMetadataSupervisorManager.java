@@ -47,6 +47,7 @@ import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -244,6 +245,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                 ).map(
                     new ResultSetMapper<Pair<String, SupervisorSpec>>()
                     {
+                      @Nullable
                       @Override
                       public Pair<String, SupervisorSpec> map(int index, ResultSet r, StatementContext ctx)
                           throws SQLException
@@ -259,8 +261,8 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                           );
                         }
                         catch (IOException e) {
-                          log.error(e, "Exception mapping SupervisorSpec for spec_id: [%s]", r.getString("spec_id"));
-                          return Pair.of(null, null);
+                          log.error(e, "Could not map json payload to a SupervisorSpec for spec_id: [%s]", r.getString("spec_id"));
+                          return null;
                         }
                       }
                     }
@@ -277,7 +279,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                       )
                       {
                         try {
-                          if (null != stringObjectMap.lhs && null != stringObjectMap.rhs) {
+                          if (null != stringObjectMap) {
                             retVal.put(stringObjectMap.lhs, stringObjectMap.rhs);
                           }
                           return retVal;
