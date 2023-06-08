@@ -439,10 +439,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT\n"
         + "  COUNT(*)\n"
         + "FROM INFORMATION_SCHEMA.ROUTINES\n"
-        + "WHERE ROUTINE_TYPE = 'SPECIAL'",
+        + "WHERE IS_AGGREGATOR = 'YES'",
         ImmutableList.of(),
         ImmutableList.of(
-            new Object[]{14L}
+            new Object[]{30L}
         )
     );
   }
