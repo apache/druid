@@ -206,32 +206,40 @@ GROUP BY 1, 2`;
         }
 
         if (visibleColumns.shown('Running tasks')) {
-          let runningTaskLookup: Record<string, number>;
-          if (capabilities.hasSql()) {
-            const runningTasks = await queryDruidSql<RunningTaskRow>({
-              query: SupervisorsView.RUNNING_TASK_SQL,
-            });
+          try {
+            let runningTaskLookup: Record<string, number>;
+            if (capabilities.hasSql()) {
+              const runningTasks = await queryDruidSql<RunningTaskRow>({
+                query: SupervisorsView.RUNNING_TASK_SQL,
+              });
 
-            runningTaskLookup = lookupBy(
-              runningTasks,
-              ({ datasource, type }) => `${datasource}_${type}`,
-              ({ num_running_tasks }) => num_running_tasks,
-            );
-          } else if (capabilities.hasOverlordAccess()) {
-            const taskList = (await Api.instance.get(`/druid/indexer/v1/tasks`)).data;
-            const runningTasks = filterMap(taskList, (t: any) => {
-              if (t.statusCode !== 'RUNNING' || t.runnerStatusCode !== 'RUNNING') return;
-              return `${t.dataSource}_${t.type.replace(/^index_/, '')}`;
+              runningTaskLookup = lookupBy(
+                runningTasks,
+                ({ datasource, type }) => `${datasource}_${type}`,
+                ({ num_running_tasks }) => num_running_tasks,
+              );
+            } else if (capabilities.hasOverlordAccess()) {
+              const taskList = (await Api.instance.get(`/druid/indexer/v1/tasks`)).data;
+              const runningTasks = filterMap(taskList, (t: any) => {
+                if (t.statusCode !== 'RUNNING' || t.runnerStatusCode !== 'RUNNING') return;
+                return `${t.dataSource}_${t.type.replace(/^index_/, '')}`;
+              });
+              runningTaskLookup = groupByAsMap(runningTasks, String, xs => xs.length);
+            } else {
+              throw new Error(`must have SQL or overlord access`);
+            }
+
+            supervisors.forEach(supervisor => {
+              supervisor.running_tasks =
+                runningTaskLookup[`${supervisor.supervisor_id}_${supervisor.type}`] || 0;
             });
-            runningTaskLookup = groupByAsMap(runningTasks, String, xs => xs.length);
-          } else {
-            throw new Error(`must have SQL or overlord access`);
+          } catch (e) {
+            AppToaster.show({
+              icon: IconNames.ERROR,
+              intent: Intent.DANGER,
+              message: 'Could not get running task counts',
+            });
           }
-
-          supervisors.forEach(supervisor => {
-            supervisor.running_tasks =
-              runningTaskLookup[`${supervisor.supervisor_id}_${supervisor.type}`];
-          });
         }
 
         return supervisors;
@@ -558,7 +566,11 @@ GROUP BY 1, 2`;
                 hoverIcon={IconNames.ARROW_TOP_RIGHT}
                 title="Go to tasks view"
               >
-                {value ? pluralIfNeeded(value, 'running task') : `No running tasks`}
+                {typeof value === 'undefined'
+                  ? 'n/a'
+                  : !value
+                  ? `No running tasks`
+                  : pluralIfNeeded(value, 'running task')}
               </TableClickableCell>
             ),
             show: visibleColumns.shown('Running tasks'),
