@@ -62,8 +62,6 @@ public class KafkaEmitterConfig
     }
   }
 
-  public static final Set<EventType> DEFAULT_EVENT_TYPES = ImmutableSet.of(EventType.ALERTS, EventType.METRICS);
-
   public enum SegmentMetadataTopicFormat
   {
     JSON,
@@ -82,6 +80,9 @@ public class KafkaEmitterConfig
       return valueOf(StringUtils.toUpperCase(name));
     }
   }
+
+  public static final Set<EventType> DEFAULT_EVENT_TYPES = ImmutableSet.of(EventType.ALERTS, EventType.METRICS);
+
   @JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG)
   private final String bootstrapServers;
   @Nullable @JsonProperty("event.types")
