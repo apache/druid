@@ -525,8 +525,9 @@ public class InformationSchema extends AbstractSchema
 
       for (SqlOperator sqlOperator : operatorList) {
         if (sqlOperator.getSyntax() != SqlSyntax.FUNCTION &&
-            sqlOperator.getSyntax() != SqlSyntax.FUNCTION_STAR
-            && sqlOperator.getSyntax() != SqlSyntax.SPECIAL
+            sqlOperator.getSyntax() != SqlSyntax.FUNCTION_STAR &&
+            sqlOperator.getSyntax() != SqlSyntax.FUNCTION_ID &&
+            sqlOperator.getSyntax() != SqlSyntax.SPECIAL
         ) {
           continue;
         }
