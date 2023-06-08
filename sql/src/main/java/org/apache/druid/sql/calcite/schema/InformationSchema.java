@@ -489,6 +489,7 @@ public class InformationSchema extends AbstractSchema
 
   static class RoutinesTable extends AbstractTable implements ScannableTable
   {
+    private static final String FUNCTION = "FUNCTION";
     private final DruidOperatorTable operatorTable;
 
     public RoutinesTable(
@@ -536,7 +537,7 @@ public class InformationSchema extends AbstractSchema
             CATALOG_NAME, // ROUTINE_CATALOG
             INFORMATION_SCHEMA_NAME, // ROUTINE_SCHEMA
             sqlOperator.getName(), // ROUTINE_NAME
-            sqlOperator.getSyntax().toString(), // ROUTINE_TYPE
+            FUNCTION, // ROUTINE_TYPE
             sqlOperator.isAggregator() ? INFO_TRUE : INFO_FALSE, // IS_AGGREGATOR
             sqlOperator.getOperandTypeChecker() == null ? null : sqlOperator.getAllowedSignatures() // SIGNATURES
         };
