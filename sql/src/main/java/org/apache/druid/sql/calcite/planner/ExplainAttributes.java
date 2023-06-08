@@ -21,6 +21,8 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlNodeList;
+import org.apache.druid.java.util.common.granularity.Granularity;
 
 import javax.annotation.Nullable;
 
@@ -34,12 +36,27 @@ public final class ExplainAttributes
   @Nullable
   private final SqlNode targetDataSource;
 
+  @Nullable
+  private final Granularity partitionedBy;
+
+  @Nullable
+  private final SqlNodeList clusteredBy;
+
+  @Nullable
+  private final SqlNode replaceTimeChunks;
+
   public ExplainAttributes(
       @JsonProperty("statementType") final String statementType,
-      @JsonProperty("targetDataSource") @Nullable final SqlNode targetDataSource)
+      @JsonProperty("targetDataSource") @Nullable final SqlNode targetDataSource,
+      @JsonProperty("partitionedBy") @Nullable Granularity partitionedBy,
+      @JsonProperty("clusteredBy") @Nullable SqlNodeList clusteredBy,
+      @JsonProperty("replaceTimeChunks") @Nullable SqlNode replaceTimeChunks)
   {
     this.statementType = statementType;
     this.targetDataSource = targetDataSource;
+    this.partitionedBy = partitionedBy;
+    this.clusteredBy = clusteredBy;
+    this.replaceTimeChunks = replaceTimeChunks;
   }
 
   /**
@@ -62,12 +79,37 @@ public final class ExplainAttributes
     return targetDataSource == null ? null : targetDataSource.toString();
   }
 
+  // TODO: add javadocs
+  @Nullable
+  @JsonProperty
+  public Granularity getPartitionedBy()
+  {
+    return partitionedBy;
+  }
+
+  @Nullable
+  @JsonProperty
+  public String getClusteredBy()
+  {
+    return clusteredBy == null ? null : clusteredBy.toString();
+  }
+
+  @Nullable
+  @JsonProperty
+  public String getReplaceTimeChunks()
+  {
+    return replaceTimeChunks == null ? null : replaceTimeChunks.toString();
+  }
+
   @Override
   public String toString()
   {
     return "ExplainAttributes{" +
            "statementType='" + statementType + '\'' +
            ", targetDataSource=" + targetDataSource +
+           ", partitionedBy=" + partitionedBy +
+           ", clusteredBy=" + clusteredBy +
+           ", replaceTimeChunks=" + replaceTimeChunks +
            '}';
   }
 }
