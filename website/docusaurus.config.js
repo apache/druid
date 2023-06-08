@@ -1,3 +1,5 @@
+const Redirects = require('./redirects.js').Redirects;
+
 module.exports={
   "title": "Apache® Druid",
   "tagline": "A fast analytical database",
@@ -28,6 +30,7 @@ module.exports={
           "showLastUpdateTime": false,
           "editUrl": "https://github.com/apache/druid/edit/master/docs/",
           "path": "../docs",
+          "routeBasePath": "/docs/latest",
           "sidebarPath": "../website/sidebars.json"
         },
         "blog": {},
@@ -46,7 +49,8 @@ module.exports={
       {
         "fromExtensions": [
           "html"
-        ]
+        ],
+        "redirects": Redirects
       }
     ]
   ],
@@ -78,7 +82,7 @@ module.exports={
           ],
         },
         {
-          "to": "docs/design/",
+          "to": "docs/latest/design/",
           "label": "Docs",
           "position": "right"
         },
