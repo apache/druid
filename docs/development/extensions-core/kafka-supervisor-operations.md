@@ -157,12 +157,12 @@ as it takes to generate segments, push segments to deep storage, and have them b
 
 The number of reading tasks is controlled by `replicas` and `taskCount`. In general, there will be `replicas * taskCount`
 reading tasks, the exception being if taskCount > {numKafkaPartitions} in which case {numKafkaPartitions} tasks will
-be used instead. When `taskDuration` elapses, these tasks will transition to publishing state and `replicas * taskCount`
-new reading tasks will be created. Therefore to allow for reading tasks and publishing tasks to run concurrently, there
+be used instead. When `taskDuration` elapses, one task and it's replicas will transition to publishing state and
+new reading tasks will be created. Therefore, to allow for reading tasks and publishing tasks to run concurrently, there
 should be a minimum capacity of:
 
 ```
-workerCapacity = 2 * replicas * taskCount
+workerCapacity = replicas * (taskCount + 1)
 ```
 
 This value is for the ideal situation in which there is at most one set of tasks publishing while another set is reading.
