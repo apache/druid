@@ -76,7 +76,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGetRoutinesMap()
+  public void testGetTableNamesMap()
   {
     Assert.assertEquals(
         ImmutableSet.of("SCHEMATA", "TABLES", "COLUMNS", "ROUTINES"),
@@ -85,7 +85,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGetOperators()
+  public void testScanRoutinesTable()
   {
     DruidOperatorTable operatorTable = qf.operatorTable();
     InformationSchema.RoutinesTable routinesTable = new InformationSchema.RoutinesTable(operatorTable);
@@ -98,6 +98,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
     Assert.assertEquals(6, rowType.getFieldCount());
 
     for (Object[] row : rows) {
+      Assert.assertEquals(rowType.getFieldCount(), row.length);
       Assert.assertEquals("druid", row[0]);
       Assert.assertEquals("INFORMATION_SCHEMA", row[1]);
       Assert.assertNotNull(row[2]);
@@ -109,7 +110,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testCustomOperators()
+  public void testScanRoutinesTableWithCustomOperatorTable()
   {
     DruidOperatorTable operatorTable1 = addCustomOperatorsToOperatorTable();
     InformationSchema.RoutinesTable routinesTable = new InformationSchema.RoutinesTable(operatorTable1);
