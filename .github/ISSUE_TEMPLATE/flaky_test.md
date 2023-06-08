@@ -7,4 +7,4 @@ assignees: ''
 
 ---
 
-Please replace 'test name' in the title with the actual test name. Also include a link to a failing test run, along with any investigation you might have done to triage the issue.
+Please replace 'test name' in the title with the actual test name. Also include a stack trace as well as link to a failing test run, along with any investigation you might have done to triage the issue.
