@@ -120,14 +120,8 @@ public class RowBasedFrameWriter implements FrameWriter
       return false;
     }
 
-    try {
-      if (!writeData()) {
-        return false;
-      }
-    }
-    catch (Exception e) {
-      Throwables.propagateIfInstanceOf(e, ParseException.class);
-      throw new ParseException("", e, "Unable to add the row to the frame. Type conversion might be required.");
+    if (!writeData()) {
+      return false;
     }
 
     final MemoryRange<WritableMemory> rowOffsetCursor = rowOffsetMemory.cursor();
@@ -294,11 +288,22 @@ public class RowBasedFrameWriter implements FrameWriter
       final long writeResult;
 
       // May throw InvalidNullByteException; allow it to propagate upwards.
-      writeResult = fieldWriter.writeTo(
-          dataCursor.memory(),
-          dataCursor.start() + bytesWritten,
-          remainingInBlock - bytesWritten
-      );
+      try {
+        writeResult = fieldWriter.writeTo(
+            dataCursor.memory(),
+            dataCursor.start() + bytesWritten,
+            remainingInBlock - bytesWritten
+        );
+      }
+      catch (InvalidNullByteException inbe) {
+        throw InvalidNullByteException.builder(inbe)
+                                      .column(signature.getColumnName(i))
+                                      .build();
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
+
 
       if (writeResult < 0) {
         // Reset to beginning of loop.

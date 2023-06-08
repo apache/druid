@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
+import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -192,6 +193,15 @@ public class MSQErrorReport
         return new TooManyBucketsFault(((TooManyBucketsException) cause).getMaxBuckets());
       } else if (cause instanceof FrameRowTooLargeException) {
         return new RowTooLargeFault(((FrameRowTooLargeException) cause).getMaxFrameSize());
+      } else if (cause instanceof InvalidNullByteException) {
+        InvalidNullByteException invalidNullByteException = (InvalidNullByteException) cause;
+        return new InvalidNullByteFault(
+            invalidNullByteException.getSource(),
+            invalidNullByteException.getRowNumber(),
+            invalidNullByteException.getColumn(),
+            invalidNullByteException.getValue(),
+            invalidNullByteException.getPosition()
+        );
       } else if (cause instanceof UnexpectedMultiValueDimensionException) {
         return new QueryRuntimeFault(StringUtils.format(
             "Column [%s] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.",

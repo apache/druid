@@ -60,7 +60,7 @@ public class MSQFaultSerdeTest
     assertFaultSerde(InsertLockPreemptedFault.INSTANCE);
     assertFaultSerde(InsertTimeNullFault.INSTANCE);
     assertFaultSerde(new InsertTimeOutOfBoundsFault(Intervals.ETERNITY));
-    assertFaultSerde(new InvalidNullByteFault("the column"));
+    assertFaultSerde(new InvalidNullByteFault("the source", 1, "the column", "the value", 2));
     assertFaultSerde(new NotEnoughMemoryFault(1000, 1000, 900, 1, 2));
     assertFaultSerde(QueryNotSupportedFault.INSTANCE);
     assertFaultSerde(new QueryRuntimeFault("new error", "base error"));

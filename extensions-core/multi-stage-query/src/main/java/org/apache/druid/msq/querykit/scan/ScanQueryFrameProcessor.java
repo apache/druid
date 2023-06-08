@@ -21,6 +21,7 @@ package org.apache.druid.msq.querykit.scan;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -37,6 +38,7 @@ import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -44,7 +46,9 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.msq.input.ParseUtils;
 import org.apache.druid.msq.input.ReadableInput;
+import org.apache.druid.msq.input.external.ExternalSegment;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.QueryKitUtils;
@@ -55,6 +59,8 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SimpleAscendingOffset;
+import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -82,6 +88,8 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 
   private long rowsOutput = 0;
   private Cursor cursor;
+  private Segment segment;
+  private final SimpleSettableOffset cursorOffset = new SimpleAscendingOffset(Integer.MAX_VALUE);
   private FrameWriter frameWriter;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
 
@@ -164,13 +172,13 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         cursorYielder.close();
         return ReturnOrAwait.returnObject(rowsOutput);
       } else {
-        final long rowsFlushed = setNextCursor(cursorYielder.get());
+        final long rowsFlushed = setNextCursor(cursorYielder.get(), segmentHolder.get());
         assert rowsFlushed == 0; // There's only ever one cursor when running with a segment
         closer.register(cursorYielder);
       }
     }
 
-    populateFrameWriterAndFlushIfNeeded();
+    populateFrameWriterAndFlushIfNeededWithExceptionHandling();
 
     if (cursor.isDone()) {
       flushFrameWriter();
@@ -200,7 +208,8 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
                     query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY)),
                     mapSegment(frameSegment).asStorageAdapter()
                 ).toList()
-            )
+            ),
+            frameSegment
         );
 
         if (rowsFlushed > 0) {
@@ -215,12 +224,29 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }
 
     // Cursor has some more data in it.
-    populateFrameWriterAndFlushIfNeeded();
+    populateFrameWriterAndFlushIfNeededWithExceptionHandling();
 
     if (cursor.isDone()) {
       return ReturnOrAwait.awaitAll(inputChannels().size());
     } else {
       return ReturnOrAwait.runAgain();
+    }
+  }
+
+  private void populateFrameWriterAndFlushIfNeededWithExceptionHandling()
+  {
+    try {
+      populateFrameWriterAndFlushIfNeeded();
+    }
+    catch (InvalidNullByteException inbe) {
+      InvalidNullByteException.Builder builder = InvalidNullByteException.builder(inbe);
+      throw
+          builder.source(ParseUtils.generateReadableInputSourceNameFromMappedSegment(this.segment)) // frame segment
+                 .rowNumber(this.cursorOffset.getOffset() + 1)
+                 .build();
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
     }
   }
 
@@ -244,6 +270,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       }
 
       cursor.advance();
+      cursorOffset.increment();
       partitionBoostVirtualColumn.setValue(partitionBoostVirtualColumn.getValue() + 1);
     }
   }
@@ -253,7 +280,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     if (frameWriter == null) {
       final FrameWriterFactory frameWriterFactory = getFrameWriterFactory();
       final ColumnSelectorFactory frameWriterColumnSelectorFactory =
-          frameWriterVirtualColumns.wrap(cursor.getColumnSelectorFactory());
+      wrapColumnSelectorFactoryIfNeeded(frameWriterVirtualColumns.wrap(cursor.getColumnSelectorFactory()));
       frameWriter = frameWriterFactory.newFrameWriter(frameWriterColumnSelectorFactory);
       currentAllocatorCapacity = frameWriterFactory.allocatorCapacity();
     }
@@ -278,11 +305,26 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }
   }
 
-  private long setNextCursor(final Cursor cursor) throws IOException
+  private long setNextCursor(final Cursor cursor, final Segment segment) throws IOException
   {
     final long rowsFlushed = flushFrameWriter();
     this.cursor = cursor;
+    this.segment = segment;
+    this.cursorOffset.reset();
     return rowsFlushed;
+  }
+
+  private ColumnSelectorFactory wrapColumnSelectorFactoryIfNeeded(final ColumnSelectorFactory baseColumnSelectorFactory)
+  {
+    if(segment instanceof ExternalSegment)
+    {
+      return new ExternalColumnSelectorFactory(
+          baseColumnSelectorFactory,
+          ((ExternalSegment) segment).externalInputSource(),
+          cursorOffset
+      );
+    }
+    return baseColumnSelectorFactory;
   }
 
   private static Sequence<Cursor> makeCursors(final ScanQuery query, final StorageAdapter adapter)

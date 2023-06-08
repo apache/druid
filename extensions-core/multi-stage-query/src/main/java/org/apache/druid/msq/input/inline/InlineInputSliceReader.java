@@ -41,7 +41,8 @@ import java.util.function.Consumer;
  */
 public class InlineInputSliceReader implements InputSliceReader
 {
-  private static final SegmentDescriptor DUMMY_SEGMENT_DESCRIPTOR = SegmentId.dummy("inline").toDescriptor();
+  public static final String SEGMENT_ID = "__inline";
+  private static final SegmentDescriptor DUMMY_SEGMENT_DESCRIPTOR = SegmentId.dummy(SEGMENT_ID).toDescriptor();
 
   private final SegmentWrangler segmentWrangler;
 

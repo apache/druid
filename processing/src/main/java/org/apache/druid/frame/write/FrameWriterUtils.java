@@ -229,7 +229,12 @@ public class FrameWriterUtils
       final byte b = src.get(p);
 
       if (!allowNullBytes && b == 0) {
-        throw new InvalidNullByteException();
+        ByteBuffer duplicate = src.duplicate();
+        duplicate.limit(srcEnd);
+        throw InvalidNullByteException.builder()
+                                      .value(StringUtils.fromUtf8(duplicate))
+                                      .position(p - src.position())
+                                      .build();
       }
 
       dst.putByte(q, b);

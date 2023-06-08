@@ -76,16 +76,10 @@ public class ColumnarFrameWriter implements FrameWriter
     }
 
     int i = 0;
-    try {
-      for (; i < columnWriters.size(); i++) {
-        if (!columnWriters.get(i).addSelection()) {
-          break;
-        }
+    for (; i < columnWriters.size(); i++) {
+      if (!columnWriters.get(i).addSelection()) {
+        break;
       }
-    }
-    catch (Exception e) {
-      Throwables.propagateIfInstanceOf(e, ParseException.class);
-      throw new ParseException("", e, "Unable to add the row to the frame. Type conversion might be required.");
     }
 
     if (i < columnWriters.size()) {
