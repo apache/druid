@@ -86,7 +86,7 @@ public class BalancerStrategyTest
         new DruidServer("server1", "host1", null, 10L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).addDataSegment(proposedDataSegment).toImmutableDruidServer(),
         new LoadQueuePeonTester());
     Assert.assertFalse(
-        balancerStrategy.findServerToLoadSegment(
+        balancerStrategy.findServersToLoadSegment(
             proposedDataSegment,
             Collections.singletonList(serverHolder)
         ).hasNext()
@@ -111,7 +111,7 @@ public class BalancerStrategyTest
     serverHolders.add(serverHolder2);
 
     // since there is not enough nodes to load 3 replicas of segment
-    Assert.assertFalse(balancerStrategy.findServerToLoadSegment(proposedDataSegment, serverHolders).hasNext());
+    Assert.assertFalse(balancerStrategy.findServersToLoadSegment(proposedDataSegment, serverHolders).hasNext());
   }
 
   @Test
@@ -123,7 +123,7 @@ public class BalancerStrategyTest
     serverHolders = new ArrayList<>();
     serverHolders.add(serverHolder);
     final ServerHolder foundServerHolder = balancerStrategy
-        .findServerToLoadSegment(proposedDataSegment, serverHolders).next();
+        .findServersToLoadSegment(proposedDataSegment, serverHolders).next();
     // since there is enough space on server it should be selected
     Assert.assertEquals(serverHolder, foundServerHolder);
   }

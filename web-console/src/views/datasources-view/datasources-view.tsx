@@ -347,8 +347,8 @@ ORDER BY 1`;
     DatasourcesAndDefaultRules
   >;
 
-  constructor(props: DatasourcesViewProps, context: any) {
-    super(props, context);
+  constructor(props: DatasourcesViewProps) {
+    super(props);
 
     const datasourceFilter: Filter[] = [];
     if (props.initDatasource) {

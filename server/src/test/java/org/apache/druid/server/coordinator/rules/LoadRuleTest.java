@@ -120,7 +120,7 @@ public class LoadRuleTest
     EasyMock.expectLastCall().atLeastOnce();
 
     if (!useRoundRobinAssignment) {
-      EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
+      EasyMock.expect(mockBalancerStrategy.findServersToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
               .andDelegateTo(balancerStrategy)
               .times(2);
     }
@@ -201,7 +201,7 @@ public class LoadRuleTest
 
     final DataSegment segment = createDataSegment(DS_WIKI);
 
-    EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(mockBalancerStrategy.findServersToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(balancerStrategy)
             .anyTimes();
 
@@ -245,7 +245,7 @@ public class LoadRuleTest
 
     final DataSegment segment = createDataSegment(DS_WIKI);
 
-    EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(mockBalancerStrategy.findServersToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(balancerStrategy)
             .anyTimes();
 
@@ -298,7 +298,7 @@ public class LoadRuleTest
 
     final DataSegment segment = createDataSegment(DS_WIKI);
 
-    EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(mockBalancerStrategy.findServersToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(balancerStrategy)
             .anyTimes();
 
@@ -349,7 +349,7 @@ public class LoadRuleTest
     loadingPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().once();
 
-    EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(mockBalancerStrategy.findServersToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(cachingCostBalancerStrategy)
             .anyTimes();
 
@@ -376,7 +376,7 @@ public class LoadRuleTest
     final LoadQueuePeon mockPeon = createEmptyPeon();
     mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
-    EasyMock.expect(mockBalancerStrategy.pickServersToDrop(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(mockBalancerStrategy.pickServersToDropSegment(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(balancerStrategy)
             .times(4);
     EasyMock.replay(mockPeon, mockBalancerStrategy);
@@ -416,7 +416,7 @@ public class LoadRuleTest
     EasyMock.expectLastCall().atLeastOnce();
 
     if (!useRoundRobinAssignment) {
-      EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
+      EasyMock.expect(mockBalancerStrategy.findServersToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
               .andDelegateTo(balancerStrategy)
               .times(1);
     }
@@ -474,7 +474,7 @@ public class LoadRuleTest
   public void testMaxLoadingQueueSize()
   {
     if (!useRoundRobinAssignment) {
-      EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
+      EasyMock.expect(mockBalancerStrategy.findServersToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
               .andDelegateTo(balancerStrategy)
               .times(2);
     }
@@ -538,7 +538,7 @@ public class LoadRuleTest
     final LoadQueuePeon mockPeon2 = createOneCallPeonMock();
 
     if (!useRoundRobinAssignment) {
-      EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
+      EasyMock.expect(mockBalancerStrategy.findServersToLoadSegment(EasyMock.anyObject(), EasyMock.anyObject()))
               .andDelegateTo(balancerStrategy)
               .times(1);
     }
@@ -579,9 +579,9 @@ public class LoadRuleTest
 
     final DataSegment segment = createDataSegment(DS_WIKI);
     if (!useRoundRobinAssignment) {
-      EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(segment, ImmutableList.of(holder2)))
+      EasyMock.expect(mockBalancerStrategy.findServersToLoadSegment(segment, ImmutableList.of(holder2)))
               .andReturn(Collections.singletonList(holder2).iterator());
-      EasyMock.expect(mockBalancerStrategy.findServerToLoadSegment(segment, ImmutableList.of(holder4, holder3)))
+      EasyMock.expect(mockBalancerStrategy.findServersToLoadSegment(segment, ImmutableList.of(holder4, holder3)))
               .andReturn(Arrays.asList(holder3, holder4).iterator());
     }
 
@@ -612,7 +612,7 @@ public class LoadRuleTest
     final LoadQueuePeon mockPeon = createEmptyPeon();
     mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().times(2);
-    EasyMock.expect(mockBalancerStrategy.pickServersToDrop(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(mockBalancerStrategy.pickServersToDropSegment(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(balancerStrategy)
             .times(4);
     EasyMock.replay(mockPeon, mockBalancerStrategy);
@@ -658,7 +658,7 @@ public class LoadRuleTest
     final LoadQueuePeon mockPeon1 = new LoadQueuePeonTester();
     final LoadQueuePeon mockPeon2 = new LoadQueuePeonTester();
     final LoadQueuePeon mockPeon3 = new LoadQueuePeonTester();
-    EasyMock.expect(mockBalancerStrategy.pickServersToDrop(EasyMock.anyObject(), EasyMock.anyObject()))
+    EasyMock.expect(mockBalancerStrategy.pickServersToDropSegment(EasyMock.anyObject(), EasyMock.anyObject()))
             .andDelegateTo(balancerStrategy)
             .times(4);
     EasyMock.replay(mockBalancerStrategy);

@@ -792,7 +792,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         )
     ).andReturn(new AtomicReference<>(CoordinatorCompactionConfig.empty())).anyTimes();
     EasyMock.replay(configManager);
-    EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
     DruidDataSource dataSource = new DruidDataSource("dataSource1", Collections.emptyMap());
     DataSegment dataSegment = new DataSegment(
         "dataSource1",
@@ -812,8 +811,12 @@ public class DruidCoordinatorTest extends CuratorTestBase
         .expect(segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments())
         .andReturn(dataSourcesSnapshot)
         .anyTimes();
+    EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
+    EasyMock.expect(segmentsMetadataManager.iterateAllUsedSegments())
+            .andReturn(Collections.singletonList(dataSegment)).anyTimes();
     EasyMock.replay(segmentsMetadataManager);
     EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
+    EasyMock.expect(serverInventoryView.getInventory()).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.replay(serverInventoryView);
 
     // Create CoordinatorCustomDutyGroups
@@ -851,7 +854,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         loadQueueTaskMaster,
-        null,
+        new SegmentLoadQueueManager(serverInventoryView, segmentsMetadataManager, loadQueueTaskMaster),
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         new HashSet<>(),

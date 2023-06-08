@@ -411,7 +411,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       Iterator<ServerHolder> serverIterator =
           (useRoundRobinAssignment || eligibleLiveServers.size() >= remainingNumToDrop)
           ? eligibleLiveServers.iterator()
-          : strategy.pickServersToDrop(segment, eligibleLiveServers);
+          : strategy.pickServersToDropSegment(segment, eligibleLiveServers);
       numDropsQueued += dropReplicasFromServers(remainingNumToDrop, segment, serverIterator, tier);
     }
 
@@ -469,7 +469,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     final Iterator<ServerHolder> serverIterator =
         useRoundRobinAssignment
         ? serverSelector.getServersInTierToLoadSegment(tier, segment)
-        : strategy.findServerToLoadSegment(segment, eligibleServers);
+        : strategy.findServersToLoadSegment(segment, eligibleServers);
     if (!serverIterator.hasNext()) {
       incrementStat(Error.NO_STRATEGIC_SERVER_FOR_LOAD, segment, tier);
       return 0;

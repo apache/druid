@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 public class RandomBalancerStrategy implements BalancerStrategy
 {
   @Override
-  public Iterator<ServerHolder> findServerToLoadSegment(
+  public Iterator<ServerHolder> findServersToLoadSegment(
       DataSegment proposalSegment,
       List<ServerHolder> serverHolders
   )
@@ -66,7 +66,7 @@ public class RandomBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public Iterator<ServerHolder> pickServersToDrop(DataSegment toDropSegment, NavigableSet<ServerHolder> serverHolders)
+  public Iterator<ServerHolder> pickServersToDropSegment(DataSegment toDropSegment, NavigableSet<ServerHolder> serverHolders)
   {
     List<ServerHolder> serverList = new ArrayList<>(serverHolders);
     Collections.shuffle(serverList);

@@ -65,7 +65,7 @@ public interface BalancerStrategy
    * @return Iterator over the best servers (in order) on which the segment
    * can be placed.
    */
-  Iterator<ServerHolder> findServerToLoadSegment(
+  Iterator<ServerHolder> findServersToLoadSegment(
       DataSegment proposalSegment,
       List<ServerHolder> serverHolders
   );
@@ -165,7 +165,7 @@ public interface BalancerStrategy
    * @param serverHolders set of historicals to consider dropping from
    * @return Iterator for set of historicals, ordered by drop preference
    */
-  Iterator<ServerHolder> pickServersToDrop(DataSegment toDropSegment, NavigableSet<ServerHolder> serverHolders);
+  Iterator<ServerHolder> pickServersToDropSegment(DataSegment toDropSegment, NavigableSet<ServerHolder> serverHolders);
 
   /**
    * Add balancing strategy stats during the 'balanceTier' operation of

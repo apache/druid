@@ -23,6 +23,10 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.GranularityType;
+import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.ServerHolder;
@@ -35,9 +39,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -47,6 +53,7 @@ public class CostBalancerStrategyTest
   private static final double DELTA = 1e-6;
   private static final String DS_WIKI = "wiki";
 
+  private StubServiceEmitter serviceEmitter;
   private ExecutorService balancerExecutor;
   private CostBalancerStrategy strategy;
   private int uniqueServerId;
@@ -56,6 +63,9 @@ public class CostBalancerStrategyTest
   {
     balancerExecutor = new BlockingExecutorService("test-balance-exec-%d");
     strategy = new CostBalancerStrategy(MoreExecutors.listeningDecorator(balancerExecutor));
+
+    serviceEmitter = new StubServiceEmitter("test-service", "host");
+    EmittingLogger.registerEmitter(serviceEmitter);
   }
 
   @After
@@ -302,6 +312,51 @@ public class CostBalancerStrategyTest
         1.1534173737329768e7,
         1.6340633534241956e7,
         1.9026400521582970e7
+    );
+  }
+
+  @Test
+  public void testFindServerAfterExecutorShutdownThrowsException()
+  {
+    DataSegment segment = CreateDataSegments.ofDatasource(DS_WIKI)
+                                            .forIntervals(1, Granularities.DAY)
+                                            .startingAt("2012-10-24")
+                                            .eachOfSizeInMb(100).get(0);
+
+    final LoadQueuePeonTester peon = new LoadQueuePeonTester();
+    ServerHolder serverA = new ServerHolder(createHistorical().toImmutableDruidServer(), peon);
+    ServerHolder serverB = new ServerHolder(createHistorical().toImmutableDruidServer(), peon);
+
+    balancerExecutor.shutdownNow();
+    Assert.assertThrows(
+        RejectedExecutionException.class,
+        () -> strategy.findServersToLoadSegment(segment, Arrays.asList(serverA, serverB))
+    );
+  }
+
+  @Test(timeout = 90_000L)
+  public void testFindServerRaisesAlertOnTimeout()
+  {
+    DataSegment segment = CreateDataSegments.ofDatasource(DS_WIKI)
+                                            .forIntervals(1, Granularities.DAY)
+                                            .startingAt("2012-10-24")
+                                            .eachOfSizeInMb(100).get(0);
+
+    final LoadQueuePeonTester peon = new LoadQueuePeonTester();
+    ServerHolder serverA = new ServerHolder(createHistorical().toImmutableDruidServer(), peon);
+    ServerHolder serverB = new ServerHolder(createHistorical().toImmutableDruidServer(), peon);
+
+    strategy.findServersToLoadSegment(segment, Arrays.asList(serverA, serverB));
+
+    List<Event> events = serviceEmitter.getEvents();
+    Assert.assertEquals(1, events.size());
+    Assert.assertTrue(events.get(0) instanceof AlertEvent);
+
+    AlertEvent alertEvent = (AlertEvent) events.get(0);
+    Assert.assertEquals(
+        "Cost balancer strategy timed out in action [findServersToLoadSegment]."
+        + " Try setting a higher value of 'balancerComputeThreads'.",
+        alertEvent.getDescription()
     );
   }
 

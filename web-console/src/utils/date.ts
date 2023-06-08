@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { DateRange } from '@blueprintjs/datetime';
+import type { DateRange } from '@blueprintjs/datetime2';
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
 

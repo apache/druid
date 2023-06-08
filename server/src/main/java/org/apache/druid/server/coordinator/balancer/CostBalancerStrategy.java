@@ -19,11 +19,13 @@
 
 package org.apache.druid.server.coordinator.balancer;
 
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -33,7 +35,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -41,7 +42,7 @@ import java.util.NavigableSet;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+import java.util.concurrent.TimeoutException;
 
 public class CostBalancerStrategy implements BalancerStrategy
 {
@@ -197,9 +198,12 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public Iterator<ServerHolder> findServerToLoadSegment(DataSegment proposalSegment, List<ServerHolder> serverHolders)
+  public Iterator<ServerHolder> findServersToLoadSegment(
+      DataSegment proposalSegment,
+      List<ServerHolder> serverHolders
+  )
   {
-    return chooseBestServers(proposalSegment, serverHolders, false);
+    return getServersByPlacementCost(proposalSegment, serverHolders, false, "findServersToLoadSegment");
   }
 
 
@@ -210,11 +214,12 @@ public class CostBalancerStrategy implements BalancerStrategy
       List<ServerHolder> serverHolders
   )
   {
-    Iterator<ServerHolder> servers = chooseBestServers(proposalSegment, serverHolders, true);
+    Iterator<ServerHolder> servers =
+        getServersByPlacementCost(proposalSegment, serverHolders, true, "findServerToMoveSegment");
     return servers.hasNext() ? servers.next() : null;
   }
 
-  public static double computeJointSegmentsCost(final DataSegment segment, final Iterable<DataSegment> segmentSet)
+  public static double computeJointSegmentsCost(DataSegment segment, Iterable<DataSegment> segmentSet)
   {
     double totalCost = 0;
     for (DataSegment s : segmentSet) {
@@ -224,34 +229,17 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public Iterator<ServerHolder> pickServersToDrop(DataSegment toDrop, NavigableSet<ServerHolder> serverHolders)
+  public Iterator<ServerHolder> pickServersToDropSegment(
+      DataSegment segmentToDrop,
+      NavigableSet<ServerHolder> serverHolders
+  )
   {
-    List<ListenableFuture<Pair<Double, ServerHolder>>> futures = new ArrayList<>();
+    List<ServerHolder> serversByCost = Lists.newArrayList(
+        getServersByPlacementCost(segmentToDrop, serverHolders, true, "pickServersToDropSegment")
+    );
 
-    for (final ServerHolder server : serverHolders) {
-      futures.add(
-          exec.submit(
-              () -> Pair.of(computeCost(toDrop, server, true), server)
-          )
-      );
-    }
-
-    final ListenableFuture<List<Pair<Double, ServerHolder>>> resultsFuture = Futures.allAsList(futures);
-
-    try {
-      // results is an un-ordered list of a pair consisting of the 'cost' of a segment being on a server and the server
-      List<Pair<Double, ServerHolder>> results = resultsFuture.get();
-      return results.stream()
-                    // Comparator.comapringDouble will order by lowest cost...
-                    // reverse it because we want to drop from the highest cost servers first
-                    .sorted(Comparator.comparingDouble((Pair<Double, ServerHolder> o) -> o.lhs).reversed())
-                    .map(x -> x.rhs).collect(Collectors.toList())
-                    .iterator();
-    }
-    catch (Exception e) {
-      log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();
-    }
-    return Collections.emptyIterator();
+    // Prioritize drop from highest cost servers
+    return Lists.reverse(serversByCost).iterator();
   }
 
   /**
@@ -344,21 +332,21 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   /**
-   * For assignment, we want to move to the lowest cost server that isn't already serving the segment.
+   * Returns an iterator over the servers, ordered by increasing cost for
+   * placing the given segment on that server.
    *
-   * @param proposalSegment A DataSegment that we are proposing to move.
-   * @param serverHolders   An iterable of ServerHolders for a particular tier.
-   *
-   * @return A ServerHolder with the new home for a segment.
+   * @param includeCurrentServer true if the server already serving a replica
+   *                             of this segment should be included in the results
    */
-  protected Iterator<ServerHolder> chooseBestServers(
-      final DataSegment proposalSegment,
-      final Iterable<ServerHolder> serverHolders,
-      final boolean includeCurrentServer
+  private Iterator<ServerHolder> getServersByPlacementCost(
+      DataSegment proposalSegment,
+      Iterable<ServerHolder> serverHolders,
+      boolean includeCurrentServer,
+      String action
   )
   {
     final List<ListenableFuture<Pair<Double, ServerHolder>>> futures = new ArrayList<>();
-    for (final ServerHolder server : serverHolders) {
+    for (ServerHolder server : serverHolders) {
       futures.add(
           exec.submit(
               () -> Pair.of(computeCost(proposalSegment, server, includeCurrentServer), server)
@@ -369,10 +357,14 @@ public class CostBalancerStrategy implements BalancerStrategy
     final PriorityQueue<Pair<Double, ServerHolder>> costPrioritizedServers =
         new PriorityQueue<>(CHEAPEST_SERVERS_FIRST);
     try {
-      costPrioritizedServers.addAll(Futures.allAsList(futures).get(5, TimeUnit.MINUTES));
+      // 1 minute is the typical time for a full run of all historical management duties
+      // and is more than enough time for the cost computation of a single segment
+      costPrioritizedServers.addAll(
+          Futures.allAsList(futures).get(1, TimeUnit.MINUTES)
+      );
     }
     catch (Exception e) {
-      log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();
+      alertOnFailure(e, action);
     }
 
     // Include current server only if specified
@@ -380,5 +372,23 @@ public class CostBalancerStrategy implements BalancerStrategy
                       .filter(pair -> includeCurrentServer || pair.rhs.canLoadSegment(proposalSegment))
                       .map(pair -> pair.rhs).iterator();
   }
+
+  private void alertOnFailure(Exception e, String action)
+  {
+    // Do not alert if the executor has been shutdown
+    if (exec.isShutdown()) {
+      log.noStackTrace().info("Balancer executor was terminated. Failing action [%s].", action);
+      return;
+    }
+
+    final boolean hasTimedOut = e instanceof TimeoutException;
+    final String message = StringUtils.format(
+        "Cost balancer strategy %s in action [%s].%s",
+        hasTimedOut ? "timed out" : "failed", action,
+        hasTimedOut ? " Try setting a higher value of 'balancerComputeThreads'." : ""
+    );
+    log.makeAlert(e, message).emit();
+  }
+
 }
 
