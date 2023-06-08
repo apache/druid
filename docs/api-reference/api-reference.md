@@ -1,6 +1,6 @@
 ---
 id: api-reference
-title: HTTP API endpoints reference
+title: HTTP API reference
 sidebar_label: API endpoints reference
 ---
 
