@@ -653,7 +653,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     skipVectorize();
 
     final String resources = "[{\"name\":\"dst\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-//    final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
     final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"druid.dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":\"2, `dim1` DESC, CEIL(`m2`)\",\"replaceTimeChunks\":null}";
 
     final String sql = "EXPLAIN PLAN FOR INSERT INTO druid.dst "
@@ -695,7 +694,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
         ImmutableMap.of("sqlQueryId", "dummy"),
         Collections.emptyList(),
-       sql,
+        sql,
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(),
         new DefaultResultsVerifier(
