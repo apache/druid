@@ -40,13 +40,7 @@ public class KafkaEmitterConfig
     METRICS,
     ALERTS,
     REQUESTS,
-    SEGMENTMETADATA {
-      @Override
-      public String toString()
-      {
-        return "segmentMetadata";
-      }
-    };
+    SEGMENT_METADATA;
 
     @JsonValue
     @Override
@@ -61,8 +55,6 @@ public class KafkaEmitterConfig
       return valueOf(StringUtils.toUpperCase(name));
     }
   }
-
-  public static final Set<EventType> DEFAULT_EVENT_TYPES = ImmutableSet.of(EventType.ALERTS, EventType.METRICS);
 
   public enum SegmentMetadataTopicFormat
   {
@@ -83,6 +75,7 @@ public class KafkaEmitterConfig
     }
   }
 
+  public static final Set<EventType> DEFAULT_EVENT_TYPES = ImmutableSet.of(EventType.ALERTS, EventType.METRICS);
   @JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG)
   private final String bootstrapServers;
   @Nullable @JsonProperty("event.types")
@@ -115,19 +108,18 @@ public class KafkaEmitterConfig
       @JsonProperty("producer.config") @Nullable Map<String, String> kafkaProducerConfig
   )
   {
-    this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "bootstrap.servers can not be null");
-    this.eventTypes = validateEventTypes(eventTypes, requestTopic);
+    this.bootstrapServers = Preconditions.checkNotNull(bootstrapServers, "druid.emitter.kafka.bootstrap.servers can not be null");
+    this.eventTypes = maybeUpdateEventTypes(eventTypes, requestTopic);
     this.segmentMetadataTopicFormat = segmentMetadataTopicFormat == null ? SegmentMetadataTopicFormat.JSON : segmentMetadataTopicFormat;
-
-    this.metricTopic = this.eventTypes.contains(EventType.METRICS) ? Preconditions.checkNotNull(metricTopic, "metric.topic can not be null") : null;
-    this.alertTopic = this.eventTypes.contains(EventType.ALERTS) ? Preconditions.checkNotNull(alertTopic, "alert.topic can not be null") : null;
-    this.requestTopic = this.eventTypes.contains(EventType.REQUESTS) ? Preconditions.checkNotNull(requestTopic, "request.topic can not be null") : null;
-    this.segmentMetadataTopic = this.eventTypes.contains(EventType.SEGMENTMETADATA) ? Preconditions.checkNotNull(segmentMetadataTopic, "segmentMetadata.topic can not be null") : null;
+    this.metricTopic = this.eventTypes.contains(EventType.METRICS) ? Preconditions.checkNotNull(metricTopic, "druid.emitter.kafka.metric.topic can not be null") : null;
+    this.alertTopic = this.eventTypes.contains(EventType.ALERTS) ? Preconditions.checkNotNull(alertTopic, "druid.emitter.kafka.alert.topic can not be null") : null;
+    this.requestTopic = this.eventTypes.contains(EventType.REQUESTS) ? Preconditions.checkNotNull(requestTopic, "druid.emitter.kafka.request.topic can not be null") : null;
+    this.segmentMetadataTopic = this.eventTypes.contains(EventType.SEGMENT_METADATA) ? Preconditions.checkNotNull(segmentMetadataTopic, "druid.emitter.kafka.segmentMetadata.topic can not be null") : null;
     this.clusterName = clusterName;
     this.kafkaProducerConfig = kafkaProducerConfig == null ? ImmutableMap.of() : kafkaProducerConfig;
   }
 
-  private Set<EventType> validateEventTypes(Set<EventType> eventTypes, String requestTopic)
+  private Set<EventType> maybeUpdateEventTypes(Set<EventType> eventTypes, String requestTopic)
   {
     // Unless explicitly overridden, kafka emitter will always emit metrics and alerts
     if (eventTypes == null) {
@@ -262,7 +254,7 @@ public class KafkaEmitterConfig
   {
     return "KafkaEmitterConfig{" +
            "bootstrap.servers='" + bootstrapServers + '\'' +
-           ", event.types='" + eventTypes.toString() + '\'' +
+           ", event.types='" + eventTypes + '\'' +
            ", metric.topic='" + metricTopic + '\'' +
            ", alert.topic='" + alertTopic + '\'' +
            ", request.topic='" + requestTopic + '\'' +

@@ -29,6 +29,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 public class KafkaEmitterConfigTest
 {
@@ -69,6 +71,22 @@ public class KafkaEmitterConfigTest
   }
 
   @Test
+  public void testSerDeserKafkaEmitterConfigNullMetricsTopic() throws IOException
+  {
+    Set<KafkaEmitterConfig.EventType> eventTypeSet = new HashSet<KafkaEmitterConfig.EventType>();
+    eventTypeSet.add(KafkaEmitterConfig.EventType.SEGMENT_METADATA);
+    KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("hostname", eventTypeSet, null,
+        "alertTest", null, "metadataTest", null,
+        "clusterNameTest", ImmutableMap.<String, String>builder()
+        .put("testKey", "testValue").build()
+    );
+    String kafkaEmitterConfigString = mapper.writeValueAsString(kafkaEmitterConfig);
+    KafkaEmitterConfig kafkaEmitterConfigExpected = mapper.readerFor(KafkaEmitterConfig.class)
+        .readValue(kafkaEmitterConfigString);
+    Assert.assertEquals(kafkaEmitterConfigExpected, kafkaEmitterConfig);
+  }
+
+  @Test
   public void testSerDeNotRequiredKafkaProducerConfig()
   {
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig("localhost:9092", null, "metricTest",
@@ -87,9 +105,9 @@ public class KafkaEmitterConfigTest
   @Test
   public void testDeserializeEventTypesWithDifferentCase() throws JsonProcessingException
   {
-    Assert.assertEquals(KafkaEmitterConfig.EventType.SEGMENTMETADATA, mapper.readValue("\"segmentMetadata\"", KafkaEmitterConfig.EventType.class));
+    Assert.assertEquals(KafkaEmitterConfig.EventType.SEGMENT_METADATA, mapper.readValue("\"segment_metadata\"", KafkaEmitterConfig.EventType.class));
     Assert.assertEquals(KafkaEmitterConfig.EventType.ALERTS, mapper.readValue("\"alerts\"", KafkaEmitterConfig.EventType.class));
-    Assert.assertThrows(ValueInstantiationException.class, () -> mapper.readValue("\"segment_metadata\"", KafkaEmitterConfig.EventType.class));
+    Assert.assertThrows(ValueInstantiationException.class, () -> mapper.readValue("\"segmentMetadata\"", KafkaEmitterConfig.EventType.class));
   }
 
   @Test

@@ -138,16 +138,16 @@ public class KafkaEmitter implements Emitter
     if (eventTypes.contains(EventType.REQUESTS)) {
       scheduler.schedule(this::sendRequestToKafka, sendInterval, TimeUnit.SECONDS);
     }
-    if (eventTypes.contains(EventType.SEGMENTMETADATA)) {
+    if (eventTypes.contains(EventType.SEGMENT_METADATA)) {
       scheduler.schedule(this::sendSegmentMetadataToKafka, sendInterval, TimeUnit.SECONDS);
     }
     scheduler.scheduleWithFixedDelay(() -> {
-      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], invalidLost=[%d] segmentMetadataLost=[%d]",
+      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], segmentMetadataLost=[%d], invalidLost=[%d]",
           metricLost.get(),
           alertLost.get(),
           requestLost.get(),
-          invalidLost.get(),
-          segmentMetadataLost.get()
+          segmentMetadataLost.get(),
+          invalidLost.get()
       );
     }, DEFAULT_SEND_LOST_INTERVAL_MINUTES, DEFAULT_SEND_LOST_INTERVAL_MINUTES, TimeUnit.MINUTES);
     log.info("Starting Kafka Emitter.");
@@ -204,6 +204,7 @@ public class KafkaEmitter implements Emitter
             resultBytes,
             resultBytes.length
         );
+
         Set<EventType> eventTypes = config.getEventTypes();
         if (event instanceof ServiceMetricEvent) {
           if (!eventTypes.contains(EventType.METRICS) || !metricQueue.offer(objectContainer)) {
@@ -218,7 +219,7 @@ public class KafkaEmitter implements Emitter
             requestLost.incrementAndGet();
           }
         } else if (event instanceof SegmentMetadataEvent) {
-          if (!eventTypes.contains(EventType.SEGMENTMETADATA)) {
+          if (!eventTypes.contains(EventType.SEGMENT_METADATA)) {
             segmentMetadataLost.incrementAndGet();
           } else {
             switch (config.getSegmentMetadataTopicFormat()) {

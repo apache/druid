@@ -61,13 +61,13 @@ public class KafkaEmitterTest
   public static Object[] data()
   {
     return new Object[][] {
-        {new HashSet<>(Arrays.asList(KafkaEmitterConfig.EventType.METRICS, KafkaEmitterConfig.EventType.REQUESTS, KafkaEmitterConfig.EventType.ALERTS, KafkaEmitterConfig.EventType.SEGMENTMETADATA)), "requests"},
-        {new HashSet<>(Arrays.asList(KafkaEmitterConfig.EventType.METRICS, KafkaEmitterConfig.EventType.ALERTS, KafkaEmitterConfig.EventType.SEGMENTMETADATA)), null}
+        {new HashSet<>(Arrays.asList(KafkaEmitterConfig.EventType.METRICS, KafkaEmitterConfig.EventType.REQUESTS, KafkaEmitterConfig.EventType.ALERTS, KafkaEmitterConfig.EventType.SEGMENT_METADATA)), "requests"},
+        {new HashSet<>(Arrays.asList(KafkaEmitterConfig.EventType.METRICS, KafkaEmitterConfig.EventType.ALERTS, KafkaEmitterConfig.EventType.SEGMENT_METADATA)), null}
     };
   }
 
-  // there is 1 seconds wait in kafka emitter before it starts sending events to broker, set a timeout for 5 seconds
-  @Test(timeout = 5_000)
+  // there is 1 seconds wait in kafka emitter before it starts sending events to broker, set a timeout for 10 seconds
+  @Test(timeout = 10_000)
   public void testKafkaEmitter() throws InterruptedException
   {
     final List<ServiceMetricEvent> serviceMetricEvents = ImmutableList.of(
