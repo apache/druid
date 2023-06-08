@@ -1,7 +1,7 @@
 ---
 id: api-reference
-title: HTTP API reference
-sidebar_label: API endpoints reference
+title: API reference
+sidebar_label: Overview
 ---
 
 <!--
@@ -31,7 +31,7 @@ This topic is an index to the Apache Druid API documentation.
 * [Data management](./data-management-api.md) to manage data segments.
 * [Dynamic configuration](./dynamic-configuration-api.md) to configure the behavior of the Coordinator and Overlord processes.
 * [JSON querying](./json-querying-api.md) to submit JSON-based native queries.
-* [Lookups](./lookups-api.md) to manage and modify key-value transformations.
+* [Lookups](./lookups-api.md) to manage and modify key-value datasources.
 * [Retention rules](./retention-rules-api.md) to define and manage data retention rules across datasources.
 * [Service status](./service-status-api.md) to monitor components within the Druid cluster. 
 * [Druid SQL queries](./sql-api.md) to submit SQL queries using the Druid SQL API.
