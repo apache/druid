@@ -5597,7 +5597,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         // JOIN condition with a function of both sides.
         "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
         + "FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3\n",
-        "Possible error: SQL requires a join with 'GREATER_THAN' condition that is not supported."
+        "Possible error: SQL requires a join with 'GREATER_THAN' condition that is not supported.",
+
+        // JOIN condition with OR
+        "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
+        + "FROM foo INNER JOIN lookup.lookyloo l ON (foo.dim2 = l.k OR foo.dim1 = l.k)",
+        "Possible error: SQL requires a join with 'OR' condition that is not supported."
     );
 
     for (final Map.Entry<String, String> queryErrorPair : queries.entrySet()) {
