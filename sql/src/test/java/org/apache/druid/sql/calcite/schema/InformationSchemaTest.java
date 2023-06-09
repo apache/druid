@@ -55,7 +55,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
   private SqlTestFramework qf;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     qf = queryFramework();
     DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
