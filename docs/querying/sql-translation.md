@@ -226,29 +226,13 @@ The EXPLAIN PLAN statement returns the following result with plan, resources, an
 ]
 ```
 
-Similarly consider the following `REPLACE` query for the `wikipedia` datasource:
+Now consider the following EXPLAIN PLAN for a `REPLACE` query that replaces all the data in the `wikipedia` datasource:
 ```sql
 EXPLAIN PLAN FOR
 REPLACE INTO wikipedia
 OVERWRITE ALL
 SELECT
   TIME_PARSE("timestamp") AS __time,
-  isRobot,
-  channel,
-  flags,
-  isUnpatrolled,
-  page,
-  diffUrl,
-  added,
-  comment,
-  commentLength,
-  isNew,
-  isMinor,
-  delta,
-  isAnonymous,
-  user,
-  deltaBucket,
-  deleted,
   namespace,
   cityName,
   countryName,
@@ -260,410 +244,204 @@ FROM TABLE(
     EXTERN(
       '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
       '{"type":"json"}',
-      '[{"name":"isRobot","type":"string"},{"name":"channel","type":"string"},{"name":"timestamp","type":"string"},{"name":"flags","type":"string"},{"name":"isUnpatrolled","type":"string"},{"name":"page","type":"string"},{"name":"diffUrl","type":"string"},{"name":"added","type":"long"},{"name":"comment","type":"string"},{"name":"commentLength","type":"long"},{"name":"isNew","type":"string"},{"name":"isMinor","type":"string"},{"name":"delta","type":"long"},{"name":"isAnonymous","type":"string"},{"name":"user","type":"string"},{"name":"deltaBucket","type":"long"},{"name":"deleted","type":"long"},{"name":"namespace","type":"string"},{"name":"cityName","type":"string"},{"name":"countryName","type":"string"},{"name":"regionIsoCode","type":"string"},{"name":"metroCode","type":"long"},{"name":"countryIsoCode","type":"string"},{"name":"regionName","type":"string"}]'
+      '[{"name":"timestamp","type":"string"},{"name":"namespace","type":"string"},{"name":"cityName","type":"string"},{"name":"countryName","type":"string"},{"name":"regionIsoCode","type":"string"},{"name":"metroCode","type":"long"},{"name":"countryIsoCode","type":"string"},{"name":"regionName","type":"string"}]'
     )
   )
 PARTITIONED BY HOUR
-CLUSTERED BY channel
+CLUSTERED BY cityName
 ```
 
-Produces the following output:
+The EXPLAIN PLAN returns the following result:
 
 ```json
 [
-  {
-    "query": {
-      "queryType": "scan",
-      "dataSource": {
-        "type": "external",
-        "inputSource": {
-          "type": "http",
-          "uris": [
-            "https://druid.apache.org/data/wikipedia.json.gz"
+  [
+    {
+      "query": {
+        "queryType": "scan",
+        "dataSource": {
+          "type": "external",
+          "inputSource": {
+            "type": "http",
+            "uris": [
+              "https://druid.apache.org/data/wikipedia.json.gz"
+            ]
+          },
+          "inputFormat": {
+            "type": "json",
+            "keepNullColumns": false,
+            "assumeNewlineDelimited": false,
+            "useJsonNodeReader": false
+          },
+          "signature": [
+            {
+              "name": "timestamp",
+              "type": "STRING"
+            },
+            {
+              "name": "namespace",
+              "type": "STRING"
+            },
+            {
+              "name": "cityName",
+              "type": "STRING"
+            },
+            {
+              "name": "countryName",
+              "type": "STRING"
+            },
+            {
+              "name": "regionIsoCode",
+              "type": "STRING"
+            },
+            {
+              "name": "metroCode",
+              "type": "LONG"
+            },
+            {
+              "name": "countryIsoCode",
+              "type": "STRING"
+            },
+            {
+              "name": "regionName",
+              "type": "STRING"
+            }
           ]
         },
-        "inputFormat": {
-          "type": "json",
-          "keepNullColumns": false,
-          "assumeNewlineDelimited": false,
-          "useJsonNodeReader": false
+        "intervals": {
+          "type": "intervals",
+          "intervals": [
+            "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+          ]
         },
-        "signature": [
+        "virtualColumns": [
           {
-            "name": "isRobot",
-            "type": "STRING"
-          },
-          {
-            "name": "channel",
-            "type": "STRING"
-          },
-          {
-            "name": "timestamp",
-            "type": "STRING"
-          },
-          {
-            "name": "flags",
-            "type": "STRING"
-          },
-          {
-            "name": "isUnpatrolled",
-            "type": "STRING"
-          },
-          {
-            "name": "page",
-            "type": "STRING"
-          },
-          {
-            "name": "diffUrl",
-            "type": "STRING"
-          },
-          {
-            "name": "added",
-            "type": "LONG"
-          },
-          {
-            "name": "comment",
-            "type": "STRING"
-          },
-          {
-            "name": "commentLength",
-            "type": "LONG"
-          },
-          {
-            "name": "isNew",
-            "type": "STRING"
-          },
-          {
-            "name": "isMinor",
-            "type": "STRING"
-          },
-          {
-            "name": "delta",
-            "type": "LONG"
-          },
-          {
-            "name": "isAnonymous",
-            "type": "STRING"
-          },
-          {
-            "name": "user",
-            "type": "STRING"
-          },
-          {
-            "name": "deltaBucket",
-            "type": "LONG"
-          },
-          {
-            "name": "deleted",
-            "type": "LONG"
-          },
-          {
-            "name": "namespace",
-            "type": "STRING"
-          },
-          {
-            "name": "cityName",
-            "type": "STRING"
-          },
-          {
-            "name": "countryName",
-            "type": "STRING"
-          },
-          {
-            "name": "regionIsoCode",
-            "type": "STRING"
-          },
-          {
-            "name": "metroCode",
-            "type": "LONG"
-          },
-          {
-            "name": "countryIsoCode",
-            "type": "STRING"
-          },
-          {
-            "name": "regionName",
-            "type": "STRING"
+            "type": "expression",
+            "name": "v0",
+            "expression": "timestamp_parse(\"timestamp\",null,'UTC')",
+            "outputType": "LONG"
           }
-        ]
+        ],
+        "resultFormat": "compactedList",
+        "orderBy": [
+          {
+            "columnName": "cityName",
+            "order": "ascending"
+          }
+        ],
+        "columns": [
+          "cityName",
+          "countryIsoCode",
+          "countryName",
+          "metroCode",
+          "namespace",
+          "regionIsoCode",
+          "regionName",
+          "v0"
+        ],
+        "legacy": false,
+        "context": {
+          "finalizeAggregations": false,
+          "groupByEnableMultiValueUnnesting": false,
+          "maxNumTasks": 5,
+          "queryId": "b474c0d5-a5ce-432d-be94-535ccdb7addc",
+          "scanSignature": "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"},{\"name\":\"metroCode\",\"type\":\"LONG\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"regionIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"},{\"name\":\"v0\",\"type\":\"LONG\"}]",
+          "sqlInsertSegmentGranularity": "\"HOUR\"",
+          "sqlQueryId": "b474c0d5-a5ce-432d-be94-535ccdb7addc",
+          "sqlReplaceTimeChunks": "all"
+        },
+        "granularity": {
+          "type": "all"
+        }
       },
-      "intervals": {
-        "type": "intervals",
-        "intervals": [
-          "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-        ]
-      },
-      "virtualColumns": [
+      "signature": [
         {
-          "type": "expression",
           "name": "v0",
-          "expression": "timestamp_parse(\"timestamp\",null,'UTC')",
-          "outputType": "LONG"
-        }
-      ],
-      "resultFormat": "compactedList",
-      "orderBy": [
+          "type": "LONG"
+        },
         {
-          "columnName": "channel",
-          "order": "ascending"
+          "name": "namespace",
+          "type": "STRING"
+        },
+        {
+          "name": "cityName",
+          "type": "STRING"
+        },
+        {
+          "name": "countryName",
+          "type": "STRING"
+        },
+        {
+          "name": "regionIsoCode",
+          "type": "STRING"
+        },
+        {
+          "name": "metroCode",
+          "type": "LONG"
+        },
+        {
+          "name": "countryIsoCode",
+          "type": "STRING"
+        },
+        {
+          "name": "regionName",
+          "type": "STRING"
         }
       ],
-      "columns": [
-        "added",
-        "channel",
-        "cityName",
-        "comment",
-        "commentLength",
-        "countryIsoCode",
-        "countryName",
-        "deleted",
-        "delta",
-        "deltaBucket",
-        "diffUrl",
-        "flags",
-        "isAnonymous",
-        "isMinor",
-        "isNew",
-        "isRobot",
-        "isUnpatrolled",
-        "metroCode",
-        "namespace",
-        "page",
-        "regionIsoCode",
-        "regionName",
-        "user",
-        "v0"
-      ],
-      "legacy": false,
-      "context": {
-        "finalizeAggregations": false,
-        "groupByEnableMultiValueUnnesting": false,
-        "maxNumTasks": 5,
-        "queryId": "1473f988-ed82-4ace-8b69-44123342d889",
-        "scanSignature": "[{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"channel\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"comment\",\"type\":\"STRING\"},{\"name\":\"commentLength\",\"type\":\"LONG\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"},{\"name\":\"deleted\",\"type\":\"LONG\"},{\"name\":\"delta\",\"type\":\"LONG\"},{\"name\":\"deltaBucket\",\"type\":\"LONG\"},{\"name\":\"diffUrl\",\"type\":\"STRING\"},{\"name\":\"flags\",\"type\":\"STRING\"},{\"name\":\"isAnonymous\",\"type\":\"STRING\"},{\"name\":\"isMinor\",\"type\":\"STRING\"},{\"name\":\"isNew\",\"type\":\"STRING\"},{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"isUnpatrolled\",\"type\":\"STRING\"},{\"name\":\"metroCode\",\"type\":\"LONG\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"page\",\"type\":\"STRING\"},{\"name\":\"regionIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"},{\"name\":\"user\",\"type\":\"STRING\"},{\"name\":\"v0\",\"type\":\"LONG\"}]",
-        "sqlInsertSegmentGranularity": "\"HOUR\"",
-        "sqlQueryId": "1473f988-ed82-4ace-8b69-44123342d889",
-        "sqlReplaceTimeChunks": "all"
-      },
-      "granularity": {
-        "type": "all"
-      }
+      "columnMappings": [
+        {
+          "queryColumn": "v0",
+          "outputColumn": "__time"
+        },
+        {
+          "queryColumn": "namespace",
+          "outputColumn": "namespace"
+        },
+        {
+          "queryColumn": "cityName",
+          "outputColumn": "cityName"
+        },
+        {
+          "queryColumn": "countryName",
+          "outputColumn": "countryName"
+        },
+        {
+          "queryColumn": "regionIsoCode",
+          "outputColumn": "regionIsoCode"
+        },
+        {
+          "queryColumn": "metroCode",
+          "outputColumn": "metroCode"
+        },
+        {
+          "queryColumn": "countryIsoCode",
+          "outputColumn": "countryIsoCode"
+        },
+        {
+          "queryColumn": "regionName",
+          "outputColumn": "regionName"
+        }
+      ]
+    }
+  ],
+  [
+    {
+      "name": "EXTERNAL",
+      "type": "EXTERNAL"
     },
-    "signature": [
-      {
-        "name": "v0",
-        "type": "LONG"
-      },
-      {
-        "name": "isRobot",
-        "type": "STRING"
-      },
-      {
-        "name": "channel",
-        "type": "STRING"
-      },
-      {
-        "name": "flags",
-        "type": "STRING"
-      },
-      {
-        "name": "isUnpatrolled",
-        "type": "STRING"
-      },
-      {
-        "name": "page",
-        "type": "STRING"
-      },
-      {
-        "name": "diffUrl",
-        "type": "STRING"
-      },
-      {
-        "name": "added",
-        "type": "LONG"
-      },
-      {
-        "name": "comment",
-        "type": "STRING"
-      },
-      {
-        "name": "commentLength",
-        "type": "LONG"
-      },
-      {
-        "name": "isNew",
-        "type": "STRING"
-      },
-      {
-        "name": "isMinor",
-        "type": "STRING"
-      },
-      {
-        "name": "delta",
-        "type": "LONG"
-      },
-      {
-        "name": "isAnonymous",
-        "type": "STRING"
-      },
-      {
-        "name": "user",
-        "type": "STRING"
-      },
-      {
-        "name": "deltaBucket",
-        "type": "LONG"
-      },
-      {
-        "name": "deleted",
-        "type": "LONG"
-      },
-      {
-        "name": "namespace",
-        "type": "STRING"
-      },
-      {
-        "name": "cityName",
-        "type": "STRING"
-      },
-      {
-        "name": "countryName",
-        "type": "STRING"
-      },
-      {
-        "name": "regionIsoCode",
-        "type": "STRING"
-      },
-      {
-        "name": "metroCode",
-        "type": "LONG"
-      },
-      {
-        "name": "countryIsoCode",
-        "type": "STRING"
-      },
-      {
-        "name": "regionName",
-        "type": "STRING"
-      }
-    ],
-    "columnMappings": [
-      {
-        "queryColumn": "v0",
-        "outputColumn": "__time"
-      },
-      {
-        "queryColumn": "isRobot",
-        "outputColumn": "isRobot"
-      },
-      {
-        "queryColumn": "channel",
-        "outputColumn": "channel"
-      },
-      {
-        "queryColumn": "flags",
-        "outputColumn": "flags"
-      },
-      {
-        "queryColumn": "isUnpatrolled",
-        "outputColumn": "isUnpatrolled"
-      },
-      {
-        "queryColumn": "page",
-        "outputColumn": "page"
-      },
-      {
-        "queryColumn": "diffUrl",
-        "outputColumn": "diffUrl"
-      },
-      {
-        "queryColumn": "added",
-        "outputColumn": "added"
-      },
-      {
-        "queryColumn": "comment",
-        "outputColumn": "comment"
-      },
-      {
-        "queryColumn": "commentLength",
-        "outputColumn": "commentLength"
-      },
-      {
-        "queryColumn": "isNew",
-        "outputColumn": "isNew"
-      },
-      {
-        "queryColumn": "isMinor",
-        "outputColumn": "isMinor"
-      },
-      {
-        "queryColumn": "delta",
-        "outputColumn": "delta"
-      },
-      {
-        "queryColumn": "isAnonymous",
-        "outputColumn": "isAnonymous"
-      },
-      {
-        "queryColumn": "user",
-        "outputColumn": "user"
-      },
-      {
-        "queryColumn": "deltaBucket",
-        "outputColumn": "deltaBucket"
-      },
-      {
-        "queryColumn": "deleted",
-        "outputColumn": "deleted"
-      },
-      {
-        "queryColumn": "namespace",
-        "outputColumn": "namespace"
-      },
-      {
-        "queryColumn": "cityName",
-        "outputColumn": "cityName"
-      },
-      {
-        "queryColumn": "countryName",
-        "outputColumn": "countryName"
-      },
-      {
-        "queryColumn": "regionIsoCode",
-        "outputColumn": "regionIsoCode"
-      },
-      {
-        "queryColumn": "metroCode",
-        "outputColumn": "metroCode"
-      },
-      {
-        "queryColumn": "countryIsoCode",
-        "outputColumn": "countryIsoCode"
-      },
-      {
-        "queryColumn": "regionName",
-        "outputColumn": "regionName"
-      }
-    ]
+    {
+      "name": "wikipedia",
+      "type": "DATASOURCE"
+    }
+  ],
+  {
+    "statementType": "REPLACE",
+    "targetDataSource": "wikipedia",
+    "partitionedBy": "HOUR",
+    "clusteredBy": "`cityName`",
+    "replaceTimeChunks": "'ALL'"
   }
 ]
-[
-  {
-    "name": "EXTERNAL",
-    "type": "EXTERNAL"
-  },
-  {
-    "name": "wikipedia",
-    "type": "DATASOURCE"
-  }
-]
-{
-  "statementType": "REPLACE",
-  "targetDataSource": "wikipedia",
-  "partitionedBy": "HOUR",
-  "clusteredBy": "`channel`",
-  "replaceTimeChunks": "'ALL'"
-}
 ```
 
 In this case the JOIN operator gets translated to a `join` datasource. See the [Join translation](#joins) section
