@@ -1454,7 +1454,9 @@ public class ControllerImpl implements Controller
                          return Sequences.simple(retVal);
                        }
                    )
-                   .limit(Limits.MAX_SELECT_RESULT_ROWS)
+                   // We add one more row than required in the iterator, so that we can determine if the results are
+                   // truncated or not
+                   .limit(Limits.MAX_SELECT_RESULT_ROWS + 1)
                    .withBaggage(resultReaderExec::shutdownNow)
       );
     } else {
@@ -2028,7 +2030,7 @@ public class ControllerImpl implements Controller
       );
     }
 
-    return new MSQResultsReport(mappedSignature.build(), sqlTypeNames, resultsYielder);
+    return new MSQResultsReport(mappedSignature.build(), sqlTypeNames, resultsYielder, null);
   }
 
   private static MSQStatusReport makeStatusReport(
