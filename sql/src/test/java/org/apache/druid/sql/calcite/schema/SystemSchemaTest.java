@@ -564,7 +564,7 @@ public class SystemSchemaTest extends CalciteTestBase
   public void testSegmentsTable() throws Exception
   {
     final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
-    final Set<SegmentPlus> publishedSegments = new HashSet<>(Arrays.asList(// HERE
+    final Set<SegmentPlus> publishedSegments = new HashSet<>(Arrays.asList(
         new SegmentPlus(publishedCompactedSegment1, true, 2),
         new SegmentPlus(publishedCompactedSegment2, false, 0),
         new SegmentPlus(publishedUncompactedSegment3, false, 2),
