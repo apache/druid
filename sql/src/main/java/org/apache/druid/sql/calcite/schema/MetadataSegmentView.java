@@ -40,7 +40,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
+import org.apache.druid.timeline.SegmentPlus;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.util.Iterator;
@@ -76,7 +76,7 @@ public class MetadataSegmentView
    * from other threads.
    */
   @MonotonicNonNull
-  private volatile ImmutableSortedSet<SegmentWithOvershadowedStatus> publishedSegments = null;
+  private volatile ImmutableSortedSet<SegmentPlus> publishedSegments = null;
   private final ScheduledExecutorService scheduledExec;
   private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
@@ -133,27 +133,28 @@ public class MetadataSegmentView
   private void poll()
   {
     log.info("polling published segments from coordinator");
-    final JsonParserIterator<SegmentWithOvershadowedStatus> metadataSegments = getMetadataSegments(
+    final JsonParserIterator<SegmentPlus> metadataSegments = getMetadataSegments(
         coordinatorDruidLeaderClient,
         jsonMapper,
         segmentWatcherConfig.getWatchedDataSources()
     );
 
-    final ImmutableSortedSet.Builder<SegmentWithOvershadowedStatus> builder = ImmutableSortedSet.naturalOrder();
+    final ImmutableSortedSet.Builder<SegmentPlus> builder = ImmutableSortedSet.naturalOrder();
     while (metadataSegments.hasNext()) {
-      final SegmentWithOvershadowedStatus segment = metadataSegments.next();
+      final SegmentPlus segment = metadataSegments.next();
       final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
-      final SegmentWithOvershadowedStatus segmentWithOvershadowedStatus = new SegmentWithOvershadowedStatus(
+      final SegmentPlus segmentPlus = new SegmentPlus(
           interned,
-          segment.isOvershadowed()
+          segment.isOvershadowed(),
+          segment.getTotalTargetReplicants()
       );
-      builder.add(segmentWithOvershadowedStatus);
+      builder.add(segmentPlus);
     }
     publishedSegments = builder.build();
     cachePopulated.countDown();
   }
 
-  Iterator<SegmentWithOvershadowedStatus> getPublishedSegments()
+  Iterator<SegmentPlus> getPublishedSegments()
   {
     if (isCacheEnabled) {
       Uninterruptibles.awaitUninterruptibly(cachePopulated);
@@ -168,13 +169,13 @@ public class MetadataSegmentView
   }
 
   // Note that coordinator must be up to get segments
-  private JsonParserIterator<SegmentWithOvershadowedStatus> getMetadataSegments(
+  private JsonParserIterator<SegmentPlus> getMetadataSegments(
       DruidLeaderClient coordinatorClient,
       ObjectMapper jsonMapper,
       Set<String> watchedDataSources
   )
   {
-    String query = "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus";
+    String query = "/druid/coordinator/v1/metadata/segments?includeFullDetails";
     if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
       log.debug(
           "filtering datasources in published segments based on broker's watchedDataSources[%s]", watchedDataSources);
@@ -183,12 +184,12 @@ public class MetadataSegmentView
         sb.append("datasources=").append(ds).append("&");
       }
       sb.setLength(sb.length() - 1);
-      query = "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&" + sb;
+      query = "/druid/coordinator/v1/metadata/segments?includeFullDetails&" + sb;
     }
 
     return SystemSchema.getThingsFromLeaderNode(
         query,
-        new TypeReference<SegmentWithOvershadowedStatus>()
+        new TypeReference<SegmentPlus>()
         {
         },
         coordinatorClient,

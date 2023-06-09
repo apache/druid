@@ -23,39 +23,50 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 
+import javax.annotation.Nullable;
+import java.util.Objects;
+
 /**
- * DataSegment object plus the overshadowed status for the segment. An immutable object.
- *
- * SegmentWithOvershadowedStatus's {@link #compareTo} method considers only the {@link SegmentId}
+ * DataSegment object plus the overshadowed and target number of replicants for the segment. An immutable object.
+ * <br></br>
+ * SegmentPlus's {@link #compareTo} method considers only the {@link SegmentId}
  * of the DataSegment object.
  */
-public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOvershadowedStatus>
+public class SegmentPlus implements Comparable<SegmentPlus>
 {
   private final boolean overshadowed;
   /**
+   * The target number of replicants for the segment added across all tiers. This value is null if the load rules for
+   * the segment have not been evaluated yet.
+   */
+  private final Integer totalTargetReplicants;
+  /**
    * dataSegment is serialized "unwrapped", i.e. it's properties are included as properties of
-   * enclosing class. If in future, if {@code SegmentWithOvershadowedStatus} were to extend {@link DataSegment},
+   * enclosing class. If in the future, if {@code SegmentPlus} were to extend {@link DataSegment},
    * there will be no change in the serialized format.
    */
   @JsonUnwrapped
   private final DataSegment dataSegment;
 
   @JsonCreator
-  public SegmentWithOvershadowedStatus(
-      @JsonProperty("overshadowed") boolean overshadowed
+  public SegmentPlus(
+      @JsonProperty("overshadowed") boolean overshadowed,
+      @JsonProperty("totalTargetReplicants") Integer targetReplicants
   )
   {
     // Jackson will overwrite dataSegment if needed (even though the field is final)
-    this(null, overshadowed);
+    this(null, overshadowed, targetReplicants);
   }
 
-  public SegmentWithOvershadowedStatus(
+  public SegmentPlus(
       DataSegment dataSegment,
-      boolean overshadowed
+      boolean overshadowed,
+      Integer totalTargetReplicants
   )
   {
     this.dataSegment = dataSegment;
     this.overshadowed = overshadowed;
+    this.totalTargetReplicants = totalTargetReplicants;
   }
 
   @JsonProperty
@@ -70,35 +81,38 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
     return dataSegment;
   }
 
+  @Nullable
+  @JsonProperty
+  public Integer getTotalTargetReplicants()
+  {
+    return totalTargetReplicants;
+  }
+
   @Override
   public boolean equals(Object o)
   {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof SegmentWithOvershadowedStatus)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final SegmentWithOvershadowedStatus that = (SegmentWithOvershadowedStatus) o;
-    if (!dataSegment.equals(that.dataSegment)) {
-      return false;
-    }
-    if (overshadowed != (that.overshadowed)) {
-      return false;
-    }
-    return true;
+    SegmentPlus that = (SegmentPlus) o;
+    return overshadowed == that.overshadowed
+           && Objects.equals(totalTargetReplicants, that.totalTargetReplicants)
+           && Objects.equals(dataSegment, that.dataSegment);
   }
 
   @Override
   public int hashCode()
   {
     int result = dataSegment.hashCode();
-    result = 31 * result + Boolean.hashCode(overshadowed);
+    result = 31 * result + Objects.hash(overshadowed, totalTargetReplicants);
     return result;
   }
 
   @Override
-  public int compareTo(SegmentWithOvershadowedStatus o)
+  public int compareTo(SegmentPlus o)
   {
     return dataSegment.getId().compareTo(o.dataSegment.getId());
   }
@@ -106,8 +120,9 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   @Override
   public String toString()
   {
-    return "SegmentWithOvershadowedStatus{" +
+    return "SegmentPlus{" +
            "overshadowed=" + overshadowed +
+           ", totalTargetReplicants=" + totalTargetReplicants +
            ", dataSegment=" + dataSegment +
            '}';
   }

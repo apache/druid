@@ -32,13 +32,14 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.JettyUtils;
+import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
+import org.apache.druid.timeline.SegmentPlus;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -69,18 +70,21 @@ public class MetadataResource
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
+  private final DruidCoordinator coordinator;
 
   @Inject
   public MetadataResource(
       SegmentsMetadataManager segmentsMetadataManager,
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       AuthorizerMapper authorizerMapper,
+      DruidCoordinator coordinator,
       @Json ObjectMapper jsonMapper
   )
   {
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
     this.authorizerMapper = authorizerMapper;
+    this.coordinator = coordinator;
   }
 
   @GET
@@ -136,11 +140,11 @@ public class MetadataResource
   public Response getAllUsedSegments(
       @Context final HttpServletRequest req,
       @QueryParam("datasources") final @Nullable Set<String> dataSources,
-      @QueryParam("includeOvershadowedStatus") final @Nullable String includeOvershadowedStatus
+      @QueryParam("includeFullDetails") final @Nullable String includeFullDetails
   )
   {
-    if (includeOvershadowedStatus != null) {
-      return getAllUsedSegmentsWithOvershadowedStatus(req, dataSources);
+    if (includeFullDetails != null) {
+      return getAllUsedSegmentsWithAdditionalDetails(req, dataSources);
     }
 
     Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
@@ -165,7 +169,7 @@ public class MetadataResource
     return builder.entity(authorizedSegments).build();
   }
 
-  private Response getAllUsedSegmentsWithOvershadowedStatus(
+  private Response getAllUsedSegmentsWithAdditionalDetails(
       HttpServletRequest req,
       @Nullable Set<String> dataSources
   )
@@ -184,15 +188,21 @@ public class MetadataResource
         .flatMap(t -> t.getSegments().stream());
     final Set<DataSegment> overshadowedSegments = dataSourcesSnapshot.getOvershadowedSegments();
 
-    final Stream<SegmentWithOvershadowedStatus> usedSegmentsWithOvershadowedStatus = usedSegments
-        .map(segment -> new SegmentWithOvershadowedStatus(segment, overshadowedSegments.contains(segment)));
+    final Stream<SegmentPlus> segmentPlusStream = usedSegments
+        .map(segment ->
+                 new SegmentPlus(
+                     segment,
+                     overshadowedSegments.contains(segment),
+                     coordinator.getTotalTargetReplicantsForSegment(segment.getId())
+                 )
+        );
 
-    final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections
+    final Function<SegmentPlus, Iterable<ResourceAction>> raGenerator = segment -> Collections
         .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
 
-    final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+    final Iterable<SegmentPlus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
         req,
-        usedSegmentsWithOvershadowedStatus::iterator,
+        segmentPlusStream::iterator,
         raGenerator,
         authorizerMapper
     );

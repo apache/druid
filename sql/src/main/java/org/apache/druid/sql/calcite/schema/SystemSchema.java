@@ -81,7 +81,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
+import org.apache.druid.timeline.SegmentPlus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
@@ -106,7 +106,7 @@ public class SystemSchema extends AbstractSchema
   private static final String TASKS_TABLE = "tasks";
   private static final String SUPERVISOR_TABLE = "supervisors";
 
-  private static final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>>
+  private static final Function<SegmentPlus, Iterable<ResourceAction>>
       SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR = segment ->
       Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
           segment.getDataSegment().getDataSource())
@@ -129,6 +129,7 @@ public class SystemSchema extends AbstractSchema
   private static final long IS_AVAILABLE_TRUE = 1L;
   private static final long IS_OVERSHADOWED_FALSE = 0L;
   private static final long IS_OVERSHADOWED_TRUE = 1L;
+  private static final long TARGET_NUM_REPLICAS_UNKNOWN = -1L;
 
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
@@ -150,6 +151,7 @@ public class SystemSchema extends AbstractSchema
       .add("dimensions", ColumnType.STRING)
       .add("metrics", ColumnType.STRING)
       .add("last_compaction_state", ColumnType.STRING)
+      .add("target_num_replicas", ColumnType.LONG)
       .build();
 
   static final RowSignature SERVERS_SIGNATURE = RowSignature
@@ -288,7 +290,7 @@ public class SystemSchema extends AbstractSchema
 
       // Get published segments from metadata segment cache (if enabled in SQL planner config), else directly from
       // Coordinator.
-      final Iterator<SegmentWithOvershadowedStatus> metadataStoreSegments = metadataView.getPublishedSegments();
+      final Iterator<SegmentPlus> metadataStoreSegments = metadataView.getPublishedSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.cache().getTotalSegments());
 
@@ -326,7 +328,8 @@ public class SystemSchema extends AbstractSchema
                   segment.getShardSpec() == null ? null : jsonMapper.writeValueAsString(segment.getShardSpec()),
                   segment.getDimensions() == null ? null : jsonMapper.writeValueAsString(segment.getDimensions()),
                   segment.getMetrics() == null ? null : jsonMapper.writeValueAsString(segment.getMetrics()),
-                  segment.getLastCompactionState() == null ? null : jsonMapper.writeValueAsString(segment.getLastCompactionState())
+                  segment.getLastCompactionState() == null ? null : jsonMapper.writeValueAsString(segment.getLastCompactionState()),
+                  val.getTotalTargetReplicants() == null ? TARGET_NUM_REPLICAS_UNKNOWN : (long) val.getTotalTargetReplicants()
               };
             }
             catch (JsonProcessingException e) {
@@ -368,7 +371,8 @@ public class SystemSchema extends AbstractSchema
                   val.getValue().getSegment().getShardSpec() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getShardSpec()),
                   val.getValue().getSegment().getDimensions() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getDimensions()),
                   val.getValue().getSegment().getMetrics() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getMetrics()),
-                  null // unpublished segments from realtime tasks will not be compacted yet
+                  null, // unpublished segments from realtime tasks will not be compacted yet
+                  TARGET_NUM_REPLICAS_UNKNOWN
               };
             }
             catch (JsonProcessingException e) {
@@ -384,8 +388,8 @@ public class SystemSchema extends AbstractSchema
 
     }
 
-    private Iterator<SegmentWithOvershadowedStatus> getAuthorizedPublishedSegments(
-        Iterator<SegmentWithOvershadowedStatus> it,
+    private Iterator<SegmentPlus> getAuthorizedPublishedSegments(
+        Iterator<SegmentPlus> it,
         DataContext root
     )
     {
@@ -394,7 +398,7 @@ public class SystemSchema extends AbstractSchema
           "authenticationResult in dataContext"
       );
 
-      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils
+      final Iterable<SegmentPlus> authorizedSegments = AuthorizationUtils
           .filterAuthorizedResources(
               authenticationResult,
               () -> it,

@@ -40,15 +40,17 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
-public class SegmentWithOvershadowedStatusTest
+public class SegmentPlusTest
 {
   private static final ObjectMapper MAPPER = createObjectMapper();
   private static final Interval INTERVAL = Intervals.of("2011-10-01/2011-10-02");
   private static final ImmutableMap<String, Object> LOAD_SPEC = ImmutableMap.of("something", "or_other");
   private static final boolean OVERSHADOWED = true;
+  private static final Integer TOTAL_TARGET_REPLICANTS = 2;
   private static final int TEST_VERSION = 0x9;
-  private static final SegmentWithOvershadowedStatus SEGMENT = createSegmentWithOvershadowedStatus();
+  private static final SegmentPlus SEGMENT = createSegmentPlusForTest();
 
   private static ObjectMapper createObjectMapper()
   {
@@ -59,7 +61,7 @@ public class SegmentWithOvershadowedStatusTest
     return objectMapper;
   }
 
-  private static SegmentWithOvershadowedStatus createSegmentWithOvershadowedStatus()
+  private static SegmentPlus createSegmentPlusForTest()
   {
     DataSegment dataSegment = new DataSegment(
         "something",
@@ -74,7 +76,7 @@ public class SegmentWithOvershadowedStatusTest
         1
     );
 
-    return new SegmentWithOvershadowedStatus(dataSegment, OVERSHADOWED);
+    return new SegmentPlus(dataSegment, OVERSHADOWED, TOTAL_TARGET_REPLICANTS);
   }
 
   @Test
@@ -85,7 +87,7 @@ public class SegmentWithOvershadowedStatusTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(11, objectMap.size());
+    Assert.assertEquals(12, objectMap.size());
     Assert.assertEquals("something", objectMap.get("dataSource"));
     Assert.assertEquals(INTERVAL.toString(), objectMap.get("interval"));
     Assert.assertEquals("1", objectMap.get("version"));
@@ -96,12 +98,13 @@ public class SegmentWithOvershadowedStatusTest
     Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
     Assert.assertEquals(OVERSHADOWED, objectMap.get("overshadowed"));
+    Assert.assertEquals(TOTAL_TARGET_REPLICANTS, objectMap.get("totalTargetReplicants"));
 
     final String json = MAPPER.writeValueAsString(SEGMENT);
 
-    final TestSegmentWithOvershadowedStatus deserializedSegment = MAPPER.readValue(
+    final TestSegmentPlus deserializedSegment = MAPPER.readValue(
         json,
-        TestSegmentWithOvershadowedStatus.class
+        TestSegmentPlus.class
     );
 
     DataSegment dataSegment = SEGMENT.getDataSegment();
@@ -114,30 +117,33 @@ public class SegmentWithOvershadowedStatusTest
     Assert.assertEquals(dataSegment.getShardSpec(), deserializedSegment.getShardSpec());
     Assert.assertEquals(dataSegment.getSize(), deserializedSegment.getSize());
     Assert.assertEquals(dataSegment.getId(), deserializedSegment.getId());
+    Assert.assertEquals(OVERSHADOWED, deserializedSegment.isOvershadowed());
+    Assert.assertEquals(TOTAL_TARGET_REPLICANTS, deserializedSegment.getTotalTargetReplicants());
   }
 
-  // Previously, the implementation of SegmentWithOvershadowedStatus had @JsonCreator/@JsonProperty and @JsonUnwrapped
+  // Previously, the implementation of SegmentPlus had @JsonCreator/@JsonProperty and @JsonUnwrapped
   // on the same field (dataSegment), which used to work in Jackson 2.6, but does not work with Jackson 2.9:
   // https://github.com/FasterXML/jackson-databind/issues/265#issuecomment-264344051
   @Test
   public void testJsonCreatorAndJsonUnwrappedAnnotationsAreCompatible() throws Exception
   {
     String json = MAPPER.writeValueAsString(SEGMENT);
-    SegmentWithOvershadowedStatus segment = MAPPER.readValue(json, SegmentWithOvershadowedStatus.class);
+    SegmentPlus segment = MAPPER.readValue(json, SegmentPlus.class);
     Assert.assertEquals(SEGMENT, segment);
     Assert.assertEquals(json, MAPPER.writeValueAsString(segment));
   }
 }
 
 /**
- * Subclass of DataSegment with overshadowed status
+ * Flat subclass of DataSegment for testing
  */
-class TestSegmentWithOvershadowedStatus extends DataSegment
+class TestSegmentPlus extends DataSegment
 {
   private final boolean overshadowed;
+  private final Integer totalTargetReplicants;
 
   @JsonCreator
-  public TestSegmentWithOvershadowedStatus(
+  public TestSegmentPlus(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
@@ -154,7 +160,8 @@ class TestSegmentWithOvershadowedStatus extends DataSegment
       @JsonProperty("lasCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size,
-      @JsonProperty("overshadowed") boolean overshadowed
+      @JsonProperty("overshadowed") boolean overshadowed,
+      @JsonProperty("totalTargetReplicants") Integer totalTargetReplicants
   )
   {
     super(
@@ -170,6 +177,7 @@ class TestSegmentWithOvershadowedStatus extends DataSegment
         size
     );
     this.overshadowed = overshadowed;
+    this.totalTargetReplicants = totalTargetReplicants;
   }
 
   @JsonProperty
@@ -178,23 +186,34 @@ class TestSegmentWithOvershadowedStatus extends DataSegment
     return overshadowed;
   }
 
+  @JsonProperty
+  public Integer getTotalTargetReplicants()
+  {
+    return totalTargetReplicants;
+  }
+
   @Override
   public boolean equals(Object o)
   {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof TestSegmentWithOvershadowedStatus)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
     if (!super.equals(o)) {
       return false;
     }
-    final TestSegmentWithOvershadowedStatus that = (TestSegmentWithOvershadowedStatus) o;
-    if (overshadowed != (that.overshadowed)) {
-      return false;
-    }
-    return true;
+    TestSegmentPlus that = (TestSegmentPlus) o;
+    return overshadowed == that.overshadowed && Objects.equals(
+        totalTargetReplicants,
+        that.totalTargetReplicants
+    );
   }
 
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), overshadowed, totalTargetReplicants);
+  }
 }

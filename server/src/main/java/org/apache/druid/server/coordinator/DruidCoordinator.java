@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -154,6 +155,7 @@ public class DruidCoordinator
 
   private volatile boolean started = false;
   private volatile SegmentReplicantLookup segmentReplicantLookup = null;
+  private volatile ImmutableMap<SegmentId, Integer> prevTotalTargetReplicantMap = null;
   private volatile DruidCluster cluster = null;
 
   private int cachedBalancerThreadNumber;
@@ -817,6 +819,12 @@ public class DruidCoordinator
     return ImmutableList.of(compactSegments);
   }
 
+  @Nullable
+  public Integer getTotalTargetReplicantsForSegment(SegmentId segmentId)
+  {
+    return prevTotalTargetReplicantMap == null ? null : prevTotalTargetReplicantMap.get(segmentId);
+  }
+
   @VisibleForTesting
   protected class DutiesRunnable implements Runnable
   {
@@ -943,6 +951,11 @@ public class DruidCoordinator
             }
           }
         }
+
+        if (params.getSegmentReplicantLookup() != null) {
+          prevTotalTargetReplicantMap = params.getSegmentReplicantLookup().createTargetReplicantMapCopy();
+        }
+
         // Emit the runtime of the full DutiesRunnable
         params.getEmitter().emit(
             new ServiceMetricEvent.Builder()

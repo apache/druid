@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Table;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
@@ -30,6 +31,7 @@ import org.apache.druid.timeline.SegmentId;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedSet;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A lookup for the number of replicants of a given segment for a certain tier.
@@ -79,6 +81,7 @@ public class SegmentReplicantLookup
 
   private final Table<SegmentId, String, Integer> segmentsInCluster;
   private final Table<SegmentId, String, Integer> loadingSegments;
+  private final ConcurrentHashMap<SegmentId, Integer> totalTargetReplicants = new ConcurrentHashMap<>();
   private final DruidCluster cluster;
 
   private SegmentReplicantLookup(
@@ -112,6 +115,16 @@ public class SegmentReplicantLookup
   {
     Integer retVal = segmentsInCluster.get(segmentId, tier);
     return (retVal == null) ? 0 : retVal;
+  }
+
+  public void setTotalTargetReplicants(SegmentId segmentId, Integer requiredReplicas)
+  {
+    totalTargetReplicants.put(segmentId, requiredReplicas);
+  }
+
+  public ImmutableMap<SegmentId, Integer> createTargetReplicantMapCopy()
+  {
+    return ImmutableMap.copyOf(totalTargetReplicants);
   }
 
   private int getLoadingReplicants(SegmentId segmentId, String tier)
