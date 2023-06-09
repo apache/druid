@@ -71,6 +71,10 @@
           <groupId>org.slf4j</groupId>
           <artifactId>slf4j-api</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.apache.yetus</groupId>
+          <artifactId>audience-annotations</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
@@ -100,6 +104,10 @@
         <exclusion>
           <groupId>commons-pool</groupId>
           <artifactId>commons-pool</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.yetus</groupId>
+          <artifactId>audience-annotations</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -438,6 +446,9 @@
           <scope>runtime</scope>
         </dependency>
       </dependencies>
+      <properties>
+      <parquet.version>1.13.0</parquet.version>
+      </properties>
     </profile>
   </profiles>
 </project>
