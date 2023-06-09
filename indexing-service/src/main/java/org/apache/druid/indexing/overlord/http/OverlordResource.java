@@ -758,18 +758,12 @@ public class OverlordResource
         maxCompletedTasks,
         type
     );
-
     final Map<String, ? extends TaskRunnerWorkItem> runnerWorkItems = getTaskRunnerWorkItems(
         taskRunner,
         state,
         dataSource,
         type
     );
-
-    log.info("List from task runner");
-    for (TaskRunnerWorkItem workItem : runnerWorkItems.values()) {
-      log.info(workItem.toString());
-    }
 
     if (state == TaskStateLookup.PENDING || state == TaskStateLookup.RUNNING) {
       // We are interested in only those tasks which are in taskRunner.
@@ -794,19 +788,13 @@ public class OverlordResource
 
     activeTaskStatusPlusList.forEach(statusPlus -> {
       final TaskRunnerWorkItem runnerWorkItem = runnerWorkItems.get(statusPlus.getId());
-      log.info("Building task status out of");
-      log.info(runnerWorkItem != null ? runnerWorkItem.toString() : "null");
       if (runnerWorkItem == null) {
         // a task is assumed to be a waiting task if it exists in taskStorage but not in taskRunner.
         if (state == TaskStateLookup.WAITING || state == TaskStateLookup.ALL) {
           taskStatuses.add(statusPlus);
-          log.info("Waiting task");
-          log.info(statusPlus.toString());
         }
       } else {
         if (state == TaskStateLookup.PENDING || state == TaskStateLookup.RUNNING || state == TaskStateLookup.ALL) {
-          log.info("Active task");
-          log.info(runnerWorkItem.toString());
           taskStatuses.add(
               new TaskStatusPlus(
                   statusPlus.getId(),
@@ -826,10 +814,6 @@ public class OverlordResource
       }
     });
 
-    log.info("Returned List");
-    for (TaskStatusPlus taskStatusPlus : taskStatuses) {
-      log.info(taskStatusPlus.toString());
-    }
     return taskStatuses;
   }
 
