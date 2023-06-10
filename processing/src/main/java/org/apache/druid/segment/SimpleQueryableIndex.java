@@ -38,7 +38,7 @@ import java.util.Map;
 /**
  *
  */
-public class SimpleQueryableIndex extends AbstractIndex implements QueryableIndex
+public class SimpleQueryableIndex implements QueryableIndex
 {
   private final Interval dataInterval;
   private final List<String> columnNames;
@@ -98,12 +98,6 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   public List<String> getColumnNames()
   {
     return columnNames;
-  }
-
-  @Override
-  public StorageAdapter toStorageAdapter()
-  {
-    return new QueryableIndexStorageAdapter(this);
   }
 
   @Override

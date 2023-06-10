@@ -21,6 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.utils.CompressionUtils;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -138,5 +139,23 @@ public class DelimitedInputFormatTest
   {
     final DelimitedInputFormat format = new DelimitedInputFormat(null, null, "delim", true, null, 0);
     Assert.assertTrue(format.isFindColumnsFromHeader());
+  }
+  @Test
+  public void test_getWeightedSize_withoutCompression()
+  {
+    final DelimitedInputFormat format = new DelimitedInputFormat(null, null, "delim", true, null, 0);
+    final long unweightedSize = 100L;
+    Assert.assertEquals(unweightedSize, format.getWeightedSize("file.tsv", unweightedSize));
+  }
+
+  @Test
+  public void test_getWeightedSize_withGzCompression()
+  {
+    final DelimitedInputFormat format = new DelimitedInputFormat(null, null, "delim", true, null, 0);
+    final long unweightedSize = 100L;
+    Assert.assertEquals(
+        unweightedSize * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR,
+        format.getWeightedSize("file.tsv.gz", unweightedSize)
+    );
   }
 }

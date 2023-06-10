@@ -163,7 +163,7 @@ public class ArrayConcatSqlAggregator implements SqlAggregator
           OperandTypes.or(
               OperandTypes.ARRAY,
               OperandTypes.sequence(
-                  StringUtils.format("'%s'(expr, maxSizeBytes)", NAME),
+                  StringUtils.format("'%s(expr, maxSizeBytes)'", NAME),
                   OperandTypes.ARRAY,
                   OperandTypes.POSITIVE_INTEGER_LITERAL
               )
