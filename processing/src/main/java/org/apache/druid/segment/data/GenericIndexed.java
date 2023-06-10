@@ -454,21 +454,6 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     inspector.visit("strategy", strategy);
   }
 
-  @Override
-  public String toString()
-  {
-    StringBuilder sb = new StringBuilder("GenericIndexed[");
-    if (size() > 0) {
-      for (int i = 0; i < size(); i++) {
-        T value = get(i);
-        sb.append(value).append(',').append(' ');
-      }
-      sb.setLength(sb.length() - 2);
-    }
-    sb.append(']');
-    return sb.toString();
-  }
-
   /**
    * Single-threaded view.
    */
