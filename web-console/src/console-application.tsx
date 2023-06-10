@@ -83,8 +83,8 @@ export class ConsoleApplication extends React.PureComponent<
   private onlyUnavailable?: boolean;
   private queryWithContext?: QueryWithContext;
 
-  constructor(props: ConsoleApplicationProps, context: any) {
-    super(props, context);
+  constructor(props: ConsoleApplicationProps) {
+    super(props);
     this.state = {
       capabilities: Capabilities.FULL,
       capabilitiesLoading: true,

@@ -600,6 +600,11 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
 
+    final String query = StringUtils.format(
+        "EXPLAIN PLAN FOR REPLACE INTO dst OVERWRITE ALL SELECT * FROM %s PARTITIONED BY ALL TIME",
+        externSql(externalDataSource)
+    );
+
     ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
     final ScanQuery expectedQuery = newScanQueryBuilder()
         .dataSource(externalDataSource)
@@ -638,10 +643,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
         ImmutableMap.of("sqlQueryId", "dummy"),
         Collections.emptyList(),
-        StringUtils.format(
-            "EXPLAIN PLAN FOR REPLACE INTO dst OVERWRITE ALL SELECT * FROM %s PARTITIONED BY ALL TIME",
-            externSql(externalDataSource)
-        ),
+        query,
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(),
         new DefaultResultsVerifier(
@@ -661,10 +663,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
         ImmutableMap.of("sqlQueryId", "dummy"),
         Collections.emptyList(),
-        StringUtils.format(
-            "EXPLAIN PLAN FOR REPLACE INTO dst OVERWRITE ALL SELECT * FROM %s PARTITIONED BY ALL TIME",
-            externSql(externalDataSource)
-        ),
+        query,
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(),
         new DefaultResultsVerifier(

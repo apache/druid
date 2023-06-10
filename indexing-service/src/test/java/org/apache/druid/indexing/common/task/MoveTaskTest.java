@@ -17,41 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.k8s.overlord.common;
+package org.apache.druid.indexing.common.task;
 
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.dsl.LogWatch;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.Intervals;
+import org.junit.Assert;
+import org.junit.Test;
 
-import java.io.IOException;
-import java.io.InputStream;
-
-/**
- * This wraps the InputStream for k8s client
- * When you call close on the stream, it will also close the open
- * http connections and the client
- */
-public class LogWatchInputStream extends InputStream
+public class MoveTaskTest
 {
-
-  private final KubernetesClient client;
-  private final LogWatch logWatch;
-
-  public LogWatchInputStream(KubernetesClient client, LogWatch logWatch)
+  @Test
+  public void testGetInputSourceResources()
   {
-    this.client = client;
-    this.logWatch = logWatch;
-  }
+    final MoveTask task = new MoveTask(
+        null,
+        "foo",
+        Intervals.of("2010-01-01/P1D"),
+        ImmutableMap.of("bucket", "hey", "baseKey", "what"),
+        null,
+        null
+    );
 
-  @Override
-  public int read() throws IOException
-  {
-    return logWatch.getOutput().read();
-  }
-
-  @Override
-  public void close()
-  {
-    logWatch.close();
-    client.close();
+    Assert.assertTrue(task.getInputSourceResources().isEmpty());
   }
 }

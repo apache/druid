@@ -55,7 +55,7 @@ public class TimeInIntervalConvertletFactory implements DruidConvertletFactory
       .operatorBuilder(NAME)
       .operandTypeChecker(
           OperandTypes.sequence(
-              NAME + "(<TIMESTAMP>, <LITERAL ISO8601 INTERVAL>)",
+              "'" + NAME + "(<TIMESTAMP>, <LITERAL ISO8601 INTERVAL>)'",
               OperandTypes.family(SqlTypeFamily.TIMESTAMP),
               OperandTypes.and(OperandTypes.family(SqlTypeFamily.CHARACTER), OperandTypes.LITERAL)
           )

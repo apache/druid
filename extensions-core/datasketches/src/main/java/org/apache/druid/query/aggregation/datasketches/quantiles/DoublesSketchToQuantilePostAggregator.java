@@ -83,7 +83,7 @@ public class DoublesSketchToQuantilePostAggregator implements PostAggregator
   public Object compute(final Map<String, Object> combinedAggregators)
   {
     final DoublesSketch sketch = (DoublesSketch) field.compute(combinedAggregators);
-    return sketch.getQuantile(fraction);
+    return sketch.isEmpty() ? Double.NaN : sketch.getQuantile(fraction);
   }
 
   @Override

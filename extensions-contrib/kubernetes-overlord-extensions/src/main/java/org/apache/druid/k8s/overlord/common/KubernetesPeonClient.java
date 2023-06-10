@@ -120,26 +120,46 @@ public class KubernetesPeonClient
     }
   }
 
-  public Optional<InputStream> getPeonLogs(K8sTaskId taskId)
+  public Optional<LogWatch> getPeonLogWatcher(K8sTaskId taskId)
   {
     KubernetesClient k8sClient = clientApi.getClient();
     try {
       LogWatch logWatch = k8sClient.batch()
+          .v1()
+          .jobs()
+          .inNamespace(namespace)
+          .withName(taskId.getK8sTaskId())
+          .inContainer("main")
+          .watchLog();
+      if (logWatch == null) {
+        return Optional.absent();
+      }
+      return Optional.of(logWatch);
+    }
+    catch (Exception e) {
+      log.error(e, "Error watching logs from task: %s", taskId);
+      return Optional.absent();
+    }
+  }
+
+  public Optional<InputStream> getPeonLogs(K8sTaskId taskId)
+  {
+    KubernetesClient k8sClient = clientApi.getClient();
+    try {
+      InputStream logStream = k8sClient.batch()
                                    .v1()
                                    .jobs()
                                    .inNamespace(namespace)
                                    .withName(taskId.getK8sTaskId())
                                    .inContainer("main")
-                                   .watchLog();
-      if (logWatch == null) {
-        k8sClient.close();
+                                   .getLogInputStream();
+      if (logStream == null) {
         return Optional.absent();
       }
-      return Optional.of(new LogWatchInputStream(k8sClient, logWatch));
+      return Optional.of(logStream);
     }
     catch (Exception e) {
       log.error(e, "Error streaming logs from task: %s", taskId);
-      k8sClient.close();
       return Optional.absent();
     }
   }

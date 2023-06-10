@@ -187,7 +187,7 @@ public class ArraySqlAggregator implements SqlAggregator
           OperandTypes.or(
             OperandTypes.ANY,
             OperandTypes.and(
-                OperandTypes.sequence(StringUtils.format("%s(expr, maxSizeBytes)", NAME), OperandTypes.ANY, OperandTypes.POSITIVE_INTEGER_LITERAL),
+                OperandTypes.sequence(StringUtils.format("'%s(expr, maxSizeBytes)'", NAME), OperandTypes.ANY, OperandTypes.POSITIVE_INTEGER_LITERAL),
                 OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
             )
           ),

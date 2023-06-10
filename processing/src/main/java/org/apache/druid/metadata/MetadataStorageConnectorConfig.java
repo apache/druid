@@ -56,7 +56,7 @@ public class MetadataStorageConnectorConfig
       String connectUri,
       String user,
       String password,
-      Map<String, Object> properties
+      Map<String, String> properties
   )
   {
     MetadataStorageConnectorConfig config = new MetadataStorageConnectorConfig();

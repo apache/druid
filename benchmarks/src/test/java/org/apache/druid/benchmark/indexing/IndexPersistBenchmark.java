@@ -107,7 +107,7 @@ public class IndexPersistBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
 
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 

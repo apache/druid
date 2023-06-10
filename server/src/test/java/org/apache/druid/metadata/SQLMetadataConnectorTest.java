@@ -19,9 +19,9 @@
 
 package org.apache.druid.metadata;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableMap;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
@@ -30,14 +30,19 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.tweak.HandleCallback;
+import org.skife.jdbi.v2.exceptions.CallbackFailedException;
+import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
+import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.SQLRecoverableException;
+import java.sql.SQLTransientConnectionException;
+import java.sql.SQLTransientException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 
 public class SQLMetadataConnectorTest
@@ -47,7 +52,6 @@ public class SQLMetadataConnectorTest
 
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
-  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
   @Before
   public void setUp()
@@ -78,28 +82,23 @@ public class SQLMetadataConnectorTest
     connector.createSupervisorsTable();
 
     connector.getDBI().withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            for (String table : tables) {
-              Assert.assertTrue(
-                  StringUtils.format("table %s was not created!", table),
-                  connector.tableExists(handle, table)
-              );
-            }
-
-            String taskTable = tablesConfig.getTasksTable();
-            for (String column : Arrays.asList("type", "group_id")) {
-              Assert.assertTrue(
-                  StringUtils.format("Tasks table column %s was not created!", column),
-                  connector.tableContainsColumn(handle, taskTable, column)
-              );
-            }
-
-            return null;
+        handle -> {
+          for (String table : tables) {
+            Assert.assertTrue(
+                StringUtils.format("table %s was not created!", table),
+                connector.tableExists(handle, table)
+            );
           }
+
+          String taskTable = tablesConfig.getTasksTable();
+          for (String column : Arrays.asList("type", "group_id")) {
+            Assert.assertTrue(
+                StringUtils.format("Tasks table column %s was not created!", column),
+                connector.tableContainsColumn(handle, taskTable, column)
+            );
+          }
+
+          return null;
         }
     );
 
@@ -147,16 +146,8 @@ public class SQLMetadataConnectorTest
   private void dropTable(final String tableName)
   {
     connector.getDBI().withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
-                  .execute();
-            return null;
-          }
-        }
+        handle -> handle.createStatement(StringUtils.format("DROP TABLE %s", tableName))
+                        .execute()
     );
   }
 
@@ -213,79 +204,74 @@ public class SQLMetadataConnectorTest
     }
   }
 
-  private MetadataStorageConnectorConfig getDbcpPropertiesFile(
-      boolean createTables,
-      String host,
-      int port,
-      String connectURI,
-      String user,
-      String pwdString,
-      String pwd
-  ) throws Exception
-  {
-    return JSON_MAPPER.readValue(
-        "{" +
-        "\"createTables\": \"" + createTables + "\"," +
-        "\"host\": \"" + host + "\"," +
-        "\"port\": \"" + port + "\"," +
-        "\"connectURI\": \"" + connectURI + "\"," +
-        "\"user\": \"" + user + "\"," +
-        "\"password\": " + pwdString + "," +
-        "\"dbcp\": {\n" +
-        "  \"maxConnLifetimeMillis\" : 1200000,\n" +
-        "  \"defaultQueryTimeout\" : \"30000\"\n" +
-        "}" +
-        "}",
-        MetadataStorageConnectorConfig.class
-    );
-  }
-
   @Test
-  public void testBasicDataSourceCreation() throws Exception
+  public void testBasicDataSourceCreation()
   {
-    MetadataStorageConnectorConfig config = getDbcpPropertiesFile(
-        true,
-        "host",
-        1234,
-        "connectURI",
-        "user",
-        "{\"type\":\"default\",\"password\":\"nothing\"}",
-        "nothing"
+    Map<String, String> props = ImmutableMap.of(
+        "maxConnLifetimeMillis", "1200000",
+        "defaultQueryTimeout", "30000"
     );
+    MetadataStorageConnectorConfig config =
+        MetadataStorageConnectorConfig.create("connectURI", "user", "password", props);
+
     TestSQLMetadataConnector testSQLMetadataConnector = new TestSQLMetadataConnector(
         Suppliers.ofInstance(config),
         Suppliers.ofInstance(tablesConfig)
     );
     BasicDataSource dataSource = testSQLMetadataConnector.getDatasource();
     Assert.assertEquals(dataSource.getMaxConnLifetimeMillis(), 1200000);
-    Assert.assertEquals((long) dataSource.getDefaultQueryTimeout(), 30000);
+    Assert.assertEquals(dataSource.getDefaultQueryTimeout().intValue(), 30000);
   }
 
-  private boolean verifyTaskTypeAndGroupId(String table, String id, String type, String groupId)
+  @Test
+  public void testIsTransientException()
   {
-    try {
-      return connector.retryWithHandle(
-          new HandleCallback<Boolean>()
-          {
-            @Override
-            public Boolean withHandle(Handle handle) throws SQLException
-            {
-              Statement statement = handle.getConnection().createStatement();
-              ResultSet resultSet = statement.executeQuery(
-                  StringUtils.format("SELECT * FROM %1$s WHERE id = '%2$s'", table, id)
-              );
-              resultSet.next();
-              boolean flag = type.equals(resultSet.getString("type"))
-                             && groupId.equals(resultSet.getString("group_id"));
-              statement.close();
-              return flag;
-            }
-          }
-      );
-    }
-    catch (Exception e) {
-      e.printStackTrace();
-      return false;
-    }
+    MetadataStorageConnectorConfig config =
+        MetadataStorageConnectorConfig.create("connectURI", "user", "password", Collections.emptyMap());
+    TestSQLMetadataConnector metadataConnector = new TestSQLMetadataConnector(
+        Suppliers.ofInstance(config),
+        Suppliers.ofInstance(tablesConfig)
+    );
+
+    // Transient exceptions
+    Assert.assertTrue(metadataConnector.isTransientException(new RetryTransactionException("")));
+    Assert.assertTrue(metadataConnector.isTransientException(new SQLRecoverableException()));
+    Assert.assertTrue(metadataConnector.isTransientException(new SQLTransientException()));
+    Assert.assertTrue(metadataConnector.isTransientException(new SQLTransientConnectionException()));
+
+    // Non transient exceptions
+    Assert.assertFalse(metadataConnector.isTransientException(null));
+    Assert.assertFalse(metadataConnector.isTransientException(new SQLException()));
+    Assert.assertFalse(metadataConnector.isTransientException(new UnableToExecuteStatementException("")));
+
+    // Nested transient exceptions
+    Assert.assertTrue(
+        metadataConnector.isTransientException(
+            new CallbackFailedException(new SQLTransientException())
+        )
+    );
+    Assert.assertTrue(
+        metadataConnector.isTransientException(
+            new UnableToObtainConnectionException(new SQLException())
+        )
+    );
+    Assert.assertTrue(
+        metadataConnector.isTransientException(
+            new UnableToExecuteStatementException(new SQLTransientException())
+        )
+    );
+
+    // Nested non-transient exceptions
+    Assert.assertFalse(
+        metadataConnector.isTransientException(
+            new CallbackFailedException(new SQLException())
+        )
+    );
+    Assert.assertFalse(
+        metadataConnector.isTransientException(
+            new UnableToExecuteStatementException(new SQLException())
+        )
+    );
+
   }
 }

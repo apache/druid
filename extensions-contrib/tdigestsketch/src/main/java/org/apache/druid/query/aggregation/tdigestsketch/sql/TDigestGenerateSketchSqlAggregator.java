@@ -148,7 +148,7 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
 
   private static class TDigestGenerateSketchSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE_WITH_COMPRESSION = "'" + NAME + "(column, compression)'\n";
+    private static final String SIGNATURE_WITH_COMPRESSION = "'" + NAME + "(column, compression)'";
 
     TDigestGenerateSketchSqlAggFunction()
     {
