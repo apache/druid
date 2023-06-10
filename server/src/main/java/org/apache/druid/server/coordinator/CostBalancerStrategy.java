@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -36,6 +37,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 public class CostBalancerStrategy implements BalancerStrategy
@@ -226,7 +229,7 @@ public class CostBalancerStrategy implements BalancerStrategy
 
     try {
       // results is an un-ordered list of a pair consisting of the 'cost' of a segment being on a server and the server
-      List<Pair<Double, ServerHolder>> results = resultsFuture.get();
+      List<Pair<Double, ServerHolder>> results = resultsFuture.get(1, TimeUnit.MINUTES);
       return results.stream()
                     // Comparator.comapringDouble will order by lowest cost...
                     // reverse it because we want to drop from the highest cost servers first
@@ -235,7 +238,7 @@ public class CostBalancerStrategy implements BalancerStrategy
                     .iterator();
     }
     catch (Exception e) {
-      log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();
+      alertOnFailure(e, "pick drop server");
     }
     return Collections.emptyIterator();
   }
@@ -298,10 +301,7 @@ public class CostBalancerStrategy implements BalancerStrategy
 
     log.info(
         "[%s]: Initial Total Cost: [%f], Normalization: [%f], Initial Normalized Cost: [%f]",
-        tier,
-        initialTotalCost,
-        normalization,
-        normalizedInitialCost
+        tier, initialTotalCost, normalization, normalizedInitialCost
     );
   }
 
@@ -373,7 +373,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     final List<Pair<Double, ServerHolder>> bestServers = new ArrayList<>();
     bestServers.add(bestServer);
     try {
-      for (Pair<Double, ServerHolder> server : resultsFuture.get()) {
+      for (Pair<Double, ServerHolder> server : resultsFuture.get(1, TimeUnit.MINUTES)) {
         if (server.lhs <= bestServers.get(0).lhs) {
           if (server.lhs < bestServers.get(0).lhs) {
             bestServers.clear();
@@ -390,9 +390,28 @@ public class CostBalancerStrategy implements BalancerStrategy
       bestServer = bestServers.get(ThreadLocalRandom.current().nextInt(bestServers.size()));
     }
     catch (Exception e) {
-      log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();
+      alertOnFailure(e, "choose best load server");
     }
     return bestServer;
   }
+
+  private void alertOnFailure(Exception e, String action)
+  {
+    // Do not alert if the executor has been shutdown
+    if (exec.isShutdown()) {
+      log.noStackTrace().info("Balancer executor was terminated. Failing action [%s].", action);
+      return;
+    }
+
+    final boolean hasTimedOut = e instanceof TimeoutException;
+
+    final String message = StringUtils.format(
+        "Cost balancer strategy %s in action [%s].%s",
+        hasTimedOut ? "timed out" : "failed", action,
+        hasTimedOut ? " Try setting a higher value of 'balancerComputeThreads'." : ""
+    );
+    log.makeAlert(e, message).emit();
+  }
+
 }
 

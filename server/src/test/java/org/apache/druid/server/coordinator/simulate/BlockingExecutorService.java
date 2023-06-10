@@ -30,6 +30,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -47,6 +48,8 @@ public class BlockingExecutorService implements ExecutorService
 
   private final String nameFormat;
   private final Queue<Task<?>> taskQueue = new ConcurrentLinkedQueue<>();
+
+  private boolean isShutdown;
 
   public BlockingExecutorService(String nameFormat)
   {
@@ -115,12 +118,14 @@ public class BlockingExecutorService implements ExecutorService
   @Override
   public <T> Future<T> submit(Callable<T> task)
   {
+    verifyNotShutdown();
     return addTaskToQueue(task);
   }
 
   @Override
   public <T> Future<T> submit(Runnable task, T result)
   {
+    verifyNotShutdown();
     return addTaskToQueue(() -> {
       task.run();
       return result;
@@ -130,6 +135,7 @@ public class BlockingExecutorService implements ExecutorService
   @Override
   public Future<?> submit(Runnable task)
   {
+    verifyNotShutdown();
     return addTaskToQueue(() -> {
       task.run();
       return null;
@@ -140,6 +146,13 @@ public class BlockingExecutorService implements ExecutorService
   public void execute(Runnable command)
   {
     submit(command);
+  }
+
+  private void verifyNotShutdown()
+  {
+    if (isShutdown) {
+      throw new RejectedExecutionException();
+    }
   }
 
   private <T> Future<T> addTaskToQueue(Callable<T> callable)
@@ -153,25 +166,27 @@ public class BlockingExecutorService implements ExecutorService
   @Override
   public void shutdown()
   {
+    isShutdown = true;
     taskQueue.clear();
   }
 
   @Override
   public List<Runnable> shutdownNow()
   {
+    shutdown();
     return null;
   }
 
   @Override
   public boolean isShutdown()
   {
-    return false;
+    return isShutdown;
   }
 
   @Override
   public boolean isTerminated()
   {
-    return false;
+    return isShutdown && taskQueue.isEmpty();
   }
 
   @Override
