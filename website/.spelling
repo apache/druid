@@ -64,6 +64,7 @@ dimensionsSpec
 DimensionSpec
 DimensionSpecs
 Dockerfile
+Docusaurus
 DogStatsD
 DOCTYPE
 Double.NEGATIVE_INFINITY
@@ -494,6 +495,7 @@ substring
 subtask
 subtasks
 supervisorTaskId
+SVG
 symlink
 syntaxes
 tiering
@@ -558,6 +560,7 @@ znodes
 APPROX_COUNT_DISTINCT
 APPROX_QUANTILE
 ARRAY_AGG
+ARRAY_TO_MV
 BIGINT
 CATALOG_NAME
 CHARACTER_MAXIMUM_LENGTH
@@ -583,6 +586,7 @@ NUMERIC_PRECISION
 NUMERIC_PRECISION_RADIX
 NUMERIC_SCALE
 ORDINAL_POSITION
+PNG
 POSIX
 P1M
 P1Y

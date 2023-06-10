@@ -18,13 +18,19 @@
 
 import type { Intent } from '@blueprintjs/core';
 import { Button, InputGroup, Position } from '@blueprintjs/core';
-import type { DateRange } from '@blueprintjs/datetime';
-import { DateRangePicker, TimePrecision } from '@blueprintjs/datetime';
+import type { DateRange } from '@blueprintjs/datetime2';
+import { DateRangeInput2 } from '@blueprintjs/datetime2';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import React from 'react';
 
-import { intervalToLocalDateRange, localDateRangeToInterval } from '../../utils';
+import {
+  dateToIsoDateString,
+  intervalToLocalDateRange,
+  localDateRangeToInterval,
+} from '../../utils';
+
+const BASIC_DATE_PARSER = (str: string) => new Date(str);
 
 export interface IntervalInputProps {
   interval: string;
@@ -45,14 +51,16 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
           <Popover2
             popoverClassName="calendar"
             content={
-              <DateRangePicker
-                timePrecision={TimePrecision.SECOND}
+              <DateRangeInput2
+                timePrecision="second"
                 value={intervalToLocalDateRange(interval)}
                 contiguousCalendarMonths={false}
                 reverseMonthAndYearMenus
                 onChange={(selectedRange: DateRange) => {
                   onValueChange(localDateRangeToInterval(selectedRange));
                 }}
+                formatDate={dateToIsoDateString}
+                parseDate={BASIC_DATE_PARSER}
               />
             }
             position={Position.BOTTOM_RIGHT}

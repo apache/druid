@@ -48,6 +48,8 @@ services:
   overlord:
     image: ${DRUID_IT_IMAGE_NAME}
     container_name: overlord
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.10
@@ -67,6 +69,8 @@ services:
   coordinator:
     image: ${DRUID_IT_IMAGE_NAME}
     container_name: coordinator
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.20
@@ -86,6 +90,8 @@ services:
   historical:
     image: ${DRUID_IT_IMAGE_NAME}
     container_name: historical
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.30
@@ -105,6 +111,8 @@ services:
   middlemanager:
     image: ${DRUID_IT_IMAGE_NAME}
     container_name: middlemanager
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.40
@@ -136,6 +144,8 @@ services:
   indexer:
     image: ${DRUID_IT_IMAGE_NAME}
     container_name: indexer
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.50
@@ -155,6 +165,8 @@ services:
   broker:
     image: ${DRUID_IT_IMAGE_NAME}
     container_name: broker
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.60
@@ -174,6 +186,8 @@ services:
   router:
     image: ${DRUID_IT_IMAGE_NAME}
     container_name: router
+    labels:
+      druid-int-test: "true"
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.70
