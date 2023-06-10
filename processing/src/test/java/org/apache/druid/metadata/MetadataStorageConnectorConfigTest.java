@@ -194,12 +194,8 @@ public class MetadataStorageConnectorConfigTest
   public void testCreate()
   {
     Map<String, String> props = ImmutableMap.of("key", "value");
-    MetadataStorageConnectorConfig config = MetadataStorageConnectorConfig.create(
-        "connectURI",
-        "user",
-        "pwd",
-        props
-    );
+    MetadataStorageConnectorConfig config =
+        MetadataStorageConnectorConfig.create("connectURI", "user", "pwd", props);
     Assert.assertEquals("connectURI", config.getConnectURI());
     Assert.assertEquals("user", config.getUser());
     Assert.assertEquals("pwd", config.getPassword());

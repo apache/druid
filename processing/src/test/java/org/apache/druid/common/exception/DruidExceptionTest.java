@@ -30,10 +30,11 @@ public class DruidExceptionTest
     DruidException exception = Assert.assertThrows(
         DruidException.class,
         () -> {
-          throw new DruidException("an error has occurred", 401, null);
+          throw new DruidException("an error has occurred", 401, null, true);
         }
     );
     Assert.assertEquals("an error has occurred", exception.getMessage());
     Assert.assertEquals(401, exception.getResponseCode());
+    Assert.assertTrue(exception.isTransient());
   }
 }

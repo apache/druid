@@ -442,7 +442,8 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
               taskId
           ),
           DruidException.HTTP_CODE_BAD_REQUEST,
-          t
+          t,
+          false
       );
     } else {
       return new DruidException(

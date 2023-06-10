@@ -30,11 +30,6 @@ public class DruidException extends RuntimeException
   private final int responseCode;
   private final boolean isTransient;
 
-  public DruidException(String message, int responseCode, Throwable cause)
-  {
-    this(message, responseCode, cause, false);
-  }
-
   public DruidException(String message, int responseCode, Throwable cause, boolean isTransient)
   {
     super(message, cause);
@@ -49,8 +44,7 @@ public class DruidException extends RuntimeException
 
   /**
    * Returns true if this is a transient exception and might go away if the
-   * operation is retried. All DruidException are non-transient by default
-   * unless specified otherwise.
+   * operation is retried.
    */
   public boolean isTransient()
   {
