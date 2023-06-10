@@ -77,7 +77,7 @@ public abstract class LoadRule implements Rule
       targetReplicants.putAll(getTieredReplicants());
       currentReplicants.putAll(params.getSegmentReplicantLookup().getClusterTiers(segment.getId()));
 
-      params.getSegmentReplicantLookup().setTotalTargetReplicants(segment.getId(), getTotalTargetReplicants());
+      params.getSegmentReplicantLookup().setReplicationFactor(segment.getId(), getReplicationFactor());
 
       final CoordinatorStats stats = new CoordinatorStats();
       assign(params, segment, stats);
@@ -95,7 +95,7 @@ public abstract class LoadRule implements Rule
     }
   }
 
-  private int getTotalTargetReplicants()
+  private int getReplicationFactor()
   {
     return getTieredReplicants().values().stream().reduce(0, Integer::sum);
   }

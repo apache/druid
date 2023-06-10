@@ -81,7 +81,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentPlus;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
@@ -106,7 +106,7 @@ public class SystemSchema extends AbstractSchema
   private static final String TASKS_TABLE = "tasks";
   private static final String SUPERVISOR_TABLE = "supervisors";
 
-  private static final Function<SegmentPlus, Iterable<ResourceAction>>
+  private static final Function<SegmentStatusInCluster, Iterable<ResourceAction>>
       SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR = segment ->
       Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
           segment.getDataSegment().getDataSource())
@@ -116,6 +116,8 @@ public class SystemSchema extends AbstractSchema
       segment -> Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
           segment.getDataSource())
       );
+
+  private static final long REPLICATION_FACTOR_UNKNOWN = -1L;
 
   /**
    * Booleans constants represented as long type,
@@ -129,7 +131,6 @@ public class SystemSchema extends AbstractSchema
   private static final long IS_AVAILABLE_TRUE = 1L;
   private static final long IS_OVERSHADOWED_FALSE = 0L;
   private static final long IS_OVERSHADOWED_TRUE = 1L;
-  private static final long TARGET_NUM_REPLICAS_UNKNOWN = -1L;
 
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
@@ -151,7 +152,7 @@ public class SystemSchema extends AbstractSchema
       .add("dimensions", ColumnType.STRING)
       .add("metrics", ColumnType.STRING)
       .add("last_compaction_state", ColumnType.STRING)
-      .add("target_num_replicas", ColumnType.LONG)
+      .add("replication_factor", ColumnType.LONG)
       .build();
 
   static final RowSignature SERVERS_SIGNATURE = RowSignature
@@ -290,7 +291,7 @@ public class SystemSchema extends AbstractSchema
 
       // Get published segments from metadata segment cache (if enabled in SQL planner config), else directly from
       // Coordinator.
-      final Iterator<SegmentPlus> metadataStoreSegments = metadataView.getPublishedSegments();
+      final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getPublishedSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.cache().getTotalSegments());
 
@@ -329,7 +330,7 @@ public class SystemSchema extends AbstractSchema
                   segment.getDimensions() == null ? null : jsonMapper.writeValueAsString(segment.getDimensions()),
                   segment.getMetrics() == null ? null : jsonMapper.writeValueAsString(segment.getMetrics()),
                   segment.getLastCompactionState() == null ? null : jsonMapper.writeValueAsString(segment.getLastCompactionState()),
-                  val.getTotalTargetReplicants() == null ? TARGET_NUM_REPLICAS_UNKNOWN : (long) val.getTotalTargetReplicants()
+                  val.getReplicationFactor() == null ? REPLICATION_FACTOR_UNKNOWN : (long) val.getReplicationFactor()
               };
             }
             catch (JsonProcessingException e) {
@@ -372,7 +373,7 @@ public class SystemSchema extends AbstractSchema
                   val.getValue().getSegment().getDimensions() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getDimensions()),
                   val.getValue().getSegment().getMetrics() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getMetrics()),
                   null, // unpublished segments from realtime tasks will not be compacted yet
-                  TARGET_NUM_REPLICAS_UNKNOWN
+                  REPLICATION_FACTOR_UNKNOWN
               };
             }
             catch (JsonProcessingException e) {
@@ -388,8 +389,8 @@ public class SystemSchema extends AbstractSchema
 
     }
 
-    private Iterator<SegmentPlus> getAuthorizedPublishedSegments(
-        Iterator<SegmentPlus> it,
+    private Iterator<SegmentStatusInCluster> getAuthorizedPublishedSegments(
+        Iterator<SegmentStatusInCluster> it,
         DataContext root
     )
     {
@@ -398,7 +399,7 @@ public class SystemSchema extends AbstractSchema
           "authenticationResult in dataContext"
       );
 
-      final Iterable<SegmentPlus> authorizedSegments = AuthorizationUtils
+      final Iterable<SegmentStatusInCluster> authorizedSegments = AuthorizationUtils
           .filterAuthorizedResources(
               authenticationResult,
               () -> it,

@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class SegmentPlusTest
+public class SegmentStatusInClusterTest
 {
   private static final ObjectMapper MAPPER = createObjectMapper();
   private static final Interval INTERVAL = Intervals.of("2011-10-01/2011-10-02");
@@ -50,7 +50,7 @@ public class SegmentPlusTest
   private static final boolean OVERSHADOWED = true;
   private static final Integer TOTAL_TARGET_REPLICANTS = 2;
   private static final int TEST_VERSION = 0x9;
-  private static final SegmentPlus SEGMENT = createSegmentPlusForTest();
+  private static final SegmentStatusInCluster SEGMENT = createSegmentForTest();
 
   private static ObjectMapper createObjectMapper()
   {
@@ -61,7 +61,7 @@ public class SegmentPlusTest
     return objectMapper;
   }
 
-  private static SegmentPlus createSegmentPlusForTest()
+  private static SegmentStatusInCluster createSegmentForTest()
   {
     DataSegment dataSegment = new DataSegment(
         "something",
@@ -76,7 +76,7 @@ public class SegmentPlusTest
         1
     );
 
-    return new SegmentPlus(dataSegment, OVERSHADOWED, TOTAL_TARGET_REPLICANTS);
+    return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, TOTAL_TARGET_REPLICANTS);
   }
 
   @Test
@@ -98,13 +98,13 @@ public class SegmentPlusTest
     Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
     Assert.assertEquals(OVERSHADOWED, objectMap.get("overshadowed"));
-    Assert.assertEquals(TOTAL_TARGET_REPLICANTS, objectMap.get("totalTargetReplicants"));
+    Assert.assertEquals(TOTAL_TARGET_REPLICANTS, objectMap.get("replicationFactor"));
 
     final String json = MAPPER.writeValueAsString(SEGMENT);
 
-    final TestSegmentPlus deserializedSegment = MAPPER.readValue(
+    final TestSegment deserializedSegment = MAPPER.readValue(
         json,
-        TestSegmentPlus.class
+        TestSegment.class
     );
 
     DataSegment dataSegment = SEGMENT.getDataSegment();
@@ -118,17 +118,17 @@ public class SegmentPlusTest
     Assert.assertEquals(dataSegment.getSize(), deserializedSegment.getSize());
     Assert.assertEquals(dataSegment.getId(), deserializedSegment.getId());
     Assert.assertEquals(OVERSHADOWED, deserializedSegment.isOvershadowed());
-    Assert.assertEquals(TOTAL_TARGET_REPLICANTS, deserializedSegment.getTotalTargetReplicants());
+    Assert.assertEquals(TOTAL_TARGET_REPLICANTS, deserializedSegment.getReplicationFactor());
   }
 
-  // Previously, the implementation of SegmentPlus had @JsonCreator/@JsonProperty and @JsonUnwrapped
+  // Previously, the implementation of SegmentStatusInCluster had @JsonCreator/@JsonProperty and @JsonUnwrapped
   // on the same field (dataSegment), which used to work in Jackson 2.6, but does not work with Jackson 2.9:
   // https://github.com/FasterXML/jackson-databind/issues/265#issuecomment-264344051
   @Test
   public void testJsonCreatorAndJsonUnwrappedAnnotationsAreCompatible() throws Exception
   {
     String json = MAPPER.writeValueAsString(SEGMENT);
-    SegmentPlus segment = MAPPER.readValue(json, SegmentPlus.class);
+    SegmentStatusInCluster segment = MAPPER.readValue(json, SegmentStatusInCluster.class);
     Assert.assertEquals(SEGMENT, segment);
     Assert.assertEquals(json, MAPPER.writeValueAsString(segment));
   }
@@ -137,13 +137,13 @@ public class SegmentPlusTest
 /**
  * Flat subclass of DataSegment for testing
  */
-class TestSegmentPlus extends DataSegment
+class TestSegment extends DataSegment
 {
   private final boolean overshadowed;
-  private final Integer totalTargetReplicants;
+  private final Integer replicationFactor;
 
   @JsonCreator
-  public TestSegmentPlus(
+  public TestSegment(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
@@ -161,7 +161,7 @@ class TestSegmentPlus extends DataSegment
       @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size,
       @JsonProperty("overshadowed") boolean overshadowed,
-      @JsonProperty("totalTargetReplicants") Integer totalTargetReplicants
+      @JsonProperty("replicationFactor") Integer replicationFactor
   )
   {
     super(
@@ -177,7 +177,7 @@ class TestSegmentPlus extends DataSegment
         size
     );
     this.overshadowed = overshadowed;
-    this.totalTargetReplicants = totalTargetReplicants;
+    this.replicationFactor = replicationFactor;
   }
 
   @JsonProperty
@@ -187,9 +187,9 @@ class TestSegmentPlus extends DataSegment
   }
 
   @JsonProperty
-  public Integer getTotalTargetReplicants()
+  public Integer getReplicationFactor()
   {
-    return totalTargetReplicants;
+    return replicationFactor;
   }
 
   @Override
@@ -204,16 +204,16 @@ class TestSegmentPlus extends DataSegment
     if (!super.equals(o)) {
       return false;
     }
-    TestSegmentPlus that = (TestSegmentPlus) o;
+    TestSegment that = (TestSegment) o;
     return overshadowed == that.overshadowed && Objects.equals(
-        totalTargetReplicants,
-        that.totalTargetReplicants
+        replicationFactor,
+        that.replicationFactor
     );
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), overshadowed, totalTargetReplicants);
+    return Objects.hash(super.hashCode(), overshadowed, replicationFactor);
   }
 }

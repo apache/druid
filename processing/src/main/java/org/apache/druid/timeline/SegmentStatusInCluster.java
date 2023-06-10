@@ -29,44 +29,44 @@ import java.util.Objects;
 /**
  * DataSegment object plus the overshadowed and target number of replicants for the segment. An immutable object.
  * <br></br>
- * SegmentPlus's {@link #compareTo} method considers only the {@link SegmentId}
+ * SegmentStatusInCluster's {@link #compareTo} method considers only the {@link SegmentId}
  * of the DataSegment object.
  */
-public class SegmentPlus implements Comparable<SegmentPlus>
+public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster>
 {
   private final boolean overshadowed;
   /**
-   * The target number of replicants for the segment added across all tiers. This value is null if the load rules for
+   * The target repication factor for the segment added across all tiers. This value is null if the load rules for
    * the segment have not been evaluated yet.
    */
-  private final Integer totalTargetReplicants;
+  private final Integer replicationFactor;
   /**
    * dataSegment is serialized "unwrapped", i.e. it's properties are included as properties of
-   * enclosing class. If in the future, if {@code SegmentPlus} were to extend {@link DataSegment},
+   * enclosing class. If in the future, if {@code SegmentStatusInCluster} were to extend {@link DataSegment},
    * there will be no change in the serialized format.
    */
   @JsonUnwrapped
   private final DataSegment dataSegment;
 
   @JsonCreator
-  public SegmentPlus(
+  public SegmentStatusInCluster(
       @JsonProperty("overshadowed") boolean overshadowed,
-      @JsonProperty("totalTargetReplicants") Integer targetReplicants
+      @JsonProperty("replicationFactor") @Nullable Integer replicationFactor
   )
   {
     // Jackson will overwrite dataSegment if needed (even though the field is final)
-    this(null, overshadowed, targetReplicants);
+    this(null, overshadowed, replicationFactor);
   }
 
-  public SegmentPlus(
+  public SegmentStatusInCluster(
       DataSegment dataSegment,
       boolean overshadowed,
-      Integer totalTargetReplicants
+      Integer replicationFactor
   )
   {
     this.dataSegment = dataSegment;
     this.overshadowed = overshadowed;
-    this.totalTargetReplicants = totalTargetReplicants;
+    this.replicationFactor = replicationFactor;
   }
 
   @JsonProperty
@@ -83,9 +83,9 @@ public class SegmentPlus implements Comparable<SegmentPlus>
 
   @Nullable
   @JsonProperty
-  public Integer getTotalTargetReplicants()
+  public Integer getReplicationFactor()
   {
-    return totalTargetReplicants;
+    return replicationFactor;
   }
 
   @Override
@@ -97,22 +97,20 @@ public class SegmentPlus implements Comparable<SegmentPlus>
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    SegmentPlus that = (SegmentPlus) o;
+    SegmentStatusInCluster that = (SegmentStatusInCluster) o;
     return overshadowed == that.overshadowed
-           && Objects.equals(totalTargetReplicants, that.totalTargetReplicants)
+           && Objects.equals(replicationFactor, that.replicationFactor)
            && Objects.equals(dataSegment, that.dataSegment);
   }
 
   @Override
   public int hashCode()
   {
-    int result = dataSegment.hashCode();
-    result = 31 * result + Objects.hash(overshadowed, totalTargetReplicants);
-    return result;
+    return Objects.hash(overshadowed, replicationFactor, dataSegment);
   }
 
   @Override
-  public int compareTo(SegmentPlus o)
+  public int compareTo(SegmentStatusInCluster o)
   {
     return dataSegment.getId().compareTo(o.dataSegment.getId());
   }
@@ -120,9 +118,9 @@ public class SegmentPlus implements Comparable<SegmentPlus>
   @Override
   public String toString()
   {
-    return "SegmentPlus{" +
+    return "SegmentStatusInCluster{" +
            "overshadowed=" + overshadowed +
-           ", totalTargetReplicants=" + totalTargetReplicants +
+           ", replicationFactor=" + replicationFactor +
            ", dataSegment=" + dataSegment +
            '}';
   }

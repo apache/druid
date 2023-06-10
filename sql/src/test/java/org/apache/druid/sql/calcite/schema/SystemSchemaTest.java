@@ -99,7 +99,7 @@ import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentPlus;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -564,12 +564,12 @@ public class SystemSchemaTest extends CalciteTestBase
   public void testSegmentsTable() throws Exception
   {
     final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
-    final Set<SegmentPlus> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentPlus(publishedCompactedSegment1, true, 2),
-        new SegmentPlus(publishedCompactedSegment2, false, 0),
-        new SegmentPlus(publishedUncompactedSegment3, false, 2),
-        new SegmentPlus(segment1, true, 2),
-        new SegmentPlus(segment2, false, 0)
+    final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
+        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2),
+        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0),
+        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2),
+        new SegmentStatusInCluster(segment1, true, 2),
+        new SegmentStatusInCluster(segment2, false, 0)
     ));
 
     EasyMock.expect(metadataView.getPublishedSegments()).andReturn(publishedSegments.iterator()).once();

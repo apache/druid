@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -155,7 +154,13 @@ public class DruidCoordinator
 
   private volatile boolean started = false;
   private volatile SegmentReplicantLookup segmentReplicantLookup = null;
-  private volatile ImmutableMap<SegmentId, Integer> prevTotalTargetReplicantMap = null;
+
+  /**
+   * Contains a map of segmentId to total replciation factor across all tiers. This map is refreshed when load rules are
+   * evaluated. It is used by {@link DruidCoordinator} to supply this value to
+   * {@link org.apache.druid.server.http.MetadataResource}.
+   */
+  private volatile Map<SegmentId, Integer> segmentIdToReplicationFactor = null;
   private volatile DruidCluster cluster = null;
 
   private int cachedBalancerThreadNumber;
@@ -820,9 +825,9 @@ public class DruidCoordinator
   }
 
   @Nullable
-  public Integer getTotalTargetReplicantsForSegment(SegmentId segmentId)
+  public Integer getReplicationFactorForSegment(SegmentId segmentId)
   {
-    return prevTotalTargetReplicantMap == null ? null : prevTotalTargetReplicantMap.get(segmentId);
+    return segmentIdToReplicationFactor == null ? null : segmentIdToReplicationFactor.get(segmentId);
   }
 
   @VisibleForTesting
@@ -952,8 +957,10 @@ public class DruidCoordinator
           }
         }
 
+        // Update the immutable replication factor map with latest values.
+        // This value is set here as it is recalculated during load rule evaluation.
         if (params.getSegmentReplicantLookup() != null) {
-          prevTotalTargetReplicantMap = params.getSegmentReplicantLookup().createTargetReplicantMapCopy();
+          segmentIdToReplicationFactor = params.getSegmentReplicantLookup().getSegmentIdToReplicationFactor();
         }
 
         // Emit the runtime of the full DutiesRunnable

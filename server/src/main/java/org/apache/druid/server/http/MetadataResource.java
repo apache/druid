@@ -39,7 +39,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentPlus;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -140,10 +140,10 @@ public class MetadataResource
   public Response getAllUsedSegments(
       @Context final HttpServletRequest req,
       @QueryParam("datasources") final @Nullable Set<String> dataSources,
-      @QueryParam("includeFullDetails") final @Nullable String includeFullDetails
+      @QueryParam("includeOvershadowedStatus") final @Nullable String includeOvershadowedStatus
   )
   {
-    if (includeFullDetails != null) {
+    if (includeOvershadowedStatus != null) {
       return getAllUsedSegmentsWithAdditionalDetails(req, dataSources);
     }
 
@@ -188,21 +188,21 @@ public class MetadataResource
         .flatMap(t -> t.getSegments().stream());
     final Set<DataSegment> overshadowedSegments = dataSourcesSnapshot.getOvershadowedSegments();
 
-    final Stream<SegmentPlus> segmentPlusStream = usedSegments
+    final Stream<SegmentStatusInCluster> segmentStatus = usedSegments
         .map(segment ->
-                 new SegmentPlus(
+                 new SegmentStatusInCluster(
                      segment,
                      overshadowedSegments.contains(segment),
-                     coordinator.getTotalTargetReplicantsForSegment(segment.getId())
+                     coordinator.getReplicationFactorForSegment(segment.getId())
                  )
         );
 
-    final Function<SegmentPlus, Iterable<ResourceAction>> raGenerator = segment -> Collections
+    final Function<SegmentStatusInCluster, Iterable<ResourceAction>> raGenerator = segment -> Collections
         .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
 
-    final Iterable<SegmentPlus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+    final Iterable<SegmentStatusInCluster> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
         req,
-        segmentPlusStream::iterator,
+        segmentStatus::iterator,
         raGenerator,
         authorizerMapper
     );

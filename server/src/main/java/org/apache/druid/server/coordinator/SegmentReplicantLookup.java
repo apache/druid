@@ -81,7 +81,7 @@ public class SegmentReplicantLookup
 
   private final Table<SegmentId, String, Integer> segmentsInCluster;
   private final Table<SegmentId, String, Integer> loadingSegments;
-  private final ConcurrentHashMap<SegmentId, Integer> totalTargetReplicants = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<SegmentId, Integer> replicationFactorMap = new ConcurrentHashMap<>();
   private final DruidCluster cluster;
 
   private SegmentReplicantLookup(
@@ -117,14 +117,14 @@ public class SegmentReplicantLookup
     return (retVal == null) ? 0 : retVal;
   }
 
-  public void setTotalTargetReplicants(SegmentId segmentId, Integer requiredReplicas)
+  public void setReplicationFactor(SegmentId segmentId, Integer requiredReplicas)
   {
-    totalTargetReplicants.put(segmentId, requiredReplicas);
+    replicationFactorMap.put(segmentId, requiredReplicas);
   }
 
-  public ImmutableMap<SegmentId, Integer> createTargetReplicantMapCopy()
+  public Map<SegmentId, Integer> getSegmentIdToReplicationFactor()
   {
-    return ImmutableMap.copyOf(totalTargetReplicants);
+    return ImmutableMap.copyOf(replicationFactorMap);
   }
 
   private int getLoadingReplicants(SegmentId segmentId, String tier)
