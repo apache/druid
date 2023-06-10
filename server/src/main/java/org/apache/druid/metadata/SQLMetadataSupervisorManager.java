@@ -261,7 +261,12 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                           );
                         }
                         catch (IOException e) {
-                          log.error(e, "Could not map json payload to a SupervisorSpec for spec_id: [%s]", r.getString("spec_id"));
+                          String exceptionMessage = StringUtils.format(
+                              "Could not map json payload to a SupervisorSpec for spec_id: [%s]."
+                              + " Please remove the supervisor from the database and then submit a new request via the overlord.",
+                              r.getString("spec_id")
+                          );
+                          log.error(e, exceptionMessage);
                           return null;
                         }
                       }
