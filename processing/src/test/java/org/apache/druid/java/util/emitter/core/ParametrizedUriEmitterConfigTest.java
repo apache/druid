@@ -68,7 +68,7 @@ public class ParametrizedUriEmitterConfigTest
     final HttpEmitterConfig config = injector.getInstance(HttpEmitterConfig.class);
 
     Pair<Integer, Integer> batchConfigPair = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(
-         JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes()
+        JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes()
     );
     Assert.assertEquals(batchConfigPair.lhs.intValue(), config.getMaxBatchSize());
     Assert.assertEquals(batchConfigPair.rhs.intValue(), config.getBatchQueueSizeLimit());
