@@ -68,13 +68,13 @@ EXPLAIN PLAN statements return:
 - a `PLAN` column that contains a JSON array of native queries that Druid will run
 - a `RESOURCES` column that describes the resources used in the query
 - an `ATTRIBUTES` column that describes the attributes of the query, including:
-  - `statementType`
-  - `targetDataSource`
-  - `partitionedBy`
-  - `clusteredBy`
-  - `replaceTimeChunks`
+  - `statementType`: the SQL statement type
+  - `targetDataSource`: the target datasource in an INSERT or REPLACE statement
+  - `partitionedBy`: the time-based partitioning granularity in an INSERT or REPLACE statement
+  - `clusteredBy`: the clustering columns in an INSERT or REPLACE statement
+  - `replaceTimeChunks`: the time chunks in a REPLACE statement
 
-For example, consider the following query:
+Example 1: EXPLAIN PLAN for a `SELECT` query on the `wikipedia` datasource:
 
 ```sql
 EXPLAIN PLAN FOR
@@ -86,7 +86,7 @@ WHERE channel IN (SELECT page FROM wikipedia GROUP BY page ORDER BY COUNT(*) DES
 GROUP BY channel
 ```
 
-The EXPLAIN PLAN statement returns the following result with plan, resources, and attributes information in it:
+The above EXPLAIN PLAN query returns the following result:
 
 ```json
 [
@@ -220,13 +220,13 @@ The EXPLAIN PLAN statement returns the following result with plan, resources, an
     }
   ],
   {
-    "statementType": "SELECT",
-    "targetDataSource": null
+    "statementType": "SELECT"
   }
 ]
 ```
 
-Now consider the following EXPLAIN PLAN for a `REPLACE` query that replaces all the data in the `wikipedia` datasource:
+Example 2: EXPLAIN PLAN for a `REPLACE` query that replaces all the data in the `wikipedia` datasource:
+
 ```sql
 EXPLAIN PLAN FOR
 REPLACE INTO wikipedia
@@ -251,7 +251,7 @@ PARTITIONED BY HOUR
 CLUSTERED BY cityName
 ```
 
-The above EXPLAIN PLAN returns the following result:
+The above EXPLAIN PLAN query returns the following result:
 
 ```json
 [
