@@ -251,7 +251,7 @@ PARTITIONED BY HOUR
 CLUSTERED BY cityName
 ```
 
-The EXPLAIN PLAN returns the following result:
+The above EXPLAIN PLAN returns the following result:
 
 ```json
 [
