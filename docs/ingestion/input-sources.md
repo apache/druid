@@ -822,7 +822,7 @@ Sample specs:
                 "hive.metastore.execute.setugi": "false",
                 "hive.metastore.kerberos.principal": "KRB_PRINCIPAL",
                 "hive.metastore.sasl.enabled": "true",
-                "metastore.catalog.default": "acs_datalake_prod",
+                "metastore.catalog.default": "catalog_test",
                 "hadoop.security.authentication": "kerberos",
                 "hadoop.security.authorization": "true"
             }

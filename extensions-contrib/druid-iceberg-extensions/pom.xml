@@ -26,7 +26,6 @@
   <name>druid-iceberg-extensions</name>
   <description>druid-iceberg-extensions</description>
 
-
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>

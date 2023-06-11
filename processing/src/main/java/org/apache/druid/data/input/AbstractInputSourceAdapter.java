@@ -36,6 +36,9 @@ import java.util.stream.Stream;
 
 /**
  * A wrapper on top of {@link SplittableInputSource} that handles input source creation.
+ * For composing input sources such as IcebergInputSource, the delegate input source instantiation might fail upon deserialization since the input file paths
+ * are not available yet and this might fail the input source precondition checks.
+ * This adapter helps create the delegate input source once the input file paths are fully determined.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {

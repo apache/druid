@@ -26,7 +26,7 @@ title: "Iceberg"
 
 This extension provides [IcebergInputSource](../../ingestion/input-sources.md#iceberg-input-source) which enables ingestion of data stored in the Iceberg table format into Druid.
 
-Apache Iceberg is an open table format for huge analytic datasets. Even though iceberg manages most of its metadata on metadata files, it is still dependent on a metastore for managing a certain amount of metadata.
+Apache Iceberg is an open table format for huge analytic datasets. Even though iceberg manages most of its metadata in metadata files in the object storage, it is still dependent on a metastore for managing a certain amount of metadata.
 These metastores are defined as Iceberg catalogs and this extension supports connecting to the following catalog types:
 * Hive metastore catalog
 * Local catalog
@@ -44,7 +44,7 @@ To use the iceberg extension, add the `druid-iceberg-extensions` to the list of 
 
 ### Hive Metastore catalog
 
-For Druid to seamlessly talk to the Hive Metastore, ensure that the Hive specific configuration files such as `hive-site.xml` and `core-site.xml` are available in the Druid classpath.  
+For Druid to seamlessly talk to the Hive Metastore, ensure that the Hive specific configuration files such as `hive-site.xml` and `core-site.xml` are available in the Druid classpath for peon processes.  
 Hive specific properties can also be specified under the `catalogProperties` object in the ingestion spec. 
 
 Hive metastore catalogs can be associated with different types of warehouses, but this extension presently only supports HDFS and S3 warehouse directories.
@@ -62,6 +62,7 @@ If the Hive metastore supports Kerberos authentication, the following properties
   "keytab": "/path/to/keytab"
 }
 ```
+Only Kerberos based authentication is supported as of now.
 
 #### Reading from S3 warehouse
 

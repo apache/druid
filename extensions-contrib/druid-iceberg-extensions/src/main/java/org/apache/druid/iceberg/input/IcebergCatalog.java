@@ -66,18 +66,20 @@ public abstract class IcebergCatalog
     Namespace namespace = Namespace.of(tableNamespace);
     String tableIdentifier = tableNamespace + "." + tableName;
 
-    Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-    TableIdentifier icebergTableIdentifier = catalog.listTables(namespace).stream()
-                                                    .filter(tableId -> tableId.toString().equals(tableIdentifier))
-                                                    .findFirst()
-                                                    .orElseThrow(() -> new IAE(
-                                                        " Couldn't retrieve table identifier for '%s'",
-                                                        tableIdentifier
-                                                    ));
-
-    long start = System.currentTimeMillis();
     List<String> dataFilePaths = new ArrayList<>();
+
+    ClassLoader currCtxClassloader = Thread.currentThread().getContextClassLoader();
     try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      TableIdentifier icebergTableIdentifier = catalog.listTables(namespace).stream()
+                                                      .filter(tableId -> tableId.toString().equals(tableIdentifier))
+                                                      .findFirst()
+                                                      .orElseThrow(() -> new IAE(
+                                                          " Couldn't retrieve table identifier for '%s'",
+                                                          tableIdentifier
+                                                      ));
+
+      long start = System.currentTimeMillis();
       TableScan tableScan = catalog.loadTable(icebergTableIdentifier).newScan();
 
       if (icebergFilter != null) {
@@ -89,10 +91,13 @@ public abstract class IcebergCatalog
                        .forEach(dataFile -> dataFilePaths.add(dataFile.path().toString()));
 
       long duration = System.currentTimeMillis() - start;
-      log.info("Data file scan and fetch took %d ms", duration);
+      log.info("Data file scan and fetch took %d ms for %d paths", duration, dataFilePaths.size());
     }
     catch (Exception e) {
       throw new RE(e, "Failed to load iceberg table with identifier [%s]", tableIdentifier);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(currCtxClassloader);
     }
     return dataFilePaths;
   }
