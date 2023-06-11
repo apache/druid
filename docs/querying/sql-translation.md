@@ -67,7 +67,7 @@ be translated to native.
 EXPLAIN PLAN statements return:
 - a `PLAN` column that contains a JSON array of native queries that Druid will run
 - a `RESOURCES` column that describes the resources used in the query
-- a `ATTRIBUTES` column that describes the attributes of a query. Attributes include:
+- an `ATTRIBUTES` column that describes the attributes of the query, including:
   - `statementType`
   - `targetDataSource`
   - `partitionedBy`
@@ -251,7 +251,7 @@ PARTITIONED BY HOUR
 CLUSTERED BY cityName
 ```
 
-The EXPLAIN PLAN returns the following result:
+The above EXPLAIN PLAN returns the following result:
 
 ```json
 [
