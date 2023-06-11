@@ -50,7 +50,8 @@ public final class ExplainAttributes
       @JsonProperty("targetDataSource") @Nullable final SqlNode targetDataSource,
       @JsonProperty("partitionedBy") @Nullable Granularity partitionedBy,
       @JsonProperty("clusteredBy") @Nullable SqlNodeList clusteredBy,
-      @JsonProperty("replaceTimeChunks") @Nullable SqlNode replaceTimeChunks)
+      @JsonProperty("replaceTimeChunks") @Nullable SqlNode replaceTimeChunks
+      )
   {
     this.statementType = statementType;
     this.targetDataSource = targetDataSource;
