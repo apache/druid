@@ -72,7 +72,7 @@ public final class ExplainAttributes
 
   /**
    * @return the target datasource in a SQL statement. Returns null
-   * for SELECT tatements where there is no target datasource.
+   * for SELECT statements where there is no target datasource.
    */
   @Nullable
   @JsonProperty
