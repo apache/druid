@@ -653,7 +653,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     skipVectorize();
 
     final String resources = "[{\"name\":\"dst\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"druid.dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":\"2, `dim1` DESC, CEIL(`m2`)\",\"replaceTimeChunks\":null}";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"druid.dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":\"2, `dim1` DESC, CEIL(`m2`)\"}";
 
     final String sql = "EXPLAIN PLAN FOR INSERT INTO druid.dst "
                        + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
@@ -997,7 +997,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         + "}]";
 
     final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
-    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\",\"partitionedBy\":{\"type\":\"all\"},\"clusteredBy\":null,\"replaceTimeChunks\":null}";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\",\"partitionedBy\":{\"type\":\"all\"}}";
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(
@@ -1101,7 +1101,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         + "}]";
 
     final String resources = "[{\"name\":\"dst\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"druid.dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":\"2, `dim1` DESC, CEIL(`m2`)\",\"replaceTimeChunks\":null}";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"druid.dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":\"2, `dim1` DESC, CEIL(`m2`)\"}";
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(

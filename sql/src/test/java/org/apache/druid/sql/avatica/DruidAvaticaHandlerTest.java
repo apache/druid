@@ -471,7 +471,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                   "RESOURCES",
                   "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]",
                   "ATTRIBUTES",
-                  "{\"statementType\":\"SELECT\",\"targetDataSource\":null,\"partitionedBy\":null,\"clusteredBy\":null,\"replaceTimeChunks\":null}"
+                  "{\"statementType\":\"SELECT\"}"
               )
           ),
           getRows(resultSet)

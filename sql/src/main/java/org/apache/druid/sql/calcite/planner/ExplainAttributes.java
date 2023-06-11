@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
@@ -48,9 +49,9 @@ public final class ExplainAttributes
   public ExplainAttributes(
       @JsonProperty("statementType") final String statementType,
       @JsonProperty("targetDataSource") @Nullable final SqlNode targetDataSource,
-      @JsonProperty("partitionedBy") @Nullable Granularity partitionedBy,
-      @JsonProperty("clusteredBy") @Nullable SqlNodeList clusteredBy,
-      @JsonProperty("replaceTimeChunks") @Nullable SqlNode replaceTimeChunks)
+      @JsonProperty("partitionedBy") @Nullable final Granularity partitionedBy,
+      @JsonProperty("clusteredBy") @Nullable final SqlNodeList clusteredBy,
+      @JsonProperty("replaceTimeChunks") @Nullable final SqlNode replaceTimeChunks)
   {
     this.statementType = statementType;
     this.targetDataSource = targetDataSource;
@@ -70,10 +71,11 @@ public final class ExplainAttributes
 
   /**
    * @return the target datasource in a SQL statement. Returns null
-   * for SELECT/non-DML statements where there is no target datasource.
+   * for SELECT tatements where there is no target datasource.
    */
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getTargetDataSource()
   {
     return targetDataSource == null ? null : targetDataSource.toString();
@@ -81,10 +83,11 @@ public final class ExplainAttributes
 
   /**
    * @return the time-based partitioning granularity specified in the <code>PARTITIONED BY</code> clause
-   * for an INSERT or REPLACE statement. Returns null for SELECT/non-DML statements.
+   * for an INSERT or REPLACE statement. Returns null for SELECT statements.
    */
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Granularity getPartitionedBy()
   {
     return partitionedBy;
@@ -92,10 +95,11 @@ public final class ExplainAttributes
 
   /**
    * @return the clustering columns specified in the <code>CLUSTERED BY</code> clause
-   * for an INSERT or REPLACE statement. Returns null for SELECT/non-DML statements.
+   * for an INSERT or REPLACE statement. Returns null for SELECT statements.
    */
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getClusteredBy()
   {
     return clusteredBy == null ? null : clusteredBy.toString();
@@ -107,6 +111,7 @@ public final class ExplainAttributes
    */
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getReplaceTimeChunks()
   {
     return replaceTimeChunks == null ? null : replaceTimeChunks.toString();
