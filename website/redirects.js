@@ -180,8 +180,7 @@ const Redirects=[
   {
     "from": [
       "/docs/latest/ingestion/native_tasks.html",
-      "/docs/latest/ingestion/native-batch-input-sources.html",
-      "/docs/latest/ingestion/native-batch"
+      "/docs/latest/ingestion/native-batch-input-sources.html"
   ],
     "to": "/docs/latest/ingestion/input-sources"
   },
