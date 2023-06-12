@@ -267,20 +267,8 @@ const Redirects=[
   },
   {
     "from":  "/docs/latest/misc/math-expr.html",
-    "to": "/docs/latest/querying/math-expr.html"
+    "to": "/docs/latest/querying/math-expr"
 
-  },
-  {
-    "from":  "/docs/latest/multi-stage-query/api.html",
-    "to": "/docs/latest/api-reference/sql-ingestion"
-  },
-  {
-    "from":  "/docs/latest/operations/api-reference.html",
-    "to": "/docs/latest/api-reference/api-reference"
-  },
-  {
-    "from":  "/docs/latest/operations/druid-console.html",
-    "to": "/docs/latest/querying/math-expr.html"
   },
   {
     "from":  "/docs/latest/operations/getting-started",
@@ -288,11 +276,19 @@ const Redirects=[
   },
   {
     "from":  "/docs/latest/querying/sql-api.html",
-    "to": "/docs/latest/api-reference/sql-api/"
+    "to": "/docs/latest/api-reference/sql-api"
   },
   {
     "from":  "/docs/latest/querying/sql-jdbc.html",
     "to": "/docs/latest/api-reference/sql-jdbc"
+  },
+  {
+    "from":  "/docs/latest/multi-stage-query/api.html",
+    "to": "/docs/latest/api-reference/sql-ingestion-api"
+  },
+  {
+    "from":  "/docs/latest/operations/api-reference.html",
+    "to": "/docs/latest/api-reference/"
   }
 ]
 
