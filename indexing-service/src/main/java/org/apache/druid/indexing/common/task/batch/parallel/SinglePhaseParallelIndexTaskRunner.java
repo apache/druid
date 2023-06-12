@@ -26,9 +26,11 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.indexing.common.Counters;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
@@ -283,7 +285,11 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
 
   NonnullPair<Interval, String> findIntervalAndVersion(DateTime timestamp) throws IOException
   {
-    return AbstractBatchIndexTask.findIntervalAndVersion(getToolbox(), ingestionSchema, timestamp);
+    TaskLockType taskLockType = null;
+    if (getContext().containsKey(Tasks.TASK_LOCK_TYPE)) {
+      taskLockType = TaskLockType.valueOf(getContext().get(Tasks.TASK_LOCK_TYPE).toString());
+    }
+    return AbstractBatchIndexTask.findIntervalAndVersion(getToolbox(), ingestionSchema, timestamp, taskLockType);
   }
 
   @Override

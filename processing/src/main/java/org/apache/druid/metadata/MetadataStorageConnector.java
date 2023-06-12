@@ -77,6 +77,8 @@ public interface MetadataStorageConnector
 
   void createSegmentTable();
 
+  void createSegmentVersionTable();
+
   void createRulesTable();
 
   void createConfigTable();

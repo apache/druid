@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskLockbox;
@@ -33,9 +34,11 @@ import org.joda.time.DateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
 
 public class TaskLocks
@@ -96,7 +99,8 @@ public class TaskLocks
                   final TimeChunkLock timeChunkLock = (TimeChunkLock) lock;
                   return timeChunkLock.getInterval().contains(segment.getInterval())
                          && timeChunkLock.getDataSource().equals(segment.getDataSource())
-                         && timeChunkLock.getVersion().compareTo(segment.getVersion()) >= 0;
+                         && (timeChunkLock.getVersion().compareTo(segment.getVersion()) >= 0
+                             || TaskLockType.APPEND.equals(timeChunkLock.getType()));
                 } else {
                   final SegmentLock segmentLock = (SegmentLock) lock;
                   return segmentLock.getInterval().contains(segment.getInterval())
@@ -108,6 +112,29 @@ public class TaskLocks
           );
         }
     );
+  }
+
+  public static Set<TaskLock> findReplaceLocksForSegments(
+      final String datasource,
+      final TaskLockbox taskLockbox,
+      final Collection<DataSegment> segments
+  )
+  {
+    final Set<TaskLock> found = new HashSet<>();
+    final Set<TaskLock> locks = taskLockbox.getAllReplaceLocksForDatasource(datasource);
+    segments.forEach(segment -> {
+
+      locks.forEach(lock -> {
+        if (lock.getGranularity() == LockGranularity.TIME_CHUNK) {
+          final TimeChunkLock timeChunkLock = (TimeChunkLock) lock;
+          if (timeChunkLock.getInterval().contains(segment.getInterval())
+              && timeChunkLock.getDataSource().equals(segment.getDataSource())) {
+            found.add(lock);
+          }
+        }
+      });
+    });
+    return found;
   }
 
   public static List<TaskLock> findLocksForSegments(

@@ -251,6 +251,10 @@ public interface IndexerMetadataStorageCoordinator
    * @param endMetadata    dataSource metadata post-insert will have this endMetadata merged in with
    *                       {@link DataSourceMetadata#plus(DataSourceMetadata)}. If null, this insert will not
    *                       involve a metadata transaction
+   * @param segmentLockMap map of segments appended with an append lock to the task lock of the exclusive lock
+   *                       held for the datasource + interval during commit
+   * @param taskLockInfos  Set of task lock infos for which new segments with given replace the old ones
+   *                       for the datasource + interval during commit
    *
    * @return segment publish result indicating transaction success or failure, and set of segments actually published.
    * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
@@ -259,6 +263,16 @@ public interface IndexerMetadataStorageCoordinator
    * @throws IllegalArgumentException if startMetadata and endMetadata are not either both null or both non-null
    * @throws RuntimeException         if the state of metadata storage after this call is unknown
    */
+  SegmentPublishResult announceHistoricalSegments(
+      Set<DataSegment> segments,
+      Set<DataSegment> segmentsToDrop,
+      @Nullable DataSourceMetadata startMetadata,
+      @Nullable DataSourceMetadata endMetadata,
+      @Nullable Map<DataSegment, TaskLockInfo> segmentLockMap,
+      @Nullable Set<TaskLockInfo> taskLockInfos,
+      boolean append
+  ) throws IOException;
+
   SegmentPublishResult announceHistoricalSegments(
       Set<DataSegment> segments,
       Set<DataSegment> segmentsToDrop,

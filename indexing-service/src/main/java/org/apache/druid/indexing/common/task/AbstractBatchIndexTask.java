@@ -297,15 +297,14 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
     );
     IngestionMode ingestionMode = getIngestionMode();
-    final boolean useSharedLock = ingestionMode == IngestionMode.APPEND
-                                  && getContextValue(Tasks.USE_SHARED_LOCK, false);
+    final TaskLockType taskLockType = TaskLockType.valueOf(getContextValue(Tasks.TASK_LOCK_TYPE, TaskLockType.EXCLUSIVE.name()));
     // Respect task context value most.
     if (forceTimeChunkLock || ingestionMode == IngestionMode.REPLACE) {
       log.info(
           "forceTimeChunkLock[%s] is set to true or mode[%s] is replace. Use timeChunk lock",
           forceTimeChunkLock, ingestionMode
       );
-      taskLockHelper = new TaskLockHelper(false, useSharedLock);
+      taskLockHelper = new TaskLockHelper(false, taskLockType);
       if (!intervals.isEmpty()) {
         return tryTimeChunkLock(client, intervals);
       } else {
@@ -314,7 +313,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     } else {
       if (!intervals.isEmpty()) {
         final LockGranularityDetermineResult result = determineSegmentGranularity(client, intervals);
-        taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT, useSharedLock);
+        taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT, taskLockType);
         return tryLockWithDetermineResult(client, result);
       } else {
         // This branch is the only one that will not initialize taskLockHelper.
@@ -342,11 +341,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
         Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
     );
-    final boolean useSharedLock = getContextValue(Tasks.USE_SHARED_LOCK, false);
+    final TaskLockType taskLockType = TaskLockType.valueOf(getContextValue(Tasks.TASK_LOCK_TYPE, TaskLockType.EXCLUSIVE.name()));
 
     if (forceTimeChunkLock) {
       log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
-      taskLockHelper = new TaskLockHelper(false, useSharedLock);
+      taskLockHelper = new TaskLockHelper(false, taskLockType);
       segmentCheckFunction.accept(LockGranularity.TIME_CHUNK, segments);
       return tryTimeChunkLock(
           client,
@@ -354,7 +353,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       );
     } else {
       final LockGranularityDetermineResult result = determineSegmentGranularity(segments);
-      taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT, useSharedLock);
+      taskLockHelper = new TaskLockHelper(result.lockGranularity == LockGranularity.SEGMENT, taskLockType);
       segmentCheckFunction.accept(result.lockGranularity, segments);
       return tryLockWithDetermineResult(client, result);
     }
@@ -430,7 +429,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       }
 
       prev = cur;
-      final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, cur));
+      final TaskLockType taskLockType = TaskLockType.valueOf(getContextValue(Tasks.TASK_LOCK_TYPE, TaskLockType.EXCLUSIVE.name()));
+      final TaskLock lock = client.submit(new TimeChunkLockTryAcquireAction(taskLockType, cur));
       if (lock == null) {
         return false;
       }
@@ -670,7 +670,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   public static NonnullPair<Interval, String> findIntervalAndVersion(
       TaskToolbox toolbox,
       IngestionSpec<?, ?> ingestionSpec,
-      DateTime timestamp
+      DateTime timestamp,
+      TaskLockType taskLockType
   ) throws IOException
   {
     // This method is called whenever subtasks need to allocate a new segment via the supervisor task.
@@ -724,9 +725,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
           }
         }
         // We don't have a lock for this interval, so we should lock it now.
+        if (taskLockType == null) {
+          taskLockType = TaskLockType.EXCLUSIVE;
+        }
         final TaskLock lock = Preconditions.checkNotNull(
             toolbox.getTaskActionClient().submit(
-                new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)
+                new TimeChunkLockTryAcquireAction(taskLockType, interval)
             ),
             "Cannot acquire a lock for interval[%s]",
             interval

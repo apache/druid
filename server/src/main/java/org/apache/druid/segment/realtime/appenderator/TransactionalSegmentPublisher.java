@@ -72,4 +72,9 @@ public interface TransactionalSegmentPublisher
   {
     return false;
   }
+
+
+  // append starts (2023-01-01/2023-02-01) - V0-0 pending segment
+  // replace starts and ends (2023-01-01/2024-01-01) - V1-0 committed segment
+  // append ends (2023-01-01/2023-02-01) - V0-0 committed segment, (2023-01-01/2024-01-01) V1-1 committed segment
 }

@@ -28,6 +28,7 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SegmentCreateRequest;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.indexing.overlord.TaskLockInfo;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -143,11 +144,25 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       Set<DataSegment> segments,
       Set<DataSegment> segmentsToDrop,
       DataSourceMetadata oldCommitMetadata,
-      DataSourceMetadata newCommitMetadata
+      DataSourceMetadata newCommitMetadata,
+      @Nullable Map<DataSegment, TaskLockInfo> segmentLockMap,
+      @Nullable Set<TaskLockInfo> taskLockInfos,
+      boolean append
   )
   {
     // Don't actually compare metadata, just do it!
     return SegmentPublishResult.ok(announceHistoricalSegments(segments));
+  }
+
+  @Override
+  public SegmentPublishResult announceHistoricalSegments(
+      Set<DataSegment> segments,
+      Set<DataSegment> segmentsToDrop,
+      @Nullable DataSourceMetadata startMetadata,
+      @Nullable DataSourceMetadata endMetadata
+  )
+  {
+    return announceHistoricalSegments(segments, segmentsToDrop, startMetadata, endMetadata, null, null, false);
   }
 
   @Override

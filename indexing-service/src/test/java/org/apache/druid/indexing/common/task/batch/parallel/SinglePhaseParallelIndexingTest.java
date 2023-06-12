@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -620,9 +621,9 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     final ParallelIndexSupervisorTask task = newTask(interval, Granularities.DAY, true, true);
     final ParallelIndexSupervisorTask task2 = newTask(interval, Granularities.DAY, true, true);
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
-    task.addToContext(Tasks.USE_SHARED_LOCK, true);
+    task.addToContext(Tasks.TASK_LOCK_TYPE, TaskLockType.SHARED);
     task2.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
-    task2.addToContext(Tasks.USE_SHARED_LOCK, true);
+    task2.addToContext(Tasks.TASK_LOCK_TYPE, TaskLockType.SHARED);
     getIndexingServiceClient().runTask(task.getId(), task);
     getIndexingServiceClient().runTask(task2.getId(), task2);
 

@@ -295,6 +295,32 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
+  public void createSegmentVersionTable(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id VARCHAR(255) NOT NULL,\n"
+                + "  dataSource VARCHAR(255) %3$s NOT NULL,\n"
+                + "  start BIGINT NOT NULL,\n"
+                + "  %2$send%2$s BIGINT NOT NULL,\n"
+                + "  segment_id VARCHAR(255) NOT NULL,\n"
+                + "  lock_version VARCHAR(255) NOT NULL,\n"
+                + "  PRIMARY KEY (id)\n"
+                + ")",
+                tableName, getQuoteString(), getCollation()
+            ),
+            StringUtils.format(
+                "CREATE INDEX idx_%1$s_datasource_end_start ON %1$s(dataSource, %2$send%2$s, start)",
+                tableName,
+                getQuoteString()
+            )
+        )
+    );
+  }
+
   public void createRulesTable(final String tableName)
   {
     createTable(
@@ -609,6 +635,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     if (config.get().isCreateTables()) {
       createSegmentTable(tablesConfigSupplier.get().getSegmentsTable());
+    }
+  }
+
+  @Override
+  public void createSegmentVersionTable()
+  {
+    if (config.get().isCreateTables()) {
+      createSegmentVersionTable(tablesConfigSupplier.get().getSegmentVersionsTable());
     }
   }
 

@@ -51,8 +51,8 @@ public class Tasks
   public static final String PRIORITY_KEY = "priority";
   public static final String LOCK_TIMEOUT_KEY = "taskLockTimeout";
   public static final String FORCE_TIME_CHUNK_LOCK_KEY = "forceTimeChunkLock";
-  public static final String USE_SHARED_LOCK = "useSharedLock";
   public static final String STORE_EMPTY_COLUMNS_KEY = "storeEmptyColumns";
+  public static final String TASK_LOCK_TYPE = "taskLockType";
 
   /**
    * Context flag denoting if maximum possible values should be used to estimate

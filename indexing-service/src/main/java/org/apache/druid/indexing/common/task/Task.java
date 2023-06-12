@@ -79,7 +79,9 @@ import java.util.Set;
     @Type(name = "index_realtime", value = RealtimeIndexTask.class),
     @Type(name = "index_realtime_appenderator", value = AppenderatorDriverRealtimeIndexTask.class),
     @Type(name = "noop", value = NoopTask.class),
-    @Type(name = "compact", value = CompactionTask.class)
+    @Type(name = "compact", value = CompactionTask.class),
+    @Type(name = "replace", value = ReplaceTask.class),
+    @Type(name = "append", value = AppendTask.class)
 })
 public interface Task
 {

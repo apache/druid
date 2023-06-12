@@ -115,6 +115,9 @@ public class TimeChunkLockRequest implements LockRequest
   @Override
   public String getVersion()
   {
+    if (lockType.equals(TaskLockType.APPEND) && preferredVersion == null) {
+      return "1970-01-01T00:00:00.000Z";
+    }
     return preferredVersion == null ? DateTimes.nowUtc().toString() : preferredVersion;
   }
 

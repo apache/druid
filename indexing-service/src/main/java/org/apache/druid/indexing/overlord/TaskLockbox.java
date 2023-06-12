@@ -24,6 +24,7 @@ import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
@@ -749,7 +750,7 @@ public class TaskLockbox
     return metadataStorageCoordinator.allocatePendingSegment(
         request.getDataSource(),
         request.getSequenceName(),
-        request.getPrevisousSegmentId(),
+        request.getPreviousSegmentId(),
         request.getInterval(),
         request.getPartialShardSpec(),
         version,
@@ -1239,6 +1240,28 @@ public class TaskLockbox
   {
     return running;
   }
+
+  public Set<TaskLock> getAllReplaceLocksForDatasource(final String datasource)
+  {
+    giant.lock();
+    try {
+      final NavigableMap<DateTime, SortedMap<Interval, List<TaskLockPosse>>> dsRunning = running.get(datasource);
+      if (dsRunning == null) {
+        return ImmutableSet.of();
+      }
+      return dsRunning.values()
+                      .stream()
+                      .flatMap(map -> map.values().stream())
+                      .flatMap(Collection::stream)
+                      .map(TaskLockPosse::getTaskLock)
+                      .filter(taskLock -> taskLock.getType().equals(TaskLockType.REPLACE))
+                      .collect(Collectors.toSet());
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
 
   /**
    * Check if the lock for a given request can coexist with a given set of conflicting posses without any revocation.
