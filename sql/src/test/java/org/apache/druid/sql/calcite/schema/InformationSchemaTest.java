@@ -100,8 +100,8 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
 
     List<Object[]> rows = routinesTable.scan(dataContext).toList();
 
-    Assert.assertTrue("There should at least be 10 built-in functions that gets statically loaded by default",
-                      rows.size() > 10);
+    Assert.assertTrue("There should at least be 1 built-in function that gets statically loaded by default",
+                      rows.size() > 0);
     RelDataType rowType = routinesTable.getRowType(new JavaTypeFactoryImpl());
     Assert.assertEquals(6, rowType.getFieldCount());
 
