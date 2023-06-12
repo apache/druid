@@ -20,25 +20,21 @@
 package org.apache.druid.metadata;
 
 import org.apache.druid.common.exception.DruidException;
-import org.apache.druid.java.util.common.StringUtils;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- * A non-transient Druid metadata exception thrown when trying to insert a
- * duplicate entry in the metadata.
- */
-public class EntryExistsException extends DruidException
+public class EntryExistsExceptionTest
 {
-
-  private static final int HTTP_BAD_REQUEST = 400;
-
-  public EntryExistsException(String entryType, String entryId)
+  @Test
+  public void testExceptionMessageAndResponseCode()
   {
-    this(entryType, entryId, null);
+    EntryExistsException exception = Assert.assertThrows(
+        EntryExistsException.class,
+        () -> {
+          throw new EntryExistsException("task", "100");
+        }
+    );
+    Assert.assertEquals("task [100] already exists.", exception.getMessage());
+    Assert.assertEquals(DruidException.HTTP_CODE_BAD_REQUEST, exception.getResponseCode());
   }
-
-  public EntryExistsException(String entryType, String entryId, Throwable t)
-  {
-    super(StringUtils.format("%s [%s] already exists.", entryType, entryId), HTTP_BAD_REQUEST, t, false);
-  }
-
 }

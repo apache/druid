@@ -127,7 +127,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testEntryAndStatus() throws Exception
+  public void testEntryAndStatus()
   {
     Map<String, Object> entry = ImmutableMap.of("numericId", 1234);
     Map<String, Object> status1 = ImmutableMap.of("count", 42);
@@ -256,7 +256,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test(timeout = 60_000L)
-  public void testRepeatInsert() throws Exception
+  public void testRepeatInsert()
   {
     final String entryId = "abcd";
     Map<String, Object> entry = ImmutableMap.of("a", 1);
@@ -269,7 +269,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testLogs() throws Exception
+  public void testLogs()
   {
     final String entryId = "abcd";
     Map<String, Object> entry = ImmutableMap.of("a", 1);
@@ -301,7 +301,7 @@ public class SQLMetadataStorageActionHandlerTest
 
 
   @Test
-  public void testLocks() throws Exception
+  public void testLocks()
   {
     final String entryId = "ABC123";
     Map<String, Object> entry = ImmutableMap.of("a", 1);
@@ -404,7 +404,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testRemoveTasksOlderThan() throws Exception
+  public void testRemoveTasksOlderThan()
   {
     final String entryId1 = "1234";
     Map<String, Object> entry1 = ImmutableMap.of("numericId", 1234);
