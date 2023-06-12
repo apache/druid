@@ -44,7 +44,8 @@ public class StringFirstVectorAggregator implements VectorAggregator
       BaseLongVectorValueSelector timeSelector,
       VectorObjectSelector valueSelector,
       int maxStringBytes
-  ) {
+  )
+  {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
     this.maxStringBytes = maxStringBytes;
@@ -66,7 +67,7 @@ public class StringFirstVectorAggregator implements VectorAggregator
     Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
     firstTime = buf.getLong(position);
     int index;
-    for(int i=startRow; i<endRow; i++) {
+    for (int i = startRow; i < endRow; i++) {
       if (times[i] > firstTime) {
         break;
       }
