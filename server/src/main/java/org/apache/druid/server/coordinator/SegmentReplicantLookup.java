@@ -117,6 +117,8 @@ public class SegmentReplicantLookup
     return (retVal == null) ? 0 : retVal;
   }
 
+  // TODO: Refactor this setter, as this class is following a singleton pattern with only getters, and this breaks convention.
+  // This would be revamped in https://github.com/apache/druid/pull/13197
   public void setReplicationFactor(SegmentId segmentId, Integer requiredReplicas)
   {
     replicationFactorMap.put(segmentId, requiredReplicas);

@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * DataSegment object plus the overshadowed and target replication factor for the segment. An immutable object.
+ * DataSegment object plus the overshadowed and replication factor for the segment. An immutable object.
  * <br></br>
  * SegmentStatusInCluster's {@link #compareTo} method considers only the {@link SegmentId}
  * of the DataSegment object.
@@ -36,7 +36,7 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
 {
   private final boolean overshadowed;
   /**
-   * The target replication factor for the segment added across all tiers. This value is null if the load rules for
+   * The replication factor for the segment added across all tiers. This value is null if the load rules for
    * the segment have not been evaluated yet.
    */
   private final Integer replicationFactor;
