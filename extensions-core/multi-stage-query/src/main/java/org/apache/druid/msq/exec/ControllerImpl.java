@@ -206,6 +206,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -1430,33 +1431,39 @@ public class ControllerImpl implements Controller
                                            ).collect(Collectors.toList());
 
                          final List<SqlTypeName> sqlTypeNames = task.getSqlTypeNames();
-                         final List<Object[]> retVal = new ArrayList<>();
-                         while (!cursor.isDone()) {
-                           final Object[] row = new Object[columnMappings.size()];
-                           for (int i = 0; i < row.length; i++) {
-                             final Object value = selectors.get(i).getObject();
-                             if (sqlTypeNames == null || task.getSqlResultsContext() == null) {
-                               // SQL type unknown, or no SQL results context: pass-through as is.
-                               row[i] = value;
-                             } else {
-                               row[i] = SqlResults.coerce(
-                                   context.jsonMapper(),
-                                   task.getSqlResultsContext(),
-                                   value,
-                                   sqlTypeNames.get(i)
-                               );
-                             }
+                         Iterable<Object[]> retVal = () -> new Iterator<Object[]>()
+                         {
+                           @Override
+                           public boolean hasNext()
+                           {
+                             return !cursor.isDone();
                            }
-                           retVal.add(row);
-                           cursor.advance();
-                         }
 
+                           @Override
+                           public Object[] next()
+                           {
+                             final Object[] row = new Object[columnMappings.size()];
+                             for (int i = 0; i < row.length; i++) {
+                               final Object value = selectors.get(i).getObject();
+                               if (sqlTypeNames == null || task.getSqlResultsContext() == null) {
+                                 // SQL type unknown, or no SQL results context: pass-through as is.
+                                 row[i] = value;
+                               } else {
+                                 row[i] = SqlResults.coerce(
+                                     context.jsonMapper(),
+                                     task.getSqlResultsContext(),
+                                     value,
+                                     sqlTypeNames.get(i)
+                                 );
+                               }
+                             }
+                             cursor.advance();
+                             return row;
+                           }
+                         };
                          return Sequences.simple(retVal);
                        }
                    )
-                   // We add one more row than required in the iterator, so that we can determine if the results are
-                   // truncated or not
-                   .limit(Limits.MAX_SELECT_RESULT_ROWS + 1)
                    .withBaggage(resultReaderExec::shutdownNow)
       );
     } else {
