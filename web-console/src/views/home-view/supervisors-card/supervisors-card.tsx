@@ -69,7 +69,7 @@ FROM sys.supervisors`,
     <HomeViewCard
       className="supervisors-card"
       href="#supervisors"
-      icon={IconNames.ROUTE}
+      icon={IconNames.EYE_OPEN}
       title="Supervisors"
       loading={supervisorCountState.loading}
       error={supervisorCountState.error}

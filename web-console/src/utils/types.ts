@@ -71,6 +71,14 @@ export function dataTypeToIcon(dataType: string): IconName {
     case 'COMPLEX<JSON>':
       return IconNames.DIAGRAM_TREE;
 
+    case 'COMPLEX<HYPERUNIQUE>':
+    case 'COMPLEX<HLLSKETCHBUILD>':
+    case 'COMPLEX<THETASKETCHBUILD>':
+      return IconNames.SNOWFLAKE;
+
+    case 'COMPLEX<QUANTILESDOUBLESSKETCH>':
+      return IconNames.HORIZONTAL_DISTRIBUTION;
+
     case 'COMPLEX<VARIANCE>':
       return IconNames.ALIGNMENT_HORIZONTAL_CENTER;
 

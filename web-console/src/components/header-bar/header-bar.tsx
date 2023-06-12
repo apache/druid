@@ -434,7 +434,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           className="header-entry"
           minimal
           active={active === 'supervisors'}
-          icon={IconNames.ROUTE}
+          icon={IconNames.EYE_OPEN}
           text="Supervisors"
           href="#supervisors"
           disabled={!capabilities.hasSqlOrOverlordAccess()}
