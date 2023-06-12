@@ -17,28 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
-
-import org.apache.druid.common.exception.DruidException;
-import org.apache.druid.java.util.common.StringUtils;
+package org.apache.druid.common.exception;
 
 /**
- * A non-transient Druid metadata exception thrown when trying to insert a
- * duplicate entry in the metadata.
+ * A generic exception thrown by Druid.
  */
-public class EntryExistsException extends DruidException
+public class DruidException extends RuntimeException
 {
+  public static final int HTTP_CODE_SERVER_ERROR = 500;
+  public static final int HTTP_CODE_BAD_REQUEST = 400;
 
-  private static final int HTTP_BAD_REQUEST = 400;
+  private final int responseCode;
+  private final boolean isTransient;
 
-  public EntryExistsException(String entryType, String entryId)
+  public DruidException(String message, int responseCode, Throwable cause, boolean isTransient)
   {
-    this(entryType, entryId, null);
+    super(message, cause);
+    this.responseCode = responseCode;
+    this.isTransient = isTransient;
   }
 
-  public EntryExistsException(String entryType, String entryId, Throwable t)
+  public int getResponseCode()
   {
-    super(StringUtils.format("%s [%s] already exists.", entryType, entryId), HTTP_BAD_REQUEST, t, false);
+    return responseCode;
   }
 
+  /**
+   * Returns true if this is a transient exception and might go away if the
+   * operation is retried.
+   */
+  public boolean isTransient()
+  {
+    return isTransient;
+  }
 }
