@@ -1,0 +1,44 @@
+{
+  "type": "index_parallel",
+  "spec": {
+    "ioConfig": {
+      "type": "index_parallel",
+      "inputSource": {
+        "type": "local",
+        "baseDir": "/Users/will.xu/projects/data_gen/products.parquet.gzip",
+        "filter": "*"
+      },
+      "inputFormat": {
+        "type": "parquet"
+      }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "partitionsSpec": {
+        "type": "dynamic"
+      },
+      "indexSpec": {
+        "stringDictionaryEncoding": {
+          "type": "frontCoded",
+          "bucketSize": 16
+        }
+      }
+    },
+    "dataSchema": {
+      "dataSource": "product_test",
+      "timestampSpec": {
+        "missingValue": "2010-01-01T00:00:00Z"
+      },
+      "dimensionsSpec": {
+        "dimensions": [],
+        "dimensionExclusions": [],
+        "spatialDimensions": [],
+        "useSchemaDiscovery": true
+      },
+      "granularitySpec": {
+        "queryGranularity": "none",
+        "rollup": false
+      }
+    }
+  }
+}
