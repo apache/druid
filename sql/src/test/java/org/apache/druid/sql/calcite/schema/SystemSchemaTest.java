@@ -599,7 +599,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_realtime
         1L, //is_overshadowed
         null, //is_compacted
-        2L  // targetReplicas
+        2L  // replication_factor
     );
 
     verifyRow(
@@ -614,7 +614,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_realtime
         0L, //is_overshadowed,
         null, //is_compacted
-        0L  // target_replicas
+        0L  // replication_factor
     );
 
     //segment test3 is unpublished and has a NumberedShardSpec with partitionNum = 2
@@ -630,7 +630,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_realtime
         0L, //is_overshadowed
         null, //is_compacted
-        -1L   // target_replicas
+        -1L   // replication_factor
     );
 
     verifyRow(
@@ -645,7 +645,7 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_realtime
         0L, //is_overshadowed
         null, //is_compacted
-        -1L  // target_replicas
+        -1L  // replication_factor
     );
 
     verifyRow(
@@ -660,7 +660,7 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_realtime
         0L, //is_overshadowed
         null, //is_compacted
-        -1L  // target_replicas
+        -1L  // replication_factor
     );
 
     // wikipedia segments are published and unavailable, num_replicas is 0
@@ -677,7 +677,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_realtime
         1L, //is_overshadowed
         expectedCompactionState, //is_compacted
-        2L  // target_replicas
+        2L  // replication_factor
     );
 
     verifyRow(
@@ -692,7 +692,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_realtime
         0L, //is_overshadowed
         expectedCompactionState, //is_compacted
-        0L  // target_replicas
+        0L  // replication_factor
     );
 
     verifyRow(
@@ -707,7 +707,7 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_realtime
         0L, //is_overshadowed
         null, //is_compacted
-        2L  // target_replicas
+        2L  // replication_factor
     );
 
     // Verify value types.
@@ -726,7 +726,7 @@ public class SystemSchemaTest extends CalciteTestBase
       long isRealtime,
       long isOvershadowed,
       CompactionState compactionState,
-      long targetReplicas
+      long replicationFactor
   ) throws Exception
   {
     Assert.assertEquals(segmentId, row[0].toString());
@@ -749,7 +749,7 @@ public class SystemSchemaTest extends CalciteTestBase
     } else {
       Assert.assertEquals(mapper.writeValueAsString(compactionState), row[17]);
     }
-    Assert.assertEquals(targetReplicas, row[18]);
+    Assert.assertEquals(replicationFactor, row[18]);
   }
 
   @Test

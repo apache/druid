@@ -107,7 +107,7 @@ public class SystemSchema extends AbstractSchema
   private static final String SUPERVISOR_TABLE = "supervisors";
 
   private static final Function<SegmentStatusInCluster, Iterable<ResourceAction>>
-      SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR = segment ->
+      SEGMENT_STATUS_IN_CLUSTER_RA_GENERATOR = segment ->
       Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
           segment.getDataSegment().getDataSource())
       );
@@ -403,7 +403,7 @@ public class SystemSchema extends AbstractSchema
           .filterAuthorizedResources(
               authenticationResult,
               () -> it,
-              SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR,
+              SEGMENT_STATUS_IN_CLUSTER_RA_GENERATOR,
               authorizerMapper
           );
       return authorizedSegments.iterator();

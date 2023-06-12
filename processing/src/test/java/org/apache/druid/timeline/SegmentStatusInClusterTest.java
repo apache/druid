@@ -48,7 +48,7 @@ public class SegmentStatusInClusterTest
   private static final Interval INTERVAL = Intervals.of("2011-10-01/2011-10-02");
   private static final ImmutableMap<String, Object> LOAD_SPEC = ImmutableMap.of("something", "or_other");
   private static final boolean OVERSHADOWED = true;
-  private static final Integer TOTAL_TARGET_REPLICANTS = 2;
+  private static final Integer TOTAL_REPLICATION_FACTOR = 2;
   private static final int TEST_VERSION = 0x9;
   private static final SegmentStatusInCluster SEGMENT = createSegmentForTest();
 
@@ -76,7 +76,7 @@ public class SegmentStatusInClusterTest
         1
     );
 
-    return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, TOTAL_TARGET_REPLICANTS);
+    return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, TOTAL_REPLICATION_FACTOR);
   }
 
   @Test
@@ -98,7 +98,7 @@ public class SegmentStatusInClusterTest
     Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
     Assert.assertEquals(OVERSHADOWED, objectMap.get("overshadowed"));
-    Assert.assertEquals(TOTAL_TARGET_REPLICANTS, objectMap.get("replicationFactor"));
+    Assert.assertEquals(TOTAL_REPLICATION_FACTOR, objectMap.get("replicationFactor"));
 
     final String json = MAPPER.writeValueAsString(SEGMENT);
 
@@ -118,7 +118,7 @@ public class SegmentStatusInClusterTest
     Assert.assertEquals(dataSegment.getSize(), deserializedSegment.getSize());
     Assert.assertEquals(dataSegment.getId(), deserializedSegment.getId());
     Assert.assertEquals(OVERSHADOWED, deserializedSegment.isOvershadowed());
-    Assert.assertEquals(TOTAL_TARGET_REPLICANTS, deserializedSegment.getReplicationFactor());
+    Assert.assertEquals(TOTAL_REPLICATION_FACTOR, deserializedSegment.getReplicationFactor());
   }
 
   // Previously, the implementation of SegmentStatusInCluster had @JsonCreator/@JsonProperty and @JsonUnwrapped

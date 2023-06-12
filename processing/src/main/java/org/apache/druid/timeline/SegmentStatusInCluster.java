@@ -36,7 +36,7 @@ public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster
 {
   private final boolean overshadowed;
   /**
-   * The target repication factor for the segment added across all tiers. This value is null if the load rules for
+   * The target replication factor for the segment added across all tiers. This value is null if the load rules for
    * the segment have not been evaluated yet.
    */
   private final Integer replicationFactor;
