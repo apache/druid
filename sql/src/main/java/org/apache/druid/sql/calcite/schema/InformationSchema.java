@@ -44,7 +44,6 @@ import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.security.Action;
@@ -145,7 +144,7 @@ public class InformationSchema extends AbstractSchema
       .add("ROUTINE_NAME", SqlTypeName.VARCHAR)
       .add("ROUTINE_TYPE", SqlTypeName.VARCHAR)
       .add("IS_AGGREGATOR", SqlTypeName.VARCHAR)
-      .add("SIGNATURES", SqlTypeName.VARCHAR)
+      .add("SIGNATURES", SqlTypeName.VARCHAR, true)
       .build();
   private static final RelDataTypeSystem TYPE_SYSTEM = RelDataTypeSystem.DEFAULT;
 
@@ -525,11 +524,8 @@ public class InformationSchema extends AbstractSchema
       List<SqlOperator> operatorList = operatorTable.getOperatorList();
 
       for (SqlOperator sqlOperator : operatorList) {
-        if (sqlOperator.getSyntax() != SqlSyntax.FUNCTION &&
-            sqlOperator.getSyntax() != SqlSyntax.FUNCTION_STAR &&
-            sqlOperator.getSyntax() != SqlSyntax.FUNCTION_ID &&
-            sqlOperator.getSyntax() != SqlSyntax.SPECIAL
-        ) {
+        // For the ROUTINES table, we skip anything that's not a function syntax.
+        if (!DruidOperatorTable.isFunctionSyntax(sqlOperator.getSyntax())) {
           continue;
         }
 
