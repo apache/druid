@@ -3,6 +3,8 @@ id: api
 title: SQL-based ingestion and multi-stage query task API
 sidebar_label: API
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
@@ -52,9 +54,10 @@ As an experimental feature, this endpoint also accepts SELECT queries. SELECT qu
 by the controller, and written into the [task report](#get-the-report-for-a-query-task) as an array of arrays. The
 behavior and result format of plain SELECT queries (without INSERT or REPLACE) is subject to change.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--HTTP-->
+<TabItem value="1" label="HTTP">
+
 
 ```
 POST /druid/v2/sql/task
@@ -69,7 +72,10 @@ POST /druid/v2/sql/task
 }
 ```
 
-<!--curl-->
+</TabItem>
+
+<TabItem value="2" label="curl">
+
 
 ```bash
 # Make sure you replace `username`, `password`, `your-instance`, and `port` with the values for your deployment.
@@ -83,7 +89,10 @@ curl --location --request POST 'https://<username>:<password>@<your-instance>:<p
   }'
 ```
 
-<!--Python-->
+</TabItem>
+
+<TabItem value="3" label="Python">
+
 
 ```python
 import json
@@ -108,7 +117,9 @@ print(response.text)
 
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+
+</Tabs>
 
 #### Response
 
@@ -132,22 +143,29 @@ You can retrieve status of a query to see if it is still running, completed succ
 
 #### Request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--HTTP-->
+<TabItem value="4" label="HTTP">
+
 
 ```
 GET /druid/indexer/v1/task/<taskId>/status
 ```
 
-<!--curl-->
+</TabItem>
+
+<TabItem value="5" label="curl">
+
 
 ```bash
 # Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
 curl --location --request GET 'https://<username>:<password>@<your-instance>:<port>/druid/indexer/v1/task/<taskId>/status'
 ```
 
-<!--Python-->
+</TabItem>
+
+<TabItem value="6" label="Python">
+
 
 ```python
 import requests
@@ -163,7 +181,9 @@ response = requests.get(url, headers=headers, data=payload, auth=('USER', 'PASSW
 print(response.text)
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+
+</Tabs>
 
 #### Response
 
@@ -208,22 +228,29 @@ For an explanation of the fields in a report, see [Report response fields](#repo
 
 #### Request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--HTTP-->
+<TabItem value="7" label="HTTP">
+
 
 ```
 GET /druid/indexer/v1/task/<taskId>/reports
 ```
 
-<!--curl-->
+</TabItem>
+
+<TabItem value="8" label="curl">
+
 
 ```bash
 # Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
 curl --location --request GET 'https://<username>:<password>@<your-instance>:<port>/druid/indexer/v1/task/<taskId>/reports'
 ```
 
-<!--Python-->
+</TabItem>
+
+<TabItem value="9" label="Python">
+
 
 ```python
 import requests
@@ -236,7 +263,9 @@ response = requests.get(url, headers=headers, auth=('USER', 'PASSWORD'))
 print(response.text)
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+
+</Tabs>
 
 #### Response
 
@@ -511,7 +540,7 @@ The response shows an example report for a query.
                 "0": 1,
                 "1": 1,
                 "2": 1
-              }, 
+              },
               "totalMergersForUltimateLevel": 1,
               "progressDigest": 1
             }
@@ -587,22 +616,29 @@ The following table describes the response fields when you retrieve a report for
 
 #### Request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--HTTP-->
+<TabItem value="10" label="HTTP">
+
 
 ```
 POST /druid/indexer/v1/task/<taskId>/shutdown
 ```
 
-<!--curl-->
+</TabItem>
+
+<TabItem value="11" label="curl">
+
 
 ```bash
 # Make sure you replace `username`, `password`, `your-instance`, `port`, and `taskId` with the values for your deployment.
 curl --location --request POST 'https://<username>:<password>@<your-instance>:<port>/druid/indexer/v1/task/<taskId>/shutdown'
 ```
 
-<!--Python-->
+</TabItem>
+
+<TabItem value="12" label="Python">
+
 
 ```python
 import requests
@@ -618,7 +654,9 @@ response = requests.post(url, headers=headers, data=payload, auth=('USER', 'PASS
 print(response.text)
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+
+</Tabs>
 
 #### Response
 
