@@ -18,7 +18,6 @@
 
 import type { IconName } from '@blueprintjs/core';
 import {
-  Alert,
   AnchorButton,
   Button,
   ButtonGroup,
@@ -54,7 +53,7 @@ import {
   Loader,
   PopoverText,
 } from '../../components';
-import { AsyncActionDialog } from '../../dialogs';
+import { AlertDialog, AsyncActionDialog } from '../../dialogs';
 import type {
   DimensionSpec,
   DruidFilter,
@@ -1160,7 +1159,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (!showResetConfirm) return;
 
     return (
-      <Alert
+      <AlertDialog
         cancelButtonText="Cancel"
         confirmButtonText="Reset spec"
         icon="trash"
@@ -1170,7 +1169,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         onConfirm={this.handleResetSpec}
       >
         <p>This will discard the current progress in the spec.</p>
-      </Alert>
+      </AlertDialog>
     );
   }
 

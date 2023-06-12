@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Alert, Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import type { Filter } from 'react-table';
@@ -34,7 +34,7 @@ import {
   TableFilterableCell,
   ViewControlBar,
 } from '../../components';
-import { AsyncActionDialog, SpecDialog, TaskTableActionDialog } from '../../dialogs';
+import { AlertDialog, AsyncActionDialog, SpecDialog, TaskTableActionDialog } from '../../dialogs';
 import type { QueryWithContext } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
@@ -600,7 +600,7 @@ ORDER BY
             title="Submit task"
           />
         )}
-        <Alert
+        <AlertDialog
           icon={IconNames.ERROR}
           intent={Intent.PRIMARY}
           isOpen={Boolean(alertErrorMsg)}
@@ -608,7 +608,7 @@ ORDER BY
           onConfirm={() => this.setState({ alertErrorMsg: undefined })}
         >
           <p>{alertErrorMsg}</p>
-        </Alert>
+        </AlertDialog>
         {taskTableActionDialogId && taskTableActionDialogStatus && (
           <TaskTableActionDialog
             status={taskTableActionDialogStatus}

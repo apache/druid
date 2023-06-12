@@ -309,6 +309,13 @@ export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
   return xs.filter(Boolean) as T[];
 }
 
+export function moveToEnd<T>(
+  xs: T[],
+  predicate: (value: T, index: number, array: T[]) => unknown,
+): T[] {
+  return xs.filter((x, i, a) => !predicate(x, i, a)).concat(xs.filter(predicate));
+}
+
 export function alphanumericCompare(a: string, b: string): number {
   return String(a).localeCompare(b, undefined, { numeric: true });
 }

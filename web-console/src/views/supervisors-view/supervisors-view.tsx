@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Alert, Intent, MenuItem } from '@blueprintjs/core';
+import { Intent, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import type { Filter } from 'react-table';
@@ -34,7 +34,12 @@ import {
   TableFilterableCell,
   ViewControlBar,
 } from '../../components';
-import { AsyncActionDialog, SpecDialog, SupervisorTableActionDialog } from '../../dialogs';
+import {
+  AlertDialog,
+  AsyncActionDialog,
+  SpecDialog,
+  SupervisorTableActionDialog,
+} from '../../dialogs';
 import type { QueryWithContext } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
@@ -565,7 +570,7 @@ GROUP BY 1, 2`;
               <TableClickableCell
                 onClick={() => goToTasks(original.supervisor_id, `index_${original.type}`)}
                 hoverIcon={IconNames.ARROW_TOP_RIGHT}
-                title="Go to tasks view"
+                title="Go to tasks"
               >
                 {typeof value === 'undefined'
                   ? 'n/a'
@@ -763,7 +768,7 @@ GROUP BY 1, 2`;
             title="Submit supervisor"
           />
         )}
-        <Alert
+        <AlertDialog
           icon={IconNames.ERROR}
           intent={Intent.PRIMARY}
           isOpen={Boolean(alertErrorMsg)}
@@ -771,7 +776,7 @@ GROUP BY 1, 2`;
           onConfirm={() => this.setState({ alertErrorMsg: undefined })}
         >
           <p>{alertErrorMsg}</p>
-        </Alert>
+        </AlertDialog>
         {supervisorTableActionDialogId && (
           <SupervisorTableActionDialog
             supervisorId={supervisorTableActionDialogId}

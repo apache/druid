@@ -17,34 +17,26 @@
  */
 
 import { Intent } from '@blueprintjs/core';
+import { render } from '@testing-library/react';
 import React from 'react';
 
-import { AlertDialog } from '../../../dialogs';
+import { AlertDialog } from './alert-dialog';
 
-export interface CancelQueryDialogProps {
-  onDismiss(): void;
-  onCancel(): void;
-}
-
-export const CancelQueryDialog = function CancelQueryDialog(props: CancelQueryDialogProps) {
-  const { onDismiss, onCancel } = props;
-
-  return (
-    <AlertDialog
-      intent={Intent.DANGER}
-      isOpen
-      cancelButtonText="Continue running query"
-      confirmButtonText="Cancel query"
-      canOutsideClickCancel
-      canEscapeKeyCancel
-      onCancel={onDismiss}
-      onConfirm={() => {
-        onCancel();
-        onDismiss();
-      }}
-    >
-      <p>Are you sure you want to cancel this query?</p>
-      <p>You can&apos;t undo this action.</p>
-    </AlertDialog>
-  );
-};
+describe('AlertDialog', () => {
+  it('matches snapshot', () => {
+    const aboutDialog = (
+      <AlertDialog
+        cancelButtonText="Cancel"
+        confirmButtonText="Run it anyway"
+        intent={Intent.PRIMARY}
+        onCancel={() => {}}
+        onConfirm={() => {}}
+      >
+        <p>Blah blah</p>
+        <p>Foo bar</p>
+      </AlertDialog>
+    );
+    render(aboutDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
+  });
+});

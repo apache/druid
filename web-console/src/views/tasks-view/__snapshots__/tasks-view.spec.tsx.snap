@@ -311,17 +311,14 @@ exports[`TasksView matches snapshot 1`] = `
     style={Object {}}
     subRowsKey="_subRows"
   />
-  <Blueprint4.Alert
-    canEscapeKeyCancel={false}
-    canOutsideClickCancel={false}
+  <Memo(AlertDialog)
     confirmButtonText="OK"
     icon="error"
     intent="primary"
     isOpen={false}
-    loading={false}
     onConfirm={[Function]}
   >
     <p />
-  </Blueprint4.Alert>
+  </Memo(AlertDialog)>
 </div>
 `;
