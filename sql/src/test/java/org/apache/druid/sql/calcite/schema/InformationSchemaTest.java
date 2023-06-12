@@ -26,15 +26,12 @@ import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlSyntax;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
@@ -200,7 +197,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
     extractionOperators.add(new DirectOperatorConversion(operator1, "foo_fn"));
     extractionOperators.add(new DirectOperatorConversion(operator2, "bar_fn"));
 
-    // Create non-function syntax operators
+    // Make a few non-function syntax operators
     extractionOperators.add(new DirectOperatorConversion(createNonFunctionOperator("not_a_fn_1"), "not_a_fn_1"));
     extractionOperators.add(new DirectOperatorConversion(createNonFunctionOperator("not_a_fn_2"), "not_a_fn_2"));
     return extractionOperators;

@@ -433,7 +433,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testAggregatorOnInformationSchemaRoutines()
+  public void testFilterAggregatorFunctionsOnInformationSchemaRoutines()
   {
     notMsqCompatible();
     testQuery(
@@ -449,7 +449,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNonAggregatorOnInformationSchemaRoutines()
+  public void testFilterScalarFunctionsOnInformationSchemaRoutines()
   {
     notMsqCompatible();
     testQuery(
@@ -461,6 +461,19 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{152L}
         )
+    );
+  }
+
+  @Test
+  public void testNonExistentSchemaOnInformationSchemaRoutines()
+  {
+    notMsqCompatible();
+    testQuery(
+        "SELECT *\n"
+        + "FROM INFORMATION_SCHEMA.ROUTINES\n"
+        + "WHERE ROUTINE_SCHEMA = 'boo'",
+        ImmutableList.of(),
+        ImmutableList.of()
     );
   }
 
