@@ -236,6 +236,9 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   {
     return new ExplainAttributes(
         "SELECT",
+        null,
+        null,
+        null,
         null
     );
   }
