@@ -211,12 +211,14 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
     return new SqlOperator(operatorName, SqlKind.PLUS_PREFIX, 0, false, null,
                            InferTypes.RETURN_TYPE, OperandTypes.VARIADIC) {
       @Override
-      public SqlSyntax getSyntax() {
-        return  SqlSyntax.POSTFIX;
+      public SqlSyntax getSyntax()
+      {
+        return SqlSyntax.POSTFIX;
       }
 
       @Override
-      public boolean isDynamicFunction() {
+      public boolean isDynamicFunction()
+      {
         return true;
       }
     };
