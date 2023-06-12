@@ -263,7 +263,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                         catch (IOException e) {
                           String exceptionMessage = StringUtils.format(
                               "Could not map json payload to a SupervisorSpec for spec_id: [%s]."
-                              + " Please remove the supervisor from the database and then submit a new request via the overlord.",
+                              + " Delete the supervisor from the database and re-submit it to the overlord.",
                               r.getString("spec_id")
                           );
                           log.error(e, exceptionMessage);
