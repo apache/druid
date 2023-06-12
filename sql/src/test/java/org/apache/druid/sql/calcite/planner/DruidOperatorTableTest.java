@@ -49,6 +49,20 @@ public class DruidOperatorTableTest
   }
 
   @Test
+  public void testIsFunctionSyntax()
+  {
+    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION));
+    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION_STAR));
+    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION_ID));
+    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.SPECIAL));
+    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.INTERNAL));
+
+    Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.BINARY));
+    Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.PREFIX));
+    Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.POSTFIX));
+  }
+
+  @Test
   public void testCustomOperatorTable()
   {
     final SqlOperator operator1 = OperatorConversions
@@ -82,19 +96,5 @@ public class DruidOperatorTableTest
 
     Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(operator1.getSyntax()));
     Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(operator2.getSyntax()));
-  }
-
-  @Test
-  public void testIsFunctionSyntax()
-  {
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION));
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION_STAR));
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION_ID));
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.SPECIAL));
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.INTERNAL));
-
-    Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.BINARY));
-    Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.PREFIX));
-    Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.POSTFIX));
   }
 }
