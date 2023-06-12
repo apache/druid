@@ -26,8 +26,15 @@ import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.SqlSyntax;
+import org.apache.calcite.sql.type.InferTypes;
+import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
@@ -43,11 +50,14 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class InformationSchemaTest extends BaseCalciteQueryTest
 {
@@ -93,7 +103,8 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
 
     List<Object[]> rows = routinesTable.scan(dataContext).toList();
 
-    Assert.assertTrue("There should be at least 10 functions", rows.size() > 10);
+    Assert.assertTrue("There should at least be 10 built-in functions that gets statically loaded by default",
+                      rows.size() > 10);
     RelDataType rowType = routinesTable.getRowType(new JavaTypeFactoryImpl());
     Assert.assertEquals(6, rowType.getFieldCount());
 
@@ -110,15 +121,24 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testScanRoutinesTableWithCustomOperatorTable()
+  public void testScanRoutinesTableWithCustomOperators()
   {
-    DruidOperatorTable operatorTable1 = addCustomOperatorsToOperatorTable();
-    InformationSchema.RoutinesTable routinesTable = new InformationSchema.RoutinesTable(operatorTable1);
+    Set<SqlOperatorConversion> sqlOperatorConversions = customOperatorsToOperatorConversions();
+    final List<SqlOperator> sqlOperators = sqlOperatorConversions.stream()
+                                                           .map(SqlOperatorConversion::calciteOperator)
+                                                           .collect(Collectors.toList());
+
+    DruidOperatorTable mockOperatorTable = Mockito.mock(DruidOperatorTable.class);
+    Mockito.when(mockOperatorTable.getOperatorList()).thenReturn(sqlOperators);
+
+    InformationSchema.RoutinesTable routinesTable = new InformationSchema.RoutinesTable(mockOperatorTable);
     DataContext dataContext = createDataContext();
 
     List<Object[]> rows = routinesTable.scan(dataContext).toList();
 
-    Assert.assertTrue(rows.size() > 2);
+    Assert.assertNotNull(rows);
+    Assert.assertEquals("There should be exactly 2 rows; any non-function syntax operator should get filtered out",
+                        2, rows.size());
     Object[] expectedRow1 = {"druid", "INFORMATION_SCHEMA", "FOO", "FUNCTION", "NO", "'FOO(<ANY>)'"};
     Assert.assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow1)));
 
@@ -126,7 +146,25 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
     Assert.assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow2)));
   }
 
-  private static DruidOperatorTable addCustomOperatorsToOperatorTable()
+  @Test
+  public void testScanRoutinesTableWithAnEmptyOperatorTable()
+  {
+    DruidOperatorTable mockOperatorTable = Mockito.mock(DruidOperatorTable.class);
+
+    // This should never happen. Adding a test case, so we don't hit a NPE and instead return gracefully.
+    List<SqlOperator> emptyOperatorList = new ArrayList<>();
+    Mockito.when(mockOperatorTable.getOperatorList()).thenReturn(emptyOperatorList);
+
+    InformationSchema.RoutinesTable routinesTable = new InformationSchema.RoutinesTable(mockOperatorTable);
+    DataContext dataContext = createDataContext();
+
+    List<Object[]> rows = routinesTable.scan(dataContext).toList();
+
+    Assert.assertNotNull(rows);
+    Assert.assertEquals(0, rows.size());
+  }
+
+  private static Set<SqlOperatorConversion> customOperatorsToOperatorConversions()
   {
     final SqlOperator operator1 = OperatorConversions
         .operatorBuilder("FOO")
@@ -161,7 +199,30 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
     final Set<SqlOperatorConversion> extractionOperators = new HashSet<>();
     extractionOperators.add(new DirectOperatorConversion(operator1, "foo_fn"));
     extractionOperators.add(new DirectOperatorConversion(operator2, "bar_fn"));
-    return new DruidOperatorTable(ImmutableSet.of(), extractionOperators);
+
+    // Create non-function syntax operators
+    extractionOperators.add(new DirectOperatorConversion(createNonFunctionOperator("not_a_fn_1"), "not_a_fn_1"));
+    extractionOperators.add(new DirectOperatorConversion(createNonFunctionOperator("not_a_fn_2"), "not_a_fn_2"));
+    return extractionOperators;
+  }
+
+  /**
+   * A test factory to create non-function SQL synatx operators.
+   */
+  private static SqlOperator createNonFunctionOperator(String operatorName)
+  {
+    return new SqlOperator(operatorName, SqlKind.PLUS_PREFIX, 0, false, null,
+                           InferTypes.RETURN_TYPE, OperandTypes.VARIADIC) {
+      @Override
+      public SqlSyntax getSyntax() {
+        return  SqlSyntax.POSTFIX;
+      }
+
+      @Override
+      public boolean isDynamicFunction() {
+        return true;
+      }
+    };
   }
 
   private DataContext createDataContext()
