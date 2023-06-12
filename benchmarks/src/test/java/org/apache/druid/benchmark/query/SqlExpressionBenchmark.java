@@ -215,7 +215,15 @@ public class SqlExpressionBenchmark
       "SELECT LATEST(float3), LATEST(long1), LATEST(double4) FROM foo",
       // 42,43: filter numeric nulls
       "SELECT SUM(long5) FROM foo WHERE long5 IS NOT NULL",
-      "SELECT string2, SUM(long5) FROM foo WHERE long5 IS NOT NULL GROUP BY 1"
+      "SELECT string2, SUM(long5) FROM foo WHERE long5 IS NOT NULL GROUP BY 1",
+      // 44: EARLIEST aggregator
+      "SELECT EARLIEST(long1) FROM foo",
+      // 45: EARLIEST aggregator double
+      "SELECT EARLIEST(double4) FROM foo",
+      // 46: EARLIEST aggregator float
+      "SELECT EARLIEST(float3) FROM foo",
+      // 47: EARLIEST aggregator all
+      "SELECT EARLIEST(float3), EARLIEST(long1), EARLIEST(double4) FROM foo"
   );
 
   @Param({"5000000"})
@@ -273,7 +281,11 @@ public class SqlExpressionBenchmark
       "40",
       "41",
       "42",
-      "43"
+      "43",
+      "44",
+      "45",
+      "46",
+      "47"
   })
   private String query;
 

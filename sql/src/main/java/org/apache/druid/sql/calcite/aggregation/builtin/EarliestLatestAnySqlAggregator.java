@@ -198,13 +198,12 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     final String fieldName = getColumnName(plannerContext, virtualColumnRegistry, args.get(0), rexNodes.get(0));
 
     if (!rowSignature.contains(ColumnHolder.TIME_COLUMN_NAME) && (aggregatorType == AggregatorType.LATEST || aggregatorType == AggregatorType.EARLIEST)) {
-      plannerContext.setPlanningError("%s() aggregator depends on __time column, the underlying datasource "
+      throw new ISE("%s() aggregator depends on __time column, the underlying datasource "
                                       + "or extern function you are querying doesn't contain __time column, "
                                       + "Please use %s_BY() and specify the time column you want to use",
                                       aggregatorType.name(),
                                       aggregatorType.name()
       );
-      return null;
     }
 
     final AggregatorFactory theAggFactory;
