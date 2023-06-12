@@ -638,8 +638,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testEarliestAggregators()
   {
     notMsqCompatible();
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
 
     testQuery(
         "SELECT "
@@ -1071,8 +1069,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testPrimitiveEarliestInSubquery()
   {
     notMsqCompatible();
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
 
     testQuery(
         "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, EARLIEST(m1) AS val1, EARLIEST(cnt) AS val2, EARLIEST(m2) AS val3 FROM foo GROUP BY dim2)",
@@ -1170,9 +1166,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringEarliestInSubquery()
   {
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
-
     testQuery(
         "SELECT SUM(val) FROM (SELECT dim2, EARLIEST(dim1, 10) AS val FROM foo GROUP BY dim2)",
         ImmutableList.of(
@@ -1424,8 +1417,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testFirstLatestAggregatorsSkipNulls()
   {
     notMsqCompatible();
-    // Cannot vectorize EARLIEST aggregator.
-    skipVectorize();
 
     final DimFilter filter;
     if (useDefault) {
