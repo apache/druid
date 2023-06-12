@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * DataSegment object plus the overshadowed and target number of replicants for the segment. An immutable object.
+ * DataSegment object plus the overshadowed and target replication factor for the segment. An immutable object.
  * <br></br>
  * SegmentStatusInCluster's {@link #compareTo} method considers only the {@link SegmentId}
  * of the DataSegment object.

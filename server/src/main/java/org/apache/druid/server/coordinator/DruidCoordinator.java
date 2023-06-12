@@ -156,7 +156,7 @@ public class DruidCoordinator
   private volatile SegmentReplicantLookup segmentReplicantLookup = null;
 
   /**
-   * Contains a map of segmentId to total replciation factor across all tiers. This map is refreshed when load rules are
+   * Contains a map of segmentId to total replication factor across all tiers. This map is refreshed when load rules are
    * evaluated. It is used by {@link DruidCoordinator} to supply this value to
    * {@link org.apache.druid.server.http.MetadataResource}.
    */

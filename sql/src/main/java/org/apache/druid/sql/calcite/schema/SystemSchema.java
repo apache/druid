@@ -330,6 +330,8 @@ public class SystemSchema extends AbstractSchema
                   segment.getDimensions() == null ? null : jsonMapper.writeValueAsString(segment.getDimensions()),
                   segment.getMetrics() == null ? null : jsonMapper.writeValueAsString(segment.getMetrics()),
                   segment.getLastCompactionState() == null ? null : jsonMapper.writeValueAsString(segment.getLastCompactionState()),
+                  // If the value is null, the load rules might have not evaluated yet, and we don't know the replication factor.
+                  // This should be automatically updated in the next refesh with Coordinator.
                   val.getReplicationFactor() == null ? REPLICATION_FACTOR_UNKNOWN : (long) val.getReplicationFactor()
               };
             }
@@ -373,7 +375,7 @@ public class SystemSchema extends AbstractSchema
                   val.getValue().getSegment().getDimensions() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getDimensions()),
                   val.getValue().getSegment().getMetrics() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getMetrics()),
                   null, // unpublished segments from realtime tasks will not be compacted yet
-                  REPLICATION_FACTOR_UNKNOWN
+                  REPLICATION_FACTOR_UNKNOWN // If the segment is unpublished, we won't have this information yet.
               };
             }
             catch (JsonProcessingException e) {
