@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
@@ -60,7 +61,7 @@ import java.util.Map;
 import java.util.Set;
 
 @JsonTypeName(MSQControllerTask.TYPE)
-public class MSQControllerTask extends AbstractTask
+public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
 {
   public static final String TYPE = "query_controller";
   public static final String DUMMY_DATASOURCE_FOR_SELECT = "__query_select";

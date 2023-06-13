@@ -86,6 +86,9 @@ public class QueryContexts
   public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
+  // SQL statement resource specific keys
+  public static final String CTX_EXECUTION_MODE = "executionMode";
+
   // Defaults
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -423,8 +426,20 @@ public class QueryContexts
 
   public static <E extends Enum<E>> E getAsEnum(String key, Object value, Class<E> clazz, E defaultValue)
   {
-    if (value == null) {
+    E result = getAsEnum(key, value, clazz);
+    if (result == null) {
       return defaultValue;
+    } else {
+      return result;
+    }
+  }
+
+
+  @Nullable
+  public static <E extends Enum<E>> E getAsEnum(String key, Object value, Class<E> clazz)
+  {
+    if (value == null) {
+      return null;
     }
 
     try {

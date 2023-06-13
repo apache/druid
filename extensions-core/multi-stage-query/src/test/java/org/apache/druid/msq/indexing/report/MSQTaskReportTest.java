@@ -60,7 +60,7 @@ public class MSQTaskReportTest
 {
   private static final String TASK_ID = "mytask";
   private static final String HOST = "example.com:1234";
-  private static final QueryDefinition QUERY_DEFINITION =
+  public static final QueryDefinition QUERY_DEFINITION =
       QueryDefinition
           .builder()
           .add(

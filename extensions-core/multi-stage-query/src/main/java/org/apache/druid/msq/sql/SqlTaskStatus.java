@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.msq.sql.resources.SqlTaskResource;
 import org.apache.druid.query.QueryException;
 
 import javax.annotation.Nullable;
