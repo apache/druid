@@ -222,7 +222,7 @@ public class StringSqlAggregator implements SqlAggregator
           OperandTypes.or(
               OperandTypes.and(
                   OperandTypes.sequence(
-                      StringUtils.format("'%s'(expr, separator)", NAME),
+                      StringUtils.format("'%s(expr, separator)'", NAME),
                       OperandTypes.ANY,
                       OperandTypes.STRING
                   ),
@@ -230,7 +230,7 @@ public class StringSqlAggregator implements SqlAggregator
               ),
               OperandTypes.and(
                   OperandTypes.sequence(
-                      StringUtils.format("'%s'(expr, separator, maxSizeBytes)", NAME),
+                      StringUtils.format("'%s(expr, separator, maxSizeBytes)'", NAME),
                       OperandTypes.ANY,
                       OperandTypes.STRING,
                       OperandTypes.POSITIVE_INTEGER_LITERAL
