@@ -20,6 +20,7 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -43,12 +44,11 @@ import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DruidPredicateIndex;
+import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.NullValueIndex;
-import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.column.NumericRangeIndex;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
-import org.apache.druid.segment.data.CompressionFactory;
-import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -69,12 +69,12 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
@@ -82,78 +82,56 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 @RunWith(Parameterized.class)
-public class VariantColumnSupplierTest extends InitializedNullHandlingTest
+public class ConstantColumnSupplierTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
 
-  BitmapSerdeFactory bitmapSerdeFactory = RoaringBitmapSerdeFactory.getInstance();
-  DefaultBitmapResultFactory resultFactory = new DefaultBitmapResultFactory(bitmapSerdeFactory.getBitmapFactory());
-  static List<List<Long>> LONG_ARRAY = Arrays.asList(
-      Collections.emptyList(),
-      Arrays.asList(1L, null, 2L),
+  public static List<Object> CONSTANT_NULL = Arrays.asList(
       null,
-      Collections.singletonList(null),
-      Arrays.asList(3L, 4L),
-      Arrays.asList(null, null)
-  );
-
-  static List<List<Double>> DOUBLE_ARRAY = Arrays.asList(
-      Collections.emptyList(),
-      Arrays.asList(1.1, null, 2.2),
       null,
-      Collections.singletonList(null),
-      Arrays.asList(3.3, 4.4),
-      Arrays.asList(null, null)
-  );
-
-  static List<List<String>> STRING_ARRAY = Arrays.asList(
-      Collections.emptyList(),
-      Arrays.asList("a", null, "b"),
       null,
-      Collections.singletonList(null),
-      Arrays.asList("c", "d"),
-      Arrays.asList(null, null)
-  );
-
-  static List<Object> VARIANT_NUMERIC = Arrays.asList(
-      1L,
-      2.2,
       null,
-      3.3,
-      4L,
       null
   );
 
-  static List<Object> VARIANT_SCALAR = Arrays.asList(
-      null,
-      1L,
-      null,
-      "b",
-      3.3,
-      4L
+  public static List<String> CONSTANT_STRING = Arrays.asList(
+      "abcd",
+      "abcd",
+      "abcd",
+      "abcd",
+      "abcd"
   );
 
-  static List<Object> VARIANT_SCALAR_AND_ARRAY = Arrays.asList(
-      Collections.emptyList(),
-      2L,
-      null,
-      Collections.singletonList(null),
-      Arrays.asList(3L, 4L),
-      Arrays.asList(null, "a"),
-      5.5,
-      "b"
+  public static List<Long> CONSTANT_LONG = Arrays.asList(
+      1234L,
+      1234L,
+      1234L,
+      1234L,
+      1234L
   );
 
-  static List<List<Object>> VARIANT_ARRAY = Arrays.asList(
-      Collections.emptyList(),
-      Arrays.asList("a", null, "b"),
-      null,
-      Collections.singletonList(null),
-      Arrays.asList(3L, 4L),
-      Arrays.asList(null, 3.3)
+  public static List<List<Long>> CONSTANT_LONG_ARRAY = Arrays.asList(
+      Arrays.asList(1L, 2L, 3L, 4L),
+      Arrays.asList(1L, 2L, 3L, 4L),
+      Arrays.asList(1L, 2L, 3L, 4L),
+      Arrays.asList(1L, 2L, 3L, 4L),
+      Arrays.asList(1L, 2L, 3L, 4L)
   );
 
+  public static List<Object> CONSTANT_EMPTY_OBJECTS = Arrays.asList(
+      Collections.emptyMap(),
+      Collections.emptyMap(),
+      Collections.emptyMap(),
+      Collections.emptyMap(),
+      Collections.emptyMap()
+  );
+
+  public static List<Object> CONSTANT_OBJECTS = Arrays.asList(
+      ImmutableMap.of("x", 1234, "y", 1.234, "z", "abcd"),
+      ImmutableMap.of("x", 1234, "y", 1.234, "z", "abcd"),
+      ImmutableMap.of("x", 1234, "y", 1.234, "z", "abcd"),
+      ImmutableMap.of("x", 1234, "y", 1.234, "z", "abcd"),
+      ImmutableMap.of("x", 1234, "y", 1.234, "z", "abcd")
+  );
 
   @BeforeClass
   public static void staticSetup()
@@ -164,31 +142,20 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
   @Parameterized.Parameters(name = "data = {0}")
   public static Collection<?> constructorFeeder()
   {
-    IndexSpec fancy = IndexSpec.builder()
-                               .withLongEncoding(CompressionFactory.LongEncodingStrategy.AUTO)
-                               .withStringDictionaryEncoding(
-                                   new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V1)
-                               )
-                               .build();
     final List<Object[]> constructors = ImmutableList.of(
-        new Object[]{"ARRAY<LONG>", LONG_ARRAY, IndexSpec.DEFAULT},
-        new Object[]{"ARRAY<LONG>", LONG_ARRAY, fancy},
-        new Object[]{"ARRAY<DOUBLE>", DOUBLE_ARRAY, IndexSpec.DEFAULT},
-        new Object[]{"ARRAY<DOUBLE>", DOUBLE_ARRAY, fancy},
-        new Object[]{"ARRAY<STRING>", STRING_ARRAY, IndexSpec.DEFAULT},
-        new Object[]{"ARRAY<STRING>", STRING_ARRAY, fancy},
-        new Object[]{"DOUBLE,LONG", VARIANT_NUMERIC, IndexSpec.DEFAULT},
-        new Object[]{"DOUBLE,LONG", VARIANT_NUMERIC, fancy},
-        new Object[]{"DOUBLE,LONG,STRING", VARIANT_SCALAR, IndexSpec.DEFAULT},
-        new Object[]{"DOUBLE,LONG,STRING", VARIANT_SCALAR, fancy},
-        new Object[]{"ARRAY<LONG>,ARRAY<STRING>,DOUBLE,LONG,STRING", VARIANT_SCALAR_AND_ARRAY, IndexSpec.DEFAULT},
-        new Object[]{"ARRAY<LONG>,ARRAY<STRING>,DOUBLE,LONG,STRING", VARIANT_SCALAR_AND_ARRAY, fancy},
-        new Object[]{"ARRAY<DOUBLE>,ARRAY<LONG>,ARRAY<STRING>", VARIANT_ARRAY, IndexSpec.DEFAULT},
-        new Object[]{"ARRAY<DOUBLE>,ARRAY<LONG>,ARRAY<STRING>", VARIANT_ARRAY, fancy}
+        new Object[]{"NULL", CONSTANT_NULL, IndexSpec.DEFAULT},
+        new Object[]{"STRING", CONSTANT_STRING, IndexSpec.DEFAULT},
+        new Object[]{"LONG", CONSTANT_LONG, IndexSpec.DEFAULT},
+        new Object[]{"ARRAY<LONG>", CONSTANT_LONG_ARRAY, IndexSpec.DEFAULT},
+        new Object[]{"EMPTY OBJECT", CONSTANT_EMPTY_OBJECTS, IndexSpec.DEFAULT},
+        new Object[]{"OBJECT", CONSTANT_OBJECTS, IndexSpec.DEFAULT}
     );
 
     return constructors;
   }
+
+  @Rule
+  public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   Closer closer = Closer.create();
 
@@ -203,7 +170,10 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
   private final List<?> data;
   private final IndexSpec indexSpec;
 
-  public VariantColumnSupplierTest(
+  BitmapSerdeFactory bitmapSerdeFactory = RoaringBitmapSerdeFactory.getInstance();
+  DefaultBitmapResultFactory resultFactory = new DefaultBitmapResultFactory(bitmapSerdeFactory.getBitmapFactory());
+
+  public ConstantColumnSupplierTest(
       @SuppressWarnings("unused") String name,
       List<?> data,
       IndexSpec indexSpec
@@ -240,24 +210,31 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
           new IndexableAdapter.NestedColumnMergable(
               indexer.getSortedValueLookups(),
               indexer.getFieldTypeInfo(),
-              false,
-              false,
-              null
+              data.get(0) instanceof Map,
+              true,
+              data.get(0)
           )
       );
       SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
       mergable.mergeFieldsInto(sortedFields);
 
-      expectedTypes = new FieldTypeInfo.MutableTypeSet((byte) (sortedFields.get(NestedPathFinder.JSON_PATH_ROOT).getByteValue() & 0x7F));
-      for (ColumnType type : FieldTypeInfo.convertToSet(expectedTypes.getByteValue())) {
-        expectedLogicalType = ColumnType.leastRestrictiveType(expectedLogicalType, type);
+      expectedTypes = sortedFields.get(NestedPathFinder.JSON_PATH_ROOT);
+      if (expectedTypes != null) {
+        for (ColumnType type : FieldTypeInfo.convertToSet(expectedTypes.getByteValue())) {
+          expectedLogicalType = ColumnType.leastRestrictiveType(expectedLogicalType, type);
+        }
+        if (expectedLogicalType == null) {
+          expectedLogicalType = ColumnType.STRING;
+        }
+      } else {
+        expectedLogicalType = ColumnType.STRING;
       }
-      VariantColumnSerializer serializer = new VariantColumnSerializer(
+      if (data.get(0) instanceof Map) {
+        expectedLogicalType = ColumnType.NESTED_DATA;
+      }
+      ConstantColumnSerializer serializer = new ConstantColumnSerializer(
           fileNameBase,
-          expectedTypes.getSingleType() == null ? expectedTypes.getByteValue() : null,
-          indexSpec,
-          writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
-          closer
+          data.get(0)
       );
 
       serializer.openDictionaryWriter();
@@ -297,15 +274,12 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
   {
     ColumnBuilder bob = new ColumnBuilder();
     bob.setFileMapper(fileMapper);
-    VariantColumnAndIndexSupplier supplier = VariantColumnAndIndexSupplier.read(
+    ConstantColumnAndIndexSupplier supplier = ConstantColumnAndIndexSupplier.read(
         expectedLogicalType,
-        ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
-        baseBuffer,
-        bob,
-        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
+        baseBuffer
     );
-    try (VariantColumn<?> column = (VariantColumn<?>) supplier.get()) {
+    try (ConstantColumn column = (ConstantColumn) supplier.get()) {
       smokeTest(supplier, column, data, expectedTypes);
     }
   }
@@ -316,13 +290,10 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
     // if this test ever starts being to be a flake, there might be thread safety issues
     ColumnBuilder bob = new ColumnBuilder();
     bob.setFileMapper(fileMapper);
-    VariantColumnAndIndexSupplier supplier = VariantColumnAndIndexSupplier.read(
+    ConstantColumnAndIndexSupplier supplier = ConstantColumnAndIndexSupplier.read(
         expectedLogicalType,
-        ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
-        baseBuffer,
-        bob,
-        NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
+        baseBuffer
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);
@@ -339,7 +310,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
             try {
               threadsStartLatch.await();
               for (int iter = 0; iter < 5000; iter++) {
-                try (VariantColumn column = (VariantColumn) supplier.get()) {
+                try (ConstantColumn column = (ConstantColumn) supplier.get()) {
                   smokeTest(supplier, column, data, expectedTypes);
                 }
               }
@@ -356,8 +327,8 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
   }
 
   private void smokeTest(
-      VariantColumnAndIndexSupplier supplier,
-      VariantColumn<?> column,
+      ConstantColumnAndIndexSupplier supplier,
+      ConstantColumn column,
       List<?> data,
       FieldTypeInfo.MutableTypeSet expectedType
   )
@@ -372,18 +343,35 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
         expectedLogicalType.isPrimitive() ? column.makeSingleValueDimensionVectorSelector(vectorOffset) : null;
 
     StringValueSetIndex valueSetIndex = supplier.as(StringValueSetIndex.class);
-    Assert.assertNull(valueSetIndex);
     DruidPredicateIndex predicateIndex = supplier.as(DruidPredicateIndex.class);
-    Assert.assertNull(predicateIndex);
     NullValueIndex nullValueIndex = supplier.as(NullValueIndex.class);
+    LexicographicalRangeIndex lexicographicalRangeIndex = supplier.as(LexicographicalRangeIndex.class);
+    NumericRangeIndex rangeIndex = supplier.as(NumericRangeIndex.class);
+    if (!expectedLogicalType.isPrimitive()) {
+      Assert.assertNull(valueSetIndex);
+      Assert.assertNull(predicateIndex);
+      Assert.assertNull(lexicographicalRangeIndex);
+      Assert.assertNull(rangeIndex);
+    } else {
+      Assert.assertNotNull(valueSetIndex);
+      Assert.assertNotNull(predicateIndex);
+      if (expectedLogicalType.isNumeric()) {
+        Assert.assertNull(lexicographicalRangeIndex);
+        Assert.assertNotNull(rangeIndex);
+      } else {
+        Assert.assertNotNull(lexicographicalRangeIndex);
+        Assert.assertNull(rangeIndex);
+      }
+    }
     Assert.assertNotNull(nullValueIndex);
 
     SortedMap<String, FieldTypeInfo.MutableTypeSet> fields = column.getFieldTypeInfo();
-    Assert.assertEquals(1, fields.size());
-    Assert.assertEquals(
-        expectedType,
-        fields.get(NestedPathFinder.JSON_PATH_ROOT)
-    );
+    if (expectedType != null) {
+      Assert.assertEquals(
+          ImmutableMap.of(NestedPathFinder.JSON_PATH_ROOT, expectedType),
+          fields
+      );
+    }
     final ExpressionType expressionType = ExpressionType.fromColumnTypeStrict(expectedLogicalType);
 
     for (int i = 0; i < data.size(); i++) {
@@ -402,8 +390,13 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
             Assert.assertArrayEquals(ExprEval.ofType(expressionType, row).asArray(), (Object[]) vectorObjectSelector.getObjectVector()[0]);
           }
         } else {
-          Assert.assertEquals(row, valueSelector.getObject());
-          if (expectedType.getSingleType() != null) {
+          if (row instanceof Map) {
+            assertMapEquals(row, valueSelector.getObject());
+          } else {
+            Assert.assertEquals(row, valueSelector.getObject());
+            Assert.assertTrue(valueSetIndex.forValue(String.valueOf(row)).computeBitmapResult(resultFactory).get(i));
+          }
+          if (expectedType != null && expectedType.getSingleType() != null) {
             Assert.assertEquals(
                 row,
                 vectorObjectSelector.getObjectVector()[0]
@@ -413,14 +406,16 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
             ExprEval eval = ExprEval.ofType(expressionType, row);
             if (expectedLogicalType.isArray()) {
               Assert.assertArrayEquals(eval.asArray(), (Object[]) vectorObjectSelector.getObjectVector()[0]);
+            } else if (expectedLogicalType.isPrimitive()) {
+              assertMapEquals(eval.value(), vectorObjectSelector.getObjectVector()[0]);
             } else {
               Assert.assertEquals(eval.value(), vectorObjectSelector.getObjectVector()[0]);
             }
           }
           if (dimensionSelector != null) {
             Assert.assertEquals(String.valueOf(row), dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-            // null is always 0
-            Assert.assertTrue(dimensionSelector.idLookup().lookupId(String.valueOf(row)) > 0);
+            // constants, always 0
+            Assert.assertTrue(dimensionSelector.idLookup().lookupId(String.valueOf(row)) == 0);
             if (dimensionVectorSelector != null) {
               int[] dim = dimensionVectorSelector.getRowVector();
               Assert.assertEquals(String.valueOf(row), dimensionVectorSelector.lookupName(dim[0]));
@@ -444,6 +439,16 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
 
       offset.increment();
       vectorOffset.advance();
+    }
+  }
+
+  private static void assertMapEquals(Object o1, Object o2)
+  {
+    Map<String, ?> m1 = (Map<String, ?>) o1;
+    Map<String, ?> m2 = (Map<String, ?>) o2;
+    Assert.assertEquals(m1.size(), m2.size());
+    for (String k : m1.keySet()) {
+      Assert.assertEquals(m1.get(k), m2.get(k));
     }
   }
 }

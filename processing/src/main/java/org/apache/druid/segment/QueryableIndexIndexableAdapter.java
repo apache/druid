@@ -28,12 +28,14 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.ImmutableBitmapValues;
 import org.apache.druid.segment.data.IndexedIterable;
+import org.apache.druid.segment.nested.ConstantColumn;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.SortedValueDictionary;
@@ -184,6 +186,21 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     final BaseColumn col = columnHolder.getColumn();
     if (col instanceof NestedCommonFormatColumn) {
       NestedCommonFormatColumn column = (NestedCommonFormatColumn) col;
+      if (column instanceof ConstantColumn) {
+        return new NestedColumnMergable(
+            new SortedValueDictionary(
+                column.getStringDictionary(),
+                column.getLongDictionary(),
+                column.getDoubleDictionary(),
+                column.getArrayDictionary(),
+                column
+            ),
+            column.getFieldTypeInfo(),
+            ColumnType.NESTED_DATA.equals(column.getLogicalType()),
+            true,
+            ((ConstantColumn) column).getConstantValue()
+        );
+      }
       return new NestedColumnMergable(
           new SortedValueDictionary(
               column.getStringDictionary(),
@@ -192,7 +209,10 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
               column.getArrayDictionary(),
               column
           ),
-          column.getFieldTypeInfo()
+          column.getFieldTypeInfo(),
+          ColumnType.NESTED_DATA.equals(column.getLogicalType()),
+          false,
+          null
       );
     }
 

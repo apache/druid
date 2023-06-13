@@ -50,6 +50,7 @@ import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.nested.ConstantColumn;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
@@ -346,6 +347,12 @@ public class SegmentAnalyzer
                                                      .withTypeName(typeName);
 
     try (final BaseColumn theColumn = columnHolder != null ? columnHolder.getColumn() : null) {
+      bob.hasMultipleValues(capabilities.hasMultipleValues().isTrue())
+         .hasNulls(capabilities.hasNulls().isMaybeTrue());
+
+      if (theColumn instanceof ConstantColumn) {
+        return bob.build();
+      }
       if (theColumn != null && !(theColumn instanceof ComplexColumn)) {
         return bob.withErrorMessage(
                     StringUtils.format(
@@ -357,9 +364,6 @@ public class SegmentAnalyzer
                   .build();
       }
       final ComplexColumn complexColumn = (ComplexColumn) theColumn;
-
-      bob.hasMultipleValues(capabilities.hasMultipleValues().isTrue())
-         .hasNulls(capabilities.hasNulls().isMaybeTrue());
 
       long size = 0;
       if (analyzingSize() && complexColumn != null) {

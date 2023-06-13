@@ -44,12 +44,10 @@ public class FieldTypeInfo
   private static final byte STRING_MASK = 1;
   private static final byte LONG_MASK = 1 << 2;
   private static final byte DOUBLE_MASK = 1 << 3;
-
   private static final byte STRING_ARRAY_MASK = 1 << 4;
-
   private static final byte LONG_ARRAY_MASK = 1 << 5;
-
   private static final byte DOUBLE_ARRAY_MASK = 1 << 6;
+  private static final short EMPTY_ARRAY_MASK = 1 << 7;
 
   public static FieldTypeInfo read(ByteBuffer buffer, int length)
   {
@@ -169,6 +167,20 @@ public class FieldTypeInfo
       return this;
     }
 
+    public MutableTypeSet addEmptyArray()
+    {
+      if (types < 0) {
+        return this;
+      }
+      types = (byte) (types | EMPTY_ARRAY_MASK);
+      return this;
+    }
+
+    public boolean hasEmptyArray()
+    {
+      return types < 0;
+    }
+
     public MutableTypeSet merge(byte other)
     {
       types |= other;
@@ -281,6 +293,10 @@ public class FieldTypeInfo
     }
     if ((types & DOUBLE_ARRAY_MASK) > 0) {
       singleType = ColumnType.DOUBLE_ARRAY;
+      count++;
+    }
+    // if type isn't an array and the empty array bit is set, increment the count
+    if (((types & EMPTY_ARRAY_MASK) > 0) && !(singleType != null && singleType.isArray())) {
       count++;
     }
     return count == 1 ? singleType : null;

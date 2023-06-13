@@ -59,6 +59,9 @@ public class IndexSpec
   @Nullable
   private final CompressionStrategy jsonCompression;
 
+  // remove before Druid 28
+  private final boolean optimizeJsonConstantColumns;
+
   @Nullable
   private final SegmentizerFactory segmentLoader;
 
@@ -92,6 +95,7 @@ public class IndexSpec
       @JsonProperty("metricCompression") @Nullable CompressionStrategy metricCompression,
       @JsonProperty("longEncoding") @Nullable CompressionFactory.LongEncodingStrategy longEncoding,
       @JsonProperty("jsonCompression") @Nullable CompressionStrategy jsonCompression,
+      @JsonProperty("optimizeJsonConstantColumns") boolean optimizeJsonConstantColumns,
       @JsonProperty("segmentLoader") @Nullable SegmentizerFactory segmentLoader
   )
   {
@@ -112,6 +116,7 @@ public class IndexSpec
                         ? CompressionFactory.DEFAULT_LONG_ENCODING_STRATEGY
                         : longEncoding;
     this.jsonCompression = jsonCompression;
+    this.optimizeJsonConstantColumns = optimizeJsonConstantColumns;
     this.segmentLoader = segmentLoader;
   }
 
@@ -161,6 +166,15 @@ public class IndexSpec
     return jsonCompression;
   }
 
+  /**
+   * Remove before Druid 28
+   */
+  @JsonProperty
+  public boolean optimizeJsonConstantColumns()
+  {
+    return optimizeJsonConstantColumns;
+  }
+
   public Map<String, Object> asMap(ObjectMapper objectMapper)
   {
     return objectMapper.convertValue(
@@ -185,13 +199,14 @@ public class IndexSpec
            metricCompression == indexSpec.metricCompression &&
            longEncoding == indexSpec.longEncoding &&
            Objects.equals(jsonCompression, indexSpec.jsonCompression) &&
+           optimizeJsonConstantColumns == indexSpec.optimizeJsonConstantColumns &&
            Objects.equals(segmentLoader, indexSpec.segmentLoader);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(bitmapSerdeFactory, dimensionCompression, stringDictionaryEncoding, metricCompression, longEncoding, jsonCompression, segmentLoader);
+    return Objects.hash(bitmapSerdeFactory, dimensionCompression, stringDictionaryEncoding, metricCompression, longEncoding, jsonCompression, optimizeJsonConstantColumns, segmentLoader);
   }
 
   @Override
@@ -204,6 +219,7 @@ public class IndexSpec
            ", metricCompression=" + metricCompression +
            ", longEncoding=" + longEncoding +
            ", jsonCompression=" + jsonCompression +
+           ", optimizeJsonConstantColumns=" + optimizeJsonConstantColumns +
            ", segmentLoader=" + segmentLoader +
            '}';
   }
@@ -222,6 +238,8 @@ public class IndexSpec
     private CompressionFactory.LongEncodingStrategy longEncoding;
     @Nullable
     private CompressionStrategy jsonCompression;
+
+    private boolean optimizeJsonConstantColumns = false;
     @Nullable
     private SegmentizerFactory segmentLoader;
 
@@ -260,6 +278,12 @@ public class IndexSpec
       return this;
     }
 
+    public Builder optimizeJsonConstantColumns(boolean optimizeJsonConstantColumns)
+    {
+      this.optimizeJsonConstantColumns = optimizeJsonConstantColumns;
+      return this;
+    }
+
     public Builder withSegmentLoader(SegmentizerFactory segmentLoader)
     {
       this.segmentLoader = segmentLoader;
@@ -275,6 +299,7 @@ public class IndexSpec
           metricCompression,
           longEncoding,
           jsonCompression,
+          optimizeJsonConstantColumns,
           segmentLoader
       );
     }

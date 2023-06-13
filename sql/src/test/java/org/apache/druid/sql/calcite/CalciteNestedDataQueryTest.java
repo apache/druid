@@ -59,6 +59,7 @@ import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -87,6 +88,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   private static final String DATA_SOURCE_MIXED = "nested_mix";
   private static final String DATA_SOURCE_MIXED_2 = "nested_mix_2";
   private static final String DATA_SOURCE_ARRAYS = "arrays";
+  private static final String DATA_SOURCE_ALL = "all_auto";
+  private static final String DATA_SOURCE_ALL_WITH_CONSTANTS = "all_auto_constants";
 
   private static final List<ImmutableMap<String, Object>> RAW_ROWS = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
@@ -294,6 +297,58 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .inputTmpDir(temporaryFolder.newFolder())
                     .buildMMappedIndex();
 
+    final QueryableIndex indexAllTypesAuto =
+        IndexBuilder.create()
+                    .tmpDir(temporaryFolder.newFolder())
+                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                    .schema(
+                        new IncrementalIndexSchema.Builder()
+                            .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                            .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                            .withMetrics(
+                                new CountAggregatorFactory("cnt")
+                            )
+                            .withRollup(false)
+                            .build()
+                    )
+                    .inputSource(
+                        ResourceInputSource.of(
+                            NestedDataTestUtils.class.getClassLoader(),
+                            NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
+                        )
+                    )
+                    .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+                    .inputTmpDir(temporaryFolder.newFolder())
+                    .buildMMappedIndex();
+
+    // remove this in Druid 28 when IndexSpec.optimizeJsonConstantColumns is removed in favor of always writing
+    // constant columns
+    final QueryableIndex indexAllTypesAutoWithOptimizedConstants =
+        IndexBuilder.create()
+                    .tmpDir(temporaryFolder.newFolder())
+                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                    .schema(
+                        new IncrementalIndexSchema.Builder()
+                            .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                            .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                            .withMetrics(
+                                new CountAggregatorFactory("cnt")
+                            )
+                            .withRollup(false)
+                            .build()
+                    )
+                    .inputSource(
+                        ResourceInputSource.of(
+                            NestedDataTestUtils.class.getClassLoader(),
+                            NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
+                        )
+                    )
+                    .indexSpec(IndexSpec.builder().optimizeJsonConstantColumns(true).build())
+                    .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+                    .inputTmpDir(temporaryFolder.newFolder())
+                    .buildMMappedIndex();
+
+
     SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate);
     walker.add(
         DataSegment.builder()
@@ -349,6 +404,26 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                    .size(0)
                    .build(),
         indexArrays
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE_ALL)
+                   .version("1")
+                   .interval(indexAllTypesAuto.getDataInterval())
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        indexAllTypesAuto
+    ).add(
+        // remove this in Druid 28 when IndexSpec.optimizeJsonConstantColumns is removed in favor of always writing
+        // constant columns
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE_ALL_WITH_CONSTANTS)
+                   .version("1")
+                   .interval(indexAllTypesAutoWithOptimizedConstants.getDataInterval())
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        indexAllTypesAutoWithOptimizedConstants
     );
 
     return walker;
@@ -5139,5 +5214,223 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         )
         .run();
+  }
+
+  @Test
+  public void testScanAllTypesAuto()
+  {
+    skipVectorize();
+    testQuery(
+        "SELECT * FROM druid.all_auto",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns(
+                      "__time",
+                      "arrayBool",
+                      "arrayDouble",
+                      "arrayDoubleNulls",
+                      "arrayLong",
+                      "arrayLongNulls",
+                      "arrayNestedLong",
+                      "arrayObject",
+                      "arrayString",
+                      "arrayStringNulls",
+                      "arrayVariant",
+                      "bool",
+                      "cDoubleArray",
+                      "cEmptyArray",
+                      "cEmptyObj",
+                      "cEmptyObjectArray",
+                      "cLongArray",
+                      "cNullArray",
+                      "cObj",
+                      "cObjectArray",
+                      "cdouble",
+                      "clong",
+                      "cnt",
+                      "complexObj",
+                      "cstr",
+                      "cstringArray",
+                      "double",
+                      "long",
+                      "null",
+                      "obj",
+                      "str",
+                      "variant",
+                      "variantEmptyObj",
+                      "variantEmtpyArray"
+                  )
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{1672531200000L, "", 0L, 0.0D, "true", "51", "1", "[]", "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]}}", "{\"x\":400,\"y\":[{\"l\":[null],\"m\":100,\"n\":5},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{}}", null, "[\"a\",\"b\"]", null, "[2,3]", null, "[null]", null, "[\"true\",\"false\",\"true\"]", null, "[{\"x\":1},{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "", 2L, 0.0D, "false", "b", "\"b\"", "2", "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]}}", "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2}],\"z\":{\"a\":[5.5],\"b\":false}}", "[\"a\",\"b\",\"c\"]", "[null,\"b\"]", "[2,3]", null, "[3.3,4.4,5.5]", "[999.0,null,5.5]", "[null,null,2.2]", "[\"true\",\"true\"]", "[null,[null],[]]", "[{\"x\":3},{\"x\":4}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "a", 1L, 1.0D, "true", "1", "1", "1", "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]}}", "{\"x\":1234,\"y\":[{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"a\",\"b\"]", "[\"a\",\"b\"]", "[1,2,3]", "[1,null,3]", "[1.1,2.2,3.3]", "[1.1,2.2,null]", "[\"a\",\"1\",\"2.2\"]", "[\"true\",\"false\",\"true\"]", "[[1,2,null],[3,4]]", "[{\"x\":1},{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "b", 4L, 3.3D, "true", "4", "{}", "4", "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]}}", "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"d\",\"e\"]", "[\"b\",\"b\"]", "[1,4]", "[1]", "[2.2,3.3,4.0]", null, "[\"a\",\"b\",\"c\"]", "[null,\"false\",\"true\"]", "[[1,2],[3,4],[5,6,7]]", "[{\"x\":null},{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "c", 0L, 4.4D, "true", "hello", "{}", "[]", "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]}}", "{\"x\":11,\"y\":[],\"z\":{\"a\":[null],\"b\":false}}", null, null, "[1,2,3]", "[]", "[1.1,2.2,3.3]", null, null, "[\"false\"]", null, "[{\"x\":1000},{\"y\":2000}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "d", 5L, 5.9D, "false", "", "\"a\"", "6", "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]}}", null, "[\"a\",\"b\"]", null, null, "[null,2,9]", null, "[999.0,5.5,null]", "[\"a\",\"1\",\"2.2\"]", "[]", "[[1],[1,2,null]]", "[{\"a\":1},{\"b\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "null", 3L, 2.0D, "", "3.0", "3.3", "3", "{\"a\":300}", "{\"x\":4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}", "[\"b\",\"c\"]", "[\"d\",null,\"b\"]", "[1,2,3,4]", "[1,2,3]", "[1.1,3.3]", "[null,2.2,null]", "[1,null,1]", "[\"true\",null,\"true\"]", "[[1],null,[1,2,3]]", "[null,{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L}
+        ) :
+        ImmutableList.of(
+            new Object[]{1672531200000L, null, null, null, "true", "51", "1", "[]", "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]}}", "{\"x\":400,\"y\":[{\"l\":[null],\"m\":100,\"n\":5},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{}}", null, "[\"a\",\"b\"]", null, "[2,3]", null, "[null]", null, "[\"true\",\"false\",\"true\"]", null, "[{\"x\":1},{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "", 2L, null, "false", "b", "\"b\"", "2", "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]}}", "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2}],\"z\":{\"a\":[5.5],\"b\":false}}", "[\"a\",\"b\",\"c\"]", "[null,\"b\"]", "[2,3]", null, "[3.3,4.4,5.5]", "[999.0,null,5.5]", "[null,null,2.2]", "[\"true\",\"true\"]", "[null,[null],[]]", "[{\"x\":3},{\"x\":4}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "a", 1L, 1.0D, "true", "1", "1", "1", "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]}}", "{\"x\":1234,\"y\":[{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"a\",\"b\"]", "[\"a\",\"b\"]", "[1,2,3]", "[1,null,3]", "[1.1,2.2,3.3]", "[1.1,2.2,null]", "[\"a\",\"1\",\"2.2\"]", "[\"true\",\"false\",\"true\"]", "[[1,2,null],[3,4]]", "[{\"x\":1},{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "b", 4L, 3.3D, "true", "4", "{}", "4", "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]}}", "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"d\",\"e\"]", "[\"b\",\"b\"]", "[1,4]", "[1]", "[2.2,3.3,4.0]", null, "[\"a\",\"b\",\"c\"]", "[null,\"false\",\"true\"]", "[[1,2],[3,4],[5,6,7]]", "[{\"x\":null},{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "c", null, 4.4D, "true", "hello", "{}", "[]", "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]}}", "{\"x\":11,\"y\":[],\"z\":{\"a\":[null],\"b\":false}}", null, null, "[1,2,3]", "[]", "[1.1,2.2,3.3]", null, null, "[\"false\"]", null, "[{\"x\":1000},{\"y\":2000}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "d", 5L, 5.9D, "false", null, "\"a\"", "6", "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]}}", null, "[\"a\",\"b\"]", null, null, "[null,2,9]", null, "[999.0,5.5,null]", "[\"a\",\"1\",\"2.2\"]", "[]", "[[1],[1,2,null]]", "[{\"a\":1},{\"b\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "null", 3L, 2.0D, null, "3.0", "3.3", "3", "{\"a\":300}", "{\"x\":4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}", "[\"b\",\"c\"]", "[\"d\",null,\"b\"]", "[1,2,3,4]", "[1,2,3]", "[1.1,3.3]", "[null,2.2,null]", "[1,null,1]", "[\"true\",null,\"true\"]", "[[1],null,[1,2,3]]", "[null,{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L}
+        ),
+        RowSignature.builder()
+                    .add("__time", ColumnType.LONG)
+                    .add("str", ColumnType.STRING)
+                    .add("long", ColumnType.LONG)
+                    .add("double", ColumnType.DOUBLE)
+                    .add("bool", ColumnType.STRING)
+                    .add("variant", ColumnType.STRING)
+                    .add("variantEmptyObj", ColumnType.NESTED_DATA)
+                    .add("variantEmtpyArray", ColumnType.LONG_ARRAY)
+                    .add("obj", ColumnType.NESTED_DATA)
+                    .add("complexObj", ColumnType.NESTED_DATA)
+                    .add("arrayString", ColumnType.STRING_ARRAY)
+                    .add("arrayStringNulls", ColumnType.STRING_ARRAY)
+                    .add("arrayLong", ColumnType.LONG_ARRAY)
+                    .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                    .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
+                    .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
+                    .add("arrayVariant", ColumnType.STRING_ARRAY)
+                    .add("arrayBool", ColumnType.STRING_ARRAY)
+                    .add("arrayNestedLong", ColumnType.NESTED_DATA)
+                    .add("arrayObject", ColumnType.NESTED_DATA)
+                    .add("null", ColumnType.STRING)
+                    .add("cstr", ColumnType.STRING)
+                    .add("clong", ColumnType.LONG)
+                    .add("cdouble", ColumnType.DOUBLE)
+                    .add("cObj", ColumnType.NESTED_DATA)
+                    .add("cstringArray", ColumnType.STRING_ARRAY)
+                    .add("cLongArray", ColumnType.LONG_ARRAY)
+                    .add("cDoubleArray", ColumnType.DOUBLE_ARRAY)
+                    .add("cEmptyArray", ColumnType.NESTED_DATA)
+                    .add("cEmptyObj", ColumnType.NESTED_DATA)
+                    .add("cNullArray", ColumnType.NESTED_DATA)
+                    .add("cEmptyObjectArray", ColumnType.NESTED_DATA)
+                    .add("cObjectArray", ColumnType.NESTED_DATA)
+                    .add("cnt", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testScanAllTypesAutoWithOptimizedConstants()
+  {
+    // remove this test in Druid 28 when IndexSpec.optimizeJsonConstantColumns is removed in favor of always writing
+    // constant columns
+    skipVectorize();
+    testQuery(
+        "SELECT * FROM druid.all_auto_constants",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL_WITH_CONSTANTS)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns(
+                      "__time",
+                      "arrayBool",
+                      "arrayDouble",
+                      "arrayDoubleNulls",
+                      "arrayLong",
+                      "arrayLongNulls",
+                      "arrayNestedLong",
+                      "arrayObject",
+                      "arrayString",
+                      "arrayStringNulls",
+                      "arrayVariant",
+                      "bool",
+                      "cDoubleArray",
+                      "cEmptyArray",
+                      "cEmptyObj",
+                      "cEmptyObjectArray",
+                      "cLongArray",
+                      "cNullArray",
+                      "cObj",
+                      "cObjectArray",
+                      "cdouble",
+                      "clong",
+                      "cnt",
+                      "complexObj",
+                      "cstr",
+                      "cstringArray",
+                      "double",
+                      "long",
+                      "null",
+                      "obj",
+                      "str",
+                      "variant",
+                      "variantEmptyObj",
+                      "variantEmtpyArray"
+                  )
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{1672531200000L, "", 0L, 0.0D, "true", "51", "1", "[]", "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]}}", "{\"x\":400,\"y\":[{\"l\":[null],\"m\":100,\"n\":5},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{}}", null, "[\"a\",\"b\"]", null, "[2,3]", null, "[null]", null, "[\"true\",\"false\",\"true\"]", null, "[{\"x\":1},{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "", 2L, 0.0D, "false", "b", "\"b\"", "2", "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]}}", "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2}],\"z\":{\"a\":[5.5],\"b\":false}}", "[\"a\",\"b\",\"c\"]", "[null,\"b\"]", "[2,3]", null, "[3.3,4.4,5.5]", "[999.0,null,5.5]", "[null,null,2.2]", "[\"true\",\"true\"]", "[null,[null],[]]", "[{\"x\":3},{\"x\":4}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "a", 1L, 1.0D, "true", "1", "1", "1", "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]}}", "{\"x\":1234,\"y\":[{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"a\",\"b\"]", "[\"a\",\"b\"]", "[1,2,3]", "[1,null,3]", "[1.1,2.2,3.3]", "[1.1,2.2,null]", "[\"a\",\"1\",\"2.2\"]", "[\"true\",\"false\",\"true\"]", "[[1,2,null],[3,4]]", "[{\"x\":1},{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "b", 4L, 3.3D, "true", "4", "{}", "4", "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]}}", "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"d\",\"e\"]", "[\"b\",\"b\"]", "[1,4]", "[1]", "[2.2,3.3,4.0]", null, "[\"a\",\"b\",\"c\"]", "[null,\"false\",\"true\"]", "[[1,2],[3,4],[5,6,7]]", "[{\"x\":null},{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "c", 0L, 4.4D, "true", "hello", "{}", "[]", "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]}}", "{\"x\":11,\"y\":[],\"z\":{\"a\":[null],\"b\":false}}", null, null, "[1,2,3]", "[]", "[1.1,2.2,3.3]", null, null, "[\"false\"]", null, "[{\"x\":1000},{\"y\":2000}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "d", 5L, 5.9D, "false", "", "\"a\"", "6", "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]}}", null, "[\"a\",\"b\"]", null, null, "[null,2,9]", null, "[999.0,5.5,null]", "[\"a\",\"1\",\"2.2\"]", "[]", "[[1],[1,2,null]]", "[{\"a\":1},{\"b\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "null", 3L, 2.0D, "", "3.0", "3.3", "3", "{\"a\":300}", "{\"x\":4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}", "[\"b\",\"c\"]", "[\"d\",null,\"b\"]", "[1,2,3,4]", "[1,2,3]", "[1.1,3.3]", "[null,2.2,null]", "[1,null,1]", "[\"true\",null,\"true\"]", "[[1],null,[1,2,3]]", "[null,{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L}
+        ) :
+        ImmutableList.of(
+            new Object[]{1672531200000L, null, null, null, "true", "51", "1", "[]", "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]}}", "{\"x\":400,\"y\":[{\"l\":[null],\"m\":100,\"n\":5},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{}}", null, "[\"a\",\"b\"]", null, "[2,3]", null, "[null]", null, "[\"true\",\"false\",\"true\"]", null, "[{\"x\":1},{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "", 2L, null, "false", "b", "\"b\"", "2", "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]}}", "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2}],\"z\":{\"a\":[5.5],\"b\":false}}", "[\"a\",\"b\",\"c\"]", "[null,\"b\"]", "[2,3]", null, "[3.3,4.4,5.5]", "[999.0,null,5.5]", "[null,null,2.2]", "[\"true\",\"true\"]", "[null,[null],[]]", "[{\"x\":3},{\"x\":4}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "a", 1L, 1.0D, "true", "1", "1", "1", "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]}}", "{\"x\":1234,\"y\":[{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"a\",\"b\"]", "[\"a\",\"b\"]", "[1,2,3]", "[1,null,3]", "[1.1,2.2,3.3]", "[1.1,2.2,null]", "[\"a\",\"1\",\"2.2\"]", "[\"true\",\"false\",\"true\"]", "[[1,2,null],[3,4]]", "[{\"x\":1},{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "b", 4L, 3.3D, "true", "4", "{}", "4", "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]}}", "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"d\",\"e\"]", "[\"b\",\"b\"]", "[1,4]", "[1]", "[2.2,3.3,4.0]", null, "[\"a\",\"b\",\"c\"]", "[null,\"false\",\"true\"]", "[[1,2],[3,4],[5,6,7]]", "[{\"x\":null},{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "c", null, 4.4D, "true", "hello", "{}", "[]", "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]}}", "{\"x\":11,\"y\":[],\"z\":{\"a\":[null],\"b\":false}}", null, null, "[1,2,3]", "[]", "[1.1,2.2,3.3]", null, null, "[\"false\"]", null, "[{\"x\":1000},{\"y\":2000}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "d", 5L, 5.9D, "false", null, "\"a\"", "6", "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]}}", null, "[\"a\",\"b\"]", null, null, "[null,2,9]", null, "[999.0,5.5,null]", "[\"a\",\"1\",\"2.2\"]", "[]", "[[1],[1,2,null]]", "[{\"a\":1},{\"b\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "null", 3L, 2.0D, null, "3.0", "3.3", "3", "{\"a\":300}", "{\"x\":4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}", "[\"b\",\"c\"]", "[\"d\",null,\"b\"]", "[1,2,3,4]", "[1,2,3]", "[1.1,3.3]", "[null,2.2,null]", "[1,null,1]", "[\"true\",null,\"true\"]", "[[1],null,[1,2,3]]", "[null,{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L}
+        ),
+        RowSignature.builder()
+                    .add("__time", ColumnType.LONG)
+                    .add("str", ColumnType.STRING)
+                    .add("long", ColumnType.LONG)
+                    .add("double", ColumnType.DOUBLE)
+                    .add("bool", ColumnType.STRING)
+                    .add("variant", ColumnType.STRING)
+                    .add("variantEmptyObj", ColumnType.NESTED_DATA)
+                    .add("variantEmtpyArray", ColumnType.LONG_ARRAY)
+                    .add("obj", ColumnType.NESTED_DATA)
+                    .add("complexObj", ColumnType.NESTED_DATA)
+                    .add("arrayString", ColumnType.STRING_ARRAY)
+                    .add("arrayStringNulls", ColumnType.STRING_ARRAY)
+                    .add("arrayLong", ColumnType.LONG_ARRAY)
+                    .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                    .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
+                    .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
+                    .add("arrayVariant", ColumnType.STRING_ARRAY)
+                    .add("arrayBool", ColumnType.STRING_ARRAY)
+                    .add("arrayNestedLong", ColumnType.NESTED_DATA)
+                    .add("arrayObject", ColumnType.NESTED_DATA)
+                    .add("null", ColumnType.STRING)
+                    .add("cstr", ColumnType.STRING)
+                    .add("clong", ColumnType.LONG)
+                    .add("cdouble", ColumnType.DOUBLE)
+                    .add("cObj", ColumnType.NESTED_DATA)
+                    .add("cstringArray", ColumnType.STRING_ARRAY)
+                    .add("cLongArray", ColumnType.LONG_ARRAY)
+                    .add("cDoubleArray", ColumnType.DOUBLE_ARRAY)
+                    .add("cEmptyArray", ColumnType.NESTED_DATA)
+                    .add("cEmptyObj", ColumnType.NESTED_DATA)
+                    .add("cNullArray", ColumnType.NESTED_DATA)
+                    .add("cEmptyObjectArray", ColumnType.NESTED_DATA)
+                    .add("cObjectArray", ColumnType.NESTED_DATA)
+                    .add("cnt", ColumnType.LONG)
+                    .build()
+    );
   }
 }

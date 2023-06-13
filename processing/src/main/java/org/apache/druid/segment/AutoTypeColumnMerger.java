@@ -27,9 +27,11 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.nested.ConstantColumnSerializer;
 import org.apache.druid.segment.nested.DictionaryIdLookup;
 import org.apache.druid.segment.nested.FieldTypeInfo;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
@@ -82,7 +84,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
 
   private ColumnType logicalType;
   private boolean isVariantType = false;
-  private boolean hasOnlyNulls = false;
+  private boolean isConstant = true;
 
   public AutoTypeColumnMerger(
       String name,
@@ -113,6 +115,10 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
 
       final SortedMap<String, FieldTypeInfo.MutableTypeSet> mergedFields = new TreeMap<>();
 
+      boolean forceNested = false;
+      Object constantValue = null;
+      boolean hasArrays = false;
+
       for (int i = 0; i < adapters.size(); i++) {
         final IndexableAdapter adapter = adapters.get(i);
         final IndexableAdapter.NestedColumnMergable mergable = closer.register(
@@ -121,6 +127,10 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         if (mergable == null) {
           continue;
         }
+        forceNested = forceNested || mergable.isForceNestedType();
+        isConstant = isConstant && mergable.isConstant();
+        constantValue = mergable.getConstantValue();
+
         final SortedValueDictionary dimValues = mergable.getValueDictionary();
 
         boolean allNulls = dimValues == null || dimValues.allNull();
@@ -131,21 +141,48 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
           sortedLongLookups[i] = dimValues.getSortedLongs();
           sortedDoubleLookups[i] = dimValues.getSortedDoubles();
           sortedArrayLookups[i] = dimValues.getSortedArrays();
+          hasArrays = sortedArrayLookups[i].size() > 0;
           numMergeIndex++;
         }
-      }
-
-      // no data, we don't need to write this column
-      if (numMergeIndex == 0 && mergedFields.size() == 0) {
-        hasOnlyNulls = true;
-        return;
       }
 
       // check to see if we can specialize the serializer after merging all the adapters
       final FieldTypeInfo.MutableTypeSet rootTypes = mergedFields.get(NestedPathFinder.JSON_PATH_ROOT);
       final boolean rootOnly = mergedFields.size() == 1 && rootTypes != null;
-      if (rootOnly && rootTypes.getSingleType() != null) {
+
+      if (isConstant && indexSpec.optimizeJsonConstantColumns()) {
+        serializer = new ConstantColumnSerializer(name, constantValue);
+        if (constantValue == null) {
+          logicalType = ColumnType.STRING;
+        } else if (forceNested || !rootOnly) {
+          logicalType = ColumnType.NESTED_DATA;
+        } else if (rootTypes.getSingleType() != null) {
+          logicalType = rootTypes.getSingleType();
+        } else {
+          for (ColumnType type : FieldTypeInfo.convertToSet(rootTypes.getByteValue())) {
+            logicalType = ColumnType.leastRestrictiveType(logicalType, type);
+          }
+        }
+        return;
+      }
+
+      // for backwards compat; remove this constant handling in druid 28 along with
+      // indexSpec.optimizeJsonConstantColumns in favor of always writing constant columns
+      // we also handle the numMergeIndex == 0 here, which also indicates that the column is a null constant
+      if ((isConstant && constantValue == null) || (numMergeIndex == 0)) {
+        logicalType = ColumnType.STRING;
+        serializer = new ScalarStringColumnSerializer(
+            name,
+            indexSpec,
+            segmentWriteOutMedium,
+            closer
+        );
+      } else if (!forceNested && rootOnly && rootTypes.getSingleType() != null) {
         logicalType = rootTypes.getSingleType();
+        // empty arrays can be missed since they don't have a type, so handle them here
+        if (!logicalType.isArray() && hasArrays) {
+          logicalType = ColumnTypeFactory.getInstance().ofArray(logicalType);
+        }
         switch (logicalType.getType()) {
           case LONG:
             serializer = new ScalarLongColumnSerializer(
@@ -187,12 +224,16 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
                 logicalType
             );
         }
-      } else if (rootOnly) {
+      } else if (!forceNested && rootOnly) {
         // mixed type column, but only root path, we can use VariantArrayColumnSerializer
         // pick the least restrictive type for the logical type
         isVariantType = true;
         for (ColumnType type : FieldTypeInfo.convertToSet(rootTypes.getByteValue())) {
           logicalType = ColumnType.leastRestrictiveType(logicalType, type);
+        }
+        // empty arrays can be missed since they don't have a type, so handle them here
+        if (!logicalType.isArray() && hasArrays) {
+          logicalType = ColumnTypeFactory.getInstance().ofArray(logicalType);
         }
         serializer = new VariantColumnSerializer(
             name,
@@ -307,7 +348,8 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   @Override
   public boolean hasOnlyNulls()
   {
-    return hasOnlyNulls;
+    // we handle this internally using a constant column instead of using the generic null part serde
+    return false;
   }
 
   @Override
@@ -318,6 +360,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
     final NestedCommonFormatColumnPartSerde partSerde = NestedCommonFormatColumnPartSerde.serializerBuilder()
                                                                                          .withLogicalType(logicalType)
                                                                                          .withHasNulls(serializer.hasNulls())
+                                                                                         .isConstant(isConstant && indexSpec.optimizeJsonConstantColumns())
                                                                                          .isVariantType(isVariantType)
                                                                                          .withByteOrder(ByteOrder.nativeOrder())
                                                                                          .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
