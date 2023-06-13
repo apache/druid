@@ -1321,7 +1321,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testOffHeapEarliestGroupBy() throws Exception
+  public void testOffHeapEarliestGroupBy()
   {
     testQuery(
         "SELECT dim2, EARLIEST(m1) AS val1 FROM foo GROUP BY dim2",
@@ -14696,7 +14696,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEarliestVectorAggregators() throws Exception
+  public void testEarliestVectorAggregators()
   {
     testQuery(
         "SELECT "
