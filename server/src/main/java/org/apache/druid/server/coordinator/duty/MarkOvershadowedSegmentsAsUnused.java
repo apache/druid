@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
@@ -31,19 +32,21 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
+import org.joda.time.DateTime;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
+public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
 {
-  private static final Logger log = new Logger(MarkAsUnusedOvershadowedSegments.class);
+  private static final Logger log = new Logger(MarkOvershadowedSegmentsAsUnused.class);
 
   private final DruidCoordinator coordinator;
 
-  public MarkAsUnusedOvershadowedSegments(DruidCoordinator coordinator)
+  public MarkOvershadowedSegmentsAsUnused(DruidCoordinator coordinator)
   {
     this.coordinator = coordinator;
   }
@@ -51,9 +54,15 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    // Mark as unused overshadowed segments only if we've had enough time to make sure we aren't flapping with old data.
-    if (!params.coordinatorIsLeadingEnoughTimeToMarkAsUnusedOvershadowedSegements()) {
-      log.info("Skipping MarkAsUnused as coordinator is not leading enough time.");
+    // Mark overshadowed segments as unused only if the coordinator has been running
+    // long enough to have refreshed its metadata view
+    final DateTime coordinatorStartTime = params.getCoordinatorStartTime();
+    final long delayMillis = params.getCoordinatorDynamicConfig().getMarkSegmentAsUnusedDelayMillis();
+    if (DateTimes.nowUtc().isBefore(coordinatorStartTime.plus(delayMillis))) {
+      log.info(
+          "Skipping MarkAsUnused until [%s] have elapsed after coordinator start [%s].",
+          Duration.ofMillis(delayMillis), coordinatorStartTime
+      );
       return params;
     }
 
@@ -78,7 +87,7 @@ public class MarkAsUnusedOvershadowedSegments implements CoordinatorDuty
     // Note that we do not include segments from ingestion services such as tasks or indexers,
     // to prevent unpublished segments from prematurely overshadowing segments.
 
-    // Mark all segments as unused in db that are overshadowed by served segments
+    // Mark all segments overshadowed by served segments as unused
     final Map<String, Set<SegmentId>> datasourceToUnusedSegments = new HashMap<>();
     for (DataSegment dataSegment : allOvershadowedSegments) {
       SegmentTimeline timeline = timelines.get(dataSegment.getDataSource());

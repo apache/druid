@@ -36,10 +36,13 @@ public class Stats
     public static final CoordinatorStat MOVED
         = new CoordinatorStat("moved", "segment/moved/count");
 
-    public static final CoordinatorStat ASSIGNED_BROADCAST
-        = new CoordinatorStat("assignBroad", "segment/assigned/broadcast", CoordinatorStat.Level.INFO);
-    public static final CoordinatorStat DROPPED_BROADCAST
-        = new CoordinatorStat("dropBroad", "segment/dropped/broadcast", CoordinatorStat.Level.INFO);
+    // Skipped decisions in a run
+    public static final CoordinatorStat ASSIGN_SKIPPED
+        = new CoordinatorStat("assignSkip", "segment/assignSkipped/count");
+    public static final CoordinatorStat DROP_SKIPPED
+        = new CoordinatorStat("dropSkip", "segment/dropSkipped/count");
+    public static final CoordinatorStat MOVE_SKIPPED
+        = new CoordinatorStat("moveSkip", "segment/moveSkipped/count");
 
     // Current state of segments of a datasource
     public static final CoordinatorStat USED
@@ -72,7 +75,7 @@ public class Stats
     public static final CoordinatorStat FAILED_ACTIONS
         = new CoordinatorStat("failedActions", "segment/loadQueue/failed", CoordinatorStat.Level.ERROR);
     public static final CoordinatorStat CANCELLED_ACTIONS
-        = new CoordinatorStat("cancelActions", "segment/loadQueue/cancelled");
+        = new CoordinatorStat("cancelledActions", "segment/loadQueue/cancelled");
   }
 
   public static class Tier
@@ -120,10 +123,10 @@ public class Stats
 
   public static class CoordinatorRun
   {
-    public static final CoordinatorStat DUTY_TIME
+    public static final CoordinatorStat DUTY_RUN_TIME
         = new CoordinatorStat("dutyRunTime", "coordinator/time");
-    public static final CoordinatorStat TOTAL_TIME
-        = new CoordinatorStat("totalRunTime", "coordinator/global/time");
+    public static final CoordinatorStat GROUP_RUN_TIME
+        = new CoordinatorStat("groupRunTime", "coordinator/global/time");
   }
 
   public static class Balancer

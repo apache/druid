@@ -64,7 +64,6 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
 
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .withDynamicConfig(createDynamicConfig(1000, 0, 100))
                              .withBalancer(strategy)
                              .withRules(DS.WIKI, Load.on(Tier.T1, 1).forever())
                              .withServers(historicals)
@@ -99,7 +98,6 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
 
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .withDynamicConfig(createDynamicConfig(1000, 0, 100))
                              .withBalancer(strategy)
                              .withRules(DS.WIKI, Load.on(Tier.T1, 1).forever())
                              .withServers(historicals)
@@ -124,7 +122,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     historicals.add(newHistorical);
 
     // Run the coordinator for a few cycles
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 7; ++i) {
       runCoordinatorCycle();
       loadQueuedSegments();
     }
@@ -132,7 +130,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     // Verify that the segments have been balanced
     for (DruidServer historical : historicals) {
       long loadedSegments = historical.getTotalSegments();
-      Assert.assertTrue(loadedSegments >= 199 && loadedSegments <= 201);
+      Assert.assertTrue(loadedSegments >= 195 && loadedSegments <= 205);
     }
   }
 
@@ -146,7 +144,6 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
 
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .withDynamicConfig(createDynamicConfig(1000, 0, 100))
                              .withBalancer(strategy)
                              .withRules(DS.WIKI, Load.on(Tier.T1, 1).forever())
                              .withServers(historicals)

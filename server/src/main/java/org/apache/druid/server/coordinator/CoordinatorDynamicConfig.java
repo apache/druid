@@ -56,7 +56,7 @@ public class CoordinatorDynamicConfig
 {
   public static final String CONFIG_KEY = "coordinator.config";
 
-  private final long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
+  private final long markSegmentAsUnusedDelayMillis;
   private final long mergeBytesLimit;
   private final int mergeSegmentsLimit;
   private final int maxSegmentsToMove;
@@ -69,6 +69,7 @@ public class CoordinatorDynamicConfig
   private final int balancerComputeThreads;
   private final boolean emitBalancingStats;
   private final boolean useRoundRobinSegmentAssignment;
+  private final boolean smartSegmentLoading;
 
   /**
    * List of specific data sources for which kill tasks are sent in {@link KillUnusedSegments}.
@@ -123,7 +124,7 @@ public class CoordinatorDynamicConfig
       // Keeping the legacy 'millisToWaitBeforeDeleting' property name for backward compatibility. When the project is
       // updated to Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
       @JsonProperty("millisToWaitBeforeDeleting")
-          long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
+          long markSegmentAsUnusedDelayMillis,
       @JsonProperty("mergeBytesLimit") long mergeBytesLimit,
       @JsonProperty("mergeSegmentsLimit") int mergeSegmentsLimit,
       @JsonProperty("maxSegmentsToMove") int maxSegmentsToMove,
@@ -150,14 +151,16 @@ public class CoordinatorDynamicConfig
       @JsonProperty("replicateAfterLoadTimeout") boolean replicateAfterLoadTimeout,
       @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad,
       @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment,
+      @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
       @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions
   )
   {
-    this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
-        leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
+    this.markSegmentAsUnusedDelayMillis =
+        markSegmentAsUnusedDelayMillis;
     this.mergeBytesLimit = mergeBytesLimit;
     this.mergeSegmentsLimit = mergeSegmentsLimit;
     this.maxSegmentsToMove = maxSegmentsToMove;
+    this.smartSegmentLoading = Builder.valueOrDefault(smartSegmentLoading, Defaults.SMART_SEGMENT_LOADING);
 
     if (percentOfSegmentsToConsiderPerMove == null) {
       log.debug(
@@ -171,7 +174,7 @@ public class CoordinatorDynamicConfig
     }
     Preconditions.checkArgument(
         percentOfSegmentsToConsiderPerMove > 0 && percentOfSegmentsToConsiderPerMove <= 100,
-        "percentOfSegmentsToConsiderPerMove should be between 1 and 100!"
+        "'percentOfSegmentsToConsiderPerMove' should be between 1 and 100"
     );
     this.percentOfSegmentsToConsiderPerMove = percentOfSegmentsToConsiderPerMove;
 
@@ -184,9 +187,10 @@ public class CoordinatorDynamicConfig
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
     this.emitBalancingStats = emitBalancingStats;
-    this.specificDataSourcesToKillUnusedSegmentsIn = parseJsonStringOrArray(specificDataSourcesToKillUnusedSegmentsIn);
-    this.dataSourcesToNotKillStalePendingSegmentsIn =
-        parseJsonStringOrArray(dataSourcesToNotKillStalePendingSegmentsIn);
+    this.specificDataSourcesToKillUnusedSegmentsIn
+        = parseJsonStringOrArray(specificDataSourcesToKillUnusedSegmentsIn);
+    this.dataSourcesToNotKillStalePendingSegmentsIn
+        = parseJsonStringOrArray(dataSourcesToNotKillStalePendingSegmentsIn);
     this.maxSegmentsInNodeLoadingQueue = Builder.valueOrDefault(
         maxSegmentsInNodeLoadingQueue,
         Defaults.MAX_SEGMENTS_IN_NODE_LOADING_QUEUE
@@ -194,7 +198,7 @@ public class CoordinatorDynamicConfig
     this.decommissioningNodes = parseJsonStringOrArray(decommissioningNodes);
     Preconditions.checkArgument(
         decommissioningMaxPercentOfMaxSegmentsToMove >= 0 && decommissioningMaxPercentOfMaxSegmentsToMove <= 100,
-        "decommissioningMaxPercentOfMaxSegmentsToMove should be in range [0, 100]"
+        "'decommissioningMaxPercentOfMaxSegmentsToMove' should be in range [0, 100]"
     );
     this.decommissioningMaxPercentOfMaxSegmentsToMove = decommissioningMaxPercentOfMaxSegmentsToMove;
 
@@ -262,7 +266,7 @@ public class CoordinatorDynamicConfig
       }
       return result;
     } else if (jsonStringOrArray instanceof Collection) {
-      return ImmutableSet.copyOf(((Collection) jsonStringOrArray));
+      return ImmutableSet.copyOf((Collection) jsonStringOrArray);
     } else {
       return ImmutableSet.of();
     }
@@ -284,9 +288,9 @@ public class CoordinatorDynamicConfig
   }
 
   @JsonProperty("millisToWaitBeforeDeleting")
-  public long getLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments()
+  public long getMarkSegmentAsUnusedDelayMillis()
   {
-    return leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
+    return markSegmentAsUnusedDelayMillis;
   }
 
   @JsonProperty
@@ -375,6 +379,12 @@ public class CoordinatorDynamicConfig
     return useRoundRobinSegmentAssignment;
   }
 
+  @JsonProperty
+  public boolean isSmartSegmentLoading()
+  {
+    return smartSegmentLoading;
+  }
+
   /**
    * List of historical servers to 'decommission'. Coordinator will not assign new segments to 'decommissioning'
    * servers, and segments will be moved away from them to be placed on non-decommissioning servers at the maximum rate
@@ -446,7 +456,7 @@ public class CoordinatorDynamicConfig
   {
     return "CoordinatorDynamicConfig{" +
            "leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments="
-           + leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments +
+           + markSegmentAsUnusedDelayMillis +
            ", mergeBytesLimit=" + mergeBytesLimit +
            ", mergeSegmentsLimit=" + mergeSegmentsLimit +
            ", maxSegmentsToMove=" + maxSegmentsToMove +
@@ -479,8 +489,7 @@ public class CoordinatorDynamicConfig
 
     CoordinatorDynamicConfig that = (CoordinatorDynamicConfig) o;
 
-    return leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments
-           == that.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments
+    return markSegmentAsUnusedDelayMillis == that.markSegmentAsUnusedDelayMillis
            && mergeBytesLimit == that.mergeBytesLimit
            && mergeSegmentsLimit == that.mergeSegmentsLimit
            && maxSegmentsToMove == that.maxSegmentsToMove
@@ -509,7 +518,7 @@ public class CoordinatorDynamicConfig
   public int hashCode()
   {
     return Objects.hash(
-        leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
+        markSegmentAsUnusedDelayMillis,
         mergeBytesLimit,
         mergeSegmentsLimit,
         maxSegmentsToMove,
@@ -552,11 +561,12 @@ public class CoordinatorDynamicConfig
     static final boolean REPLICATE_AFTER_LOAD_TIMEOUT = false;
     static final int MAX_NON_PRIMARY_REPLICANTS_TO_LOAD = Integer.MAX_VALUE;
     static final boolean USE_ROUND_ROBIN_ASSIGNMENT = true;
+    static final boolean SMART_SEGMENT_LOADING = true;
   }
 
   public static class Builder
   {
-    private Long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
+    private Long markSegmentAsUnusedDelayMillis;
     private Long mergeBytesLimit;
     private Integer mergeSegmentsLimit;
     private Integer maxSegmentsToMove;
@@ -576,6 +586,7 @@ public class CoordinatorDynamicConfig
     private Boolean replicateAfterLoadTimeout;
     private Integer maxNonPrimaryReplicantsToLoad;
     private Boolean useRoundRobinSegmentAssignment;
+    private Boolean smartSegmentLoading;
 
     public Builder()
     {
@@ -583,12 +594,12 @@ public class CoordinatorDynamicConfig
 
     @JsonCreator
     public Builder(
-        @JsonProperty("millisToWaitBeforeDeleting")
-        @Nullable Long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
+        @JsonProperty("millisToWaitBeforeDeleting") @Nullable Long markSegmentAsUnusedDelayMillis,
         @JsonProperty("mergeBytesLimit") @Nullable Long mergeBytesLimit,
         @JsonProperty("mergeSegmentsLimit") @Nullable Integer mergeSegmentsLimit,
         @JsonProperty("maxSegmentsToMove") @Nullable Integer maxSegmentsToMove,
-        @Deprecated @JsonProperty("percentOfSegmentsToConsiderPerMove") @Nullable Double percentOfSegmentsToConsiderPerMove,
+        @Deprecated @JsonProperty("percentOfSegmentsToConsiderPerMove")
+        @Nullable Double percentOfSegmentsToConsiderPerMove,
         @Deprecated @JsonProperty("useBatchedSegmentSampler") Boolean useBatchedSegmentSampler,
         @JsonProperty("replicantLifetime") @Nullable Integer replicantLifetime,
         @JsonProperty("replicationThrottleLimit") @Nullable Integer replicationThrottleLimit,
@@ -604,11 +615,11 @@ public class CoordinatorDynamicConfig
         @JsonProperty("replicateAfterLoadTimeout") @Nullable Boolean replicateAfterLoadTimeout,
         @JsonProperty("maxNonPrimaryReplicantsToLoad") @Nullable Integer maxNonPrimaryReplicantsToLoad,
         @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment,
+        @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
         @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions
     )
     {
-      this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
-          leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
+      this.markSegmentAsUnusedDelayMillis = markSegmentAsUnusedDelayMillis;
       this.mergeBytesLimit = mergeBytesLimit;
       this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.maxSegmentsToMove = maxSegmentsToMove;
@@ -627,12 +638,13 @@ public class CoordinatorDynamicConfig
       this.replicateAfterLoadTimeout = replicateAfterLoadTimeout;
       this.maxNonPrimaryReplicantsToLoad = maxNonPrimaryReplicantsToLoad;
       this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
+      this.smartSegmentLoading = smartSegmentLoading;
       this.debugDimensions = debugDimensions;
     }
 
-    public Builder withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(long leadingTimeMillis)
+    public Builder withMarkSegmentAsUnusedDelayMillis(long leadingTimeMillis)
     {
-      this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments = leadingTimeMillis;
+      this.markSegmentAsUnusedDelayMillis = leadingTimeMillis;
       return this;
     }
 
@@ -668,6 +680,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withSmartSegmentLoading(boolean smartSegmentLoading)
+    {
+      this.smartSegmentLoading = smartSegmentLoading;
+      return this;
+    }
+
     public Builder withReplicantLifetime(int replicantLifetime)
     {
       this.replicantLifetime = replicantLifetime;
@@ -677,6 +695,12 @@ public class CoordinatorDynamicConfig
     public Builder withReplicationThrottleLimit(int replicationThrottleLimit)
     {
       this.replicationThrottleLimit = replicationThrottleLimit;
+      return this;
+    }
+
+    public Builder withDebugDimensions(Map<String, String> debugDimensions)
+    {
+      this.debugDimensions = debugDimensions;
       return this;
     }
 
@@ -748,7 +772,7 @@ public class CoordinatorDynamicConfig
     {
       return new CoordinatorDynamicConfig(
           valueOrDefault(
-              leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
+              markSegmentAsUnusedDelayMillis,
               Defaults.LEADING_MILLIS_BEFORE_MARK_UNUSED
           ),
           valueOrDefault(mergeBytesLimit, Defaults.MERGE_BYTES_LIMIT),
@@ -772,6 +796,7 @@ public class CoordinatorDynamicConfig
           valueOrDefault(replicateAfterLoadTimeout, Defaults.REPLICATE_AFTER_LOAD_TIMEOUT),
           valueOrDefault(maxNonPrimaryReplicantsToLoad, Defaults.MAX_NON_PRIMARY_REPLICANTS_TO_LOAD),
           valueOrDefault(useRoundRobinSegmentAssignment, Defaults.USE_ROUND_ROBIN_ASSIGNMENT),
+          valueOrDefault(smartSegmentLoading, Defaults.SMART_SEGMENT_LOADING),
           debugDimensions
       );
     }
@@ -785,8 +810,8 @@ public class CoordinatorDynamicConfig
     {
       return new CoordinatorDynamicConfig(
           valueOrDefault(
-              leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
-              defaults.getLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments()
+              markSegmentAsUnusedDelayMillis,
+              defaults.getMarkSegmentAsUnusedDelayMillis()
           ),
           valueOrDefault(mergeBytesLimit, defaults.getMergeBytesLimit()),
           valueOrDefault(mergeSegmentsLimit, defaults.getMergeSegmentsLimit()),
@@ -809,6 +834,7 @@ public class CoordinatorDynamicConfig
           valueOrDefault(replicateAfterLoadTimeout, defaults.getReplicateAfterLoadTimeout()),
           valueOrDefault(maxNonPrimaryReplicantsToLoad, defaults.getMaxNonPrimaryReplicantsToLoad()),
           valueOrDefault(useRoundRobinSegmentAssignment, defaults.isUseRoundRobinSegmentAssignment()),
+          valueOrDefault(smartSegmentLoading, defaults.isSmartSegmentLoading()),
           valueOrDefault(debugDimensions, defaults.getDebugDimensions())
       );
     }

@@ -57,7 +57,7 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     params.getDruidCluster().getHistoricals()
-          .forEach(this::logServedSegmentStats);
+          .forEach(this::logHistoricalTierStats);
     collectSegmentStats(params);
 
     StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
@@ -122,7 +122,7 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
     return builder.build();
   }
 
-  private void logServedSegmentStats(String tier, Set<ServerHolder> historicals)
+  private void logHistoricalTierStats(String tier, Set<ServerHolder> historicals)
   {
     final AtomicInteger servedCount = new AtomicInteger();
     final AtomicInteger loadingCount = new AtomicInteger();

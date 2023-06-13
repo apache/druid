@@ -84,10 +84,7 @@ public class CoordinatorSimulationBuilder
   private static final CompactionSegmentSearchPolicy COMPACTION_SEGMENT_SEARCH_POLICY =
       new NewestSegmentFirstPolicy(OBJECT_MAPPER);
   private String balancerStrategy;
-  private CoordinatorDynamicConfig dynamicConfig =
-      CoordinatorDynamicConfig.builder()
-                              .withUseBatchedSegmentSampler(true)
-                              .build();
+  private CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig.builder().build();
   private List<DruidServer> servers;
   private List<DataSegment> segments;
   private final Map<String, List<Rule>> datasourceRules = new HashMap<>();

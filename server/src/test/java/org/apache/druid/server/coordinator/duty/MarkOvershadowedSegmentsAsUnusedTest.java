@@ -45,7 +45,7 @@ import java.util.Collections;
 import java.util.List;
 
 @RunWith(JUnitParamsRunner.class)
-public class MarkAsUnusedOvershadowedSegmentsTest
+public class MarkOvershadowedSegmentsAsUnusedTest
 {
   private final DruidCoordinator coordinator = EasyMock.createStrictMock(DruidCoordinator.class);
 
@@ -67,8 +67,8 @@ public class MarkAsUnusedOvershadowedSegmentsTest
   {
     ServerType serverType = ServerType.fromString(serverTypeString);
 
-    MarkAsUnusedOvershadowedSegments markAsUnusedOvershadowedSegments =
-        new MarkAsUnusedOvershadowedSegments(coordinator);
+    MarkOvershadowedSegmentsAsUnused markOvershadowedSegmentsAsUnused =
+        new MarkOvershadowedSegmentsAsUnused(coordinator);
     final List<DataSegment> usedSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2);
 
     // Dummy values for comparisons in TreeSet
@@ -91,16 +91,14 @@ public class MarkAsUnusedOvershadowedSegmentsTest
         .build();
 
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
-        .newBuilder(System.nanoTime())
+        .newBuilder(DateTimes.nowUtc())
         .withUsedSegmentsInTest(usedSegments)
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(
-            CoordinatorDynamicConfig.builder()
-                                    .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0)
-                                    .build()
+            CoordinatorDynamicConfig.builder().withMarkSegmentAsUnusedDelayMillis(0).build()
         )
         .build();
-    markAsUnusedOvershadowedSegments.run(params);
+    markOvershadowedSegmentsAsUnused.run(params);
     EasyMock.verify(coordinator, druidDataSource);
   }
 }

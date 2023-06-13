@@ -28,6 +28,7 @@ public enum Dimension
   DATASOURCE("dataSource"),
   DUTY("duty"),
   DUTY_GROUP("dutyGroup"),
+  DESCRIPTION("description"),
   SERVER("server");
 
   private final String reportedName;

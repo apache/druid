@@ -60,16 +60,12 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
 
   private void testBalancingWithAutoSyncInventory(boolean autoSyncInventory)
   {
-    // maxSegmentsToMove = 10, unlimited load queue, no replication
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(10, 0, 0);
-
     // historicals = 2(T1), replicas = 1(T1)
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(segments)
                              .withServers(historicalT11, historicalT12)
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
-                             .withDynamicConfig(dynamicConfig)
                              .withAutoInventorySync(autoSyncInventory)
                              .build();
 
@@ -96,16 +92,12 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   @Test
   public void testDropDoesNotHappenWhenLoadFails()
   {
-    // maxSegmentsToMove = 10, unlimited load queue, no replication
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(10, 0, 0);
-
     // historicals = 2(T1), replicas = 1(T1)
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(segments)
                              .withServers(historicalT11, historicalT12)
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
-                             .withDynamicConfig(dynamicConfig)
                              .build();
 
     // Put all the segments on histT11
@@ -128,15 +120,11 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   @Test
   public void testBalancingOfFullyReplicatedSegment()
   {
-    // maxSegmentsToMove = 10, unlimited load queue, replicationThrottleLimit = 10
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(10, 0, 10);
-
     // historicals = 2(in T1), replicas = 1(T1)
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(segments)
                              .withServers(historicalT11, historicalT12)
-                             .withDynamicConfig(dynamicConfig)
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
                              .build();
 
@@ -168,7 +156,6 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   {
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .withDynamicConfig(createDynamicConfig(5, 0, 10))
                              .withSegments(segments)
                              .withServers(historicalT11)
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
@@ -201,9 +188,16 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   public void testBalancingDoesNotMoveLoadedSegmentsWhenTierIsBusy()
   {
     // maxSegmentsToMove = 3, unlimited load queue
+    final CoordinatorDynamicConfig dynamicConfig =
+        CoordinatorDynamicConfig.builder()
+                                .withSmartSegmentLoading(false)
+                                .withMaxSegmentsToMove(3)
+                                .withMaxSegmentsInNodeLoadingQueue(0)
+                                .build();
+
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .withDynamicConfig(createDynamicConfig(3, 0, 0))
+                             .withDynamicConfig(dynamicConfig)
                              .withSegments(segments)
                              .withServers(historicalT11)
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())

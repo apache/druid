@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2LongMaps;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -47,7 +48,7 @@ public class CollectSegmentAndServerStatsTest
   public void testCollectedSegmentStats()
   {
     DruidCoordinatorRuntimeParams runtimeParams =
-        DruidCoordinatorRuntimeParams.newBuilder(System.nanoTime())
+        DruidCoordinatorRuntimeParams.newBuilder(DateTimes.nowUtc())
                                      .withDruidCluster(DruidCluster.EMPTY)
                                      .withUsedSegmentsInTest()
                                      .withBalancerStrategy(new RandomBalancerStrategy())

@@ -329,7 +329,7 @@ public class RunRulesTest
   )
   {
     return DruidCoordinatorRuntimeParams
-        .newBuilder(0)
+        .newBuilder(DateTimes.nowUtc().minusDays(1))
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(dataSegments)
         .withDatabaseRuleManager(databaseRuleManager);
@@ -590,7 +590,7 @@ public class RunRulesTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()
-                .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0L)
+                .withMarkSegmentAsUnusedDelayMillis(0L)
                 .build()
         )
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))

@@ -28,6 +28,7 @@ import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.SegmentActionHandler;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
+import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -132,7 +133,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
                           .collect(Collectors.toList());
 
     if (eligibleDestinationServers.isEmpty()) {
-      incrementStat(Error.NO_ELIGIBLE_SERVER_FOR_MOVE, segment, tier);
+      incrementSkipStat(Stats.Segments.MOVE_SKIPPED, "No eligible server", segment, tier);
       return false;
     }
 
@@ -146,13 +147,13 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
         strategy.findDestinationServerToMoveSegment(segment, sourceServer, eligibleDestinationServers);
 
     if (destination == null || destination.getServer().equals(sourceServer.getServer())) {
-      incrementStat(Error.MOVE_SKIPPED_OPTIMALLY_PLACED, segment, tier);
+      incrementSkipStat(Stats.Segments.MOVE_SKIPPED, "Optimally placed", segment, tier);
       return false;
     } else if (moveSegment(segment, sourceServer, destination)) {
-      incrementStat(Stats.Segments.MOVED, segment, tier);
+      incrementStat(Stats.Segments.MOVED, segment, tier, 1);
       return true;
     } else {
-      incrementStat(Error.MOVE_FAILED, segment, tier);
+      incrementSkipStat(Stats.Segments.MOVE_SKIPPED, "Encountered error", segment, tier);
       return false;
     }
   }
@@ -298,16 +299,23 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
         continue;
       }
 
-      // Drop from decommissioning servers and load on active servers
       final String tier = server.getServer().getTier();
+
+      // Drop from decommissioning servers and load on active servers
+      int numDropsQueued = 0;
+      int numLoadsQueued = 0;
       if (server.isDecommissioning()) {
-        boolean dropQueued = dropBroadcastSegment(segment, server);
-        incrementStat(Stats.Segments.DROPPED_BROADCAST, segment, tier, dropQueued ? 1 : 0);
-      } else if (loadBroadcastSegment(segment, server)) {
-        tierToRequiredReplicas.addTo(tier, 1);
-        incrementStat(Stats.Segments.ASSIGNED_BROADCAST, segment, tier);
+        numDropsQueued += dropBroadcastSegment(segment, server) ? 1 : 0;
       } else {
         tierToRequiredReplicas.addTo(tier, 1);
+        numLoadsQueued += loadBroadcastSegment(segment, server) ? 1 : 0;
+      }
+
+      if (numLoadsQueued > 0) {
+        incrementStat(Stats.Segments.ASSIGNED, segment, tier, numLoadsQueued);
+      }
+      if (numDropsQueued > 0) {
+        incrementStat(Stats.Segments.DROPPED, segment, tier, numDropsQueued);
       }
     }
 
@@ -385,7 +393,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
     final List<ServerHolder> eligibleServers = segmentStatus.getServersEligibleToDrop();
     if (eligibleServers.isEmpty()) {
-      incrementStat(Error.NO_ELIGIBLE_SERVER_FOR_DROP, segment, tier);
+      incrementSkipStat(Stats.Segments.DROP_SKIPPED, "No eligible server", segment, tier);
       return 0;
     }
 
@@ -437,7 +445,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       if (dropped) {
         ++numDropsQueued;
       } else {
-        incrementStat(Error.DROP_FAILED, segment, tier);
+        incrementSkipStat(Stats.Segments.DROP_SKIPPED, "Encountered error", segment, tier);
       }
     }
 
@@ -462,7 +470,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
     final List<ServerHolder> eligibleServers = segmentStatus.getServersEligibleToLoad();
     if (eligibleServers.isEmpty()) {
-      incrementStat(Error.NO_ELIGIBLE_SERVER_FOR_LOAD, segment, tier);
+      incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "No eligible server", segment, tier);
       return 0;
     }
 
@@ -471,7 +479,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
         ? serverSelector.getServersInTierToLoadSegment(tier, segment)
         : strategy.findServersToLoadSegment(segment, eligibleServers);
     if (!serverIterator.hasNext()) {
-      incrementStat(Error.NO_STRATEGIC_SERVER_FOR_LOAD, segment, tier);
+      incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "No server chosen by strategy", segment, tier);
       return 0;
     }
 
@@ -489,7 +497,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   {
     final String tier = server.getServer().getTier();
     if (isAlreadyLoadedOnTier && !replicationThrottler.canAssignReplica(tier)) {
-      incrementStat(Error.REPLICA_THROTTLED, segment, tier);
+      incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "Throttled replication", segment, tier);
       return false;
     }
 
@@ -497,7 +505,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     final boolean assigned = loadQueueManager.loadSegment(segment, server, action);
 
     if (!assigned) {
-      incrementStat(Error.LOAD_FAILED, segment, tier);
+      incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "Encountered error", segment, tier);
     } else if (isAlreadyLoadedOnTier) {
       replicationThrottler.incrementAssignedReplicas(tier);
     }
@@ -547,42 +555,23 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     return numCancelled;
   }
 
-  private void incrementStat(CoordinatorStat stat, DataSegment segment, String tier)
+  private void incrementSkipStat(CoordinatorStat stat, String reason, DataSegment segment, String tier)
   {
-    incrementStat(stat, segment, tier, 1);
+    final RowKey.Builder keyBuilder
+        = RowKey.builder()
+                .add(Dimension.TIER, tier)
+                .add(Dimension.DATASOURCE, segment.getDataSource());
+
+    if (reason != null) {
+      keyBuilder.add(Dimension.DESCRIPTION, reason);
+    }
+
+    stats.add(stat, keyBuilder.build(), 1);
   }
 
   private void incrementStat(CoordinatorStat stat, DataSegment segment, String tier, long value)
   {
     stats.addToSegmentStat(stat, tier, segment.getDataSource(), value);
-  }
-
-  /**
-   * These errors are tracked for debugging purposes only. They can be logged by
-   * the respective duties.
-   */
-  private static class Error
-  {
-    static final CoordinatorStat MOVE_FAILED
-        = new CoordinatorStat("failed to start move", CoordinatorStat.Level.ERROR);
-    static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_MOVE
-        = new CoordinatorStat("no eligible server for move", CoordinatorStat.Level.INFO);
-    static final CoordinatorStat MOVE_SKIPPED_OPTIMALLY_PLACED
-        = new CoordinatorStat("move skipped (optimally placed)");
-
-    static final CoordinatorStat DROP_FAILED
-        = new CoordinatorStat("failed to start drop", CoordinatorStat.Level.ERROR);
-    static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_DROP
-        = new CoordinatorStat("no eligible server for drop", CoordinatorStat.Level.INFO);
-
-    static final CoordinatorStat LOAD_FAILED
-        = new CoordinatorStat("failed to start load", CoordinatorStat.Level.ERROR);
-    static final CoordinatorStat REPLICA_THROTTLED
-        = new CoordinatorStat("replica throttled");
-    static final CoordinatorStat NO_ELIGIBLE_SERVER_FOR_LOAD
-        = new CoordinatorStat("no eligible server for load", CoordinatorStat.Level.INFO);
-    static final CoordinatorStat NO_STRATEGIC_SERVER_FOR_LOAD
-        = new CoordinatorStat("no strategic server for load", CoordinatorStat.Level.INFO);
   }
 
 }

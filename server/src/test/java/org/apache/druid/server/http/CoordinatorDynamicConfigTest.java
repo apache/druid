@@ -258,6 +258,7 @@ public class CoordinatorDynamicConfigTest
         true,
         10,
         false,
+        false,
         null
     );
     Assert.assertTrue(config.isKillUnusedSegmentsInAllDataSources());
@@ -286,6 +287,7 @@ public class CoordinatorDynamicConfigTest
         true,
         true,
         10,
+        false,
         false,
         null
     );
@@ -438,70 +440,21 @@ public class CoordinatorDynamicConfigTest
   }
 
   @Test
-  public void testSerdeHandleInvalidPercentOfSegmentsToConsiderPerMove() throws Exception
+  public void testSerdeHandleInvalidPercentOfSegmentsToConsiderPerMove()
   {
-    try {
-      String jsonStr = "{\n"
-                       + "  \"percentOfSegmentsToConsiderPerMove\": 0\n"
-                       + "}\n";
-
-      mapper.readValue(
-          mapper.writeValueAsString(
-              mapper.readValue(
-                  jsonStr,
-                  CoordinatorDynamicConfig.class
-              )
-          ),
-          CoordinatorDynamicConfig.class
-      );
-
-      Assert.fail("deserialization should fail.");
-    }
-    catch (JsonMappingException e) {
-      Assert.assertTrue(e.getCause() instanceof IllegalArgumentException);
-    }
-
-    try {
-      String jsonStr = "{\n"
-                       + "  \"percentOfSegmentsToConsiderPerMove\": -100\n"
-                       + "}\n";
-
-      mapper.readValue(
-          mapper.writeValueAsString(
-              mapper.readValue(
-                  jsonStr,
-                  CoordinatorDynamicConfig.class
-              )
-          ),
-          CoordinatorDynamicConfig.class
-      );
-
-      Assert.fail("deserialization should fail.");
-    }
-    catch (JsonMappingException e) {
-      Assert.assertTrue(e.getCause() instanceof IllegalArgumentException);
-    }
-
-    try {
-      String jsonStr = "{\n"
-                       + "  \"percentOfSegmentsToConsiderPerMove\": 105\n"
-                       + "}\n";
-
-      mapper.readValue(
-          mapper.writeValueAsString(
-              mapper.readValue(
-                  jsonStr,
-                  CoordinatorDynamicConfig.class
-              )
-          ),
-          CoordinatorDynamicConfig.class
-      );
-
-      Assert.fail("deserialization should fail.");
-    }
-    catch (JsonMappingException e) {
-      Assert.assertTrue(e.getCause() instanceof IllegalArgumentException);
-    }
+    final String errorMsg = "'percentOfSegmentsToConsiderPerMove' should be between 1 and 100";
+    assertThatDeserializationFailsWithMessage(
+        "{\"percentOfSegmentsToConsiderPerMove\": 0}",
+        errorMsg
+    );
+    assertThatDeserializationFailsWithMessage(
+        "{\"percentOfSegmentsToConsiderPerMove\": -100}",
+        errorMsg
+    );
+    assertThatDeserializationFailsWithMessage(
+        "{\"percentOfSegmentsToConsiderPerMove\": 105}",
+        errorMsg
+    );
   }
 
   @Test
@@ -524,10 +477,7 @@ public class CoordinatorDynamicConfigTest
                      + "}\n";
     CoordinatorDynamicConfig actual = mapper.readValue(
         mapper.writeValueAsString(
-            mapper.readValue(
-                jsonStr,
-                CoordinatorDynamicConfig.class
-            )
+            mapper.readValue(jsonStr, CoordinatorDynamicConfig.class)
         ),
         CoordinatorDynamicConfig.class
     );
@@ -575,10 +525,7 @@ public class CoordinatorDynamicConfigTest
 
     CoordinatorDynamicConfig actual = mapper.readValue(
         mapper.writeValueAsString(
-            mapper.readValue(
-                jsonStr,
-                CoordinatorDynamicConfig.class
-            )
+            mapper.readValue(jsonStr, CoordinatorDynamicConfig.class)
         ),
         CoordinatorDynamicConfig.class
     );
@@ -613,10 +560,7 @@ public class CoordinatorDynamicConfigTest
               + "  \"killAllDataSources\": true,\n"
               + "  \"percentOfSegmentsToConsiderPerMove\": 1\n"
               + "}\n";
-    actual = mapper.readValue(
-        jsonStr,
-        CoordinatorDynamicConfig.class
-    );
+    actual = mapper.readValue(jsonStr, CoordinatorDynamicConfig.class);
 
     Assert.assertFalse(actual.isKillUnusedSegmentsInAllDataSources());
     Assert.assertEquals(2, actual.getSpecificDataSourcesToKillUnusedSegmentsIn().size());
@@ -640,10 +584,7 @@ public class CoordinatorDynamicConfigTest
 
     CoordinatorDynamicConfig actual = mapper.readValue(
         mapper.writeValueAsString(
-            mapper.readValue(
-                jsonStr,
-                CoordinatorDynamicConfig.class
-            )
+            mapper.readValue(jsonStr, CoordinatorDynamicConfig.class)
         ),
         CoordinatorDynamicConfig.class
     );
@@ -760,6 +701,7 @@ public class CoordinatorDynamicConfigTest
             null,
             null,
             null,
+            null,
             null
         ).build(current)
     );
@@ -768,20 +710,26 @@ public class CoordinatorDynamicConfigTest
   @Test
   public void testSerdeHandleInvalidMaxNonPrimaryReplicantsToLoad()
   {
-    String jsonStr = "{\"maxNonPrimaryReplicantsToLoad\": -1}";
+    assertThatDeserializationFailsWithMessage(
+        "{\"maxNonPrimaryReplicantsToLoad\": -1}",
+        "maxNonPrimaryReplicantsToLoad must be greater than or equal to 0."
+    );
+  }
+
+  private void assertThatDeserializationFailsWithMessage(String json, String message)
+  {
     JsonMappingException e = Assert.assertThrows(
         JsonMappingException.class,
         () -> mapper.readValue(
             mapper.writeValueAsString(
-                mapper.readValue(
-                    jsonStr,
-                    CoordinatorDynamicConfig.class
-                )
+                mapper.readValue(json, CoordinatorDynamicConfig.class)
             ),
             CoordinatorDynamicConfig.class
         )
     );
     Assert.assertTrue(e.getCause() instanceof IllegalArgumentException);
+    IllegalArgumentException cause = (IllegalArgumentException) e.getCause();
+    Assert.assertEquals(message, cause.getMessage());
   }
 
   @Test
@@ -817,7 +765,7 @@ public class CoordinatorDynamicConfigTest
   {
     Assert.assertEquals(
         expectedLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
-        config.getLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments()
+        config.getMarkSegmentAsUnusedDelayMillis()
     );
     Assert.assertEquals(expectedMergeBytesLimit, config.getMergeBytesLimit());
     Assert.assertEquals(expectedMergeSegmentsLimit, config.getMergeSegmentsLimit());

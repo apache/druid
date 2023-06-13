@@ -161,29 +161,6 @@ public abstract class CoordinatorSimulationBaseTest implements
 
   // Utility methods
 
-  /**
-   * Creates a {@link CoordinatorDynamicConfig} with the specified values of:
-   * {@code maxSegmentsToMove, maxSegmentsInNodeLoadingQueue and replicationThrottleLimit}.
-   * The created config always has {@code useBatchedSegmentSampler=true} to avoid
-   * flakiness in tests.
-   *
-   * @see CoordinatorSimulationBaseTest
-   */
-  static CoordinatorDynamicConfig createDynamicConfig(
-      int maxSegmentsToMove,
-      int maxSegmentsInNodeLoadingQueue,
-      int replicationThrottleLimit
-  )
-  {
-    return CoordinatorDynamicConfig.builder()
-                                   .withMaxSegmentsToMove(maxSegmentsToMove)
-                                   .withReplicationThrottleLimit(replicationThrottleLimit)
-                                   .withMaxSegmentsInNodeLoadingQueue(maxSegmentsInNodeLoadingQueue)
-                                   .withUseBatchedSegmentSampler(true)
-                                   .withUseRoundRobinSegmentAssignment(false)
-                                   .build();
-  }
-
   static Map<String, Object> filterByServer(DruidServer server)
   {
     return filter(Dimension.SERVER, server.getName());
@@ -238,9 +215,6 @@ public abstract class CoordinatorSimulationBaseTest implements
     static final String DROPPED_COUNT = "segment/dropped/count";
     static final String LOAD_QUEUE_COUNT = "segment/loadQueue/count";
     static final String DROP_QUEUE_COUNT = "segment/dropQueue/count";
-
-    static final String BROADCAST_LOADS = "segment/assigned/broadcast";
-    static final String BROADCAST_DROPS = "segment/dropped/broadcast";
     static final String CANCELLED_ACTIONS = "segment/loadQueue/cancelled";
   }
 

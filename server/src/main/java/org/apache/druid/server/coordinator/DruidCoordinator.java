@@ -45,6 +45,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.CoordinatorIndexingServiceDuty;
 import org.apache.druid.guice.annotations.CoordinatorMetadataStoreManagementDuty;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
@@ -66,7 +67,7 @@ import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
-import org.apache.druid.server.coordinator.duty.MarkAsUnusedOvershadowedSegments;
+import org.apache.druid.server.coordinator.duty.MarkOvershadowedSegmentsAsUnused;
 import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
@@ -81,6 +82,7 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -567,7 +569,7 @@ public class DruidCoordinator
         new UpdateCoordinatorStateAndPrepareCluster(),
         new RunRules(),
         new UnloadUnusedSegments(loadQueueManager),
-        new MarkAsUnusedOvershadowedSegments(DruidCoordinator.this),
+        new MarkOvershadowedSegmentsAsUnused(DruidCoordinator.this),
         new BalanceSegments(),
         new CollectSegmentAndServerStats(DruidCoordinator.this)
     );
@@ -635,7 +637,7 @@ public class DruidCoordinator
 
   private class DutiesRunnable implements Runnable
   {
-    private final long startTimeNanos = System.nanoTime();
+    private final DateTime coordinatorStartTime = DateTimes.nowUtc();
     private final List<? extends CoordinatorDuty> duties;
     private final int startingLeaderCounter;
     private final String dutyGroupName;
@@ -686,7 +688,7 @@ public class DruidCoordinator
 
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams
-                .newBuilder(startTimeNanos)
+                .newBuilder(coordinatorStartTime)
                 .withDatabaseRuleManager(metadataRuleManager)
                 .withSnapshotOfDataSourcesWithAllUsedSegments(dataSourcesSnapshot)
                 .withDynamicConfigs(getDynamicConfigs())
@@ -722,7 +724,7 @@ public class DruidCoordinator
               return;
             } else {
               final RowKey rowKey = RowKey.builder().add(Dimension.DUTY, dutyName).build();
-              params.getCoordinatorStats().add(Stats.CoordinatorRun.DUTY_TIME, rowKey, end - start);
+              params.getCoordinatorStats().add(Stats.CoordinatorRun.DUTY_RUN_TIME, rowKey, end - start);
             }
           }
         }
@@ -739,16 +741,16 @@ public class DruidCoordinator
                 }
               }
           );
+
           log.info(
-              "Emitted total [%d] stats for [%d] dimension keys while running group [%s].",
-              emittedCount.get(), allStats.rowCount(), dutyGroupName
+              "Emitted [%d] stats for group [%s]. All collected stats:%s\n",
+              emittedCount.get(), dutyGroupName, allStats.buildStatsTable()
           );
-          allStats.logStatsAndErrors(log);
         }
 
         // Emit the runtime of the full DutiesRunnable
         final long runMillis = System.currentTimeMillis() - globalStart;
-        emitStat(Stats.CoordinatorRun.TOTAL_TIME, Collections.emptyMap(), runMillis);
+        emitStat(Stats.CoordinatorRun.GROUP_RUN_TIME, Collections.emptyMap(), runMillis);
         log.info("Finished coordinator run for group [%s] in [%d] ms", dutyGroupName, runMillis);
       }
       catch (Exception e) {
@@ -814,6 +816,7 @@ public class DruidCoordinator
 
       params = params.buildFromExisting()
                      .withDruidCluster(cluster)
+                     .withDynamicConfigs(recomputeDynamicConfig(params))
                      .withBalancerStrategy(balancerStrategy)
                      .withSegmentAssignerUsing(loadQueueManager)
                      .build();
@@ -821,6 +824,44 @@ public class DruidCoordinator
       segmentReplicantLookup = params.getSegmentReplicantLookup();
 
       return params;
+    }
+
+    /**
+     * Recomputes dynamic config values if {@code smartLoadQueue} is enabled.
+     */
+    private CoordinatorDynamicConfig recomputeDynamicConfig(DruidCoordinatorRuntimeParams params)
+    {
+      final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
+      if (!dynamicConfig.isSmartSegmentLoading()) {
+        return dynamicConfig;
+      }
+
+      // Impose a lower bound on both replicationThrottleLimit and maxSegmentsToMove
+      final int throttlePercentage = 2;
+      final int replicationThrottleLimit = Math.max(
+          100,
+          params.getUsedSegments().size() * throttlePercentage / 100
+      );
+
+      // Impose an upper bound on maxSegmentsToMove to ensure that coordinator
+      // run times are bounded. This limit can be relaxed as performance of
+      // the CostBalancerStrategy.computeCost() is improved.
+      final int maxSegmentsToMove = Math.min(1000, replicationThrottleLimit);
+
+      log.info(
+          "Smart segment loading is enabled. Recomputed replicationThrottleLimit"
+          + " [%d] (%d%% of used segments) and maxSegmentsToMove [%d].",
+          replicationThrottleLimit, throttlePercentage, maxSegmentsToMove
+      );
+
+      return CoordinatorDynamicConfig.builder()
+                                     .withMaxSegmentsInNodeLoadingQueue(0)
+                                     .withReplicationThrottleLimit(replicationThrottleLimit)
+                                     .withMaxSegmentsToMove(maxSegmentsToMove)
+                                     .withUseRoundRobinSegmentAssignment(true)
+                                     .withUseBatchedSegmentSampler(true)
+                                     .withEmitBalancingStats(false)
+                                     .build(dynamicConfig);
     }
 
     /**
@@ -899,8 +940,7 @@ public class DruidCoordinator
             new ServerHolder(
                 server,
                 loadManagementPeons.get(server.getName()),
-                decommissioningServers.contains(server.getHost())
-                || decommissioningServers.contains("tier:" + server.getTier()),
+                decommissioningServers.contains(server.getHost()),
                 dynamicConfig.getMaxSegmentsInNodeLoadingQueue(),
                 dynamicConfig.getReplicantLifetime()
             )

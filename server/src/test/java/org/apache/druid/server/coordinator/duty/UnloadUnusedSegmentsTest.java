@@ -243,7 +243,7 @@ public class UnloadUnusedSegmentsTest
     Set<DataSegment> usedSegments = ImmutableSet.of(segment2);
 
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
-        .newBuilder(System.nanoTime())
+        .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(
             DruidCluster
                 .builder()

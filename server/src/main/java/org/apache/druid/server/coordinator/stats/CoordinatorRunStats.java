@@ -20,7 +20,7 @@
 package org.apache.druid.server.coordinator.stats;
 
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.Collections;
@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Contains statistics typically tracked during a single coordinator run or the
@@ -92,11 +93,15 @@ public class CoordinatorRunStats
   }
 
   /**
-   * Logs all the error, info and debug level stats (if applicable) with non-zero
-   * values, using the given logger.
+   * Builds a printable table of all the collected error, info and debug level
+   * stats (if applicable) with non-zero values.
    */
-  public void logStatsAndErrors(Logger log)
+  public String buildStatsTable()
   {
+    final StringBuilder statsTable = new StringBuilder();
+    final AtomicInteger hiddenStats = new AtomicInteger(0);
+    final AtomicInteger totalStats = new AtomicInteger();
+
     allStats.forEach(
         (rowKey, statMap) -> {
           // Categorize the stats by level
@@ -104,38 +109,56 @@ public class CoordinatorRunStats
               = new EnumMap<>(CoordinatorStat.Level.class);
 
           statMap.object2LongEntrySet().fastForEach(
-              stat -> {
-                if (stat.getLongValue() == 0) {
-                  return;
-                }
-
-                levelToStats.computeIfAbsent(stat.getKey().getLevel(), l -> new HashMap<>())
-                            .put(stat.getKey(), stat.getLongValue());
-              }
+              stat -> levelToStats.computeIfAbsent(stat.getKey().getLevel(), l -> new HashMap<>())
+                                  .put(stat.getKey(), stat.getLongValue())
           );
 
-          // Log all the errors
+          // Add all the errors
           final Map<CoordinatorStat, Long> errorStats = levelToStats
               .getOrDefault(CoordinatorStat.Level.ERROR, Collections.emptyMap());
+          totalStats.addAndGet(errorStats.size());
           if (!errorStats.isEmpty()) {
-            log.error("Errors for dimensions [%s]: %s", rowKey, errorStats);
+            statsTable.append(
+                StringUtils.format("\nError: %s ==> %s", rowKey, errorStats)
+            );
           }
 
-          // Log all the infos
+          // Add all the info level stats
           final Map<CoordinatorStat, Long> infoStats = levelToStats
               .getOrDefault(CoordinatorStat.Level.INFO, Collections.emptyMap());
+          totalStats.addAndGet(infoStats.size());
           if (!infoStats.isEmpty()) {
-            log.info("Collected stats for dimensions [%s] are [%s].", rowKey, infoStats);
+            statsTable.append(
+                StringUtils.format("\nInfo : %s ==> %s", rowKey, infoStats)
+            );
           }
 
-          // Log all the debugs
+          // Add all the debug level stats if the row key has a debug dimension
           final Map<CoordinatorStat, Long> debugStats = levelToStats
               .getOrDefault(CoordinatorStat.Level.DEBUG, Collections.emptyMap());
+          totalStats.addAndGet(debugStats.size());
           if (!debugStats.isEmpty() && hasDebugDimension(rowKey)) {
-            log.info("Debug stats for dimensions [%s] are [%s].", rowKey, debugStats);
+            statsTable.append(
+                StringUtils.format("\nDebug: %s ==> %s", rowKey, debugStats)
+            );
+          } else {
+            hiddenStats.addAndGet(debugStats.size());
           }
         }
     );
+
+    if (hiddenStats.get() > 0) {
+      statsTable.append(
+          StringUtils.format("\nDebug: %d hidden stats. Set 'debugDimensions' to see these.", hiddenStats.get())
+      );
+    }
+    if (totalStats.get() > 0) {
+      statsTable.append(
+          StringUtils.format("\nTOTAL: %d stats for %d dimension keys", totalStats.get(), rowCount())
+      );
+    }
+
+    return statsTable.toString();
   }
 
   public boolean hasStat(CoordinatorStat stat)

@@ -27,7 +27,9 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.CoordinatorStat;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -215,38 +217,35 @@ public class TierSegmentBalancer
   private DataSegment getLoadableSegment(DataSegment segmentToMove)
   {
     if (!params.getUsedSegments().contains(segmentToMove)) {
-      markUnmoved(Error.SEGMENT_IS_UNUSED, segmentToMove);
+      markUnmoved("Segment is unused", segmentToMove);
       return null;
     }
 
     ImmutableDruidDataSource datasource = params.getDataSourcesSnapshot().getDataSource(segmentToMove.getDataSource());
     if (datasource == null) {
-      markUnmoved(Error.DATASOURCE_NOT_FOUND, segmentToMove);
+      markUnmoved("Invalid datasource", segmentToMove);
       return null;
     }
 
     DataSegment loadableSegment = datasource.getSegment(segmentToMove.getId());
     if (loadableSegment == null) {
-      markUnmoved(Error.METADATA_NOT_FOUND, segmentToMove);
+      markUnmoved("Invalid segment ID", segmentToMove);
       return null;
     }
 
     return loadableSegment;
   }
 
-  private void markUnmoved(CoordinatorStat stat, DataSegment segment)
+  private void markUnmoved(String reason, DataSegment segment)
   {
-    runStats.addToSegmentStat(stat, tier, segment.getDataSource(), 1);
-  }
+    final RowKey key
+        = RowKey.builder()
+                .add(Dimension.TIER, tier)
+                .add(Dimension.DATASOURCE, segment.getDataSource())
+                .add(Dimension.DESCRIPTION, reason)
+                .build();
 
-  private static class Error
-  {
-    static final CoordinatorStat SEGMENT_IS_UNUSED =
-        new CoordinatorStat("move skipped (unused segment)", CoordinatorStat.Level.INFO);
-    static final CoordinatorStat DATASOURCE_NOT_FOUND =
-        new CoordinatorStat("move skipped (invalid datasource)", CoordinatorStat.Level.INFO);
-    static final CoordinatorStat METADATA_NOT_FOUND =
-        new CoordinatorStat("move skipped (invalid segment)", CoordinatorStat.Level.INFO);
+    runStats.add(Stats.Segments.MOVE_SKIPPED, key, 1);
   }
 
 }

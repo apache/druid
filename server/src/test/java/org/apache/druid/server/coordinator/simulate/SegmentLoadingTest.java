@@ -57,9 +57,6 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   @Test
   public void testSecondReplicaOnAnyTierIsThrottled()
   {
-    // Disable balancing, infinite load queue size, replicateThrottleLimit = 2
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 2);
-
     // historicals = 2(in T1)
     // replicas = 2(on T1)
     final CoordinatorSimulation sim =
@@ -67,7 +64,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
                              .withSegments(segments)
                              .withServers(historicalT11, historicalT12)
                              .withRules(datasource, Load.on(Tier.T1, 2).forever())
-                             .withDynamicConfig(dynamicConfig)
+                             .withDynamicConfig(withReplicationThrottleLimit(2))
                              .build();
 
     // Put the first replica of all the segments on histT11
@@ -90,16 +87,13 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     // historicals = 1(in T1), size 1 GB
     final DruidServer historicalT11 = createHistorical(1, Tier.T1, 1000);
 
-    // disable balancing, unlimited load queue, replicationThrottleLimit = 10
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 10);
-
     // segments = 10*1day, size 500 MB
     // strategy = cost, replicas = 1(T1)
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(segments)
                              .withServers(historicalT11)
-                             .withDynamicConfig(dynamicConfig)
+                             .withDynamicConfig(withReplicationThrottleLimit(10))
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
                              .withImmediateSegmentLoading(false)
                              .build();
@@ -116,16 +110,13 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   @Test
   public void testTierShiftDoesNotCauseUnderReplication()
   {
-    // disable balancing
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 10);
-
     // historicals = 2(in T1) + 3(in T2)
     // segments = 1, replicas = 3(T2)
     final DataSegment segment = segments.get(0);
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(Collections.singletonList(segment))
-                             .withDynamicConfig(dynamicConfig)
+                             .withDynamicConfig(withReplicationThrottleLimit(10))
                              .withRules(datasource, Load.on(Tier.T2, 3).forever())
                              .withServers(historicalT11, historicalT12, historicalT21, historicalT22)
                              .build();
@@ -191,9 +182,6 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   @Test
   public void testTierAddDoesNotCauseUnderReplication()
   {
-    // disable balancing
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 10);
-
     // historicals = 2(in T1) + 1(in T2)
     // current replicas = 2(T1)
     // required replicas = 1(T1) + 1(T2)
@@ -201,7 +189,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(Collections.singletonList(segment))
-                             .withDynamicConfig(dynamicConfig)
+                             .withDynamicConfig(withReplicationThrottleLimit(10))
                              .withRules(datasource, Load.on(Tier.T1, 1).andOn(Tier.T2, 1).forever())
                              .withServers(historicalT11, historicalT12, historicalT21)
                              .build();
@@ -245,16 +233,13 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     // historicals = 1(in T1), size 1 GB
     final DruidServer historicalT11 = createHistorical(1, Tier.T1, 1000);
 
-    // disable balancing, unlimited load queue, replicationThrottleLimit = 10
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 10);
-
     // segments = 10*1day, size 500 MB
     // strategy = cost, replicas = 1(T1)
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(segments)
                              .withServers(historicalT11)
-                             .withDynamicConfig(dynamicConfig)
+                             .withDynamicConfig(withReplicationThrottleLimit(10))
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
                              .withImmediateSegmentLoading(true)
                              .build();
@@ -271,7 +256,14 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   public void testMaxSegmentsInNodeLoadingQueue()
   {
     // disable balancing, maxSegmentsInNodeLoadingQueue = 5, replicationThrottleLimit = 10
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 5, 10);
+    CoordinatorDynamicConfig dynamicConfig =
+        CoordinatorDynamicConfig.builder()
+                                .withMaxSegmentsToMove(0)
+                                .withReplicationThrottleLimit(10)
+                                .withMaxSegmentsInNodeLoadingQueue(5)
+                                .withUseRoundRobinSegmentAssignment(false)
+                                .withSmartSegmentLoading(false)
+                                .build();
 
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
@@ -308,16 +300,13 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   @Test
   public void testFirstReplicaOnTierIsNotThrottled()
   {
-    // Disable balancing, infinite load queue size, replicateThrottleLimit = 2
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 2);
-
     // historicals = 1(in T1) + 1(in T2)
     // replicas = 1(on T1) + 1(on T2)
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(segments)
                              .withServers(historicalT11, historicalT21)
-                             .withDynamicConfig(dynamicConfig)
+                             .withDynamicConfig(withReplicationThrottleLimit(2))
                              .withRules(datasource, Load.on(Tier.T1, 1).andOn(Tier.T2, 1).forever())
                              .build();
 
@@ -328,11 +317,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     runCoordinatorCycle();
 
     // Verify that primary replica on T2 are not throttled
-    verifyValue(
-        Metric.ASSIGNED_COUNT,
-        filterByTier(Tier.T2),
-        10L
-    );
+    verifyValue(Metric.ASSIGNED_COUNT, filterByTier(Tier.T2), 10L);
 
     loadQueuedSegments();
 
@@ -344,9 +329,6 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   @Test
   public void testImmediateLoadingDoesNotViolateThrottleLimit()
   {
-    // Disable balancing, infinite load queue size, replicationThrottleLimit = 2
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 2);
-
     // historicals = 2(in T1), segments = 10*1day
     // replicas = 2(on T1), immediate segment loading
     final CoordinatorSimulation sim =
@@ -355,7 +337,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
                              .withServers(historicalT11, historicalT12)
                              .withRules(datasource, Load.on(Tier.T1, 2).forever())
                              .withImmediateSegmentLoading(true)
-                             .withDynamicConfig(dynamicConfig)
+                             .withDynamicConfig(withReplicationThrottleLimit(2))
                              .build();
 
     // Put the first replica of all the segments on histT11
@@ -374,15 +356,12 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   @Test
   public void testLoadOfFullyReplicatedSegmentGetsCancelled()
   {
-    // disable balancing, unlimited load queue, replicationThrottleLimit = 10
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 10);
-
     // historicals = 2(in T1), replicas = 2(on T1)
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(segments)
                              .withServers(historicalT11, historicalT12)
-                             .withDynamicConfig(dynamicConfig)
+                             .withDynamicConfig(withReplicationThrottleLimit(10))
                              .withRules(datasource, Load.on(Tier.T1, 2).forever())
                              .build();
 
@@ -408,25 +387,18 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     // Verify that the loading of the extra replicas is cancelled
     verifyValue(Metric.CANCELLED_ACTIONS, 10L);
-    verifyValue(
-        Metric.LOAD_QUEUE_COUNT,
-        filterByServer(historicalT12),
-        0L
-    );
+    verifyValue(Metric.LOAD_QUEUE_COUNT, filterByServer(historicalT12), 0L);
   }
 
   @Test
-  public void testBroadcastIsNotThrottled()
+  public void testBroadcastReplicasAreNotThrottled()
   {
-    // disable balancing, unlimited load queue, replicationThrottleLimit = 1
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 0);
-
     // historicals = 3(in T1)
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(segments)
                              .withServers(historicalT11, historicalT12, historicalT13)
-                             .withDynamicConfig(dynamicConfig)
+                             .withDynamicConfig(withReplicationThrottleLimit(0))
                              .withRules(datasource, Broadcast.forever())
                              .build();
 
@@ -435,21 +407,18 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     // Verify that all the segments are broadcast to all historicals
     // irrespective of throttle limit
-    verifyValue(Metric.BROADCAST_LOADS, filterByDatasource(DS.WIKI), 30L);
-    verifyNotEmitted(Metric.BROADCAST_DROPS);
+    verifyValue(Metric.ASSIGNED_COUNT, filterByDatasource(DS.WIKI), 30L);
+    verifyNotEmitted(Metric.DROPPED_COUNT);
   }
 
   @Test
   public void testReplicasAreNotAssignedIfTierIsBusy()
   {
-    // disable balancing, unlimited load queue, replicationThrottleLimit = 1
-    CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 5);
-
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(segments)
                              .withServers(historicalT11, historicalT12)
-                             .withDynamicConfig(dynamicConfig)
+                             .withDynamicConfig(withReplicationThrottleLimit(5))
                              .withRules(datasource, Load.on(Tier.T1, 2).forever())
                              .build();
 
@@ -478,8 +447,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   @Test
   public void testAllLoadsOnDecommissioningServerAreCancelled()
   {
-    // disable balancing, unlimited load queue, replicationThrottleLimit = 1
-    final CoordinatorDynamicConfig dynamicConfig = createDynamicConfig(0, 0, 100);
+    final CoordinatorDynamicConfig dynamicConfig = withReplicationThrottleLimit(100);
 
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
@@ -518,7 +486,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withServers(historicalT11, historicalT12)
-                             .withDynamicConfig(createDynamicConfig(0, 0, 100))
+                             .withDynamicConfig(withReplicationThrottleLimit(100))
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
                              .withRules(DS.KOALA, Load.on(Tier.T1, 1).forever())
                              .build();
@@ -553,4 +521,17 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     return numLoaded;
   }
 
+  /**
+   * Creates a dynamic config with unlimited load queue, balancing disabled and
+   * the given {@code replicationThrottleLimit}.
+   */
+  private CoordinatorDynamicConfig withReplicationThrottleLimit(int replicationThrottleLimit)
+  {
+    return CoordinatorDynamicConfig.builder()
+                                   .withSmartSegmentLoading(false)
+                                   .withMaxSegmentsToMove(0)
+                                   .withMaxSegmentsInNodeLoadingQueue(0)
+                                   .withReplicationThrottleLimit(replicationThrottleLimit)
+                                   .build();
+  }
 }

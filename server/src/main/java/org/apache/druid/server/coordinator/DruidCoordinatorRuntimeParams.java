@@ -31,6 +31,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -39,7 +40,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.TimeUnit;
 
 /**
  */
@@ -59,7 +59,7 @@ public class DruidCoordinatorRuntimeParams
     return segmentsSet;
   }
 
-  private final long startTimeNanos;
+  private final DateTime coordinatorStartTime;
   private final DruidCluster druidCluster;
   private final MetadataRuleManager databaseRuleManager;
   private final StrategicSegmentAssigner segmentAssigner;
@@ -73,7 +73,7 @@ public class DruidCoordinatorRuntimeParams
   private final Set<String> broadcastDatasources;
 
   private DruidCoordinatorRuntimeParams(
-      long startTimeNanos,
+      DateTime coordinatorStartTime,
       DruidCluster druidCluster,
       MetadataRuleManager databaseRuleManager,
       StrategicSegmentAssigner segmentAssigner,
@@ -87,7 +87,7 @@ public class DruidCoordinatorRuntimeParams
       Set<String> broadcastDatasources
   )
   {
-    this.startTimeNanos = startTimeNanos;
+    this.coordinatorStartTime = coordinatorStartTime;
     this.druidCluster = druidCluster;
     this.databaseRuleManager = databaseRuleManager;
     this.segmentAssigner = segmentAssigner;
@@ -101,9 +101,9 @@ public class DruidCoordinatorRuntimeParams
     this.broadcastDatasources = broadcastDatasources;
   }
 
-  public long getStartTimeNanos()
+  public DateTime getCoordinatorStartTime()
   {
-    return startTimeNanos;
+    return coordinatorStartTime;
   }
 
   public DruidCluster getDruidCluster()
@@ -169,30 +169,21 @@ public class DruidCoordinatorRuntimeParams
     return broadcastDatasources;
   }
 
-  public boolean coordinatorIsLeadingEnoughTimeToMarkAsUnusedOvershadowedSegements()
-  {
-    long nanosElapsedSinceCoordinatorStart = System.nanoTime() - getStartTimeNanos();
-    long lagNanos = TimeUnit.MILLISECONDS.toNanos(
-        coordinatorDynamicConfig.getLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments()
-    );
-    return nanosElapsedSinceCoordinatorStart > lagNanos;
-  }
-
   public DataSourcesSnapshot getDataSourcesSnapshot()
   {
     Preconditions.checkState(dataSourcesSnapshot != null, "usedSegments or dataSourcesSnapshot must be set");
     return dataSourcesSnapshot;
   }
 
-  public static Builder newBuilder(long startTimeNanos)
+  public static Builder newBuilder(DateTime coordinatorStartTime)
   {
-    return new Builder(startTimeNanos);
+    return new Builder(coordinatorStartTime);
   }
 
   public Builder buildFromExisting()
   {
     return new Builder(
-        startTimeNanos,
+        coordinatorStartTime,
         druidCluster,
         databaseRuleManager,
         segmentAssigner,
@@ -209,7 +200,7 @@ public class DruidCoordinatorRuntimeParams
 
   public static class Builder
   {
-    private final long startTimeNanos;
+    private final DateTime coordinatorStartTime;
     private DruidCluster druidCluster;
     private MetadataRuleManager databaseRuleManager;
     private SegmentLoadQueueManager loadQueueManager;
@@ -223,16 +214,16 @@ public class DruidCoordinatorRuntimeParams
     private BalancerStrategy balancerStrategy;
     private Set<String> broadcastDatasources;
 
-    private Builder(long startTimeNanos)
+    private Builder(DateTime coordinatorStartTime)
     {
-      this.startTimeNanos = startTimeNanos;
+      this.coordinatorStartTime = coordinatorStartTime;
       this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
       this.coordinatorCompactionConfig = CoordinatorCompactionConfig.empty();
       this.broadcastDatasources = Collections.emptySet();
     }
 
     private Builder(
-        long startTimeNanos,
+        DateTime coordinatorStartTime,
         DruidCluster cluster,
         MetadataRuleManager databaseRuleManager,
         StrategicSegmentAssigner segmentAssigner,
@@ -246,7 +237,7 @@ public class DruidCoordinatorRuntimeParams
         Set<String> broadcastDatasources
     )
     {
-      this.startTimeNanos = startTimeNanos;
+      this.coordinatorStartTime = coordinatorStartTime;
       this.druidCluster = cluster;
       this.databaseRuleManager = databaseRuleManager;
       this.segmentAssigner = segmentAssigner;
@@ -266,7 +257,7 @@ public class DruidCoordinatorRuntimeParams
       initSegmentAssignerIfRequired();
 
       return new DruidCoordinatorRuntimeParams(
-          startTimeNanos,
+          coordinatorStartTime,
           druidCluster,
           databaseRuleManager,
           segmentAssigner,

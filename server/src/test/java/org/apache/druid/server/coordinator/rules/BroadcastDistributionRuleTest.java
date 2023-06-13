@@ -291,8 +291,8 @@ public class BroadcastDistributionRuleTest
         )
     );
 
-    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED_BROADCAST, TIER_1, DS_SMALL));
-    Assert.assertEquals(3L, stats.getSegmentStat(Stats.Segments.ASSIGNED_BROADCAST, TIER_2, DS_SMALL));
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, DS_SMALL));
+    Assert.assertEquals(3L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_2, DS_SMALL));
 
     Assert.assertTrue(
         holdersOfLargeSegments.stream().allMatch(
@@ -313,7 +313,7 @@ public class BroadcastDistributionRuleTest
   )
   {
     return DruidCoordinatorRuntimeParams
-        .newBuilder(System.nanoTime())
+        .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(druidCluster)
         .withUsedSegmentsInTest(usedSegments)
         .withBalancerStrategy(new RandomBalancerStrategy())
@@ -351,7 +351,7 @@ public class BroadcastDistributionRuleTest
         )
     );
 
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED_BROADCAST, TIER_1, DS_SMALL));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, DS_SMALL));
     Assert.assertEquals(1, activeServer.getPeon().getSegmentsToLoad().size());
     Assert.assertEquals(1, decommissioningServer1.getPeon().getSegmentsToDrop().size());
     Assert.assertEquals(0, decommissioningServer2.getPeon().getSegmentsToLoad().size());
@@ -376,8 +376,8 @@ public class BroadcastDistributionRuleTest
         )
     );
 
-    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED_BROADCAST, TIER_1, DS_SMALL));
-    Assert.assertEquals(3L, stats.getSegmentStat(Stats.Segments.ASSIGNED_BROADCAST, TIER_2, DS_SMALL));
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, DS_SMALL));
+    Assert.assertEquals(3L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_2, DS_SMALL));
 
     Assert.assertTrue(
         holdersOfLargeSegments.stream().allMatch(
@@ -411,8 +411,8 @@ public class BroadcastDistributionRuleTest
         )
     );
 
-    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED_BROADCAST, TIER_1, DS_SMALL));
-    Assert.assertEquals(3L, stats.getSegmentStat(Stats.Segments.ASSIGNED_BROADCAST, TIER_2, DS_SMALL));
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, DS_SMALL));
+    Assert.assertEquals(3L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_2, DS_SMALL));
 
     Assert.assertTrue(
         druidCluster.getAllServers().stream().allMatch(

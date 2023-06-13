@@ -177,7 +177,7 @@ public class LoadRuleTest
   )
   {
     return DruidCoordinatorRuntimeParams
-        .newBuilder(System.nanoTime())
+        .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(druidCluster)
         .withBalancerStrategy(mockBalancerStrategy)
         .withUsedSegmentsInTest(usedSegments)
@@ -502,7 +502,7 @@ public class LoadRuleTest
     DataSegment dataSegment3 = createDataSegment("ds3");
 
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
-        .newBuilder(System.nanoTime())
+        .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(druidCluster)
         .withBalancerStrategy(mockBalancerStrategy)
         .withUsedSegmentsInTest(dataSegment1, dataSegment2, dataSegment3)
