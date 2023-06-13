@@ -127,17 +127,21 @@ export interface SupervisorsViewState {
 function stateToColor(status: string): string {
   switch (status) {
     case 'UNHEALTHY_SUPERVISOR':
-      return '#d5100a';
     case 'UNHEALTHY_TASKS':
       return '#d5100a';
+
     case 'PENDING':
-      return '#ffbf00';
-    case `SUSPENDED`:
-      return '#ffbf00';
-    case 'STOPPING':
-      return '#d5100a';
+      return '#00eaff';
+
     case 'RUNNING':
       return '#2167d5';
+
+    case 'STOPPING':
+      return '#e75c06';
+
+    case `SUSPENDED`:
+      return '#ffbf00';
+
     default:
       return '#0a1500';
   }
