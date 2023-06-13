@@ -346,6 +346,11 @@ public class SegmentAnalyzer
                                                      .withTypeName(typeName);
 
     try (final BaseColumn theColumn = columnHolder != null ? columnHolder.getColumn() : null) {
+      if (capabilities != null) {
+        bob.hasMultipleValues(capabilities.hasMultipleValues().isTrue())
+           .hasNulls(capabilities.hasNulls().isMaybeTrue());
+      }
+
       if (theColumn != null && !(theColumn instanceof ComplexColumn)) {
         return bob.withErrorMessage(
                     StringUtils.format(
@@ -357,9 +362,6 @@ public class SegmentAnalyzer
                   .build();
       }
       final ComplexColumn complexColumn = (ComplexColumn) theColumn;
-
-      bob.hasMultipleValues(capabilities.hasMultipleValues().isTrue())
-         .hasNulls(capabilities.hasNulls().isMaybeTrue());
 
       long size = 0;
       if (analyzingSize() && complexColumn != null) {
