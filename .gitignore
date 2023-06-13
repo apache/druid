@@ -35,6 +35,8 @@ integration-tests/gen-scripts/
 **/.local/
 **/druidapi.egg-info/
 examples/quickstart/jupyter-notebooks/docker-jupyter/notebooks
+website/.docusaurus/
+
 
 # ignore NetBeans IDE specific files
 nbproject
