@@ -28,7 +28,7 @@ export function columnToSummary(column: Column): string {
 }
 
 function getEffectiveColumnType(column: Column): string | undefined {
-  if (column.sqlType === 'TIMESTAMP') return column.sqlType;
+  if (column.sqlType === 'TIMESTAMP' || column.sqlType === 'BOOLEAN') return column.sqlType;
   return column.nativeType || column.sqlType;
 }
 
@@ -43,6 +43,9 @@ export function dataTypeToIcon(dataType: string): IconName {
   switch (typeUpper) {
     case 'TIMESTAMP':
       return IconNames.TIME;
+
+    case 'BOOLEAN':
+      return IconNames.SEGMENTED_CONTROL;
 
     case 'VARCHAR':
     case 'STRING':
@@ -107,6 +110,9 @@ export function dataTypeToWidth(dataType: string | undefined): number {
   switch (typeUpper) {
     case 'TIMESTAMP':
       return 180;
+
+    case 'BOOLEAN':
+      return 100;
 
     case 'VARCHAR':
     case 'STRING':

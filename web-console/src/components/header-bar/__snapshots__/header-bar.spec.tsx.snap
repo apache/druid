@@ -111,7 +111,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       className="header-entry"
       disabled={false}
       href="#supervisors"
-      icon="route"
+      icon="eye-open"
       minimal={true}
       text="Supervisors"
     />
