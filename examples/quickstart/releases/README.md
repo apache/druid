@@ -20,7 +20,7 @@
   -->
 
 This directory contains notebook-based release notes that contain examples on how to use new features.
-Notebooks in this directory are meant to be run against quick-start clusters, but you can adapt them to run against live production clusters.
+Notebooks in this directory are meant to be run against quickstart clusters, but you can adapt them to run against live production clusters.
 
 For information on prerequisites and getting started with the Jupyter-based tutorials,
 see [Jupyter Notebook tutorials](../../../docs/tutorials/tutorial-jupyter-index.md).
