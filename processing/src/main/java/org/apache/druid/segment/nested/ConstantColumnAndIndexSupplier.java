@@ -23,6 +23,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Evals;
@@ -170,7 +171,7 @@ public class ConstantColumnAndIndexSupplier implements Supplier<NestedCommonForm
 
   class ConstantLexicographicalRangeIndex implements LexicographicalRangeIndex
   {
-    private final String theString = Evals.asString(constantValue);
+    private final String theString = NullHandling.emptyToNullIfNeeded(Evals.asString(constantValue));
     private final NullableTypeStrategy<String> strategy = logicalType.getNullableStrategy();
 
     @Nullable
@@ -211,9 +212,10 @@ public class ConstantColumnAndIndexSupplier implements Supplier<NestedCommonForm
         boolean endStrict
     )
     {
-      final int startCompare = strategy.compare(startValue, theString);
-      final int endCompare = endValue == null ? -1 : strategy.compare(theString, endValue);
-      final boolean startSatisfied = startStrict ? startCompare > 0 : startCompare >= 0;
+      // a negative integer, zero, or a positive integer as the first argument is less than, equal to, or greater than the second.
+      final int startCompare = strategy.compare(NullHandling.emptyToNullIfNeeded(startValue), theString);
+      final int endCompare = endValue == null ? -1 : strategy.compare(theString, NullHandling.emptyToNullIfNeeded(endValue));
+      final boolean startSatisfied = startStrict ? startCompare < 0 : startCompare <= 0;
       final boolean endSatisified = endStrict ? endCompare < 0 : endCompare <= 0;
       return startSatisfied && endSatisified;
     }
@@ -238,7 +240,7 @@ public class ConstantColumnAndIndexSupplier implements Supplier<NestedCommonForm
       final Number theNumber = (Number) constantValue;
       final int startCompare = strategy.compare(startValue, theNumber);
       final int endCompare = endValue == null ? -1 : strategy.compare(theNumber, endValue);
-      final boolean startSatisfied = startStrict ? startCompare > 0 : startCompare >= 0;
+      final boolean startSatisfied = startStrict ? startCompare < 0 : startCompare <= 0;
       final boolean endSatisified = endStrict ? endCompare < 0 : endCompare <= 0;
       if (startSatisfied && endSatisified) {
         return match;
@@ -261,25 +263,34 @@ public class ConstantColumnAndIndexSupplier implements Supplier<NestedCommonForm
           return noMatch;
         case LONG:
           DruidLongPredicate longPredicate = matcherFactory.makeLongPredicate();
-          if (constantValue == null && longPredicate.applyNull()) {
-            return match;
-          } else if (longPredicate.applyLong((Long) constantValue)) {
+          if (constantValue == null) {
+            if (longPredicate.applyNull()) {
+              return match;
+            }
+            return noMatch;
+          } else if (longPredicate.applyLong(((Number) constantValue).longValue())) {
             return match;
           }
           return noMatch;
         case FLOAT:
           DruidFloatPredicate floatPredicate = matcherFactory.makeFloatPredicate();
-          if (constantValue == null && floatPredicate.applyNull()) {
-            return match;
-          } else if (floatPredicate.applyFloat((Float) constantValue)) {
+          if (constantValue == null) {
+            if (floatPredicate.applyNull()) {
+              return match;
+            }
+            return noMatch;
+          } else if (floatPredicate.applyFloat(((Number) constantValue).floatValue())) {
             return match;
           }
           return noMatch;
         case DOUBLE:
           DruidDoublePredicate doublePredicate = matcherFactory.makeDoublePredicate();
-          if (constantValue == null && doublePredicate.applyNull()) {
-            return match;
-          } else if (doublePredicate.applyDouble((Double) constantValue)) {
+          if (constantValue == null) {
+            if (doublePredicate.applyNull()) {
+              return match;
+            }
+            return noMatch;
+          } else if (doublePredicate.applyDouble(((Number) constantValue).doubleValue())) {
             return match;
           }
           return noMatch;

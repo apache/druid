@@ -92,10 +92,10 @@ public class BoundFilter implements Filter
         );
         if (rangeBitmaps != null) {
           // preserve sad backwards compatible behavior where bound filter matches 'null' if the lower bound is not set
-          if (boundDimFilter.hasLowerBound() && !NullHandling.isNullOrEquivalent(boundDimFilter.getLower())) {
-            return rangeBitmaps;
-          } else {
+          if (doesMatchNull()) {
             return wrapRangeIndexWithNullValueIndex(indexSupplier, rangeBitmaps);
+          } else {
+            return rangeBitmaps;
           }
         }
       }
@@ -123,10 +123,10 @@ public class BoundFilter implements Filter
           );
           if (rangeBitmaps != null) {
             // preserve sad backwards compatible behavior where bound filter matches 'null' if the lower bound is not set
-            if (boundDimFilter.hasLowerBound() && !NullHandling.isNullOrEquivalent(boundDimFilter.getLower())) {
-              return rangeBitmaps;
-            } else {
+            if (doesMatchNull()) {
               return wrapRangeIndexWithNullValueIndex(indexSupplier, rangeBitmaps);
+            } else {
+              return rangeBitmaps;
             }
           }
         }

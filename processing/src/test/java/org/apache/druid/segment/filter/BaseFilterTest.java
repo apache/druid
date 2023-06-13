@@ -322,6 +322,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                     .put(
                         "mmappedAutoTypes",
                         input -> {
+                          input.indexSpec(IndexSpec.builder().optimizeJsonConstantColumns(true).build());
                           input.mapSchema(
                               schema ->
                                   new IncrementalIndexSchema(

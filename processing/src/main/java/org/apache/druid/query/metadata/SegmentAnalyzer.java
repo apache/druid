@@ -347,8 +347,10 @@ public class SegmentAnalyzer
                                                      .withTypeName(typeName);
 
     try (final BaseColumn theColumn = columnHolder != null ? columnHolder.getColumn() : null) {
-      bob.hasMultipleValues(capabilities.hasMultipleValues().isTrue())
-         .hasNulls(capabilities.hasNulls().isMaybeTrue());
+      if (capabilities != null) {
+        bob.hasMultipleValues(capabilities.hasMultipleValues().isTrue())
+           .hasNulls(capabilities.hasNulls().isMaybeTrue());
+      }
 
       if (theColumn instanceof ConstantColumn) {
         return bob.build();

@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.DefaultBitmapResultFactory;
+import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.AutoTypeColumnMerger;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -48,6 +49,7 @@ import org.apache.druid.segment.column.LexicographicalRangeIndex;
 import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.column.NumericRangeIndex;
 import org.apache.druid.segment.column.StringValueSetIndex;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
@@ -395,6 +397,22 @@ public class ConstantColumnSupplierTest extends InitializedNullHandlingTest
           } else {
             Assert.assertEquals(row, valueSelector.getObject());
             Assert.assertTrue(valueSetIndex.forValue(String.valueOf(row)).computeBitmapResult(resultFactory).get(i));
+            Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(String.valueOf(row))).computeBitmapResult(resultFactory).get(i));
+            if (expectedLogicalType.isNumeric()) {
+              long s1 = ((Number) row).longValue() - 10;
+              long s2 = ((Number) row).longValue() - 5;
+              long s3 = ((Number) row).longValue() + 5;
+              Assert.assertFalse(rangeIndex.forRange(s1, false, s2, false).computeBitmapResult(resultFactory).get(i));
+              Assert.assertTrue(rangeIndex.forRange(s1, false, s3, false).computeBitmapResult(resultFactory).get(i));
+            }
+            if (expectedLogicalType.is(ValueType.STRING)) {
+              // this will break if we ever add other strings...
+              String a = "a";
+              String aa = "aa";
+              String z = "z";
+              Assert.assertFalse(lexicographicalRangeIndex.forRange(a, false, aa, false).computeBitmapResult(resultFactory).get(i));
+              Assert.assertTrue(lexicographicalRangeIndex.forRange(a, false, z, false).computeBitmapResult(resultFactory).get(i));
+            }
           }
           if (expectedType != null && expectedType.getSingleType() != null) {
             Assert.assertEquals(
@@ -435,6 +453,11 @@ public class ConstantColumnSupplierTest extends InitializedNullHandlingTest
           }
         }
         Assert.assertTrue(nullValueIndex.forNull().computeBitmapResult(resultFactory).get(i));
+        if (expectedLogicalType.isPrimitive()) {
+          Assert.assertTrue(predicateIndex.forPredicate(new SelectorPredicateFactory(null))
+                                          .computeBitmapResult(resultFactory)
+                                          .get(i));
+        }
       }
 
       offset.increment();

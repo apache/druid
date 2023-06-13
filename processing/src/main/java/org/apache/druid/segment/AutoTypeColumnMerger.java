@@ -134,8 +134,8 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         final SortedValueDictionary dimValues = mergable.getValueDictionary();
 
         boolean allNulls = dimValues == null || dimValues.allNull();
-        sortedLookup = dimValues;
         if (!allNulls) {
+          sortedLookup = dimValues;
           mergable.mergeFieldsInto(mergedFields);
           sortedLookups[i] = dimValues.getSortedStrings();
           sortedLongLookups[i] = dimValues.getSortedLongs();
@@ -169,7 +169,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       // for backwards compat; remove this constant handling in druid 28 along with
       // indexSpec.optimizeJsonConstantColumns in favor of always writing constant columns
       // we also handle the numMergeIndex == 0 here, which also indicates that the column is a null constant
-      if ((isConstant && constantValue == null) || (numMergeIndex == 0)) {
+      if (!forceNested && ((isConstant && constantValue == null) || numMergeIndex == 0)) {
         logicalType = ColumnType.STRING;
         serializer = new ScalarStringColumnSerializer(
             name,
