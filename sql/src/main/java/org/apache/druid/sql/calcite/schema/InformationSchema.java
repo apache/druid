@@ -43,6 +43,7 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.security.Action;
@@ -52,14 +53,17 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -68,9 +72,12 @@ public class InformationSchema extends AbstractSchema
   private static final EmittingLogger log = new EmittingLogger(InformationSchema.class);
 
   private static final String CATALOG_NAME = "druid";
+  private static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
+
   private static final String SCHEMATA_TABLE = "SCHEMATA";
   private static final String TABLES_TABLE = "TABLES";
   private static final String COLUMNS_TABLE = "COLUMNS";
+  private static final String ROUTINES_TABLE = "ROUTINES";
 
   private static class RowTypeBuilder
   {
@@ -131,6 +138,14 @@ public class InformationSchema extends AbstractSchema
       .add("COLLATION_NAME", SqlTypeName.VARCHAR, true)
       .add("JDBC_TYPE", SqlTypeName.BIGINT)
       .build();
+  private static final RelDataType ROUTINES_SIGNATURE = new RowTypeBuilder()
+      .add("ROUTINE_CATALOG", SqlTypeName.VARCHAR)
+      .add("ROUTINE_SCHEMA", SqlTypeName.VARCHAR)
+      .add("ROUTINE_NAME", SqlTypeName.VARCHAR)
+      .add("ROUTINE_TYPE", SqlTypeName.VARCHAR)
+      .add("IS_AGGREGATOR", SqlTypeName.VARCHAR)
+      .add("SIGNATURES", SqlTypeName.VARCHAR, true)
+      .build();
   private static final RelDataTypeSystem TYPE_SYSTEM = RelDataTypeSystem.DEFAULT;
 
   private static final String INFO_TRUE = "YES";
@@ -143,14 +158,16 @@ public class InformationSchema extends AbstractSchema
   @Inject
   public InformationSchema(
       @Named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA) final DruidSchemaCatalog rootSchema,
-      final AuthorizerMapper authorizerMapper
+      final AuthorizerMapper authorizerMapper,
+      final DruidOperatorTable operatorTable
   )
   {
     this.rootSchema = Preconditions.checkNotNull(rootSchema, "rootSchema");
     this.tableMap = ImmutableMap.of(
         SCHEMATA_TABLE, new SchemataTable(),
         TABLES_TABLE, new TablesTable(),
-        COLUMNS_TABLE, new ColumnsTable()
+        COLUMNS_TABLE, new ColumnsTable(),
+        ROUTINES_TABLE, new RoutinesTable(operatorTable)
     );
     this.authorizerMapper = authorizerMapper;
   }
@@ -466,6 +483,63 @@ public class InformationSchema extends AbstractSchema
                 }
               }
           );
+    }
+  }
+
+  static class RoutinesTable extends AbstractTable implements ScannableTable
+  {
+    private static final String FUNCTION = "FUNCTION";
+    private final DruidOperatorTable operatorTable;
+
+    public RoutinesTable(
+        DruidOperatorTable operatorTable
+    )
+    {
+      this.operatorTable = operatorTable;
+    }
+
+
+    @Override
+    public RelDataType getRowType(RelDataTypeFactory typeFactory)
+    {
+      return ROUTINES_SIGNATURE;
+    }
+
+    @Override
+    public Statistic getStatistic()
+    {
+      return Statistics.UNKNOWN;
+    }
+
+    @Override
+    public TableType getJdbcTableType()
+    {
+      return TableType.SYSTEM_TABLE;
+    }
+
+    @Override
+    public Enumerable<Object[]> scan(DataContext root)
+    {
+      final List<Object[]> rows = new ArrayList<>();
+      List<SqlOperator> operatorList = operatorTable.getOperatorList();
+
+      for (SqlOperator sqlOperator : operatorList) {
+        // For the ROUTINES table, we skip anything that's not a function syntax.
+        if (!DruidOperatorTable.isFunctionSyntax(sqlOperator.getSyntax())) {
+          continue;
+        }
+
+        Object[] row = new Object[]{
+            CATALOG_NAME, // ROUTINE_CATALOG
+            INFORMATION_SCHEMA_NAME, // ROUTINE_SCHEMA
+            sqlOperator.getName(), // ROUTINE_NAME
+            FUNCTION, // ROUTINE_TYPE
+            sqlOperator.isAggregator() ? INFO_TRUE : INFO_FALSE, // IS_AGGREGATOR
+            sqlOperator.getOperandTypeChecker() == null ? null : sqlOperator.getAllowedSignatures() // SIGNATURES
+        };
+        rows.add(row);
+      }
+      return Linq4j.asEnumerable(rows);
     }
   }
 

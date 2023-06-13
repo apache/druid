@@ -168,7 +168,8 @@ public class QueryFrameworkUtils
     InformationSchema informationSchema =
         new InformationSchema(
             catalog,
-            authorizerMapper
+            authorizerMapper,
+            createOperatorTable(injector)
         );
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
     rootSchema.add(INFORMATION_SCHEMA_NAME, informationSchema);

@@ -47,6 +47,7 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
+import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.view.ViewManager;
@@ -92,6 +93,8 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   private LookupReferencesManager lookupReferencesManager;
   @Mock
   private SegmentManager segmentManager;
+  @Mock
+  private DruidOperatorTable druidOperatorTable;
 
   private DruidCalciteSchemaModule target;
   private Injector injector;
@@ -112,6 +115,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(AuthorizerMapper.class).toInstance(authorizerMapper);
           binder.bind(FilteredServerInventoryView.class).toInstance(serverInventoryView);
           binder.bind(SegmentManager.class).toInstance(segmentManager);
+          binder.bind(DruidOperatorTable.class).toInstance(druidOperatorTable);
           binder.bind(DruidLeaderClient.class)
                 .annotatedWith(Coordinator.class)
                 .toInstance(coordinatorDruidLeaderClient);
