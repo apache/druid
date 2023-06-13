@@ -455,7 +455,7 @@ public class ControllerImpl implements Controller
 
     if (queryKernel != null && queryKernel.isSuccess()) {
       if (segmentLoadAwaiter != null) {
-        // If successful and there are segments a
+        // If successful and there are segments created, segmentLoadAwaiter should wait for them to become available.
         segmentLoadAwaiter.awaitSegmentLoad();
       }
     }
@@ -1287,14 +1287,16 @@ public class ControllerImpl implements Controller
                  .submit(new MarkSegmentsAsUnusedAction(task.getDataSource(), interval));
         }
       } else {
-        segmentLoadAwaiter = new SegmentLoadAwaiter(context.coordinatorClient(), task.getDataSource(), segmentsWithTombstones);
+        Set<String> versionsToAwait = segmentsWithTombstones.stream().map(DataSegment::getVersion).collect(Collectors.toSet());
+        segmentLoadAwaiter = new SegmentLoadAwaiter(context, task.getDataSource(), versionsToAwait, segmentsWithTombstones.size());
         performSegmentPublish(
             context.taskActionClient(),
             SegmentTransactionalInsertAction.overwriteAction(null, null, segmentsWithTombstones)
         );
       }
     } else if (!segments.isEmpty()) {
-      segmentLoadAwaiter = new SegmentLoadAwaiter(context.coordinatorClient(), task.getDataSource(), segments);
+      Set<String> versionsToAwait = segments.stream().map(DataSegment::getVersion).collect(Collectors.toSet());
+      segmentLoadAwaiter = new SegmentLoadAwaiter(context, task.getDataSource(), versionsToAwait, segments.size());
       // Append mode.
       performSegmentPublish(
           context.taskActionClient(),
@@ -2061,7 +2063,7 @@ public class ControllerImpl implements Controller
       runningTasks = workerTaskCount.getRunningWorkerCount() + 1; // To account for controller.
     }
 
-    SegmentLoadAwaiter.Status status = segmentLoadWaiter == null ? null : segmentLoadWaiter.status();
+    SegmentLoadAwaiter.SegmentLoadAwaiterStatus status = segmentLoadWaiter == null ? null : segmentLoadWaiter.status();
 
     return new MSQStatusReport(
         taskState,

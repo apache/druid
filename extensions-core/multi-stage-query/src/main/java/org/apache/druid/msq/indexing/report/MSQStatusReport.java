@@ -52,7 +52,7 @@ public class MSQStatusReport
   private final int runningTasks;
 
   @Nullable
-  private final SegmentLoadAwaiter.Status segmentLoadAwaiterStatus;
+  private final SegmentLoadAwaiter.SegmentLoadAwaiterStatus segmentLoadAwaiterStatus;
 
   @JsonCreator
   public MSQStatusReport(
@@ -63,7 +63,7 @@ public class MSQStatusReport
       @JsonProperty("durationMs") long durationMs,
       @JsonProperty("pendingTasks") int pendingTasks,
       @JsonProperty("runningTasks") int runningTasks,
-      @JsonProperty("segmentLoadAwaiterStatus") @Nullable SegmentLoadAwaiter.Status segmentLoadAwaiterStatus
+      @JsonProperty("segmentLoadAwaiterStatus") @Nullable SegmentLoadAwaiter.SegmentLoadAwaiterStatus segmentLoadAwaiterStatus
   )
   {
     this.status = Preconditions.checkNotNull(status, "status");
@@ -126,7 +126,7 @@ public class MSQStatusReport
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public SegmentLoadAwaiter.Status getSegmentLoadAwaiterStatus()
+  public SegmentLoadAwaiter.SegmentLoadAwaiterStatus getSegmentLoadAwaiterStatus()
   {
     return segmentLoadAwaiterStatus;
   }

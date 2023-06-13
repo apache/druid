@@ -30,6 +30,7 @@ import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
@@ -45,7 +46,6 @@ import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -92,8 +92,9 @@ public class MSQTaskReportTest
         new Object[]{"bar"}
     );
 
-    SegmentLoadAwaiter.Status status = new SegmentLoadAwaiter.Status(
-        SegmentLoadAwaiter.State.RUNNING, DateTime.now(),
+    SegmentLoadAwaiter.SegmentLoadAwaiterStatus status = new SegmentLoadAwaiter.SegmentLoadAwaiterStatus(
+        SegmentLoadAwaiter.State.RUNNING,
+        DateTimes.nowUtc(),
         200L,
         50,
         10
@@ -151,8 +152,9 @@ public class MSQTaskReportTest
   @Test
   public void testSerdeErrorReport() throws Exception
   {
-    SegmentLoadAwaiter.Status status = new SegmentLoadAwaiter.Status(
-        SegmentLoadAwaiter.State.FAILED, DateTime.now(),
+    SegmentLoadAwaiter.SegmentLoadAwaiterStatus status = new SegmentLoadAwaiter.SegmentLoadAwaiterStatus(
+        SegmentLoadAwaiter.State.FAILED,
+        DateTimes.nowUtc(),
         200L,
         50,
         10
@@ -195,8 +197,9 @@ public class MSQTaskReportTest
   @Test
   public void testWriteTaskReport() throws Exception
   {
-    SegmentLoadAwaiter.Status status = new SegmentLoadAwaiter.Status(
-        SegmentLoadAwaiter.State.SUCCESS, DateTime.now(),
+    SegmentLoadAwaiter.SegmentLoadAwaiterStatus status = new SegmentLoadAwaiter.SegmentLoadAwaiterStatus(
+        SegmentLoadAwaiter.State.SUCCESS,
+        DateTimes.nowUtc(),
         200L,
         50,
         0
