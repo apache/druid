@@ -639,6 +639,7 @@ num_segments
 partition_num
 plaintext_port
 queue_insertion_time
+replication_factor
 runner_status
 segment_id
 server_type
