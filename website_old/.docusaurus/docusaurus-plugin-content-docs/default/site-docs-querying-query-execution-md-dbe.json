@@ -1,0 +1,27 @@
+{
+  "unversionedId": "querying/query-execution",
+  "id": "querying/query-execution",
+  "title": "Query execution",
+  "description": "<!--",
+  "source": "@site/../docs/querying/query-execution.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/query-execution",
+  "permalink": "/docs/latest/querying/query-execution",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/query-execution.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "query-execution",
+    "title": "Query execution"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Native queries",
+    "permalink": "/docs/latest/querying/"
+  },
+  "next": {
+    "title": "Troubleshooting",
+    "permalink": "/docs/latest/querying/troubleshooting"
+  }
+}

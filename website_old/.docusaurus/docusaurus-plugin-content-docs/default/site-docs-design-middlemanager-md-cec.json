@@ -1,0 +1,27 @@
+{
+  "unversionedId": "design/middlemanager",
+  "id": "design/middlemanager",
+  "title": "MiddleManager Process",
+  "description": "<!--",
+  "source": "@site/../docs/design/middlemanager.md",
+  "sourceDirName": "design",
+  "slug": "/design/middlemanager",
+  "permalink": "/docs/latest/design/middlemanager",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/middlemanager.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "middlemanager",
+    "title": "MiddleManager Process"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Indexing Service",
+    "permalink": "/docs/latest/design/indexing-service"
+  },
+  "next": {
+    "title": "Overlord Process",
+    "permalink": "/docs/latest/design/overlord"
+  }
+}

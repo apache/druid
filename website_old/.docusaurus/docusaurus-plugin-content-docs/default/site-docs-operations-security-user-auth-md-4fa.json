@@ -1,0 +1,27 @@
+{
+  "unversionedId": "operations/security-user-auth",
+  "id": "operations/security-user-auth",
+  "title": "User authentication and authorization",
+  "description": "<!--",
+  "source": "@site/../docs/operations/security-user-auth.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/security-user-auth",
+  "permalink": "/docs/latest/operations/security-user-auth",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/security-user-auth.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "security-user-auth",
+    "title": "User authentication and authorization"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Security overview",
+    "permalink": "/docs/latest/operations/security-overview"
+  },
+  "next": {
+    "title": "LDAP auth",
+    "permalink": "/docs/latest/operations/auth-ldap"
+  }
+}

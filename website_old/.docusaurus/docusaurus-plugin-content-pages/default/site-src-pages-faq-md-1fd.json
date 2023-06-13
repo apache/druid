@@ -1,0 +1,10 @@
+{
+  "type": "mdx",
+  "permalink": "/faq",
+  "source": "@site/src/pages/faq.md",
+  "title": "Frequently Asked Questions",
+  "description": "Edit this page in the druid-website-src repo.",
+  "frontMatter": {
+    "title": "Frequently Asked Questions"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "unversionedId": "operations/single-server",
+  "id": "operations/single-server",
+  "title": "Single server deployment",
+  "description": "<!--",
+  "source": "@site/../docs/operations/single-server.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/single-server",
+  "permalink": "/docs/latest/operations/single-server",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/single-server.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "single-server",
+    "title": "Single server deployment"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Quickstart (local)",
+    "permalink": "/docs/latest/tutorials/"
+  },
+  "next": {
+    "title": "Clustered deployment",
+    "permalink": "/docs/latest/tutorials/cluster"
+  }
+}

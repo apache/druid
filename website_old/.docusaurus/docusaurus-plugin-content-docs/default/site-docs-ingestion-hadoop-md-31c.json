@@ -1,0 +1,28 @@
+{
+  "unversionedId": "ingestion/hadoop",
+  "id": "ingestion/hadoop",
+  "title": "Hadoop-based ingestion",
+  "description": "<!--",
+  "source": "@site/../docs/ingestion/hadoop.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/hadoop",
+  "permalink": "/docs/latest/ingestion/hadoop",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/hadoop.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "hadoop",
+    "title": "Hadoop-based ingestion",
+    "sidebar_label": "Hadoop-based"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Firehose (deprecated)",
+    "permalink": "/docs/latest/ingestion/native-batch-firehose"
+  },
+  "next": {
+    "title": "Overview",
+    "permalink": "/docs/latest/multi-stage-query/"
+  }
+}

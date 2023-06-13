@@ -1,0 +1,27 @@
+{
+  "unversionedId": "operations/insert-segment-to-db",
+  "id": "operations/insert-segment-to-db",
+  "title": "insert-segment-to-db tool",
+  "description": "<!--",
+  "source": "@site/../docs/operations/insert-segment-to-db.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/insert-segment-to-db",
+  "permalink": "/docs/latest/operations/insert-segment-to-db",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/insert-segment-to-db.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "insert-segment-to-db",
+    "title": "insert-segment-to-db tool"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "reset-cluster tool",
+    "permalink": "/docs/latest/operations/reset-cluster"
+  },
+  "next": {
+    "title": "pull-deps tool",
+    "permalink": "/docs/latest/operations/pull-deps"
+  }
+}

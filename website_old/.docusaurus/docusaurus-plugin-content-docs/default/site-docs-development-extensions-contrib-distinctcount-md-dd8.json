@@ -1,0 +1,27 @@
+{
+  "unversionedId": "development/extensions-contrib/distinctcount",
+  "id": "development/extensions-contrib/distinctcount",
+  "title": "DistinctCount Aggregator",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/distinctcount.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/distinctcount",
+  "permalink": "/docs/latest/development/extensions-contrib/distinctcount",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/distinctcount.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "distinctcount",
+    "title": "DistinctCount Aggregator"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Rackspace Cloud Files",
+    "permalink": "/docs/latest/development/extensions-contrib/cloudfiles"
+  },
+  "next": {
+    "title": "Graphite Emitter",
+    "permalink": "/docs/latest/development/extensions-contrib/graphite"
+  }
+}

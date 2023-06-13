@@ -1,0 +1,27 @@
+{
+  "unversionedId": "development/extensions-core/google",
+  "id": "development/extensions-core/google",
+  "title": "Google Cloud Storage",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/google.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/google",
+  "permalink": "/docs/latest/development/extensions-core/google",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/google.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "google",
+    "title": "Google Cloud Storage"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Apache Ranger Security",
+    "permalink": "/docs/latest/development/extensions-core/druid-ranger-security"
+  },
+  "next": {
+    "title": "HDFS",
+    "permalink": "/docs/latest/development/extensions-core/hdfs"
+  }
+}

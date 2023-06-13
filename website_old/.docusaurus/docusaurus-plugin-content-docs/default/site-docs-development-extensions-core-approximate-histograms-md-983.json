@@ -1,0 +1,27 @@
+{
+  "unversionedId": "development/extensions-core/approximate-histograms",
+  "id": "development/extensions-core/approximate-histograms",
+  "title": "Approximate Histogram aggregators",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/approximate-histograms.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/approximate-histograms",
+  "permalink": "/docs/latest/development/extensions-core/approximate-histograms",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/approximate-histograms.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "approximate-histograms",
+    "title": "Approximate Histogram aggregators"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Peons",
+    "permalink": "/docs/latest/design/peons"
+  },
+  "next": {
+    "title": "Apache Avro",
+    "permalink": "/docs/latest/development/extensions-core/avro"
+  }
+}

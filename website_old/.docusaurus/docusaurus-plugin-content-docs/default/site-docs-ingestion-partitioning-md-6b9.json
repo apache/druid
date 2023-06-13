@@ -1,0 +1,29 @@
+{
+  "unversionedId": "ingestion/partitioning",
+  "id": "ingestion/partitioning",
+  "title": "Partitioning",
+  "description": "Describes time chunk and secondary partitioning in Druid. Provides guidance to choose a secondary partition dimension.",
+  "source": "@site/../docs/ingestion/partitioning.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/partitioning",
+  "permalink": "/docs/latest/ingestion/partitioning",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/partitioning.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "partitioning",
+    "title": "Partitioning",
+    "sidebar_label": "Partitioning",
+    "description": "Describes time chunk and secondary partitioning in Druid. Provides guidance to choose a secondary partition dimension."
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Data rollup",
+    "permalink": "/docs/latest/ingestion/rollup"
+  },
+  "next": {
+    "title": "Ingestion spec",
+    "permalink": "/docs/latest/ingestion/ingestion-spec"
+  }
+}

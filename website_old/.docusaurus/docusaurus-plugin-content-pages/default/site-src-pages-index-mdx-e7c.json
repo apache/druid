@@ -1,0 +1,10 @@
+{
+  "type": "mdx",
+  "permalink": "/",
+  "source": "@site/src/pages/index.mdx",
+  "title": "The website home page",
+  "description": "Edit this page in the druid-website-src repo.",
+  "frontMatter": {
+    "title": "The website home page"
+  }
+}

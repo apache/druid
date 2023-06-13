@@ -1,0 +1,27 @@
+{
+  "unversionedId": "development/extensions-core/kubernetes",
+  "id": "development/extensions-core/kubernetes",
+  "title": "Kubernetes",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/kubernetes.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/kubernetes",
+  "permalink": "/docs/latest/development/extensions-core/kubernetes",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/kubernetes.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "kubernetes",
+    "title": "Kubernetes"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Druid AWS RDS Module",
+    "permalink": "/docs/latest/development/extensions-core/druid-aws-rds"
+  },
+  "next": {
+    "title": "Ambari Metrics Emitter",
+    "permalink": "/docs/latest/development/extensions-contrib/ambari-metrics-emitter"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "unversionedId": "development/extensions-contrib/sqlserver",
+  "id": "development/extensions-contrib/sqlserver",
+  "title": "Microsoft SQLServer",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/sqlserver.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/sqlserver",
+  "permalink": "/docs/latest/development/extensions-contrib/sqlserver",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/sqlserver.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "sqlserver",
+    "title": "Microsoft SQLServer"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Druid Redis Cache",
+    "permalink": "/docs/latest/development/extensions-contrib/redis-cache"
+  },
+  "next": {
+    "title": "StatsD Emitter",
+    "permalink": "/docs/latest/development/extensions-contrib/statsd"
+  }
+}

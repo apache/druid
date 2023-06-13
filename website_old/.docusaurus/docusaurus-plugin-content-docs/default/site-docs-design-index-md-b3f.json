@@ -1,0 +1,23 @@
+{
+  "unversionedId": "design/index",
+  "id": "design/index",
+  "title": "Introduction to Apache Druid",
+  "description": "<!--",
+  "source": "@site/../docs/design/index.md",
+  "sourceDirName": "design",
+  "slug": "/design/",
+  "permalink": "/docs/latest/design/",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/index.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "index",
+    "title": "Introduction to Apache Druid"
+  },
+  "sidebar": "docs",
+  "next": {
+    "title": "Quickstart (local)",
+    "permalink": "/docs/latest/tutorials/"
+  }
+}

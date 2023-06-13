@@ -1,0 +1,18 @@
+{
+  "unversionedId": "development/extensions-core/examples",
+  "id": "development/extensions-core/examples",
+  "title": "Extension Examples",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/examples.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/examples",
+  "permalink": "/docs/latest/development/extensions-core/examples",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/examples.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "examples",
+    "title": "Extension Examples"
+  }
+}

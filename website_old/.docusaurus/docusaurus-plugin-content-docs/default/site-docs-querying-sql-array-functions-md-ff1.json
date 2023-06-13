@@ -1,0 +1,28 @@
+{
+  "unversionedId": "querying/sql-array-functions",
+  "id": "querying/sql-array-functions",
+  "title": "SQL ARRAY functions",
+  "description": "<!--",
+  "source": "@site/../docs/querying/sql-array-functions.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/sql-array-functions",
+  "permalink": "/docs/latest/querying/sql-array-functions",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/sql-array-functions.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "sql-array-functions",
+    "title": "SQL ARRAY functions",
+    "sidebar_label": "Array functions"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Aggregation functions",
+    "permalink": "/docs/latest/querying/sql-aggregations"
+  },
+  "next": {
+    "title": "Multi-value string functions",
+    "permalink": "/docs/latest/querying/sql-multivalue-string-functions"
+  }
+}

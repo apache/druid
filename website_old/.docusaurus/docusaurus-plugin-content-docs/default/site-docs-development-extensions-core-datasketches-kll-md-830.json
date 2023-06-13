@@ -1,0 +1,18 @@
+{
+  "unversionedId": "development/extensions-core/datasketches-kll",
+  "id": "development/extensions-core/datasketches-kll",
+  "title": "DataSketches KLL Sketch module",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/datasketches-kll.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/datasketches-kll",
+  "permalink": "/docs/latest/development/extensions-core/datasketches-kll",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/datasketches-kll.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "datasketches-kll",
+    "title": "DataSketches KLL Sketch module"
+  }
+}

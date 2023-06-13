@@ -1,0 +1,10 @@
+{
+  "type": "mdx",
+  "permalink": "/community/join-slack",
+  "source": "@site/src/pages/community/join-slack.md",
+  "description": "Edit this page in the druid-website-src repo.",
+  "frontMatter": {
+    "layout": "redirect_page",
+    "redirect_target": "https://join.slack.com/t/apachedruidworkspace/shared_invite/zt-143m5afbr-4ebnAPJPaQfNOUu_g1MvSw"
+  }
+}

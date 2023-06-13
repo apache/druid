@@ -1,0 +1,27 @@
+{
+  "unversionedId": "querying/limitspec",
+  "id": "querying/limitspec",
+  "title": "Sorting and limiting (groupBy)",
+  "description": "<!--",
+  "source": "@site/../docs/querying/limitspec.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/limitspec",
+  "permalink": "/docs/latest/querying/limitspec",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/limitspec.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "limitspec",
+    "title": "Sorting and limiting (groupBy)"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Having filters (groupBy)",
+    "permalink": "/docs/latest/querying/having"
+  },
+  "next": {
+    "title": "Sorting (topN)",
+    "permalink": "/docs/latest/querying/topnmetricspec"
+  }
+}

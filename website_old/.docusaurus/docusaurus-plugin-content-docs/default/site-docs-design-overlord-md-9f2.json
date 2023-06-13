@@ -1,0 +1,27 @@
+{
+  "unversionedId": "design/overlord",
+  "id": "design/overlord",
+  "title": "Overlord Process",
+  "description": "<!--",
+  "source": "@site/../docs/design/overlord.md",
+  "sourceDirName": "design",
+  "slug": "/design/overlord",
+  "permalink": "/docs/latest/design/overlord",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/overlord.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "overlord",
+    "title": "Overlord Process"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "MiddleManager Process",
+    "permalink": "/docs/latest/design/middlemanager"
+  },
+  "next": {
+    "title": "Router Process",
+    "permalink": "/docs/latest/design/router"
+  }
+}

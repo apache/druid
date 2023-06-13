@@ -1,0 +1,12 @@
+{
+  "type": "mdx",
+  "permalink": "/libraries",
+  "source": "@site/src/pages/libraries.md",
+  "title": "Community and Third Party Software",
+  "description": "Edit this page in the druid-website-src repo.",
+  "frontMatter": {
+    "title": "Community and Third Party Software",
+    "layout": "simple_page",
+    "canonical": "https://druid.apache.org/libraries"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "unversionedId": "development/geo",
+  "id": "development/geo",
+  "title": "Spatial filters",
+  "description": "<!--",
+  "source": "@site/../docs/development/geo.md",
+  "sourceDirName": "development",
+  "slug": "/development/geo",
+  "permalink": "/docs/latest/development/geo",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/geo.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "geo",
+    "title": "Spatial filters"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Virtual columns",
+    "permalink": "/docs/latest/querying/virtual-columns"
+  },
+  "next": {
+    "title": "Configuration reference",
+    "permalink": "/docs/latest/configuration/"
+  }
+}

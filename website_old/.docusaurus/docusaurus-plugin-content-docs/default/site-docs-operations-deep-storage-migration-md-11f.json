@@ -1,0 +1,27 @@
+{
+  "unversionedId": "operations/deep-storage-migration",
+  "id": "operations/deep-storage-migration",
+  "title": "Deep storage migration",
+  "description": "<!--",
+  "source": "@site/../docs/operations/deep-storage-migration.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/deep-storage-migration",
+  "permalink": "/docs/latest/operations/deep-storage-migration",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/deep-storage-migration.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "deep-storage-migration",
+    "title": "Deep storage migration"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "pull-deps tool",
+    "permalink": "/docs/latest/operations/pull-deps"
+  },
+  "next": {
+    "title": "Export Metadata Tool",
+    "permalink": "/docs/latest/operations/export-metadata"
+  }
+}

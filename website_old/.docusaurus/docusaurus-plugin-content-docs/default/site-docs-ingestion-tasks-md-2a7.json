@@ -1,0 +1,27 @@
+{
+  "unversionedId": "ingestion/tasks",
+  "id": "ingestion/tasks",
+  "title": "Task reference",
+  "description": "<!--",
+  "source": "@site/../docs/ingestion/tasks.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/tasks",
+  "permalink": "/docs/latest/ingestion/tasks",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/tasks.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "tasks",
+    "title": "Task reference"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Known issues",
+    "permalink": "/docs/latest/multi-stage-query/known-issues"
+  },
+  "next": {
+    "title": "Troubleshooting FAQ",
+    "permalink": "/docs/latest/ingestion/faq"
+  }
+}

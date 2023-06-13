@@ -1,0 +1,28 @@
+{
+  "unversionedId": "operations/security-overview",
+  "id": "operations/security-overview",
+  "title": "Security overview",
+  "description": "Overiew of Apache Druid security. Includes best practices, configuration instructions, a description of the security model and documentation on how to report security issues.",
+  "source": "@site/../docs/operations/security-overview.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/security-overview",
+  "permalink": "/docs/latest/operations/security-overview",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/security-overview.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "security-overview",
+    "title": "Security overview",
+    "description": "Overiew of Apache Druid security. Includes best practices, configuration instructions, a description of the security model and documentation on how to report security issues."
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Java runtime",
+    "permalink": "/docs/latest/operations/java"
+  },
+  "next": {
+    "title": "User authentication and authorization",
+    "permalink": "/docs/latest/operations/security-user-auth"
+  }
+}

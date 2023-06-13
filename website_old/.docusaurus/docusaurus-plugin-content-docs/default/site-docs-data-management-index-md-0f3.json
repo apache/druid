@@ -1,0 +1,28 @@
+{
+  "unversionedId": "data-management/index",
+  "id": "data-management/index",
+  "title": "Data management",
+  "description": "<!--",
+  "source": "@site/../docs/data-management/index.md",
+  "sourceDirName": "data-management",
+  "slug": "/data-management/",
+  "permalink": "/docs/latest/data-management/",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/data-management/index.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "index",
+    "title": "Data management",
+    "sidebar_label": "Overview"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Troubleshooting FAQ",
+    "permalink": "/docs/latest/ingestion/faq"
+  },
+  "next": {
+    "title": "Data updates",
+    "permalink": "/docs/latest/data-management/update"
+  }
+}

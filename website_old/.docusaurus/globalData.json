@@ -1,0 +1,1167 @@
+{
+  "docusaurus-plugin-google-gtag": {
+    "default": {
+      "trackingID": [
+        "UA-131010415-1"
+      ],
+      "anonymizeIP": false,
+      "id": "default"
+    }
+  },
+  "docusaurus-plugin-content-docs": {
+    "default": {
+      "path": "/docs/latest",
+      "versions": [
+        {
+          "name": "current",
+          "label": "Next",
+          "isLast": true,
+          "path": "/docs/latest",
+          "mainDocId": "design/index",
+          "docs": [
+            {
+              "id": "comparisons/druid-vs-elasticsearch",
+              "path": "/docs/latest/comparisons/druid-vs-elasticsearch",
+              "sidebar": "docs"
+            },
+            {
+              "id": "comparisons/druid-vs-key-value",
+              "path": "/docs/latest/comparisons/druid-vs-key-value",
+              "sidebar": "docs"
+            },
+            {
+              "id": "comparisons/druid-vs-kudu",
+              "path": "/docs/latest/comparisons/druid-vs-kudu",
+              "sidebar": "docs"
+            },
+            {
+              "id": "comparisons/druid-vs-redshift",
+              "path": "/docs/latest/comparisons/druid-vs-redshift",
+              "sidebar": "docs"
+            },
+            {
+              "id": "comparisons/druid-vs-spark",
+              "path": "/docs/latest/comparisons/druid-vs-spark",
+              "sidebar": "docs"
+            },
+            {
+              "id": "comparisons/druid-vs-sql-on-hadoop",
+              "path": "/docs/latest/comparisons/druid-vs-sql-on-hadoop",
+              "sidebar": "docs"
+            },
+            {
+              "id": "configuration/human-readable-byte",
+              "path": "/docs/latest/configuration/human-readable-byte"
+            },
+            {
+              "id": "configuration/index",
+              "path": "/docs/latest/configuration/",
+              "sidebar": "docs"
+            },
+            {
+              "id": "configuration/logging",
+              "path": "/docs/latest/configuration/logging",
+              "sidebar": "docs"
+            },
+            {
+              "id": "data-management/automatic-compaction",
+              "path": "/docs/latest/data-management/automatic-compaction",
+              "sidebar": "docs"
+            },
+            {
+              "id": "data-management/compaction",
+              "path": "/docs/latest/data-management/compaction",
+              "sidebar": "docs"
+            },
+            {
+              "id": "data-management/delete",
+              "path": "/docs/latest/data-management/delete",
+              "sidebar": "docs"
+            },
+            {
+              "id": "data-management/index",
+              "path": "/docs/latest/data-management/",
+              "sidebar": "docs"
+            },
+            {
+              "id": "data-management/schema-changes",
+              "path": "/docs/latest/data-management/schema-changes",
+              "sidebar": "docs"
+            },
+            {
+              "id": "data-management/update",
+              "path": "/docs/latest/data-management/update",
+              "sidebar": "docs"
+            },
+            {
+              "id": "dependencies/deep-storage",
+              "path": "/docs/latest/dependencies/deep-storage",
+              "sidebar": "docs"
+            },
+            {
+              "id": "dependencies/metadata-storage",
+              "path": "/docs/latest/dependencies/metadata-storage",
+              "sidebar": "docs"
+            },
+            {
+              "id": "dependencies/zookeeper",
+              "path": "/docs/latest/dependencies/zookeeper",
+              "sidebar": "docs"
+            },
+            {
+              "id": "design/architecture",
+              "path": "/docs/latest/design/architecture",
+              "sidebar": "docs"
+            },
+            {
+              "id": "design/auth",
+              "path": "/docs/latest/design/auth",
+              "sidebar": "docs"
+            },
+            {
+              "id": "design/broker",
+              "path": "/docs/latest/design/broker",
+              "sidebar": "docs"
+            },
+            {
+              "id": "design/coordinator",
+              "path": "/docs/latest/design/coordinator",
+              "sidebar": "docs"
+            },
+            {
+              "id": "design/extensions-contrib/dropwizard",
+              "path": "/docs/latest/design/extensions-contrib/dropwizard"
+            },
+            {
+              "id": "design/historical",
+              "path": "/docs/latest/design/historical",
+              "sidebar": "docs"
+            },
+            {
+              "id": "design/index",
+              "path": "/docs/latest/design/",
+              "sidebar": "docs"
+            },
+            {
+              "id": "design/indexer",
+              "path": "/docs/latest/design/indexer",
+              "sidebar": "docs"
+            },
+            {
+              "id": "design/indexing-service",
+              "path": "/docs/latest/design/indexing-service",
+              "sidebar": "docs"
+            },
+            {
+              "id": "design/middlemanager",
+              "path": "/docs/latest/design/middlemanager",
+              "sidebar": "docs"
+            },
+            {
+              "id": "design/overlord",
+              "path": "/docs/latest/design/overlord",
+              "sidebar": "docs"
+            },
+            {
+              "id": "design/peons",
+              "path": "/docs/latest/design/peons",
+              "sidebar": "docs"
+            },
+            {
+              "id": "design/processes",
+              "path": "/docs/latest/design/processes",
+              "sidebar": "docs"
+            },
+            {
+              "id": "design/router",
+              "path": "/docs/latest/design/router",
+              "sidebar": "docs"
+            },
+            {
+              "id": "design/segments",
+              "path": "/docs/latest/design/segments",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/build",
+              "path": "/docs/latest/development/build",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/experimental",
+              "path": "/docs/latest/development/experimental",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/experimental-features",
+              "path": "/docs/latest/development/experimental-features"
+            },
+            {
+              "id": "development/extensions",
+              "path": "/docs/latest/development/extensions",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/aliyun-oss",
+              "path": "/docs/latest/development/extensions-contrib/aliyun-oss",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/ambari-metrics-emitter",
+              "path": "/docs/latest/development/extensions-contrib/ambari-metrics-emitter",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/cassandra",
+              "path": "/docs/latest/development/extensions-contrib/cassandra",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/cloudfiles",
+              "path": "/docs/latest/development/extensions-contrib/cloudfiles",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/compressed-big-decimal",
+              "path": "/docs/latest/development/extensions-contrib/compressed-big-decimal"
+            },
+            {
+              "id": "development/extensions-contrib/distinctcount",
+              "path": "/docs/latest/development/extensions-contrib/distinctcount",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/gce-extensions",
+              "path": "/docs/latest/development/extensions-contrib/gce-extensions",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/graphite",
+              "path": "/docs/latest/development/extensions-contrib/graphite",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/influx",
+              "path": "/docs/latest/development/extensions-contrib/influx",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/influxdb-emitter",
+              "path": "/docs/latest/development/extensions-contrib/influxdb-emitter",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/k8s-jobs",
+              "path": "/docs/latest/development/extensions-contrib/k8s-jobs"
+            },
+            {
+              "id": "development/extensions-contrib/kafka-emitter",
+              "path": "/docs/latest/development/extensions-contrib/kafka-emitter",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/materialized-view",
+              "path": "/docs/latest/development/extensions-contrib/materialized-view",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/momentsketch-quantiles",
+              "path": "/docs/latest/development/extensions-contrib/momentsketch-quantiles",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/moving-average-query",
+              "path": "/docs/latest/development/extensions-contrib/moving-average-query",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/opentsdb-emitter",
+              "path": "/docs/latest/development/extensions-contrib/opentsdb-emitter",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/prometheus",
+              "path": "/docs/latest/development/extensions-contrib/prometheus",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/redis-cache",
+              "path": "/docs/latest/development/extensions-contrib/redis-cache",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/sqlserver",
+              "path": "/docs/latest/development/extensions-contrib/sqlserver",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/statsd",
+              "path": "/docs/latest/development/extensions-contrib/statsd",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/tdigestsketch-quantiles",
+              "path": "/docs/latest/development/extensions-contrib/tdigestsketch-quantiles",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/thrift",
+              "path": "/docs/latest/development/extensions-contrib/thrift",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-contrib/time-min-max",
+              "path": "/docs/latest/development/extensions-contrib/time-min-max",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/approximate-histograms",
+              "path": "/docs/latest/development/extensions-core/approximate-histograms",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/avro",
+              "path": "/docs/latest/development/extensions-core/avro",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/azure",
+              "path": "/docs/latest/development/extensions-core/azure",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/bloom-filter",
+              "path": "/docs/latest/development/extensions-core/bloom-filter",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/datasketches-extension",
+              "path": "/docs/latest/development/extensions-core/datasketches-extension",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/datasketches-hll",
+              "path": "/docs/latest/development/extensions-core/datasketches-hll",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/datasketches-kll",
+              "path": "/docs/latest/development/extensions-core/datasketches-kll"
+            },
+            {
+              "id": "development/extensions-core/datasketches-quantiles",
+              "path": "/docs/latest/development/extensions-core/datasketches-quantiles",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/datasketches-theta",
+              "path": "/docs/latest/development/extensions-core/datasketches-theta",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/datasketches-tuple",
+              "path": "/docs/latest/development/extensions-core/datasketches-tuple",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/druid-aws-rds",
+              "path": "/docs/latest/development/extensions-core/druid-aws-rds",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/druid-basic-security",
+              "path": "/docs/latest/development/extensions-core/druid-basic-security",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/druid-kerberos",
+              "path": "/docs/latest/development/extensions-core/druid-kerberos",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/druid-lookups",
+              "path": "/docs/latest/development/extensions-core/druid-lookups",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/druid-pac4j",
+              "path": "/docs/latest/development/extensions-core/druid-pac4j",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/druid-ranger-security",
+              "path": "/docs/latest/development/extensions-core/druid-ranger-security",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/examples",
+              "path": "/docs/latest/development/extensions-core/examples"
+            },
+            {
+              "id": "development/extensions-core/google",
+              "path": "/docs/latest/development/extensions-core/google",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/hdfs",
+              "path": "/docs/latest/development/extensions-core/hdfs",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/kafka-extraction-namespace",
+              "path": "/docs/latest/development/extensions-core/kafka-extraction-namespace",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/kafka-ingestion",
+              "path": "/docs/latest/development/extensions-core/kafka-ingestion",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/kafka-supervisor-operations",
+              "path": "/docs/latest/development/extensions-core/kafka-supervisor-operations",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/kafka-supervisor-reference",
+              "path": "/docs/latest/development/extensions-core/kafka-supervisor-reference",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/kinesis-ingestion",
+              "path": "/docs/latest/development/extensions-core/kinesis-ingestion",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/kubernetes",
+              "path": "/docs/latest/development/extensions-core/kubernetes",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/lookups-cached-global",
+              "path": "/docs/latest/development/extensions-core/lookups-cached-global",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/mysql",
+              "path": "/docs/latest/development/extensions-core/mysql",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/orc",
+              "path": "/docs/latest/development/extensions-core/orc",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/parquet",
+              "path": "/docs/latest/development/extensions-core/parquet",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/postgresql",
+              "path": "/docs/latest/development/extensions-core/postgresql",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/protobuf",
+              "path": "/docs/latest/development/extensions-core/protobuf",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/s3",
+              "path": "/docs/latest/development/extensions-core/s3",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/simple-client-sslcontext",
+              "path": "/docs/latest/development/extensions-core/simple-client-sslcontext",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/stats",
+              "path": "/docs/latest/development/extensions-core/stats",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/extensions-core/test-stats",
+              "path": "/docs/latest/development/extensions-core/test-stats",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/geo",
+              "path": "/docs/latest/development/geo",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/javascript",
+              "path": "/docs/latest/development/javascript",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/modules",
+              "path": "/docs/latest/development/modules",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/overview",
+              "path": "/docs/latest/development/overview",
+              "sidebar": "docs"
+            },
+            {
+              "id": "development/versioning",
+              "path": "/docs/latest/development/versioning",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/data-formats",
+              "path": "/docs/latest/ingestion/data-formats",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/data-model",
+              "path": "/docs/latest/ingestion/data-model",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/faq",
+              "path": "/docs/latest/ingestion/faq",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/hadoop",
+              "path": "/docs/latest/ingestion/hadoop",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/index",
+              "path": "/docs/latest/ingestion/",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/ingestion-spec",
+              "path": "/docs/latest/ingestion/ingestion-spec",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/migrate-from-firehose",
+              "path": "/docs/latest/ingestion/migrate-from-firehose",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/native-batch",
+              "path": "/docs/latest/ingestion/native-batch",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/native-batch-firehose",
+              "path": "/docs/latest/ingestion/native-batch-firehose",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/native-batch-input-sources",
+              "path": "/docs/latest/ingestion/native-batch-input-sources",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/native-batch-simple-task",
+              "path": "/docs/latest/ingestion/native-batch-simple-task",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/partitioning",
+              "path": "/docs/latest/ingestion/partitioning",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/rollup",
+              "path": "/docs/latest/ingestion/rollup",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/schema-design",
+              "path": "/docs/latest/ingestion/schema-design",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/standalone-realtime",
+              "path": "/docs/latest/ingestion/standalone-realtime",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/tasks",
+              "path": "/docs/latest/ingestion/tasks",
+              "sidebar": "docs"
+            },
+            {
+              "id": "ingestion/tranquility",
+              "path": "/docs/latest/ingestion/tranquility"
+            },
+            {
+              "id": "misc/math-expr",
+              "path": "/docs/latest/misc/math-expr",
+              "sidebar": "docs"
+            },
+            {
+              "id": "misc/papers-and-talks",
+              "path": "/docs/latest/misc/papers-and-talks",
+              "sidebar": "docs"
+            },
+            {
+              "id": "multi-stage-query/api",
+              "path": "/docs/latest/multi-stage-query/api",
+              "sidebar": "docs"
+            },
+            {
+              "id": "multi-stage-query/concepts",
+              "path": "/docs/latest/multi-stage-query/concepts",
+              "sidebar": "docs"
+            },
+            {
+              "id": "multi-stage-query/examples",
+              "path": "/docs/latest/multi-stage-query/examples",
+              "sidebar": "docs"
+            },
+            {
+              "id": "multi-stage-query/index",
+              "path": "/docs/latest/multi-stage-query/",
+              "sidebar": "docs"
+            },
+            {
+              "id": "multi-stage-query/known-issues",
+              "path": "/docs/latest/multi-stage-query/known-issues",
+              "sidebar": "docs"
+            },
+            {
+              "id": "multi-stage-query/reference",
+              "path": "/docs/latest/multi-stage-query/reference",
+              "sidebar": "docs"
+            },
+            {
+              "id": "multi-stage-query/security",
+              "path": "/docs/latest/multi-stage-query/security",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/alerts",
+              "path": "/docs/latest/operations/alerts",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/api-reference",
+              "path": "/docs/latest/operations/api-reference",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/auth-ldap",
+              "path": "/docs/latest/operations/auth-ldap",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/basic-cluster-tuning",
+              "path": "/docs/latest/operations/basic-cluster-tuning",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/clean-metadata-store",
+              "path": "/docs/latest/operations/clean-metadata-store",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/deep-storage-migration",
+              "path": "/docs/latest/operations/deep-storage-migration",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/dump-segment",
+              "path": "/docs/latest/operations/dump-segment",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/dynamic-config-provider",
+              "path": "/docs/latest/operations/dynamic-config-provider",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/export-metadata",
+              "path": "/docs/latest/operations/export-metadata",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/getting-started",
+              "path": "/docs/latest/operations/getting-started"
+            },
+            {
+              "id": "operations/high-availability",
+              "path": "/docs/latest/operations/high-availability",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/http-compression",
+              "path": "/docs/latest/operations/http-compression",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/insert-segment-to-db",
+              "path": "/docs/latest/operations/insert-segment-to-db",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/java",
+              "path": "/docs/latest/operations/java",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/kubernetes",
+              "path": "/docs/latest/operations/kubernetes",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/metadata-migration",
+              "path": "/docs/latest/operations/metadata-migration",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/metrics",
+              "path": "/docs/latest/operations/metrics",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/mixed-workloads",
+              "path": "/docs/latest/operations/mixed-workloads",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/other-hadoop",
+              "path": "/docs/latest/operations/other-hadoop",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/password-provider",
+              "path": "/docs/latest/operations/password-provider",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/pull-deps",
+              "path": "/docs/latest/operations/pull-deps",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/request-logging",
+              "path": "/docs/latest/operations/request-logging",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/reset-cluster",
+              "path": "/docs/latest/operations/reset-cluster",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/rolling-updates",
+              "path": "/docs/latest/operations/rolling-updates",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/rule-configuration",
+              "path": "/docs/latest/operations/rule-configuration",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/security-overview",
+              "path": "/docs/latest/operations/security-overview",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/security-user-auth",
+              "path": "/docs/latest/operations/security-user-auth",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/segment-optimization",
+              "path": "/docs/latest/operations/segment-optimization",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/single-server",
+              "path": "/docs/latest/operations/single-server",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/tls-support",
+              "path": "/docs/latest/operations/tls-support",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/use_sbt_to_build_fat_jar",
+              "path": "/docs/latest/operations/use_sbt_to_build_fat_jar",
+              "sidebar": "docs"
+            },
+            {
+              "id": "operations/web-console",
+              "path": "/docs/latest/operations/web-console",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/aggregations",
+              "path": "/docs/latest/querying/aggregations",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/caching",
+              "path": "/docs/latest/querying/caching",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/datasource",
+              "path": "/docs/latest/querying/datasource",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/datasourcemetadataquery",
+              "path": "/docs/latest/querying/datasourcemetadataquery",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/dimensionspecs",
+              "path": "/docs/latest/querying/dimensionspecs",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/filters",
+              "path": "/docs/latest/querying/filters",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/granularities",
+              "path": "/docs/latest/querying/granularities",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/groupbyquery",
+              "path": "/docs/latest/querying/groupbyquery",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/having",
+              "path": "/docs/latest/querying/having",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/hll-old",
+              "path": "/docs/latest/querying/hll-old",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/joins",
+              "path": "/docs/latest/querying/joins",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/limitspec",
+              "path": "/docs/latest/querying/limitspec",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/lookups",
+              "path": "/docs/latest/querying/lookups",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/multi-value-dimensions",
+              "path": "/docs/latest/querying/multi-value-dimensions",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/multitenancy",
+              "path": "/docs/latest/querying/multitenancy",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/nested-columns",
+              "path": "/docs/latest/querying/nested-columns",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/post-aggregations",
+              "path": "/docs/latest/querying/post-aggregations",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/query-context",
+              "path": "/docs/latest/querying/query-context",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/query-execution",
+              "path": "/docs/latest/querying/query-execution",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/querying",
+              "path": "/docs/latest/querying/",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/scan-query",
+              "path": "/docs/latest/querying/scan-query",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/searchquery",
+              "path": "/docs/latest/querying/searchquery",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/segmentmetadataquery",
+              "path": "/docs/latest/querying/segmentmetadataquery",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/select-query",
+              "path": "/docs/latest/querying/select-query",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/sorting-orders",
+              "path": "/docs/latest/querying/sorting-orders",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/sql",
+              "path": "/docs/latest/querying/sql",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/sql-aggregations",
+              "path": "/docs/latest/querying/sql-aggregations",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/sql-api",
+              "path": "/docs/latest/querying/sql-api",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/sql-array-functions",
+              "path": "/docs/latest/querying/sql-array-functions",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/sql-data-types",
+              "path": "/docs/latest/querying/sql-data-types",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/sql-functions",
+              "path": "/docs/latest/querying/sql-functions",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/sql-jdbc",
+              "path": "/docs/latest/querying/sql-jdbc",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/sql-json-functions",
+              "path": "/docs/latest/querying/sql-json-functions",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/sql-metadata-tables",
+              "path": "/docs/latest/querying/sql-metadata-tables",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/sql-multivalue-string-functions",
+              "path": "/docs/latest/querying/sql-multivalue-string-functions",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/sql-operators",
+              "path": "/docs/latest/querying/sql-operators",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/sql-query-context",
+              "path": "/docs/latest/querying/sql-query-context",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/sql-scalar",
+              "path": "/docs/latest/querying/sql-scalar",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/sql-translation",
+              "path": "/docs/latest/querying/sql-translation",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/timeboundaryquery",
+              "path": "/docs/latest/querying/timeboundaryquery",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/timeseriesquery",
+              "path": "/docs/latest/querying/timeseriesquery",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/topnmetricspec",
+              "path": "/docs/latest/querying/topnmetricspec",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/topnquery",
+              "path": "/docs/latest/querying/topnquery",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/troubleshooting",
+              "path": "/docs/latest/querying/troubleshooting",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/using-caching",
+              "path": "/docs/latest/querying/using-caching",
+              "sidebar": "docs"
+            },
+            {
+              "id": "querying/virtual-columns",
+              "path": "/docs/latest/querying/virtual-columns",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/cluster",
+              "path": "/docs/latest/tutorials/cluster",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/docker",
+              "path": "/docs/latest/tutorials/docker",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/index",
+              "path": "/docs/latest/tutorials/",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-batch",
+              "path": "/docs/latest/tutorials/tutorial-batch",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-batch-hadoop",
+              "path": "/docs/latest/tutorials/tutorial-batch-hadoop",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-batch-native",
+              "path": "/docs/latest/tutorials/tutorial-batch-native"
+            },
+            {
+              "id": "tutorials/tutorial-compaction",
+              "path": "/docs/latest/tutorials/tutorial-compaction",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-delete-data",
+              "path": "/docs/latest/tutorials/tutorial-delete-data",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-ingestion-spec",
+              "path": "/docs/latest/tutorials/tutorial-ingestion-spec",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-jdbc",
+              "path": "/docs/latest/tutorials/tutorial-jdbc",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-jupyter-docker",
+              "path": "/docs/latest/tutorials/tutorial-jupyter-docker",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-jupyter-index",
+              "path": "/docs/latest/tutorials/tutorial-jupyter-index",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-kafka",
+              "path": "/docs/latest/tutorials/tutorial-kafka",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-kerberos-hadoop",
+              "path": "/docs/latest/tutorials/tutorial-kerberos-hadoop",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-msq-convert-spec",
+              "path": "/docs/latest/tutorials/tutorial-msq-convert-spec",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-msq-extern",
+              "path": "/docs/latest/tutorials/tutorial-msq-extern",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-query",
+              "path": "/docs/latest/tutorials/tutorial-query",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-retention",
+              "path": "/docs/latest/tutorials/tutorial-retention",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-rollup",
+              "path": "/docs/latest/tutorials/tutorial-rollup",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-sketches-theta",
+              "path": "/docs/latest/tutorials/tutorial-sketches-theta",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-sql-query-view",
+              "path": "/docs/latest/tutorials/tutorial-sql-query-view",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-transform-spec",
+              "path": "/docs/latest/tutorials/tutorial-transform-spec",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-unnest-arrays",
+              "path": "/docs/latest/tutorials/tutorial-unnest-arrays",
+              "sidebar": "docs"
+            },
+            {
+              "id": "tutorials/tutorial-update-data",
+              "path": "/docs/latest/tutorials/tutorial-update-data",
+              "sidebar": "docs"
+            }
+          ],
+          "draftIds": [],
+          "sidebars": {
+            "docs": {
+              "link": {
+                "path": "/docs/latest/design/",
+                "label": "design/index"
+              }
+            }
+          }
+        }
+      ],
+      "breadcrumbs": true
+    }
+  }
+}

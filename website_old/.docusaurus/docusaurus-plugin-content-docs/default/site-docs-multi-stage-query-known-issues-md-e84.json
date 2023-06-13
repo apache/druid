@@ -1,0 +1,28 @@
+{
+  "unversionedId": "multi-stage-query/known-issues",
+  "id": "multi-stage-query/known-issues",
+  "title": "SQL-based ingestion known issues",
+  "description": "<!--",
+  "source": "@site/../docs/multi-stage-query/known-issues.md",
+  "sourceDirName": "multi-stage-query",
+  "slug": "/multi-stage-query/known-issues",
+  "permalink": "/docs/latest/multi-stage-query/known-issues",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/multi-stage-query/known-issues.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "known-issues",
+    "title": "SQL-based ingestion known issues",
+    "sidebar_label": "Known issues"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Reference",
+    "permalink": "/docs/latest/multi-stage-query/reference"
+  },
+  "next": {
+    "title": "Task reference",
+    "permalink": "/docs/latest/ingestion/tasks"
+  }
+}

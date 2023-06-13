@@ -1,0 +1,10 @@
+{
+  "type": "mdx",
+  "permalink": "/druid-powered",
+  "source": "@site/src/pages/druid-powered.md",
+  "title": "Powered by Apache Druid",
+  "description": "Edit this page in the druid-website-src repo.",
+  "frontMatter": {
+    "title": "Powered by Apache Druid"
+  }
+}

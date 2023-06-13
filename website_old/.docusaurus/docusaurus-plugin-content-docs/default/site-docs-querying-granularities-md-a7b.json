@@ -1,0 +1,28 @@
+{
+  "unversionedId": "querying/granularities",
+  "id": "querying/granularities",
+  "title": "Query granularities",
+  "description": "<!--",
+  "source": "@site/../docs/querying/granularities.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/granularities",
+  "permalink": "/docs/latest/querying/granularities",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/granularities.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "granularities",
+    "title": "Query granularities",
+    "sidebar_label": "Granularities"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Filters",
+    "permalink": "/docs/latest/querying/filters"
+  },
+  "next": {
+    "title": "Dimensions",
+    "permalink": "/docs/latest/querying/dimensionspecs"
+  }
+}

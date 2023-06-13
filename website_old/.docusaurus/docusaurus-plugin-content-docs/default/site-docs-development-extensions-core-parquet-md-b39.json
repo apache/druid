@@ -1,0 +1,27 @@
+{
+  "unversionedId": "development/extensions-core/parquet",
+  "id": "development/extensions-core/parquet",
+  "title": "Apache Parquet Extension",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/parquet.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/parquet",
+  "permalink": "/docs/latest/development/extensions-core/parquet",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/parquet.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "parquet",
+    "title": "Apache Parquet Extension"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Druid pac4j based Security extension",
+    "permalink": "/docs/latest/development/extensions-core/druid-pac4j"
+  },
+  "next": {
+    "title": "PostgreSQL Metadata Store",
+    "permalink": "/docs/latest/development/extensions-core/postgresql"
+  }
+}

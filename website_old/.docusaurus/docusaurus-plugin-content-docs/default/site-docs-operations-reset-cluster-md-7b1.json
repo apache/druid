@@ -1,0 +1,27 @@
+{
+  "unversionedId": "operations/reset-cluster",
+  "id": "operations/reset-cluster",
+  "title": "reset-cluster tool",
+  "description": "<!--",
+  "source": "@site/../docs/operations/reset-cluster.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/reset-cluster",
+  "permalink": "/docs/latest/operations/reset-cluster",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/reset-cluster.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "reset-cluster",
+    "title": "reset-cluster tool"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "dump-segment tool",
+    "permalink": "/docs/latest/operations/dump-segment"
+  },
+  "next": {
+    "title": "insert-segment-to-db tool",
+    "permalink": "/docs/latest/operations/insert-segment-to-db"
+  }
+}

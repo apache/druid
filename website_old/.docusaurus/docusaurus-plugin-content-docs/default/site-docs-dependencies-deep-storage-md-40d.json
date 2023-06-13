@@ -1,0 +1,27 @@
+{
+  "unversionedId": "dependencies/deep-storage",
+  "id": "dependencies/deep-storage",
+  "title": "Deep storage",
+  "description": "<!--",
+  "source": "@site/../docs/dependencies/deep-storage.md",
+  "sourceDirName": "dependencies",
+  "slug": "/dependencies/deep-storage",
+  "permalink": "/docs/latest/dependencies/deep-storage",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/dependencies/deep-storage.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "deep-storage",
+    "title": "Deep storage"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Processes and servers",
+    "permalink": "/docs/latest/design/processes"
+  },
+  "next": {
+    "title": "Metadata storage",
+    "permalink": "/docs/latest/dependencies/metadata-storage"
+  }
+}

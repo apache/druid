@@ -1,0 +1,27 @@
+{
+  "unversionedId": "tutorials/cluster",
+  "id": "tutorials/cluster",
+  "title": "Clustered deployment",
+  "description": "<!--",
+  "source": "@site/../docs/tutorials/cluster.md",
+  "sourceDirName": "tutorials",
+  "slug": "/tutorials/cluster",
+  "permalink": "/docs/latest/tutorials/cluster",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/tutorials/cluster.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "cluster",
+    "title": "Clustered deployment"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Single server deployment",
+    "permalink": "/docs/latest/operations/single-server"
+  },
+  "next": {
+    "title": "Load files natively",
+    "permalink": "/docs/latest/tutorials/tutorial-batch"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "unversionedId": "ingestion/tranquility",
+  "id": "ingestion/tranquility",
+  "title": "Tranquility",
+  "description": "<!--",
+  "source": "@site/../docs/ingestion/tranquility.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/tranquility",
+  "permalink": "/docs/latest/ingestion/tranquility",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/tranquility.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "tranquility",
+    "title": "Tranquility"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "unversionedId": "ingestion/native-batch-input-sources",
+  "id": "ingestion/native-batch-input-sources",
+  "title": "Native batch input sources",
+  "description": "<!--",
+  "source": "@site/../docs/ingestion/native-batch-input-source.md",
+  "sourceDirName": "ingestion",
+  "slug": "/ingestion/native-batch-input-sources",
+  "permalink": "/docs/latest/ingestion/native-batch-input-sources",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/ingestion/native-batch-input-source.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "native-batch-input-sources",
+    "title": "Native batch input sources",
+    "sidebar_label": "Native batch: input sources"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Native batch",
+    "permalink": "/docs/latest/ingestion/native-batch"
+  },
+  "next": {
+    "title": "Migrate from firehose",
+    "permalink": "/docs/latest/ingestion/migrate-from-firehose"
+  }
+}

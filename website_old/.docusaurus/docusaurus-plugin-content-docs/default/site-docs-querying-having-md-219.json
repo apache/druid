@@ -1,0 +1,27 @@
+{
+  "unversionedId": "querying/having",
+  "id": "querying/having",
+  "title": "Having filters (groupBy)",
+  "description": "<!--",
+  "source": "@site/../docs/querying/having.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/having",
+  "permalink": "/docs/latest/querying/having",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/having.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "having",
+    "title": "Having filters (groupBy)"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Expressions",
+    "permalink": "/docs/latest/misc/math-expr"
+  },
+  "next": {
+    "title": "Sorting and limiting (groupBy)",
+    "permalink": "/docs/latest/querying/limitspec"
+  }
+}

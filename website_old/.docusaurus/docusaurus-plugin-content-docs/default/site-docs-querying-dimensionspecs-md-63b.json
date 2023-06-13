@@ -1,0 +1,28 @@
+{
+  "unversionedId": "querying/dimensionspecs",
+  "id": "querying/dimensionspecs",
+  "title": "Query dimensions",
+  "description": "<!--",
+  "source": "@site/../docs/querying/dimensionspecs.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/dimensionspecs",
+  "permalink": "/docs/latest/querying/dimensionspecs",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/dimensionspecs.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "dimensionspecs",
+    "title": "Query dimensions",
+    "sidebar_label": "Dimensions"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Granularities",
+    "permalink": "/docs/latest/querying/granularities"
+  },
+  "next": {
+    "title": "Aggregations",
+    "permalink": "/docs/latest/querying/aggregations"
+  }
+}

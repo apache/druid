@@ -1,0 +1,28 @@
+{
+  "unversionedId": "querying/multitenancy",
+  "id": "querying/multitenancy",
+  "title": "Multitenancy considerations",
+  "description": "<!--",
+  "source": "@site/../docs/querying/multitenancy.md",
+  "sourceDirName": "querying",
+  "slug": "/querying/multitenancy",
+  "permalink": "/docs/latest/querying/multitenancy",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/querying/multitenancy.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "multitenancy",
+    "title": "Multitenancy considerations",
+    "sidebar_label": "Multitenancy"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Nested columns",
+    "permalink": "/docs/latest/querying/nested-columns"
+  },
+  "next": {
+    "title": "Query caching",
+    "permalink": "/docs/latest/querying/caching"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "unversionedId": "development/extensions-core/azure",
+  "id": "development/extensions-core/azure",
+  "title": "Microsoft Azure",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/azure.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/azure",
+  "permalink": "/docs/latest/development/extensions-core/azure",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/azure.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "azure",
+    "title": "Microsoft Azure"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Apache Avro",
+    "permalink": "/docs/latest/development/extensions-core/avro"
+  },
+  "next": {
+    "title": "Bloom Filter",
+    "permalink": "/docs/latest/development/extensions-core/bloom-filter"
+  }
+}

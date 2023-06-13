@@ -1,0 +1,10 @@
+{
+  "type": "mdx",
+  "permalink": "/downloads",
+  "source": "@site/src/pages/downloads.md",
+  "title": "Download",
+  "description": "Edit this page in the druid-website-src repo.",
+  "frontMatter": {
+    "title": "Download"
+  }
+}

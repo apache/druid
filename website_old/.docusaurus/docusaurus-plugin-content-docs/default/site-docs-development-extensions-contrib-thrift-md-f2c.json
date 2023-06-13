@@ -1,0 +1,27 @@
+{
+  "unversionedId": "development/extensions-contrib/thrift",
+  "id": "development/extensions-contrib/thrift",
+  "title": "Thrift",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/thrift.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/thrift",
+  "permalink": "/docs/latest/development/extensions-contrib/thrift",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/thrift.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "thrift",
+    "title": "Thrift"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "T-Digest Quantiles Sketch module",
+    "permalink": "/docs/latest/development/extensions-contrib/tdigestsketch-quantiles"
+  },
+  "next": {
+    "title": "Timestamp Min/Max aggregators",
+    "permalink": "/docs/latest/development/extensions-contrib/time-min-max"
+  }
+}

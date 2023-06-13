@@ -1,0 +1,12 @@
+{
+  "type": "mdx",
+  "permalink": "/community/cla",
+  "source": "@site/src/pages/community/cla.md",
+  "title": "Druid Contributor License Agreement",
+  "description": "Edit this page in the druid-website-src repo.",
+  "frontMatter": {
+    "title": "Druid Contributor License Agreement",
+    "layout": "simple_page",
+    "canonical": "https://druid.apache.org/community/cla"
+  }
+}

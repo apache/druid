@@ -1,0 +1,27 @@
+{
+  "unversionedId": "design/auth",
+  "id": "design/auth",
+  "title": "Authentication and Authorization",
+  "description": "<!--",
+  "source": "@site/../docs/design/auth.md",
+  "sourceDirName": "design",
+  "slug": "/design/auth",
+  "permalink": "/docs/latest/design/auth",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/design/auth.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "auth",
+    "title": "Authentication and Authorization"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Dynamic Config Providers",
+    "permalink": "/docs/latest/operations/dynamic-config-provider"
+  },
+  "next": {
+    "title": "TLS support",
+    "permalink": "/docs/latest/operations/tls-support"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "unversionedId": "development/extensions-contrib/prometheus",
+  "id": "development/extensions-contrib/prometheus",
+  "title": "Prometheus Emitter",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/prometheus.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/prometheus",
+  "permalink": "/docs/latest/development/extensions-contrib/prometheus",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/prometheus.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "prometheus",
+    "title": "Prometheus Emitter"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Aliyun OSS",
+    "permalink": "/docs/latest/development/extensions-contrib/aliyun-oss"
+  },
+  "next": {
+    "title": "kubernetes",
+    "permalink": "/docs/latest/operations/kubernetes"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "unversionedId": "multi-stage-query/api",
+  "id": "multi-stage-query/api",
+  "title": "SQL-based ingestion and multi-stage query task API",
+  "description": "<!--",
+  "source": "@site/../docs/multi-stage-query/api.md",
+  "sourceDirName": "multi-stage-query",
+  "slug": "/multi-stage-query/api",
+  "permalink": "/docs/latest/multi-stage-query/api",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/multi-stage-query/api.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "api",
+    "title": "SQL-based ingestion and multi-stage query task API",
+    "sidebar_label": "API"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Key concepts",
+    "permalink": "/docs/latest/multi-stage-query/concepts"
+  },
+  "next": {
+    "title": "Security",
+    "permalink": "/docs/latest/multi-stage-query/security"
+  }
+}

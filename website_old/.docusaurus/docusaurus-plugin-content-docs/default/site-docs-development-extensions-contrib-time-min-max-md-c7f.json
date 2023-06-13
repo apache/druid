@@ -1,0 +1,27 @@
+{
+  "unversionedId": "development/extensions-contrib/time-min-max",
+  "id": "development/extensions-contrib/time-min-max",
+  "title": "Timestamp Min/Max aggregators",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-contrib/time-min-max.md",
+  "sourceDirName": "development/extensions-contrib",
+  "slug": "/development/extensions-contrib/time-min-max",
+  "permalink": "/docs/latest/development/extensions-contrib/time-min-max",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-contrib/time-min-max.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "time-min-max",
+    "title": "Timestamp Min/Max aggregators"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Thrift",
+    "permalink": "/docs/latest/development/extensions-contrib/thrift"
+  },
+  "next": {
+    "title": "GCE Extensions",
+    "permalink": "/docs/latest/development/extensions-contrib/gce-extensions"
+  }
+}

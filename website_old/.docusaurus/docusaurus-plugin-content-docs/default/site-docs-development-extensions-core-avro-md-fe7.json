@@ -1,0 +1,27 @@
+{
+  "unversionedId": "development/extensions-core/avro",
+  "id": "development/extensions-core/avro",
+  "title": "Apache Avro",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/avro.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/avro",
+  "permalink": "/docs/latest/development/extensions-core/avro",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/avro.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "avro",
+    "title": "Apache Avro"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Approximate Histogram aggregators",
+    "permalink": "/docs/latest/development/extensions-core/approximate-histograms"
+  },
+  "next": {
+    "title": "Microsoft Azure",
+    "permalink": "/docs/latest/development/extensions-core/azure"
+  }
+}

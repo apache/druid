@@ -1,0 +1,11 @@
+{
+  "type": "mdx",
+  "permalink": "/technology",
+  "source": "@site/src/pages/technology.md",
+  "title": "Technology",
+  "description": "Edit this page in the druid-website-src repo.",
+  "frontMatter": {
+    "title": "Technology",
+    "canonical": "https://druid.apache.org/technology"
+  }
+}

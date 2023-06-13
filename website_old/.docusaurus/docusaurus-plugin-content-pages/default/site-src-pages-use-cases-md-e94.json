@@ -1,0 +1,11 @@
+{
+  "type": "mdx",
+  "permalink": "/use-cases",
+  "source": "@site/src/pages/use-cases.md",
+  "title": "Use Cases",
+  "description": "Edit this page in the druid-website-src repo.",
+  "frontMatter": {
+    "title": "Use Cases",
+    "canonical": "https://druid.apache.org/use-cases"
+  }
+}

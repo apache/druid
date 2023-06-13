@@ -1,0 +1,27 @@
+{
+  "unversionedId": "operations/api-reference",
+  "id": "operations/api-reference",
+  "title": "API reference",
+  "description": "<!--",
+  "source": "@site/../docs/operations/api-reference.md",
+  "sourceDirName": "operations",
+  "slug": "/operations/api-reference",
+  "permalink": "/docs/latest/operations/api-reference",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/operations/api-reference.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "api-reference",
+    "title": "API reference"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Alerts",
+    "permalink": "/docs/latest/operations/alerts"
+  },
+  "next": {
+    "title": "High availability",
+    "permalink": "/docs/latest/operations/high-availability"
+  }
+}

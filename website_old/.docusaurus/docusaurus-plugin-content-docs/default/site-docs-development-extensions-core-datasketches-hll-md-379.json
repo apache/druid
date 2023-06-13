@@ -1,0 +1,27 @@
+{
+  "unversionedId": "development/extensions-core/datasketches-hll",
+  "id": "development/extensions-core/datasketches-hll",
+  "title": "DataSketches HLL Sketch module",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/datasketches-hll.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/datasketches-hll",
+  "permalink": "/docs/latest/development/extensions-core/datasketches-hll",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/datasketches-hll.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "datasketches-hll",
+    "title": "DataSketches HLL Sketch module"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "DataSketches extension",
+    "permalink": "/docs/latest/development/extensions-core/datasketches-extension"
+  },
+  "next": {
+    "title": "DataSketches Quantiles Sketch module",
+    "permalink": "/docs/latest/development/extensions-core/datasketches-quantiles"
+  }
+}

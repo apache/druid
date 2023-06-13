@@ -1,0 +1,40 @@
+{
+  "docusaurusVersion": "2.4.0",
+  "pluginVersions": {
+    "docusaurus-plugin-content-docs": {
+      "type": "package",
+      "name": "@docusaurus/plugin-content-docs",
+      "version": "2.4.0"
+    },
+    "docusaurus-plugin-content-blog": {
+      "type": "package",
+      "name": "@docusaurus/plugin-content-blog",
+      "version": "2.4.0"
+    },
+    "docusaurus-plugin-content-pages": {
+      "type": "package",
+      "name": "@docusaurus/plugin-content-pages",
+      "version": "2.4.0"
+    },
+    "docusaurus-plugin-debug": {
+      "type": "package",
+      "name": "@docusaurus/plugin-debug",
+      "version": "2.4.0"
+    },
+    "docusaurus-plugin-google-gtag": {
+      "type": "package",
+      "name": "@docusaurus/plugin-google-gtag",
+      "version": "2.4.0"
+    },
+    "docusaurus-theme-classic": {
+      "type": "package",
+      "name": "@docusaurus/theme-classic",
+      "version": "2.4.0"
+    },
+    "docusaurus-plugin-client-redirects": {
+      "type": "package",
+      "name": "@docusaurus/plugin-client-redirects",
+      "version": "2.4.0"
+    }
+  }
+}

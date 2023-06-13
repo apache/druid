@@ -1,0 +1,27 @@
+{
+  "unversionedId": "misc/papers-and-talks",
+  "id": "misc/papers-and-talks",
+  "title": "Papers",
+  "description": "<!--",
+  "source": "@site/../docs/misc/papers-and-talks.md",
+  "sourceDirName": "misc",
+  "slug": "/misc/papers-and-talks",
+  "permalink": "/docs/latest/misc/papers-and-talks",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/misc/papers-and-talks.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "papers-and-talks",
+    "title": "Papers"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Experimental features",
+    "permalink": "/docs/latest/development/experimental"
+  },
+  "next": {
+    "title": "Apache Druid vs Elasticsearch",
+    "permalink": "/docs/latest/comparisons/druid-vs-elasticsearch"
+  }
+}

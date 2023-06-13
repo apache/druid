@@ -1,0 +1,27 @@
+{
+  "unversionedId": "development/extensions-core/simple-client-sslcontext",
+  "id": "development/extensions-core/simple-client-sslcontext",
+  "title": "Simple SSLContext Provider Module",
+  "description": "<!--",
+  "source": "@site/../docs/development/extensions-core/simple-client-sslcontext.md",
+  "sourceDirName": "development/extensions-core",
+  "slug": "/development/extensions-core/simple-client-sslcontext",
+  "permalink": "/docs/latest/development/extensions-core/simple-client-sslcontext",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/development/extensions-core/simple-client-sslcontext.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "simple-client-sslcontext",
+    "title": "Simple SSLContext Provider Module"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "S3-compatible",
+    "permalink": "/docs/latest/development/extensions-core/s3"
+  },
+  "next": {
+    "title": "Stats aggregator",
+    "permalink": "/docs/latest/development/extensions-core/stats"
+  }
+}

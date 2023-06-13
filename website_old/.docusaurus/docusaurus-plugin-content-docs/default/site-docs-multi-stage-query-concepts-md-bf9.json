@@ -1,0 +1,28 @@
+{
+  "unversionedId": "multi-stage-query/concepts",
+  "id": "multi-stage-query/concepts",
+  "title": "SQL-based ingestion concepts",
+  "description": "<!--",
+  "source": "@site/../docs/multi-stage-query/concepts.md",
+  "sourceDirName": "multi-stage-query",
+  "slug": "/multi-stage-query/concepts",
+  "permalink": "/docs/latest/multi-stage-query/concepts",
+  "draft": false,
+  "editUrl": "https://github.com/apache/druid/edit/master/docs/../docs/multi-stage-query/concepts.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "concepts",
+    "title": "SQL-based ingestion concepts",
+    "sidebar_label": "Key concepts"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Overview",
+    "permalink": "/docs/latest/multi-stage-query/"
+  },
+  "next": {
+    "title": "API",
+    "permalink": "/docs/latest/multi-stage-query/api"
+  }
+}
