@@ -71,15 +71,14 @@ module.exports={
           "position": "right"
         },
         {
+          "href": "/druid-powered",
+          "label": "Powered By",
+          "position": "right",
+        },        
+        {
           "href": "/use-cases",
           "label": "Use Cases",
           "position": "right",
-          "items": [
-            {
-              "href": "/druid-powered",
-              "label": "Powered By"
-            },
-          ],
         },
         {
           "to": "docs/latest/design/",
