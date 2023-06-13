@@ -122,6 +122,12 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
   {
     final List<String> dimensionsToUse = findDimensions(timestampSpec, dimensionsSpec, theMap);
 
+    final DateTime timestamp = parseTimestamp(timestampSpec, theMap);
+    return new MapBasedInputRow(timestamp, dimensionsToUse, theMap);
+  }
+
+  public static DateTime parseTimestamp(TimestampSpec timestampSpec, Map<String, Object> theMap)
+  {
     final DateTime timestamp;
     try {
       timestamp = timestampSpec.extractTimestamp(theMap);
@@ -154,7 +160,7 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
           rawMap
       );
     }
-    return new MapBasedInputRow(timestamp, dimensionsToUse, theMap);
+    return timestamp;
   }
 
   @Nullable

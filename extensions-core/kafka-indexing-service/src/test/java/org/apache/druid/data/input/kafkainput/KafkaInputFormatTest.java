@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
@@ -550,6 +551,68 @@ public class KafkaInputFormatTest
         }
 
         Assert.assertEquals(numExpectedIterations, numActualIterations);
+      }
+    }
+  }
+
+  @Test
+  public void testMissingTimestampThrowsException() throws IOException
+  {
+    final byte[] key = StringUtils.toUtf8(
+        "{\n"
+        + "    \"key\": \"sampleKey\"\n"
+        + "}");
+
+    final byte[] payload = StringUtils.toUtf8(
+        "{\n"
+        + "    \"timestamp\": \"2021-06-25\",\n"
+        + "    \"bar\": null,\n"
+        + "    \"foo\": \"x\",\n"
+        + "    \"baz\": 4,\n"
+        + "    \"o\": {\n"
+        + "        \"mg\": 1\n"
+        + "    }\n"
+        + "}");
+
+    Headers headers = new RecordHeaders(SAMPLE_HEADERS);
+    inputEntity = new KafkaRecordEntity(
+        new ConsumerRecord<>(
+        "sample",
+        0,
+        0,
+        timestamp,
+        null,
+        null,
+        0,
+        0,
+        key,
+        payload,
+        headers
+        )
+    );
+
+    final InputEntityReader reader = format.createReader(
+        new InputRowSchema(
+            new TimestampSpec("time", "iso", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                "bar", "foo",
+                "kafka.newheader.encoding",
+                "kafka.newheader.kafkapkc",
+                "kafka.newts.timestamp"
+            ))),
+            ColumnsFilter.all()
+        ),
+        newSettableByteEntity(inputEntity),
+        null
+    );
+
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      while (iterator.hasNext()) {
+        Throwable t = Assert.assertThrows(ParseException.class, () -> iterator.next());
+        Assert.assertEquals(
+            "Timestamp[null] is unparseable! Event: {foo=x, kafka.newts.timestamp=1624492800000, kafka.newkey.key=sampleKey, root_baz=4, bar=null, kafka...",
+            t.getMessage()
+        );
       }
     }
   }
