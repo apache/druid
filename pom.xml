@@ -119,9 +119,9 @@
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.5.10</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
-        <com.google.apis.client.version>1.26.0</com.google.apis.client.version>
-        <com.google.apis.compute.version>v1-rev20190607-${com.google.apis.client.version}</com.google.apis.compute.version>
-        <com.google.apis.storage.version>v1-rev20190523-${com.google.apis.client.version}</com.google.apis.storage.version>
+        <com.google.apis.client.version>1.34.0</com.google.apis.client.version>
+        <com.google.apis.compute.version>v1-rev20220720-1.32.1</com.google.apis.compute.version>
+        <com.google.apis.storage.version>v1-rev20220705-1.32.1</com.google.apis.storage.version>
         <jdk.surefire.argLine><!-- empty placeholder --></jdk.surefire.argLine>
         <repoOrgId>maven.org</repoOrgId>
         <repoOrgName>Maven Central Repository</repoOrgName>
