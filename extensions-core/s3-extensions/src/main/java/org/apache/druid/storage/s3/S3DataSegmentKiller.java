@@ -110,14 +110,12 @@ public class S3DataSegmentKiller implements DataSegmentKiller
         log.info("Removing from bucket: [%s] the following index files: [%s] from s3!", s3Bucket, keysToDeleteStrings);
         s3Client.deleteObjects(deleteObjectsRequest);
       }
-      catch (MultiObjectDeleteException e)
-      {
+      catch (MultiObjectDeleteException e) {
         keysNotDeleted.addAll(e.getErrors().stream()
-         .map(MultiObjectDeleteException.DeleteError::getKey)
-         .collect(Collectors.toList()));
+                               .map(MultiObjectDeleteException.DeleteError::getKey)
+                               .collect(Collectors.toList()));
       }
-      catch (AmazonServiceException e)
-      {
+      catch (AmazonServiceException e) {
         throw new SegmentLoadingException(e,
                                           "Unable to delete from bucket [%s]",
                                           s3Bucket);

@@ -376,7 +376,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     ImmutableList.Builder builder = ImmutableList.builder();
     // limit is 1000 per chunk, but we attempt to delete 2 objects per key so this will be 1002 keys so it will make 2
     // calls via the s3client to delete all these objects
-    for(int ii = 0; ii < 501; ii++) {
+    for (int ii = 0; ii < 501; ii++) {
       builder.add(DATA_SEGMENT_1);
     }
 
