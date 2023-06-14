@@ -2968,7 +2968,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // if this task has run longer than the configured duration, signal all tasks in the group to persist
       else if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {
         int pendingTasks = pendingCompletionTaskGroups.values().stream().mapToInt(CopyOnWriteArrayList::size).sum();
-        if (pendingTasks <= 0) {
+        if (pendingTasks <= ioConfig.getStopTaskCount()) {
           log.info("Task group [%d] has run for [%s]", groupId, ioConfig.getTaskDuration());
           futureGroupIds.add(groupId);
           futures.add(checkpointTaskGroup(group, true));
