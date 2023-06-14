@@ -304,6 +304,7 @@ public class ParallelMergeCombiningSequenceTest
         "Query did not complete within configured timeout period"
     );
     assertResultWithCustomPool(input, 10, 20, reportMetrics -> {}, customBadPool);
+    customBadPool.shutdown();
   }
 
   @Test
