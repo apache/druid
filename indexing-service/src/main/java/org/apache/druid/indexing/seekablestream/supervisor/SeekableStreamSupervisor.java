@@ -1578,6 +1578,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
       }
     }
+    earlyStopTime = DateTimes.EPOCH;
 
     checkTaskDuration();
   }
@@ -2938,6 +2939,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final List<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>> futures = new ArrayList<>();
     final List<Integer> futureGroupIds = new ArrayList<>();
 
+    boolean stopTasksEarly = false;
+    if (earlyStopTime != null && (earlyStopTime.isBeforeNow() || earlyStopTime.isEqualNow())) {
+      log.info("Early stop requested - signalling tasks to complete");
+
+      earlyStopTime = null;
+      stopTasksEarly = true;
+    }
+
     for (Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
       Integer groupId = entry.getKey();
       TaskGroup group = entry.getValue();
@@ -2949,16 +2958,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           earliestTaskStart = taskData.startTime;
         }
       }
-
-
-      boolean stopTasksEarly = false;
-      if (earlyStopTime != null && (earlyStopTime.isBeforeNow() || earlyStopTime.isEqualNow())) {
-        log.info("Early stop requested - signalling tasks to complete");
-
-        earlyStopTime = null;
-        stopTasksEarly = true;
-      }
-
 
       if (stopTasksEarly) {
         log.info("Task group [%d] has run for [%s]", groupId, ioConfig.getTaskDuration());
