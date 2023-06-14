@@ -152,11 +152,11 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 
 ## General native ingestion metrics
 
-|Metric|Description| Dimensions                                                                 |Normal Value|
-|------|-----------|----------------------------------------------------------------------------|------------|
-|`ingest/count`|Count of `1` every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |Always `1`.|
-|`ingest/segments/count`|Count of final segments created by job (includes tombstones). | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |At least `1`.|
-|`ingest/tombstones/count`|Count of tombstones created by job. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |Zero or more for replace. Always zero for non-replace tasks (always zero for legacy replace, see below).|
+|Metric|Description| Dimensions                                              |Normal Value|
+|------|-----------|---------------------------------------------------------|------------|
+|`ingest/count`|Count of `1` every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions. | `dataSource`, `taskId`, `taskType`, `taskIngestionMode`, `tags` |Always `1`.|
+|`ingest/segments/count`|Count of final segments created by job (includes tombstones). | `dataSource`, `taskId`, `taskType`, `taskIngestionMode`, `tags` |At least `1`.|
+|`ingest/tombstones/count`|Count of tombstones created by job. | `dataSource`, `taskId`, `taskType`, `taskIngestionMode`, `tags` |Zero or more for replace. Always zero for non-replace tasks (always zero for legacy replace, see below).|
 
 The `taskIngestionMode` dimension includes the following modes: 
 * `APPEND`: a native ingestion job appending to existing segments 
@@ -204,64 +204,64 @@ These metrics apply to the [Kinesis indexing service](../development/extensions-
 Streaming ingestion tasks and certain types of
 batch ingestion emit the following metrics. These metrics are deltas for each emission period.
 
-|Metric|Description| Dimensions                                            |Normal Value|
-|------|-----------|-------------------------------------------------------|------------|
-|`ingest/events/thrownAway`|Number of events rejected because they are either null, or filtered by the transform spec, or outside the windowPeriod.| `dataSource`, `taskId`, `taskType`, `groupId`, tags`  |0|
-|`ingest/events/unparseable`|Number of events rejected because the events are unparseable.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags` |0|
-|`ingest/events/duplicate`|Number of events rejected because the events are duplicated.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags` |0|
-|`ingest/events/processed`|Number of events successfully processed per emission period.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags` |Equal to the number of events per emission period.|
-|`ingest/rows/output`|Number of Druid rows persisted.| `dataSource`, `taskId`, `taskType`, `groupId`         |Your number of events with rollup.|
-|`ingest/persists/count`|Number of times persist occurred.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags` |Depends on configuration.|
-|`ingest/persists/time`|Milliseconds spent doing intermediate persist.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags` |Depends on configuration. Generally a few minutes at most.|
-|`ingest/persists/cpu`|Cpu time in Nanoseconds spent on doing intermediate persist.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags` |Depends on configuration. Generally a few minutes at most.|
-|`ingest/persists/backPressure`|Milliseconds spent creating persist tasks and blocking waiting for them to finish.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags` |0 or very low|
-|`ingest/persists/failed`|Number of persists that failed.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags` |0|
-|`ingest/handoff/failed`|Number of handoffs that failed.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags` |0|
-|`ingest/merge/time`|Milliseconds spent merging intermediate segments.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags` |Depends on configuration. Generally a few minutes at most.|
-|`ingest/merge/cpu`|Cpu time in Nanoseconds spent on merging intermediate segments.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags` |Depends on configuration. Generally a few minutes at most.|
-|`ingest/handoff/count`|Number of handoffs that happened.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags` |Varies. Generally greater than 0 once every segment granular period if cluster operating normally.|
-|`ingest/sink/count`|Number of sinks not handoffed.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags` |1~3|
-|`ingest/events/messageGap`|Time gap in milliseconds between the latest ingested event timestamp and the current system timestamp of metrics emission. If the value is increasing but lag is low, Druid may not be receiving new data. This metric is reset as new tasks spawn up.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags` |Greater than 0, depends on the time carried in event. |
-|`ingest/notices/queueSize`|Number of pending notices to be processed by the coordinator.| `dataSource`, `tags`                                  |Typically 0 and occasionally in lower single digits. Should not be a very high number. |
-|`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor.| `dataSource`, `tags`                                  | < 1s |
-|`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.| `dataSource`, `taskId`, `tags`                        | < 10 seconds|
-|`ingest/handoff/time`|Total number of milliseconds taken to handoff a set of segments.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags` |Depends on coordinator cycle time.|
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`ingest/events/thrownAway`|Number of events rejected because they are either null, or filtered by the transform spec, or outside the windowPeriod.|`dataSource`, `taskId`, `taskType`, `tags`|0|
+|`ingest/events/unparseable`|Number of events rejected because the events are unparseable.|`dataSource`, `taskId`, `taskType`, `tags`|0|
+|`ingest/events/duplicate`|Number of events rejected because the events are duplicated.|`dataSource`, `taskId`, `taskType`, `tags`|0|
+|`ingest/events/processed`|Number of events successfully processed per emission period.|`dataSource`, `taskId`, `taskType`, `tags`|Equal to the number of events per emission period.|
+|`ingest/rows/output`|Number of Druid rows persisted.|`dataSource`, `taskId`, `taskType`|Your number of events with rollup.|
+|`ingest/persists/count`|Number of times persist occurred.|`dataSource`, `taskId`, `taskType`, `tags`|Depends on configuration.|
+|`ingest/persists/time`|Milliseconds spent doing intermediate persist.|`dataSource`, `taskId`, `taskType`, `tags`|Depends on configuration. Generally a few minutes at most.|
+|`ingest/persists/cpu`|Cpu time in Nanoseconds spent on doing intermediate persist.|`dataSource`, `taskId`, `taskType`, `tags`|Depends on configuration. Generally a few minutes at most.|
+|`ingest/persists/backPressure`|Milliseconds spent creating persist tasks and blocking waiting for them to finish.|`dataSource`, `taskId`, `taskType`, `tags`|0 or very low|
+|`ingest/persists/failed`|Number of persists that failed.|`dataSource`, `taskId`, `taskType`, `tags`|0|
+|`ingest/handoff/failed`|Number of handoffs that failed.|`dataSource`, `taskId`, `taskType`, `tags`|0|
+|`ingest/merge/time`|Milliseconds spent merging intermediate segments.|`dataSource`, `taskId`, `taskType`, `tags`|Depends on configuration. Generally a few minutes at most.|
+|`ingest/merge/cpu`|Cpu time in Nanoseconds spent on merging intermediate segments.|`dataSource`, `taskId`, `taskType`, `tags`|Depends on configuration. Generally a few minutes at most.|
+|`ingest/handoff/count`|Number of handoffs that happened.|`dataSource`, `taskId`, `taskType`, `tags`|Varies. Generally greater than 0 once every segment granular period if cluster operating normally.|
+|`ingest/sink/count`|Number of sinks not handoffed.|`dataSource`, `taskId`, `taskType`, `tags`|1~3|
+|`ingest/events/messageGap`|Time gap in milliseconds between the latest ingested event timestamp and the current system timestamp of metrics emission. If the value is increasing but lag is low, Druid may not be receiving new data. This metric is reset as new tasks spawn up.|`dataSource`, `taskId`, `taskType`, `tags`|Greater than 0, depends on the time carried in event. |
+|`ingest/notices/queueSize`|Number of pending notices to be processed by the coordinator.|`dataSource`, `tags`|Typically 0 and occasionally in lower single digits. Should not be a very high number. |
+|`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor.|`dataSource`, `tags`| < 1s |
+|`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|`dataSource`, `taskId`, `tags`| < 10 seconds|
+|`ingest/handoff/time`|Total number of milliseconds taken to handoff a set of segments.|`dataSource`, `taskId`, `taskType`, `tags`|Depends on coordinator cycle time.|
 
 Note: If the JVM does not support CPU time measurement for the current thread, `ingest/merge/cpu` and `ingest/persists/cpu` will be 0.
 
 ## Indexing service
 
-|Metric|Description| Dimensions                                                                            |Normal Value|
-|------|-----------|---------------------------------------------------------------------------------------|------------|
-|`task/run/time`|Milliseconds taken to run a task.| `dataSource`, `taskId`, `taskType`, `groupId`, `taskStatus`, `tags`                   |Varies|
-|`task/pending/time`|Milliseconds taken for a task to wait for running.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags`                                 |Varies|
-|`task/action/log/time`|Milliseconds taken to log a task action to the audit log.| `dataSource`, `taskId`, `taskType`, `groupId`, `taskActionType`, `tags`               |< 1000 (subsecond)|
-|`task/action/run/time`|Milliseconds taken to execute a task action.| `dataSource`, `taskId`, `taskType`, `groupId`, `taskActionType`, `tags`               |Varies from subsecond to a few seconds, based on action type.|
-|`task/action/success/count`|Number of task actions that were executed successfully during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskId`, `taskType`, `groupId`, `taskActionType`, `tags`               |Varies|
-|`task/action/failed/count`|Number of task actions that failed during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskId`, `taskType`, `groupId`, `taskActionType`, `tags`               |Varies|
-|`task/action/batch/queueTime`|Milliseconds spent by a batch of task actions in queue. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskActionType`, `interval`                                            |Varies based on the `batchAllocationWaitTime` and number of batches in queue.|
-|`task/action/batch/runTime`|Milliseconds taken to execute a batch of task actions. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskActionType`, `interval`                                            |Varies from subsecond to a few seconds, based on action type and batch size.|
-|`task/action/batch/size`|Number of task actions in a batch that was executed during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskActionType`, `interval`                                            |Varies based on number of concurrent task actions.|
-|`task/action/batch/attempts`|Number of execution attempts for a single batch of task actions. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskActionType`, `interval`                                            |1 if there are no failures or retries.|
-|`task/segmentAvailability/wait/time`|The amount of milliseconds a batch indexing task waited for newly created segments to become available for querying.| `dataSource`, `taskType`, `groupId`, `taskId`, `segmentAvailabilityConfirmed`, `tags` |Varies|
-|`segment/added/bytes`|Size in bytes of new segments created.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`                     |Varies|
-|`segment/moved/bytes`|Size in bytes of segments moved/archived via the Move Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`                     |Varies|
-|`segment/nuked/bytes`|Size in bytes of segments deleted via the Kill Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`                     |Varies|
-|`task/success/count`|Number of successful tasks per emission period. This metric is only available if the TaskCountStatsMonitor module is included.| `dataSource`                                                                          |Varies|
-|`task/failed/count`|Number of failed tasks per emission period. This metric is only available if the TaskCountStatsMonitor module is included.| `dataSource`                                                                          |Varies|
-|`task/running/count`|Number of current running tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.| `dataSource`                                                                          |Varies|
-|`task/pending/count`|Number of current pending tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.| `dataSource`                                                                          |Varies|
-|`task/waiting/count`|Number of current waiting tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.| `dataSource`                                                                          |Varies|
-|`taskSlot/total/count`|Number of total task slots per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`                                                                            |Varies|
-|`taskSlot/idle/count`|Number of idle task slots per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`                                                                            |Varies|
-|`taskSlot/used/count`|Number of busy task slots per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`                                                                            |Varies|
-|`taskSlot/lazy/count`|Number of total task slots in lazy marked MiddleManagers and Indexers per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`                                                                            |Varies|
-|`taskSlot/blacklisted/count`|Number of total task slots in blacklisted MiddleManagers and Indexers per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`                                                                            |Varies|
-|`worker/task/failed/count`|Number of failed tasks run on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included, and is only supported for middleManager nodes.| `category`, `workerVersion`                                                           |Varies|
-|`worker/task/success/count`|Number of successful tasks run on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included, and is only supported for middleManager nodes.| `category`,`workerVersion`                                                            |Varies|
-|`worker/taskSlot/idle/count`|Number of idle task slots on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included, and is only supported for middleManager nodes.| `category`, `workerVersion`                                                           |Varies|
-|`worker/taskSlot/total/count`|Number of total task slots on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.| `category`, `workerVersion`                                                           |Varies|
-|`worker/taskSlot/used/count`|Number of busy task slots on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.| `category`, `workerVersion`                                                           |Varies|
+|Metric|Description| Dimensions                                                 |Normal Value|
+|------|-----------|------------------------------------------------------------|------------|
+|`task/run/time`|Milliseconds taken to run a task.| `dataSource`, `taskId`, `taskType`, `taskStatus`, `tags`|Varies|
+|`task/pending/time`|Milliseconds taken for a task to wait for running.| `dataSource`, `taskId`, `taskType`, `tags`|Varies|
+|`task/action/log/time`|Milliseconds taken to log a task action to the audit log.| `dataSource`, `taskId`, `taskType`, `taskActionType`, `tags`|< 1000 (subsecond)|
+|`task/action/run/time`|Milliseconds taken to execute a task action.| `dataSource`, `taskId`, `taskType`, `taskActionType`, `tags`|Varies from subsecond to a few seconds, based on action type.|
+|`task/action/success/count`|Number of task actions that were executed successfully during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskId`, `taskType`, `taskActionType`, `tags`|Varies|
+|`task/action/failed/count`|Number of task actions that failed during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskId`, `taskType`, `taskActionType`, `tags`|Varies|
+|`task/action/batch/queueTime`|Milliseconds spent by a batch of task actions in queue. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskActionType`, `interval`|Varies based on the `batchAllocationWaitTime` and number of batches in queue.|
+|`task/action/batch/runTime`|Milliseconds taken to execute a batch of task actions. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskActionType`, `interval`|Varies from subsecond to a few seconds, based on action type and batch size.|
+|`task/action/batch/size`|Number of task actions in a batch that was executed during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskActionType`, `interval`|Varies based on number of concurrent task actions.|
+|`task/action/batch/attempts`|Number of execution attempts for a single batch of task actions. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskActionType`, `interval`|1 if there are no failures or retries.|
+|`task/segmentAvailability/wait/time`|The amount of milliseconds a batch indexing task waited for newly created segments to become available for querying.| `dataSource`, `taskType`, `taskId`, `segmentAvailabilityConfirmed`, `tags`|Varies|
+|`segment/added/bytes`|Size in bytes of new segments created.| `dataSource`, `taskId`, `taskType`, `interval`, `tags`|Varies|
+|`segment/moved/bytes`|Size in bytes of segments moved/archived via the Move Task.| `dataSource`, `taskId`, `taskType`, `interval`, `tags`|Varies|
+|`segment/nuked/bytes`|Size in bytes of segments deleted via the Kill Task.| `dataSource`, `taskId`, `taskType`, `interval`, `tags`|Varies|
+|`task/success/count`|Number of successful tasks per emission period. This metric is only available if the TaskCountStatsMonitor module is included.| `dataSource`|Varies|
+|`task/failed/count`|Number of failed tasks per emission period. This metric is only available if the TaskCountStatsMonitor module is included.|`dataSource`|Varies|
+|`task/running/count`|Number of current running tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`|Varies|
+|`task/pending/count`|Number of current pending tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`|Varies|
+|`task/waiting/count`|Number of current waiting tasks. This metric is only available if the `TaskCountStatsMonitor` module is included.|`dataSource`|Varies|
+|`taskSlot/total/count`|Number of total task slots per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
+|`taskSlot/idle/count`|Number of idle task slots per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
+|`taskSlot/used/count`|Number of busy task slots per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
+|`taskSlot/lazy/count`|Number of total task slots in lazy marked MiddleManagers and Indexers per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
+|`taskSlot/blacklisted/count`|Number of total task slots in blacklisted MiddleManagers and Indexers per emission period. This metric is only available if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
+|`worker/task/failed/count`|Number of failed tasks run on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included, and is only supported for middleManager nodes.| `category`, `workerVersion`|Varies|
+|`worker/task/success/count`|Number of successful tasks run on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included, and is only supported for middleManager nodes.| `category`,`workerVersion`|Varies|
+|`worker/taskSlot/idle/count`|Number of idle task slots on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included, and is only supported for middleManager nodes.| `category`, `workerVersion`|Varies|
+|`worker/taskSlot/total/count`|Number of total task slots on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.| `category`, `workerVersion`|Varies|
+|`worker/taskSlot/used/count`|Number of busy task slots on the reporting worker per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.| `category`, `workerVersion`|Varies|
 
 ## Shuffle metrics (Native parallel task)
 
