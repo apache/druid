@@ -35,12 +35,7 @@ your favorite editor. Refresh the web page after each edit to review your change
 ## Dependencies
 
 * [NodeJS](https://nodejs.org/en/download/). Use the version Docusaurus specifies, not a
-newer one. (For example, if 12.x is requested, don't install 16.x.)
-Docusaurus may require a version
-newer than that available in your Linux package repository, but older than the
-latest version. See
-[this page](https://github.com/nodesource/distributions/blob/master/README.md) to
-find the version required by Docusaurus.
+newer one. Docusaurus requires node 16.14 or higher.
 * The [Yarn](https://classic.yarnpkg.com/en/) dependency from Docusaurus is optional.
 (This Yarn is not the Hadoop resource manager, it is a package manager for Node.js).
 * [Docusaurus](https://docusaurus.io/docs/installation). Installed automatically
