@@ -43,28 +43,16 @@ public class ForeverLoadRuleTest
     Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
 
     Assert.assertEquals(rule.getTieredReplicants(), ((ForeverLoadRule) reread).getTieredReplicants());
-    Assert.assertEquals(ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS), rule.getTieredReplicants());
-  }
-
-  @Test
-  public void testMappingNullTieredReplicants() throws Exception
-  {
-    String inputJson = "{\n"
-                      + " \"type\": \"loadForever\"\n"
-                      + "}";
-    String expectedJson = "    {\n"
-                          + "      \"tieredReplicants\": {\n"
-                          + "        \"" + DruidServer.DEFAULT_TIER + "\": " + DruidServer.DEFAULT_NUM_REPLICANTS + "\n"
-                          + "      },\n"
-                          + "      \"type\": \"loadForever\"\n"
-                          + "    }";
-    ObjectMapper jsonMapper = new DefaultObjectMapper();
-    ForeverLoadRule inputForeverLoadRule = jsonMapper.readValue(inputJson, ForeverLoadRule.class);
-    ForeverLoadRule expectedForeverLoadRule = jsonMapper.readValue(expectedJson, ForeverLoadRule.class);
-    Assert.assertEquals(expectedForeverLoadRule.getTieredReplicants(), inputForeverLoadRule.getTieredReplicants());
+    Assert.assertEquals(ImmutableMap.of(), rule.getTieredReplicants());
   }
 
   @Test(expected = IAE.class)
+  public void testCreatingNegativeTieredReplicants()
+  {
+    ForeverLoadRule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, -1));
+  }
+
+  @Test
   public void testEmptyTieredReplicants() throws Exception
   {
     ForeverLoadRule rule = new ForeverLoadRule(
@@ -72,7 +60,8 @@ public class ForeverLoadRuleTest
     );
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();
-    Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
+    LoadRule reread = (LoadRule) jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
+    Assert.assertEquals(ImmutableMap.of(), reread.getTieredReplicants());
   }
 
   @Test(expected = IAE.class)

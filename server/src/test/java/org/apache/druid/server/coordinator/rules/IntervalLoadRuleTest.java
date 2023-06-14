@@ -23,11 +23,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
+ * Unit tests for {@link IntervalLoadRule}
  */
 public class IntervalLoadRuleTest
 {
@@ -56,29 +61,30 @@ public class IntervalLoadRuleTest
     Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
 
     Assert.assertEquals(rule, reread);
-    Assert.assertEquals(
-        ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
-        rule.getTieredReplicants()
+    Assert.assertEquals(ImmutableMap.of(), rule.getTieredReplicants());
+  }
+
+  @Test(expected = IAE.class)
+  public void testCreatingNegativeTieredReplicants()
+  {
+    IntervalLoadRule intervalLoadRule = new IntervalLoadRule(
+        Intervals.of("0/3000"),
+        ImmutableMap.of(DruidServer.DEFAULT_TIER, -1)
     );
   }
 
-  @Test
-  public void testMappingNullTieredReplicants() throws Exception
+  @Test(expected = IAE.class)
+  public void testEmptyReplicantValue() throws Exception
   {
-    String inputJson = "    {\n"
-                       + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
-                       + "      \"type\": \"loadByInterval\"\n"
-                       + "    }";
-    String expectedJson = "{\n"
-                          + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
-                          + "      \"tieredReplicants\": {\n"
-                          + "        \"" + DruidServer.DEFAULT_TIER + "\": " + DruidServer.DEFAULT_NUM_REPLICANTS + "\n"
-                          + "      },\n"
-                          + "      \"type\": \"loadByInterval\"\n"
-                          + "    }";
+    // Immutable map does not allow null values
+    Map<String, Integer> tieredReplicants = new HashMap<>();
+    tieredReplicants.put("tier", null);
+    IntervalLoadRule rule = new IntervalLoadRule(
+        Intervals.of("0/3000"),
+        tieredReplicants
+    );
+
     ObjectMapper jsonMapper = new DefaultObjectMapper();
-    IntervalLoadRule inputIntervalLoadRule = jsonMapper.readValue(inputJson, IntervalLoadRule.class);
-    IntervalLoadRule expectedIntervalLoadRule = jsonMapper.readValue(expectedJson, IntervalLoadRule.class);
-    Assert.assertEquals(expectedIntervalLoadRule, inputIntervalLoadRule);
+    Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
   }
 }

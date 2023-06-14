@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.rules;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.DruidServer;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -41,7 +40,7 @@ public class ForeverLoadRule extends LoadRule
       @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
   )
   {
-    this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS) : tieredReplicants;
+    this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of() : tieredReplicants;
     validateTieredReplicants(this.tieredReplicants);
   }
 

@@ -23,6 +23,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -58,6 +59,7 @@ public abstract class LoadRule implements Rule
   static final String DROPPED_COUNT = "droppedCount";
   public final String NON_PRIMARY_ASSIGNED_COUNT = "totalNonPrimaryReplicantsLoaded";
   public static final String REQUIRED_CAPACITY = "requiredCapacity";
+  public static final int DEFAULT_LOAD_RULE_NUM_REPLICANTS = 0;
 
   private final Object2IntMap<String> targetReplicants = new Object2IntOpenHashMap<>();
   private final Object2IntMap<String> currentReplicants = new Object2IntOpenHashMap<>();
@@ -74,7 +76,12 @@ public abstract class LoadRule implements Rule
   {
     try {
       // get the "snapshots" of targetReplicants and currentReplicants for assignments.
-      targetReplicants.putAll(getTieredReplicants());
+      Map<String, Integer> tieredReplicants = getTieredReplicants();
+      if (tieredReplicants.isEmpty()) {
+        targetReplicants.put(DruidServer.DEFAULT_TIER, DEFAULT_LOAD_RULE_NUM_REPLICANTS);
+      } else {
+        targetReplicants.putAll(getTieredReplicants());
+      }
       currentReplicants.putAll(params.getSegmentReplicantLookup().getClusterTiers(segment.getId()));
 
       final CoordinatorStats stats = new CoordinatorStats();
@@ -545,15 +552,15 @@ public abstract class LoadRule implements Rule
 
   protected static void validateTieredReplicants(final Map<String, Integer> tieredReplicants)
   {
-    if (tieredReplicants.size() == 0) {
-      throw new IAE("A rule with empty tiered replicants is invalid");
+    if (tieredReplicants == null || tieredReplicants.isEmpty()) {
+      return;
     }
     for (Map.Entry<String, Integer> entry : tieredReplicants.entrySet()) {
       if (entry.getValue() == null) {
         throw new IAE("Replicant value cannot be empty");
       }
       if (entry.getValue() < 0) {
-        throw new IAE("Replicant value [%d] is less than 0, which is not allowed", entry.getValue());
+        throw new IAE("Replicant value [%d] is less than 1, which is not allowed", entry.getValue());
       }
     }
   }

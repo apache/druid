@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.rules;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -49,7 +48,7 @@ public class PeriodLoadRule extends LoadRule
       @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
   )
   {
-    this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS) : tieredReplicants;
+    this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of() : tieredReplicants;
     validateTieredReplicants(this.tieredReplicants);
     this.period = period;
     this.includeFuture = includeFuture == null ? DEFAULT_INCLUDE_FUTURE : includeFuture;

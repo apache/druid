@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -32,6 +33,9 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  */
@@ -158,7 +162,7 @@ public class PeriodLoadRuleTest
     Assert.assertEquals(rule.isIncludeFuture(), ((PeriodLoadRule) reread).isIncludeFuture());
     Assert.assertEquals(PeriodLoadRule.DEFAULT_INCLUDE_FUTURE, rule.isIncludeFuture());
     Assert.assertEquals(rule.getTieredReplicants(), ((PeriodLoadRule) reread).getTieredReplicants());
-    Assert.assertEquals(ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS), rule.getTieredReplicants());
+    Assert.assertEquals(ImmutableMap.of(), rule.getTieredReplicants());
   }
 
   /**
@@ -174,9 +178,6 @@ public class PeriodLoadRuleTest
     String expectedJson = "{\n"
                           + "      \"period\": \"P1D\",\n"
                           + "      \"includeFuture\": " + PeriodLoadRule.DEFAULT_INCLUDE_FUTURE + ",\n"
-                          + "      \"tieredReplicants\": {\n"
-                          + "        \"" + DruidServer.DEFAULT_TIER + "\": " + DruidServer.DEFAULT_NUM_REPLICANTS + "\n"
-                          + "      },\n"
                           + "      \"type\": \"loadByPeriod\"\n"
                           + "    }";
     ObjectMapper jsonMapper = new DefaultObjectMapper();
@@ -185,5 +186,27 @@ public class PeriodLoadRuleTest
     Assert.assertEquals(expectedPeriodLoadRule.getTieredReplicants(), inputPeriodLoadRule.getTieredReplicants());
     Assert.assertEquals(expectedPeriodLoadRule.getPeriod(), inputPeriodLoadRule.getPeriod());
     Assert.assertEquals(expectedPeriodLoadRule.isIncludeFuture(), inputPeriodLoadRule.isIncludeFuture());
+  }
+
+  @Test(expected = IAE.class)
+  public void testCreatingNegativeTieredReplicants()
+  {
+    PeriodLoadRule periodLoadRule = new PeriodLoadRule(Period.days(1), true, ImmutableMap.of(DruidServer.DEFAULT_TIER, -1));
+  }
+
+  @Test(expected = IAE.class)
+  public void testEmptyReplicantValue() throws Exception
+  {
+    // Immutable map does not allow null values
+    Map<String, Integer> tieredReplicants = new HashMap<>();
+    tieredReplicants.put("tier", null);
+    PeriodLoadRule rule = new PeriodLoadRule(
+        Period.days(1),
+        true,
+        tieredReplicants
+    );
+
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
   }
 }
