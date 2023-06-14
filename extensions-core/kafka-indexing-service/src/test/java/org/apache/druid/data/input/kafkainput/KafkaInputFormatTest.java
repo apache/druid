@@ -53,11 +53,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Optional;
 
 public class KafkaInputFormatTest
 {
   private KafkaRecordEntity inputEntity;
-  private long timestamp = DateTimes.of("2021-06-24").getMillis();
+  private final long timestamp = DateTimes.of("2021-06-24").getMillis();
   private static final Iterable<Header> SAMPLE_HEADERS = ImmutableList.of(
       new Header()
       {
@@ -171,7 +172,7 @@ public class KafkaInputFormatTest
 
     final byte[] formatBytes = mapper.writeValueAsBytes(format);
     final byte[] kifBytes = mapper.writeValueAsBytes(kif);
-    Assert.assertTrue(Arrays.equals(formatBytes, kifBytes));
+    Assert.assertArrayEquals(formatBytes, kifBytes);
   }
 
   @Test
@@ -196,21 +197,7 @@ public class KafkaInputFormatTest
     );
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
-    inputEntity = new KafkaRecordEntity(
-        new ConsumerRecord<>(
-            "sample",
-            0,
-            0,
-            timestamp,
-            null,
-            null,
-            0,
-            0,
-            key,
-            payload,
-            headers
-        )
-    );
+    inputEntity = makeInputEntity(key, payload, headers);
 
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
@@ -299,24 +286,11 @@ public class KafkaInputFormatTest
         + "    \"o\": {\n"
         + "        \"mg\": 1\n"
         + "    }\n"
-        + "}");
+        + "}"
+    );
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
-    inputEntity = new KafkaRecordEntity(
-        new ConsumerRecord<>(
-            "sample",
-            0,
-            0,
-            timestamp,
-            null,
-            null,
-            0,
-            0,
-            null,
-            payload,
-            headers
-        )
-    );
+    inputEntity = makeInputEntity(null, payload, headers);
 
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
@@ -377,7 +351,8 @@ public class KafkaInputFormatTest
                   }
                 }
             )
-        ));
+        )
+    );
     final byte[] key = StringUtils.toUtf8(
         "{\n"
         + "    \"key\": \"sampleKey\"\n"
@@ -397,21 +372,7 @@ public class KafkaInputFormatTest
     );
 
     Headers headers = new RecordHeaders(sample_header_with_ts);
-    inputEntity = new KafkaRecordEntity(
-        new ConsumerRecord<>(
-            "sample",
-            0,
-            0,
-            timestamp,
-            null,
-            null,
-            0,
-            0,
-            key,
-            payload,
-            headers
-        )
-    );
+    inputEntity = makeInputEntity(key, payload, headers);
 
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
@@ -496,21 +457,7 @@ public class KafkaInputFormatTest
     );
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
-    inputEntity = new KafkaRecordEntity(
-        new ConsumerRecord<>(
-            "sample",
-            0,
-            0,
-            timestamp,
-            null,
-            null,
-            0,
-            0,
-            null,
-            payload,
-            headers
-        )
-    );
+    inputEntity = makeInputEntity(null, payload, headers);
 
     KafkaInputFormat localFormat = new KafkaInputFormat(
         null,
@@ -633,21 +580,7 @@ public class KafkaInputFormatTest
     for (int i = 0; i < keys.length; i++) {
       headers = headers.add(new RecordHeader("indexH", String.valueOf(i).getBytes(StandardCharsets.UTF_8)));
 
-      inputEntity = new KafkaRecordEntity(
-          new ConsumerRecord<>(
-              "sample",
-              0,
-              0,
-              timestamp,
-              null,
-              null,
-              0,
-              0,
-              keys[i],
-              values[i],
-              headers
-          )
-      );
+      inputEntity = makeInputEntity(keys[i], values[i], headers);
       settableByteEntity.setEntity(inputEntity);
 
       final int numExpectedIterations = 1;
@@ -724,21 +657,7 @@ public class KafkaInputFormatTest
     );
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
-    inputEntity = new KafkaRecordEntity(
-        new ConsumerRecord<>(
-            "sample",
-            0,
-            0,
-            timestamp,
-            null,
-            null,
-            0,
-            0,
-            key,
-            payload,
-            headers
-        )
-    );
+    inputEntity = makeInputEntity(key, payload, headers);
 
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
@@ -794,21 +713,7 @@ public class KafkaInputFormatTest
     );
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
-    inputEntity = new KafkaRecordEntity(
-        new ConsumerRecord<>(
-            "sample",
-            0,
-            0,
-            timestamp,
-            null,
-            null,
-            0,
-            0,
-            key,
-            payload,
-            headers
-        )
-    );
+    inputEntity = makeInputEntity(key, payload, headers);
 
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
@@ -904,21 +809,7 @@ public class KafkaInputFormatTest
     );
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
-    inputEntity = new KafkaRecordEntity(
-        new ConsumerRecord<>(
-            "sample",
-            0,
-            0,
-            timestamp,
-            null,
-            null,
-            0,
-            0,
-            key,
-            payload,
-            headers
-        )
-    );
+    inputEntity = makeInputEntity(key, payload, headers);
 
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
@@ -992,6 +883,25 @@ public class KafkaInputFormatTest
 
       Assert.assertEquals(numExpectedIterations, numActualIterations);
     }
+  }
+
+  private KafkaRecordEntity makeInputEntity(byte[] key, byte[] payload, Headers headers)
+  {
+    return new KafkaRecordEntity(
+        new ConsumerRecord<>(
+            "sample",
+            0,
+            0,
+            timestamp,
+            null,
+            0,
+            0,
+            key,
+            payload,
+            headers,
+            Optional.empty()
+        )
+    );
   }
 
 

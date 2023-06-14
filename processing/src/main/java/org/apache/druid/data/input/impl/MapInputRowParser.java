@@ -32,6 +32,7 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +74,11 @@ public class MapInputRowParser implements InputRowParser<Map<String, Object>>
       Map<String, Object> theMap
   ) throws ParseException
   {
-    final List<String> dimensionsToUse = findDimensions(timestampSpec, dimensionsSpec, theMap.keySet());
+    final List<String> dimensionsToUse = findDimensions(
+        timestampSpec,
+        dimensionsSpec,
+        theMap == null ? Collections.emptySet() : theMap.keySet()
+    );
 
     final DateTime timestamp = parseTimestamp(timestampSpec, theMap);
     return new MapBasedInputRow(timestamp, dimensionsToUse, theMap);
