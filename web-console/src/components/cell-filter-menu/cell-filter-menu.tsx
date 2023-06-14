@@ -148,7 +148,6 @@ export function CellFilterMenu(props: CellFilterMenuProps) {
 
     const updatedClause =
       currentClauses.length === 1 && val ? addToClause(currentClauses[0], val) : undefined;
-    console.log(updatedClause, currentClauses);
 
     const jsonColumn = column.nativeType === 'COMPLEX<json>';
     return (

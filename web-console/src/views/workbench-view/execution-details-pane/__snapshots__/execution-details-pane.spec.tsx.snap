@@ -1207,7 +1207,7 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
           ],
         }
       }
-      goToIngestion={[Function]}
+      goToTask={[Function]}
       onErrorClick={[Function]}
       onWarningClick={[Function]}
     />

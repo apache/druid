@@ -16,31 +16,27 @@
  * limitations under the License.
  */
 
+import { Intent } from '@blueprintjs/core';
+import { render } from '@testing-library/react';
 import React from 'react';
 
-import { EXECUTION_INGEST_ERROR } from '../../../druid-models/execution/execution-ingest-error.mock';
-import { shallow } from '../../../utils/shallow-renderer';
+import { AlertDialog } from './alert-dialog';
 
-import { ExecutionDetailsPane } from './execution-details-pane';
-
-describe('ExecutionDetailsPane', () => {
-  it('matches snapshot no init tab', () => {
-    const comp = shallow(
-      <ExecutionDetailsPane execution={EXECUTION_INGEST_ERROR} goToTask={() => {}} />,
+describe('AlertDialog', () => {
+  it('matches snapshot', () => {
+    const aboutDialog = (
+      <AlertDialog
+        cancelButtonText="Cancel"
+        confirmButtonText="Run it anyway"
+        intent={Intent.PRIMARY}
+        onCancel={() => {}}
+        onConfirm={() => {}}
+      >
+        <p>Blah blah</p>
+        <p>Foo bar</p>
+      </AlertDialog>
     );
-
-    expect(comp).toMatchSnapshot();
-  });
-
-  it('matches snapshot with init tab', () => {
-    const comp = shallow(
-      <ExecutionDetailsPane
-        execution={EXECUTION_INGEST_ERROR}
-        initTab="warnings"
-        goToTask={() => {}}
-      />,
-    );
-
-    expect(comp).toMatchSnapshot();
+    render(aboutDialog);
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

@@ -83,7 +83,7 @@ export interface WorkbenchViewProps {
   mandatoryQueryContext?: Record<string, any>;
   queryEngines: DruidEngine[];
   allowExplain: boolean;
-  goToIngestion(taskId: string): void;
+  goToTask(taskId: string): void;
 }
 
 export interface WorkbenchViewState {
@@ -253,7 +253,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   }
 
   private renderExecutionDetailsDialog() {
-    const { goToIngestion } = this.props;
+    const { goToTask } = this.props;
     const { details } = this.state;
     if (!details) return;
 
@@ -262,7 +262,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
         id={details.id}
         initTab={details.initTab}
         initExecution={details.initExecution}
-        goToIngestion={goToIngestion}
+        goToTask={goToTask}
         onClose={() => this.setState({ details: undefined })}
       />
     );
@@ -625,7 +625,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   }
 
   private renderCenterPanel() {
-    const { capabilities, mandatoryQueryContext, queryEngines, allowExplain, goToIngestion } =
+    const { capabilities, mandatoryQueryContext, queryEngines, allowExplain, goToTask } =
       this.props;
     const { columnMetadataState } = this.state;
     const currentTabEntry = this.getCurrentTabEntry();
@@ -646,7 +646,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           onDetails={this.handleDetails}
           queryEngines={queryEngines}
           clusterCapacity={capabilities.getClusterCapacity()}
-          goToIngestion={goToIngestion}
+          goToTask={goToTask}
           runMoreMenu={
             <Menu>
               {allowExplain && (

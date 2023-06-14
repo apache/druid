@@ -1,36 +1,55 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`DatasourcesView matches snapshot 1`] = `
+exports[`TasksView matches snapshot 1`] = `
 <div
-  className="datasources-view app-view"
+  className="tasks-view app-view"
 >
   <Memo(ViewControlBar)
-    label="Datasources"
+    label="Tasks"
   >
+    <Unknown>
+      Group by
+    </Unknown>
+    <Blueprint4.ButtonGroup>
+      <Blueprint4.Button
+        active={true}
+        onClick={[Function]}
+      >
+        None
+      </Blueprint4.Button>
+      <Blueprint4.Button
+        active={false}
+        onClick={[Function]}
+      >
+        Group ID
+      </Blueprint4.Button>
+      <Blueprint4.Button
+        active={false}
+        onClick={[Function]}
+      >
+        Type
+      </Blueprint4.Button>
+      <Blueprint4.Button
+        active={false}
+        onClick={[Function]}
+      >
+        Datasource
+      </Blueprint4.Button>
+      <Blueprint4.Button
+        active={false}
+        onClick={[Function]}
+      >
+        Status
+      </Blueprint4.Button>
+    </Blueprint4.ButtonGroup>
     <Memo(RefreshButton)
-      localStorageKey="datasources-refresh-rate"
+      localStorageKey="task-refresh-rate"
       onRefresh={[Function]}
     />
-    <Memo(MoreButton)
-      altExtra={
-        <Blueprint4.MenuItem
-          active={false}
-          disabled={false}
-          icon="compressed"
-          intent="danger"
-          label="(debug)"
-          multiline={false}
-          onClick={[Function]}
-          popoverProps={Object {}}
-          selected={false}
-          shouldDismissPopover={true}
-          text="Force compaction run"
-        />
-      }
-    >
+    <Memo(MoreButton)>
       <Blueprint4.MenuItem
         active={false}
-        disabled={true}
+        disabled={false}
         icon="application"
         multiline={false}
         onClick={[Function]}
@@ -42,56 +61,31 @@ exports[`DatasourcesView matches snapshot 1`] = `
       <Blueprint4.MenuItem
         active={false}
         disabled={false}
-        icon="edit"
+        icon="manually-entered-data"
         multiline={false}
         onClick={[Function]}
         popoverProps={Object {}}
         selected={false}
         shouldDismissPopover={true}
-        text="Edit default retention rules"
+        text="Submit JSON task"
       />
     </Memo(MoreButton)>
-    <Blueprint4.Switch
-      checked={false}
-      disabled={false}
-      label="Show unused"
-      onChange={[Function]}
-    />
-    <Blueprint4.Switch
-      checked={false}
-      disabled={false}
-      label="Show segment timeline"
-      onChange={[Function]}
-    />
     <Memo(TableColumnSelector)
       columns={
         Array [
-          "Datasource name",
-          "Availability",
-          "Availability detail",
-          "Total data size",
-          "Running tasks",
-          "Segment rows",
-          "Segment size",
-          "Segment granularity",
-          "Total rows",
-          "Avg. row size",
-          "Replicated size",
-          "Compaction",
-          "% Compacted",
-          "Left to be compacted",
-          "Retention",
+          "Task ID",
+          "Group ID",
+          "Type",
+          "Datasource",
+          "Status",
+          "Created time",
+          "Duration",
+          "Location",
           "Actions",
         ]
       }
       onChange={[Function]}
-      onClose={[Function]}
-      tableColumnsHidden={
-        Array [
-          "Segment size",
-          "Segment granularity",
-        ]
-      }
+      tableColumnsHidden={Array []}
     />
   </Memo(ViewControlBar)>
   <ReactTable
@@ -152,190 +146,75 @@ exports[`DatasourcesView matches snapshot 1`] = `
     columns={
       Array [
         Object {
+          "Aggregated": [Function],
           "Cell": [Function],
-          "Header": <React.Fragment>
-            Datasource
-            <br />
-            name
-          </React.Fragment>,
+          "Header": "Task ID",
+          "accessor": "task_id",
+          "show": true,
+          "width": 440,
+        },
+        Object {
+          "Aggregated": [Function],
+          "Cell": [Function],
+          "Header": "Group ID",
+          "accessor": "group_id",
+          "show": true,
+          "width": 300,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Type",
+          "accessor": "type",
+          "show": true,
+          "width": 140,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Datasource",
           "accessor": "datasource",
-          "show": true,
-          "width": 150,
-        },
-        Object {
-          "Cell": [Function],
-          "Header": "Availability",
-          "accessor": "num_segments",
-          "className": "padded",
-          "filterable": false,
-          "show": true,
-          "sortMethod": [Function],
-          "width": 220,
-        },
-        Object {
-          "Cell": [Function],
-          "Header": <React.Fragment>
-            Availability
-            <br />
-            detail
-          </React.Fragment>,
-          "accessor": "num_segments_to_load",
-          "className": "padded",
-          "filterable": false,
-          "show": true,
-          "width": 180,
-        },
-        Object {
-          "Cell": [Function],
-          "Header": <React.Fragment>
-            Total
-            <br />
-            data size
-          </React.Fragment>,
-          "accessor": "total_data_size",
-          "className": "padded",
-          "filterable": false,
-          "show": true,
-          "width": 100,
-        },
-        Object {
-          "Cell": [Function],
-          "Header": "Running tasks",
-          "accessor": [Function],
-          "filterable": false,
-          "id": "running_tasks",
           "show": true,
           "width": 200,
         },
         Object {
           "Cell": [Function],
-          "Header": <React.Fragment>
-            Segment rows
-            <br />
-            minimum / average / maximum
-          </React.Fragment>,
-          "accessor": "avg_segment_rows",
-          "className": "padded",
-          "filterable": false,
-          "show": true,
-          "width": 230,
-        },
-        Object {
-          "Cell": [Function],
-          "Header": <React.Fragment>
-            Segment size
-            <br />
-            minimum / average / maximum
-          </React.Fragment>,
-          "accessor": "avg_segment_size",
-          "className": "padded",
-          "filterable": false,
-          "show": false,
-          "width": 270,
-        },
-        Object {
-          "Cell": [Function],
-          "Header": <React.Fragment>
-            Segment
-            <br />
-            granularity
-          </React.Fragment>,
+          "Header": "Status",
           "accessor": [Function],
-          "className": "padded",
-          "filterable": false,
-          "id": "segment_granularity",
-          "show": false,
-          "width": 100,
-        },
-        Object {
-          "Cell": [Function],
-          "Header": <React.Fragment>
-            Total
-            <br />
-            rows
-          </React.Fragment>,
-          "accessor": "total_rows",
-          "className": "padded",
-          "filterable": false,
+          "id": "status",
           "show": true,
+          "sortMethod": [Function],
           "width": 110,
         },
         Object {
+          "Aggregated": [Function],
           "Cell": [Function],
-          "Header": <React.Fragment>
-            Avg. row size
-            <br />
-            (bytes)
-          </React.Fragment>,
-          "accessor": "avg_row_size",
+          "Header": "Created time",
+          "accessor": "created_time",
+          "show": true,
+          "width": 190,
+        },
+        Object {
+          "Aggregated": [Function],
+          "Cell": [Function],
+          "Header": "Duration",
+          "accessor": "duration",
           "className": "padded",
           "filterable": false,
           "show": true,
-          "width": 100,
+          "width": 80,
         },
         Object {
+          "Aggregated": [Function],
           "Cell": [Function],
-          "Header": <React.Fragment>
-            Replicated
-            <br />
-            size
-          </React.Fragment>,
-          "accessor": "replicated_size",
-          "className": "padded",
-          "filterable": false,
-          "show": true,
-          "width": 100,
-        },
-        Object {
-          "Cell": [Function],
-          "Header": "Compaction",
-          "accessor": [Function],
-          "filterable": false,
-          "id": "compactionStatus",
-          "show": true,
-          "width": 180,
-        },
-        Object {
-          "Cell": [Function],
-          "Header": <React.Fragment>
-            % Compacted
-            <br />
-            bytes / segments / intervals
-          </React.Fragment>,
-          "accessor": [Function],
-          "className": "padded",
-          "filterable": false,
-          "id": "percentCompacted",
+          "Header": "Location",
+          "accessor": "location",
           "show": true,
           "width": 200,
         },
         Object {
-          "Cell": [Function],
-          "Header": <React.Fragment>
-            Left to be
-            <br />
-            compacted
-          </React.Fragment>,
-          "accessor": [Function],
-          "className": "padded",
-          "filterable": false,
-          "id": "leftToBeCompacted",
-          "show": true,
-          "width": 100,
-        },
-        Object {
-          "Cell": [Function],
-          "Header": "Retention",
-          "accessor": [Function],
-          "filterable": false,
-          "id": "retention",
-          "show": true,
-          "width": 200,
-        },
-        Object {
+          "Aggregated": [Function],
           "Cell": [Function],
           "Header": "Actions",
-          "accessor": "datasource",
+          "accessor": "task_id",
           "filterable": false,
           "id": "actions",
           "show": true,
@@ -348,11 +227,18 @@ exports[`DatasourcesView matches snapshot 1`] = `
     defaultFilterMethod={[Function]}
     defaultFiltered={Array []}
     defaultPage={0}
-    defaultPageSize={50}
+    defaultPageSize={25}
     defaultResized={Array []}
     defaultSortDesc={false}
     defaultSortMethod={[Function]}
-    defaultSorted={Array []}
+    defaultSorted={
+      Array [
+        Object {
+          "desc": true,
+          "id": "status",
+        },
+      ]
+    }
     expanderDefaults={
       Object {
         "filterable": false,
@@ -401,12 +287,13 @@ exports[`DatasourcesView matches snapshot 1`] = `
     pageJumpText="jump to page"
     pageSizeOptions={
       Array [
+        25,
         50,
         100,
-        200,
       ]
     }
     pageText="Page"
+    pivotBy={Array []}
     pivotDefaults={Object {}}
     pivotIDKey="_pivotID"
     pivotValKey="_pivotVal"
@@ -424,5 +311,14 @@ exports[`DatasourcesView matches snapshot 1`] = `
     style={Object {}}
     subRowsKey="_subRows"
   />
+  <Memo(AlertDialog)
+    confirmButtonText="OK"
+    icon="error"
+    intent="primary"
+    isOpen={false}
+    onConfirm={[Function]}
+  >
+    <p />
+  </Memo(AlertDialog)>
 </div>
 `;

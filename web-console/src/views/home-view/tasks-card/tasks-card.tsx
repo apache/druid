@@ -91,7 +91,7 @@ export const TasksCard = React.memo(function TasksCard(props: TasksCardProps) {
   return (
     <HomeViewCard
       className="tasks-card"
-      href="#ingestion"
+      href="#tasks"
       icon={IconNames.GANTT_CHART}
       title="Tasks"
       loading={cardState.loading}
