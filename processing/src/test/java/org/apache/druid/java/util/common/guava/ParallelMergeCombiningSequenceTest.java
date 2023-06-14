@@ -105,7 +105,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testOrderedResultBatchFromSequenceBackToYielderOnSequence() throws IOException
+  public void testOrderedResultBatchFromSequenceBacktoYielderOnSequence() throws IOException
   {
     final int batchSize = 128;
     final int sequenceSize = 5_000;
@@ -280,6 +280,27 @@ public class ParallelMergeCombiningSequenceTest
     input.add(Sequences.empty());
     input.add(nonBlockingSequence(5));
     assertResult(input);
+  }
+  @Test
+  public void testMergeCombineMetricsAccumulatorNPEOnBadExecutorPool() throws Exception
+  {
+    // below min threshold, so will merge serially
+    List<Sequence<IntPair>> input = new ArrayList<>();
+    input.add(nonBlockingSequence(5));
+    input.add(nonBlockingSequence(6));
+    // Simulates the bad/occupied executor pool, it does not execute any task submitted to it
+    ForkJoinPool customBadPool = new ForkJoinPool(
+        1,
+        pool -> null,
+        (t, e) -> LOG.error(e, "Unhandled exception in thread [%s]", t),
+        true
+    );
+    expectedException.expect(QueryTimeoutException.class);
+    expectedException.expectMessage(
+        "Query did not complete within configured timeout period"
+    );
+    assertResultWithCustomPool(input, 10, 20, reportMetrics -> {}, customBadPool);
+    customBadPool.shutdown();
   }
 
   @Test
@@ -591,6 +612,61 @@ public class ParallelMergeCombiningSequenceTest
     );
   }
 
+  private void assertResultWithCustomPool(
+          List<Sequence<IntPair>> sequences,
+          int batchSize,
+          int yieldAfter,
+          Consumer<ParallelMergeCombiningSequence.MergeCombineMetrics> reporter,
+          ForkJoinPool customPool
+  )
+          throws InterruptedException, IOException
+  {
+    final CombiningSequence<IntPair> combiningSequence = CombiningSequence.create(
+            new MergeSequence<>(INT_PAIR_ORDERING, Sequences.simple(sequences)),
+            INT_PAIR_ORDERING,
+            INT_PAIR_MERGE_FN
+    );
+
+    final ParallelMergeCombiningSequence<IntPair> parallelMergeCombineSequence = new ParallelMergeCombiningSequence<>(
+            customPool,
+            sequences,
+            INT_PAIR_ORDERING,
+            INT_PAIR_MERGE_FN,
+            true,
+            5000,
+            0,
+            TEST_POOL_SIZE,
+            yieldAfter,
+            batchSize,
+            ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS,
+            reporter
+    );
+
+    Yielder<IntPair> combiningYielder = Yielders.each(combiningSequence);
+    Yielder<IntPair> parallelMergeCombineYielder = Yielders.each(parallelMergeCombineSequence);
+
+    IntPair prev = null;
+
+    while (!combiningYielder.isDone() && !parallelMergeCombineYielder.isDone()) {
+      Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
+      Assert.assertNotEquals(parallelMergeCombineYielder.get(), prev);
+      prev = parallelMergeCombineYielder.get();
+      combiningYielder = combiningYielder.next(combiningYielder.get());
+      parallelMergeCombineYielder = parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
+    }
+
+    Assert.assertTrue(combiningYielder.isDone());
+    Assert.assertTrue(parallelMergeCombineYielder.isDone());
+    while (pool.getRunningThreadCount() > 0) {
+      Thread.sleep(100);
+    }
+    Assert.assertEquals(0, pool.getRunningThreadCount());
+    combiningYielder.close();
+    parallelMergeCombineYielder.close();
+    // cancellation trigger should not be set if sequence was fully yielded and close is called
+    // (though shouldn't actually matter even if it was...)
+    Assert.assertFalse(parallelMergeCombineSequence.getCancellationGizmo().isCancelled());
+  }
   private void assertResult(
       List<Sequence<IntPair>> sequences,
       int batchSize,
