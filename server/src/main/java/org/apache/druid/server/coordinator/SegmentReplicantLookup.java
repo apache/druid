@@ -31,7 +31,6 @@ import org.apache.druid.timeline.SegmentId;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedSet;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A lookup for the number of replicants of a given segment for a certain tier.
@@ -81,7 +80,7 @@ public class SegmentReplicantLookup
 
   private final Table<SegmentId, String, Integer> segmentsInCluster;
   private final Table<SegmentId, String, Integer> loadingSegments;
-  private final ConcurrentHashMap<SegmentId, Integer> replicationFactorMap = new ConcurrentHashMap<>();
+  private final Map<SegmentId, Integer> segmentIdToReplicationFactor = new HashMap<>();
   private final DruidCluster cluster;
 
   private SegmentReplicantLookup(
@@ -121,12 +120,12 @@ public class SegmentReplicantLookup
   // This would be revamped in https://github.com/apache/druid/pull/13197
   public void setReplicationFactor(SegmentId segmentId, Integer requiredReplicas)
   {
-    replicationFactorMap.put(segmentId, requiredReplicas);
+    segmentIdToReplicationFactor.put(segmentId, requiredReplicas);
   }
 
   public Map<SegmentId, Integer> getSegmentIdToReplicationFactor()
   {
-    return ImmutableMap.copyOf(replicationFactorMap);
+    return ImmutableMap.copyOf(segmentIdToReplicationFactor);
   }
 
   private int getLoadingReplicants(SegmentId segmentId, String tier)

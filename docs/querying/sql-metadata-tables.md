@@ -137,7 +137,7 @@ Segments table provides details on all Druid segments, whether they are publishe
 |dimensions|VARCHAR|JSON-serialized form of the segment dimensions|
 |metrics|VARCHAR|JSON-serialized form of the segment metrics|
 |last_compaction_state|VARCHAR|JSON-serialized form of the compaction task's config (compaction task which created this segment). May be null if segment was not created by compaction task.|
-|replication_factor|BIGINT|Total number of replicants across all tiers for the segment. If this value is 0, the segment is not assigned to any historical and will never be loaded. If this value is -1, the load rules might not have evaluated yet for the segment and the replication factor is currently unavailable.|
+|replication_factor|BIGINT|Total number of replicas of the segment that are required to be loaded across all historical tiers, based on the load rule that currently applies to this segment. If this value is 0, the segment is not assigned to any historical and will not be loaded. This value is -1 if load rules for the segment have not been evaluated yet or if the segment is overshadowed and will soon be marked as unused.|
 
 For example, to retrieve all currently active segments for datasource "wikipedia", use the query:
 

@@ -205,10 +205,7 @@ class TestSegment extends DataSegment
       return false;
     }
     TestSegment that = (TestSegment) o;
-    return overshadowed == that.overshadowed && Objects.equals(
-        replicationFactor,
-        that.replicationFactor
-    );
+    return overshadowed == that.overshadowed && Objects.equals(replicationFactor, that.replicationFactor);
   }
 
   @Override

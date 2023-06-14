@@ -27,10 +27,15 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * DataSegment object plus the overshadowed and replication factor for the segment. An immutable object.
+ * This class represents the current state of a segment in the cluster and encapsulates the following:
+ * <ul>
+ *   <li>the {@code DataSegment} object</li>
+ *   <li>overshadowed status of the segment</li>
+ *   <li>replication factor of the segment</li>
+ * </ul>
  * <br></br>
- * SegmentStatusInCluster's {@link #compareTo} method considers only the {@link SegmentId}
- * of the DataSegment object.
+ * Objects of this class are used to sync the state of segments from the Coordinator to different services, typically the Broker.
+ * The {@link #compareTo} method considers only the {@link SegmentId}.
  */
 public class SegmentStatusInCluster implements Comparable<SegmentStatusInCluster>
 {
