@@ -31,6 +31,7 @@ import org.apache.druid.segment.NestedDataColumnIndexer;
 import org.apache.druid.segment.TransformableRowIterator;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnFormat;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.joda.time.Interval;
@@ -155,14 +156,20 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
       return new NestedColumnMergable(
           nestedDataColumnIndexer.getSortedValueLookups(),
-          nestedDataColumnIndexer.getFieldTypeInfo()
+          nestedDataColumnIndexer.getFieldTypeInfo(),
+          true,
+          false,
+          null
       );
     }
     if (indexer instanceof AutoTypeColumnIndexer) {
       AutoTypeColumnIndexer autoIndexer = (AutoTypeColumnIndexer) indexer;
       return new NestedColumnMergable(
           autoIndexer.getSortedValueLookups(),
-          autoIndexer.getFieldTypeInfo()
+          autoIndexer.getFieldTypeInfo(),
+          autoIndexer.getLogicalType().equals(ColumnType.NESTED_DATA),
+          autoIndexer.isConstant(),
+          autoIndexer.getConstantValue()
       );
     }
     return null;

@@ -89,7 +89,7 @@ public abstract class StructuredDataProcessor
   private ProcessResults processMapField(Queue<Field> toProcess, MapField map)
   {
     // just guessing a size for a Map as some constant, it might be bigger than this...
-    final ProcessResults processResults = new ProcessResults().withSize(16);
+    final ProcessResults processResults = new ProcessResults().withSize(16).setHasObjects();
     for (Map.Entry<String, ?> entry : map.getMap().entrySet()) {
       // add estimated size of string key
       processResults.addSize(estimateStringSize(entry.getKey()));
@@ -242,20 +242,36 @@ public abstract class StructuredDataProcessor
     private Set<ArrayList<NestedPathPart>> literalFields;
     private int estimatedSize;
 
+    private boolean hasObjects;
+
     public ProcessResults()
     {
       literalFields = new HashSet<>();
       estimatedSize = 0;
     }
 
+    /**
+     * Set of paths which contain simple values
+     */
     public Set<ArrayList<NestedPathPart>> getLiteralFields()
     {
       return literalFields;
     }
 
+    /**
+     * Estimated size in bytes of the data processed
+     */
     public int getEstimatedSize()
     {
       return estimatedSize;
+    }
+
+    /**
+     * Returns true if
+     */
+    public boolean hasObjects()
+    {
+      return hasObjects;
     }
 
     public ProcessResults addSize(int size)
@@ -277,10 +293,17 @@ public abstract class StructuredDataProcessor
       return this;
     }
 
+    public ProcessResults setHasObjects()
+    {
+      this.hasObjects = true;
+      return this;
+    }
+
     public ProcessResults merge(ProcessResults other)
     {
       this.literalFields.addAll(other.literalFields);
       this.estimatedSize += other.estimatedSize;
+      this.hasObjects = this.hasObjects || other.hasObjects;
       return this;
     }
   }

@@ -99,8 +99,8 @@ public class NestedDataColumnMerger implements DimensionMergerV9
         final SortedValueDictionary dimValues = mergable.getValueDictionary();
 
         boolean allNulls = dimValues == null || dimValues.allNull();
-        sortedLookup = dimValues;
         if (!allNulls) {
+          sortedLookup = dimValues;
           mergable.mergeFieldsInto(mergedFields);
           sortedLookups[i] = dimValues.getSortedStrings();
           sortedLongLookups[i] = dimValues.getSortedLongs();
