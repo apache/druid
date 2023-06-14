@@ -427,8 +427,8 @@ The use this emitter module, set `druid.emitter=logging`. The `logging` emitter 
 [Marker](https://logging.apache.org/log4j/2.x/manual/markers.html) as the feed of the event. Users may wish to edit the
 log4j config to route these logs to different sources based on the feed of the event.
 
-|Property|Description| Default                                             |
-|--------|-----------|-----------------------------------------------------|
+|Property|Description| Default|
+|--------|-----------|--------|
 |`druid.emitter.logging.loggerClass`|The class used for logging.|`org.apache.druid.java.util.emitter.core.LoggingEmitter`|
 |`druid.emitter.logging.logLevel`|Choices: debug, info, warn, error. The log level at which message are logged.|info|
 
@@ -816,8 +816,8 @@ All Druid components can communicate with each other over HTTP.
 
 This section contains the configuration options for endpoints that are supported by all processes.
 
-|Property| Description                                                                                                                                  | Default                                                                                     |
-|--------|----------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+|Property|Description|Default|
+|--------|-----------|-------|
 |`druid.server.hiddenProperties`| If property names or substring of property names (case insensitive) is in this list, responses of the `/status/properties` endpoint do not show these properties | `["druid.s3.accessKey","druid.s3.secretKey","druid.metadata.storage.connector.password", "password", "key", "token", "pwd"]` |
 
 ## Master Server
@@ -864,7 +864,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 
 ##### Metadata Management
 
-|Property|Description|Required?|Default|
+|Property|Description|Required|Default|
 |--------|-----------|---------|-------|
 |`druid.coordinator.period.metadataStoreManagementPeriod`|How often to run metadata management tasks in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. |No | `PT1H`|
 |`druid.coordinator.kill.supervisor.on`| Boolean value for whether to enable automatic deletion of terminated supervisors. If set to true, Coordinator will periodically remove terminated supervisors from the supervisor table in metadata storage.| No | True|
@@ -917,8 +917,8 @@ http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config
 
 Optional Header Parameters for auditing the config change can also be specified.
 
-|Header Param Name| Description | Default |
-|----------|-------------|---------|
+|Header Param Name|Description|Default|
+|-----------------|-----------|-------|
 |`X-Druid-Author`| author making the config change|""|
 |`X-Druid-Comment`| comment describing the change being done|""|
 
@@ -1185,8 +1185,8 @@ http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker
 
 Optional header parameters for auditing the config change can also be specified.
 
-|Header Param Name| Description | Default |
-|----------|-------------|---------|
+|Header Param Name|Description|Default|
+|-----------------|-----------|-------|
 |`X-Druid-Author`| author making the config change|""|
 |`X-Druid-Comment`| comment describing the change being done|""|
 
@@ -1230,8 +1230,8 @@ An example Overlord dynamic config is shown below:
 
 Issuing a GET request to the same URL returns the current Overlord dynamic config.
 
-|Property| Description                                                                                                                                                                                 | Default                       |
-|--------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------|
+|Property|Description|Default|
+|--------|-----------|-------|
 |`selectStrategy`| Describes how to assign tasks to MiddleManagers. The type can be `equalDistribution`, `equalDistributionWithCategorySpec`, `fillCapacity`, `fillCapacityWithCategorySpec`, and `javascript`. | `{"type":"equalDistribution"}` |
 |`autoScaler`| Only used if autoscaling is enabled. See below. | null |
 
@@ -1337,9 +1337,9 @@ leave others empty. The empty ones can be safely terminated.
 Note that if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to _N_ > 1, then this strategy will fill _N_
 MiddleManagers up to capacity simultaneously, rather than a single MiddleManager.
 
-|Property| Description                             |Default|
-|--------|-----------------------------------------|-------|
-|`type`| `fillCapacity`                          |required; must be `fillCapacity`|
+|Property|Description|Default|
+|--------|-----------|-------|
+|`type`| `fillCapacity`|required; must be `fillCapacity`|
 |`affinityConfig`| [`AffinityConfig`](#affinityconfig) object |null (no affinity)|
 
 ###### `fillCapacityWithCategorySpec`
@@ -1412,14 +1412,14 @@ Amazon's EC2 together with Google's GCE are currently the only supported autosca
 
 EC2's autoscaler properties are:
 
-| Property                     | Description                                                                                                                                                                                                        |Default|
-|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|
-| `type`                       | `ec2`                                                                                                                                                                                                              |0|
-| `minNumWorkers`              | The minimum number of workers that can be in the cluster at any given time.                                                                                                                                        |0|
-| `maxNumWorkers`              | The maximum number of workers that can be in the cluster at any given time.                                                                                                                                        |0|
-| `envConfig.availabilityZone` | What Amazon availability zone to run in.                                                                                                                                                                           |none|
-| `envConfig.nodeData`         | A JSON object that describes how to launch new nodes.                                                                                                                                                              |none; required|
-| `envConfig.userData`         | A JSON object that describes how to configure new nodes. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary. |none; optional|
+|Property| Description|Default|
+|--------|------------|-------|
+|`type`|`ec2`|0|
+|`minNumWorkers`| The minimum number of workers that can be in the cluster at any given time.|0|
+|`maxNumWorkers`| The maximum number of workers that can be in the cluster at any given time.|0|
+|`envConfig.availabilityZone` | What Amazon availability zone to run in.|none|
+|`envConfig.nodeData`| A JSON object that describes how to launch new nodes.|none; required|
+| `envConfig.userData`| A JSON object that describes how to configure new nodes. If you have set `druid.indexer.autoscale.workerVersion`, this must have a `versionReplacementString`. Otherwise, a `versionReplacementString` is not necessary.|none; optional|
 
 For GCE's properties, please refer to the [gce-extensions](../development/extensions-contrib/gce-extensions.md).
 
@@ -1468,19 +1468,19 @@ Middle managers pass their configurations down to their child peons. The MiddleM
 
 #### Peon Processing
 
-Processing properties set on the Middlemanager will be passed through to Peons.
+Processing properties set on the MiddleManager will be passed through to Peons.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.processing.buffer.sizeBytes`|This specifies a buffer size (less than 2GiB) for the storage of intermediate results. The computation engine in both the Historical and Realtime processes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed. [Human-readable format](human-readable-byte.md) is supported.|auto (max 1 GiB)|
-|`druid.processing.buffer.poolCacheMaxCount`|processing buffer pool caches the buffers for later use, this is the maximum count cache will grow to. note that pool can create more buffers than it can cache if necessary.|Integer.MAX_VALUE|
+|`druid.processing.buffer.poolCacheMaxCount`|Processing buffer pool caches the buffers for later use. This property sets the maximum count cache will grow to. Note that pool can create more buffers than it can cache if necessary.|`Integer.MAX_VALUE`|
 |`druid.processing.formatString`|Realtime and Historical processes use this format string to name their processing threads.|processing-%s|
 |`druid.processing.numMergeBuffers`|The number of direct memory buffers available for merging query results. The buffers are sized by `druid.processing.buffer.sizeBytes`. This property is effectively a concurrency limit for queries that require merging buffers. If you are using any queries that require merge buffers (currently, just groupBy v2) then you should have at least two of these.|`max(2, druid.processing.numThreads / 4)`|
 |`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, which means that even under heavy load there will still be one core available to do background tasks like talking with ZooKeeper and pulling down segments. If only one core is available, this property defaults to the value `1`.|Number of cores - 1 (or 1)|
 |`druid.processing.columnCache.sizeBytes`|Maximum size in bytes for the dimension value lookup cache. Any value greater than `0` enables the cache. It is currently disabled by default. Enabling the lookup cache can significantly improve the performance of aggregators operating on dimension values, such as the JavaScript aggregator, or cardinality aggregator, but can slow things down if the cache hit rate is low (i.e. dimensions with few repeating values). Enabling it may also require additional garbage collection tuning to avoid long GC pauses.|`0` (disabled)|
-|`druid.processing.fifo`|If the processing queue should treat tasks of equal priority in a FIFO manner|`true`|
+|`druid.processing.fifo`|Enables the processing queue to treat tasks of equal priority in a FIFO manner.|`true`|
 |`druid.processing.tmpDir`|Path where temporary files created while processing a query should be stored. If specified, this configuration takes priority over the default `java.io.tmpdir` path.|path represented by `java.io.tmpdir`|
-|`druid.processing.intermediaryData.storage.type`|Storage type for storing intermediary segments of data shuffle between native parallel index tasks. Current choices are "local" which stores segment files in local storage of Middle Managers (or Indexer) or "deepstore" which uses configured deep storage. Note - With "deepstore" type data is stored in `shuffle-data` directory under the configured deep storage path, auto clean up for this directory is not supported yet. One can setup cloud storage lifecycle rules for auto clean up of data at `shuffle-data` prefix location.|local|
+|`druid.processing.intermediaryData.storage.type`|Storage type for storing intermediary segments of data shuffle between native parallel index tasks. </br>To store segment files in the local storage of MiddleManager or Indexer, set this property to `local`. </br>To use configured deep storage for better fault tolerance during rolling updates, set the storage type to `deepstore`. When the storage type is `deepstore`, the data is stored in `shuffle-data` directory under the configured deep storage path. Note that Druid does not support automated cleanup for the `shuffle-data` directory. You can setup cloud storage lifecycle rules for automated cleanup of data at `shuffle-data` prefix location.|`local`|
 
 The amount of direct memory needed by Druid is at least
 `druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1)`. You can
