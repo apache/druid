@@ -36,6 +36,11 @@ import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
 
+/**
+ * A column selector factory wrapper which wraps the underlying factory's errors into a {@link ParseException}.
+ * This is used when reading from external data, since failure to read the data is usually an issue with the external
+ * input
+ */
 public class ExternalColumnSelectorFactory implements ColumnSelectorFactory
 {
   private static final String ERROR_MESSAGE_FORMAT_STRING =
@@ -138,7 +143,7 @@ public class ExternalColumnSelectorFactory implements ColumnSelectorFactory
   {
     return new ColumnValueSelector()
     {
-      ColumnValueSelector delegateColumnValueSelector = delegate.makeColumnValueSelector(columnName);
+      final ColumnValueSelector delegateColumnValueSelector = delegate.makeColumnValueSelector(columnName);
 
       @Override
       public double getDouble()

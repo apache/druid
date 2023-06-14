@@ -27,6 +27,10 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
+/**
+ * Fault thrown when the user tries to insert strings with \u0000 (NULL) byte, since that is unsupported by row-based
+ * frames
+ */
 @JsonTypeName(InvalidNullByteFault.CODE)
 public class InvalidNullByteFault extends BaseMSQFault
 {
@@ -38,6 +42,16 @@ public class InvalidNullByteFault extends BaseMSQFault
   private final String value;
   private final Integer position;
 
+  /**
+   * All the parameters to the constructor can be null, in case we are unable to extract them from the site
+   * where the error was generated
+   * @param source      source where \0000 containing string was found
+   * @param rowNumber   rowNumber where the \0000 containing string was found (1-indexed)
+   * @param column      column name where the \0000 containing string was found
+   * @param value       value of the \0000 containing string
+   * @param position    position (1-indexed) of \0000 in the string. This is added in case the test viewer skips or
+   *                    doesn't render \0000 correctly
+   */
   @JsonCreator
   public InvalidNullByteFault(
       @Nullable @JsonProperty("source") final String source,

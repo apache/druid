@@ -44,12 +44,27 @@ import java.io.IOException;
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 
+/**
+ * Segment representing the rows read from an external source. This is currently returned when using EXTERN with MSQ
+ */
 public class ExternalSegment implements Segment
 {
 
   private final Segment delegate;
   private final InputSource inputSource;
 
+  /**
+   * @param inputSource       {@link InputSource} that the segment is a representation of
+   * @param segmentId         segment id to assign to the segment. This is usually a dummy id which doesn't serve a
+   *                          real purpose further down the line
+   * @param reader            reader to read the external input source
+   * @param inputStats        input stats
+   * @param warningCounters   warning counters tracking the warnings generated while reading the external source
+   * @param warningPublisher  publisher to report the warnings generated
+   * @param incrementCounters whether to increment the channel counters
+   * @param channelCounters   channel counters to increment as we read through the files/units of the external source
+   * @param signature         signature of the external source
+   */
   public ExternalSegment(
       final InputSource inputSource,
       final SegmentId segmentId,
@@ -182,6 +197,9 @@ public class ExternalSegment implements Segment
     delegate.close();
   }
 
+  /**
+   * Return the input source that the segment is a representation of
+   */
   public InputSource externalInputSource()
   {
     return inputSource;

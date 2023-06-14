@@ -46,7 +46,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.msq.input.ParseUtils;
+import org.apache.druid.msq.input.ParseExceptionUtils;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.external.ExternalSegment;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
@@ -233,6 +233,9 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }
   }
 
+  /**
+   * Populates the null exception message with the input source name and the row number
+   */
   private void populateFrameWriterAndFlushIfNeededWithExceptionHandling()
   {
     try {
@@ -241,7 +244,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     catch (InvalidNullByteException inbe) {
       InvalidNullByteException.Builder builder = InvalidNullByteException.builder(inbe);
       throw
-          builder.source(ParseUtils.generateReadableInputSourceNameFromMappedSegment(this.segment)) // frame segment
+          builder.source(ParseExceptionUtils.generateReadableInputSourceNameFromMappedSegment(this.segment)) // frame segment
                  .rowNumber(this.cursorOffset.getOffset() + 1)
                  .build();
     }
@@ -314,6 +317,9 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     return rowsFlushed;
   }
 
+  /**
+   * Wraps the column selector factory if the underlying input to the processor is an external source
+   */
   private ColumnSelectorFactory wrapColumnSelectorFactoryIfNeeded(final ColumnSelectorFactory baseColumnSelectorFactory)
   {
     if (segment instanceof ExternalSegment) {

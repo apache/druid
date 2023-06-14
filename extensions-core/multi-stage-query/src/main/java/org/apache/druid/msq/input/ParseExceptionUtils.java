@@ -28,8 +28,17 @@ import org.apache.druid.segment.Segment;
 
 import javax.annotation.Nullable;
 
-public class ParseUtils
+/**
+ * Utility class containing methods that help in generating the {@link org.apache.druid.sql.calcite.parser.ParseException}
+ * in the frame processors
+ */
+public class ParseExceptionUtils
 {
+
+  /**
+   * Given a segment, this returns the human-readable description of the segment which can allow user to figure out the
+   * source of the parse exception
+   */
   @Nullable
   public static String generateReadableInputSourceNameFromMappedSegment(Segment segment)
   {
