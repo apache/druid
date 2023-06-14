@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
@@ -29,7 +30,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 
 @LazySingleton
-public class KafkaIndexTaskClientFactory extends SeekableStreamIndexTaskClientFactory<Integer, Long>
+public class KafkaIndexTaskClientFactory extends SeekableStreamIndexTaskClientFactory<KafkaTopicPartition, Long>
 {
   @Inject
   public KafkaIndexTaskClientFactory(
@@ -42,9 +43,9 @@ public class KafkaIndexTaskClientFactory extends SeekableStreamIndexTaskClientFa
   }
 
   @Override
-  public Class<Integer> getPartitionType()
+  public Class<KafkaTopicPartition> getPartitionType()
   {
-    return Integer.class;
+    return KafkaTopicPartition.class;
   }
 
   @Override

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
+import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
@@ -57,7 +58,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Kafka indexing task runner supporting incremental segments publishing
  */
-public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer, Long, KafkaRecordEntity>
+public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<KafkaTopicPartition, Long, KafkaRecordEntity>
 {
   private static final EmittingLogger log = new EmittingLogger(IncrementalPublishingKafkaIndexTaskRunner.class);
   private final KafkaIndexTask task;
@@ -86,8 +87,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
 
   @Nonnull
   @Override
-  protected List<OrderedPartitionableRecord<Integer, Long, KafkaRecordEntity>> getRecords(
-      RecordSupplier<Integer, Long, KafkaRecordEntity> recordSupplier,
+  protected List<OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> getRecords(
+      RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> recordSupplier,
       TaskToolbox toolbox
   ) throws Exception
   {
@@ -107,7 +108,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   }
 
   @Override
-  protected SeekableStreamEndSequenceNumbers<Integer, Long> deserializePartitionsFromMetadata(
+  protected SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> deserializePartitionsFromMetadata(
       ObjectMapper mapper,
       Object object
   )
@@ -115,14 +116,14 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
     return mapper.convertValue(object, mapper.getTypeFactory().constructParametrizedType(
         SeekableStreamEndSequenceNumbers.class,
         SeekableStreamEndSequenceNumbers.class,
-        Integer.class,
+        KafkaTopicPartition.class,
         Long.class
     ));
   }
 
   private void possiblyResetOffsetsOrWait(
       Map<TopicPartition, Long> outOfRangePartitions,
-      RecordSupplier<Integer, Long, KafkaRecordEntity> recordSupplier,
+      RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> recordSupplier,
       TaskToolbox taskToolbox
   ) throws InterruptedException, IOException
   {
@@ -133,9 +134,9 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
         final TopicPartition topicPartition = outOfRangePartition.getKey();
         final long nextOffset = outOfRangePartition.getValue();
         // seek to the beginning to get the least available offset
-        StreamPartition<Integer> streamPartition = StreamPartition.of(
+        StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(
             topicPartition.topic(),
-            topicPartition.partition()
+            KafkaTopicPartition.fromTopicPartition(topicPartition)
         );
         final Long leastAvailableOffset = recordSupplier.getEarliestSequenceNumber(streamPartition);
         if (leastAvailableOffset == null) {
@@ -159,7 +160,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
     if (doReset) {
       sendResetRequestAndWait(CollectionUtils.mapKeys(resetPartitions, streamPartition -> StreamPartition.of(
           streamPartition.topic(),
-          streamPartition.partition()
+          KafkaTopicPartition.fromTopicPartition(streamPartition)
       )), taskToolbox);
     } else {
       log.warn("Retrying in %dms", task.getPollRetryMs());
@@ -177,8 +178,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   }
 
   @Override
-  protected SeekableStreamDataSourceMetadata<Integer, Long> createDataSourceMetadata(
-      SeekableStreamSequenceNumbers<Integer, Long> partitions
+  protected SeekableStreamDataSourceMetadata<KafkaTopicPartition, Long> createDataSourceMetadata(
+      SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> partitions
   )
   {
     return new KafkaDataSourceMetadata(partitions);
@@ -193,8 +194,8 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   @Override
   protected void possiblyResetDataSourceMetadata(
       TaskToolbox toolbox,
-      RecordSupplier<Integer, Long, KafkaRecordEntity> recordSupplier,
-      Set<StreamPartition<Integer>> assignment
+      RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> recordSupplier,
+      Set<StreamPartition<KafkaTopicPartition>> assignment
   )
   {
     // do nothing
@@ -213,16 +214,16 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   }
 
   @Override
-  public TypeReference<List<SequenceMetadata<Integer, Long>>> getSequenceMetadataTypeReference()
+  public TypeReference<List<SequenceMetadata<KafkaTopicPartition, Long>>> getSequenceMetadataTypeReference()
   {
-    return new TypeReference<List<SequenceMetadata<Integer, Long>>>()
+    return new TypeReference<List<SequenceMetadata<KafkaTopicPartition, Long>>>()
     {
     };
   }
 
   @Nullable
   @Override
-  protected TreeMap<Integer, Map<Integer, Long>> getCheckPointsFromContext(
+  protected TreeMap<Integer, Map<KafkaTopicPartition, Long>> getCheckPointsFromContext(
       TaskToolbox toolbox,
       String checkpointsString
   ) throws IOException
@@ -231,7 +232,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
       log.debug("Got checkpoints from task context[%s].", checkpointsString);
       return toolbox.getJsonMapper().readValue(
           checkpointsString,
-          new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
+          new TypeReference<TreeMap<Integer, Map<KafkaTopicPartition, Long>>>()
           {
           }
       );

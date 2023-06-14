@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexTaskClient;
@@ -95,7 +96,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   private StringFullResponseHolder responseHolder;
   private HttpResponse response;
   private HttpHeaders headers;
-  private SeekableStreamIndexTaskClient<Integer, Long> client;
+  private SeekableStreamIndexTaskClient<KafkaTopicPartition, Long> client;
 
   @Parameterized.Parameters(name = "numThreads = {0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -257,7 +258,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    Map<Integer, Long> results = client.getCurrentOffsetsAsync(TEST_ID, true).get();
+    Map<KafkaTopicPartition, Long> results = client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
 
     Assert.assertEquals(0, results.size());
@@ -277,7 +278,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    Map<Integer, Long> results = client.getCurrentOffsetsAsync(TEST_ID, true).get();
+    Map<KafkaTopicPartition, Long> results = client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -289,8 +290,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
 
     Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(0));
-    Assert.assertEquals(10, (long) results.get(1));
+    Assert.assertEquals(1, (long) results.get(new KafkaTopicPartition(null, 0)));
+    Assert.assertEquals(10, (long) results.get(new KafkaTopicPartition(null, 1)));
   }
 
   @Test
@@ -318,7 +319,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
 
     replayAll();
 
-    Map<Integer, Long> results = client.getCurrentOffsetsAsync(TEST_ID, true).get();
+    Map<KafkaTopicPartition, Long> results = client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
 
     Assert.assertEquals(3, captured.getValues().size());
@@ -332,8 +333,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     }
 
     Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(0));
-    Assert.assertEquals(10, (long) results.get(1));
+    Assert.assertEquals(1, (long) results.get(new KafkaTopicPartition(null, 0)));
+    Assert.assertEquals(10, (long) results.get(new KafkaTopicPartition(null, 1)));
   }
 
   @Test
@@ -380,7 +381,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    Map<Integer, Long> results = client.getEndOffsetsAsync(TEST_ID).get();
+    Map<KafkaTopicPartition, Long> results = client.getEndOffsetsAsync(TEST_ID).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -392,8 +393,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
 
     Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(0));
-    Assert.assertEquals(10, (long) results.get(1));
+    Assert.assertEquals(1, (long) results.get(new KafkaTopicPartition(null, 0)));
+    Assert.assertEquals(10, (long) results.get(new KafkaTopicPartition(null, 1)));
   }
 
   @Test
@@ -474,7 +475,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     );
     replayAll();
 
-    Map<Integer, Long> results = client.pauseAsync(TEST_ID).get();
+    Map<KafkaTopicPartition, Long> results = client.pauseAsync(TEST_ID).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -486,8 +487,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
 
     Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(0));
-    Assert.assertEquals(10, (long) results.get(1));
+    Assert.assertEquals(1, (long) results.get(new KafkaTopicPartition(null, 0)));
+    Assert.assertEquals(10, (long) results.get(new KafkaTopicPartition(null, 1)));
   }
 
   @Test
@@ -556,7 +557,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
 
     replayAll();
 
-    Map<Integer, Long> results = client.pauseAsync(TEST_ID).get();
+    Map<KafkaTopicPartition, Long> results = client.pauseAsync(TEST_ID).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -582,8 +583,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     );
 
     Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(0));
-    Assert.assertEquals(10, (long) results.get(1));
+    Assert.assertEquals(1, (long) results.get(new KafkaTopicPartition(null, 0)));
+    Assert.assertEquals(10, (long) results.get(new KafkaTopicPartition(null, 1)));
   }
 
   @Test
@@ -615,7 +616,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testSetEndOffsets() throws Exception
   {
-    Map<Integer, Long> endOffsets = ImmutableMap.of(0, 15L, 1, 120L);
+    Map<KafkaTopicPartition, Long> endOffsets = ImmutableMap.of(new KafkaTopicPartition(null, 0), 15L,
+                                                                new KafkaTopicPartition(null, 1), 120L);
 
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
@@ -644,7 +646,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testSetEndOffsetsAndResume() throws Exception
   {
-    Map<Integer, Long> endOffsets = ImmutableMap.of(0, 15L, 1, 120L);
+    Map<KafkaTopicPartition, Long> endOffsets = ImmutableMap.of(new KafkaTopicPartition(null, 0), 15L,
+                                                                new KafkaTopicPartition(null, 1), 120L);
 
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
@@ -811,13 +814,13 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     replayAll();
 
     List<URL> expectedUrls = new ArrayList<>();
-    List<ListenableFuture<Map<Integer, Long>>> futures = new ArrayList<>();
+    List<ListenableFuture<Map<KafkaTopicPartition, Long>>> futures = new ArrayList<>();
     for (String testId : TEST_IDS) {
       expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, testId, "pause")));
       futures.add(client.pauseAsync(testId));
     }
 
-    List<Map<Integer, Long>> responses = Futures.allAsList(futures).get();
+    List<Map<KafkaTopicPartition, Long>> responses = Futures.allAsList(futures).get();
 
     verifyAll();
     List<Request> requests = captured.getValues();
@@ -827,7 +830,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     for (int i = 0; i < numRequests; i++) {
       Assert.assertEquals(HttpMethod.POST, requests.get(i).getMethod());
       Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
-      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(0, 1L)), responses.get(i));
+      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(new KafkaTopicPartition(null, 0), 1L)), responses.get(i));
     }
   }
 
@@ -923,13 +926,13 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     replayAll();
 
     List<URL> expectedUrls = new ArrayList<>();
-    List<ListenableFuture<Map<Integer, Long>>> futures = new ArrayList<>();
+    List<ListenableFuture<Map<KafkaTopicPartition, Long>>> futures = new ArrayList<>();
     for (String testId : TEST_IDS) {
       expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, testId, "offsets/current")));
       futures.add(client.getCurrentOffsetsAsync(testId, false));
     }
 
-    List<Map<Integer, Long>> responses = Futures.allAsList(futures).get();
+    List<Map<KafkaTopicPartition, Long>> responses = Futures.allAsList(futures).get();
 
     verifyAll();
     List<Request> requests = captured.getValues();
@@ -939,7 +942,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     for (int i = 0; i < numRequests; i++) {
       Assert.assertEquals(HttpMethod.GET, requests.get(i).getMethod());
       Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
-      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(0, 1L)), responses.get(i));
+      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(new KafkaTopicPartition(null, 0), 1L)), responses.get(i));
     }
   }
 
@@ -960,13 +963,13 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     replayAll();
 
     List<URL> expectedUrls = new ArrayList<>();
-    List<ListenableFuture<Map<Integer, Long>>> futures = new ArrayList<>();
+    List<ListenableFuture<Map<KafkaTopicPartition, Long>>> futures = new ArrayList<>();
     for (String testId : TEST_IDS) {
       expectedUrls.add(new URL(StringUtils.format(URL_FORMATTER, TEST_HOST, TEST_PORT, testId, "offsets/end")));
       futures.add(client.getEndOffsetsAsync(testId));
     }
 
-    List<Map<Integer, Long>> responses = Futures.allAsList(futures).get();
+    List<Map<KafkaTopicPartition, Long>> responses = Futures.allAsList(futures).get();
 
     verifyAll();
     List<Request> requests = captured.getValues();
@@ -976,14 +979,15 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     for (int i = 0; i < numRequests; i++) {
       Assert.assertEquals(HttpMethod.GET, requests.get(i).getMethod());
       Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
-      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(0, 1L)), responses.get(i));
+      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(new KafkaTopicPartition(null, 0), 1L)), responses.get(i));
     }
   }
 
   @Test
   public void testSetEndOffsetsAsync() throws Exception
   {
-    final Map<Integer, Long> endOffsets = ImmutableMap.of(0, 15L, 1, 120L);
+    final Map<KafkaTopicPartition, Long> endOffsets = ImmutableMap.of(new KafkaTopicPartition(null, 0), 15L,
+                                                                      new KafkaTopicPartition(null, 1), 120L);
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
@@ -1026,7 +1030,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testSetEndOffsetsAsyncWithResume() throws Exception
   {
-    final Map<Integer, Long> endOffsets = ImmutableMap.of(0, 15L, 1, 120L);
+    final Map<KafkaTopicPartition, Long> endOffsets = ImmutableMap.of(new KafkaTopicPartition(null, 0), 15L,
+                                                                      new KafkaTopicPartition(null, 1), 120L);
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
@@ -1080,7 +1085,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     return Futures.immediateFuture(Either.error(responseHolder));
   }
 
-  private class TestableKafkaIndexTaskClient extends SeekableStreamIndexTaskClientSyncImpl<Integer, Long>
+  private class TestableKafkaIndexTaskClient extends SeekableStreamIndexTaskClientSyncImpl<KafkaTopicPartition, Long>
   {
     TestableKafkaIndexTaskClient(
         HttpClient httpClient,
@@ -1108,9 +1113,9 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     }
 
     @Override
-    public Class<Integer> getPartitionType()
+    public Class<KafkaTopicPartition> getPartitionType()
     {
-      return Integer.class;
+      return KafkaTopicPartition.class;
     }
 
     @Override

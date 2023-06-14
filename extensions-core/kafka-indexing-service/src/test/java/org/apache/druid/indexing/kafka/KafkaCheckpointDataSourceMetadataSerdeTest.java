@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -38,12 +39,16 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
   public void testCheckPointDataSourceMetadataActionSerde() throws IOException
   {
     MAPPER.registerSubtypes(KafkaDataSourceMetadata.class);
+    MAPPER.registerSubtypes(KafkaTopicPartition.class);
 
     final KafkaDataSourceMetadata kafkaDataSourceMetadata =
         new KafkaDataSourceMetadata(
             new SeekableStreamStartSequenceNumbers<>(
                 "topic",
-                ImmutableMap.of(0, 10L, 1, 20L, 2, 30L),
+                ImmutableMap.of(
+                    new KafkaTopicPartition("topic", 0), 10L,
+                    new KafkaTopicPartition("topic", 1), 20L,
+                    new KafkaTopicPartition("topic", 2), 30L),
                 ImmutableSet.of()
             )
         );
@@ -139,7 +144,10 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
         new KafkaDataSourceMetadata(
             new SeekableStreamStartSequenceNumbers<>(
                 "topic",
-                ImmutableMap.of(0, 10L, 1, 20L, 2, 30L),
+                ImmutableMap.of(
+                    new KafkaTopicPartition(null, 0), 10L,
+                    new KafkaTopicPartition(null, 1), 20L,
+                    new KafkaTopicPartition(null, 2), 30L),
                 ImmutableSet.of()
             )
         );
