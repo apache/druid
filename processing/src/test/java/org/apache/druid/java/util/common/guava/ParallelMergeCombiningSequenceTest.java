@@ -239,14 +239,14 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testNone() throws Exception
+  public void testNone() throws IOException
   {
     List<Sequence<IntPair>> input = new ArrayList<>();
     assertResult(input);
   }
 
   @Test
-  public void testEmpties() throws Exception
+  public void testEmpties() throws IOException
   {
     // below min threshold, so will merge serially
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -262,7 +262,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testEmptiesAndNonEmpty() throws Exception
+  public void testEmptiesAndNonEmpty() throws IOException
   {
     // below min threshold, so will merge serially
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -281,8 +281,9 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(5));
     assertResult(input);
   }
+
   @Test
-  public void testMergeCombineMetricsAccumulatorNPEOnBadExecutorPool() throws Exception
+  public void testMergeCombineMetricsAccumulatorNPEOnBadExecutorPool()
   {
     // below min threshold, so will merge serially
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -295,16 +296,19 @@ public class ParallelMergeCombiningSequenceTest
         (t, e) -> LOG.error(e, "Unhandled exception in thread [%s]", t),
         true
     );
-    expectedException.expect(QueryTimeoutException.class);
-    expectedException.expectMessage(
-        "Query did not complete within configured timeout period"
+    Throwable t = Assert.assertThrows(
+        QueryTimeoutException.class,
+        () -> assertResultWithCustomPool(input, 10, 20, reportMetrics -> {}, customBadPool)
     );
-    assertResultWithCustomPool(input, 10, 20, reportMetrics -> {}, customBadPool);
+    Assert.assertEquals(
+        "Query did not complete within configured timeout period. You can increase query timeout or tune the performance of query.",
+        t.getMessage()
+    );
     customBadPool.shutdown();
   }
 
   @Test
-  public void testAllInSingleBatch() throws Exception
+  public void testAllInSingleBatch() throws IOException
   {
     // below min threshold, so will merge serially
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -339,7 +343,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testAllInSingleYield() throws Exception
+  public void testAllInSingleYield() throws IOException
   {
     // below min threshold, so will merge serially
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -375,7 +379,7 @@ public class ParallelMergeCombiningSequenceTest
 
 
   @Test
-  public void testMultiBatchMultiYield() throws Exception
+  public void testMultiBatchMultiYield() throws IOException
   {
     // below min threshold, so will merge serially
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -408,7 +412,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testMixedSingleAndMultiYield() throws Exception
+  public void testMixedSingleAndMultiYield() throws IOException
   {
     // below min threshold, so will merge serially
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -427,9 +431,8 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testLongerSequencesJustForFun() throws Exception
+  public void testLongerSequencesJustForFun() throws IOException
   {
-
     List<Sequence<IntPair>> input = new ArrayList<>();
     input.add(nonBlockingSequence(10_000));
     input.add(nonBlockingSequence(9_001));
@@ -453,7 +456,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testExceptionOnInputSequenceRead() throws Exception
+  public void testExceptionOnInputSequenceRead()
   {
     List<Sequence<IntPair>> input = new ArrayList<>();
 
@@ -467,7 +470,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testExceptionOnInputSequenceRead2() throws Exception
+  public void testExceptionOnInputSequenceRead2()
   {
     List<Sequence<IntPair>> input = new ArrayList<>();
     input.add(nonBlockingSequence(5));
@@ -482,7 +485,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testExceptionFirstResultFromSequence() throws Exception
+  public void testExceptionFirstResultFromSequence()
   {
     List<Sequence<IntPair>> input = new ArrayList<>();
     input.add(explodingSequence(0));
@@ -497,7 +500,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testExceptionFirstResultFromMultipleSequence() throws Exception
+  public void testExceptionFirstResultFromMultipleSequence()
   {
     List<Sequence<IntPair>> input = new ArrayList<>();
     input.add(explodingSequence(0));
@@ -513,9 +516,8 @@ public class ParallelMergeCombiningSequenceTest
     Assert.assertTrue(pool.isQuiescent());
   }
 
-
   @Test
-  public void testTimeoutExceptionDueToStalledInput() throws Exception
+  public void testTimeoutExceptionDueToStalledInput()
   {
     final int someSize = 2048;
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -549,7 +551,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testTimeoutExceptionDueToStalledReader() throws Exception
+  public void testTimeoutExceptionDueToStalledReader()
   {
     final int someSize = 2048;
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -566,7 +568,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testGracefulCloseOfYielderCancelsPool() throws Exception
+  public void testGracefulCloseOfYielderCancelsPool() throws IOException
   {
 
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -590,8 +592,7 @@ public class ParallelMergeCombiningSequenceTest
     });
   }
 
-
-  private void assertResult(List<Sequence<IntPair>> sequences) throws InterruptedException, IOException
+  private void assertResult(List<Sequence<IntPair>> sequences) throws IOException
   {
     assertResult(
         sequences,
@@ -602,7 +603,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   private void assertResult(List<Sequence<IntPair>> sequences, int batchSize, int yieldAfter)
-      throws InterruptedException, IOException
+      throws IOException
   {
     assertResult(
         sequences,
@@ -667,13 +668,14 @@ public class ParallelMergeCombiningSequenceTest
     // (though shouldn't actually matter even if it was...)
     Assert.assertFalse(parallelMergeCombineSequence.getCancellationGizmo().isCancelled());
   }
+
   private void assertResult(
       List<Sequence<IntPair>> sequences,
       int batchSize,
       int yieldAfter,
       Consumer<ParallelMergeCombiningSequence.MergeCombineMetrics> reporter
   )
-      throws InterruptedException, IOException
+      throws IOException
   {
     final CombiningSequence<IntPair> combiningSequence = CombiningSequence.create(
         new MergeSequence<>(INT_PAIR_ORDERING, Sequences.simple(sequences)),
@@ -727,7 +729,7 @@ public class ParallelMergeCombiningSequenceTest
       int closeYielderAfter,
       Consumer<ParallelMergeCombiningSequence.MergeCombineMetrics> reporter
   )
-      throws InterruptedException, IOException
+      throws IOException
   {
     final CombiningSequence<IntPair> combiningSequence = CombiningSequence.create(
         new MergeSequence<>(INT_PAIR_ORDERING, Sequences.simple(sequences)),
