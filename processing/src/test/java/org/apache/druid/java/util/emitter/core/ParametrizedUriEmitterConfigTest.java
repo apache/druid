@@ -20,8 +20,12 @@
 package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.utils.JvmUtils;
+import org.apache.druid.utils.RuntimeInfo;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -29,20 +33,40 @@ import java.util.Properties;
 
 public class ParametrizedUriEmitterConfigTest
 {
+  /**
+   * The JVM RuntimeInfo is static, and the default settings that depend on it such
+   * as {@link BaseHttpEmittingConfig#DEFAULT_BATCH_QUEUE_SIZE_LIMIT} are static as well. So bind the runtime info
+   * for this test, so it doesn't get pawned by other tests setting the runtime to different values.
+   */
+  private static Injector makeInjector(Properties props)
+  {
+    return Guice.createInjector(
+        binder -> {
+          JvmUtils.resetTestsToDefaultRuntimeInfo();
+          binder.bind(RuntimeInfo.class)
+                .toInstance(JvmUtils.getRuntimeInfo());
+          binder.requestStaticInjection(JvmUtils.class);
+
+          final ParametrizedUriEmitterConfig paramConfig = new ObjectMapper().convertValue(
+              Emitters.makeCustomFactoryMap(props), ParametrizedUriEmitterConfig.class);
+          final HttpEmitterConfig httpEmitterConfig = paramConfig.buildHttpEmitterConfig("http://example.com/topic");
+          binder.bind(HttpEmitterConfig.class).toInstance(httpEmitterConfig);
+        }
+    );
+  }
+
+  @AfterClass
+  public static void teardown()
+  {
+    JvmUtils.resetTestsToDefaultRuntimeInfo();
+  }
+
   @Test
   public void testDefaults()
   {
-    final Properties props = new Properties();
+    final Injector injector = makeInjector(new Properties());
+    final HttpEmitterConfig config = injector.getInstance(HttpEmitterConfig.class);
 
-    final ObjectMapper objectMapper = new ObjectMapper();
-    final ParametrizedUriEmitterConfig paramConfig = objectMapper.convertValue(Emitters.makeCustomFactoryMap(props), ParametrizedUriEmitterConfig.class);
-    final HttpEmitterConfig config = paramConfig.buildHttpEmitterConfig("http://example.com/topic");
-
-    Assert.assertEquals(60000, config.getFlushMillis());
-    Assert.assertEquals(500, config.getFlushCount());
-    Assert.assertEquals("http://example.com/topic", config.getRecipientBaseUrl());
-    Assert.assertNull(config.getBasicAuthentication());
-    Assert.assertEquals(BatchingStrategy.ARRAY, config.getBatchingStrategy());
     Pair<Integer, Integer> batchConfigPair = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(
         JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes()
     );
@@ -62,9 +86,8 @@ public class ParametrizedUriEmitterConfigTest
     props.setProperty("org.apache.druid.java.util.emitter.httpEmitting.maxBatchSize", "4");
     props.setProperty("org.apache.druid.java.util.emitter.httpEmitting.flushTimeOut", "1000");
 
-    final ObjectMapper objectMapper = new ObjectMapper();
-    final ParametrizedUriEmitterConfig paramConfig = objectMapper.convertValue(Emitters.makeCustomFactoryMap(props), ParametrizedUriEmitterConfig.class);
-    final HttpEmitterConfig config = paramConfig.buildHttpEmitterConfig("http://example.com/topic");
+    final Injector injector = makeInjector(props);
+    final HttpEmitterConfig config = injector.getInstance(HttpEmitterConfig.class);
 
     Assert.assertEquals(1, config.getFlushMillis());
     Assert.assertEquals(2, config.getFlushCount());
