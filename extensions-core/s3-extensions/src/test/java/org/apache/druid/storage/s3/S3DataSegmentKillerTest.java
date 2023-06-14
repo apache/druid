@@ -328,7 +328,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_kill_listOfSegments_multiDeleteExceptionIsThrown() throws SegmentLoadingException
+  public void test_kill_listOfSegments_multiDeleteExceptionIsThrown()
   {
     DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(TEST_BUCKET);
     deleteObjectsRequest.withKeys(KEY_1_PATH, KEY_2_PATH);
@@ -352,7 +352,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_kill_listOfSegments_multiDeleteExceptionIsThrownMultipleTimes() throws SegmentLoadingException
+  public void test_kill_listOfSegments_multiDeleteExceptionIsThrownMultipleTimes()
   {
     DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(TEST_BUCKET);
     deleteObjectsRequest.withKeys(KEY_1_PATH, KEY_2_PATH);
@@ -389,7 +389,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_kill_listOfSegments_amazonServiceExceptionExceptionIsThrown() throws SegmentLoadingException
+  public void test_kill_listOfSegments_amazonServiceExceptionExceptionIsThrown()
   {
     DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(TEST_BUCKET);
     deleteObjectsRequest.withKeys(KEY_1_PATH, KEY_2_PATH);
