@@ -40,6 +40,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -77,6 +78,18 @@ public class SqlResults
                                    .map(v -> (String) coerce(jsonMapper, context, v, sqlTypeName))
                                    .collect(Collectors.toList());
 
+        try {
+          coercedValue = jsonMapper.writeValueAsString(valueStrings);
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      } else if (value.getClass().isArray()) {
+        List<String> valueStrings = new ArrayList<>();
+        for (int i = 0; i < Array.getLength(value); ++i) {
+          String coercedElement = (String) coerce(jsonMapper, context, Array.get(value, i), sqlTypeName);
+          valueStrings.add(coercedElement);
+        }
         try {
           coercedValue = jsonMapper.writeValueAsString(valueStrings);
         }

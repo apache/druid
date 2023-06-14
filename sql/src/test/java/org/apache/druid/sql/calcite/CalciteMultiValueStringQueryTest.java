@@ -27,7 +27,9 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -1042,6 +1044,60 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testMultiValueStringToStringToMultiValueStringPostGroupBy()
+  {
+    // Cannot vectorize due to usage of expressions.
+    cannotVectorize();
+
+    ImmutableList<Object[]> results;
+    if (useDefault) {
+      results = ImmutableList.of(
+          new Object[]{""},
+          new Object[]{"[\"a\",\"b\"]"},
+          new Object[]{"[\"b\",\"c\"]"},
+          new Object[]{"[\"d\"]"}
+      );
+    } else {
+      results = ImmutableList.of(
+          new Object[]{null},
+          new Object[]{"[\"\"]"},
+          new Object[]{"[\"a\",\"b\"]"},
+          new Object[]{"[\"b\",\"c\"]"},
+          new Object[]{"[\"d\"]"}
+      );
+    }
+    testQuery(
+        "SELECT STRING_TO_MV(mvstring, ',')\n"
+        + "FROM (\n"
+        + " SELECT MV_TO_STRING(\"dim3\", ',') AS mvstring\n"
+        + " FROM druid.numfoo\n"
+        + " GROUP BY 1"
+        + ")",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "array_to_string(\"dim3\",',')", ColumnType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
+                            )
+                        )
+                        .setPostAggregatorSpecs(ImmutableList.of(new ExpressionPostAggregator("p0",
+                                                                                              "string_to_array(\"_d0\",',')",
+                                                                                              null,
+                                                                                              TestExprMacroTable.INSTANCE
+                        )))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        results
+    );
+  }
 
   @Test
   public void testMultiValueListFilter()
