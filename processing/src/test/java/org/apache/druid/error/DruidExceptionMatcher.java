@@ -23,6 +23,7 @@ import org.apache.druid.matchers.DruidMatchers;
 import org.hamcrest.Description;
 import org.hamcrest.DiagnosingMatcher;
 import org.hamcrest.Matcher;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.hamcrest.core.AllOf;
 
@@ -99,5 +100,27 @@ public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
   public void describeTo(Description description)
   {
     delegate.describeTo(description);
+  }
+
+  public <T> void assertThrowsAndMatches(ThrowingSupplier fn)
+  {
+    boolean thrown = false;
+    try {
+      fn.get();
+    }
+    catch (Throwable e) {
+      if (e instanceof DruidException) {
+        MatcherAssert.assertThat(e, this);
+        thrown = true;
+      } else {
+        throw new RuntimeException(e);
+      }
+    }
+    MatcherAssert.assertThat(thrown, Matchers.is(true));
+  }
+
+  public interface ThrowingSupplier
+  {
+    void get() throws Throwable;
   }
 }

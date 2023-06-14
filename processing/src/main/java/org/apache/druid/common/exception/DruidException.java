@@ -22,6 +22,7 @@ package org.apache.druid.common.exception;
 /**
  * A generic exception thrown by Druid.
  */
+@Deprecated
 public class DruidException extends RuntimeException
 {
   public static final int HTTP_CODE_SERVER_ERROR = 500;

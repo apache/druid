@@ -66,8 +66,6 @@ public class ErrorResponse
   @JsonCreator
   public static ErrorResponse fromMap(Map<String, Object> map)
   {
-    // TODO: perhaps need to have normal DruidExceptions set error too just so that they can masquerade as
-    //  QueryExceptions on initial release.
     final DruidException.Failure failure;
 
     final Object legacyErrorType = map.get("error");

@@ -30,6 +30,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -76,6 +79,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.http.HttpStatus;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -87,16 +91,18 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-import javax.ws.rs.core.StreamingOutput;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -642,11 +648,23 @@ public class QueryResourceTest
     );
     Assert.assertEquals(QueryTimeoutException.STATUS_CODE, response.getStatus());
 
+    ErrorResponse entity = (ErrorResponse) response.getEntity();
+    MatcherAssert.assertThat(
+        entity.getUnderlyingException(),
+        new DruidExceptionMatcher(
+            DruidException.Persona.OPERATOR,
+            DruidException.Category.TIMEOUT,
+            "legacyQueryException"
+        )
+            .expectMessageIs(
+                "Query did not complete within configured timeout period. You can increase query timeout or tune the performance of query.")
+    );
+
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ((StreamingOutput) response.getEntity()).write(baos);
+    jsonMapper.writeValue(baos, entity);
     QueryTimeoutException ex = jsonMapper.readValue(baos.toByteArray(), QueryTimeoutException.class);
     Assert.assertEquals("Query did not complete within configured timeout period. You can " +
-        "increase query timeout or tune the performance of query.", ex.getMessage());
+                        "increase query timeout or tune the performance of query.", ex.getMessage());
     Assert.assertEquals(QueryException.QUERY_TIMEOUT_ERROR_CODE, ex.getErrorCode());
     Assert.assertEquals(1, timeoutQueryResource.getTimedOutQueryCount());
 
@@ -874,12 +892,11 @@ public class QueryResourceTest
   }
 
   @Test(timeout = 10_000L)
-  public void testTooManyQuery() throws InterruptedException
+  public void testTooManyQuery() throws InterruptedException, ExecutionException
   {
     expectPermissiveHappyPathAuth();
 
     final CountDownLatch waitTwoScheduled = new CountDownLatch(2);
-    final CountDownLatch waitAllFinished = new CountDownLatch(3);
     final QueryScheduler laningScheduler = new QueryScheduler(
         2,
         ManualQueryPrioritizationStrategy.INSTANCE,
@@ -887,28 +904,42 @@ public class QueryResourceTest
         new ServerConfig()
     );
 
+    ArrayList<Future<Boolean>> back2 = new ArrayList<>();
+
     createScheduledQueryResource(laningScheduler, Collections.emptyList(), ImmutableList.of(waitTwoScheduled));
-    assertAsyncResponseAndCountdownOrBlockForever(
+    back2.add(eventuallyAssertAsyncResponse(
         SIMPLE_TIMESERIES_QUERY,
-        waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
-    );
-    assertAsyncResponseAndCountdownOrBlockForever(
+    ));
+    back2.add(eventuallyAssertAsyncResponse(
         SIMPLE_TIMESERIES_QUERY,
-        waitAllFinished,
         response -> Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus())
-    );
+    ));
     waitTwoScheduled.await();
-    assertSynchronousResponseAndCountdownOrBlockForever(
+    back2.add(eventuallyaAssertSynchronousResponse(
         SIMPLE_TIMESERIES_QUERY,
-        waitAllFinished,
         response -> {
           Assert.assertEquals(QueryCapacityExceededException.STATUS_CODE, response.getStatus());
           QueryCapacityExceededException ex;
 
+          final ErrorResponse entity = (ErrorResponse) response.getEntity();
+          MatcherAssert.assertThat(
+              entity.getUnderlyingException(),
+              new DruidExceptionMatcher(
+                  DruidException.Persona.OPERATOR,
+                  DruidException.Category.CAPACITY_EXCEEDED,
+                  "legacyQueryException"
+              )
+                  .expectMessageIs(
+                      "Too many concurrent queries, total query capacity of 2 exceeded. Please try your query again later.")
+          );
+
           try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ((StreamingOutput) response.getEntity()).write(baos);
+            jsonMapper.writeValue(baos, entity);
+
+            // Here we are converting to a QueryCapacityExceededException.  This is just to validate legacy stuff.
+            // When we delete the QueryException class, we can just rely on validating the DruidException instead
             ex = jsonMapper.readValue(baos.toByteArray(), QueryCapacityExceededException.class);
           }
           catch (IOException e) {
@@ -917,17 +948,19 @@ public class QueryResourceTest
           Assert.assertEquals(QueryCapacityExceededException.makeTotalErrorMessage(2), ex.getMessage());
           Assert.assertEquals(QueryException.QUERY_CAPACITY_EXCEEDED_ERROR_CODE, ex.getErrorCode());
         }
-    );
-    waitAllFinished.await();
+    ));
+
+    for (Future<Boolean> theFuture : back2) {
+      Assert.assertTrue(theFuture.get());
+    }
   }
 
   @Test(timeout = 10_000L)
-  public void testTooManyQueryInLane() throws InterruptedException
+  public void testTooManyQueryInLane() throws InterruptedException, ExecutionException
   {
     expectPermissiveHappyPathAuth();
     final CountDownLatch waitTwoStarted = new CountDownLatch(2);
     final CountDownLatch waitOneScheduled = new CountDownLatch(1);
-    final CountDownLatch waitAllFinished = new CountDownLatch(3);
     final QueryScheduler scheduler = new QueryScheduler(
         40,
         ManualQueryPrioritizationStrategy.INSTANCE,
@@ -935,23 +968,39 @@ public class QueryResourceTest
         new ServerConfig()
     );
 
+    ArrayList<Future<Boolean>> back2 = new ArrayList<>();
+
     createScheduledQueryResource(scheduler, ImmutableList.of(waitTwoStarted), ImmutableList.of(waitOneScheduled));
 
-    assertAsyncResponseAndCountdownOrBlockForever(
+    back2.add(eventuallyAssertAsyncResponse(
         SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY,
-        waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
-    );
+    ));
     waitOneScheduled.await();
-    assertSynchronousResponseAndCountdownOrBlockForever(
+    back2.add(eventuallyaAssertSynchronousResponse(
         SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY,
-        waitAllFinished,
         response -> {
           Assert.assertEquals(QueryCapacityExceededException.STATUS_CODE, response.getStatus());
           QueryCapacityExceededException ex;
+
+          final ErrorResponse entity = (ErrorResponse) response.getEntity();
+          MatcherAssert.assertThat(
+              entity.getUnderlyingException(),
+              new DruidExceptionMatcher(
+                  DruidException.Persona.OPERATOR,
+                  DruidException.Category.CAPACITY_EXCEEDED,
+                  "legacyQueryException"
+              )
+                  .expectMessageIs(
+                      "Too many concurrent queries for lane 'low', query capacity of 1 exceeded. Please try your query again later.")
+          );
+
           try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ((StreamingOutput) response.getEntity()).write(baos);
+            jsonMapper.writeValue(baos, entity);
+
+            // Here we are converting to a QueryCapacityExceededException.  This is just to validate legacy stuff.
+            // When we delete the QueryException class, we can just rely on validating the DruidException instead
             ex = jsonMapper.readValue(baos.toByteArray(), QueryCapacityExceededException.class);
           }
           catch (IOException e) {
@@ -964,24 +1013,24 @@ public class QueryResourceTest
           Assert.assertEquals(QueryException.QUERY_CAPACITY_EXCEEDED_ERROR_CODE, ex.getErrorCode());
 
         }
-    );
+    ));
     waitTwoStarted.await();
-    assertAsyncResponseAndCountdownOrBlockForever(
+    back2.add(eventuallyAssertAsyncResponse(
         SIMPLE_TIMESERIES_QUERY,
-        waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
-    );
+    ));
 
-    waitAllFinished.await();
+    for (Future<Boolean> theFuture : back2) {
+      Assert.assertTrue(theFuture.get());
+    }
   }
 
   @Test(timeout = 10_000L)
-  public void testTooManyQueryInLaneImplicitFromDurationThreshold() throws InterruptedException
+  public void testTooManyQueryInLaneImplicitFromDurationThreshold() throws InterruptedException, ExecutionException
   {
     expectPermissiveHappyPathAuth();
     final CountDownLatch waitTwoStarted = new CountDownLatch(2);
     final CountDownLatch waitOneScheduled = new CountDownLatch(1);
-    final CountDownLatch waitAllFinished = new CountDownLatch(3);
     final QueryScheduler scheduler = new QueryScheduler(
         40,
         new ThresholdBasedQueryPrioritizationStrategy(null, "P90D", null, null),
@@ -989,23 +1038,38 @@ public class QueryResourceTest
         new ServerConfig()
     );
 
+    ArrayList<Future<Boolean>> back2 = new ArrayList<>();
     createScheduledQueryResource(scheduler, ImmutableList.of(waitTwoStarted), ImmutableList.of(waitOneScheduled));
 
-    assertAsyncResponseAndCountdownOrBlockForever(
+    back2.add(eventuallyAssertAsyncResponse(
         SIMPLE_TIMESERIES_QUERY,
-        waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
-    );
+    ));
     waitOneScheduled.await();
-    assertSynchronousResponseAndCountdownOrBlockForever(
+    back2.add(eventuallyaAssertSynchronousResponse(
         SIMPLE_TIMESERIES_QUERY,
-        waitAllFinished,
         response -> {
           Assert.assertEquals(QueryCapacityExceededException.STATUS_CODE, response.getStatus());
           QueryCapacityExceededException ex;
+
+          final ErrorResponse entity = (ErrorResponse) response.getEntity();
+          MatcherAssert.assertThat(
+              entity.getUnderlyingException(),
+              new DruidExceptionMatcher(
+                  DruidException.Persona.OPERATOR,
+                  DruidException.Category.CAPACITY_EXCEEDED,
+                  "legacyQueryException"
+              )
+                  .expectMessageIs(
+                      "Too many concurrent queries for lane 'low', query capacity of 1 exceeded. Please try your query again later.")
+          );
+
           try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ((StreamingOutput) response.getEntity()).write(baos);
+            jsonMapper.writeValue(baos, entity);
+
+            // Here we are converting to a QueryCapacityExceededException.  This is just to validate legacy stuff.
+            // When we delete the QueryException class, we can just rely on validating the DruidException instead
             ex = jsonMapper.readValue(baos.toByteArray(), QueryCapacityExceededException.class);
           }
           catch (IOException e) {
@@ -1017,15 +1081,16 @@ public class QueryResourceTest
           );
           Assert.assertEquals(QueryException.QUERY_CAPACITY_EXCEEDED_ERROR_CODE, ex.getErrorCode());
         }
-    );
+    ));
     waitTwoStarted.await();
-    assertAsyncResponseAndCountdownOrBlockForever(
+    back2.add(eventuallyAssertAsyncResponse(
         SIMPLE_TIMESERIES_QUERY_SMALLISH_INTERVAL,
-        waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
-    );
+    ));
 
-    waitAllFinished.await();
+    for (Future<Boolean> theFuture : back2) {
+      Assert.assertTrue(theFuture.get());
+    }
   }
 
   private void createScheduledQueryResource(
@@ -1090,20 +1155,19 @@ public class QueryResourceTest
     );
   }
 
-  private void assertAsyncResponseAndCountdownOrBlockForever(
+  private Future<Boolean> eventuallyAssertAsyncResponse(
       String query,
-      CountDownLatch done,
       Consumer<MockHttpServletResponse> asserts
   )
   {
-    Executors.newSingleThreadExecutor().submit(() -> {
+    return Executors.newSingleThreadExecutor().submit(() -> {
       try {
         asserts.accept(expectAsyncRequestFlow(query, testServletRequest.mimic()));
       }
       catch (IOException e) {
         throw new RuntimeException(e);
       }
-      done.countDown();
+      return true;
     });
   }
 
@@ -1152,13 +1216,12 @@ public class QueryResourceTest
     return response;
   }
 
-  private void assertSynchronousResponseAndCountdownOrBlockForever(
+  private Future<Boolean> eventuallyaAssertSynchronousResponse(
       String query,
-      CountDownLatch done,
       Consumer<Response> asserts
   )
   {
-    Executors.newSingleThreadExecutor().submit(() -> {
+    return Executors.newSingleThreadExecutor().submit(() -> {
       try {
         asserts.accept(
             expectSynchronousRequestFlow(
@@ -1171,7 +1234,7 @@ public class QueryResourceTest
       catch (IOException e) {
         throw new RuntimeException(e);
       }
-      done.countDown();
+      return true;
     });
   }
 
