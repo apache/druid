@@ -39,6 +39,48 @@ import java.util.Map;
  * will make its way back to the user.  DruidException is always the answer to "how do I generate an error message and
  * deliver it to the user"?
  * <p>
+ * At the time that DruidException was introduced, this type of "show this to the user please" exception was largely
+ * handled by created {@link org.apache.druid.java.util.common.RE}, {@link org.apache.druid.java.util.common.IAE}, or
+ * {@link org.apache.druid.java.util.common.ISE} objects.  It is intended that DruidException replaces all usage of
+ * these exceptions where the intention is to deliver a message to the user, which we believe to be the vast majority
+ * of usages.  In cases where those exceptions are with the intention of being caught and acted upon, they should
+ * no change should occur.
+ *
+ * <h>Notes about exception messages</h>
+ *
+ * Firstly, exception messages should always be written with the notions from the style conventions covered in
+ * {@code dev/style-conventions.md}.  Whenever possible, we should also try to provide an action to take to resolve
+ * the issue.
+ *
+ * Secondly, given that the DruidException requires defining a target persona, exception messages should always be
+ * written with that target persona in mind.  Reviewers should use the targetPersona as added input to help validate
+ * that an exception message in meaningful.
+ *
+ * For example, at the time that this exception was introduced, there is an exception that the router throws which is
+ * an {@link org.apache.druid.java.util.common.ISE} with the message {@code "No default server found!"}.  This
+ * exception is thrown when the router is unable to find a broker to forward a request to.  It is completely
+ * meaningless to an end-user trying to run a query (what's a default server?  why does it need to be found?).  If we
+ * were to convert the exception to a DruidException and keep the same message, we should mark it as targetting the
+ * DEVELOPER persona as that is the only persona who should actually be able to figure out what a default server is
+ * and why it is important.  That said, does it makes sense for an exception that means "router cannot find a broker
+ * to forward the query to" to only be targetting the DEVELOPER?  The answer to that is no, it's something that should
+ * really be made meaningful to a wider group.  Some options could be
+ *
+ * USER persona: Cannot find a queryable server, contact your cluster administrator to validate that all services are
+ * operational
+ *
+ * OPERATOR persona: Router unable to find a broker, check that brokers are up and active
+ *
+ * The user-facing message doesn't talk about any Druid-specific concepts and just tries to relay a high-level
+ * understanding of what happened.  The admin-facing message includes Druid notions in it as it expects that an Admin
+ * will understand the various node types of Druid.
+ *
+ * If we think about this error more, we will realize that it's fundamentally something wrong with the cluster setup,
+ * which is something that we would expect an operator to be in charge of.  So, we would pick the OPERATOR persona
+ * message, which also allows us to include more specific information about what server was not found and provide a
+ * more meaningful action to take (check the health of your brokers).
+ *
+ * <h>Description of fields of DruidException</h>
  * Every error consists of:
  * <ul>
  * <li>A target persona</li>
@@ -52,7 +94,7 @@ import java.util.Map;
  * The target persona indicates who the message is written for.  This is important for 2 reasons
  * <ol>
  *   <li>It identifies why the developer is creating the exception and who they believe can take action on it.
- *   This context allows for code reviewers and other developers to evaluate the message with this context in mind</li>
+ *   This context allows for code reviewers and other developers to evaluate the message with the persona in mind</li>
  *   <li>It can be used as a way to control which error messages should be routed where.  For example, a user-targetted
  *   error message should be able to be exposed directly to the user, while an operator-targetted error message should
  *   perhaps be routed to the operators of the system instead of the end user firing a query.</li>
@@ -289,7 +331,7 @@ public class DruidException extends RuntimeException
      */
     TIMEOUT(504),
     /**
-     * Indicates some unsupported behavior was requested.  TODO
+     * Indicates some unsupported behavior was requested.
      */
     UNSUPPORTED(501),
     /**

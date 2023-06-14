@@ -251,13 +251,12 @@ public class MSQTaskSqlEngine implements SqlEngine
    * queries, because we use these output names to generate columns in segments. They must be unique.
    */
   private static void validateNoDuplicateAliases(final List<Pair<Integer, String>> fieldMappings)
-      throws ValidationException
   {
     final Set<String> aliasesSeen = new HashSet<>();
 
     for (final Pair<Integer, String> field : fieldMappings) {
       if (!aliasesSeen.add(field.right)) {
-        throw new ValidationException("Duplicate field in SELECT: [" + field.right + "]");
+        throw InvalidSqlInput.exception("Duplicate field in SELECT: [%s]", field.right);
       }
     }
   }

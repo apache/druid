@@ -237,6 +237,7 @@ public abstract class QueryResultPusher
       case CAPACITY_EXCEEDED:
       case UNSUPPORTED:
       case UNCATEGORIZED:
+      case DEFENSIVE:
         counter.incrementFailed();
         break;
       case TIMEOUT:

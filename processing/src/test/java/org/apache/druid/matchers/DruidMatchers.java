@@ -23,7 +23,7 @@ import org.hamcrest.Matcher;
 
 import java.util.function.Function;
 
-public class DMatchers
+public class DruidMatchers
 {
   public static <T, S> LambdaMatcher<T, S> fn(String name, Function<T, S> fn, Matcher<S> matcher)
   {

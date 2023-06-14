@@ -19,7 +19,7 @@
 
 package org.apache.druid.error;
 
-import org.apache.druid.matchers.DMatchers;
+import org.apache.druid.matchers.DruidMatchers;
 import org.hamcrest.Description;
 import org.hamcrest.DiagnosingMatcher;
 import org.hamcrest.Matcher;
@@ -54,16 +54,16 @@ public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
   )
   {
     matcherList = new ArrayList<>();
-    matcherList.add(DMatchers.fn("targetPersona", DruidException::getTargetPersona, Matchers.is(targetPersona)));
-    matcherList.add(DMatchers.fn("category", DruidException::getCategory, Matchers.is(category)));
-    matcherList.add(DMatchers.fn("errorCode", DruidException::getErrorCode, Matchers.is(errorCode)));
+    matcherList.add(DruidMatchers.fn("targetPersona", DruidException::getTargetPersona, Matchers.is(targetPersona)));
+    matcherList.add(DruidMatchers.fn("category", DruidException::getCategory, Matchers.is(category)));
+    matcherList.add(DruidMatchers.fn("errorCode", DruidException::getErrorCode, Matchers.is(errorCode)));
 
     delegate = new AllOf<>(matcherList);
   }
 
   public DruidExceptionMatcher expectContext(String key, String value)
   {
-    matcherList.add(DMatchers.fn("context", DruidException::getContext, Matchers.hasEntry(key, value)));
+    matcherList.add(DruidMatchers.fn("context", DruidException::getContext, Matchers.hasEntry(key, value)));
     return this;
   }
 
@@ -79,13 +79,13 @@ public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
 
   public DruidExceptionMatcher expectMessage(Matcher<String> messageMatcher)
   {
-    matcherList.add(DMatchers.fn("message", DruidException::getMessage, messageMatcher));
+    matcherList.add(DruidMatchers.fn("message", DruidException::getMessage, messageMatcher));
     return this;
   }
 
   public DruidExceptionMatcher expectException(Matcher<Throwable> causeMatcher)
   {
-    matcherList.add(DMatchers.fn("cause", DruidException::getCause, causeMatcher));
+    matcherList.add(DruidMatchers.fn("cause", DruidException::getCause, causeMatcher));
     return this;
   }
 

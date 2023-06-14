@@ -3514,7 +3514,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .context(queryContext)
         .build();
 
-    boolean isJoinFilterRewriteEnabled = queryContext.getOrDefault(JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+    boolean isJoinFilterRewriteEnabled = queryContext.getOrDefault(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
                                                      .toString()
                                                      .equals("true");
     testQuery(

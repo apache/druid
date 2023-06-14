@@ -2972,7 +2972,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
 
-    msqCompatible();
     assertQueryIsUnplannable(
         "SELECT\n"
         + "c, COUNT(*)\n"
@@ -5896,7 +5895,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               invalidSqlIs(
                   "Cannot apply 'TIME_IN_INTERVAL' to arguments of type "
                   + "'TIME_IN_INTERVAL(<TIMESTAMP(3)>, <VARCHAR>)'. Supported form(s): "
-                  + "TIME_IN_INTERVAL(<TIMESTAMP>, <LITERAL ISO8601 INTERVAL>) (line [1], column [38])"
+                  + "'TIME_IN_INTERVAL(<TIMESTAMP>, <LITERAL ISO8601 INTERVAL>)' (line [1], column [38])"
               )
           );
         }

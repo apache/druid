@@ -48,7 +48,6 @@ import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
@@ -563,9 +562,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .expectLogicalPlanFrom("insertFromExternal")
         .expectValidationError(
             CoreMatchers.allOf(
-                CoreMatchers.instanceOf(SqlPlanningException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(
-                    "org.apache.druid.java.util.common.UOE: This inputSource does not support input source based security"))
+                CoreMatchers.instanceOf(CalciteIngestDmlTestException.class),
+                ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("getTypes()"))
             )
         )
         .verify();

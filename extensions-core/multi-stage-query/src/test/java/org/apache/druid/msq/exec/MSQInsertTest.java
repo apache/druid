@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.ISE;
@@ -1028,11 +1029,9 @@ public class MSQInsertTest extends MSQTestBase
                 + "  )\n"
                 + ") PARTITIONED by day")
         .setQueryContext(context)
-        .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(SqlPlanningException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Duplicate field in SELECT: [namespace]"))
-        ))
+        .setExpectedValidationErrorMatcher(
+            invalidSqlIs("Duplicate field in SELECT: [namespace]")
+        )
         .verifyPlanningErrors();
   }
 

@@ -127,9 +127,10 @@ public class SqlParameterizerShuttle extends SqlShuttle
       list = Arrays.asList((Object[]) value);
     }
     List<SqlNode> args = new ArrayList<>(list.size());
-    for (Object element : list) {
+    for (int i = 0, listSize = list.size(); i < listSize; i++) {
+      Object element = list.get(i);
       if (element == null) {
-        throw InvalidSqlInput.exception("An array parameter [%s] cannot contain null values", posn + 1);
+        throw InvalidSqlInput.exception("parameter [%d] is an array, with an illegal null at index [%d]", posn + 1, i);
       }
       SqlNode node;
       if (element instanceof String) {
@@ -142,9 +143,10 @@ public class SqlParameterizerShuttle extends SqlShuttle
         node = SqlLiteral.createBoolean((Boolean) value, SqlParserPos.ZERO);
       } else {
         throw InvalidSqlInput.exception(
-            "An array parameter [%s] cannot contain values of type [%s]",
+            "parameter [%d] is an array, with an illegal value of type [%s] at index [%d]",
             posn + 1,
-            value.getClass()
+            value.getClass(),
+            i
         );
       }
       args.add(node);
