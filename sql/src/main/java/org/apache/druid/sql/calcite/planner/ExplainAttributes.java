@@ -23,9 +23,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.druid.java.util.common.granularity.Granularity;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * ExplainAttributes holds the attributes of a SQL statement that is used in the EXPLAIN PLAN result.
@@ -35,23 +37,23 @@ public final class ExplainAttributes
   private final String statementType;
 
   @Nullable
-  private final SqlNode targetDataSource;
+  private final String targetDataSource;
 
   @Nullable
   private final Granularity partitionedBy;
 
   @Nullable
-  private final SqlNodeList clusteredBy;
+  private final List<String> clusteredBy;
 
   @Nullable
-  private final SqlNode replaceTimeChunks;
+  private final String replaceTimeChunks;
 
   public ExplainAttributes(
       @JsonProperty("statementType") final String statementType,
-      @JsonProperty("targetDataSource") @Nullable final SqlNode targetDataSource,
+      @JsonProperty("targetDataSource") @Nullable final String targetDataSource,
       @JsonProperty("partitionedBy") @Nullable final Granularity partitionedBy,
-      @JsonProperty("clusteredBy") @Nullable final SqlNodeList clusteredBy,
-      @JsonProperty("replaceTimeChunks") @Nullable final SqlNode replaceTimeChunks
+      @JsonProperty("clusteredBy") @Nullable final List<String> clusteredBy,
+      @JsonProperty("replaceTimeChunks") @Nullable final String replaceTimeChunks
   )
   {
     this.statementType = statementType;
@@ -62,7 +64,7 @@ public final class ExplainAttributes
   }
 
   /**
-   * @return the statement kind of a SQL statement. For example, SELECT, INSERT, or REPLACE.
+   * @return the SQL statement type. For example, SELECT, INSERT, or REPLACE.
    */
   @JsonProperty
   public String getStatementType()
@@ -79,7 +81,7 @@ public final class ExplainAttributes
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getTargetDataSource()
   {
-    return targetDataSource == null ? null : targetDataSource.toString();
+    return targetDataSource;
   }
 
   /**
@@ -101,9 +103,9 @@ public final class ExplainAttributes
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public String getClusteredBy()
+  public List<String> getClusteredBy()
   {
-    return clusteredBy == null ? null : clusteredBy.toString();
+    return clusteredBy;
   }
 
   /**
@@ -115,7 +117,7 @@ public final class ExplainAttributes
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getReplaceTimeChunks()
   {
-    return replaceTimeChunks == null ? null : replaceTimeChunks.toString();
+    return replaceTimeChunks;
   }
 
   @Override

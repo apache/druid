@@ -21,18 +21,24 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.sql.SqlAsOperator;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlNumericLiteral;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOrderBy;
+import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.common.utils.IdUtils;
@@ -49,6 +55,8 @@ import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -158,6 +166,67 @@ public abstract class IngestHandler extends QueryHandler
   }
 
   /**
+   * Return sanitized clustered by columns specified to output columns.
+   * For example,
+   * EXPLAIN PLAN FOR
+   * INSERT INTO w000
+   * SELECT
+   *  TIME_PARSE("timestamp") AS __time,
+   *  page AS page_alias,
+   *  city,
+   *  country
+   * FROM ...
+   * PARTITIONED BY DAY
+   * CLUSTERED BY 1, 2, cityName
+   *
+   * The above SQL should return the following for clustered by columns: ["__time", "page_alias", "cityName"]
+   * That is the ordinals and any expression should resolve to the final output name.
+   *
+   */
+  @Nullable
+  protected List<String> sanitizedClusteredByColumns()
+  {
+    // CLUSTERED BY is an optional clause
+    SqlNodeList clusteredBy = ingestNode().getClusteredBy();
+    if (clusteredBy == null) {
+      return null;
+    }
+
+    SqlNode source = ingestNode().getSource();
+    Preconditions.checkArgument(source instanceof SqlSelect, "Source should be be a SELECT query");
+
+    List<SqlNode> selectList = ((SqlSelect) source).getSelectList().getList();
+    List<String> retClusteredByNames = new ArrayList<>();
+
+    for (SqlNode clusteredByNode : clusteredBy) {
+      if (clusteredByNode instanceof SqlNumericLiteral) {
+        // An ordinal is specified in CLUSTERED BY clause, so lookup the ordinal in the SELECT clause
+        int ordinal = ((SqlNumericLiteral) clusteredByNode).getValueAs(Integer.class);
+        SqlNode node = selectList.get(ordinal - 1);
+
+        if (node instanceof SqlBasicCall) {
+          // The node may be an alias or expression, in which case we'll get the output name
+          SqlBasicCall sqlBasicCall = (SqlBasicCall) node;
+          SqlOperator operator = (sqlBasicCall).getOperator();
+          if (operator instanceof SqlAsOperator) {
+            SqlNode sqlNode = (sqlBasicCall).getOperandList().get(1); // get the output type
+            retClusteredByNames.add(sqlNode.toString());
+          } else {
+            retClusteredByNames.add(node.toString());
+          }
+        } else if (node instanceof SqlIdentifier) {
+          String unqualifiedName = ((SqlIdentifier) node).names.get(1); // get the unqualified name
+          retClusteredByNames.add(unqualifiedName);
+        }
+      } else {
+        retClusteredByNames.add(clusteredByNode.toString());
+      }
+    }
+
+    return retClusteredByNames;
+  }
+
+  /**
    * Extract target datasource from a {@link SqlInsert}, and also validate that the ingestion is of a form we support.
    * Expects the target datasource to be either an unqualified name, or a name qualified by the default schema.
    */
@@ -248,11 +317,11 @@ public abstract class IngestHandler extends QueryHandler
         SqlExplain explain
     ) throws ValidationException
     {
-      super(
-          handlerContext,
+      super(handlerContext,
           sqlNode,
           convertQuery(sqlNode),
-          explain);
+          explain
+      );
       this.sqlNode = sqlNode;
     }
 
@@ -279,9 +348,9 @@ public abstract class IngestHandler extends QueryHandler
     {
       return new ExplainAttributes(
           DruidSqlInsert.OPERATOR.getName(),
-          sqlNode.getTargetTable(),
-          sqlNode.getPartitionedBy(),
-          sqlNode.getClusteredBy(),
+          targetDatasource,
+          ingestionGranularity,
+          sanitizedClusteredByColumns(),
           null
       );
     }
@@ -293,7 +362,7 @@ public abstract class IngestHandler extends QueryHandler
   protected static class ReplaceHandler extends IngestHandler
   {
     private final DruidSqlReplace sqlNode;
-    private List<String> replaceIntervals;
+    private String replaceIntervals;
 
     public ReplaceHandler(
         SqlStatementHandler.HandlerContext handlerContext,
@@ -331,15 +400,17 @@ public abstract class IngestHandler extends QueryHandler
             + "OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table.");
       }
 
-      replaceIntervals = DruidSqlParserUtils.validateQueryAndConvertToIntervals(
+      List<String> replaceIntervalsList = DruidSqlParserUtils.validateQueryAndConvertToIntervals(
           replaceTimeQuery,
           ingestionGranularity,
-          handlerContext.timeZone());
+          handlerContext.timeZone()
+      );
       super.validate();
-      if (replaceIntervals != null) {
+      if (replaceIntervalsList != null) {
+        replaceIntervals = String.join(",", replaceIntervalsList);
         handlerContext.queryContextMap().put(
             DruidSqlReplace.SQL_REPLACE_TIME_CHUNKS,
-            String.join(",", replaceIntervals)
+            replaceIntervals
         );
       }
     }
@@ -349,10 +420,10 @@ public abstract class IngestHandler extends QueryHandler
     {
       return new ExplainAttributes(
           DruidSqlReplace.OPERATOR.getName(),
-          sqlNode.getTargetTable(),
-          sqlNode.getPartitionedBy(),
-          sqlNode.getClusteredBy(),
-          sqlNode.getReplaceTimeQuery()
+          targetDatasource,
+          ingestionGranularity,
+          sanitizedClusteredByColumns(),
+          replaceIntervals
       );
     }
   }

@@ -438,8 +438,8 @@ The above EXPLAIN PLAN query returns the following result:
     "statementType": "REPLACE",
     "targetDataSource": "wikipedia",
     "partitionedBy": "HOUR",
-    "clusteredBy": "`cityName`",
-    "replaceTimeChunks": "'ALL'"
+    "clusteredBy": ["cityName"],
+    "replaceTimeChunks": "all"
   }
 ]
 ```

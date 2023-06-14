@@ -464,6 +464,22 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testFilterScalarFunctionsOnInformationSchemaRoutines2()
+  {
+    notMsqCompatible();
+    testQuery(
+        "SELECT\n"
+        + "  COUNT(*)\n"
+        + "FROM INFORMATION_SCHEMA.ROUTINES\n"
+        + "WHERE IS_AGGREGATOR = 'NO'",
+        ImmutableList.of(),
+        ImmutableList.of(
+            new Object[]{152L}
+        )
+    );
+  }
+
+  @Test
   public void testNonExistentSchemaOnInformationSchemaRoutines()
   {
     notMsqCompatible();

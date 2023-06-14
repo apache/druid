@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.parser;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -29,7 +30,10 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlNumericLiteral;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOrderBy;
+import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlTimestampLiteral;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.IAE;
@@ -55,6 +59,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.joda.time.base.AbstractInterval;
 
+import javax.annotation.Nullable;
 import java.sql.Timestamp;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -195,7 +200,7 @@ public class DruidSqlParserUtils
   }
 
   /**
-   * This method validates and converts a {@link SqlNode} representing a query into an optmizied list of intervals to
+   * This method validates and converts a {@link SqlNode} representing a query into an optimized list of intervals to
    * be used in creating an ingestion spec. If the sqlNode is an SqlLiteral of {@link #ALL}, returns a singleton list of
    * "ALL". Otherwise, it converts and optimizes the query using {@link MoveTimeFiltersToIntervals} into a list of
    * intervals which contain all valid values of time as per the query.
@@ -266,9 +271,13 @@ public class DruidSqlParserUtils
 
     if (query instanceof SqlOrderBy) {
       SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
-      // This represents the underlying query free of OFFSET, FETCH and ORDER BY clauses
-      // For a sqlOrderBy.query like "SELECT dim1, sum(dim2) FROM foo OFFSET 10 FETCH 30 ORDER BY dim1 GROUP
-      // BY dim1 this would represent the "SELECT dim1, sum(dim2) from foo GROUP BY dim1
+      /*
+        `sqlOrderBy` represents the underlying query free of OFFSET, FETCH and ORDER BY clauses.
+         For example, if `query` is:
+          "SELECT dim1, sum(dim2) FROM foo OFFSET 10 FETCH 30 GROUP BY dim1 ORDER BY dim1"
+        `sqlOrderBy` would represent:
+          "SELECT dim1, sum(dim2) FROM foo GROUP BY dim1"
+       */
       query = sqlOrderBy.query;
       offset = sqlOrderBy.offset;
       fetch = sqlOrderBy.fetch;
@@ -281,6 +290,64 @@ public class DruidSqlParserUtils
         offset,
         fetch
     );
+  }
+
+  /**
+   * Return sanitized clustered by columns specified to output columns.
+   * For example,
+   * EXPLAIN PLAN FOR
+   * INSERT INTO w000
+   * SELECT
+   *  TIME_PARSE("timestamp") AS __time,
+   *  page AS page_alias,
+   *  city,
+   *  country
+   * FROM ...
+   * PARTITIONED BY DAY
+   * CLUSTERED BY 1, 2, cityName
+   *
+   * The above SQL should return the following for clustered by columns: ["__time", "page_alias", "cityName"]
+   * That is the ordinals and any expression should resolve to the final output name.
+   *
+   */
+  @Nullable
+  public static List<String> sanitizedClusteredByColumns(SqlNodeList clusteredBy, SqlNode source)
+  {
+    // CLUSTERED BY is an optional clause
+    if (clusteredBy == null) {
+      return null;
+    }
+    Preconditions.checkArgument(source instanceof SqlSelect, "Source should be be a SELECT query");
+    List<SqlNode> selectList = ((SqlSelect) source).getSelectList().getList();
+
+    List<String> retClusteredByNames = new ArrayList<>();
+
+    for (SqlNode clusteredByNode : clusteredBy) {
+      if (clusteredByNode instanceof SqlNumericLiteral) {
+        // An ordinal is specified in CLUSTERED BY clause, so lookup the ordinal in the SELECT clause
+        int ordinal = ((SqlNumericLiteral) clusteredByNode).getValueAs(Integer.class);
+        SqlNode node = selectList.get(ordinal - 1);
+
+        if (node instanceof SqlBasicCall) {
+          // The node may be an alias or expression, in which case we'll get the output name
+          SqlBasicCall sqlBasicCall = (SqlBasicCall) node;
+          SqlOperator operator = (sqlBasicCall).getOperator();
+          if (operator instanceof SqlAsOperator) {
+            SqlNode sqlNode = (sqlBasicCall).getOperandList().get(1); // get the output type
+            retClusteredByNames.add(sqlNode.toString());
+          } else {
+            retClusteredByNames.add(node.toString());
+          }
+        } else if (node instanceof SqlIdentifier) {
+          String unqualifiedName = ((SqlIdentifier) node).names.get(1); // get the unqualified name
+          retClusteredByNames.add(unqualifiedName);
+        }
+      } else {
+        retClusteredByNames.add(clusteredByNode.toString());
+      }
+    }
+
+    return retClusteredByNames;
   }
 
   /**

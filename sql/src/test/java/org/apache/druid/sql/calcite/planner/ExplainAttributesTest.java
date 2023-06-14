@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.vavr.collection.List;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -30,20 +31,12 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+
 public class ExplainAttributesTest
 {
   private static final ObjectMapper DEFAULT_OBJECT_MAPPER = new DefaultObjectMapper();
-  private static final SqlNode DATA_SOURCE = Mockito.mock(SqlNode.class);
-  private static final SqlNodeList CLUSTERED_BY = Mockito.mock(SqlNodeList.class);
-  private static final SqlNode TIME_CHUNKS = Mockito.mock(SqlNode.class);
-
-  @Before
-  public void setup()
-  {
-    Mockito.when(DATA_SOURCE.toString()).thenReturn("foo");
-    Mockito.when(CLUSTERED_BY.toString()).thenReturn("`bar`, `jazz`");
-    Mockito.when(TIME_CHUNKS.toString()).thenReturn("ALL");
-  }
 
   @Test
   public void testSimpleGetters()
@@ -77,7 +70,7 @@ public class ExplainAttributesTest
   {
     ExplainAttributes insertAttributes = new ExplainAttributes(
         "INSERT",
-        DATA_SOURCE,
+        "foo",
         Granularities.DAY,
         null,
         null
@@ -95,7 +88,7 @@ public class ExplainAttributesTest
   {
     ExplainAttributes insertAttributes = new ExplainAttributes(
         "INSERT",
-        DATA_SOURCE,
+        "foo",
         Granularities.ALL,
         null,
         null
@@ -111,20 +104,72 @@ public class ExplainAttributesTest
   @Test
   public void testSerializeReplaceAttributes() throws JsonProcessingException
   {
-    ExplainAttributes replaceAttributes = new ExplainAttributes(
+    ExplainAttributes replaceAttributes1 = new ExplainAttributes(
         "REPLACE",
-        DATA_SOURCE,
+        "foo",
         Granularities.HOUR,
-        CLUSTERED_BY,
-        TIME_CHUNKS
+        null,
+        "ALL"
     );
-    final String expectedAttributes = "{"
+    final String expectedAttributes1 = "{"
         + "\"statementType\":\"REPLACE\","
         + "\"targetDataSource\":\"foo\","
         + "\"partitionedBy\":\"HOUR\","
-        + "\"clusteredBy\":\"`bar`, `jazz`\","
         + "\"replaceTimeChunks\":\"ALL\""
         + "}";
-    Assert.assertEquals(expectedAttributes, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes));
+    Assert.assertEquals(expectedAttributes1, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes1));
+
+
+    ExplainAttributes replaceAttributes2 = new ExplainAttributes(
+        "REPLACE",
+        "foo",
+        Granularities.HOUR,
+        null,
+        "2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z"
+    );
+    final String expectedAttributes2 = "{"
+                                      + "\"statementType\":\"REPLACE\","
+                                      + "\"targetDataSource\":\"foo\","
+                                      + "\"partitionedBy\":\"HOUR\","
+                                      + "\"replaceTimeChunks\":\"2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z\""
+                                      + "}";
+    Assert.assertEquals(expectedAttributes2, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes2));
+  }
+
+  @Test
+  public void testSerializeReplaceWithClusteredByAttributes() throws JsonProcessingException
+  {
+    ExplainAttributes replaceAttributes1 = new ExplainAttributes(
+        "REPLACE",
+        "foo",
+        Granularities.HOUR,
+        Arrays.asList("foo", "CEIL(`f2`)"),
+        "ALL"
+    );
+    final String expectedAttributes1 = "{"
+                                       + "\"statementType\":\"REPLACE\","
+                                       + "\"targetDataSource\":\"foo\","
+                                       + "\"partitionedBy\":\"HOUR\","
+                                       + "\"clusteredBy\":[\"foo\",\"CEIL(`f2`)\"],"
+                                       + "\"replaceTimeChunks\":\"ALL\""
+                                       + "}";
+    Assert.assertEquals(expectedAttributes1, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes1));
+
+
+    ExplainAttributes replaceAttributes2 = new ExplainAttributes(
+        "REPLACE",
+        "foo",
+        Granularities.HOUR,
+        Arrays.asList("foo", "boo"),
+        "2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z"
+    );
+    final String expectedAttributes2 = "{"
+                                       + "\"statementType\":\"REPLACE\","
+                                       + "\"targetDataSource\":\"foo\","
+                                       + "\"partitionedBy\":\"HOUR\","
+                                       + "\"clusteredBy\":[\"foo\",\"boo\"],"
+                                       + "\"replaceTimeChunks\":\"2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z\""
+                                       + "}";
+    Assert.assertEquals(expectedAttributes2, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes2));
   }
 }
