@@ -189,13 +189,22 @@ public class MetadataResource
     final Set<DataSegment> overshadowedSegments = dataSourcesSnapshot.getOvershadowedSegments();
 
     final Stream<SegmentStatusInCluster> segmentStatus = usedSegments
-        .map(segment ->
-                 new SegmentStatusInCluster(
-                     segment,
-                     overshadowedSegments.contains(segment),
-                     coordinator.getReplicationFactorForSegment(segment.getId())
-                 )
-        );
+        .map(segment -> {
+          boolean isOvershadowed = overshadowedSegments.contains(segment);
+          Integer replicationFactor;
+          if (isOvershadowed) {
+            // If the segment is overshadowed, the replication factor won't be present in the coordinator, but we know
+            // that it should be 0 as we will unload it soon.
+            replicationFactor = 0;
+          } else {
+            replicationFactor = coordinator.getReplicationFactorForSegment(segment.getId());
+          }
+          return new SegmentStatusInCluster(
+                   segment,
+                   isOvershadowed,
+                   replicationFactor
+               );
+        });
 
     final Function<SegmentStatusInCluster, Iterable<ResourceAction>> raGenerator = segment -> Collections
         .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));

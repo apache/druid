@@ -25,6 +25,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
+import org.apache.curator.shaded.com.google.common.cache.Cache;
+import org.apache.curator.shaded.com.google.common.cache.CacheBuilder;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DataSegmentInterner;
 import org.apache.druid.client.JsonParserIterator;
@@ -40,6 +42,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
@@ -77,6 +80,7 @@ public class MetadataSegmentView
    */
   @MonotonicNonNull
   private volatile ImmutableSortedSet<SegmentStatusInCluster> publishedSegments = null;
+  private final Cache<SegmentId, Integer> segmentIdToReplicationFactor;
   private final ScheduledExecutorService scheduledExec;
   private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
@@ -97,6 +101,9 @@ public class MetadataSegmentView
     this.isCacheEnabled = config.isMetadataSegmentCacheEnable();
     this.pollPeriodInMS = config.getMetadataSegmentPollPeriod();
     this.scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
+    this.segmentIdToReplicationFactor = CacheBuilder.newBuilder()
+                                                    .expireAfterWrite(3, TimeUnit.MINUTES)
+                                                    .build();
   }
 
   @LifecycleStart
@@ -143,10 +150,16 @@ public class MetadataSegmentView
     while (metadataSegments.hasNext()) {
       final SegmentStatusInCluster segment = metadataSegments.next();
       final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
+      Integer replicationFactor = segment.getReplicationFactor();
+      if (segment.getReplicationFactor() == null) {
+        replicationFactor = segmentIdToReplicationFactor.getIfPresent(segment.getDataSegment().getId());
+      } else {
+        segmentIdToReplicationFactor.put(segment.getDataSegment().getId(), segment.getReplicationFactor());
+      }
       final SegmentStatusInCluster segmentStatusInCluster = new SegmentStatusInCluster(
           interned,
           segment.isOvershadowed(),
-          segment.getReplicationFactor()
+          replicationFactor
       );
       builder.add(segmentStatusInCluster);
     }
