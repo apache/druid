@@ -203,6 +203,8 @@ Keep the following in mind when using the task API to view reports:
 - As an experimental feature, the MSQ task engine supports running SELECT queries. SELECT query results are written into
 the `multiStageQuery.payload.results.results` task report key as an array of arrays. The behavior and result format of plain
 SELECT queries (without INSERT or REPLACE) is subject to change.
+- `multiStageQuery.payload.results.resultsTruncated` denote whether the results of the report have been truncated to prevent
+the reports from blowing up
 
 For an explanation of the fields in a report, see [Report response fields](#report-response-fields).
 
