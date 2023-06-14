@@ -315,7 +315,7 @@ To run tests on any druid cluster that is already running, create a configuratio
     }
 
 Set the environment variable `CONFIG_FILE` to the name of the configuration file:
-```
+```bash
 export CONFIG_FILE=<config file name>
 ```
 
