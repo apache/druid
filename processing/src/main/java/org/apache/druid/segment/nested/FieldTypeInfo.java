@@ -47,7 +47,16 @@ public class FieldTypeInfo
   private static final byte STRING_ARRAY_MASK = 1 << 4;
   private static final byte LONG_ARRAY_MASK = 1 << 5;
   private static final byte DOUBLE_ARRAY_MASK = 1 << 6;
-  private static final short EMPTY_ARRAY_MASK = 1 << 7;
+
+  private static final ColumnType[] TYPES = new ColumnType[]{
+      ColumnType.STRING,
+      null, // mistakes were made...
+      ColumnType.LONG,
+      ColumnType.DOUBLE,
+      ColumnType.STRING_ARRAY,
+      ColumnType.LONG_ARRAY,
+      ColumnType.DOUBLE_ARRAY
+  };
 
   public static FieldTypeInfo read(ByteBuffer buffer, int length)
   {
@@ -122,6 +131,7 @@ public class FieldTypeInfo
   public static class MutableTypeSet
   {
     private byte types;
+    private boolean hasEmptyArray;
 
     public MutableTypeSet()
     {
@@ -131,6 +141,12 @@ public class FieldTypeInfo
     public MutableTypeSet(byte types)
     {
       this.types = types;
+    }
+
+    public MutableTypeSet(byte types, boolean hasEmptyArray)
+    {
+      this.types = types;
+      this.hasEmptyArray = hasEmptyArray;
     }
 
     public MutableTypeSet add(ColumnType type)
@@ -167,23 +183,24 @@ public class FieldTypeInfo
       return this;
     }
 
-    public MutableTypeSet addEmptyArray()
+    /**
+     * Set a flag when we encounter an empty array or array with only null elements
+     */
+    public MutableTypeSet addUntypedArray()
     {
-      if (types < 0) {
-        return this;
-      }
-      types = (byte) (types | EMPTY_ARRAY_MASK);
+      hasEmptyArray = true;
       return this;
     }
 
-    public boolean hasEmptyArray()
+    public boolean hasUntypedArray()
     {
-      return types < 0;
+      return hasEmptyArray;
     }
 
-    public MutableTypeSet merge(byte other)
+    public MutableTypeSet merge(byte other, boolean hasEmptyArray)
     {
       types |= other;
+      this.hasEmptyArray = this.hasEmptyArray || hasEmptyArray;
       return this;
     }
 
@@ -220,13 +237,13 @@ public class FieldTypeInfo
         return false;
       }
       MutableTypeSet typeSet = (MutableTypeSet) o;
-      return types == typeSet.types;
+      return types == typeSet.types && hasEmptyArray == typeSet.hasEmptyArray;
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(types);
+      return Objects.hash(types, hasEmptyArray);
     }
   }
 
@@ -269,37 +286,11 @@ public class FieldTypeInfo
   @Nullable
   private static ColumnType getSingleType(byte types)
   {
-    int count = 0;
-    ColumnType singleType = null;
-    if ((types & STRING_MASK) > 0) {
-      singleType = ColumnType.STRING;
-      count++;
+    if (Integer.bitCount(types) == 1) {
+      return TYPES[Integer.numberOfTrailingZeros(types)];
+    } else {
+      return null;
     }
-    if ((types & LONG_MASK) > 0) {
-      singleType = ColumnType.LONG;
-      count++;
-    }
-    if ((types & DOUBLE_MASK) > 0) {
-      singleType = ColumnType.DOUBLE;
-      count++;
-    }
-    if ((types & STRING_ARRAY_MASK) > 0) {
-      singleType = ColumnType.STRING_ARRAY;
-      count++;
-    }
-    if ((types & LONG_ARRAY_MASK) > 0) {
-      singleType = ColumnType.LONG_ARRAY;
-      count++;
-    }
-    if ((types & DOUBLE_ARRAY_MASK) > 0) {
-      singleType = ColumnType.DOUBLE_ARRAY;
-      count++;
-    }
-    // if type isn't an array and the empty array bit is set, increment the count
-    if (((types & EMPTY_ARRAY_MASK) > 0) && !(singleType != null && singleType.isArray())) {
-      count++;
-    }
-    return count == 1 ? singleType : null;
   }
 
   public static Set<ColumnType> convertToSet(byte types)

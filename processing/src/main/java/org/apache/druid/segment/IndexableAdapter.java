@@ -122,9 +122,9 @@ public interface IndexableAdapter
         final FieldTypeInfo.MutableTypeSet types = entry.getValue();
         mergeInto.compute(fieldPath, (k, v) -> {
           if (v == null) {
-            return new FieldTypeInfo.MutableTypeSet(types.getByteValue());
+            return types;
           }
-          return v.merge(types.getByteValue());
+          return v.merge(types.getByteValue(), types.hasUntypedArray());
         });
       }
     }

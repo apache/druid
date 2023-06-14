@@ -194,10 +194,6 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         fields.put(entry.getKey(), entry.getValue().getTypes());
       }
     }
-    // special handling for when column only has arrays with null elements, treat it as a string array
-    if (fields.isEmpty() && fieldIndexers.size() == 1) {
-      fields.put(fieldIndexers.firstKey(), new FieldTypeInfo.MutableTypeSet().add(ColumnType.STRING_ARRAY));
-    }
     return fields;
   }
 
@@ -331,7 +327,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
       }
       if (logicalType != null) {
         // special handle empty arrays
-        if (!rootField.getTypes().hasEmptyArray() || logicalType.isArray()) {
+        if (!rootField.getTypes().hasUntypedArray() || logicalType.isArray()) {
           return logicalType;
         }
         return ColumnTypeFactory.getInstance().ofArray(logicalType);
@@ -570,29 +566,27 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
                 eval.type()
             );
           }
+
+          final Object[] theArray = eval.asArray();
           switch (columnType.getElementType().getType()) {
             case LONG:
               typeSet.add(ColumnType.LONG_ARRAY);
-              final Object[] longArray = eval.asArray();
-              sizeEstimate = valueDictionary.addLongArray(longArray);
-              return new StructuredDataProcessor.ProcessedValue<>(longArray, sizeEstimate);
+              sizeEstimate = valueDictionary.addLongArray(theArray);
+              return new StructuredDataProcessor.ProcessedValue<>(theArray, sizeEstimate);
             case DOUBLE:
               typeSet.add(ColumnType.DOUBLE_ARRAY);
-              final Object[] doubleArray = eval.asArray();
-              sizeEstimate = valueDictionary.addDoubleArray(doubleArray);
-              return new StructuredDataProcessor.ProcessedValue<>(doubleArray, sizeEstimate);
+              sizeEstimate = valueDictionary.addDoubleArray(theArray);
+              return new StructuredDataProcessor.ProcessedValue<>(theArray, sizeEstimate);
             case STRING:
-              final Object[] stringArray = eval.asArray();
-              // empty arrays and arrays with all nulls are detected as string arrays, but dont count them as part of
-              // the type set
-              if (stringArray.length > 0 && !Arrays.stream(stringArray).allMatch(Objects::isNull)) {
+              // empty arrays and arrays with all nulls are detected as string arrays, but don't count them as part of
+              // the type set yet, we'll handle that later when serializing
+              if (theArray.length == 0 || Arrays.stream(theArray).allMatch(Objects::isNull)) {
+                typeSet.addUntypedArray();
+              } else {
                 typeSet.add(ColumnType.STRING_ARRAY);
               }
-              if (stringArray.length == 0) {
-                typeSet.addEmptyArray();
-              }
-              sizeEstimate = valueDictionary.addStringArray(stringArray);
-              return new StructuredDataProcessor.ProcessedValue<>(stringArray, sizeEstimate);
+              sizeEstimate = valueDictionary.addStringArray(theArray);
+              return new StructuredDataProcessor.ProcessedValue<>(theArray, sizeEstimate);
             default:
               throw new IAE("Unhandled type: %s", columnType);
           }
@@ -613,14 +607,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
 
     public boolean isSingleType()
     {
-      ColumnType singleType = typeSet.getSingleType();
-      if (singleType != null) {
-        if (typeSet.hasEmptyArray()) {
-          return singleType.isArray();
-        }
-        return true;
-      }
-      return false;
+      return typeSet.getSingleType() != null;
     }
   }
 
