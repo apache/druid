@@ -35,6 +35,7 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -75,7 +76,7 @@ public class BrokerClient
     return new Request(httpMethod, new URL(StringUtils.format("%s%s", host, urlPath)));
   }
 
-  public StringFullResponseHolder sendQuery(Request request) throws Exception
+  public String sendQuery(Request request) throws Exception
   {
     StringFullResponseHandler responseHandler = new StringFullResponseHandler(StandardCharsets.UTF_8);
 
@@ -111,8 +112,11 @@ public class BrokerClient
             MAX_RETRIES
         );
         request = getNewRequestUrl(request);
+      } else if (responseStatus.getCode() != HttpServletResponse.SC_OK) {
+        log.warn("Request[%s] failed with error", request.getUrl(), responseStatus.getCode());
+        continue;
       } else {
-        return fullResponseHolder;
+        return fullResponseHolder.getContent();
       }
     }
 

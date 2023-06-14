@@ -291,7 +291,7 @@ public class ControllerImpl implements Controller
   private WorkerMemoryParameters workerMemoryParameters;
   private boolean isDurableStorageEnabled;
   private boolean isFaultToleranceEnabled;
-  private volatile SegmentLoadAwaiter segmentLoadAwaiter;
+  private volatile SegmentLoadWaiter segmentLoadWaiter;
 
   public ControllerImpl(
       final MSQControllerTask task,
@@ -454,9 +454,9 @@ public class ControllerImpl implements Controller
     cleanUpDurableStorageIfNeeded();
 
     if (queryKernel != null && queryKernel.isSuccess()) {
-      if (segmentLoadAwaiter != null) {
+      if (segmentLoadWaiter != null) {
         // If successful and there are segments created, segmentLoadAwaiter should wait for them to become available.
-        segmentLoadAwaiter.awaitSegmentLoad();
+        segmentLoadWaiter.awaitSegmentLoad();
       }
     }
 
@@ -511,7 +511,7 @@ public class ControllerImpl implements Controller
               queryStartTime,
               new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis(),
               workerTaskLauncher,
-              segmentLoadAwaiter
+              segmentLoadWaiter
           ),
           stagesReport,
           countersSnapshot,
@@ -855,7 +855,7 @@ public class ControllerImpl implements Controller
                     queryStartTime,
                     queryStartTime == null ? -1L : new Interval(queryStartTime, DateTimes.nowUtc()).toDurationMillis(),
                     workerTaskLauncher,
-                    segmentLoadAwaiter
+                    segmentLoadWaiter
                 ),
                 makeStageReport(
                     queryDef,
@@ -1288,7 +1288,7 @@ public class ControllerImpl implements Controller
         }
       } else {
         Set<String> versionsToAwait = segmentsWithTombstones.stream().map(DataSegment::getVersion).collect(Collectors.toSet());
-        segmentLoadAwaiter = new SegmentLoadAwaiter(context, task.getDataSource(), versionsToAwait, segmentsWithTombstones.size());
+        segmentLoadWaiter = new SegmentLoadWaiter(context, task.getDataSource(), versionsToAwait, segmentsWithTombstones.size());
         performSegmentPublish(
             context.taskActionClient(),
             SegmentTransactionalInsertAction.overwriteAction(null, null, segmentsWithTombstones)
@@ -1296,7 +1296,7 @@ public class ControllerImpl implements Controller
       }
     } else if (!segments.isEmpty()) {
       Set<String> versionsToAwait = segments.stream().map(DataSegment::getVersion).collect(Collectors.toSet());
-      segmentLoadAwaiter = new SegmentLoadAwaiter(context, task.getDataSource(), versionsToAwait, segments.size());
+      segmentLoadWaiter = new SegmentLoadWaiter(context, task.getDataSource(), versionsToAwait, segments.size());
       // Append mode.
       performSegmentPublish(
           context.taskActionClient(),
@@ -2051,7 +2051,7 @@ public class ControllerImpl implements Controller
       @Nullable final DateTime queryStartTime,
       final long queryDuration,
       MSQWorkerTaskLauncher taskLauncher,
-      final SegmentLoadAwaiter segmentLoadWaiter
+      final SegmentLoadWaiter segmentLoadWaiter
   )
   {
     int pendingTasks = -1;
@@ -2063,7 +2063,7 @@ public class ControllerImpl implements Controller
       runningTasks = workerTaskCount.getRunningWorkerCount() + 1; // To account for controller.
     }
 
-    SegmentLoadAwaiter.SegmentLoadAwaiterStatus status = segmentLoadWaiter == null ? null : segmentLoadWaiter.status();
+    SegmentLoadWaiter.SegmentLoadAwaiterStatus status = segmentLoadWaiter == null ? null : segmentLoadWaiter.status();
 
     return new MSQStatusReport(
         taskState,

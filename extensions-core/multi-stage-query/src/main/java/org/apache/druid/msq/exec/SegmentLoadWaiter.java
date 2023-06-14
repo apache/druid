@@ -20,26 +20,26 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.discovery.BrokerClient;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.servlet.http.HttpServletResponse;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -53,9 +53,9 @@ import java.util.concurrent.TimeUnit;
  * If the segments are not loaded within {@link #TIMEOUT_DURATION_MILLIS} milliseconds, this logs a warning and exits
  * for the same reason.
  */
-public class SegmentLoadAwaiter
+public class SegmentLoadWaiter
 {
-  private static final Logger log = new Logger(SegmentLoadAwaiter.class);
+  private static final Logger log = new Logger(SegmentLoadWaiter.class);
   private static final long INITIAL_SLEEP_DURATION_MILLIS = TimeUnit.SECONDS.toMillis(5);
   private static final long SLEEP_DURATION_MILLIS = TimeUnit.SECONDS.toMillis(5);
   private static final long TIMEOUT_DURATION_MILLIS = TimeUnit.MINUTES.toMillis(10);
@@ -70,18 +70,31 @@ public class SegmentLoadAwaiter
   private final Map<String, VersionLoadStatus> versionToLoadStatusMap;
   private final String datasource;
   private final Set<String> versionsToAwait;
+  private final boolean doWait;
   private volatile SegmentLoadAwaiterStatus status;
 
-  public SegmentLoadAwaiter(ControllerContext context, String datasource, Set<String> versionsToAwait, int initialSegmentCount)
+  public SegmentLoadWaiter(ControllerContext context, String datasource, Set<String> versionsToAwait, int initialSegmentCount)
   {
     this.brokerClient = context.injector().getInstance(BrokerClient.class);
     this.objectMapper = context.jsonMapper();
     this.datasource = datasource;
-    this.versionsToAwait = versionsToAwait;
+    this.versionsToAwait = new TreeSet<>(versionsToAwait);
     this.versionToLoadStatusMap = new HashMap<>();
     this.status = new SegmentLoadAwaiterStatus(State.INIT, null, 0, initialSegmentCount, initialSegmentCount);
+    this.doWait = true;
   }
 
+  @VisibleForTesting
+  SegmentLoadWaiter(BrokerClient brokerClient, ObjectMapper objectMapper, String datasource, Set<String> versionsToAwait, int initialSegmentCount, boolean doWait)
+  {
+    this.brokerClient = brokerClient;
+    this.objectMapper = objectMapper;
+    this.datasource = datasource;
+    this.versionsToAwait = new TreeSet<>(versionsToAwait);
+    this.versionToLoadStatusMap = new HashMap<>();
+    this.status = new SegmentLoadAwaiterStatus(State.INIT, null, 0, initialSegmentCount, initialSegmentCount);
+    this.doWait = doWait;
+  }
   /**
    * Uses broker client to check if all segments created by the ingestion have been loaded and updates the {@link #status)}
    * periodically.
@@ -99,7 +112,7 @@ public class SegmentLoadAwaiter
       // Sleep for a short duration to allow the segments that were just created to reflect in broker queries.
       // This avoids a race condition where the broker returns nothing as it is not aware of the new segments yet,
       // as this cannot be differentiated from the case where the segments have been dropped by load rules already.
-      Thread.sleep(INITIAL_SLEEP_DURATION_MILLIS);
+      waitIfNeeded(INITIAL_SLEEP_DURATION_MILLIS);
 
       while (!versionsToAwait.isEmpty()) {
         // Check the timeout and exit if exceeded.
@@ -131,7 +144,7 @@ public class SegmentLoadAwaiter
           updateStatus(State.RUNNING, startTime);
 
           // Sleep for a while before retrying.
-          Thread.sleep(SLEEP_DURATION_MILLIS);
+          waitIfNeeded(SLEEP_DURATION_MILLIS);
         }
       }
     }
@@ -144,6 +157,12 @@ public class SegmentLoadAwaiter
     }
     // Update the status.
     updateStatus(State.SUCCESS, startTime);
+  }
+
+  private void waitIfNeeded(long waitTimeMillis) throws Exception {
+    if (doWait) {
+      Thread.sleep(waitTimeMillis);
+    }
   }
 
   /**
@@ -173,12 +192,8 @@ public class SegmentLoadAwaiter
                                      false, false, false, null, null);
     request.setContent("application/json", objectMapper.writeValueAsBytes(sqlQuery));
 
-    StringFullResponseHolder responseHolder = brokerClient.sendQuery(request);
-    if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
-      throw new RE("HTTP request to[%s] failed", request.getUrl());
-    }
+    String response = brokerClient.sendQuery(request);
 
-    String response = responseHolder.getContent();
     if (response.trim().isEmpty()) {
       // If no segments are returned for a version, all segments have been dropped by a drop rule.
       return new VersionLoadStatus(0, 0);
@@ -205,7 +220,7 @@ public class SegmentLoadAwaiter
 
     @JsonCreator
     public SegmentLoadAwaiterStatus(
-        @JsonProperty("state") SegmentLoadAwaiter.State state,
+        @JsonProperty("state") SegmentLoadWaiter.State state,
         @JsonProperty("startTime") DateTime startTime,
         @JsonProperty("duration") long duration,
         @JsonProperty("totalSegments") int totalSegments,
@@ -220,7 +235,7 @@ public class SegmentLoadAwaiter
     }
 
     @JsonProperty
-    public SegmentLoadAwaiter.State getState()
+    public SegmentLoadWaiter.State getState()
     {
       return state;
     }
@@ -266,12 +281,12 @@ public class SegmentLoadAwaiter
 
     @JsonCreator
     public VersionLoadStatus(
-        @JsonProperty("totalSegments") int total_segments,
-        @JsonProperty("loadingSegments") int loading_segments
+        @JsonProperty("totalSegments") int totalSegments,
+        @JsonProperty("loadingSegments") int loadingSegments
     )
     {
-      this.totalSegments = total_segments;
-      this.loadingSegments = loading_segments;
+      this.totalSegments = totalSegments;
+      this.loadingSegments = loadingSegments;
     }
 
     @JsonProperty("totalSegments")
@@ -286,6 +301,7 @@ public class SegmentLoadAwaiter
       return loadingSegments;
     }
 
+    @JsonIgnore
     public boolean isLoadingComplete()
     {
       return loadingSegments == 0;

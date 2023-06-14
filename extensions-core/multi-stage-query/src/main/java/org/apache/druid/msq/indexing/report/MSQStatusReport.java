@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.TaskState;
-import org.apache.druid.msq.exec.SegmentLoadAwaiter;
+import org.apache.druid.msq.exec.SegmentLoadWaiter;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.joda.time.DateTime;
 
@@ -52,7 +52,7 @@ public class MSQStatusReport
   private final int runningTasks;
 
   @Nullable
-  private final SegmentLoadAwaiter.SegmentLoadAwaiterStatus segmentLoadAwaiterStatus;
+  private final SegmentLoadWaiter.SegmentLoadAwaiterStatus segmentLoadAwaiterStatus;
 
   @JsonCreator
   public MSQStatusReport(
@@ -63,7 +63,7 @@ public class MSQStatusReport
       @JsonProperty("durationMs") long durationMs,
       @JsonProperty("pendingTasks") int pendingTasks,
       @JsonProperty("runningTasks") int runningTasks,
-      @JsonProperty("segmentLoadAwaiterStatus") @Nullable SegmentLoadAwaiter.SegmentLoadAwaiterStatus segmentLoadAwaiterStatus
+      @JsonProperty("segmentLoadAwaiterStatus") @Nullable SegmentLoadWaiter.SegmentLoadAwaiterStatus segmentLoadAwaiterStatus
   )
   {
     this.status = Preconditions.checkNotNull(status, "status");
@@ -126,7 +126,7 @@ public class MSQStatusReport
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public SegmentLoadAwaiter.SegmentLoadAwaiterStatus getSegmentLoadAwaiterStatus()
+  public SegmentLoadWaiter.SegmentLoadAwaiterStatus getSegmentLoadAwaiterStatus()
   {
     return segmentLoadAwaiterStatus;
   }
