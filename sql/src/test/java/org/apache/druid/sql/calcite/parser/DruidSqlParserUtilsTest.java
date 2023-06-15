@@ -21,13 +21,17 @@ package org.apache.druid.sql.calcite.parser;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.avatica.util.TimeUnit;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlIntervalQualifier;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlPostfixOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
@@ -119,7 +123,74 @@ public class DruidSqlParserUtilsTest
     }
   }
 
-  public static class FloorToGranularityConversionTestErrors
+  public static class ClusteredByColumnsValidationTest
+  {
+    /**
+     * Tests an empty CLUSTERED BY clause
+     */
+    @Test
+    public void testEmptyClusteredByColumnsValid()
+    {
+      final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);
+      try {
+        DruidSqlParserUtils.validateClusteredByColumns(clusteredByArgs);
+      }
+      catch (ValidationException e) {
+        Assert.fail("Did not expect an exception" + e.getMessage());
+      }
+    }
+
+    /**
+     * Tests clause "CLUSTERED BY DIM1, DIM2 ASC, 3"
+     */
+    @Test
+    public void testClusteredByColumnsValid() throws ValidationException
+    {
+      final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);
+      clusteredByArgs.add(new SqlIdentifier("DIM1", SqlParserPos.ZERO));
+      clusteredByArgs.add(new SqlIdentifier("DIM2 ASC", SqlParserPos.ZERO));
+      clusteredByArgs.add(SqlLiteral.createExactNumeric("3", SqlParserPos.ZERO));
+
+      try {
+        DruidSqlParserUtils.validateClusteredByColumns(clusteredByArgs);
+      }
+      catch (ValidationException e) {
+        Assert.fail("Did not expect an exception" + e.getMessage());
+      }
+    }
+
+    /**
+     * Tests clause "CLUSTERED BY DIM1, DIM2 ASC, 3, DIM4 DESC"
+     */
+    @Test
+    public void testClusteredByColumnsWithDescThrowsException()
+    {
+      final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);
+      clusteredByArgs.add(new SqlIdentifier("DIM1", SqlParserPos.ZERO));
+      clusteredByArgs.add(new SqlIdentifier("DIM2 ASC", SqlParserPos.ZERO));
+      clusteredByArgs.add(SqlLiteral.createExactNumeric("3", SqlParserPos.ZERO));
+
+      final SqlBasicCall sqlBasicCall = new SqlBasicCall(
+          new SqlPostfixOperator("DESC", SqlKind.DESCENDING, 2, null, null, null),
+          new SqlNode[]{
+              new SqlIdentifier("DIM4", SqlParserPos.ZERO)
+          },
+          new SqlParserPos(0, 3)
+      );
+      clusteredByArgs.add(sqlBasicCall);
+
+      ValidationException e = Assert.assertThrows(
+          ValidationException.class,
+          () -> DruidSqlParserUtils.validateClusteredByColumns(clusteredByArgs)
+      );
+      Assert.assertEquals(
+          "[`DIM4` DESC] is invalid. CLUSTERED BY columns cannot be sorted in descending order.",
+          e.getMessage()
+      );
+    }
+  }
+
+  public static class FloorToGranularityConversionErrorsTest
   {
     /**
      * Tests clause like "PARTITIONED BY 'day'"

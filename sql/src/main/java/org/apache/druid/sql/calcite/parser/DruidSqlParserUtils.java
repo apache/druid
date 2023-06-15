@@ -295,7 +295,11 @@ public class DruidSqlParserUtils
    */
   public static void validateClusteredByColumns(final SqlNodeList clusteredByNodes) throws ValidationException
   {
-    for (final SqlNode clusteredByNode: clusteredByNodes.getList()) {
+    if (clusteredByNodes == null) {
+      return;
+    }
+
+    for (final SqlNode clusteredByNode : clusteredByNodes.getList()) {
       if (clusteredByNode.isA(ImmutableSet.of(SqlKind.DESCENDING))) {
         throw new ValidationException(
             StringUtils.format("[%s] is invalid."
