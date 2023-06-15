@@ -35,6 +35,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlTimestampLiteral;
+import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.IAE;
@@ -324,7 +325,9 @@ public class DruidSqlParserUtils
     final List<String> retClusteredByNames = new ArrayList<>();
 
     for (SqlNode clusteredByNode : clusteredBy) {
-      if (clusteredByNode instanceof SqlNumericLiteral) {
+
+      // Verify that 'operand' is a literal number.
+      if (SqlUtil.isLiteral(clusteredByNode)) {
         // An ordinal is specified in CLUSTERED BY clause, so lookup the ordinal in the SELECT clause
         int ordinal = ((SqlNumericLiteral) clusteredByNode).getValueAs(Integer.class);
         SqlNode node = selectList.get(ordinal - 1);
