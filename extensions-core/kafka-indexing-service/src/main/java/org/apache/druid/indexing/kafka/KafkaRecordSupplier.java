@@ -32,10 +32,12 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.utils.CollectionUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
@@ -55,12 +57,17 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>
 {
   private final KafkaConsumer<byte[], byte[]> consumer;
   private boolean closed;
+
+  // Store the stream information when partitions get assigned. This is required because the consumer does not
+  // know about the parent stream which could be a list of topics.
+  private String stream;
 
   public KafkaRecordSupplier(
       Map<String, Object> consumerProperties,
@@ -82,6 +89,15 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   @Override
   public void assign(Set<StreamPartition<KafkaTopicPartition>> streamPartitions)
   {
+    Set<String> streams = streamPartitions.stream().map(StreamPartition::getStream).collect(Collectors.toSet());
+    try {
+      this.stream = CollectionUtils.getOnlyElement(streams, (Function<Set<String>, Throwable>) strings -> {
+        throw new IAE("[%s] streams found. Only one stream is supported.", strings);
+      });
+    }
+    catch (Throwable e) {
+      throw new RuntimeException(e);
+    }
     wrapExceptions(() -> consumer.assign(streamPartitions
                                              .stream()
                                              .map(x -> x.getPartitionId().asTopicPartition(x.getStream()))
@@ -120,7 +136,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   {
     return wrapExceptions(() -> consumer.assignment()
                                         .stream()
-                                        .map(e -> new StreamPartition<>(e.topic(),
+                                        .map(e -> new StreamPartition<>(stream,
                                                                         KafkaTopicPartition.fromTopicPartition(e)))
                                         .collect(Collectors.toSet()));
   }
@@ -180,11 +196,16 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   public Set<KafkaTopicPartition> getPartitionIds(String stream)
   {
     return wrapExceptions(() -> {
-      List<PartitionInfo> partitions = consumer.partitionsFor(stream);
-      if (partitions == null) {
-        throw new ISE("Topic [%s] is not found in KafkaConsumer's list of topics", stream);
+      List<PartitionInfo> allPartitions = new ArrayList<>();
+      for (String topic : stream.split(",")) {
+        List<PartitionInfo> partitions = consumer.partitionsFor(topic);
+        if (partitions == null) {
+          throw new ISE("Topic [%s] is not found in KafkaConsumer's list of topics", topic);
+        }
+        allPartitions.addAll(partitions);
       }
-      return partitions.stream().map(p -> new KafkaTopicPartition(p.topic(), p.partition())).collect(Collectors.toSet());
+
+      return allPartitions.stream().map(p -> new KafkaTopicPartition(p.topic(), p.partition())).collect(Collectors.toSet());
     });
   }
 

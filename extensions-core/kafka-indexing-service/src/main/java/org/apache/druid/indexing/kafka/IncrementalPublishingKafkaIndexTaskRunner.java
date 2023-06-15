@@ -135,6 +135,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
         final long nextOffset = outOfRangePartition.getValue();
         // seek to the beginning to get the least available offset
         StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(
+            // TODO - need original stream here
             topicPartition.topic(),
             KafkaTopicPartition.fromTopicPartition(topicPartition)
         );
@@ -159,6 +160,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
 
     if (doReset) {
       sendResetRequestAndWait(CollectionUtils.mapKeys(resetPartitions, streamPartition -> StreamPartition.of(
+          // need original stream here
           streamPartition.topic(),
           KafkaTopicPartition.fromTopicPartition(streamPartition)
       )), taskToolbox);
