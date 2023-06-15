@@ -474,7 +474,7 @@ public class TaskQueueScaleTest
     @Override
     public String getDataSource()
     {
-      throw new UnsupportedOperationException();
+      return DATASOURCE;
     }
 
     public void setResult(final TaskStatus result)
