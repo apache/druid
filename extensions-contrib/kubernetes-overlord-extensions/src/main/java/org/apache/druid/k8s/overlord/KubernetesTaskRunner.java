@@ -161,19 +161,17 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   {
     KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(task);
 
-    synchronized (tasks) {
-      KubernetesWorkItem workItem = tasks.get(task.getId());
+    KubernetesWorkItem workItem = tasks.get(task.getId());
 
-      if (workItem == null) {
-        throw new ISE("Task [%s] disappeared", task.getId());
-      }
-
-      if (workItem.isShutdownRequested()) {
-        throw new ISE("Task [%s] has been shut down", task.getId());
-      }
-
-      workItem.setKubernetesPeonLifecycle(peonLifecycle);
+    if (workItem == null) {
+      throw new ISE("Task [%s] disappeared", task.getId());
     }
+
+    if (workItem.isShutdownRequested()) {
+      throw new ISE("Task [%s] has been shut down", task.getId());
+    }
+
+    workItem.setKubernetesPeonLifecycle(peonLifecycle);
 
     try {
       TaskStatus taskStatus;
