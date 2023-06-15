@@ -320,12 +320,12 @@ public class DruidQueryGenerator extends RelShuttleImpl
 
   public List<PartialDruidQuery> getQueryList()
   {
-    return queryList;
+    return ImmutableList.copyOf(queryList);
   }
 
   public List<DruidTable> getQueryTables()
   {
-    return queryTables;
+    return ImmutableList.copyOf(queryTables);
   }
 
   public DruidTable getCurrentTable()
