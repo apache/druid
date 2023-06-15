@@ -21,11 +21,13 @@ package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategiesTest;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -342,35 +344,35 @@ public class ExprEvalTest extends InitializedNullHandlingTest
         coerced.rhs
     );
 
-    Map<String, Object> unknown1 = ImmutableMap.of("x", 1L, "y", 2L);
-    Map<String, Object> unknown2 = ImmutableMap.of("x", 4L, "y", 5L);
-    List<Map<String, Object>> listUnknownComplex = ImmutableList.of(unknown1, unknown2);
+    Map<String, Object> nested1 = ImmutableMap.of("x", 1L, "y", 2L);
+    Map<String, Object> nested2 = ImmutableMap.of("x", 4L, "y", 5L);
+    List<Map<String, Object>> listUnknownComplex = ImmutableList.of(nested1, nested2);
     coerced = ExprEval.coerceListToArray(listUnknownComplex, false);
-    Assert.assertEquals(ExpressionTypeFactory.getInstance().ofArray(ExpressionType.UNKNOWN_COMPLEX), coerced.lhs);
+    Assert.assertEquals(ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA), coerced.lhs);
     Assert.assertArrayEquals(
-        new Object[]{unknown1, unknown2},
+        new Object[]{nested1, nested2},
         coerced.rhs
     );
 
 
-    Map<String, Object> unknown3 = ImmutableMap.of("x", 5L, "y", 7L);
-    Map<String, Object> unknown4 = ImmutableMap.of("x", 6L, "y", 8L);
+    Map<String, Object> nested3 = ImmutableMap.of("x", 5L, "y", 7L);
+    Map<String, Object> nested4 = ImmutableMap.of("x", 6L, "y", 8L);
 
     List<List<Map<String, Object>>> nestedListsComplex = ImmutableList.of(
-        ImmutableList.of(unknown1, unknown2),
-        ImmutableList.of(unknown3, unknown4)
+        ImmutableList.of(nested1, nested2),
+        ImmutableList.of(nested3, nested4)
     );
     coerced = ExprEval.coerceListToArray(nestedListsComplex, false);
     Assert.assertEquals(
         ExpressionTypeFactory.getInstance().ofArray(
-            ExpressionTypeFactory.getInstance().ofArray(ExpressionType.UNKNOWN_COMPLEX)
+            ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA)
         ),
         coerced.lhs
     );
     Assert.assertArrayEquals(
         new Object[]{
-            new Object[]{unknown1, unknown2},
-            new Object[]{unknown3, unknown4}
+            new Object[]{nested1, nested2},
+            new Object[]{nested3, nested4}
         },
         coerced.rhs
     );
@@ -395,6 +397,41 @@ public class ExprEvalTest extends InitializedNullHandlingTest
         },
         coerced.rhs
     );
+
+    List<List<Object>> mixedNested = ImmutableList.of(
+        ImmutableList.of("a", "b", "c"),
+        ImmutableList.of(1L, 2L, 3L),
+        ImmutableList.of(3.0, 4.0, 5.0),
+        ImmutableList.of("a", 2L, 3.0, nested1)
+    );
+    coerced = ExprEval.coerceListToArray(mixedNested, false);
+    Assert.assertEquals(
+        ExpressionTypeFactory.getInstance().ofArray(
+            ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA)
+        ),
+        coerced.lhs
+    );
+    Assert.assertArrayEquals(
+        new Object[]{
+            new Object[]{"a", "b", "c"},
+            new Object[]{1L, 2L, 3L},
+            new Object[]{3.0, 4.0, 5.0},
+            new Object[]{"a", 2L, 3.0, nested1}
+        },
+        coerced.rhs
+    );
+
+    List<List<Object>> mixedUnknown = ImmutableList.of(
+        ImmutableList.of("a", "b", "c"),
+        ImmutableList.of(1L, 2L, 3L),
+        ImmutableList.of(3.0, 4.0, 5.0, new SerializablePair<>("hello", 1234L)),
+        ImmutableList.of("a", 2L, 3.0, nested1)
+    );
+    Throwable t = Assert.assertThrows(
+        Types.IncompatibleTypeException.class,
+        () -> ExprEval.coerceListToArray(mixedUnknown, false)
+    );
+    Assert.assertEquals("Cannot implicitly cast [DOUBLE] to [COMPLEX]", t.getMessage());
   }
 
   @Test

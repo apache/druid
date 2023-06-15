@@ -36,6 +36,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Generic result holder for evaluated {@link Expr} containing the value and {@link ExprType} of the value to allow
@@ -183,7 +184,7 @@ public abstract class ExprEval<T>
         for (Object o : val) {
           if (o != null) {
             ExprEval<?> eval = ExprEval.bestEffortOf(o);
-            elementType = ExpressionTypeConversion.coerceArrayTypes(elementType, eval.type());
+            elementType = ExpressionTypeConversion.leastRestrictiveType(elementType, eval.type());
             evals[i++] = eval;
           } else {
             evals[i++] = null;
@@ -504,6 +505,11 @@ public abstract class ExprEval<T>
     // back into bytes
     if (val instanceof byte[]) {
       return new StringExprEval(StringUtils.encodeBase64String((byte[]) val));
+    }
+
+
+    if (val instanceof Map) {
+      return ofComplex(ExpressionType.NESTED_DATA, val);
     }
 
     // is this cool?
