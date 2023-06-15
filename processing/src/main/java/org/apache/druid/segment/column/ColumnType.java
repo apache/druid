@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 
 import javax.annotation.Nullable;
@@ -135,7 +134,24 @@ public class ColumnType extends BaseTypeSignature<ValueType>
     return ColumnTypeFactory.getInstance().ofComplex(complexTypeName);
   }
 
-  public static ColumnType leastRestrictiveType(@Nullable ColumnType type, @Nullable ColumnType other)
+  /**
+   * Finds the type that can best represent both types, or none if there is no type information.
+   * If either type is null, the other type is returned. If both types are null, this method returns null as we cannot
+   * determine any useful type information. If the types are {@link ValueType#COMPLEX}, they must be the same complex
+   * type, else this function throws a {@link IllegalArgumentException} as the types are truly incompatible, with the
+   * exception of {@link ColumnType#NESTED_DATA} which is complex and represents nested AND mixed type data so is
+   * instead treated as the 'least restrictive type' if present. If both types are {@link ValueType#ARRAY}, the result
+   * is an array of the result of calling this method again on {@link ColumnType#elementType}. If only one type is an
+   * array, the result is an array type of calling this method on the non-array type and the array element type. After
+   * arrays, if either type is {@link ValueType#STRING}, the result is {@link ValueType#STRING}. If both types are
+   * numeric, then the result will be {@link ValueType#LONG} if both are longs, {@link ValueType#FLOAT} if both are
+   * floats, else {@link ValueType#DOUBLE}.
+   *
+   * @see org.apache.druid.math.expr.ExpressionTypeConversion#function for a similar method used for expression type
+   *                                                                   inference
+   */
+  @Nullable
+  public static ColumnType leastRestrictiveType(@Nullable ColumnType type, @Nullable ColumnType other) throws Types.IncompatibleTypeException
   {
     if (type == null) {
       return other;
@@ -151,7 +167,7 @@ public class ColumnType extends BaseTypeSignature<ValueType>
         return type;
       }
       if (!Objects.equals(type, other)) {
-        throw new IAE("Cannot implicitly cast %s to %s", type, other);
+        throw new Types.IncompatibleTypeException(type, other);
       }
       return type;
     }
@@ -160,7 +176,7 @@ public class ColumnType extends BaseTypeSignature<ValueType>
       if (ColumnType.NESTED_DATA.equals(type) || ColumnType.NESTED_DATA.equals(other)) {
         return ColumnType.NESTED_DATA;
       }
-      throw new IAE("Cannot implicitly cast %s to %s", type, other);
+      throw new Types.IncompatibleTypeException(type, other);
     }
 
     // arrays convert based on least restrictive element type
@@ -169,11 +185,13 @@ public class ColumnType extends BaseTypeSignature<ValueType>
         return type;
       }
       final ColumnType commonElementType;
+      // commonElementType cannot be null if we got this far, we always return a value unless both args are null
       if (other.isArray()) {
         commonElementType = leastRestrictiveType(
             (ColumnType) type.getElementType(),
             (ColumnType) other.getElementType()
         );
+
         return ColumnType.ofArray(commonElementType);
       } else {
         commonElementType = leastRestrictiveType(
@@ -201,13 +219,14 @@ public class ColumnType extends BaseTypeSignature<ValueType>
     }
 
     // all numbers win over longs
-    // floats vs doubles would be handled here, but we currently only support doubles...
     if (Types.is(type, ValueType.LONG) && Types.isNullOr(other, ValueType.LONG)) {
       return ColumnType.LONG;
     }
+    // doubles win over floats
     if (Types.is(type, ValueType.FLOAT) && Types.isNullOr(other, ValueType.FLOAT)) {
       return ColumnType.FLOAT;
     }
     return ColumnType.DOUBLE;
   }
+
 }

@@ -127,6 +127,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     // less chance of blocking the merge
     final BlockingQueue<ResultBatch<T>> outputQueue = new ArrayBlockingQueue<>(4 * queueSize);
     final MergeCombineMetricsAccumulator metricsAccumulator = new MergeCombineMetricsAccumulator(inputSequences.size());
+    // Starting with empty partitionMetrics
+    metricsAccumulator.setPartitions(Collections.emptyList());
+    // starting with solo merge accumulator
+    metricsAccumulator.setMergeMetrics(new MergeCombineActionMetricsAccumulator());
     MergeCombinePartitioningAction<T> mergeCombineAction = new MergeCombinePartitioningAction<>(
         inputSequences,
         orderingFn,
@@ -895,7 +899,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               accumulated.add(in);
               count++;
               if (count % batchSize == 0) {
-                yield();
+                this.yield();
               }
               return accumulated;
             }

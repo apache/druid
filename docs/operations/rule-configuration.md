@@ -34,11 +34,11 @@ You can specify the data to retain or drop in the following ways:
 - Period: segment data specified as an offset from the present time.
 - Interval: a fixed time range.
 
-Retention rules are persistent: they remain in effect until you change them. Druid stores retention rules in its [metadata store](../dependencies/metadata-storage.md).
+Retention rules are persistent: they remain in effect until you change them. Druid stores retention rules in its [metadata store](../design/metadata-storage.md).
 
 ## Set retention rules
 
-You can use the Druid [web console](./web-console.md) or the [Coordinator API](./api-reference.md#coordinator) to create and manage retention rules.
+You can use the Druid [web console](./web-console.md) or the [Coordinator API](../api-reference/api-reference.md#coordinator) to create and manage retention rules.
 
 ### Use the web console
 
@@ -195,7 +195,7 @@ Forever drop rules have type `dropForever`:
 
 ```json
 {
-  "type": "dropForever",
+  "type": "dropForever"
 }
 ```
 
@@ -209,7 +209,7 @@ Period drop rules have type `dropByPeriod` and the following JSON structure:
 {
   "type": "dropByPeriod",
   "period": "P1M",
-  "includeFuture": true,
+  "includeFuture": true
 }
 ```
 
@@ -271,7 +271,7 @@ Forever broadcast rules have type `broadcastForever`:
 
 ```json
 {
-  "type": "broadcastForever",
+  "type": "broadcastForever"
 }
 ```
 
@@ -285,7 +285,7 @@ Period broadcast rules have type `broadcastByPeriod` and the following JSON stru
 {
   "type": "broadcastByPeriod",
   "period": "P1M",
-  "includeFuture": true,
+  "includeFuture": true
 }
 ```
 

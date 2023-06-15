@@ -61,7 +61,8 @@ export type HeaderActiveTab =
   | 'data-loader'
   | 'streaming-data-loader'
   | 'classic-batch-data-loader'
-  | 'ingestion'
+  | 'supervisors'
+  | 'tasks'
   | 'datasources'
   | 'segments'
   | 'services'
@@ -432,10 +433,19 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         <AnchorButton
           className="header-entry"
           minimal
-          active={active === 'ingestion'}
+          active={active === 'supervisors'}
+          icon={IconNames.EYE_OPEN}
+          text="Supervisors"
+          href="#supervisors"
+          disabled={!capabilities.hasSqlOrOverlordAccess()}
+        />
+        <AnchorButton
+          className="header-entry"
+          minimal
+          active={active === 'tasks'}
           icon={IconNames.GANTT_CHART}
-          text="Ingestion"
-          href="#ingestion"
+          text="Tasks"
+          href="#tasks"
           disabled={!capabilities.hasSqlOrOverlordAccess()}
         />
         <AnchorButton

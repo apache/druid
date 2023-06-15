@@ -137,7 +137,13 @@ public class ScalarDoubleColumnSupplierTest extends InitializedNullHandlingTest
       SortedMap<String, FieldTypeInfo.MutableTypeSet> sortedFields = new TreeMap<>();
 
       IndexableAdapter.NestedColumnMergable mergable = closer.register(
-          new IndexableAdapter.NestedColumnMergable(indexer.getSortedValueLookups(), indexer.getFieldTypeInfo())
+          new IndexableAdapter.NestedColumnMergable(
+              indexer.getSortedValueLookups(),
+              indexer.getFieldTypeInfo(),
+              false,
+              false,
+              null
+          )
       );
       SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
       mergable.mergeFieldsInto(sortedFields);

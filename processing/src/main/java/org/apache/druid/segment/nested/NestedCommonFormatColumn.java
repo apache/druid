@@ -75,9 +75,11 @@ public interface NestedCommonFormatColumn extends BaseColumn
 
   default SortedMap<String, FieldTypeInfo.MutableTypeSet> getFieldTypeInfo()
   {
-    FieldTypeInfo.MutableTypeSet rootOnlyType = new FieldTypeInfo.MutableTypeSet().add(getLogicalType());
     SortedMap<String, FieldTypeInfo.MutableTypeSet> fields = new TreeMap<>();
-    fields.put(NestedPathFinder.JSON_PATH_ROOT, rootOnlyType);
+    if (!ColumnType.NESTED_DATA.equals(getLogicalType())) {
+      FieldTypeInfo.MutableTypeSet rootOnlyType = new FieldTypeInfo.MutableTypeSet().add(getLogicalType());
+      fields.put(NestedPathFinder.JSON_PATH_ROOT, rootOnlyType);
+    }
     return fields;
   }
 

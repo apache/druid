@@ -44,7 +44,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
   {
     name: 'maxSegmentsToMove',
     type: 'number',
-    defaultValue: 5,
+    defaultValue: 100,
     info: <>The maximum number of segments that can be moved at any given time.</>,
   },
   {
@@ -97,7 +97,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
   {
     name: 'maxSegmentsInNodeLoadingQueue',
     type: 'number',
-    defaultValue: 0,
+    defaultValue: 500,
     info: (
       <>
         The maximum number of segments that could be queued for loading to any given server. This
@@ -106,7 +106,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
         scheduled to be replicated to some particular node (faster loading could be preferred to
         better segments distribution). Desired value depends on segments loading speed, acceptable
         replication time and number of nodes. Value 1000 could be a start point for a rather big
-        cluster. Default value is 0 (loading queue is unbounded)
+        cluster. Default value is 500.
       </>
     ),
   },
@@ -147,7 +147,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
   {
     name: 'replicationThrottleLimit',
     type: 'number',
-    defaultValue: 10,
+    defaultValue: 500,
     info: <>The maximum number of segments that can be replicated at one time.</>,
   },
   {
@@ -199,7 +199,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
   {
     name: 'useRoundRobinSegmentAssignment',
     type: 'boolean',
-    defaultValue: false,
+    defaultValue: true,
     info: (
       <>
         Boolean flag for whether segments should be assigned to historicals in a round-robin

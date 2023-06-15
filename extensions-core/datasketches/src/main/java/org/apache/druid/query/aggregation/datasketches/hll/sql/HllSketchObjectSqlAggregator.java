@@ -64,7 +64,7 @@ public class HllSketchObjectSqlAggregator extends HllSketchBaseSqlAggregator imp
 
   private static class HllSketchSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE = "'" + NAME + "(column, lgK, tgtHllType)'\n";
+    private static final String SIGNATURE = "'" + NAME + "(column, lgK, tgtHllType)'";
 
     HllSketchSqlAggFunction()
     {

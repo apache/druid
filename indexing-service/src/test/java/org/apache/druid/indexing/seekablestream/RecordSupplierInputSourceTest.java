@@ -33,9 +33,11 @@ import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexing.overlord.sampler.SamplerException;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -45,6 +47,7 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -62,7 +65,6 @@ import java.util.stream.IntStream;
 
 public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
 {
-
   private static final int NUM_COLS = 16;
   private static final int NUM_ROWS = 128;
   private static final String TIMESTAMP_STRING = "2019-01-01";
@@ -133,6 +135,24 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     Assert.assertEquals(0, inputStats.getProcessedBytes());
     Assert.assertEquals(0, read);
     Assert.assertTrue(supplier.isClosed());
+  }
+
+  @Test
+  public void testRecordSupplierInputSourceThrowsSamplerExceptionWhenExceptionDuringSeek()
+  {
+    final RecordSupplier<?, ?, ?> supplier = Mockito.mock(RecordSupplier.class);
+    Mockito.when(supplier.getPartitionIds("test-stream"))
+           .thenThrow(new StreamException(new Exception("Something bad happened")));
+
+    //noinspection ResultOfObjectAllocationIgnored
+    final SamplerException exception = Assert.assertThrows(
+        SamplerException.class,
+        () -> new RecordSupplierInputSource<>("test-stream", supplier, false, null)
+    );
+    Assert.assertEquals(
+        "Exception while seeking to the [latest] offset of partitions in topic [test-stream]: Something bad happened",
+        exception.getMessage()
+    );
   }
 
   private static class RandomCsvSupplier implements RecordSupplier<Integer, Integer, ByteEntity>

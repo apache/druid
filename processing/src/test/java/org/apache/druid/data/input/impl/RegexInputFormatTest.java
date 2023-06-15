@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.utils.CompressionUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -68,5 +69,31 @@ public class RegexInputFormatTest
     final byte[] json = mapper.writeValueAsBytes(expected);
     final Map<String, Object> map = mapper.readValue(json, Map.class);
     Assert.assertFalse(map.containsKey("compiledPattern"));
+  }
+
+  @Test
+  public void test_getWeightedSize_withoutCompression()
+  {
+    final RegexInputFormat format = new RegexInputFormat(
+        "//[^\\r\\n]*[\\r\\n]",
+        "|",
+        ImmutableList.of("col1", "col2", "col3")
+    );
+    final long unweightedSize = 100L;
+    Assert.assertEquals(unweightedSize, format.getWeightedSize("file.txt", unweightedSize));
+  }
+  @Test
+  public void test_getWeightedSize_withGzCompression()
+  {
+    final RegexInputFormat format = new RegexInputFormat(
+        "//[^\\r\\n]*[\\r\\n]",
+        "|",
+        ImmutableList.of("col1", "col2", "col3")
+    );
+    final long unweightedSize = 100L;
+    Assert.assertEquals(
+        unweightedSize * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR,
+        format.getWeightedSize("file.txt.gz", unweightedSize)
+    );
   }
 }

@@ -44,7 +44,6 @@ import java.util.Set;
 
 public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, KafkaRecordEntity>
 {
-  public static final String INPUT_SOURCE_TYPE = "kafka";
   private static final String TYPE = "index_kafka";
 
   private final ObjectMapper configMapper;
@@ -147,7 +146,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long, Kafka
   public Set<ResourceAction> getInputSourceResources()
   {
     return Collections.singleton(new ResourceAction(
-        new Resource(INPUT_SOURCE_TYPE, ResourceType.EXTERNAL),
+        new Resource(KafkaIndexTaskModule.SCHEME, ResourceType.EXTERNAL),
         Action.READ
     ));
   }

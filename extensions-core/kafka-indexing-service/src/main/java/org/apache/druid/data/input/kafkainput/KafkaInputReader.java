@@ -26,12 +26,14 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.indexing.seekablestream.SettableByteEntity;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -195,8 +197,9 @@ public class KafkaInputReader implements InputEntityReader
           // Remove the dummy timestamp added in KafkaInputFormat
           newDimensions.remove(KafkaInputFormat.DEFAULT_AUTO_TIMESTAMP_STRING);
 
+          final DateTime timestamp = MapInputRowParser.parseTimestamp(inputRowSchema.getTimestampSpec(), event);
           return new MapBasedInputRow(
-              inputRowSchema.getTimestampSpec().extractTimestamp(event),
+              timestamp,
               getFinalDimensionList(newDimensions),
               event
           );

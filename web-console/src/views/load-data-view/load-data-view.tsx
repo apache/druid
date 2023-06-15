@@ -18,7 +18,6 @@
 
 import type { IconName } from '@blueprintjs/core';
 import {
-  Alert,
   AnchorButton,
   Button,
   ButtonGroup,
@@ -54,7 +53,7 @@ import {
   Loader,
   PopoverText,
 } from '../../components';
-import { AsyncActionDialog } from '../../dialogs';
+import { AlertDialog, AsyncActionDialog } from '../../dialogs';
 import type {
   DimensionSpec,
   DruidFilter,
@@ -127,6 +126,7 @@ import {
   updateSchemaWithSample,
   upgradeSpec,
 } from '../../druid-models';
+import { getSpecDatasourceName } from '../../helpers';
 import { getLink } from '../../links';
 import { Api, AppToaster, UrlBaser } from '../../singletons';
 import {
@@ -350,7 +350,10 @@ export interface LoadDataViewProps {
   mode: LoadDataViewMode;
   initSupervisorId?: string;
   initTaskId?: string;
-  goToIngestion: (taskGroupId: string | undefined, openDialog?: string) => void;
+  goToSupervisor: (supervisorId: string) => void;
+  openSupervisorSubmit: () => void;
+  goToTasks: (taskGroupId: string) => void;
+  openTaskSubmit: () => void;
 }
 
 interface SelectedIndex<T> {
@@ -570,6 +573,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     try {
       newSpec = upgradeSpec(newSpec);
     } catch (e) {
+      const streaming = isStreamingSpec(newSpec);
       newSpec = {};
       AppToaster.show({
         icon: IconNames.ERROR,
@@ -586,10 +590,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           </>
         ),
         action: {
-          text: 'Go to Ingestion view',
-          onClick: () => {
-            this.props.goToIngestion(undefined);
-          },
+          text: `Go to ${streaming ? 'Supervisors' : 'Tasks'} view`,
+          onClick: streaming ? this.props.openSupervisorSubmit : this.props.openTaskSubmit,
         },
       });
     }
@@ -1000,7 +1002,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   renderWelcomeStepControls(): JSX.Element | undefined {
-    const { goToIngestion } = this.props;
+    const { openSupervisorSubmit, openTaskSubmit } = this.props;
     const { spec, selectedComboType } = this.state;
 
     const issue = this.selectedIngestionTypeIssue();
@@ -1089,7 +1091,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 text="Submit supervisor"
                 rightIcon={IconNames.ARROW_RIGHT}
                 intent={Intent.PRIMARY}
-                onClick={() => goToIngestion(undefined, 'supervisor')}
+                onClick={openSupervisorSubmit}
               />
             </FormGroup>
             <FormGroup>
@@ -1097,7 +1099,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 text="Submit task"
                 rightIcon={IconNames.ARROW_RIGHT}
                 intent={Intent.PRIMARY}
-                onClick={() => goToIngestion(undefined, 'task')}
+                onClick={openTaskSubmit}
               />
             </FormGroup>
           </>
@@ -1157,7 +1159,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     if (!showResetConfirm) return;
 
     return (
-      <Alert
+      <AlertDialog
         cancelButtonText="Cancel"
         confirmButtonText="Reset spec"
         icon="trash"
@@ -1167,7 +1169,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         onConfirm={this.handleResetSpec}
       >
         <p>This will discard the current progress in the spec.</p>
-      </Alert>
+      </AlertDialog>
     );
   }
 
@@ -3361,7 +3363,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   private readonly handleSubmit = async () => {
-    const { goToIngestion } = this.props;
+    const { goToSupervisor, goToTasks } = this.props;
     const { spec, submitting } = this.state;
     if (submitting) return;
 
@@ -3384,7 +3386,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       });
 
       setTimeout(() => {
-        goToIngestion(undefined); // Can we get the supervisor ID here?
+        goToSupervisor(getSpecDatasourceName(spec));
       }, 1000);
     } else {
       let taskResp: any;
@@ -3405,7 +3407,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       });
 
       setTimeout(() => {
-        goToIngestion(taskResp.data.task);
+        goToTasks(taskResp.data.task);
       }, 1000);
     }
   };

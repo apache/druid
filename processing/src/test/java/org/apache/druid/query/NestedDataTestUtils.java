@@ -76,6 +76,14 @@ public class NestedDataTestUtils
   public static final String TYPES_DATA_FILE = "nested-types-test-data.json";
   public static final String ARRAY_TYPES_DATA_FILE = "nested-array-test-data.json";
 
+  public static final String ARRAY_TYPES_DATA_FILE_2 = "nested-array-test-data-2.json";
+  public static final String ALL_TYPES_TEST_DATA_FILE = "nested-all-types-test-data.json";
+
+  public static final String INCREMENTAL_SEGMENTS_NAME = "incremental";
+  public static final String DEFAULT_SEGMENTS_NAME = "segments";
+  public static final String FRONT_CODED_SEGMENTS_NAME = "segments-frontcoded";
+  public static final String MIX_SEGMENTS_NAME = "mixed";
+
   public static final ObjectMapper JSON_MAPPER;
 
   public static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("timestamp", null, null);
@@ -519,7 +527,7 @@ public class NestedDataTestUtils
       @Override
       public String toString()
       {
-        return "mixed";
+        return MIX_SEGMENTS_NAME;
       }
     });
     segmentsGenerators.add(new BiFunction<TemporaryFolder, Closer, List<Segment>>()
@@ -541,7 +549,7 @@ public class NestedDataTestUtils
       @Override
       public String toString()
       {
-        return "incremental";
+        return INCREMENTAL_SEGMENTS_NAME;
       }
     });
     segmentsGenerators.add(new BiFunction<TemporaryFolder, Closer, List<Segment>>()
@@ -577,7 +585,7 @@ public class NestedDataTestUtils
       @Override
       public String toString()
       {
-        return "segments";
+        return DEFAULT_SEGMENTS_NAME;
       }
     });
     segmentsGenerators.add(new BiFunction<TemporaryFolder, Closer, List<Segment>>()
@@ -621,9 +629,14 @@ public class NestedDataTestUtils
       @Override
       public String toString()
       {
-        return "segments-frontcoded";
+        return FRONT_CODED_SEGMENTS_NAME;
       }
     });
     return segmentsGenerators;
+  }
+
+  public static boolean expectSegmentGeneratorCanVectorize(String name)
+  {
+    return DEFAULT_SEGMENTS_NAME.equals(name) || FRONT_CODED_SEGMENTS_NAME.equals(name);
   }
 }
