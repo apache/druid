@@ -134,7 +134,7 @@ public class SqlStatementTest
   }
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
 

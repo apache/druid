@@ -19,6 +19,7 @@
 
 package org.apache.druid.matchers;
 
+import org.apache.druid.java.util.common.IAE;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 
@@ -36,6 +37,9 @@ public class DruidMatchers
   @SuppressWarnings({"unchecked", "rawtypes"})
   public static <K, V> Matcher<Map<? extends K, ? extends V>> mapMatcher(Object... keysAndValues)
   {
+    if (keysAndValues.length % 2 == 1) {
+      throw new IAE("keysAndValues should be pairs, but had an odd length [%s]", keysAndValues.length);
+    }
     ArrayList<Matcher<Map<? extends K, ? extends V>>> entryMatchers = new ArrayList<>();
     for (int i = 0; i < keysAndValues.length; i += 2) {
       entryMatchers.add(Matchers.hasEntry((K) keysAndValues[i], (V) keysAndValues[i + 1]));

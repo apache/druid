@@ -62,7 +62,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -187,7 +186,6 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   }
 
   public static void sanityTestVectorizedSqlQueries(PlannerFactory plannerFactory, String query)
-      throws ValidationException
   {
     final Map<String, Object> vector = ImmutableMap.of(
             QueryContexts.VECTORIZE_KEY, "force",

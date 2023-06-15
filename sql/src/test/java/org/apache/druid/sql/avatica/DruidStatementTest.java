@@ -101,7 +101,7 @@ public class DruidStatementTest extends CalciteTestBase
   private SqlStatementFactory sqlStatementFactory;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
@@ -129,7 +129,7 @@ public class DruidStatementTest extends CalciteTestBase
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
 
   }
