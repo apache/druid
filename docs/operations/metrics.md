@@ -283,7 +283,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/moved/count`|Number of segments moved in the cluster.|`tier`|Varies|
 |`segment/unmoved/count`|Number of segments which were chosen for balancing but were found to be already optimally placed.|`tier`|Varies|
 |`segment/dropped/count`|Number of segments chosen to be dropped from the cluster due to being over-replicated.|`tier`|Varies|
-|`segment/deleted/count`|Number of segments marked as unused due to drop rules.|`tier`|Varies|
+|`segment/deleted/count`|Number of segments marked as unused due to drop rules.| |Varies|
 |`segment/unneeded/count`|Number of segments dropped due to being marked as unused.|`tier`|Varies|
 |`segment/cost/raw`|Used in cost balancing. The raw cost of hosting segments.|`tier`|Varies|
 |`segment/cost/normalization`|Used in cost balancing. The normalization of hosting segments.|`tier`|Varies|
