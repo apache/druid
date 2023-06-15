@@ -166,67 +166,6 @@ public abstract class IngestHandler extends QueryHandler
   }
 
   /**
-   * Return sanitized clustered by columns specified to output columns.
-   * For example,
-   * EXPLAIN PLAN FOR
-   * INSERT INTO w000
-   * SELECT
-   *  TIME_PARSE("timestamp") AS __time,
-   *  page AS page_alias,
-   *  city,
-   *  country
-   * FROM ...
-   * PARTITIONED BY DAY
-   * CLUSTERED BY 1, 2, cityName
-   *
-   * The above SQL should return the following for clustered by columns: ["__time", "page_alias", "cityName"]
-   * That is the ordinals and any expression should resolve to the final output name.
-   *
-   */
-  @Nullable
-  protected List<String> sanitizedClusteredByColumns()
-  {
-    // CLUSTERED BY is an optional clause
-    SqlNodeList clusteredBy = ingestNode().getClusteredBy();
-    if (clusteredBy == null) {
-      return null;
-    }
-
-    SqlNode source = ingestNode().getSource();
-    Preconditions.checkArgument(source instanceof SqlSelect, "Source should be be a SELECT query");
-
-    List<SqlNode> selectList = ((SqlSelect) source).getSelectList().getList();
-    List<String> retClusteredByNames = new ArrayList<>();
-
-    for (SqlNode clusteredByNode : clusteredBy) {
-      if (clusteredByNode instanceof SqlNumericLiteral) {
-        // An ordinal is specified in CLUSTERED BY clause, so lookup the ordinal in the SELECT clause
-        int ordinal = ((SqlNumericLiteral) clusteredByNode).getValueAs(Integer.class);
-        SqlNode node = selectList.get(ordinal - 1);
-
-        if (node instanceof SqlBasicCall) {
-          // The node may be an alias or expression, in which case we'll get the output name
-          SqlBasicCall sqlBasicCall = (SqlBasicCall) node;
-          SqlOperator operator = (sqlBasicCall).getOperator();
-          if (operator instanceof SqlAsOperator) {
-            SqlNode sqlNode = (sqlBasicCall).getOperandList().get(1); // get the output type
-            retClusteredByNames.add(sqlNode.toString());
-          } else {
-            retClusteredByNames.add(node.toString());
-          }
-        } else if (node instanceof SqlIdentifier) {
-          String unqualifiedName = ((SqlIdentifier) node).names.get(1); // get the unqualified name
-          retClusteredByNames.add(unqualifiedName);
-        }
-      } else {
-        retClusteredByNames.add(clusteredByNode.toString());
-      }
-    }
-
-    return retClusteredByNames;
-  }
-
-  /**
    * Extract target datasource from a {@link SqlInsert}, and also validate that the ingestion is of a form we support.
    * Expects the target datasource to be either an unqualified name, or a name qualified by the default schema.
    */
@@ -350,7 +289,7 @@ public abstract class IngestHandler extends QueryHandler
           DruidSqlInsert.OPERATOR.getName(),
           targetDatasource,
           ingestionGranularity,
-          sanitizedClusteredByColumns(),
+          DruidSqlParserUtils.sanitizedClusteredByColumns(sqlNode.getClusteredBy(), sqlNode.getSource()),
           null
       );
     }
@@ -422,7 +361,7 @@ public abstract class IngestHandler extends QueryHandler
           DruidSqlReplace.OPERATOR.getName(),
           targetDatasource,
           ingestionGranularity,
-          sanitizedClusteredByColumns(),
+          DruidSqlParserUtils.sanitizedClusteredByColumns(sqlNode.getClusteredBy(), sqlNode.getSource()),
           replaceIntervals
       );
     }

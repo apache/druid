@@ -1314,13 +1314,6 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testSanitizedCluster()
-  {
-
-
-  }
-
-  @Test
   public void testInsertWithInvalidColumnNameInIngest()
   {
     testIngestionQuery()

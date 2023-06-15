@@ -35,6 +35,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlTimestampLiteral;
+import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -317,7 +318,7 @@ public class DruidSqlParserUtils
     if (clusteredBy == null) {
       return null;
     }
-    Preconditions.checkArgument(source instanceof SqlSelect, "Source should be be a SELECT query");
+    Preconditions.checkArgument(source instanceof SqlSelect, "Source should be a SELECT query");
     List<SqlNode> selectList = ((SqlSelect) source).getSelectList().getList();
 
     List<String> retClusteredByNames = new ArrayList<>();
@@ -336,11 +337,11 @@ public class DruidSqlParserUtils
             SqlNode sqlNode = (sqlBasicCall).getOperandList().get(1); // get the output type
             retClusteredByNames.add(sqlNode.toString());
           } else {
-            retClusteredByNames.add(node.toString());
+            retClusteredByNames.add(node.toSqlString(CalciteSqlDialect.DEFAULT).toString());
           }
         } else if (node instanceof SqlIdentifier) {
-          String unqualifiedName = ((SqlIdentifier) node).names.get(1); // get the unqualified name
-          retClusteredByNames.add(unqualifiedName);
+          SqlIdentifier n = ((SqlIdentifier) node);// get the unqualified name
+          retClusteredByNames.add(n.isSimple() ? n.getSimple() : n.names.get(1));
         }
       } else {
         retClusteredByNames.add(clusteredByNode.toString());
