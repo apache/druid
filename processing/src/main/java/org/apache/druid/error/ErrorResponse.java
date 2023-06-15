@@ -132,8 +132,8 @@ public class ErrorResponse
     }
 
     retVal.put("errorCode", underlyingException.getErrorCode());
-    retVal.put("persona", underlyingException.getTargetPersona());
-    retVal.put("category", underlyingException.getCategory());
+    retVal.put("persona", underlyingException.getTargetPersona().toString());
+    retVal.put("category", underlyingException.getCategory().toString());
     retVal.put("errorMessage", underlyingException.getMessage());
     retVal.put("context", underlyingException.getContext());
 

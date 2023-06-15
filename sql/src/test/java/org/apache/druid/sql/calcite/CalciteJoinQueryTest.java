@@ -5434,7 +5434,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                     .dimension(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG))
                                                     .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(
                                                         null,
-                                                        StringComparators.LEXICOGRAPHIC
+                                                        StringComparators.NUMERIC
                                                     )))
                                                     .aggregators(new CountAggregatorFactory("a0"))
                                                     .threshold(1)

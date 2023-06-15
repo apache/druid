@@ -303,6 +303,79 @@ public class QueryResourceTest
   }
 
   @Test
+  public void testGoodQueryThrowsDruidExceptionFromLifecycleExecute() throws IOException
+  {
+    String overrideConfigKey = "priority";
+    String overrideConfigValue = "678";
+    DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
+    queryResource = new QueryResource(
+        new QueryLifecycleFactory(
+            WAREHOUSE,
+            new QuerySegmentWalker()
+            {
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForIntervals(
+                  Query<T> query,
+                  Iterable<Interval> intervals
+              )
+              {
+                throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                                    .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                                    .build("failing for coverage!");
+              }
+
+              @Override
+              public <T> QueryRunner<T> getQueryRunnerForSegments(
+                  Query<T> query,
+                  Iterable<SegmentDescriptor> specs
+              )
+              {
+                throw new UnsupportedOperationException();
+              }
+            },
+            new DefaultGenericQueryMetricsFactory(),
+            new NoopServiceEmitter(),
+            testRequestLogger,
+            new AuthConfig(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            Suppliers.ofInstance(overrideConfig)
+        ),
+        jsonMapper,
+        smileMapper,
+        queryScheduler,
+        new AuthConfig(),
+        null,
+        ResponseContextConfig.newConfig(true),
+        DRUID_NODE
+    );
+
+    expectPermissiveHappyPathAuth();
+
+    final Response response = expectSynchronousRequestFlow(SIMPLE_TIMESERIES_QUERY);
+    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+
+    final ErrorResponse entity = (ErrorResponse) response.getEntity();
+    MatcherAssert.assertThat(
+        entity.getUnderlyingException(),
+        new DruidExceptionMatcher(DruidException.Persona.OPERATOR, DruidException.Category.RUNTIME_FAILURE, "adhoc")
+            .expectMessageIs("failing for coverage!")
+    );
+
+    Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
+    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery());
+    Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext());
+    Assert.assertTrue(testRequestLogger.getNativeQuerylogs()
+                                       .get(0)
+                                       .getQuery()
+                                       .getContext()
+                                       .containsKey(overrideConfigKey));
+    Assert.assertEquals(
+        overrideConfigValue,
+        testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey)
+    );
+  }
+
+  @Test
   public void testGoodQueryWithQueryConfigDoesNotOverrideQueryContext() throws IOException
   {
     String overrideConfigKey = "priority";
@@ -1203,7 +1276,8 @@ public class QueryResourceTest
   @Nonnull
   private MockHttpServletResponse expectAsyncRequestFlow(
       MockHttpServletRequest req,
-      byte[] queryBytes, QueryResource queryResource
+      byte[] queryBytes,
+      QueryResource queryResource
   ) throws IOException
   {
     final MockHttpServletResponse response = MockHttpServletResponse.forRequest(req);
@@ -1236,6 +1310,15 @@ public class QueryResourceTest
       }
       return true;
     });
+  }
+
+  private Response expectSynchronousRequestFlow(String simpleTimeseriesQuery) throws IOException
+  {
+    return expectSynchronousRequestFlow(
+        testServletRequest,
+        simpleTimeseriesQuery.getBytes(StandardCharsets.UTF_8),
+        queryResource
+    );
   }
 
   private Response expectSynchronousRequestFlow(

@@ -20,7 +20,10 @@
 package org.apache.druid.matchers;
 
 import org.hamcrest.Matcher;
+import org.hamcrest.Matchers;
 
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.function.Function;
 
 public class DruidMatchers
@@ -28,5 +31,15 @@ public class DruidMatchers
   public static <T, S> LambdaMatcher<T, S> fn(String name, Function<T, S> fn, Matcher<S> matcher)
   {
     return new LambdaMatcher<>(name + ": ", fn, matcher);
+  }
+
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  public static <K, V> Matcher<Map<? extends K, ? extends V>> mapMatcher(Object... keysAndValues)
+  {
+    ArrayList<Matcher<Map<? extends K, ? extends V>>> entryMatchers = new ArrayList<>();
+    for (int i = 0; i < keysAndValues.length; i += 2) {
+      entryMatchers.add(Matchers.hasEntry((K) keysAndValues[i], (V) keysAndValues[i + 1]));
+    }
+    return Matchers.allOf((Iterable) entryMatchers);
   }
 }

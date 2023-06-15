@@ -137,9 +137,9 @@ public class DruidException extends RuntimeException
    * @param persona the target persona of the exception message
    * @return a builder that can be used to complete the creation of the DruidException
    */
-  public static DruidExceptionBuilder forPersona(Persona persona)
+  public static PartialDruidExceptionBuilder forPersona(Persona persona)
   {
-    return new DruidExceptionBuilder("adhoc").forPersona(persona);
+    return new PartialDruidExceptionBuilder("adhoc", persona);
   }
 
   /**
@@ -239,6 +239,7 @@ public class DruidException extends RuntimeException
    *
    * @return an ErrorResponse
    */
+  @SuppressWarnings("unused")
   @JsonValue
   public ErrorResponse toErrorResponse()
   {
@@ -350,6 +351,23 @@ public class DruidException extends RuntimeException
     public int getExpectedStatus()
     {
       return expectedStatus;
+    }
+  }
+
+  public static class PartialDruidExceptionBuilder
+  {
+    private String errorCode;
+    private Persona targetPersona;
+
+    private PartialDruidExceptionBuilder(String errorCode, Persona targetPersona)
+    {
+      this.errorCode = errorCode;
+      this.targetPersona = targetPersona;
+    }
+
+    public DruidExceptionBuilder ofCategory(Category category)
+    {
+      return new DruidExceptionBuilder(errorCode).forPersona(targetPersona).ofCategory(category);
     }
   }
 
