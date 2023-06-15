@@ -134,18 +134,16 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public ListenableFuture<TaskStatus> run(Task task)
   {
-    synchronized (tasks) {
-      tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> runTask(task))));
-      return tasks.get(task.getId()).getResult();
-    }
+    return tasks.computeIfAbsent(
+        task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> runTask(task)))
+    ).getResult();
   }
 
   protected ListenableFuture<TaskStatus> joinAsync(Task task)
   {
-    synchronized (tasks) {
-      tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> joinTask(task))));
-      return tasks.get(task.getId()).getResult();
-    }
+    return tasks.computeIfAbsent(
+        task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> joinTask(task)))
+    ).getResult();
   }
 
   private TaskStatus runTask(Task task)
@@ -202,9 +200,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
 
     finally {
-      synchronized (tasks) {
-        tasks.remove(task.getId());
-      }
+      tasks.remove(task.getId());
     }
   }
 
@@ -322,9 +318,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Collection<? extends TaskRunnerWorkItem> getKnownTasks()
   {
-    synchronized (tasks) {
-      return Lists.newArrayList(tasks.values());
-    }
+    return Lists.newArrayList(tasks.values());
   }
 
 
@@ -393,23 +387,19 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public Collection<TaskRunnerWorkItem> getRunningTasks()
   {
-    synchronized (tasks) {
-      return tasks.values()
-          .stream()
-          .filter(KubernetesWorkItem::isRunning)
-          .collect(Collectors.toList());
-    }
+    return tasks.values()
+        .stream()
+        .filter(KubernetesWorkItem::isRunning)
+        .collect(Collectors.toList());
   }
 
   @Override
   public Collection<TaskRunnerWorkItem> getPendingTasks()
   {
-    synchronized (tasks) {
-      return tasks.values()
-          .stream()
-          .filter(KubernetesWorkItem::isPending)
-          .collect(Collectors.toList());
-    }
+    return tasks.values()
+        .stream()
+        .filter(KubernetesWorkItem::isPending)
+        .collect(Collectors.toList());
   }
 
   @Nullable
