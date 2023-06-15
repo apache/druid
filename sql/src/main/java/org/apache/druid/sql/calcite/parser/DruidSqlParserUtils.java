@@ -318,10 +318,10 @@ public class DruidSqlParserUtils
     if (clusteredBy == null) {
       return null;
     }
-    Preconditions.checkArgument(source instanceof SqlSelect, "Source should be a SELECT query");
-    List<SqlNode> selectList = ((SqlSelect) source).getSelectList().getList();
+    Preconditions.checkArgument(source instanceof SqlSelect, "Source must be a SqlSelect");
+    final List<SqlNode> selectList = ((SqlSelect) source).getSelectList().getList();
 
-    List<String> retClusteredByNames = new ArrayList<>();
+    final List<String> retClusteredByNames = new ArrayList<>();
 
     for (SqlNode clusteredByNode : clusteredBy) {
       if (clusteredByNode instanceof SqlNumericLiteral) {
@@ -330,25 +330,34 @@ public class DruidSqlParserUtils
         SqlNode node = selectList.get(ordinal - 1);
 
         if (node instanceof SqlBasicCall) {
-          // The node may be an alias or expression, in which case we'll get the output name
-          SqlBasicCall sqlBasicCall = (SqlBasicCall) node;
-          SqlOperator operator = (sqlBasicCall).getOperator();
-          if (operator instanceof SqlAsOperator) {
-            SqlNode sqlNode = (sqlBasicCall).getOperandList().get(1); // get the output type
-            retClusteredByNames.add(sqlNode.toString());
-          } else {
-            retClusteredByNames.add(node.toSqlString(CalciteSqlDialect.DEFAULT).toString());
-          }
-        } else if (node instanceof SqlIdentifier) {
-          SqlIdentifier n = ((SqlIdentifier) node);// get the unqualified name
+          retClusteredByNames.add(getColumnNameFromSqlCall(node));
+        } else {
+          Preconditions.checkArgument(node instanceof SqlIdentifier, "Argument must be a SqlIdentifier");
+          SqlIdentifier n = ((SqlIdentifier) node);
           retClusteredByNames.add(n.isSimple() ? n.getSimple() : n.names.get(1));
         }
+      } else if (clusteredByNode instanceof SqlBasicCall){
+        retClusteredByNames.add(getColumnNameFromSqlCall(clusteredByNode));
       } else {
         retClusteredByNames.add(clusteredByNode.toString());
       }
     }
 
     return retClusteredByNames;
+  }
+
+  private static String getColumnNameFromSqlCall(final SqlNode sqlCallNode) {
+    Preconditions.checkArgument(sqlCallNode instanceof SqlBasicCall, "Node must be a SqlBasicCallType");
+
+    // The node may be an alias or expression, in which case we'll get the output name
+    SqlBasicCall sqlBasicCall = (SqlBasicCall) sqlCallNode;
+    SqlOperator operator = (sqlBasicCall).getOperator();
+    if (operator instanceof SqlAsOperator) {
+      SqlNode sqlNode = (sqlBasicCall).getOperandList().get(1); // get the output type
+      return sqlNode.toString();
+    } else {
+      return sqlCallNode.toSqlString(CalciteSqlDialect.DEFAULT).toString();
+    }
   }
 
   /**
