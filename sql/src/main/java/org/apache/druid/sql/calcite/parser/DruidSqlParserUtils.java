@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.parser;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -256,9 +257,12 @@ public class DruidSqlParserUtils
    * @param query sql query
    * @param clusteredByList List of clustered by columns
    * @return SqlOrderBy node containing the clusteredByList information
+   * @throws ValidationException if any of the clustered by columns contain DESCENDING order.
    */
   public static SqlOrderBy convertClusterByToOrderBy(SqlNode query, SqlNodeList clusteredByList)
+      throws ValidationException
   {
+    validateClusteredByColumns(clusteredByList);
     // If we have a CLUSTERED BY clause, extract the information in that CLUSTERED BY and create a new
     // SqlOrderBy node
     SqlNode offset = null;
@@ -281,6 +285,25 @@ public class DruidSqlParserUtils
         offset,
         fetch
     );
+  }
+
+  /**
+   * Validates the clustered by columns to ensure that it does not contain DESCENDING order columns.
+   *
+   * @param clusteredByNodes  List of SqlNodes representing columns to be clustered by.
+   * @throws ValidationException if any of the clustered by columns contain DESCENDING order.
+   */
+  public static void validateClusteredByColumns(final SqlNodeList clusteredByNodes) throws ValidationException
+  {
+    for (final SqlNode clusteredByNode: clusteredByNodes.getList()) {
+      if (clusteredByNode.isA(ImmutableSet.of(SqlKind.DESCENDING))) {
+        throw new ValidationException(
+            StringUtils.format("[%s] is invalid."
+                               + " CLUSTERED BY columns cannot be sorted in descending order.", clusteredByNode.toString()
+            )
+        );
+      }
+    }
   }
 
   /**
