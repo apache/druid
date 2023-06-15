@@ -22,12 +22,12 @@ package org.apache.druid.indexing.overlord;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import net.thisptr.jackson.jq.internal.misc.Lists;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -171,22 +171,21 @@ public class TaskQueue
     active = true;
 
     // Mark these tasks as failed as they could not reacquire locks
-    Set<Task> tasksToFail = taskLockbox.syncFromStorage().getTasksToFail();
+    final Set<Task> tasksToFail = taskLockbox.syncFromStorage().getTasksToFail();
     for (Task task : tasksToFail) {
       shutdown(
           task.getId(),
           "Shutting down forcefully as task failed to reacquire lock while becoming leader"
       );
-    }
-    requestManagement("Starting TaskQueue");
-    // Remove any unacquired locks from storage (shutdown only clears entries for which a TaskLockPosse was acquired)
-    // This is called after requesting management as locks need to be cleared after notifyStatus is processed
-    for (Task task : tasksToFail) {
+
+      // Remove any locks not cleared by shutdown, e.g. those for which TaskLockPosse was not acquired
       for (TaskLock lock : taskStorage.getLocks(task.getId())) {
         taskStorage.removeLock(task.getId(), lock);
       }
     }
     log.info("Cleaned up [%d] tasks which failed to reacquire locks.", tasksToFail.size());
+
+    requestManagement("Starting TaskQueue");
 
     // Submit task management job
     managerExec.submit(
