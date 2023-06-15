@@ -121,6 +121,6 @@ public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
 
   public interface ThrowingSupplier
   {
-    void get() throws Exception;
+    void get();
   }
 }
