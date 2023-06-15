@@ -165,9 +165,11 @@ services:
     container_name: jupyter
     profiles: ["jupyter", "druid-jupyter", "all-services"]
     environment:
-      DOCKER_STACKS_JUPYTER_CMD: "notebook"
+      JUPYTER_ENABLE_LAB: "yes"
+      JUPYTER_TOKEN: "docker"
+      DOCKER_STACKS_JUPYTER_CMD: "lab"
       NOTEBOOK_ARGS: "--NotebookApp.token=''"
     ports:
       - "${JUPYTER_PORT:-8889}:8888"
     volumes:
-      - ./notebooks:/home/jovyan/work
+      - ../notebooks:/home/jovyan/notebooks

@@ -170,4 +170,4 @@ services:
     ports:
       - "${JUPYTER_PORT:-8889}:8888"
     volumes:
-      - ../notebooks:/home/jovyan/work
+      - ../notebooks:/home/jovyan/notebooks

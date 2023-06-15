@@ -47,26 +47,20 @@ WORKDIR /home/jovyan/druidapi
 RUN pip install .
 
 
+
+# WIP -- install DruidDataDriver as a package
 # Import data generator and configuration file
 # Change permissions to allow import (requires sudo privileges)
+
+# The Jupyter notebooks themselves are mounted into the image's /home/jovyan/notebooks
+# path when running this image.
 RUN mkdir -p /home/jovyan/notebooks
-# RUN mkdir -p /home/jovyan/notebooks/"1. Introduction"
-# WORKDIR /home/jovyan/notebooks/"1. Introduction"
 
-# WIP -- change to apache repo
-# ADD https://raw.githubusercontent.com/shallada/druid/data-generator/examples/quickstart/jupyter-notebooks/data-generator/DruidDataDriver.py .
-# ADD docker-jupyter/kafka_docker_config.json .
-# RUN chmod 664 DruidDataDriver.py 
-# RUN chmod 664 kafka_docker_config.json
-
-WORKDIR /home/jovyan/work
+WORKDIR /home/jovyan/notebooks
 USER jovyan
 
-# Copy the Jupyter notebook tutorials including folder structure from the
-# build directory to the image working directory 
-# COPY ./notebooks/ ./
 
 
 # Add location of the data generator to PYTHONPATH
-ENV PYTHONPATH "${PYTHONPATH}:/home/jovyan/notebooks/Introduction"
+ENV PYTHONPATH "${PYTHONPATH}:/home/jovyan/notebooks/02-ingestion"
 
