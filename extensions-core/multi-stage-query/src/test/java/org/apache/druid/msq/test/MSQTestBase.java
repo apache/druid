@@ -69,7 +69,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.input.InputSourceModule;
@@ -769,20 +768,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     if (resultsReport == null) {
       return null;
     } else {
-      Yielder<Object[]> yielder = resultsReport.getResultYielder();
-      List<Object[]> rows = new ArrayList<>();
-      while (!yielder.isDone()) {
-        rows.add(yielder.get());
-        yielder = yielder.next(null);
-      }
-      try {
-        yielder.close();
-      }
-      catch (IOException e) {
-        throw new ISE("Unable to get results from the report");
-      }
-
-      return rows;
+      return resultsReport.getResults();
     }
   }
 
@@ -1317,7 +1303,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     {
       Preconditions.checkArgument(expectedResultRows != null, "Result rows cannot be null");
       Preconditions.checkArgument(expectedRowSignature != null, "Row signature cannot be null");
-      Preconditions.checkArgument(expectedMSQSpec != null, "MultiStageQuery Query spec not ");
+      Preconditions.checkArgument(expectedMSQSpec != null, "MultiStageQuery Query spec cannot be null ");
       Pair<MSQSpec, Pair<List<MSQResultsReport.ColumnAndType>, List<Object[]>>> specAndResults = runQueryWithResult();
 
       if (specAndResults == null) { // A fault was expected and the assertion has been done in the runQueryWithResult
