@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Static Checks CI
+name: "Static Checks CI"
 on:
   push:
     branches:
@@ -27,7 +27,7 @@ on:
       - '[0-9]+.[0-9]+.[0-9]+-[A-Za-z0-9]+' # release branches
 
 concurrency:
-  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.run_id }}' # group workflows only on pull_requests and not on branch commits
   cancel-in-progress: true
 
 env:
@@ -128,6 +128,7 @@ jobs:
           docker run --rm \
           -v $(pwd):/project \
           -v ~/.m2:/home/inspect/.m2 \
+          -v $(pwd)/.idea/misc-for-inspection.xml:/project/.idea/misc.xml \
           ccaominh/intellij-inspect:1.0.0 \
           /project/pom.xml \
           /project/.idea/inspectionProfiles/Druid.xml \

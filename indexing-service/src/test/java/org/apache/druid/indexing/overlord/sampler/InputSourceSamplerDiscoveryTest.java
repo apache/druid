@@ -84,7 +84,7 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
             new LongDimensionSchema("long"),
             new DoubleDimensionSchema("double"),
             new StringDimensionSchema("bool"),
-            new AutoTypeColumnSchema("variant"),
+            new StringDimensionSchema("variant"),
             new AutoTypeColumnSchema("array"),
             new AutoTypeColumnSchema("nested")
         ),
@@ -110,7 +110,7 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
                     .add("long", ColumnType.LONG)
                     .add("double", ColumnType.DOUBLE)
                     .add("bool", ColumnType.STRING)
-                    .add("variant", ColumnType.NESTED_DATA)
+                    .add("variant", ColumnType.STRING)
                     .add("array", ColumnType.LONG_ARRAY)
                     .add("nested", ColumnType.NESTED_DATA)
                     .build(),
@@ -147,7 +147,7 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
               new LongDimensionSchema("long"),
               new DoubleDimensionSchema("double"),
               new LongDimensionSchema("bool"),
-              new AutoTypeColumnSchema("variant"),
+              new StringDimensionSchema("variant"),
               new AutoTypeColumnSchema("array"),
               new AutoTypeColumnSchema("nested")
           ),
@@ -173,7 +173,7 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
                       .add("long", ColumnType.LONG)
                       .add("double", ColumnType.DOUBLE)
                       .add("bool", ColumnType.LONG)
-                      .add("variant", ColumnType.NESTED_DATA)
+                      .add("variant", ColumnType.STRING)
                       .add("array", ColumnType.LONG_ARRAY)
                       .add("nested", ColumnType.NESTED_DATA)
                       .build(),

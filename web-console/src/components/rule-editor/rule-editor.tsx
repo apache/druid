@@ -76,64 +76,74 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
   }
 
   function renderTiers() {
-    const tieredReplicants = rule.tieredReplicants;
-    if (!tieredReplicants) return;
-
-    const ruleTiers = Object.keys(tieredReplicants).sort();
-    return ruleTiers.map(tier => {
+    const tieredReplicants = rule.tieredReplicants || {};
+    const tieredReplicantsList = Object.entries(tieredReplicants);
+    if (!tieredReplicantsList.length) {
       return (
-        <ControlGroup key={tier}>
-          <Button minimal style={{ pointerEvents: 'none' }}>
-            Tier:
-          </Button>
-          <HTMLSelect
-            fill
-            value={tier}
-            onChange={(e: any) =>
-              onChange(RuleUtil.renameTieredReplicants(rule, tier, e.target.value))
-            }
-          >
-            <option key={tier} value={tier}>
-              {tier}
-            </option>
-            {tiers
-              .filter(t => t !== tier && !tieredReplicants[t])
-              .map(t => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-          </HTMLSelect>
-          <Button minimal style={{ pointerEvents: 'none' }}>
-            Replicants:
-          </Button>
-          <NumericInput
-            value={tieredReplicants[tier]}
-            onValueChange={(v: number) => {
-              if (isNaN(v)) return;
-              onChange(RuleUtil.addTieredReplicant(rule, tier, v));
-            }}
-            min={0}
-            max={256}
-          />
-          <Button
-            disabled={ruleTiers.length === 1}
-            onClick={() => removeTier(tier)}
-            icon={IconNames.TRASH}
-          />
-        </ControlGroup>
+        <FormGroup>
+          There is no historical replication configured, data will not be loaded on hisotricals.
+        </FormGroup>
       );
-    });
+    }
+
+    return (
+      <FormGroup>
+        {tieredReplicantsList.map(([tier, replication]) => (
+          <ControlGroup key={tier}>
+            <Button minimal style={{ pointerEvents: 'none' }}>
+              Tier:
+            </Button>
+            <HTMLSelect
+              fill
+              value={tier}
+              onChange={(e: any) =>
+                onChange(RuleUtil.renameTieredReplicants(rule, tier, e.target.value))
+              }
+            >
+              <option key={tier} value={tier}>
+                {tier}
+              </option>
+              {tiers
+                .filter(t => t !== tier && !tieredReplicants[t])
+                .map(t => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+            </HTMLSelect>
+            <Button minimal style={{ pointerEvents: 'none' }}>
+              Replicants:
+            </Button>
+            <NumericInput
+              value={replication}
+              onValueChange={(v: number) => {
+                if (isNaN(v)) return;
+                onChange(RuleUtil.addTieredReplicant(rule, tier, v));
+              }}
+              min={0}
+              max={256}
+            />
+            <Button onClick={() => removeTier(tier)} icon={IconNames.TRASH} />
+          </ControlGroup>
+        ))}
+      </FormGroup>
+    );
   }
 
   function renderTierAdder() {
     const { rule, tiers } = props;
-    if (Object.keys(rule.tieredReplicants || {}).length >= Object.keys(tiers).length) return;
+    const disabled = Object.keys(rule.tieredReplicants || {}).length >= Object.keys(tiers).length;
 
     return (
-      <FormGroup className="right">
-        <Button onClick={addTier} minimal icon={IconNames.PLUS}>
-          Add a tier
+      <FormGroup>
+        <Button
+          onClick={addTier}
+          minimal
+          icon={IconNames.PLUS}
+          disabled={disabled}
+          title={disabled ? 'There are no tiers left to assign' : ''}
+        >
+          Add historical tier replication
         </Button>
       </FormGroup>
     );
@@ -201,11 +211,11 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
               )}
             </ControlGroup>
           </FormGroup>
-          {RuleUtil.hasTieredReplicants(rule) && (
-            <FormGroup>
+          {RuleUtil.canHaveTieredReplicants(rule) && (
+            <>
               {renderTiers()}
               {renderTierAdder()}
-            </FormGroup>
+            </>
           )}
         </Card>
       </Collapse>

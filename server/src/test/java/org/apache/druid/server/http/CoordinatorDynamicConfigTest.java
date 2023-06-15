@@ -34,7 +34,7 @@ import java.util.Set;
  */
 public class CoordinatorDynamicConfigTest
 {
-  private static final int EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 100;
+  private static final int EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 500;
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -679,11 +679,11 @@ public class CoordinatorDynamicConfigTest
         900000,
         524288000,
         100,
-        5,
+        100,
         100,
         true,
         15,
-        10,
+        500,
         1,
         false,
         emptyList,
@@ -710,11 +710,11 @@ public class CoordinatorDynamicConfigTest
         900000,
         524288000,
         100,
-        5,
+        100,
         100,
         true,
         15,
-        10,
+        500,
         1,
         false,
         ImmutableSet.of("DATASOURCE"),

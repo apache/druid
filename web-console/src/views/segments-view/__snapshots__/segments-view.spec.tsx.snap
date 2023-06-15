@@ -361,14 +361,7 @@ exports[`SegmentsView matches snapshot 1`] = `
         }
       }
       filterable={true}
-      filtered={
-        Array [
-          Object {
-            "id": "datasource",
-            "value": "=test",
-          },
-        ]
-      }
+      filtered={Array []}
       freezeWhenExpanded={false}
       getLoadingProps={[Function]}
       getNoDataProps={[Function]}

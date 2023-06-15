@@ -21,7 +21,10 @@ package org.apache.druid.k8s.overlord;
 
 import com.google.inject.Binder;
 import com.google.inject.Key;
+import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
+import io.fabric8.kubernetes.client.Config;
+import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
@@ -34,14 +37,21 @@ import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogKiller;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogs;
 
+
 @LoadScope(roles = NodeRole.OVERLORD_JSON_NAME)
 public class KubernetesOverlordModule implements DruidModule
 {
+
+  private static final Logger log = new Logger(KubernetesOverlordModule.class);
+
   @Override
   public void configure(Binder binder)
   {
@@ -64,6 +74,41 @@ public class KubernetesOverlordModule implements DruidModule
          .in(LazySingleton.class);
     binder.bind(KubernetesTaskRunnerFactory.class).in(LazySingleton.class);
     configureTaskLogs(binder);
+  }
+
+  @Provides
+  @LazySingleton
+  public DruidKubernetesClient makeKubernetesClient(KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig, Lifecycle lifecycle)
+  {
+    DruidKubernetesClient client;
+    if (kubernetesTaskRunnerConfig.isDisableClientProxy()) {
+      Config config = new ConfigBuilder().build();
+      config.setHttpsProxy(null);
+      config.setHttpProxy(null);
+      client = new DruidKubernetesClient(config);
+    } else {
+      client = new DruidKubernetesClient();
+    }
+
+    lifecycle.addHandler(
+        new Lifecycle.Handler()
+        {
+          @Override
+          public void start()
+          {
+
+          }
+
+          @Override
+          public void stop()
+          {
+            log.info("Stopping overlord Kubernetes client");
+            client.getClient().close();
+          }
+        }
+    );
+
+    return client;
   }
 
   private void configureTaskLogs(Binder binder)

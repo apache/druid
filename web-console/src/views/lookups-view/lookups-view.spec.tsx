@@ -24,7 +24,7 @@ import { LookupsView } from './lookups-view';
 
 describe('LookupsView', () => {
   it('matches snapshot', () => {
-    const lookupsView = shallow(<LookupsView />);
+    const lookupsView = shallow(<LookupsView filters={[]} onFiltersChange={() => {}} />);
     expect(lookupsView).toMatchSnapshot();
   });
 });

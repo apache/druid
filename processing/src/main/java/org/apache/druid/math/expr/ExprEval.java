@@ -235,6 +235,14 @@ public abstract class ExprEval<T>
   private static Class convertType(@Nullable Class existing, Class next)
   {
     if (Number.class.isAssignableFrom(next) || next == String.class || next == Boolean.class) {
+      // coerce booleans
+      if (next == Boolean.class) {
+        if (ExpressionProcessing.useStrictBooleans()) {
+          next = Long.class;
+        } else {
+          next = String.class;
+        }
+      }
       if (existing == null) {
         return next;
       }
@@ -245,6 +253,7 @@ public abstract class ExprEval<T>
       if (next == String.class) {
         return next;
       }
+
       // all numbers win over Integer
       if (existing == Integer.class) {
         return next;
@@ -807,7 +816,7 @@ public abstract class ExprEval<T>
       if (value == null) {
         return NullHandling.defaultDoubleValue();
       }
-      return value;
+      return value.doubleValue();
     }
 
     @Override
@@ -886,7 +895,7 @@ public abstract class ExprEval<T>
       if (value == null) {
         return NullHandling.defaultLongValue();
       }
-      return value;
+      return value.longValue();
     }
 
     @Override

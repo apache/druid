@@ -26,7 +26,7 @@ sidebar_label: "Query context"
 The query context is used for various query configuration parameters. Query context parameters can be specified in
 the following ways:
 
-- For [Druid SQL](sql-api.md), context parameters are provided either in a JSON object named `context` to the
+- For [Druid SQL](../api-reference/sql-api.md), context parameters are provided either in a JSON object named `context` to the
 HTTP POST API, or as properties to the JDBC connection.
 - For [native queries](querying.md), context parameters are provided in a JSON object named `context`.
 
@@ -108,12 +108,12 @@ batches of rows at a time. Not all queries can be vectorized. In particular, vec
 requirements:
 
 - All query-level filters must either be able to run on bitmap indexes or must offer vectorized row-matchers. These
-include "selector", "bound", "in", "like", "regex", "search", "and", "or", and "not".
+include `selector`, `bound`, `in`, `like`, `regex`, `search`, `and`, `or`, and `not`.
 - All filters in filtered aggregators must offer vectorized row-matchers.
-- All aggregators must offer vectorized implementations. These include "count", "doubleSum", "floatSum", "longSum", "longMin",
- "longMax", "doubleMin", "doubleMax", "floatMin", "floatMax", "longAny", "doubleAny", "floatAny", "stringAny",
- "hyperUnique", "filtered", "approxHistogram", "approxHistogramFold", and "fixedBucketsHistogram" (with numerical input). 
-- All virtual columns must offer vectorized implementations. Currently for expression virtual columns, support for vectorization is decided on a per expression basis, depending on the type of input and the functions used by the expression. See the currently supported list in the [expression documentation](../misc/math-expr.md#vectorization-support).
+- All aggregators must offer vectorized implementations. These include `count`, `doubleSum`, `floatSum`, `longSum`. `longMin`,
+ `longMax`, `doubleMin`, `doubleMax`, `floatMin`, `floatMax`, `longAny`, `doubleAny`, `floatAny`, `stringAny`,
+ `hyperUnique`, `filtered`, `approxHistogram`, `approxHistogramFold`, and `fixedBucketsHistogram` (with numerical input). 
+- All virtual columns must offer vectorized implementations. Currently for expression virtual columns, support for vectorization is decided on a per expression basis, depending on the type of input and the functions used by the expression. See the currently supported list in the [expression documentation](math-expr.md#vectorization-support).
 - For GroupBy: All dimension specs must be "default" (no extraction functions or filtered dimension specs).
 - For GroupBy: No multi-value dimensions.
 - For Timeseries: No "descending" order.

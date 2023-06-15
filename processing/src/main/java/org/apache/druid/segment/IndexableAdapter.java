@@ -73,14 +73,40 @@ public interface IndexableAdapter
   {
     private final SortedValueDictionary valueDictionary;
     private final SortedMap<String, FieldTypeInfo.MutableTypeSet> fields;
+    private final boolean forceNestedType;
+    private final boolean isConstant;
+    @Nullable
+    private final Object constantValue;
 
     public NestedColumnMergable(
         SortedValueDictionary valueDictionary,
-        SortedMap<String, FieldTypeInfo.MutableTypeSet> fields
+        SortedMap<String, FieldTypeInfo.MutableTypeSet> fields,
+        boolean forceNestedType,
+        boolean isConstant,
+        @Nullable Object constantValue
     )
     {
       this.valueDictionary = valueDictionary;
       this.fields = fields;
+      this.forceNestedType = forceNestedType;
+      this.isConstant = isConstant;
+      this.constantValue = constantValue;
+    }
+
+    public boolean isForceNestedType()
+    {
+      return forceNestedType;
+    }
+
+    public boolean isConstant()
+    {
+      return isConstant;
+    }
+
+    @Nullable
+    public Object getConstantValue()
+    {
+      return constantValue;
     }
 
     @Nullable
@@ -96,9 +122,9 @@ public interface IndexableAdapter
         final FieldTypeInfo.MutableTypeSet types = entry.getValue();
         mergeInto.compute(fieldPath, (k, v) -> {
           if (v == null) {
-            return new FieldTypeInfo.MutableTypeSet(types.getByteValue());
+            return types;
           }
-          return v.merge(types.getByteValue());
+          return v.merge(types.getByteValue(), types.hasUntypedArray());
         });
       }
     }

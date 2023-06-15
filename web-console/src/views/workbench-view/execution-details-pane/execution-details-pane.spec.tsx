@@ -26,7 +26,7 @@ import { ExecutionDetailsPane } from './execution-details-pane';
 describe('ExecutionDetailsPane', () => {
   it('matches snapshot no init tab', () => {
     const comp = shallow(
-      <ExecutionDetailsPane execution={EXECUTION_INGEST_ERROR} goToIngestion={() => {}} />,
+      <ExecutionDetailsPane execution={EXECUTION_INGEST_ERROR} goToTask={() => {}} />,
     );
 
     expect(comp).toMatchSnapshot();
@@ -37,7 +37,7 @@ describe('ExecutionDetailsPane', () => {
       <ExecutionDetailsPane
         execution={EXECUTION_INGEST_ERROR}
         initTab="warnings"
-        goToIngestion={() => {}}
+        goToTask={() => {}}
       />,
     );
 

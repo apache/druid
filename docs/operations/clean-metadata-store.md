@@ -24,7 +24,7 @@ description: "Defines a strategy to maintain Druid metadata store performance by
   ~ under the License.
   -->
 
-Apache Druid relies on [metadata storage](../dependencies/metadata-storage.md) to track information on data storage, operations, and system configuration.
+Apache Druid relies on [metadata storage](../design/metadata-storage.md) to track information on data storage, operations, and system configuration.
 The metadata store includes the following:
 
 - Segment records
@@ -163,7 +163,7 @@ For more detail, see [Task logging](../configuration/index.md#task-logging).
 Druid automatically cleans up metadata records, excluding compaction configuration records and indexer task logs.
 To disable automated metadata cleanup, set the following properties in the `coordinator/runtime.properties` file:
 
-```
+```properties
 # Keep unused segments
 druid.coordinator.kill.on=false
 
@@ -185,7 +185,7 @@ druid.coordinator.kill.datasource.on=false
 
 Consider a scenario where you have scripts to create and delete hundreds of datasources and related entities a day. You do not want to fill your metadata store with leftover records. The datasources and related entities tend to persist for only one or two days. Therefore, you want to run a cleanup job that identifies and removes leftover records that are at least four days old. The exception is for audit logs, which you need to retain for 30 days:
 
-```
+```properties
 ...
 # Schedule the metadata management store task for every hour:
 druid.coordinator.period.metadataStoreManagementPeriod=P1H
@@ -197,7 +197,7 @@ druid.coordinator.period.metadataStoreManagementPeriod=P1H
 # Required also for automated cleanup of rules and compaction configuration.
 
 druid.coordinator.kill.on=true
-druid.coordinator.kill.period=P1D 
+druid.coordinator.kill.period=P1D
 druid.coordinator.kill.durationToRetain=P4D
 druid.coordinator.kill.maxSegments=1000
 
@@ -230,5 +230,5 @@ druid.coordinator.kill.datasource.durationToRetain=P4D
 ## Learn more
 See the following topics for more information:
 - [Metadata management](../configuration/index.md#metadata-management) for metadata store configuration reference.
-- [Metadata storage](../dependencies/metadata-storage.md) for an overview of the metadata storage database.
+- [Metadata storage](../design/metadata-storage.md) for an overview of the metadata storage database.
 

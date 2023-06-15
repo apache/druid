@@ -395,7 +395,7 @@
         </configuration>
       </plugin>
 
-      <!-- Adds the path of the generated parser to the classpath -->
+      <!-- Adds the path of the generated parser to the build path -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>

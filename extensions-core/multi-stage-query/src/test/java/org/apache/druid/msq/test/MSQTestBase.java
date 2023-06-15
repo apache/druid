@@ -69,7 +69,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.input.InputSourceModule;
@@ -225,6 +224,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
                   .put(QueryContexts.FINALIZE_KEY, true)
                   .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
+                  .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
                   .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
                   .build();
 
@@ -768,20 +768,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     if (resultsReport == null) {
       return null;
     } else {
-      Yielder<Object[]> yielder = resultsReport.getResultYielder();
-      List<Object[]> rows = new ArrayList<>();
-      while (!yielder.isDone()) {
-        rows.add(yielder.get());
-        yielder = yielder.next(null);
-      }
-      try {
-        yielder.close();
-      }
-      catch (IOException e) {
-        throw new ISE("Unable to get results from the report");
-      }
-
-      return rows;
+      return resultsReport.getResults();
     }
   }
 
@@ -799,6 +786,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
     protected MSQFault expectedMSQFault = null;
     protected Class<? extends MSQFault> expectedMSQFaultClass = null;
+    protected Map<Integer, Integer> expectedStageVsWorkerCount = new HashMap<>();
     protected final Map<Integer, Map<Integer, Map<String, CounterSnapshotMatcher>>>
         expectedStageWorkerChannelToCounters = new HashMap<>();
 
@@ -893,6 +881,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
+    public Builder setExpectedWorkerCount(Map<Integer, Integer> stageVsWorkerCount)
+    {
+      this.expectedStageVsWorkerCount = stageVsWorkerCount;
+      return asBuilder();
+    }
+
     public Builder setExpectedSegmentGenerationProgressCountersForStageWorker(
         CounterSnapshotMatcher counterSnapshot,
         int stage,
@@ -923,6 +917,14 @@ public class MSQTestBase extends BaseCalciteQueryTest
       );
 
       MatcherAssert.assertThat(e, expectedValidationErrorMatcher);
+    }
+
+    protected void verifyWorkerCount(CounterSnapshotsTree counterSnapshotsTree)
+    {
+      Map<Integer, Map<Integer, CounterSnapshots>> counterMap = counterSnapshotsTree.copyMap();
+      for (Map.Entry<Integer, Integer> stageWorkerCount : expectedStageVsWorkerCount.entrySet()) {
+        Assert.assertEquals(stageWorkerCount.getValue().intValue(), counterMap.get(stageWorkerCount.getKey()).size());
+      }
     }
 
     protected void verifyCounters(CounterSnapshotsTree counterSnapshotsTree)
@@ -1061,6 +1063,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           return;
         }
         MSQTaskReportPayload reportPayload = getPayloadOrThrow(controllerId);
+        verifyWorkerCount(reportPayload.getCounters());
         verifyCounters(reportPayload.getCounters());
 
         MSQSpec foundSpec = indexingServiceClient.getQuerySpecForTask(controllerId);
@@ -1270,6 +1273,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
         MSQTaskReportPayload payload = getPayloadOrThrow(controllerId);
         verifyCounters(payload.getCounters());
+        verifyWorkerCount(payload.getCounters());
 
         if (payload.getStatus().getErrorReport() != null) {
           throw new ISE("Query %s failed due to %s", sql, payload.getStatus().getErrorReport().toString());
@@ -1299,7 +1303,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     {
       Preconditions.checkArgument(expectedResultRows != null, "Result rows cannot be null");
       Preconditions.checkArgument(expectedRowSignature != null, "Row signature cannot be null");
-      Preconditions.checkArgument(expectedMSQSpec != null, "MultiStageQuery Query spec not ");
+      Preconditions.checkArgument(expectedMSQSpec != null, "MultiStageQuery Query spec cannot be null ");
       Pair<MSQSpec, Pair<List<MSQResultsReport.ColumnAndType>, List<Object[]>>> specAndResults = runQueryWithResult();
 
       if (specAndResults == null) { // A fault was expected and the assertion has been done in the runQueryWithResult

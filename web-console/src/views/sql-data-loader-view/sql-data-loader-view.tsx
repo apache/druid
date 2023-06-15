@@ -51,13 +51,13 @@ interface LoaderContent extends QueryWithContext {
 export interface SqlDataLoaderViewProps {
   capabilities: Capabilities;
   goToQuery(queryWithContext: QueryWithContext): void;
-  goToIngestion(taskId: string): void;
+  goToTask(taskId: string): void;
 }
 
 export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
   props: SqlDataLoaderViewProps,
 ) {
-  const { capabilities, goToQuery, goToIngestion } = props;
+  const { capabilities, goToQuery, goToTask } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
   const [externalConfigStep, setExternalConfigStep] = useState<Partial<ExternalConfig>>({});
   const [content, setContent] = useLocalStorageState<LoaderContent | undefined>(
@@ -231,7 +231,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
         <IngestionProgressDialog
           taskId={content.id}
           goToQuery={goToQuery}
-          goToIngestion={goToIngestion}
+          goToTask={goToTask}
           onReset={() => setContent(undefined)}
           onClose={() => setContent(deepDelete(content, 'id'))}
         />

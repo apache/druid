@@ -31,11 +31,13 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
 import org.apache.druid.msq.indexing.error.RowTooLargeFault;
+import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.NestedDataTestUtils;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
@@ -292,6 +294,45 @@ public class MSQInsertTest extends MSQTestBase
 
                      .verifyResults();
 
+  }
+
+  @Test
+  public void testInsertOnFoo1WithTwoCountAggregatorsWithRollupContext()
+  {
+    final List<Object[]> expectedRows = expectedFooRows();
+
+    // Add 1L to each expected row, since we have two count aggregators.
+    for (int i = 0; i < expectedRows.size(); i++) {
+      final Object[] expectedRow = expectedRows.get(i);
+      final Object[] newExpectedRow = new Object[expectedRow.length + 1];
+      System.arraycopy(expectedRow, 0, newExpectedRow, 0, expectedRow.length);
+      newExpectedRow[expectedRow.length] = 1L;
+      expectedRows.set(i, newExpectedRow);
+    }
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG)
+                                            .add("cnt2", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "insert into foo1\n"
+                         + "select  __time, dim1 , count(*) as cnt, count(*) as cnt2\n"
+                         + "from foo\n"
+                         + "where dim1 is not null\n"
+                         + "group by 1, 2\n"
+                         + "PARTITIONED by All")
+                     .setExpectedDataSource("foo1")
+                     .setQueryContext(QueryContexts.override(context, ROLLUP_CONTEXT_PARAMS))
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedResultRows(expectedRows)
+                     .setExpectedRollUp(true)
+                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
+                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt2", "cnt2"))
+                     .verifyResults();
   }
 
   @Test
@@ -983,10 +1024,9 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testInsertQueryWithInvalidSubtaskCount()
   {
-    Map<String, Object> localContext = ImmutableMap.<String, Object>builder()
-                                                   .putAll(context)
-                                                   .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 1)
-                                                   .build();
+    Map<String, Object> localContext = new HashMap<>(context);
+    localContext.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 1);
+
     testIngestQuery().setSql(
                          "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setQueryContext(localContext)
@@ -1066,6 +1106,106 @@ public class MSQInsertTest extends MSQTestBase
   }
 
   @Test
+  public void testCorrectNumberOfWorkersUsedAutoModeWithoutBytesLimit() throws IOException
+  {
+    Map<String, Object> localContext = new HashMap<>(context);
+    localContext.put(MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY, WorkerAssignmentStrategy.AUTO.name());
+    localContext.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 4);
+
+    final File toRead1 = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/multipleFiles/wikipedia-sampled-1.json");
+    final String toReadFileNameAsJson1 = queryFramework().queryJsonMapper().writeValueAsString(toRead1.getAbsolutePath());
+
+    final File toRead2 = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/multipleFiles/wikipedia-sampled-2.json");
+    final String toReadFileNameAsJson2 = queryFramework().queryJsonMapper().writeValueAsString(toRead2.getAbsolutePath());
+
+    final File toRead3 = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/multipleFiles/wikipedia-sampled-3.json");
+    final String toReadFileNameAsJson3 = queryFramework().queryJsonMapper().writeValueAsString(toRead3.getAbsolutePath());
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("cnt", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "insert into foo1 select "
+                         + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+                         + "  count(*) as cnt\n"
+                         + "FROM TABLE(\n"
+                         + "  EXTERN(\n"
+                         + "    '{ \"files\": [" + toReadFileNameAsJson1 + "," + toReadFileNameAsJson2 + "," + toReadFileNameAsJson3 + "],\"type\":\"local\"}',\n"
+                         + "    '{\"type\": \"json\"}',\n"
+                         + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
+                         + "  )\n"
+                         + ") group by 1  PARTITIONED by day ")
+                     .setExpectedDataSource("foo1")
+                     .setQueryContext(localContext)
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                         "foo1",
+                         Intervals.of("2016-06-27/P1D"),
+                         "test",
+                         0
+                     )))
+                     .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
+                     .setExpectedWorkerCount(
+                         ImmutableMap.of(
+                             0, 1
+                         ))
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testCorrectNumberOfWorkersUsedAutoModeWithBytesLimit() throws IOException
+  {
+    Map<String, Object> localContext = new HashMap<>(context);
+    localContext.put(MultiStageQueryContext.CTX_TASK_ASSIGNMENT_STRATEGY, WorkerAssignmentStrategy.AUTO.name());
+    localContext.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 4);
+    localContext.put(MultiStageQueryContext.CTX_MAX_INPUT_BYTES_PER_WORKER, 10);
+
+    final File toRead1 = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/multipleFiles/wikipedia-sampled-1.json");
+    final String toReadFileNameAsJson1 = queryFramework().queryJsonMapper().writeValueAsString(toRead1.getAbsolutePath());
+
+    final File toRead2 = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/multipleFiles/wikipedia-sampled-2.json");
+    final String toReadFileNameAsJson2 = queryFramework().queryJsonMapper().writeValueAsString(toRead2.getAbsolutePath());
+
+    final File toRead3 = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/multipleFiles/wikipedia-sampled-3.json");
+    final String toReadFileNameAsJson3 = queryFramework().queryJsonMapper().writeValueAsString(toRead3.getAbsolutePath());
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("cnt", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "insert into foo1 select "
+                         + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+                         + "  count(*) as cnt\n"
+                         + "FROM TABLE(\n"
+                         + "  EXTERN(\n"
+                         + "    '{ \"files\": [" + toReadFileNameAsJson1 + "," + toReadFileNameAsJson2 + "," + toReadFileNameAsJson3 + "],\"type\":\"local\"}',\n"
+                         + "    '{\"type\": \"json\"}',\n"
+                         + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
+                         + "  )\n"
+                         + ") group by 1  PARTITIONED by day ")
+                     .setExpectedDataSource("foo1")
+                     .setQueryContext(localContext)
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                         "foo1",
+                         Intervals.of("2016-06-27/P1D"),
+                         "test",
+                         0
+                     )))
+                     .setExpectedResultRows(ImmutableList.of(new Object[]{1466985600000L, 20L}))
+                     .setExpectedWorkerCount(
+                         ImmutableMap.of(
+                             0, 3
+                         ))
+                     .verifyResults();
+  }
+
+  @Test
   public void testInsertArraysAutoType() throws IOException
   {
     List<Object[]> expectedRows = Arrays.asList(
@@ -1120,7 +1260,6 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .verifyResults();
-
   }
 
   @Nonnull

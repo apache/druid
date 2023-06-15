@@ -39,7 +39,6 @@ export const LocalStorageKeys = {
   LOOKUP_TABLE_COLUMN_SELECTION: 'lookup-table-column-selection' as const,
   QUERY_KEY: 'druid-console-query' as const,
   QUERY_CONTEXT: 'query-context' as const,
-  INGESTION_VIEW_PANE_SIZE: 'ingestion-view-pane-size' as const,
   TASKS_REFRESH_RATE: 'task-refresh-rate' as const,
   DATASOURCES_REFRESH_RATE: 'datasources-refresh-rate' as const,
   SEGMENTS_REFRESH_RATE: 'segments-refresh-rate' as const,
