@@ -160,7 +160,7 @@ public class DruidCoordinator
    * evaluated. It is used by {@link DruidCoordinator} to supply this value to
    * {@link org.apache.druid.server.http.MetadataResource}.
    */
-  private volatile Map<SegmentId, Integer> segmentIdToReplicationFactor = null;
+  private volatile Object2IntMap<SegmentId> segmentIdToReplicationFactor = null;
   private volatile DruidCluster cluster = null;
 
   private int cachedBalancerThreadNumber;

@@ -20,8 +20,9 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Table;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.client.ImmutableDruidServer;
@@ -123,9 +124,9 @@ public class SegmentReplicantLookup
     segmentIdToReplicationFactor.put(segmentId, requiredReplicas);
   }
 
-  public Map<SegmentId, Integer> getSegmentIdToReplicationFactor()
+  public Object2IntMap<SegmentId> getSegmentIdToReplicationFactor()
   {
-    return ImmutableMap.copyOf(segmentIdToReplicationFactor);
+    return new Object2IntOpenHashMap<>(segmentIdToReplicationFactor);
   }
 
   private int getLoadingReplicants(SegmentId segmentId, String tier)

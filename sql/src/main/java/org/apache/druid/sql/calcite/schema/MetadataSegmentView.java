@@ -80,6 +80,10 @@ public class MetadataSegmentView
    */
   @MonotonicNonNull
   private volatile ImmutableSortedSet<SegmentStatusInCluster> publishedSegments = null;
+  /**
+   * Caches segmentId vs replication factor. In case the coordinator restarts, this is used to refer to previous values
+   * to prevent randomly flapping to null.
+   */
   private final Cache<SegmentId, Integer> segmentIdToReplicationFactor;
   private final ScheduledExecutorService scheduledExec;
   private final long pollPeriodInMS;
@@ -102,7 +106,7 @@ public class MetadataSegmentView
     this.pollPeriodInMS = config.getMetadataSegmentPollPeriod();
     this.scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
     this.segmentIdToReplicationFactor = CacheBuilder.newBuilder()
-                                                    .expireAfterWrite(3, TimeUnit.MINUTES)
+                                                    .expireAfterWrite(10, TimeUnit.MINUTES)
                                                     .build();
   }
 
@@ -151,7 +155,7 @@ public class MetadataSegmentView
       final SegmentStatusInCluster segment = metadataSegments.next();
       final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
       Integer replicationFactor = segment.getReplicationFactor();
-      if (segment.getReplicationFactor() == null) {
+      if (replicationFactor == null) {
         replicationFactor = segmentIdToReplicationFactor.getIfPresent(segment.getDataSegment().getId());
       } else {
         segmentIdToReplicationFactor.put(segment.getDataSegment().getId(), segment.getReplicationFactor());
