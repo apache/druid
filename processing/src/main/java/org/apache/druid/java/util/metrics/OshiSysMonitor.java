@@ -22,7 +22,6 @@ package org.apache.druid.java.util.metrics;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import oshi.SystemInfo;
@@ -60,24 +59,11 @@ import java.util.Map;
  */
 public class OshiSysMonitor extends FeedDefiningMonitor
 {
-  private static final Logger log = new Logger(OshiSysMonitor.class);
-  private final SystemInfo si = new SystemInfo();
-  private final HardwareAbstractionLayer hal = si.getHardware();
-  private final OperatingSystem os = si.getOperatingSystem();
-  private final List<String> fsTypeWhitelist = ImmutableList.of("local");
-  private final List<String> netAddressBlacklist = ImmutableList.of("0.0.0.0", "127.0.0.1");
-  private final List<String> localFsSysTypes = ImmutableList.of(
-      "apfs",
-      "cvfs",
-      "msdos",
-      "minix",
-      "hpfs",
-      "vxfs",
-      "vfat",
-      "vfat",
-      "zfs",
-      "lifs"
-  );
+
+  private final SystemInfo si;
+  private final HardwareAbstractionLayer hal;
+  private final OperatingSystem os;
+  private static final List<String> NET_ADDRESS_BLACKLIST = ImmutableList.of("0.0.0.0", "127.0.0.1");
   private final List<Stats> statsList;
 
   private final Map<String, String[]> dimensions;
@@ -97,6 +83,10 @@ public class OshiSysMonitor extends FeedDefiningMonitor
     super(feed);
     Preconditions.checkNotNull(dimensions);
     this.dimensions = ImmutableMap.copyOf(dimensions);
+
+    this.si = new SystemInfo();
+    this.hal = si.getHardware();
+    this.os = si.getOperatingSystem();
 
     this.statsList = new ArrayList<Stats>();
     this.statsList.addAll(
@@ -140,9 +130,13 @@ public class OshiSysMonitor extends FeedDefiningMonitor
       GlobalMemory mem = hal.getMemory();
       if (mem != null) {
         final Map<String, Long> stats = ImmutableMap.of(
-            "sys/mem/max", mem.getTotal(),
-            "sys/mem/used", mem.getTotal() - mem.getAvailable(),
-            "sys/mem/free", mem.getAvailable()
+            "sys/mem/max",
+            mem.getTotal(),
+            "sys/mem/used",
+            mem.getTotal() - mem.getAvailable(),
+            // This is total actual memory used, not including cache and buffer memory
+            "sys/mem/free",
+            mem.getAvailable()
         );
         final ServiceMetricEvent.Builder builder = builder();
         MonitorUtils.addDimensionsToBuilder(builder, dimensions);
@@ -191,28 +185,23 @@ public class OshiSysMonitor extends FeedDefiningMonitor
     public void emit(ServiceEmitter emitter)
     {
       FileSystem fileSystem = os.getFileSystem();
-      for (OSFileStore fs : fileSystem.getFileStores()) {
-        final String name = fs.getName();
-        final String type = localFsSysTypes.contains(fs.getType()) ? "local" : "unknown";
-        if (fsTypeWhitelist.contains(type)) {
-          final Map<String, Long> stats = ImmutableMap.<String, Long>builder()
-                                                      .put("sys/fs/max", fs.getTotalSpace())
-                                                      .put("sys/fs/used", fs.getUsableSpace())
-                                                      .put("sys/fs/files/count", fs.getTotalInodes())
-                                                      .put("sys/fs/files/free", fs.getFreeInodes())
-                                                      .build();
-          final ServiceMetricEvent.Builder builder = builder()
-              .setDimension("fsDevName", fs.getVolume())
-              .setDimension("fsDirName", fs.getMount())
-              .setDimension("fsTypeName", type)
-              .setDimension("fsSysTypeName", fs.getType())
-              .setDimension("fsOptions", fs.getOptions().split(","));
-          MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-          for (Map.Entry<String, Long> entry : stats.entrySet()) {
-            emitter.emit(builder.build(entry.getKey(), entry.getValue()));
-          }
-        } else {
-          log.debug("Not monitoring fs stats for name[%s] with typeName[%s]", name, fs.getType());
+      for (OSFileStore fs : fileSystem.getFileStores(true)) { // get only local file store : true
+
+        final Map<String, Long> stats = ImmutableMap.<String, Long>builder()
+                                                    .put("sys/fs/max", fs.getTotalSpace())
+                                                    .put("sys/fs/used", fs.getTotalSpace() - fs.getUsableSpace())
+                                                    .put("sys/fs/files/count", fs.getTotalInodes())
+                                                    .put("sys/fs/files/free", fs.getFreeInodes())
+                                                    .build();
+        final ServiceMetricEvent.Builder builder = builder()
+            .setDimension("fsDevName", fs.getVolume())
+            .setDimension("fsDirName", fs.getMount())
+            .setDimension("fsTypeName", "local")  // Only local disk types displayed
+            .setDimension("fsSysTypeName", fs.getType())
+            .setDimension("fsOptions", fs.getOptions().split(","));
+        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+        for (Map.Entry<String, Long> entry : stats.entrySet()) {
+          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
         }
       }
     }
@@ -234,18 +223,17 @@ public class OshiSysMonitor extends FeedDefiningMonitor
         final Map<String, Long> stats = diff.to(
             disk.getName(),
             ImmutableMap.<String, Long>builder()
-                        .put("sys/disk/read/size", disk.getReads())
-                        .put("sys/disk/read/count", disk.getReadBytes())
-                        .put("sys/disk/write/size", disk.getWrites())
-                        .put("sys/disk/write/count", disk.getWriteBytes())
+                        .put("sys/disk/read/size", disk.getReadBytes())
+                        .put("sys/disk/read/count", disk.getReads())
+                        .put("sys/disk/write/size", disk.getWriteBytes())
+                        .put("sys/disk/write/count", disk.getWrites())
                         .put("sys/disk/queue", disk.getCurrentQueueLength())
                         .put("sys/disk/transferTime", disk.getTransferTime())
                         .build()
         );
         if (stats != null) {
           final ServiceMetricEvent.Builder builder = builder()
-              .setDimension("diskName", disk.getName())
-              .setDimension("diskModel", disk.getModel());
+              .setDimension("diskName", disk.getName());
           MonitorUtils.addDimensionsToBuilder(builder, dimensions);
           for (Map.Entry<String, Long> entry : stats.entrySet()) {
             emitter.emit(builder.build(entry.getKey(), entry.getValue()));
@@ -266,35 +254,30 @@ public class OshiSysMonitor extends FeedDefiningMonitor
       for (NetworkIF net : networkIFS) {
         final String name = net.getName();
         for (String addr : net.getIPv4addr()) {
-          if (netAddressBlacklist.contains(addr)) {
-            net = null;
-            log.debug("Not monitoring network stats for ip addr: [%s], network name: [%s]", addr, name);
-            break;
-          }
-        }
-        if (net != null) {
-
-          final Map<String, Long> stats = diff.to(
-              name,
-              ImmutableMap.<String, Long>builder()
-                          .put("sys/net/read/size", net.getBytesRecv())
-                          .put("sys/net/read/packets", net.getPacketsRecv())
-                          .put("sys/net/read/errors", net.getInErrors())
-                          .put("sys/net/read/dropped", net.getInDrops())
-                          .put("sys/net/write/size", net.getBytesSent())
-                          .put("sys/net/write/packets", net.getPacketsSent())
-                          .put("sys/net/write/errors", net.getOutErrors())
-                          .put("sys/net/write/collisions", net.getCollisions())
-                          .build()
-          );
-          if (stats != null) {
-            final ServiceMetricEvent.Builder builder = builder()
-                .setDimension("netName", net.getName())
-                .setDimension("netAddress", Arrays.toString(net.getIPv4addr()))
-                .setDimension("netHwaddr", net.getMacaddr());
-            MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-            for (Map.Entry<String, Long> entry : stats.entrySet()) {
-              emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+          if (!NET_ADDRESS_BLACKLIST.contains(addr)) {
+            // Only emit metrics for non black-listed ip addresses
+            final Map<String, Long> stats = diff.to(
+                name,
+                ImmutableMap.<String, Long>builder()
+                            .put("sys/net/read/size", net.getBytesRecv())
+                            .put("sys/net/read/packets", net.getPacketsRecv())
+                            .put("sys/net/read/errors", net.getInErrors())
+                            .put("sys/net/read/dropped", net.getInDrops())
+                            .put("sys/net/write/size", net.getBytesSent())
+                            .put("sys/net/write/packets", net.getPacketsSent())
+                            .put("sys/net/write/errors", net.getOutErrors())
+                            .put("sys/net/write/collisions", net.getCollisions())
+                            .build()
+            );
+            if (stats != null) {
+              final ServiceMetricEvent.Builder builder = builder()
+                  .setDimension("netName", net.getName())
+                  .setDimension("netAddress", addr)
+                  .setDimension("netHwaddr", net.getMacaddr());
+              MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+              for (Map.Entry<String, Long> entry : stats.entrySet()) {
+                emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+              }
             }
           }
         }
