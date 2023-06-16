@@ -1843,6 +1843,9 @@ public class ControllerImpl implements Controller
     // Such fields in CLUSTERED BY still control partitioning as expected, but do not affect sort order of rows
     // within an individual segment.
     for (final KeyColumn clusterByColumn : queryClusterBy.getColumns()) {
+      // This cannot happen since this validation check now happens at the query planning stage and will fail then with
+      // a ValidationException. TODO: determine whether to remove this fault or keep it around as deprecated with a
+      // release note since it's documented.
       if (clusterByColumn.order() == KeyOrder.DESCENDING) {
         throw new MSQException(new InsertCannotOrderByDescendingFault(clusterByColumn.columnName()));
       }
