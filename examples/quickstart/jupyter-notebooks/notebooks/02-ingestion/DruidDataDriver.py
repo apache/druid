@@ -726,7 +726,7 @@ class ElementList():
                 exit()
             self.cardinality_distribution = parse_distribution(desc['cardinality_distribution'])
             for i in range(cardinality):
-                Value = None
+                value = None
                 while True:
                     value = self.get_instance()
                     if value not in self.cardinality:
