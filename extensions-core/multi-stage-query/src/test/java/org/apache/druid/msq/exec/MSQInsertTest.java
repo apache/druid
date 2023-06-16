@@ -54,7 +54,6 @@ import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
-import javax.xml.bind.ValidationException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
