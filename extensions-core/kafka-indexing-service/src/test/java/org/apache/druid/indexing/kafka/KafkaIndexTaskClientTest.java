@@ -290,8 +290,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
 
     Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(new KafkaTopicPartition(null, 0)));
-    Assert.assertEquals(10, (long) results.get(new KafkaTopicPartition(null, 1)));
+    Assert.assertEquals(1, (long) results.get(new KafkaTopicPartition(false, null, 0)));
+    Assert.assertEquals(10, (long) results.get(new KafkaTopicPartition(false, null, 1)));
   }
 
   @Test
@@ -333,8 +333,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     }
 
     Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(new KafkaTopicPartition(null, 0)));
-    Assert.assertEquals(10, (long) results.get(new KafkaTopicPartition(null, 1)));
+    Assert.assertEquals(1, (long) results.get(new KafkaTopicPartition(false, null, 0)));
+    Assert.assertEquals(10, (long) results.get(new KafkaTopicPartition(false, null, 1)));
   }
 
   @Test
@@ -393,8 +393,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
 
     Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(new KafkaTopicPartition(null, 0)));
-    Assert.assertEquals(10, (long) results.get(new KafkaTopicPartition(null, 1)));
+    Assert.assertEquals(1, (long) results.get(new KafkaTopicPartition(false, null, 0)));
+    Assert.assertEquals(10, (long) results.get(new KafkaTopicPartition(false, null, 1)));
   }
 
   @Test
@@ -487,8 +487,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     Assert.assertTrue(request.getHeaders().get("X-Druid-Task-Id").contains("test-id"));
 
     Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(new KafkaTopicPartition(null, 0)));
-    Assert.assertEquals(10, (long) results.get(new KafkaTopicPartition(null, 1)));
+    Assert.assertEquals(1, (long) results.get(new KafkaTopicPartition(false, null, 0)));
+    Assert.assertEquals(10, (long) results.get(new KafkaTopicPartition(false, null, 1)));
   }
 
   @Test
@@ -583,8 +583,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     );
 
     Assert.assertEquals(2, results.size());
-    Assert.assertEquals(1, (long) results.get(new KafkaTopicPartition(null, 0)));
-    Assert.assertEquals(10, (long) results.get(new KafkaTopicPartition(null, 1)));
+    Assert.assertEquals(1, (long) results.get(new KafkaTopicPartition(false, null, 0)));
+    Assert.assertEquals(10, (long) results.get(new KafkaTopicPartition(false, null, 1)));
   }
 
   @Test
@@ -616,8 +616,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testSetEndOffsets() throws Exception
   {
-    Map<KafkaTopicPartition, Long> endOffsets = ImmutableMap.of(new KafkaTopicPartition(null, 0), 15L,
-                                                                new KafkaTopicPartition(null, 1), 120L);
+    Map<KafkaTopicPartition, Long> endOffsets = ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 15L,
+                                                                new KafkaTopicPartition(false, null, 1), 120L);
 
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
@@ -646,8 +646,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testSetEndOffsetsAndResume() throws Exception
   {
-    Map<KafkaTopicPartition, Long> endOffsets = ImmutableMap.of(new KafkaTopicPartition(null, 0), 15L,
-                                                                new KafkaTopicPartition(null, 1), 120L);
+    Map<KafkaTopicPartition, Long> endOffsets = ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 15L,
+                                                                new KafkaTopicPartition(false, null, 1), 120L);
 
     Capture<Request> captured = Capture.newInstance();
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
@@ -830,7 +830,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     for (int i = 0; i < numRequests; i++) {
       Assert.assertEquals(HttpMethod.POST, requests.get(i).getMethod());
       Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
-      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(new KafkaTopicPartition(null, 0), 1L)), responses.get(i));
+      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 1L)), responses.get(i));
     }
   }
 
@@ -942,7 +942,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     for (int i = 0; i < numRequests; i++) {
       Assert.assertEquals(HttpMethod.GET, requests.get(i).getMethod());
       Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
-      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(new KafkaTopicPartition(null, 0), 1L)), responses.get(i));
+      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 1L)), responses.get(i));
     }
   }
 
@@ -979,15 +979,15 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     for (int i = 0; i < numRequests; i++) {
       Assert.assertEquals(HttpMethod.GET, requests.get(i).getMethod());
       Assert.assertTrue("unexpectedURL", expectedUrls.contains(requests.get(i).getUrl()));
-      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(new KafkaTopicPartition(null, 0), 1L)), responses.get(i));
+      Assert.assertEquals(Maps.newLinkedHashMap(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 1L)), responses.get(i));
     }
   }
 
   @Test
   public void testSetEndOffsetsAsync() throws Exception
   {
-    final Map<KafkaTopicPartition, Long> endOffsets = ImmutableMap.of(new KafkaTopicPartition(null, 0), 15L,
-                                                                      new KafkaTopicPartition(null, 1), 120L);
+    final Map<KafkaTopicPartition, Long> endOffsets = ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 15L,
+                                                                      new KafkaTopicPartition(false, null, 1), 120L);
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
@@ -1030,8 +1030,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testSetEndOffsetsAsyncWithResume() throws Exception
   {
-    final Map<KafkaTopicPartition, Long> endOffsets = ImmutableMap.of(new KafkaTopicPartition(null, 0), 15L,
-                                                                      new KafkaTopicPartition(null, 1), 120L);
+    final Map<KafkaTopicPartition, Long> endOffsets = ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 15L,
+                                                                      new KafkaTopicPartition(false, null, 1), 120L);
     final int numRequests = TEST_IDS.size();
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();

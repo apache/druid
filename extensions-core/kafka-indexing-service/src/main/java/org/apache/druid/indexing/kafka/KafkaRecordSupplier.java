@@ -65,6 +65,8 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   private final KafkaConsumer<byte[], byte[]> consumer;
   private boolean closed;
 
+  private boolean isMultiTopic;
+
   // Store the stream information when partitions get assigned. This is required because the consumer does not
   // know about the parent stream which could be a list of topics.
   private String stream;
@@ -89,11 +91,18 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   @Override
   public void assign(Set<StreamPartition<KafkaTopicPartition>> streamPartitions)
   {
+    if (streamPartitions.isEmpty()) {
+      wrapExceptions(() -> consumer.assign(Collections.emptyList()));
+      return;
+    }
+    // We assume that assign is called before assignment() or poll() method is called. That way, we know that
+    // stream would have been set.
     Set<String> streams = streamPartitions.stream().map(StreamPartition::getStream).collect(Collectors.toSet());
     try {
       this.stream = CollectionUtils.getOnlyElement(streams, (Function<Set<String>, Throwable>) strings -> {
         throw new IAE("[%s] streams found. Only one stream is supported.", strings);
       });
+      this.isMultiTopic = stream.contains(",");
     }
     catch (Throwable e) {
       throw new RuntimeException(e);
@@ -136,8 +145,12 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   {
     return wrapExceptions(() -> consumer.assignment()
                                         .stream()
-                                        .map(e -> new StreamPartition<>(stream,
-                                                                        KafkaTopicPartition.fromTopicPartition(e)))
+                                        .map(e -> new StreamPartition<>(
+                                            stream,
+                                            new KafkaTopicPartition(isMultiTopic, e.topic(),
+                                                                    e.partition()
+                                            )
+                                        ))
                                         .collect(Collectors.toSet()));
   }
 
@@ -150,7 +163,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
 
       polledRecords.add(new OrderedPartitionableRecord<>(
           record.topic(),
-          new KafkaTopicPartition(record.topic(), record.partition()),
+          new KafkaTopicPartition(isMultiTopic, record.topic(), record.partition()),
           record.offset(),
           record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record))
       ));
@@ -197,6 +210,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   {
     return wrapExceptions(() -> {
       List<PartitionInfo> allPartitions = new ArrayList<>();
+      boolean isMultiTopic = stream.contains(",");
       for (String topic : stream.split(",")) {
         List<PartitionInfo> partitions = consumer.partitionsFor(topic);
         if (partitions == null) {
@@ -205,7 +219,9 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
         allPartitions.addAll(partitions);
       }
 
-      return allPartitions.stream().map(p -> new KafkaTopicPartition(p.topic(), p.partition())).collect(Collectors.toSet());
+      return allPartitions.stream()
+                          .map(p -> new KafkaTopicPartition(isMultiTopic, p.topic(), p.partition()))
+                          .collect(Collectors.toSet());
     });
   }
 

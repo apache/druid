@@ -168,6 +168,7 @@ public class KafkaDataSourceMetadataTest
     Map<KafkaTopicPartition, Long> newOffsets = CollectionUtils.mapKeys(
         offsets,
         k -> new KafkaTopicPartition(
+            false,
             "foo",
             k
         )
@@ -180,6 +181,7 @@ public class KafkaDataSourceMetadataTest
     Map<KafkaTopicPartition, Long> newOffsets = CollectionUtils.mapKeys(
         offsets,
         k -> new KafkaTopicPartition(
+            false,
             "foo",
             k
         )

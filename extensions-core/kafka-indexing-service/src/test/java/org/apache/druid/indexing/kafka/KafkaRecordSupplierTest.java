@@ -123,7 +123,7 @@ public class KafkaRecordSupplierTest
     Map<KafkaTopicPartition, Long> partitionToOffset = new HashMap<>();
     return records.stream().map(r -> {
       long offset = 0;
-      KafkaTopicPartition tp = new KafkaTopicPartition(r.topic(), r.partition());
+      KafkaTopicPartition tp = new KafkaTopicPartition(false, r.topic(), r.partition());
       if (partitionToOffset.containsKey(tp)) {
         offset = partitionToOffset.get(tp);
         partitionToOffset.put(tp, offset + 1);
@@ -227,8 +227,8 @@ public class KafkaRecordSupplierTest
     insertData();
 
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 0)),
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 1))
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0)),
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 1))
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
@@ -239,7 +239,7 @@ public class KafkaRecordSupplierTest
     recordSupplier.assign(partitions);
 
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
-    Assert.assertEquals(ImmutableSet.of(new KafkaTopicPartition(topic, 0), new KafkaTopicPartition(topic, 1)),
+    Assert.assertEquals(ImmutableSet.of(new KafkaTopicPartition(false, topic, 0), new KafkaTopicPartition(false, topic, 1)),
                         recordSupplier.getPartitionIds(topic));
 
     recordSupplier.close();
@@ -253,8 +253,8 @@ public class KafkaRecordSupplierTest
     insertData();
 
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 0)),
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 1))
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0)),
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 1))
     );
 
     Map<String, Object> properties = kafkaServer.consumerProperties();
@@ -272,7 +272,7 @@ public class KafkaRecordSupplierTest
     recordSupplier.assign(partitions);
 
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
-    Assert.assertEquals(ImmutableSet.of(new KafkaTopicPartition(topic, 0), new KafkaTopicPartition(topic, 1)),
+    Assert.assertEquals(ImmutableSet.of(new KafkaTopicPartition(false, topic, 0), new KafkaTopicPartition(false, topic, 1)),
                         recordSupplier.getPartitionIds(topic));
 
     recordSupplier.close();
@@ -324,8 +324,8 @@ public class KafkaRecordSupplierTest
     insertData();
 
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 0)),
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 1))
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0)),
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 1))
     );
 
     Map<String, Object> properties = kafkaServer.consumerProperties();
@@ -364,8 +364,8 @@ public class KafkaRecordSupplierTest
     insertData();
 
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 0)),
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 1))
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0)),
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 1))
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
@@ -407,8 +407,8 @@ public class KafkaRecordSupplierTest
     }
 
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 0)),
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 1))
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0)),
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 1))
     );
 
 
@@ -475,12 +475,12 @@ public class KafkaRecordSupplierTest
     // Insert data
     insertData();
 
-    StreamPartition<KafkaTopicPartition> partition0 = StreamPartition.of(topic, new KafkaTopicPartition(topic, 0));
-    StreamPartition<KafkaTopicPartition> partition1 = StreamPartition.of(topic, new KafkaTopicPartition(topic, 1));
+    StreamPartition<KafkaTopicPartition> partition0 = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0));
+    StreamPartition<KafkaTopicPartition> partition1 = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 1));
 
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 0)),
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 1))
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0)),
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 1))
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
@@ -518,12 +518,12 @@ public class KafkaRecordSupplierTest
     // Insert data
     insertData();
 
-    StreamPartition<KafkaTopicPartition> partition0 = StreamPartition.of(topic, new KafkaTopicPartition(topic, 0));
-    StreamPartition<KafkaTopicPartition> partition1 = StreamPartition.of(topic, new KafkaTopicPartition(topic, 1));
+    StreamPartition<KafkaTopicPartition> partition0 = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0));
+    StreamPartition<KafkaTopicPartition> partition1 = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 1));
 
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 0)),
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 1))
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0)),
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 1))
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
@@ -552,11 +552,11 @@ public class KafkaRecordSupplierTest
       }
     }
 
-    StreamPartition<KafkaTopicPartition> partition0 = StreamPartition.of(topic, new KafkaTopicPartition(topic, 0));
-    StreamPartition<KafkaTopicPartition> partition1 = StreamPartition.of(topic, new KafkaTopicPartition(topic, 1));
+    StreamPartition<KafkaTopicPartition> partition0 = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0));
+    StreamPartition<KafkaTopicPartition> partition1 = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 1));
 
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 0))
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0))
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
@@ -577,12 +577,12 @@ public class KafkaRecordSupplierTest
     // Insert data
     insertData();
 
-    StreamPartition<KafkaTopicPartition> partition0 = StreamPartition.of(topic, new KafkaTopicPartition(topic, 0));
-    StreamPartition<KafkaTopicPartition> partition1 = StreamPartition.of(topic, new KafkaTopicPartition(topic, 1));
+    StreamPartition<KafkaTopicPartition> partition0 = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0));
+    StreamPartition<KafkaTopicPartition> partition1 = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 1));
 
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 0)),
-        StreamPartition.of(topic, new KafkaTopicPartition(topic, 1))
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0)),
+        StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 1))
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
@@ -622,7 +622,7 @@ public class KafkaRecordSupplierTest
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
         kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
-    StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(topic, new KafkaTopicPartition(topic, 0));
+    StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0));
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -634,7 +634,7 @@ public class KafkaRecordSupplierTest
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
         kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
-    StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(topic, new KafkaTopicPartition(topic, 0));
+    StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0));
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -646,7 +646,7 @@ public class KafkaRecordSupplierTest
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
         kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
-    StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(topic, new KafkaTopicPartition(topic, 0));
+    StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0));
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToLatest(partitions);
@@ -658,7 +658,7 @@ public class KafkaRecordSupplierTest
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
         kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
-    StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(topic, new KafkaTopicPartition(topic, 0));
+    StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(topic, new KafkaTopicPartition(false, topic, 0));
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
     recordSupplier.seekToLatest(partitions);

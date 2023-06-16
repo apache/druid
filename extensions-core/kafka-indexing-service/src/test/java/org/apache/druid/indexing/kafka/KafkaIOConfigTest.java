@@ -71,10 +71,10 @@ public class KafkaIOConfigTest
 
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
     Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(null, 0), 1L, new KafkaTopicPartition(null, 1), 10L),
+    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 1L, new KafkaTopicPartition(false, null, 1), 10L),
                         config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(null, 0), 15L, new KafkaTopicPartition(null, 1),
+    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 15L, new KafkaTopicPartition(false, null, 1),
                                         200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
     Assert.assertTrue(config.isUseTransaction());
@@ -106,10 +106,10 @@ public class KafkaIOConfigTest
 
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
     Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(null, 0), 1L, new KafkaTopicPartition(null, 1), 10L),
+    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 1L, new KafkaTopicPartition(false, null, 1), 10L),
                         config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(null, 0), 15L, new KafkaTopicPartition(null, 1),
+    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 15L, new KafkaTopicPartition(false, null, 1),
                                         200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
     Assert.assertTrue(config.isUseTransaction());
@@ -144,10 +144,10 @@ public class KafkaIOConfigTest
 
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
     Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(null, 0), 1L, new KafkaTopicPartition(null, 1), 10L),
+    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 1L, new KafkaTopicPartition(false, null, 1), 10L),
                         config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(null, 0), 15L, new KafkaTopicPartition(null, 1),
+    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 15L, new KafkaTopicPartition(false, null, 1),
                                         200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
     Assert.assertFalse(config.isUseTransaction());

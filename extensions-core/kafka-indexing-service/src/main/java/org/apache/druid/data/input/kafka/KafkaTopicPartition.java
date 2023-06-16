@@ -35,20 +35,36 @@ import java.io.IOException;
 import java.util.Objects;
 import java.util.Optional;
 
+/**
+ * This class represents the partition id for kafka ingestion. This partition id includes topic name along with an
+ * integer partition. The topic name is required because the same partition id can be used for different topics.
+ * This class is used as a key in {@link org.apache.druid.indexing.kafka.KafkaDataSourceMetadata} to store the offsets
+ * for each partition.
+ *
+ */
 @JsonSerialize(using = KafkaTopicPartition.KafkaTopicPartitionSerializer.class,
     keyUsing = KafkaTopicPartition.KafkaTopicPartitionSerializer.class)
 @JsonDeserialize(using = KafkaTopicPartition.KafkaTopicPartitionDeserializer.class, keyUsing =
     KafkaTopicPartition.KafkaTopicPartitionKeyDeserializer.class)
 public class KafkaTopicPartition
 {
-  private int hash = 0;
   private final int partition;
-  private final Optional<String> topic;
+  @Nullable
+  private final String topic;
 
-  public KafkaTopicPartition(@Nullable String topic, int partition)
+  // This flag is used to maintain backward incompatibilty with older versions of kafka indexing. If this flag
+  // is set to false,
+  // - KafkaTopicPartition will be serialized as an integer and can be read back by older version.
+  // - topic field is ignored while comparing two KafkaTopicPartition objects and calculating hashcode.
+  // This flag must be explicitly passed while constructing KafkaTopicPartition object. That way, we can ensure that
+  // a particular supervisor is always running in multi topic mode or single topic mode.
+  private final boolean multiTopicPartition;
+
+  public KafkaTopicPartition(boolean multiTopicPartition, @Nullable String topic, int partition)
   {
     this.partition = partition;
-    this.topic = Optional.ofNullable(topic);
+    this.topic = topic;
+    this.multiTopicPartition = multiTopicPartition;
   }
 
   public int partition()
@@ -58,58 +74,56 @@ public class KafkaTopicPartition
 
   public Optional<String> topic()
   {
-    return topic;
+    return Optional.ofNullable(topic);
+  }
+
+  public boolean isMultiTopicPartition()
+  {
+    return multiTopicPartition;
   }
 
   public TopicPartition asTopicPartition(String fallbackTopic)
   {
-    return new TopicPartition(topic.orElse(fallbackTopic), partition);
-  }
-
-  public static KafkaTopicPartition fromTopicPartition(TopicPartition tp)
-  {
-    return new KafkaTopicPartition(tp.topic(), tp.partition());
-  }
-
-  @Override
-  public int hashCode()
-  {
-    if (hash != 0) {
-      return hash;
-    }
-    final int prime = 31;
-    int result = prime + partition;
-    if (topic.isPresent()) {
-      result = prime * result + Objects.hashCode(topic);
-    }
-    this.hash = result;
-    return result;
-  }
-
-  @Override
-  public boolean equals(Object obj)
-  {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null) {
-      return false;
-    }
-    if (getClass() != obj.getClass()) {
-      return false;
-    }
-    KafkaTopicPartition other = (KafkaTopicPartition) obj;
-    return partition == other.partition && Objects.equals(topic, other.topic);
+    return new TopicPartition(topic != null ? topic : fallbackTopic, partition);
   }
 
   @Override
   public String toString()
   {
-    if (topic.isPresent()) {
-      return partition + ":" + topic.get();
+    // TODO - fix this so toString is not used for serialization
+    if (null != topic && multiTopicPartition) {
+      return partition + ":" + topic;
     } else {
       return Integer.toString(partition);
     }
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    KafkaTopicPartition that = (KafkaTopicPartition) o;
+    return partition == that.partition && multiTopicPartition == that.multiTopicPartition && (!multiTopicPartition
+                                                                                              || Objects.equals(
+        topic,
+        that.topic
+    ));
+  }
+
+  @Override
+  public int hashCode()
+  {
+    if (multiTopicPartition) {
+      return Objects.hash(partition, multiTopicPartition, topic);
+    } else {
+      return Objects.hash(partition, multiTopicPartition);
+    }
+
   }
 
   public static class KafkaTopicPartitionDeserializer extends JsonDeserializer<KafkaTopicPartition>
@@ -157,9 +171,10 @@ public class KafkaTopicPartition
   {
     int index = str.indexOf(':');
     if (index < 0) {
-      return new KafkaTopicPartition(null, Integer.parseInt(str));
+      return new KafkaTopicPartition(false, null, Integer.parseInt(str));
     } else {
       return new KafkaTopicPartition(
+          true,
           str.substring(index + 1),
           Integer.parseInt(str.substring(0, index))
       );

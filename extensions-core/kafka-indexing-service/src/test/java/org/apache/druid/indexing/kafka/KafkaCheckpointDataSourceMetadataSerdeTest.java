@@ -46,9 +46,9 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
             new SeekableStreamStartSequenceNumbers<>(
                 "topic",
                 ImmutableMap.of(
-                    new KafkaTopicPartition("topic", 0), 10L,
-                    new KafkaTopicPartition("topic", 1), 20L,
-                    new KafkaTopicPartition("topic", 2), 30L),
+                    new KafkaTopicPartition(false, "topic", 0), 10L,
+                    new KafkaTopicPartition(false, "topic", 1), 20L,
+                    new KafkaTopicPartition(false, "topic", 2), 30L),
                 ImmutableSet.of()
             )
         );
@@ -145,9 +145,9 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
             new SeekableStreamStartSequenceNumbers<>(
                 "topic",
                 ImmutableMap.of(
-                    new KafkaTopicPartition(null, 0), 10L,
-                    new KafkaTopicPartition(null, 1), 20L,
-                    new KafkaTopicPartition(null, 2), 30L),
+                    new KafkaTopicPartition(false, null, 0), 10L,
+                    new KafkaTopicPartition(false, null, 1), 20L,
+                    new KafkaTopicPartition(false, null, 2), 30L),
                 ImmutableSet.of()
             )
         );

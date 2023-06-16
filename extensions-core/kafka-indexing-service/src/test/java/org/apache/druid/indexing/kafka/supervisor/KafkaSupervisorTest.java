@@ -420,22 +420,22 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertFalse("maximumMessageTime", taskConfig.getMaximumMessageTime().isPresent());
 
     Assert.assertEquals(topic, taskConfig.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)));
-    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1)));
-    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)));
+    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)));
+    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)));
+    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)));
 
     Assert.assertEquals(topic, taskConfig.getEndSequenceNumbers().getStream());
     Assert.assertEquals(
             Long.MAX_VALUE,
-            (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0))
+            (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0))
     );
     Assert.assertEquals(
             Long.MAX_VALUE,
-            (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1))
+            (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1))
     );
     Assert.assertEquals(
             Long.MAX_VALUE,
-            (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2))
+            (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2))
     );
     Assert.assertEquals(
         Collections.singleton(new ResourceAction(
@@ -536,22 +536,22 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertFalse("maximumMessageTime", taskConfig.getMaximumMessageTime().isPresent());
 
     Assert.assertEquals(topic, taskConfig.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)));
-    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1)));
-    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)));
+    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)));
+    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)));
+    Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)));
 
     Assert.assertEquals(topic, taskConfig.getEndSequenceNumbers().getStream());
     Assert.assertEquals(
         Long.MAX_VALUE,
-        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0))
+        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0))
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1))
+        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1))
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2))
+        (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2))
     );
   }
 
@@ -606,19 +606,19 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(2, task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(
         0L,
-        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)).longValue()
+        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)).longValue()
+        task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)).longValue()
     );
     Assert.assertEquals(
         0L,
-        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)).longValue()
+        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)).longValue()
+        task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)).longValue()
     );
 
     KafkaIndexTask task2 = captured.getValues().get(1);
@@ -626,11 +626,11 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(1, task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(
         0L,
-        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1)).longValue()
+        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1)).longValue()
+        task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)).longValue()
     );
   }
 
@@ -661,15 +661,15 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(3, task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(
         0L,
-        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)).longValue()
+        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)).longValue()
     );
     Assert.assertEquals(
         0L,
-        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1)).longValue()
+        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)).longValue()
     );
     Assert.assertEquals(
         0L,
-        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)).longValue()
+        task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)).longValue()
     );
 
     KafkaIndexTask task2 = captured.getValues().get(1);
@@ -677,15 +677,15 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(3, task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
     Assert.assertEquals(
         0L,
-        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)).longValue()
+        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)).longValue()
     );
     Assert.assertEquals(
         0L,
-        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1)).longValue()
+        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)).longValue()
     );
     Assert.assertEquals(
         0L,
-        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)).longValue()
+        task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)).longValue()
     );
   }
 
@@ -795,15 +795,15 @@ public class KafkaSupervisorTest extends EasyMockSupport
     KafkaIndexTask task = captured.getValue();
     Assert.assertEquals(
         1101L,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)).longValue()
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)).longValue()
     );
     Assert.assertEquals(
         1101L,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1)).longValue()
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)).longValue()
     );
     Assert.assertEquals(
         1101L,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)).longValue()
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)).longValue()
     );
   }
 
@@ -860,15 +860,15 @@ public class KafkaSupervisorTest extends EasyMockSupport
     KafkaIndexTask task = captured.getValue();
     Assert.assertEquals(
         10,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)).longValue()
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)).longValue()
     );
     Assert.assertEquals(
         10,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1)).longValue()
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)).longValue()
     );
     Assert.assertEquals(
         10,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)).longValue()
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)).longValue()
     );
 
     addMoreEvents(9, 6);
@@ -892,15 +892,15 @@ public class KafkaSupervisorTest extends EasyMockSupport
     task = newcaptured.getValue();
     Assert.assertEquals(
         0,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 3)).longValue()
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 3)).longValue()
     );
     Assert.assertEquals(
         0,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 4)).longValue()
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 4)).longValue()
     );
     Assert.assertEquals(
         0,
-        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 5)).longValue()
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 5)).longValue()
     );
   }
 
@@ -935,15 +935,15 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
     Assert.assertEquals(
         10L,
-        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)).longValue()
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)).longValue()
     );
     Assert.assertEquals(
         20L,
-        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1)).longValue()
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)).longValue()
     );
     Assert.assertEquals(
         30L,
-        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)).longValue()
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)).longValue()
     );
   }
 
@@ -1521,8 +1521,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
       Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
 
       Assert.assertEquals(topic, taskConfig.getStartSequenceNumbers().getStream());
-      Assert.assertEquals(10L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)));
-      Assert.assertEquals(35L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)));
+      Assert.assertEquals(10L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)));
+      Assert.assertEquals(35L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)));
     }
   }
 
@@ -1620,29 +1620,29 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(topic, capturedTaskConfig.getStartSequenceNumbers().getStream());
     Assert.assertEquals(
         10L,
-        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)).longValue()
+        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)).longValue()
     );
     Assert.assertEquals(
         20L,
-        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1)).longValue()
+        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)).longValue()
     );
     Assert.assertEquals(
         30L,
-        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)).longValue()
+        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)).longValue()
     );
 
     Assert.assertEquals(topic, capturedTaskConfig.getEndSequenceNumbers().getStream());
     Assert.assertEquals(
         Long.MAX_VALUE,
-        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)).longValue()
+        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1)).longValue()
+        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)).longValue()
+        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)).longValue()
     );
   }
 
@@ -1731,29 +1731,29 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(topic, capturedTaskConfig.getStartSequenceNumbers().getStream());
     Assert.assertEquals(
         10L,
-        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)).longValue()
+        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)).longValue()
     );
     Assert.assertEquals(
         0L,
-        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1)).longValue()
+        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)).longValue()
     );
     Assert.assertEquals(
         30L,
-        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)).longValue()
+        capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)).longValue()
     );
 
     Assert.assertEquals(topic, capturedTaskConfig.getEndSequenceNumbers().getStream());
     Assert.assertEquals(
         Long.MAX_VALUE,
-        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)).longValue()
+        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1)).longValue()
+        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)).longValue()
+        capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)).longValue()
     );
   }
 
@@ -2629,8 +2629,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     for (Task task : captured.getValues()) {
       KafkaIndexTaskIOConfig taskConfig = ((KafkaIndexTask) task).getIOConfig();
-      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)));
-      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)));
+      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)));
+      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)));
     }
   }
 
@@ -2722,8 +2722,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     for (Task task : captured.getValues()) {
       KafkaIndexTaskIOConfig taskConfig = ((KafkaIndexTask) task).getIOConfig();
-      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)));
-      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)));
+      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)));
+      Assert.assertEquals(0L, (long) taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)));
     }
   }
 
@@ -3689,29 +3689,29 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(topic, taskConfig.getStartSequenceNumbers().getStream());
     Assert.assertEquals(
         0L,
-        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)).longValue()
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)).longValue()
     );
     Assert.assertEquals(
         0L,
-        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1)).longValue()
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)).longValue()
     );
     Assert.assertEquals(
         0L,
-        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)).longValue()
+        taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)).longValue()
     );
 
     Assert.assertEquals(topic, taskConfig.getEndSequenceNumbers().getStream());
     Assert.assertEquals(
         Long.MAX_VALUE,
-        taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 0)).longValue()
+        taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 0)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 1)).longValue()
+        taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 1)).longValue()
     );
     Assert.assertEquals(
         Long.MAX_VALUE,
-        taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(topic, 2)).longValue()
+        taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(new KafkaTopicPartition(false, topic, 2)).longValue()
     );
   }
 
@@ -3720,7 +3720,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, false, kafkaHost);
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
-        supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(topic, 0)),
+        supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 0)),
         singlePartitionMap(topic, 0, 0L),
         Optional.absent(),
         Optional.absent(),
@@ -3729,7 +3729,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
-        supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(topic, 1)),
+        supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 1)),
         singlePartitionMap(topic, 0, 0L),
         Optional.absent(),
         Optional.absent(),
@@ -3762,7 +3762,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, false, kafkaHost);
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
-        supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(topic, 0)),
+        supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 0)),
         singlePartitionMap(topic, 0, 0L),
         Optional.absent(),
         Optional.absent(),
@@ -3771,7 +3771,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
 
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
-        supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(topic, 1)),
+        supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 1)),
         singlePartitionMap(topic, 0, 0L),
         Optional.absent(),
         Optional.absent(),
@@ -4906,20 +4906,20 @@ public class KafkaSupervisorTest extends EasyMockSupport
   
   private static ImmutableMap<KafkaTopicPartition, Long> singlePartitionMap(String topic, int partition, long offset)
   {
-    return ImmutableMap.of(new KafkaTopicPartition(topic, partition), offset);
+    return ImmutableMap.of(new KafkaTopicPartition(false, topic, partition), offset);
   }
 
   private static ImmutableMap<KafkaTopicPartition, Long> singlePartitionMap(String topic, int partition1, long offset1, int partition2, long offset2)
   {
-    return ImmutableMap.of(new KafkaTopicPartition(topic, partition1), offset1, new KafkaTopicPartition(topic, partition2),
+    return ImmutableMap.of(new KafkaTopicPartition(false, topic, partition1), offset1, new KafkaTopicPartition(false, topic, partition2),
       offset2);
   }
 
   private static ImmutableMap<KafkaTopicPartition, Long> singlePartitionMap(String topic, int partition1, long offset1,
                                                               int partition2, long offset2, int partition3, long offset3)
   {
-    return ImmutableMap.of(new KafkaTopicPartition(topic, partition1), offset1, new KafkaTopicPartition(topic, partition2),
-                           offset2, new KafkaTopicPartition(topic, partition3), offset3);
+    return ImmutableMap.of(new KafkaTopicPartition(false, topic, partition1), offset1, new KafkaTopicPartition(false, topic, partition2),
+                           offset2, new KafkaTopicPartition(false, topic, partition3), offset3);
   }
 
   private static class TestTaskRunnerWorkItem extends TaskRunnerWorkItem
