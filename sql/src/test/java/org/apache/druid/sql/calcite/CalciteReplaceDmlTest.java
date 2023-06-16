@@ -719,7 +719,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     final String sql = "EXPLAIN PLAN FOR"
                        + " REPLACE INTO dst"
                        + " OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' "
-                       + "SELECT * FROM foo PARTITIONED BY DAY CLUSTERED BY 2";
+                       + "SELECT * FROM foo PARTITIONED BY DAY CLUSTERED BY dim1 ASC";
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(
         PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,

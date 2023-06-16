@@ -146,7 +146,7 @@ public class DruidSqlParserUtilsTest
       Assert.assertNull(DruidSqlParserUtils.sanitizedClusteredByColumns(
           null,
           new SqlSelect(SqlParserPos.ZERO, null, selectArgs, null, null, null, null, null, null, null, null)
-                        )
+        )
       );
     }
 
@@ -198,7 +198,7 @@ public class DruidSqlParserUtilsTest
     }
 
     @Test
-    public void testExoticClusteredBy()
+    public void testClusteredByOrdinalsAndAliases()
     {
       // Construct the select source args
       final SqlNodeList selectArgs = new SqlNodeList(SqlParserPos.ZERO);

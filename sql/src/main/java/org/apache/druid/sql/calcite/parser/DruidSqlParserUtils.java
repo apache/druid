@@ -311,13 +311,14 @@ public class DruidSqlParserUtils
    *
    * The above SQL should return the following for clustered by columns: ["__time", "page_alias", "cityName"]
    * That is the ordinals and any expression should resolve to the final output name.
-   *
+   * @param clusteredByNodes  List of SqlNode representing columns to be clustered by.
+   * @param source The SqlSelect source node.
    */
   @Nullable
-  public static List<String> sanitizedClusteredByColumns(SqlNodeList clusteredBy, SqlNode source)
+  public static List<String> sanitizedClusteredByColumns(SqlNodeList clusteredByNodes, SqlNode source)
   {
     // CLUSTERED BY is an optional clause
-    if (clusteredBy == null) {
+    if (clusteredByNodes == null) {
       return null;
     }
     Preconditions.checkArgument(source instanceof SqlSelect, "Source must be a SqlSelect");
@@ -325,7 +326,7 @@ public class DruidSqlParserUtils
 
     final List<String> retClusteredByNames = new ArrayList<>();
 
-    for (SqlNode clusteredByNode : clusteredBy) {
+    for (SqlNode clusteredByNode : clusteredByNodes) {
 
       // Verify that 'operand' is a literal number.
       if (SqlUtil.isLiteral(clusteredByNode)) {
@@ -352,7 +353,7 @@ public class DruidSqlParserUtils
 
   private static String getColumnNameFromSqlCall(final SqlNode sqlCallNode)
   {
-    Preconditions.checkArgument(sqlCallNode instanceof SqlBasicCall, "Node must be a SqlBasicCallType");
+    Preconditions.checkArgument(sqlCallNode instanceof SqlBasicCall, "Node must be a SqlBasicCall type");
 
     // The node may be an alias or expression, in which case we'll get the output name
     SqlBasicCall sqlBasicCall = (SqlBasicCall) sqlCallNode;
