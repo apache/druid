@@ -106,7 +106,7 @@ public class MetadataSegmentView
     this.pollPeriodInMS = config.getMetadataSegmentPollPeriod();
     this.scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
     this.segmentIdToReplicationFactor = CacheBuilder.newBuilder()
-                                                    .expireAfterWrite(10, TimeUnit.MINUTES)
+                                                    .expireAfterAccess(10, TimeUnit.MINUTES)
                                                     .build();
   }
 

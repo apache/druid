@@ -106,7 +106,7 @@ public class MetadataResourceTest
   );
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     // Create mock request
     request = mock(HttpServletRequest.class);
