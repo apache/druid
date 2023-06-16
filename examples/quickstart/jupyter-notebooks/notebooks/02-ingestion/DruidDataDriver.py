@@ -340,7 +340,7 @@ def parse_timestamp_distribution(desc):
 
 class ElementNow: # The __time dimension
     def __init__(self, global_clock):
-        self.global_clock = global_clock_
+        self.global_clock = global_clock
     def __str__(self):
         return 'ElementNow()'
     def get_json_field_string(self):
