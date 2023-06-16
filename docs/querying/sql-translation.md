@@ -76,6 +76,8 @@ EXPLAIN PLAN statements return:
 
 Example 1: EXPLAIN PLAN for a `SELECT` query on the `wikipedia` datasource:
 
+<details><summary>Show the query</summary>
+
 ```sql
 EXPLAIN PLAN FOR
 SELECT
@@ -85,8 +87,11 @@ FROM wikipedia
 WHERE channel IN (SELECT page FROM wikipedia GROUP BY page ORDER BY COUNT(*) DESC LIMIT 10)
 GROUP BY channel
 ```
+</details>
 
 The above EXPLAIN PLAN query returns the following result:
+
+<details><summary>Show the result</summary>
 
 ```json
 [
@@ -224,7 +229,11 @@ The above EXPLAIN PLAN query returns the following result:
   }
 ]
 ```
+</details>
+
 Example 2: EXPLAIN PLAN for an `INSERT` query that inserts data into the `wikipedia` datasource:
+
+<details><summary>Show the query</summary>
 
 ```sql
 EXPLAIN PLAN FOR
@@ -247,8 +256,12 @@ FROM TABLE(
   )
 PARTITIONED BY ALL
 ```
+</details>
+
 
 The above EXPLAIN PLAN returns the following result:
+
+<details><summary>Show the result</summary>
 
 ```json
 [
@@ -436,9 +449,12 @@ The above EXPLAIN PLAN returns the following result:
   }
 ]
 ```
+</details>
 
 Example 3: EXPLAIN PLAN for a `REPLACE` query that replaces all the data in the `wikipedia` datasource with a `DAY`
 time partitioning, and `cityName` and `countryName` as the clustering columns:
+
+<details><summary>Show the query</summary>
 
 ```sql
 EXPLAIN PLAN FOR
@@ -463,8 +479,12 @@ FROM TABLE(
 PARTITIONED BY DAY
 CLUSTERED BY cityName, countryName
 ```
+</details>
+
 
 The above EXPLAIN PLAN query returns the following result:
+
+<details><summary>Show the result</summary>
 
 ```json
 [
@@ -649,6 +669,9 @@ The above EXPLAIN PLAN query returns the following result:
   }
 ]
 ```
+
+</details>
+
 
 In this case the JOIN operator gets translated to a `join` datasource. See the [Join translation](#joins) section
 for more details about how this works.
