@@ -653,11 +653,11 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     skipVectorize();
 
     final String resources = "[{\"name\":\"dst\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"druid.dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":\"2, `dim1` DESC, CEIL(`m2`)\"}";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"druid.dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":\"2, `dim1`, CEIL(`m2`)\"}";
 
     final String sql = "EXPLAIN PLAN FOR INSERT INTO druid.dst "
                        + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
-                       + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 DESC, CEIL(m2)";
+                       + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1, CEIL(m2)";
 
     ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
     final ScanQuery expectedQuery = newScanQueryBuilder()
@@ -671,7 +671,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .orderBy(
             ImmutableList.of(
                 new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                new ScanQuery.OrderBy("dim1", ScanQuery.Order.DESCENDING),
+                new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
                 new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
             )
         )
@@ -718,7 +718,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         + "\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\",\"expression\":\"floor(\\\"m1\\\")\",\"outputType\":\"FLOAT\"},"
         + "{\"type\":\"expression\",\"name\":\"v1\",\"expression\":\"ceil(\\\"m2\\\")\",\"outputType\":\"DOUBLE\"}],"
         + "\"resultFormat\":\"compactedList\","
-        + "\"orderBy\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},{\"columnName\":\"dim1\",\"order\":\"descending\"},"
+        + "\"orderBy\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},{\"columnName\":\"dim1\",\"order\":\"ascending\"},"
         + "{\"columnName\":\"v1\",\"order\":\"ascending\"}],\"columns\":[\"__time\",\"dim1\",\"v0\",\"v1\"],\"legacy\":false,"
         + "\"context\":{\"sqlInsertSegmentGranularity\":\"\\\"DAY\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}},"
         + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"v0\",\"type\":\"FLOAT\"},{\"name\":\"dim1\",\"type\":\"STRING\"},"
@@ -752,6 +752,24 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testExplainPlanInsertWithClusteredByDescThrowsException()
+  {
+    skipVectorize();
+
+    final String sql = "EXPLAIN PLAN FOR INSERT INTO druid.dst "
+                       + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
+                       + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 DESC, CEIL(m2)";
+
+    testIngestionQuery()
+        .sql(sql)
+        .expectValidationError(
+            SqlPlanningException.class,
+            "[`dim1` DESC] is invalid. CLUSTERED BY columns cannot be sorted in descending order."
+        )
+        .verify();
+  }
+
+  @Test
   public void testInsertWithClusteredBy()
   {
     // Test correctness of the query when only the CLUSTERED BY clause is present
@@ -765,7 +783,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql(
             "INSERT INTO druid.dst "
             + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
-            + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
+            + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1, CEIL(m2)"
         )
         .expectTarget("dst", targetRowSignature)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
@@ -781,7 +799,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 .orderBy(
                     ImmutableList.of(
                         new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.DESCENDING),
+                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
                         new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
                     )
                 )
@@ -1052,7 +1070,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
 
     final String query = "EXPLAIN PLAN FOR INSERT INTO druid.dst "
                        + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
-                       + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 DESC, CEIL(m2)";
+                       + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 ASC, CEIL(m2)";
 
     ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
     final ScanQuery expectedQuery = newScanQueryBuilder()
@@ -1066,7 +1084,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .orderBy(
             ImmutableList.of(
                 new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                new ScanQuery.OrderBy("dim1", ScanQuery.Order.DESCENDING),
+                new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
                 new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
             )
         )
@@ -1091,7 +1109,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         + "\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\",\"expression\":\"floor(\\\"m1\\\")\",\"outputType\":\"FLOAT\"},"
         + "{\"type\":\"expression\",\"name\":\"v1\",\"expression\":\"ceil(\\\"m2\\\")\",\"outputType\":\"DOUBLE\"}],"
         + "\"resultFormat\":\"compactedList\","
-        + "\"orderBy\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},{\"columnName\":\"dim1\",\"order\":\"descending\"},"
+        + "\"orderBy\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},{\"columnName\":\"dim1\",\"order\":\"ascending\"},"
         + "{\"columnName\":\"v1\",\"order\":\"ascending\"}],\"columns\":[\"__time\",\"dim1\",\"v0\",\"v1\"],\"legacy\":false,"
         + "\"context\":{\"sqlInsertSegmentGranularity\":\"\\\"DAY\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}},"
         + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"v0\",\"type\":\"FLOAT\"},{\"name\":\"dim1\",\"type\":\"STRING\"},"
@@ -1101,7 +1119,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         + "}]";
 
     final String resources = "[{\"name\":\"dst\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"druid.dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":\"2, `dim1` DESC, CEIL(`m2`)\"}";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"druid.dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":\"2, `dim1`, CEIL(`m2`)\"}";
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(

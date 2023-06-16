@@ -765,6 +765,26 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     didTest = true;
   }
 
+
+  @Test
+  public void testExplainPlanReplaceWithClusteredByDescThrowsException()
+  {
+    skipVectorize();
+
+    final String sql = "EXPLAIN PLAN FOR"
+                       + " REPLACE INTO dst"
+                       + " OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' "
+                       + "SELECT * FROM foo PARTITIONED BY DAY CLUSTERED BY dim1 DESC";
+
+    testIngestionQuery()
+        .sql(sql)
+        .expectValidationError(
+            SqlPlanningException.class,
+            "[`dim1` DESC] is invalid. CLUSTERED BY columns cannot be sorted in descending order."
+        )
+        .verify();
+  }
+
   @Test
   public void testExplainReplaceFromExternalUnauthorized()
   {
