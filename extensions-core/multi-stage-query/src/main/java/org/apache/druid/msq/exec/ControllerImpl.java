@@ -101,7 +101,6 @@ import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.FaultsExceededChecker;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
-import org.apache.druid.msq.indexing.error.InsertCannotOrderByDescendingFault;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
@@ -1843,10 +1842,6 @@ public class ControllerImpl implements Controller
     // Such fields in CLUSTERED BY still control partitioning as expected, but do not affect sort order of rows
     // within an individual segment.
     for (final KeyColumn clusterByColumn : queryClusterBy.getColumns()) {
-      if (clusterByColumn.order() == KeyOrder.DESCENDING) {
-        throw new MSQException(new InsertCannotOrderByDescendingFault(clusterByColumn.columnName()));
-      }
-
       final IntList outputColumns = columnMappings.getOutputColumnsForQueryColumn(clusterByColumn.columnName());
       for (final int outputColumn : outputColumns) {
         outputColumnsInOrder.add(columnMappings.getOutputColumnName(outputColumn));

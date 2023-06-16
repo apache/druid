@@ -45,7 +45,6 @@ import org.apache.druid.msq.indexing.error.ColumnTypeNotSupportedFault;
 import org.apache.druid.msq.indexing.error.DurableStorageConfigurationFault;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
-import org.apache.druid.msq.indexing.error.InsertCannotOrderByDescendingFault;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
@@ -113,7 +112,6 @@ public class MSQIndexingModule implements DruidModule
       DurableStorageConfigurationFault.class,
       InsertCannotAllocateSegmentFault.class,
       InsertCannotBeEmptyFault.class,
-      InsertCannotOrderByDescendingFault.class,
       InsertLockPreemptedFault.class,
       InsertTimeNullFault.class,
       InsertTimeOutOfBoundsFault.class,

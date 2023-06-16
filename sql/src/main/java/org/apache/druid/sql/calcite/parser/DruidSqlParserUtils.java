@@ -22,6 +22,8 @@ package org.apache.druid.sql.calcite.parser;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.sql.SqlAsOperator;
+import com.google.common.collect.ImmutableSet;
+
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -263,9 +265,12 @@ public class DruidSqlParserUtils
    * @param query sql query
    * @param clusteredByList List of clustered by columns
    * @return SqlOrderBy node containing the clusteredByList information
+   * @throws ValidationException if any of the clustered by columns contain DESCENDING order.
    */
   public static SqlOrderBy convertClusterByToOrderBy(SqlNode query, SqlNodeList clusteredByList)
+      throws ValidationException
   {
+    validateClusteredByColumns(clusteredByList);
     // If we have a CLUSTERED BY clause, extract the information in that CLUSTERED BY and create a new
     // SqlOrderBy node
     SqlNode offset = null;
@@ -273,13 +278,9 @@ public class DruidSqlParserUtils
 
     if (query instanceof SqlOrderBy) {
       SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
-      /*
-        `sqlOrderBy` represents the underlying query free of OFFSET, FETCH and ORDER BY clauses.
-         For example, if `query` is:
-          "SELECT dim1, sum(dim2) FROM foo OFFSET 10 FETCH 30 GROUP BY dim1 ORDER BY dim1"
-        `sqlOrderBy` would represent:
-          "SELECT dim1, sum(dim2) FROM foo GROUP BY dim1"
-       */
+      // query represents the underlying query free of OFFSET, FETCH and ORDER BY clauses
+      // For a sqlOrderBy.query like "SELECT dim1, sum(dim2) FROM foo GROUP BY dim1 ORDER BY dim1 FETCH 30 OFFSET 10",
+      // this would represent the "SELECT dim1, sum(dim2) from foo GROUP BY dim1
       query = sqlOrderBy.query;
       offset = sqlOrderBy.offset;
       fetch = sqlOrderBy.fetch;
@@ -349,7 +350,8 @@ public class DruidSqlParserUtils
     return retClusteredByNames;
   }
 
-  private static String getColumnNameFromSqlCall(final SqlNode sqlCallNode) {
+  private static String getColumnNameFromSqlCall(final SqlNode sqlCallNode)
+  {
     Preconditions.checkArgument(sqlCallNode instanceof SqlBasicCall, "Node must be a SqlBasicCallType");
 
     // The node may be an alias or expression, in which case we'll get the output name
@@ -360,6 +362,29 @@ public class DruidSqlParserUtils
       return sqlNode.toString();
     } else {
       return sqlCallNode.toSqlString(CalciteSqlDialect.DEFAULT).toString();
+    }
+  }
+
+  /**
+   * Validates the clustered by columns to ensure that it does not contain DESCENDING order columns.
+   *
+   * @param clusteredByNodes  List of SqlNodes representing columns to be clustered by.
+   * @throws ValidationException if any of the clustered by columns contain DESCENDING order.
+   */
+  public static void validateClusteredByColumns(final SqlNodeList clusteredByNodes) throws ValidationException
+  {
+    if (clusteredByNodes == null) {
+      return;
+    }
+
+    for (final SqlNode clusteredByNode : clusteredByNodes.getList()) {
+      if (clusteredByNode.isA(ImmutableSet.of(SqlKind.DESCENDING))) {
+        throw new ValidationException(
+            StringUtils.format("[%s] is invalid."
+                               + " CLUSTERED BY columns cannot be sorted in descending order.", clusteredByNode.toString()
+            )
+        );
+      }
     }
   }
 

@@ -712,34 +712,34 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         + queryJsonMapper.writeValueAsString(expectedQuery)
         + "], signature=[{__time:LONG, dim1:STRING, dim2:STRING, dim3:STRING, cnt:LONG, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n";
 
-    final String explanation = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"orderBy\":[{\"columnName\":\"dim1\",\"order\":\"descending\"}],\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"sqlInsertSegmentGranularity\":\"\\\"DAY\\\"\",\"sqlQueryId\":\"dummy\",\"sqlReplaceTimeChunks\":\"2000-01-01T00:00:00.000Z/2000-01-02T00:00:00.000Z\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}},\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}],\"columnMappings\":[{\"queryColumn\":\"__time\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"dim1\",\"outputColumn\":\"dim1\"},{\"queryColumn\":\"dim2\",\"outputColumn\":\"dim2\"},{\"queryColumn\":\"dim3\",\"outputColumn\":\"dim3\"},{\"queryColumn\":\"cnt\",\"outputColumn\":\"cnt\"},{\"queryColumn\":\"m1\",\"outputColumn\":\"m1\"},{\"queryColumn\":\"m2\",\"outputColumn\":\"m2\"},{\"queryColumn\":\"unique_dim1\",\"outputColumn\":\"unique_dim1\"}]}]";
+    final String explanation = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"orderBy\":[{\"columnName\":\"dim1\",\"order\":\"ascending\"}],\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"sqlInsertSegmentGranularity\":\"\\\"DAY\\\"\",\"sqlQueryId\":\"dummy\",\"sqlReplaceTimeChunks\":\"2000-01-01T00:00:00.000Z/2000-01-02T00:00:00.000Z\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}},\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}],\"columnMappings\":[{\"queryColumn\":\"__time\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"dim1\",\"outputColumn\":\"dim1\"},{\"queryColumn\":\"dim2\",\"outputColumn\":\"dim2\"},{\"queryColumn\":\"dim3\",\"outputColumn\":\"dim3\"},{\"queryColumn\":\"cnt\",\"outputColumn\":\"cnt\"},{\"queryColumn\":\"m1\",\"outputColumn\":\"m1\"},{\"queryColumn\":\"m2\",\"outputColumn\":\"m2\"},{\"queryColumn\":\"unique_dim1\",\"outputColumn\":\"unique_dim1\"}]}]";
     final String resources = "[{\"name\":\"dst\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
     final String attributes = "{\"statementType\":\"REPLACE\",\"targetDataSource\":\"dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":[\"dim1\"],\"replaceTimeChunks\":\"2000-01-01T00:00:00.000Z/2000-01-02T00:00:00.000Z\"}";
 
     final String sql = "EXPLAIN PLAN FOR"
                        + " REPLACE INTO dst"
                        + " OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' "
-                       + "SELECT * FROM foo PARTITIONED BY DAY CLUSTERED BY 2 DESC";
+                       + "SELECT * FROM foo PARTITIONED BY DAY CLUSTERED BY 2";
     // Use testQuery for EXPLAIN (not testIngestionQuery).
-//    testQuery(
-//        PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
-//        ImmutableMap.of("sqlQueryId", "dummy"),
-//        Collections.emptyList(),
-//        sql,
-//        CalciteTests.SUPER_USER_AUTH_RESULT,
-//        ImmutableList.of(),
-//        new DefaultResultsVerifier(
-//            ImmutableList.of(
-//                new Object[]{
-//                    legacyExplanation,
-//                    resources,
-//                    attributes
-//                }
-//            ),
-//            null
-//        ),
-//        null
-//    );
+    testQuery(
+        PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
+        ImmutableMap.of("sqlQueryId", "dummy"),
+        Collections.emptyList(),
+        sql,
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        new DefaultResultsVerifier(
+            ImmutableList.of(
+                new Object[]{
+                    legacyExplanation,
+                    resources,
+                    attributes
+                }
+            ),
+            null
+        ),
+        null
+    );
 
     testQuery(
         PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
@@ -763,6 +763,26 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
     didTest = true;
+  }
+
+
+  @Test
+  public void testExplainPlanReplaceWithClusteredByDescThrowsException()
+  {
+    skipVectorize();
+
+    final String sql = "EXPLAIN PLAN FOR"
+                       + " REPLACE INTO dst"
+                       + " OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' "
+                       + "SELECT * FROM foo PARTITIONED BY DAY CLUSTERED BY dim1 DESC";
+
+    testIngestionQuery()
+        .sql(sql)
+        .expectValidationError(
+            SqlPlanningException.class,
+            "[`dim1` DESC] is invalid. CLUSTERED BY columns cannot be sorted in descending order."
+        )
+        .verify();
   }
 
   @Test

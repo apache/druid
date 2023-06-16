@@ -678,7 +678,7 @@ public class MSQReplaceTest extends MSQTestBase
   }
 
   @Test
-  public void testInsertOnFoo1Range()
+  public void testReplaceOnFoo1Range()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -729,6 +729,25 @@ public class MSQReplaceTest extends MSQTestBase
                          )
                      )
                      .verifyResults();
+  }
+
+  @Test
+  public void testReplaceWithClusteredByDescendingThrowsException()
+  {
+    // Add a DESC clustered by column, which should not be allowed
+    testIngestQuery().setSql(" REPLACE INTO foobar "
+                             + "OVERWRITE ALL "
+                             + "SELECT __time, m1, m2 "
+                             + "FROM foo "
+                             + "PARTITIONED BY ALL TIME "
+                             + "CLUSTERED BY m2, m1 DESC"
+                             )
+                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
+                         CoreMatchers.instanceOf(SqlPlanningException.class),
+                         ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+                             "[`m1` DESC] is invalid. CLUSTERED BY columns cannot be sorted in descending order."))
+                     ))
+                     .verifyPlanningErrors();
   }
 
   @Test

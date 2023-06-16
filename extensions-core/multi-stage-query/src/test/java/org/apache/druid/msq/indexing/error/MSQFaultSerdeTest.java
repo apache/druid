@@ -56,7 +56,6 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new ColumnNameRestrictedFault("the column"));
     assertFaultSerde(new InsertCannotAllocateSegmentFault("the datasource", Intervals.ETERNITY));
     assertFaultSerde(new InsertCannotBeEmptyFault("the datasource"));
-    assertFaultSerde(new InsertCannotOrderByDescendingFault("the column"));
     assertFaultSerde(InsertLockPreemptedFault.INSTANCE);
     assertFaultSerde(InsertTimeNullFault.INSTANCE);
     assertFaultSerde(new InsertTimeOutOfBoundsFault(Intervals.ETERNITY));
