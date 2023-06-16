@@ -270,9 +270,9 @@ public class DruidSqlParserUtils
 
     if (query instanceof SqlOrderBy) {
       SqlOrderBy sqlOrderBy = (SqlOrderBy) query;
-      // This represents the underlying query free of OFFSET, FETCH and ORDER BY clauses
-      // For a sqlOrderBy.query like "SELECT dim1, sum(dim2) FROM foo OFFSET 10 FETCH 30 ORDER BY dim1 GROUP
-      // BY dim1 this would represent the "SELECT dim1, sum(dim2) from foo GROUP BY dim1
+      // query represents the underlying query free of OFFSET, FETCH and ORDER BY clauses
+      // For a sqlOrderBy.query like "SELECT dim1, sum(dim2) FROM foo OFFSET 10 FETCH 30 GROUP BY dim1 ORDER BY dim1",
+      // this would represent the "SELECT dim1, sum(dim2) from foo GROUP BY dim1
       query = sqlOrderBy.query;
       offset = sqlOrderBy.offset;
       fetch = sqlOrderBy.fetch;

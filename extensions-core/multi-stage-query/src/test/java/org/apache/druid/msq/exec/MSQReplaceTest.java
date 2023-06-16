@@ -678,7 +678,7 @@ public class MSQReplaceTest extends MSQTestBase
   }
 
   @Test
-  public void testInsertOnFoo1Range()
+  public void testReplaceOnFoo1Range()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)

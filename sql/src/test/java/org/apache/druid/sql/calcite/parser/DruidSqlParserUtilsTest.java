@@ -144,7 +144,7 @@ public class DruidSqlParserUtilsTest
      * Tests clause "CLUSTERED BY DIM1, DIM2 ASC, 3"
      */
     @Test
-    public void testClusteredByColumnsValid() throws ValidationException
+    public void testClusteredByColumnsValid()
     {
       final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);
       clusteredByArgs.add(new SqlIdentifier("DIM1", SqlParserPos.ZERO));
