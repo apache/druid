@@ -59,6 +59,13 @@ class FutureEvent:
         return self.t < other.t
     def __eq__(self, other):
         return self.t == other.t
+    def __le__(self, other):
+        return self.t <= other.t
+    def __gt__(self, other):
+        return self.t > other.t
+    def __ge__(self, other):
+        return self.t >= other.t
+
     def __str__(self):
         return 'FutureEvent('+self.name+', '+str(self.t)+')'
     def pause(self):
@@ -186,6 +193,9 @@ class PrintFile:
     def __init__(self, file_name):
         self.file_name = file_name
         self.f = open(file_name, 'w')
+    def __del__(self):
+        if self.f != None:
+            self.f.close()
     def __str__(self):
         return 'PrintFile(file_name='+self.file_name+')'
     def print(self, record):
@@ -330,7 +340,7 @@ def parse_timestamp_distribution(desc):
 
 class ElementNow: # The __time dimension
     def __init__(self, global_clock):
-        self.global_clock = global_clock
+        self.global_clock = global_clock_
     def __str__(self):
         return 'ElementNow()'
     def get_json_field_string(self):
@@ -376,7 +386,7 @@ class ElementCounter: # The __time dimension
             s = '"'+self.name+'": null'
         else:
             s = '"'+self.name+'":"'+str(self.get_stochastic_value())+'"'
-            return s
+        return s
 
     def is_missing(self):
         return random.random() < self.percent_missing
@@ -444,23 +454,29 @@ class ElementBase: # Base class for the remainder of the dimensions
             self.percent_missing = desc['percent_missing'] / 100.0
         else:
             self.percent_missing = 0.0
-        cardinality = desc['cardinality']
-        if cardinality == 0:
+
+        self.cardinality_setting = desc['cardinality']
+        self.cardinality_distribution = None
+
+        if self.cardinality_setting == 0:
             self.cardinality = None
-            self.cardinality_distribution = None
+
         else:
             self.cardinality = []
             if 'cardinality_distribution' not in desc.keys():
                 print('Element '+self.name+' specifies a cardinality without a cardinality distribution')
                 exit()
             self.cardinality_distribution = parse_distribution(desc['cardinality_distribution'])
-            for i in range(cardinality):
-                Value = None
-                while True:
-                    value = self.get_stochastic_value()
-                    if value not in self.cardinality:
-                        break
-                self.cardinality.append(value)
+            self.init_cardinality()
+
+    def init_cardinality(self):
+        for i in range(self.cardinality_setting):
+            value = None
+            while True:
+                value = self.get_stochastic_value()
+                if value not in self.cardinality:
+                    break
+            self.cardinality.append(value)
 
 
     def get_stochastic_value(self):
@@ -473,6 +489,7 @@ class ElementBase: # Base class for the remainder of the dimensions
             if self.cardinality is None:
                 value = self.get_stochastic_value()
             else:
+                if (self.cardinality_distribution)
                 index = int(self.cardinality_distribution.get_sample())
                 if index < 0:
                     index = 0
@@ -566,33 +583,7 @@ class ElementFloat(ElementBase):
 
 class ElementTimestamp(ElementBase):
     def __init__(self, desc):
-        self.name = desc['name']
-        self.value_distribution = parse_timestamp_distribution(desc['distribution'])
-        if 'percent_nulls' in desc.keys():
-            self.percent_nulls = desc['percent_nulls'] / 100.0
-        else:
-            self.percent_nulls = 0.0
-        if 'percent_missing' in desc.keys():
-            self.percent_missing = desc['percent_missing'] / 100.0
-        else:
-            self.percent_missing = 0.0
-        cardinality = desc['cardinality']
-        if cardinality == 0:
-            self.cardinality = None
-            self.cardinality_distribution = None
-        else:
-            if 'cardinality_distribution' not in desc.keys():
-                print('Element '+self.name+' specifies a cardinality without a cardinality distribution')
-                exit()
-            self.cardinality = []
-            self.cardinality_distribution = parse_distribution(desc['cardinality_distribution'])
-            for i in range(cardinality):
-                Value = None
-                while True:
-                    value = self.get_stochastic_value()
-                    if value not in self.cardinality:
-                        break
-                self.cardinality.append(value)
+        super().__init__(desc)
 
     def __str__(self):
         return 'ElementTimestamp(name='+self.name+', value_distribution='+str(self.value_distribution)+', cardinality='+str(self.cardinality)+', cardinality_distribution='+str(self.cardinality_distribution)+')'
@@ -670,7 +661,7 @@ class ElementObject():
                 exit()
             self.cardinality_distribution = parse_distribution(desc['cardinality_distribution'])
             for i in range(cardinality):
-                Value = None
+                value = None
                 while True:
                     value = self.get_instance()
                     if value not in self.cardinality:
@@ -1085,7 +1076,7 @@ def simulate(config_file_name, runtime, total_recs, time_type, start_time):
         transitions = parse_transitions(state['transitions'])
         this_state = State(name, dimensions, delay, transitions, variables)
         states[name] = this_state
-        if initial_state == None:
+        if initial_state is None:
             initial_state = this_state
 
     #sys.stderr.write('states='+str(['('+str(key)+':'+str(states[key])+')' for key in states])+'\n')
