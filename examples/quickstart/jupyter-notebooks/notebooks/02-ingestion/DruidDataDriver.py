@@ -489,7 +489,6 @@ class ElementBase: # Base class for the remainder of the dimensions
             if self.cardinality is None:
                 value = self.get_stochastic_value()
             else:
-                if (self.cardinality_distribution)
                 index = int(self.cardinality_distribution.get_sample())
                 if index < 0:
                     index = 0
