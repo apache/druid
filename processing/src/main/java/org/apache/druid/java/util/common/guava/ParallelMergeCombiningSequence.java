@@ -932,7 +932,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         return batchYielder;
       }
       catch (InterruptedException e) {
-        batchYielder = Yielders.done(null, null);
+        batchYielder = Yielders.done(null, batchYielder);
         throw new RuntimeException("Failed to load initial batch of results", e);
       }
     }
@@ -1085,6 +1085,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       if (yielder != null) {
         yielder.close();
       }
+      resultBatch = ResultBatch.TERMINAL;
     }
   }
 
@@ -1168,6 +1169,13 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       // if we can get a result immediately without blocking, also no need to block
       resultBatch = queue.poll();
       return resultBatch != null;
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      super.close();
+      resultBatch = ResultBatch.TERMINAL;
     }
   }
 

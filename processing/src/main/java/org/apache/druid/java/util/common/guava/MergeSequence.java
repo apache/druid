@@ -63,7 +63,7 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
       pQueue = baseSequences.accumulate(
           pQueue,
           (queue, in) -> {
-            final Yielder<T> yielder = in.toYielder(
+            final Yielder<T> yielder = Yielders.withClose(in, (inSeq) -> inSeq.toYielder(
                 null,
                 new YieldingAccumulator<T, T>()
                 {
@@ -74,20 +74,14 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
                     return in;
                   }
                 }
-            );
+            ));
 
             if (!yielder.isDone()) {
               try {
                 queue.add(yielder);
               }
               catch (Throwable t1) {
-                try {
-                  yielder.close();
-                }
-                catch (Throwable t2) {
-                  t1.addSuppressed(t2);
-                }
-
+                Yielders.safeCloseYielder(t1, yielder);
                 throw t1;
               }
             } else {

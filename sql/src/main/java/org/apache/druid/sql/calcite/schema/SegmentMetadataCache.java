@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
@@ -724,7 +725,7 @@ public class SegmentMetadataCache
         Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY)
     );
 
-    Yielder<SegmentAnalysis> yielder = Yielders.each(sequence);
+    Yielder<SegmentAnalysis> yielder = Yielders.withClose(sequence, (inSeq)-> Yielders.each(inSeq));
 
     try {
       while (!yielder.isDone()) {
@@ -780,7 +781,9 @@ public class SegmentMetadataCache
       }
     }
     finally {
-      yielder.close();
+      if (yielder!=null) {
+        yielder.close();
+      }
     }
 
     log.debug(

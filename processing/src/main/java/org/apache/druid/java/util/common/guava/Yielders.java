@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common.guava;
 
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 
 import java.io.IOException;
@@ -79,5 +80,28 @@ public class Yielders
         }
       }
     };
+  }
+  public static <T> void safeCloseYielder(Throwable t1, Yielder<T> yielder)
+  {
+    try {
+      if (yielder != null) {
+        yielder.close();
+      }
+    }
+    catch (Throwable t2) {
+      t1.addSuppressed(t2);
+    }
+  }
+  public static <T> Yielder<T> withClose(Sequence<T> in, Function<Sequence<T>, Yielder<T>> fn)
+  {
+    Yielder<T> yielder = null;
+    try {
+      yielder = fn.apply(in);
+    }
+    catch (Throwable t1) {
+      safeCloseYielder(t1, yielder);
+      throw t1;
+    }
+    return yielder;
   }
 }

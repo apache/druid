@@ -75,7 +75,10 @@ public class CombiningSequence<T> implements Sequence<T>
 
     combiningAccumulator.setRetVal(initValue);
 
-    final Yielder<T> baseYielder = baseSequence.toYielder(null, combiningAccumulator);
+    final Yielder<T> baseYielder = Yielders.withClose(
+        baseSequence,
+        (baseSeq) -> baseSeq.toYielder(null, combiningAccumulator)
+    );
 
     try {
       // If the yielder is already done at this point, that means that it ran through all of the inputs
@@ -97,13 +100,7 @@ public class CombiningSequence<T> implements Sequence<T>
       return makeYielder(baseYielder, combiningAccumulator);
     }
     catch (Throwable t1) {
-      try {
-        baseYielder.close();
-      }
-      catch (Throwable t2) {
-        t1.addSuppressed(t2);
-      }
-
+      Yielders.safeCloseYielder(t1, baseYielder);
       throw t1;
     }
   }
