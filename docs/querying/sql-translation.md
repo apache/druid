@@ -227,191 +227,218 @@ The above EXPLAIN PLAN query returns the following result:
 Example 2: EXPLAIN PLAN for an `INSERT` query that inserts data into the `wikipedia` datasource:
 
 ```sql
-
+EXPLAIN PLAN FOR
+INSERT INTO wikipedia2
+SELECT
+  TIME_PARSE("timestamp") AS __time,
+  namespace,
+  cityName,
+  countryName,
+  regionIsoCode,
+  metroCode,
+  countryIsoCode,
+  regionName
+FROM TABLE(
+    EXTERN(
+      '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+      '{"type":"json"}',
+      '[{"name":"timestamp","type":"string"},{"name":"namespace","type":"string"},{"name":"cityName","type":"string"},{"name":"countryName","type":"string"},{"name":"regionIsoCode","type":"string"},{"name":"metroCode","type":"long"},{"name":"countryIsoCode","type":"string"},{"name":"regionName","type":"string"}]'
+    )
+  )
+PARTITIONED BY ALL
 ```
 
 The above EXPLAIN PLAN returns the following result:
 
 ```json
 [
-  {
-    "query": {
-      "queryType": "scan",
-      "dataSource": {
-        "type": "external",
-        "inputSource": {
-          "type": "http",
-          "uris": [
-            "https://druid.apache.org/data/wikipedia.json.gz"
+  [
+    {
+      "query": {
+        "queryType": "scan",
+        "dataSource": {
+          "type": "external",
+          "inputSource": {
+            "type": "http",
+            "uris": [
+              "https://druid.apache.org/data/wikipedia.json.gz"
+            ]
+          },
+          "inputFormat": {
+            "type": "json",
+            "keepNullColumns": false,
+            "assumeNewlineDelimited": false,
+            "useJsonNodeReader": false
+          },
+          "signature": [
+            {
+              "name": "timestamp",
+              "type": "STRING"
+            },
+            {
+              "name": "namespace",
+              "type": "STRING"
+            },
+            {
+              "name": "cityName",
+              "type": "STRING"
+            },
+            {
+              "name": "countryName",
+              "type": "STRING"
+            },
+            {
+              "name": "regionIsoCode",
+              "type": "STRING"
+            },
+            {
+              "name": "metroCode",
+              "type": "LONG"
+            },
+            {
+              "name": "countryIsoCode",
+              "type": "STRING"
+            },
+            {
+              "name": "regionName",
+              "type": "STRING"
+            }
           ]
         },
-        "inputFormat": {
-          "type": "json",
-          "keepNullColumns": false,
-          "assumeNewlineDelimited": false,
-          "useJsonNodeReader": false
+        "intervals": {
+          "type": "intervals",
+          "intervals": [
+            "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+          ]
         },
-        "signature": [
+        "virtualColumns": [
           {
-            "name": "timestamp",
-            "type": "STRING"
-          },
-          {
-            "name": "namespace",
-            "type": "STRING"
-          },
-          {
-            "name": "cityName",
-            "type": "STRING"
-          },
-          {
-            "name": "countryName",
-            "type": "STRING"
-          },
-          {
-            "name": "regionIsoCode",
-            "type": "STRING"
-          },
-          {
-            "name": "metroCode",
-            "type": "LONG"
-          },
-          {
-            "name": "countryIsoCode",
-            "type": "STRING"
-          },
-          {
-            "name": "regionName",
-            "type": "STRING"
+            "type": "expression",
+            "name": "v0",
+            "expression": "timestamp_parse(\"timestamp\",null,'UTC')",
+            "outputType": "LONG"
           }
-        ]
-      },
-      "intervals": {
-        "type": "intervals",
-        "intervals": [
-          "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-        ]
-      },
-      "virtualColumns": [
-        {
-          "type": "expression",
-          "name": "v0",
-          "expression": "timestamp_parse(\"timestamp\",null,'UTC')",
-          "outputType": "LONG"
+        ],
+        "resultFormat": "compactedList",
+        "columns": [
+          "cityName",
+          "countryIsoCode",
+          "countryName",
+          "metroCode",
+          "namespace",
+          "regionIsoCode",
+          "regionName",
+          "v0"
+        ],
+        "legacy": false,
+        "context": {
+          "finalizeAggregations": false,
+          "forceExpressionVirtualColumns": true,
+          "groupByEnableMultiValueUnnesting": false,
+          "maxNumTasks": 5,
+          "multiStageQuery": true,
+          "queryId": "42e3de2b-daaf-40f9-a0e7-2c6184529ea3",
+          "scanSignature": "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"},{\"name\":\"metroCode\",\"type\":\"LONG\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"regionIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"},{\"name\":\"v0\",\"type\":\"LONG\"}]",
+          "sqlInsertSegmentGranularity": "{\"type\":\"all\"}",
+          "sqlQueryId": "42e3de2b-daaf-40f9-a0e7-2c6184529ea3",
+          "useNativeQueryExplain": true
+        },
+        "granularity": {
+          "type": "all"
         }
-      ],
-      "resultFormat": "compactedList",
-      "orderBy": [
+      },
+      "signature": [
         {
-          "columnName": "cityName",
-          "order": "ascending"
+          "name": "v0",
+          "type": "LONG"
         },
         {
-          "columnName": "countryName",
-          "order": "ascending"
+          "name": "namespace",
+          "type": "STRING"
+        },
+        {
+          "name": "cityName",
+          "type": "STRING"
+        },
+        {
+          "name": "countryName",
+          "type": "STRING"
+        },
+        {
+          "name": "regionIsoCode",
+          "type": "STRING"
+        },
+        {
+          "name": "metroCode",
+          "type": "LONG"
+        },
+        {
+          "name": "countryIsoCode",
+          "type": "STRING"
+        },
+        {
+          "name": "regionName",
+          "type": "STRING"
         }
       ],
-      "columns": [
-        "cityName",
-        "countryIsoCode",
-        "countryName",
-        "metroCode",
-        "namespace",
-        "regionIsoCode",
-        "regionName",
-        "v0"
-      ],
-      "legacy": false,
-      "context": {
-        "finalizeAggregations": false,
-        "forceExpressionVirtualColumns": true,
-        "groupByEnableMultiValueUnnesting": false,
-        "maxNumTasks": 5,
-        "multiStageQuery": true,
-        "queryId": "f066ddcc-7866-4bb6-8eb9-c3296756fdfa",
-        "scanSignature": "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"},{\"name\":\"metroCode\",\"type\":\"LONG\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"regionIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"},{\"name\":\"v0\",\"type\":\"LONG\"}]",
-        "sqlInsertSegmentGranularity": "\"DAY\"",
-        "sqlQueryId": "f066ddcc-7866-4bb6-8eb9-c3296756fdfa",
-        "useNativeQueryExplain": true
-      },
-      "granularity": {
-        "type": "all"
-      }
+      "columnMappings": [
+        {
+          "queryColumn": "v0",
+          "outputColumn": "__time"
+        },
+        {
+          "queryColumn": "namespace",
+          "outputColumn": "namespace"
+        },
+        {
+          "queryColumn": "cityName",
+          "outputColumn": "cityName"
+        },
+        {
+          "queryColumn": "countryName",
+          "outputColumn": "countryName"
+        },
+        {
+          "queryColumn": "regionIsoCode",
+          "outputColumn": "regionIsoCode"
+        },
+        {
+          "queryColumn": "metroCode",
+          "outputColumn": "metroCode"
+        },
+        {
+          "queryColumn": "countryIsoCode",
+          "outputColumn": "countryIsoCode"
+        },
+        {
+          "queryColumn": "regionName",
+          "outputColumn": "regionName"
+        }
+      ]
+    }
+  ],
+  [
+    {
+      "name": "EXTERNAL",
+      "type": "EXTERNAL"
     },
-    "signature": [
-      {
-        "name": "v0",
-        "type": "LONG"
-      },
-      {
-        "name": "namespace",
-        "type": "STRING"
-      },
-      {
-        "name": "cityName",
-        "type": "STRING"
-      },
-      {
-        "name": "countryName",
-        "type": "STRING"
-      },
-      {
-        "name": "regionIsoCode",
-        "type": "STRING"
-      },
-      {
-        "name": "metroCode",
-        "type": "LONG"
-      },
-      {
-        "name": "countryIsoCode",
-        "type": "STRING"
-      },
-      {
-        "name": "regionName",
-        "type": "STRING"
-      }
-    ],
-    "columnMappings": [
-      {
-        "queryColumn": "v0",
-        "outputColumn": "__time"
-      },
-      {
-        "queryColumn": "namespace",
-        "outputColumn": "namespace"
-      },
-      {
-        "queryColumn": "cityName",
-        "outputColumn": "cityName"
-      },
-      {
-        "queryColumn": "countryName",
-        "outputColumn": "countryName"
-      },
-      {
-        "queryColumn": "regionIsoCode",
-        "outputColumn": "regionIsoCode"
-      },
-      {
-        "queryColumn": "metroCode",
-        "outputColumn": "metroCode"
-      },
-      {
-        "queryColumn": "countryIsoCode",
-        "outputColumn": "countryIsoCode"
-      },
-      {
-        "queryColumn": "regionName",
-        "outputColumn": "regionName"
-      }
-    ]
+    {
+      "name": "wikipedia",
+      "type": "DATASOURCE"
+    }
+  ],
+  {
+    "statementType": "INSERT",
+    "targetDataSource": "wikipedia",
+    "partitionedBy": {
+      "type": "all"
+    }
   }
 ]
-
-
 ```
-Example 2: EXPLAIN PLAN for a `REPLACE` query that replaces all the data in the `wikipedia` datasource:
+
+Example 3: EXPLAIN PLAN for a `REPLACE` query that replaces all the data in the `wikipedia` datasource with a `DAY`
+time partitioning, and `cityName` and `countryName` as the clustering columns:
 
 ```sql
 EXPLAIN PLAN FOR
@@ -433,8 +460,8 @@ FROM TABLE(
       '[{"name":"timestamp","type":"string"},{"name":"namespace","type":"string"},{"name":"cityName","type":"string"},{"name":"countryName","type":"string"},{"name":"regionIsoCode","type":"string"},{"name":"metroCode","type":"long"},{"name":"countryIsoCode","type":"string"},{"name":"regionName","type":"string"}]'
     )
   )
-PARTITIONED BY HOUR
-CLUSTERED BY cityName
+PARTITIONED BY DAY
+CLUSTERED BY cityName, countryName
 ```
 
 The above EXPLAIN PLAN query returns the following result:
@@ -509,12 +536,6 @@ The above EXPLAIN PLAN query returns the following result:
           }
         ],
         "resultFormat": "compactedList",
-        "orderBy": [
-          {
-            "columnName": "cityName",
-            "order": "ascending"
-          }
-        ],
         "columns": [
           "cityName",
           "countryIsoCode",
@@ -530,10 +551,10 @@ The above EXPLAIN PLAN query returns the following result:
           "finalizeAggregations": false,
           "groupByEnableMultiValueUnnesting": false,
           "maxNumTasks": 5,
-          "queryId": "b474c0d5-a5ce-432d-be94-535ccdb7addc",
+          "queryId": "d88e0823-76d4-40d9-a1a7-695c8577b79f",
           "scanSignature": "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"},{\"name\":\"metroCode\",\"type\":\"LONG\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"regionIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"},{\"name\":\"v0\",\"type\":\"LONG\"}]",
-          "sqlInsertSegmentGranularity": "\"HOUR\"",
-          "sqlQueryId": "b474c0d5-a5ce-432d-be94-535ccdb7addc",
+          "sqlInsertSegmentGranularity": "\"DAY\"",
+          "sqlQueryId": "d88e0823-76d4-40d9-a1a7-695c8577b79f",
           "sqlReplaceTimeChunks": "all"
         },
         "granularity": {
@@ -623,8 +644,7 @@ The above EXPLAIN PLAN query returns the following result:
   {
     "statementType": "REPLACE",
     "targetDataSource": "wikipedia",
-    "partitionedBy": "HOUR",
-    "clusteredBy": ["cityName"],
+    "partitionedBy": "DAY",
     "replaceTimeChunks": "all"
   }
 ]
