@@ -71,6 +71,7 @@ public class EmitClusterStatsAndMetricsTest
     List<ServiceEventBuilder> emittedEvents = argumentCaptor.getAllValues();
     boolean foundCompactMetric = false;
     boolean foundHistoricalDutyMetric = false;
+    boolean foundSegmentDeletedCount = false;
     for (ServiceEventBuilder eventBuilder : emittedEvents) {
       ServiceMetricEvent serviceMetricEvent = ((ServiceMetricEvent) eventBuilder.build("x", "x"));
       String metric = serviceMetricEvent.getMetric();
@@ -78,6 +79,9 @@ public class EmitClusterStatsAndMetricsTest
         foundHistoricalDutyMetric = true;
       } else if ("compact/task/count".equals(metric)) {
         foundCompactMetric = true;
+      } else if ("segment/deleted/count".equals(metric)) {
+        foundSegmentDeletedCount = true;
+        continue;
       }
       String dutyGroup = (String) serviceMetricEvent.getUserDims().get("dutyGroup");
       Assert.assertNotNull(dutyGroup);
@@ -85,6 +89,7 @@ public class EmitClusterStatsAndMetricsTest
     }
     Assert.assertTrue(foundHistoricalDutyMetric);
     Assert.assertFalse(foundCompactMetric);
+    Assert.assertTrue(foundSegmentDeletedCount);
   }
 
   @Test

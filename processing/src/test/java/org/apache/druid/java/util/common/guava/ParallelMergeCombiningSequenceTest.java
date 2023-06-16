@@ -24,12 +24,11 @@ import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.utils.JvmUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -62,9 +61,6 @@ public class ParallelMergeCombiningSequenceTest
   };
 
   private ForkJoinPool pool;
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Before
   public void setup()
@@ -109,7 +105,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testOrderedResultBatchFromSequenceBackToYielderOnSequence() throws IOException
+  public void testOrderedResultBatchFromSequenceBacktoYielderOnSequence() throws IOException
   {
     final int batchSize = 128;
     final int sequenceSize = 5_000;
@@ -243,14 +239,14 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testNone() throws Exception
+  public void testNone() throws IOException
   {
     List<Sequence<IntPair>> input = new ArrayList<>();
     assertResult(input);
   }
 
   @Test
-  public void testEmpties() throws Exception
+  public void testEmpties() throws IOException
   {
     // below min threshold, so will merge serially
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -266,7 +262,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testEmptiesAndNonEmpty() throws Exception
+  public void testEmptiesAndNonEmpty() throws IOException
   {
     // below min threshold, so will merge serially
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -287,7 +283,32 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testAllInSingleBatch() throws Exception
+  public void testMergeCombineMetricsAccumulatorNPEOnBadExecutorPool()
+  {
+    // below min threshold, so will merge serially
+    List<Sequence<IntPair>> input = new ArrayList<>();
+    input.add(nonBlockingSequence(5));
+    input.add(nonBlockingSequence(6));
+    // Simulates the bad/occupied executor pool, it does not execute any task submitted to it
+    ForkJoinPool customBadPool = new ForkJoinPool(
+        1,
+        pool -> null,
+        (t, e) -> LOG.error(e, "Unhandled exception in thread [%s]", t),
+        true
+    );
+    Throwable t = Assert.assertThrows(
+        QueryTimeoutException.class,
+        () -> assertResultWithCustomPool(input, 10, 20, reportMetrics -> {}, customBadPool)
+    );
+    Assert.assertEquals(
+        "Query did not complete within configured timeout period. You can increase query timeout or tune the performance of query.",
+        t.getMessage()
+    );
+    customBadPool.shutdown();
+  }
+
+  @Test
+  public void testAllInSingleBatch() throws IOException
   {
     // below min threshold, so will merge serially
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -322,7 +343,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testAllInSingleYield() throws Exception
+  public void testAllInSingleYield() throws IOException
   {
     // below min threshold, so will merge serially
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -358,7 +379,7 @@ public class ParallelMergeCombiningSequenceTest
 
 
   @Test
-  public void testMultiBatchMultiYield() throws Exception
+  public void testMultiBatchMultiYield() throws IOException
   {
     // below min threshold, so will merge serially
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -391,7 +412,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testMixedSingleAndMultiYield() throws Exception
+  public void testMixedSingleAndMultiYield() throws IOException
   {
     // below min threshold, so will merge serially
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -410,9 +431,8 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testLongerSequencesJustForFun() throws Exception
+  public void testLongerSequencesJustForFun() throws IOException
   {
-
     List<Sequence<IntPair>> input = new ArrayList<>();
     input.add(nonBlockingSequence(10_000));
     input.add(nonBlockingSequence(9_001));
@@ -436,23 +456,21 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   @Test
-  public void testExceptionOnInputSequenceRead() throws Exception
+  public void testExceptionOnInputSequenceRead()
   {
     List<Sequence<IntPair>> input = new ArrayList<>();
 
     input.add(explodingSequence(15));
     input.add(nonBlockingSequence(25));
 
-
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage(
-        "exploded"
-    );
-    assertException(input);
+    Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
+    Assert.assertEquals("exploded", t.getMessage());
+    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
+    Assert.assertTrue(pool.isQuiescent());
   }
 
   @Test
-  public void testExceptionOnInputSequenceRead2() throws Exception
+  public void testExceptionOnInputSequenceRead2()
   {
     List<Sequence<IntPair>> input = new ArrayList<>();
     input.add(nonBlockingSequence(5));
@@ -460,15 +478,14 @@ public class ParallelMergeCombiningSequenceTest
     input.add(explodingSequence(11));
     input.add(nonBlockingSequence(12));
 
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage(
-        "exploded"
-    );
-    assertException(input);
+    Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
+    Assert.assertEquals("exploded", t.getMessage());
+    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
+    Assert.assertTrue(pool.isQuiescent());
   }
 
   @Test
-  public void testExceptionFirstResultFromSequence() throws Exception
+  public void testExceptionFirstResultFromSequence()
   {
     List<Sequence<IntPair>> input = new ArrayList<>();
     input.add(explodingSequence(0));
@@ -476,15 +493,14 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(2));
     input.add(nonBlockingSequence(2));
 
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage(
-        "exploded"
-    );
-    assertException(input);
+    Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
+    Assert.assertEquals("exploded", t.getMessage());
+    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
+    Assert.assertTrue(pool.isQuiescent());
   }
 
   @Test
-  public void testExceptionFirstResultFromMultipleSequence() throws Exception
+  public void testExceptionFirstResultFromMultipleSequence()
   {
     List<Sequence<IntPair>> input = new ArrayList<>();
     input.add(explodingSequence(0));
@@ -494,15 +510,14 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(2));
     input.add(nonBlockingSequence(2));
 
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage(
-        "exploded"
-    );
-    assertException(input);
+    Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
+    Assert.assertEquals("exploded", t.getMessage());
+    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
+    Assert.assertTrue(pool.isQuiescent());
   }
 
   @Test
-  public void testTimeoutExceptionDueToStalledInput() throws Exception
+  public void testTimeoutExceptionDueToStalledInput()
   {
     final int someSize = 2048;
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -510,21 +525,33 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(someSize));
     input.add(nonBlockingSequence(someSize));
     input.add(blockingSequence(someSize, 400, 500, 1, 500, true));
-    expectedException.expect(QueryTimeoutException.class);
-    expectedException.expectMessage("Query did not complete within configured timeout period. " +
-        "You can increase query timeout or tune the performance of query");
 
-    assertException(
-        input,
-        ParallelMergeCombiningSequence.DEFAULT_TASK_SMALL_BATCH_NUM_ROWS,
-        ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS,
-        1000L,
-        0
+    Throwable t = Assert.assertThrows(
+        QueryTimeoutException.class,
+        () -> assertException(
+            input,
+            ParallelMergeCombiningSequence.DEFAULT_TASK_SMALL_BATCH_NUM_ROWS,
+            ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS,
+            1000L,
+            0
+        )
     );
+    Assert.assertEquals("Query did not complete within configured timeout period. " +
+                        "You can increase query timeout or tune the performance of query.", t.getMessage());
+
+
+    // these tests when run in java 11, 17 and maybe others in between 8 and 20 don't seem to correctly clean up the
+    // pool, however this behavior is flaky and doesn't always happen so we can't definitively assert that the pool is
+    // or isn't
+    if (JvmUtils.majorVersion() >= 20 || JvmUtils.majorVersion() < 9) {
+      Assert.assertTrue(pool.awaitQuiescence(3, TimeUnit.SECONDS));
+      // good result, we want the pool to always be idle if an exception occurred during processing
+      Assert.assertTrue(pool.isQuiescent());
+    }
   }
 
   @Test
-  public void testTimeoutExceptionDueToStalledReader() throws Exception
+  public void testTimeoutExceptionDueToStalledReader()
   {
     final int someSize = 2048;
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -533,14 +560,15 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(someSize));
     input.add(nonBlockingSequence(someSize));
 
-    expectedException.expect(QueryTimeoutException.class);
-    expectedException.expectMessage("Query did not complete within configured timeout period. " +
-        "You can increase query timeout or tune the performance of query");
-    assertException(input, 8, 64, 1000, 500);
+    Throwable t = Assert.assertThrows(QueryTimeoutException.class, () -> assertException(input, 8, 64, 1000, 1500));
+    Assert.assertEquals("Query did not complete within configured timeout period. " +
+                        "You can increase query timeout or tune the performance of query.", t.getMessage());
+    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
+    Assert.assertTrue(pool.isQuiescent());
   }
 
   @Test
-  public void testGracefulCloseOfYielderCancelsPool() throws Exception
+  public void testGracefulCloseOfYielderCancelsPool() throws IOException
   {
 
     List<Sequence<IntPair>> input = new ArrayList<>();
@@ -564,8 +592,7 @@ public class ParallelMergeCombiningSequenceTest
     });
   }
 
-
-  private void assertResult(List<Sequence<IntPair>> sequences) throws InterruptedException, IOException
+  private void assertResult(List<Sequence<IntPair>> sequences) throws IOException
   {
     assertResult(
         sequences,
@@ -576,7 +603,7 @@ public class ParallelMergeCombiningSequenceTest
   }
 
   private void assertResult(List<Sequence<IntPair>> sequences, int batchSize, int yieldAfter)
-      throws InterruptedException, IOException
+      throws IOException
   {
     assertResult(
         sequences,
@@ -586,13 +613,69 @@ public class ParallelMergeCombiningSequenceTest
     );
   }
 
+  private void assertResultWithCustomPool(
+          List<Sequence<IntPair>> sequences,
+          int batchSize,
+          int yieldAfter,
+          Consumer<ParallelMergeCombiningSequence.MergeCombineMetrics> reporter,
+          ForkJoinPool customPool
+  )
+          throws InterruptedException, IOException
+  {
+    final CombiningSequence<IntPair> combiningSequence = CombiningSequence.create(
+            new MergeSequence<>(INT_PAIR_ORDERING, Sequences.simple(sequences)),
+            INT_PAIR_ORDERING,
+            INT_PAIR_MERGE_FN
+    );
+
+    final ParallelMergeCombiningSequence<IntPair> parallelMergeCombineSequence = new ParallelMergeCombiningSequence<>(
+            customPool,
+            sequences,
+            INT_PAIR_ORDERING,
+            INT_PAIR_MERGE_FN,
+            true,
+            5000,
+            0,
+            TEST_POOL_SIZE,
+            yieldAfter,
+            batchSize,
+            ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS,
+            reporter
+    );
+
+    Yielder<IntPair> combiningYielder = Yielders.each(combiningSequence);
+    Yielder<IntPair> parallelMergeCombineYielder = Yielders.each(parallelMergeCombineSequence);
+
+    IntPair prev = null;
+
+    while (!combiningYielder.isDone() && !parallelMergeCombineYielder.isDone()) {
+      Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
+      Assert.assertNotEquals(parallelMergeCombineYielder.get(), prev);
+      prev = parallelMergeCombineYielder.get();
+      combiningYielder = combiningYielder.next(combiningYielder.get());
+      parallelMergeCombineYielder = parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
+    }
+
+    Assert.assertTrue(combiningYielder.isDone());
+    Assert.assertTrue(parallelMergeCombineYielder.isDone());
+    while (pool.getRunningThreadCount() > 0) {
+      Thread.sleep(100);
+    }
+    Assert.assertEquals(0, pool.getRunningThreadCount());
+    combiningYielder.close();
+    parallelMergeCombineYielder.close();
+    // cancellation trigger should not be set if sequence was fully yielded and close is called
+    // (though shouldn't actually matter even if it was...)
+    Assert.assertFalse(parallelMergeCombineSequence.getCancellationGizmo().isCancelled());
+  }
+
   private void assertResult(
       List<Sequence<IntPair>> sequences,
       int batchSize,
       int yieldAfter,
       Consumer<ParallelMergeCombiningSequence.MergeCombineMetrics> reporter
   )
-      throws InterruptedException, IOException
+      throws IOException
   {
     final CombiningSequence<IntPair> combiningSequence = CombiningSequence.create(
         new MergeSequence<>(INT_PAIR_ORDERING, Sequences.simple(sequences)),
@@ -630,10 +713,8 @@ public class ParallelMergeCombiningSequenceTest
 
     Assert.assertTrue(combiningYielder.isDone());
     Assert.assertTrue(parallelMergeCombineYielder.isDone());
-    while (pool.getRunningThreadCount() > 0) {
-      Thread.sleep(100);
-    }
-    Assert.assertEquals(0, pool.getRunningThreadCount());
+    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
+    Assert.assertTrue(pool.isQuiescent());
     combiningYielder.close();
     parallelMergeCombineYielder.close();
     // cancellation trigger should not be set if sequence was fully yielded and close is called
@@ -648,7 +729,7 @@ public class ParallelMergeCombiningSequenceTest
       int closeYielderAfter,
       Consumer<ParallelMergeCombiningSequence.MergeCombineMetrics> reporter
   )
-      throws InterruptedException, IOException
+      throws IOException
   {
     final CombiningSequence<IntPair> combiningSequence = CombiningSequence.create(
         new MergeSequence<>(INT_PAIR_ORDERING, Sequences.simple(sequences)),
@@ -693,15 +774,10 @@ public class ParallelMergeCombiningSequenceTest
     }
     // trying to next the yielder creates sadness for you
     final String expectedExceptionMsg = "Already closed";
-    try {
-      Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
-      parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
-      // this should explode so the contradictory next statement should not be reached
-      Assert.assertTrue(false);
-    }
-    catch (RuntimeException rex) {
-      Assert.assertEquals(expectedExceptionMsg, rex.getMessage());
-    }
+    Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
+    final Yielder<IntPair> finalYielder = parallelMergeCombineYielder;
+    Throwable t = Assert.assertThrows(RuntimeException.class, () -> finalYielder.next(finalYielder.get()));
+    Assert.assertEquals(expectedExceptionMsg, t.getMessage());
 
     // cancellation gizmo of sequence should be cancelled, and also should contain our expected message
     Assert.assertTrue(parallelMergeCombineSequence.getCancellationGizmo().isCancelled());
@@ -710,16 +786,14 @@ public class ParallelMergeCombiningSequenceTest
         parallelMergeCombineSequence.getCancellationGizmo().getRuntimeException().getMessage()
     );
 
-    while (pool.getRunningThreadCount() > 0) {
-      Thread.sleep(100);
-    }
-    Assert.assertEquals(0, pool.getRunningThreadCount());
+    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
+    Assert.assertTrue(pool.isQuiescent());
 
     Assert.assertFalse(combiningYielder.isDone());
     Assert.assertFalse(parallelMergeCombineYielder.isDone());
   }
 
-  private void assertException(List<Sequence<IntPair>> sequences) throws Exception
+  private void assertException(List<Sequence<IntPair>> sequences) throws Throwable
   {
     assertException(
         sequences,
@@ -737,9 +811,9 @@ public class ParallelMergeCombiningSequenceTest
       long timeout,
       int readDelayMillis
   )
-      throws Exception
+      throws Throwable
   {
-    try {
+    Throwable t = Assert.assertThrows(Exception.class, () -> {
       final ParallelMergeCombiningSequence<IntPair> parallelMergeCombineSequence = new ParallelMergeCombiningSequence<>(
           pool,
           sequences,
@@ -768,17 +842,16 @@ public class ParallelMergeCombiningSequenceTest
         parallelMergeCombineYielder = parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
       }
       parallelMergeCombineYielder.close();
-    }
-    catch (Exception ex) {
-      sequences.forEach(sequence -> {
-        if (sequence instanceof ExplodingSequence) {
-          ExplodingSequence exploder = (ExplodingSequence) sequence;
-          Assert.assertEquals(1, exploder.getCloseCount());
-        }
-      });
-      LOG.warn(ex, "exception:");
-      throw ex;
-    }
+    });
+
+    sequences.forEach(sequence -> {
+      if (sequence instanceof ExplodingSequence) {
+        ExplodingSequence exploder = (ExplodingSequence) sequence;
+        Assert.assertEquals(1, exploder.getCloseCount());
+      }
+    });
+    LOG.warn(t, "exception:");
+    throw t;
   }
 
   public static class IntPair extends Pair<Integer, Integer>

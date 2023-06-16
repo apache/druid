@@ -90,4 +90,11 @@ public class Limits
    * {@link ClusterStatisticsMergeMode#SEQUENTIAL} mode is chosen.
    */
   public static final long MAX_WORKERS_FOR_PARALLEL_MERGE = 100;
+
+  /**
+   * Max number of rows in the query reports of the SELECT queries run by MSQ. This ensures that the reports donot blow
+   * up for queries operating on larger datasets. The full result of the select query should be available once the
+   * MSQ is able to run async queries
+   */
+  public static final long MAX_SELECT_RESULT_ROWS = 3_000;
 }
