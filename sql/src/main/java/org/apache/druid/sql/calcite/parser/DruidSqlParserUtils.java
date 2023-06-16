@@ -21,9 +21,8 @@ package org.apache.druid.sql.calcite.parser;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import org.apache.calcite.sql.SqlAsOperator;
 import com.google.common.collect.ImmutableSet;
-
+import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -341,7 +340,7 @@ public class DruidSqlParserUtils
           SqlIdentifier n = ((SqlIdentifier) node);
           retClusteredByNames.add(n.isSimple() ? n.getSimple() : n.names.get(1));
         }
-      } else if (clusteredByNode instanceof SqlBasicCall){
+      } else if (clusteredByNode instanceof SqlBasicCall) {
         retClusteredByNames.add(getColumnNameFromSqlCall(clusteredByNode));
       } else {
         retClusteredByNames.add(clusteredByNode.toString());
