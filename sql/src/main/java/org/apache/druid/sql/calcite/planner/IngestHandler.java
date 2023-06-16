@@ -279,7 +279,10 @@ public abstract class IngestHandler extends QueryHandler
     {
       return new ExplainAttributes(
           DruidSqlInsert.OPERATOR.getName(),
-          sqlNode.getTargetTable()
+          sqlNode.getTargetTable(),
+          sqlNode.getPartitionedBy(),
+          sqlNode.getClusteredBy(),
+          null
       );
     }
   }
@@ -346,7 +349,10 @@ public abstract class IngestHandler extends QueryHandler
     {
       return new ExplainAttributes(
           DruidSqlReplace.OPERATOR.getName(),
-          sqlNode.getTargetTable()
+          sqlNode.getTargetTable(),
+          sqlNode.getPartitionedBy(),
+          sqlNode.getClusteredBy(),
+          sqlNode.getReplaceTimeQuery()
       );
     }
   }

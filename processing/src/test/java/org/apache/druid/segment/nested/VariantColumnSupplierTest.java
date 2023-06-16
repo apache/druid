@@ -20,7 +20,6 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -238,12 +237,18 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
       SortedMap<String, FieldTypeInfo.MutableTypeSet> sortedFields = new TreeMap<>();
 
       IndexableAdapter.NestedColumnMergable mergable = closer.register(
-          new IndexableAdapter.NestedColumnMergable(indexer.getSortedValueLookups(), indexer.getFieldTypeInfo())
+          new IndexableAdapter.NestedColumnMergable(
+              indexer.getSortedValueLookups(),
+              indexer.getFieldTypeInfo(),
+              false,
+              false,
+              null
+          )
       );
       SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
       mergable.mergeFieldsInto(sortedFields);
 
-      expectedTypes = sortedFields.get(NestedPathFinder.JSON_PATH_ROOT);
+      expectedTypes = new FieldTypeInfo.MutableTypeSet((byte) (sortedFields.get(NestedPathFinder.JSON_PATH_ROOT).getByteValue() & 0x7F));
       for (ColumnType type : FieldTypeInfo.convertToSet(expectedTypes.getByteValue())) {
         expectedLogicalType = ColumnType.leastRestrictiveType(expectedLogicalType, type);
       }
@@ -374,9 +379,10 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
     Assert.assertNotNull(nullValueIndex);
 
     SortedMap<String, FieldTypeInfo.MutableTypeSet> fields = column.getFieldTypeInfo();
+    Assert.assertEquals(1, fields.size());
     Assert.assertEquals(
-        ImmutableMap.of(NestedPathFinder.JSON_PATH_ROOT, expectedType),
-        fields
+        expectedType,
+        fields.get(NestedPathFinder.JSON_PATH_ROOT)
     );
     final ExpressionType expressionType = ExpressionType.fromColumnTypeStrict(expectedLogicalType);
 

@@ -195,7 +195,7 @@ Forever drop rules have type `dropForever`:
 
 ```json
 {
-  "type": "dropForever",
+  "type": "dropForever"
 }
 ```
 
@@ -209,7 +209,7 @@ Period drop rules have type `dropByPeriod` and the following JSON structure:
 {
   "type": "dropByPeriod",
   "period": "P1M",
-  "includeFuture": true,
+  "includeFuture": true
 }
 ```
 
@@ -271,7 +271,7 @@ Forever broadcast rules have type `broadcastForever`:
 
 ```json
 {
-  "type": "broadcastForever",
+  "type": "broadcastForever"
 }
 ```
 
@@ -285,7 +285,7 @@ Period broadcast rules have type `broadcastByPeriod` and the following JSON stru
 {
   "type": "broadcastByPeriod",
   "period": "P1M",
-  "includeFuture": true,
+  "includeFuture": true
 }
 ```
 

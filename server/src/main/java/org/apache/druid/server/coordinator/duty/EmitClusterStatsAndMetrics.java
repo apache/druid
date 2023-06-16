@@ -190,7 +190,13 @@ public class EmitClusterStatsAndMetrics implements CoordinatorDuty
     emitTieredStats(emitter, "segment/moved/count", stats, "movedCount");
     emitTieredStats(emitter, "segment/unmoved/count", stats, "unmovedCount");
 
-    emitTieredStats(emitter, "segment/deleted/count", stats, "deletedCount");
+    emitter.emit(
+        new ServiceMetricEvent.Builder()
+            .build(
+                "segment/deleted/count",
+                stats.getGlobalStat("deletedCount")
+            )
+    );
 
     stats.forEachTieredStat(
         "normalizedInitialCostTimesOneThousand",
