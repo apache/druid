@@ -295,33 +295,34 @@ public class DruidSqlParserUtils
   }
 
   /**
-   * Return sanitized clustered by columns specified to output columns.
+   * Return resolved clustered by columns specified to output columns.
    * For example,
    * EXPLAIN PLAN FOR
    * INSERT INTO w000
    * SELECT
    *  TIME_PARSE("timestamp") AS __time,
    *  page AS page_alias,
-   *  city,
-   *  country
+   *  FLOOR("cost"),
+   *  country,
+   *  citName
    * FROM ...
    * PARTITIONED BY DAY
-   * CLUSTERED BY 1, 2, cityName
+   * CLUSTERED BY 1, 2, 3, cityName
    *
-   * The above SQL should return the following for clustered by columns: ["__time", "page_alias", "cityName"]
-   * That is the ordinals and any expression should resolve to the final output name.
-   * @param clusteredByNodes  List of SqlNode representing columns to be clustered by.
-   * @param source The SqlSelect source node.
+   * The above SQL will return the following clusteredBy columns: ["__time", "page_alias", "FLOOR(\"cost\")", cityName"]
+   * Any ordinal and expression specified in the CLUSTERED BY clause will resolve to the final output column name.
+   * @param clusteredByNodes  List of {@link SqlNode}s representing columns to be clustered by.
+   * @param sourceNode The select source node.
    */
   @Nullable
-  public static List<String> sanitizedClusteredByColumns(SqlNodeList clusteredByNodes, SqlNode source)
+  public static List<String> resolveClusteredByColumnsToOutputColumns(SqlNodeList clusteredByNodes, SqlNode sourceNode)
   {
     // CLUSTERED BY is an optional clause
     if (clusteredByNodes == null) {
       return null;
     }
-    Preconditions.checkArgument(source instanceof SqlSelect, "Source must be a SqlSelect");
-    final List<SqlNode> selectList = ((SqlSelect) source).getSelectList().getList();
+    Preconditions.checkArgument(sourceNode instanceof SqlSelect, "Source must be a SqlSelect");
+    final List<SqlNode> selectList = ((SqlSelect) sourceNode).getSelectList().getList();
 
     final List<String> retClusteredByNames = new ArrayList<>();
 
@@ -358,7 +359,7 @@ public class DruidSqlParserUtils
     SqlBasicCall sqlBasicCall = (SqlBasicCall) sqlCallNode;
     SqlOperator operator = (sqlBasicCall).getOperator();
     if (operator instanceof SqlAsOperator) {
-      SqlNode sqlNode = (sqlBasicCall).getOperandList().get(1); // get the output type
+      SqlNode sqlNode = (sqlBasicCall).getOperandList().get(1); // get the output name for this alias operator
       return sqlNode.toString();
     } else {
       return sqlCallNode.toSqlString(CalciteSqlDialect.DEFAULT).toString();

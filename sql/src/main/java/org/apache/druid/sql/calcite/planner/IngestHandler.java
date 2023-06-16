@@ -281,7 +281,7 @@ public abstract class IngestHandler extends QueryHandler
           DruidSqlInsert.OPERATOR.getName(),
           targetDatasource,
           ingestionGranularity,
-          DruidSqlParserUtils.sanitizedClusteredByColumns(sqlNode.getClusteredBy(), sqlNode.getSource()),
+          DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(sqlNode.getClusteredBy(), sqlNode.getSource()),
           null
       );
     }
@@ -353,7 +353,7 @@ public abstract class IngestHandler extends QueryHandler
           DruidSqlReplace.OPERATOR.getName(),
           targetDatasource,
           ingestionGranularity,
-          DruidSqlParserUtils.sanitizedClusteredByColumns(sqlNode.getClusteredBy(), sqlNode.getSource()),
+          DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(sqlNode.getClusteredBy(), sqlNode.getSource()),
           replaceIntervals
       );
     }

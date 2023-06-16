@@ -128,14 +128,14 @@ public class DruidSqlParserUtilsTest
   }
 
   /**
-   * Tests for "CLUSTERED BY" columns.
+   * Test class that validates the resolution of "CLUSTERED BY" columns.
    */
-  public static class SanitizedClusteredByColumnsTest
+  public static class ResolveClusteredByColumnsTest
   {
     @Test
     public void testNullClusteredByAndSource()
     {
-      Assert.assertNull(DruidSqlParserUtils.sanitizedClusteredByColumns(null, null));
+      Assert.assertNull(DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(null, null));
     }
 
     @Test
@@ -143,7 +143,7 @@ public class DruidSqlParserUtilsTest
     {
       final SqlNodeList selectArgs = new SqlNodeList(SqlParserPos.ZERO);
       selectArgs.add(new SqlIdentifier("__time", new SqlParserPos(0, 1)));
-      Assert.assertNull(DruidSqlParserUtils.sanitizedClusteredByColumns(
+      Assert.assertNull(DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(
           null,
           new SqlSelect(SqlParserPos.ZERO, null, selectArgs, null, null, null, null, null, null, null, null)
         )
@@ -159,7 +159,7 @@ public class DruidSqlParserUtilsTest
 
       IllegalArgumentException iae = Assert.assertThrows(
           IllegalArgumentException.class,
-          () -> DruidSqlParserUtils.sanitizedClusteredByColumns(args, null)
+          () -> DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(args, null)
       );
       Assert.assertEquals("Source must be a SqlSelect", iae.getMessage());
     }
@@ -193,7 +193,7 @@ public class DruidSqlParserUtilsTest
 
       Assert.assertEquals(
           Arrays.asList("__time", "FOO", "BOO"),
-          DruidSqlParserUtils.sanitizedClusteredByColumns(clusteredByArgs, sqlSelect)
+          DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(clusteredByArgs, sqlSelect)
       );
     }
 
@@ -256,7 +256,7 @@ public class DruidSqlParserUtilsTest
 
       Assert.assertEquals(
           Arrays.asList("DIM3_ALIAS", "floor_dim4_time", "DIM5", "TIME_FLOOR(\"timestamps\", 'PT1H')"),
-          DruidSqlParserUtils.sanitizedClusteredByColumns(clusteredByArgs, sqlSelect)
+          DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(clusteredByArgs, sqlSelect)
       );
     }
   }

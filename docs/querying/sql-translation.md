@@ -665,6 +665,7 @@ The above EXPLAIN PLAN query returns the following result:
     "statementType": "REPLACE",
     "targetDataSource": "wikipedia",
     "partitionedBy": "DAY",
+    "clusteredBy": ["cityName","countryName"],
     "replaceTimeChunks": "all"
   }
 ]
