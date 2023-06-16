@@ -442,7 +442,7 @@ class ElementVariable: # Variable dimensions
         value = variables[self.variable_name]
         return '"'+self.name+'":"'+str(value)+'"'
 
-
+# TODO: Refactor ElementBase and subclasses, and those element classes that don't inherit from ElementBase
 class ElementBase: # Base class for the remainder of the dimensions
     def __init__(self, desc):
         self.name = desc['name']
@@ -503,6 +503,7 @@ class ElementBase: # Base class for the remainder of the dimensions
 
 
 class ElementString(ElementBase):
+
     def __init__(self, desc):
         self.length_distribution = parse_distribution(desc['length_distribution'])
         if 'chars' in desc:
