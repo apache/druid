@@ -329,6 +329,18 @@ If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configurati
 
 ## General Health
 
+### Overlord
+
+| Metric         | Description             | Dimensions    | Normal Value |
+|----------------|-------------------------|---------------|--------------|
+| `leader/count` | Overlord leader count. `OverlordStatusMonitor` must be enabled. | `serviceType` | 1            |
+
+### Coordinator
+
+| Metric         | Description                | Dimensions    | Normal Value |
+|----------------|----------------------------|---------------|--------------|
+| `leader/count` | Coordinator leader count. `CoordinatorStatusMonitor` must be enabled. | `serviceType` | 1            |
+
 ### Historical
 
 |Metric|Description|Dimensions|Normal Value|
