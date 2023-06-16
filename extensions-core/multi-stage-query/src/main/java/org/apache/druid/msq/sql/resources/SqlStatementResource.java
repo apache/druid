@@ -325,23 +325,27 @@ public class SqlStatementResource
       if (statusPlus == null || !MSQControllerTask.TYPE.equals(statusPlus.getType())) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
-
-      MSQControllerTask msqControllerTask = getMSQControllerTaskOrThrow(queryId, authenticationResult.getIdentity());
       SqlStatementState sqlStatementState = getSqlStatementState(statusPlus);
 
       if (sqlStatementState == SqlStatementState.RUNNING || sqlStatementState == SqlStatementState.ACCEPTED) {
         return buildNonOkResponse(
-            Response.Status.PRECONDITION_FAILED.getStatusCode(),
-            new QueryException(null, "Query not ready to retrieve results", null, null),
+            Response.Status.NOT_FOUND.getStatusCode(),
+            new QueryException(
+                null,
+                StringUtils.format("Query is [%s]. Please wait for it to complete.", sqlStatementState),
+                null,
+                null
+            ),
             queryId
         );
       } else if (sqlStatementState == SqlStatementState.FAILED) {
         return buildNonOkResponse(
-            Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
+            Response.Status.NOT_FOUND.getStatusCode(),
             new QueryException(null, statusPlus.getErrorMsg(), null, null),
             queryId
         );
       } else {
+        MSQControllerTask msqControllerTask = getMSQControllerTaskOrThrow(queryId, authenticationResult.getIdentity());
         Optional<List<ColNameAndType>> signature = getSignature(msqControllerTask);
         Optional<List<Object>> results = getResults(overlordClient.getTaskReport(queryId));
 
@@ -642,7 +646,16 @@ public class SqlStatementResource
     SqlStatementState sqlStatementState = getSqlStatementState(statusPlus);
 
     if (SqlStatementState.FAILED == sqlStatementState) {
-      throw new QueryException(null, statusPlus.getErrorMsg(), null, null);
+      return Optional.of(new SqlStatementResult(
+          queryId,
+          sqlStatementState,
+          taskResponse.getStatus()
+                      .getCreatedTime(),
+          null,
+          taskResponse.getStatus().getDuration(),
+          null,
+          new QueryException(null, statusPlus.getErrorMsg(), null, null)
+      ));
     }
 
     MSQControllerTask msqControllerTask = getMSQControllerTaskOrThrow(queryId, currentUser);
@@ -659,7 +672,8 @@ public class SqlStatementResource
             queryId,
             signature.isPresent(),
             sqlStatementState
-        ).orElse(null) : null
+        ).orElse(null) : null,
+        null
     ));
   }
 

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.msq.sql.SqlStatementState;
+import org.apache.druid.query.QueryException;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -47,6 +48,9 @@ public class SqlStatementResult
   @Nullable
   private final ResultSetInformation resultSetInformation;
 
+  @Nullable
+  private final QueryException queryException;
+
 
   @JsonCreator
   public SqlStatementResult(
@@ -61,7 +65,9 @@ public class SqlStatementResult
       @Nullable @JsonProperty("durationInMs")
       Long durationInMs,
       @Nullable @JsonProperty("result")
-      ResultSetInformation resultSetInformation
+      ResultSetInformation resultSetInformation,
+      @Nullable @JsonProperty("exception")
+      QueryException queryException
 
   )
   {
@@ -71,6 +77,7 @@ public class SqlStatementResult
     this.sqlRowSignature = sqlRowSignature;
     this.durationInMs = durationInMs;
     this.resultSetInformation = resultSetInformation;
+    this.queryException = queryException;
   }
 
   @JsonProperty
@@ -115,6 +122,14 @@ public class SqlStatementResult
     return resultSetInformation;
   }
 
+  @JsonProperty
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public QueryException getQueryException()
+  {
+    return queryException;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -131,25 +146,29 @@ public class SqlStatementResult
     ) && Objects.equals(sqlRowSignature, that.sqlRowSignature) && Objects.equals(
         durationInMs,
         that.durationInMs
-    ) && Objects.equals(resultSetInformation, that.resultSetInformation);
+    ) && Objects.equals(resultSetInformation, that.resultSetInformation) && Objects.equals(
+        queryException,
+        that.queryException
+    );
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(queryId, state, createdAt, sqlRowSignature, durationInMs, resultSetInformation);
+    return Objects.hash(queryId, state, createdAt, sqlRowSignature, durationInMs, resultSetInformation, queryException);
   }
 
   @Override
   public String toString()
   {
-    return "StatementSqlResult{" +
+    return "SqlStatementResult{" +
            "queryId='" + queryId + '\'' +
            ", state=" + state +
            ", createdAt=" + createdAt +
            ", sqlRowSignature=" + sqlRowSignature +
            ", durationInMs=" + durationInMs +
            ", resultSetInformation=" + resultSetInformation +
+           ", queryException=" + queryException +
            '}';
   }
 }

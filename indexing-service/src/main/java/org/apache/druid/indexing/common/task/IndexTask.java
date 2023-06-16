@@ -144,8 +144,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
+  public static final String TYPE = "index";
   private static final Logger log = new Logger(IndexTask.class);
-  private static final String TYPE = "index";
 
   private static String makeGroupId(IndexIngestionSpec ingestionSchema, IngestionMode ingestionMode)
   {
