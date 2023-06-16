@@ -224,7 +224,193 @@ The above EXPLAIN PLAN query returns the following result:
   }
 ]
 ```
+Example 2: EXPLAIN PLAN for an `INSERT` query that inserts data into the `wikipedia` datasource:
 
+```sql
+
+```
+
+The above EXPLAIN PLAN returns the following result:
+
+```json
+[
+  {
+    "query": {
+      "queryType": "scan",
+      "dataSource": {
+        "type": "external",
+        "inputSource": {
+          "type": "http",
+          "uris": [
+            "https://druid.apache.org/data/wikipedia.json.gz"
+          ]
+        },
+        "inputFormat": {
+          "type": "json",
+          "keepNullColumns": false,
+          "assumeNewlineDelimited": false,
+          "useJsonNodeReader": false
+        },
+        "signature": [
+          {
+            "name": "timestamp",
+            "type": "STRING"
+          },
+          {
+            "name": "namespace",
+            "type": "STRING"
+          },
+          {
+            "name": "cityName",
+            "type": "STRING"
+          },
+          {
+            "name": "countryName",
+            "type": "STRING"
+          },
+          {
+            "name": "regionIsoCode",
+            "type": "STRING"
+          },
+          {
+            "name": "metroCode",
+            "type": "LONG"
+          },
+          {
+            "name": "countryIsoCode",
+            "type": "STRING"
+          },
+          {
+            "name": "regionName",
+            "type": "STRING"
+          }
+        ]
+      },
+      "intervals": {
+        "type": "intervals",
+        "intervals": [
+          "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+        ]
+      },
+      "virtualColumns": [
+        {
+          "type": "expression",
+          "name": "v0",
+          "expression": "timestamp_parse(\"timestamp\",null,'UTC')",
+          "outputType": "LONG"
+        }
+      ],
+      "resultFormat": "compactedList",
+      "orderBy": [
+        {
+          "columnName": "cityName",
+          "order": "ascending"
+        },
+        {
+          "columnName": "countryName",
+          "order": "ascending"
+        }
+      ],
+      "columns": [
+        "cityName",
+        "countryIsoCode",
+        "countryName",
+        "metroCode",
+        "namespace",
+        "regionIsoCode",
+        "regionName",
+        "v0"
+      ],
+      "legacy": false,
+      "context": {
+        "finalizeAggregations": false,
+        "forceExpressionVirtualColumns": true,
+        "groupByEnableMultiValueUnnesting": false,
+        "maxNumTasks": 5,
+        "multiStageQuery": true,
+        "queryId": "f066ddcc-7866-4bb6-8eb9-c3296756fdfa",
+        "scanSignature": "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"},{\"name\":\"metroCode\",\"type\":\"LONG\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"regionIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"},{\"name\":\"v0\",\"type\":\"LONG\"}]",
+        "sqlInsertSegmentGranularity": "\"DAY\"",
+        "sqlQueryId": "f066ddcc-7866-4bb6-8eb9-c3296756fdfa",
+        "useNativeQueryExplain": true
+      },
+      "granularity": {
+        "type": "all"
+      }
+    },
+    "signature": [
+      {
+        "name": "v0",
+        "type": "LONG"
+      },
+      {
+        "name": "namespace",
+        "type": "STRING"
+      },
+      {
+        "name": "cityName",
+        "type": "STRING"
+      },
+      {
+        "name": "countryName",
+        "type": "STRING"
+      },
+      {
+        "name": "regionIsoCode",
+        "type": "STRING"
+      },
+      {
+        "name": "metroCode",
+        "type": "LONG"
+      },
+      {
+        "name": "countryIsoCode",
+        "type": "STRING"
+      },
+      {
+        "name": "regionName",
+        "type": "STRING"
+      }
+    ],
+    "columnMappings": [
+      {
+        "queryColumn": "v0",
+        "outputColumn": "__time"
+      },
+      {
+        "queryColumn": "namespace",
+        "outputColumn": "namespace"
+      },
+      {
+        "queryColumn": "cityName",
+        "outputColumn": "cityName"
+      },
+      {
+        "queryColumn": "countryName",
+        "outputColumn": "countryName"
+      },
+      {
+        "queryColumn": "regionIsoCode",
+        "outputColumn": "regionIsoCode"
+      },
+      {
+        "queryColumn": "metroCode",
+        "outputColumn": "metroCode"
+      },
+      {
+        "queryColumn": "countryIsoCode",
+        "outputColumn": "countryIsoCode"
+      },
+      {
+        "queryColumn": "regionName",
+        "outputColumn": "regionName"
+      }
+    ]
+  }
+]
+
+
+```
 Example 2: EXPLAIN PLAN for a `REPLACE` query that replaces all the data in the `wikipedia` datasource:
 
 ```sql
