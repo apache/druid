@@ -827,7 +827,7 @@ public class DruidCoordinator
   @Nullable
   public Integer getReplicationFactorForSegment(SegmentId segmentId)
   {
-    return segmentIdToReplicationFactor == null ? null : segmentIdToReplicationFactor.get(segmentId);
+    return segmentIdToReplicationFactor == null ? null : segmentIdToReplicationFactor.getInt(segmentId);
   }
 
   @VisibleForTesting

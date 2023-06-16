@@ -151,7 +151,7 @@ public class MetadataResourceTest
     doReturn(1).when(coordinator).getReplicationFactorForSegment(dataSegment4.getId());
     doReturn(ImmutableSet.of(dataSegment4)).when(dataSourcesSnapshot).getOvershadowedSegments();
 
-    metadataResource = new MetadataResource(segmentsMetadataManager,  mock(IndexerMetadataStorageCoordinator.class), AuthTestUtils.TEST_AUTHORIZER_MAPPER, coordinator, new ObjectMapper());
+    metadataResource = new MetadataResource(segmentsMetadataManager, mock(IndexerMetadataStorageCoordinator.class), AuthTestUtils.TEST_AUTHORIZER_MAPPER, coordinator, new ObjectMapper());
   }
 
   @Test
@@ -165,16 +165,16 @@ public class MetadataResourceTest
 
     List<SegmentStatusInCluster> resultList = materializeResponse(response);
     Assert.assertEquals(resultList.size(), 4);
-    Assert.assertEquals(new SegmentStatusInCluster(dataSegment1, false,  2), resultList.get(0));
-    Assert.assertEquals(new SegmentStatusInCluster(dataSegment2, false,  null), resultList.get(1));
-    Assert.assertEquals(new SegmentStatusInCluster(dataSegment3, false,  1), resultList.get(2));
+    Assert.assertEquals(new SegmentStatusInCluster(dataSegment1, false, 2), resultList.get(0));
+    Assert.assertEquals(new SegmentStatusInCluster(dataSegment2, false, null), resultList.get(1));
+    Assert.assertEquals(new SegmentStatusInCluster(dataSegment3, false, 1), resultList.get(2));
     // Replication factor should be 0 as the segment is overshadowed
-    Assert.assertEquals(new SegmentStatusInCluster(dataSegment4, true,  0), resultList.get(3));
+    Assert.assertEquals(new SegmentStatusInCluster(dataSegment4, true, 0), resultList.get(3));
   }
 
   private List<SegmentStatusInCluster> materializeResponse(Response response)
   {
-    Iterable<SegmentStatusInCluster> resultIterator = (Iterable <SegmentStatusInCluster>) response.getEntity();
+    Iterable<SegmentStatusInCluster> resultIterator = (Iterable<SegmentStatusInCluster>) response.getEntity();
     List<SegmentStatusInCluster> segmentStatusInClusters = new ArrayList<>();
     resultIterator.forEach(segmentStatusInClusters::add);
     return segmentStatusInClusters;
