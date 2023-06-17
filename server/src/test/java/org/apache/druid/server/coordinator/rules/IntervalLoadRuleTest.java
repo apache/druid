@@ -67,10 +67,7 @@ public class IntervalLoadRuleTest
   @Test(expected = IAE.class)
   public void testCreatingNegativeTieredReplicants()
   {
-    IntervalLoadRule intervalLoadRule = new IntervalLoadRule(
-        Intervals.of("0/3000"),
-        ImmutableMap.of(DruidServer.DEFAULT_TIER, -1)
-    );
+    new IntervalLoadRule(Intervals.of("0/3000"), ImmutableMap.of(DruidServer.DEFAULT_TIER, -1));
   }
 
   @Test(expected = IAE.class)
@@ -85,6 +82,6 @@ public class IntervalLoadRuleTest
     );
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();
-    Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
+    jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
   }
 }

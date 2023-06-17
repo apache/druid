@@ -560,7 +560,7 @@ public abstract class LoadRule implements Rule
         throw new IAE("Replicant value cannot be empty");
       }
       if (entry.getValue() < 0) {
-        throw new IAE("Replicant value [%d] is less than 1, which is not allowed", entry.getValue());
+        throw new IAE("Replicant value [%d] is less than 0, which is not allowed", entry.getValue());
       }
     }
   }

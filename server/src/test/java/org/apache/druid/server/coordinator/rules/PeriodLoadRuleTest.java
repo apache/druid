@@ -191,7 +191,7 @@ public class PeriodLoadRuleTest
   @Test(expected = IAE.class)
   public void testCreatingNegativeTieredReplicants()
   {
-    PeriodLoadRule periodLoadRule = new PeriodLoadRule(Period.days(1), true, ImmutableMap.of(DruidServer.DEFAULT_TIER, -1));
+    new PeriodLoadRule(Period.days(1), true, ImmutableMap.of(DruidServer.DEFAULT_TIER, -1));
   }
 
   @Test(expected = IAE.class)
@@ -207,6 +207,6 @@ public class PeriodLoadRuleTest
     );
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();
-    Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
+    jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
   }
 }

@@ -49,7 +49,7 @@ public class ForeverLoadRuleTest
   @Test(expected = IAE.class)
   public void testCreatingNegativeTieredReplicants()
   {
-    ForeverLoadRule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, -1));
+    new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, -1));
   }
 
   @Test
@@ -75,6 +75,6 @@ public class ForeverLoadRuleTest
     );
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();
-    Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
+    jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
   }
 }
