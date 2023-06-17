@@ -108,11 +108,9 @@ public class MetadataResourceTest
   @Before
   public void setUp()
   {
-    // Create mock request
     request = mock(HttpServletRequest.class);
     doReturn(mock(AuthenticationResult.class)).when(request).getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT);
 
-    // Mock SegmentsMetadataManager
     segmentsMetadataManager = mock(SegmentsMetadataManager.class);
     ImmutableDruidDataSource druidDataSource1 = new ImmutableDruidDataSource(
         DATASOURCE1,
@@ -132,22 +130,14 @@ public class MetadataResourceTest
         )
     );
 
-    // Mock segments from cache and coordinator
     DataSourcesSnapshot dataSourcesSnapshot = mock(DataSourcesSnapshot.class);
     doReturn(dataSourcesSnapshot).when(segmentsMetadataManager).getSnapshotOfDataSourcesWithAllUsedSegments();
-
     doReturn(ImmutableList.of(druidDataSource1, druidDataSource2)).when(dataSourcesSnapshot).getDataSourcesWithAllUsedSegments();
-    // Segment 4 is overshadowed
 
-    // Mock Coordinator
     coordinator = mock(DruidCoordinator.class);
-    // Segment 1: Replication factor 2, not overshadowed
     doReturn(2).when(coordinator).getReplicationFactorForSegment(dataSegment1.getId());
-    // Segment 2: Replication factor null, not overshadowed
     doReturn(null).when(coordinator).getReplicationFactorForSegment(dataSegment2.getId());
-    // Segment 3: Replication factor 1, not overshadowed
     doReturn(1).when(coordinator).getReplicationFactorForSegment(dataSegment3.getId());
-    // Segment 4: Replication factor 1, overshadowed
     doReturn(1).when(coordinator).getReplicationFactorForSegment(dataSegment4.getId());
     doReturn(ImmutableSet.of(dataSegment4)).when(dataSourcesSnapshot).getOvershadowedSegments();
 
