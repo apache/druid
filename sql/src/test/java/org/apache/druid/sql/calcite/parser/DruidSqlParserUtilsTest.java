@@ -29,6 +29,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlPostfixOperator;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -128,7 +129,7 @@ public class DruidSqlParserUtilsTest
   }
 
   /**
-   * Test class that validates the resolution of "CLUSTERED BY" columns.
+   * Test class that validates the resolution of "CLUSTERED BY" columns to output columns.
    */
   public static class ResolveClusteredByColumnsTest
   {
@@ -161,7 +162,7 @@ public class DruidSqlParserUtilsTest
           IllegalArgumentException.class,
           () -> DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(args, null)
       );
-      Assert.assertEquals("Source must be a SqlSelect", iae.getMessage());
+      Assert.assertEquals("Source node must be either SqlOrderBy or SqlSelect", iae.getMessage());
     }
 
     @Test
@@ -257,6 +258,44 @@ public class DruidSqlParserUtilsTest
       Assert.assertEquals(
           Arrays.asList("DIM3_ALIAS", "floor_dim4_time", "DIM5", "TIME_FLOOR(\"timestamps\", 'PT1H')"),
           DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(clusteredByArgs, sqlSelect)
+      );
+    }
+
+    @Test
+    public void testSimpleClusteredByWithOrderBy()
+    {
+      final SqlNodeList selectArgs = new SqlNodeList(SqlParserPos.ZERO);
+      selectArgs.add(new SqlIdentifier("__time", new SqlParserPos(0, 1)));
+      selectArgs.add(new SqlIdentifier("FOO", new SqlParserPos(0, 2)));
+      selectArgs.add(new SqlIdentifier("BOO", new SqlParserPos(0, 3)));
+
+      final SqlSelect sqlSelect = new SqlSelect(
+          SqlParserPos.ZERO,
+          null,
+          selectArgs,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
+
+      SqlNodeList orderList = new SqlNodeList(SqlParserPos.ZERO);
+      orderList.add(sqlSelect);
+
+      SqlNode orderByNode = new SqlOrderBy(SqlParserPos.ZERO, sqlSelect, orderList, null, null);
+
+      final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);
+      clusteredByArgs.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
+      clusteredByArgs.add(new SqlIdentifier("FOO", SqlParserPos.ZERO));
+      clusteredByArgs.add(SqlLiteral.createExactNumeric("3", SqlParserPos.ZERO));
+
+      Assert.assertEquals(
+          Arrays.asList("__time", "FOO", "BOO"),
+          DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(clusteredByArgs, orderByNode)
       );
     }
   }

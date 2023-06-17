@@ -312,7 +312,7 @@ public class DruidSqlParserUtils
    * The above SQL will return the following clusteredBy columns: ["__time", "page_alias", "FLOOR(\"cost\")", cityName"]
    * Any ordinal and expression specified in the CLUSTERED BY clause will resolve to the final output column name.
    * @param clusteredByNodes  List of {@link SqlNode}s representing columns to be clustered by.
-   * @param sourceNode The select source node.
+   * @param sourceNode The select or order by source node.
    */
   @Nullable
   public static List<String> resolveClusteredByColumnsToOutputColumns(SqlNodeList clusteredByNodes, SqlNode sourceNode)
@@ -321,9 +321,13 @@ public class DruidSqlParserUtils
     if (clusteredByNodes == null) {
       return null;
     }
-    Preconditions.checkArgument(sourceNode instanceof SqlSelect, "Source must be a SqlSelect");
-    final List<SqlNode> selectList = ((SqlSelect) sourceNode).getSelectList().getList();
 
+    Preconditions.checkArgument(sourceNode instanceof SqlOrderBy || sourceNode instanceof SqlSelect,
+                                "Source node must be either SqlOrderBy or SqlSelect");
+
+    final SqlSelect selectNode = (sourceNode instanceof SqlSelect) ? (SqlSelect) sourceNode
+                                                                   : (SqlSelect) ((SqlOrderBy) sourceNode).query;
+    final List<SqlNode> selectList = selectNode.getSelectList().getList();
     final List<String> retClusteredByNames = new ArrayList<>();
 
     for (SqlNode clusteredByNode : clusteredByNodes) {

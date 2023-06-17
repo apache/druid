@@ -248,7 +248,8 @@ public abstract class IngestHandler extends QueryHandler
         SqlExplain explain
     ) throws ValidationException
     {
-      super(handlerContext,
+      super(
+          handlerContext,
           sqlNode,
           convertQuery(sqlNode),
           explain
