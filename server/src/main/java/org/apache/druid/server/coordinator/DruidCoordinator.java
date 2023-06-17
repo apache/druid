@@ -70,9 +70,13 @@ import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
 import org.apache.druid.server.coordinator.duty.MarkOvershadowedSegmentsAsUnused;
 import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
-import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
-import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
-import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
+import org.apache.druid.server.coordinator.loading.ReplicationThrottler;
+import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
+import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
+import org.apache.druid.server.coordinator.loading.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
@@ -258,11 +262,11 @@ public class DruidCoordinator
 
     final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
     for (DataSegment segment : dataSegments) {
-      if (segmentReplicantLookup.getLoadedReplicas(segment.getId(), true) == 0) {
-        datasourceToUnavailableSegments.addTo(segment.getDataSource(), 1);
-      } else {
-        datasourceToUnavailableSegments.addTo(segment.getDataSource(), 0);
-      }
+      SegmentReplicaCount replicaCount = segmentReplicantLookup.getReplicaCountsInCluster(segment.getId());
+      datasourceToUnavailableSegments.addTo(
+          segment.getDataSource(),
+          replicaCount.loaded() == 0 ? 1 : 0
+      );
     }
 
     return datasourceToUnavailableSegments;
@@ -801,22 +805,23 @@ public class DruidCoordinator
       startPeonsForNewServers(currentServers);
       stopPeonsForDisappearedServers(currentServers);
 
-      final DruidCluster cluster = prepareCluster(params.getCoordinatorDynamicConfig(), currentServers);
-      cancelLoadsOnDecommissioningServers(cluster);
-
       final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
+      final SegmentLoadingConfig segmentLoadingConfig = params.getSegmentLoadingConfig();
+
+      final DruidCluster cluster = prepareCluster(dynamicConfig, segmentLoadingConfig, currentServers);
+      cancelLoadsOnDecommissioningServers(cluster);
 
       initBalancerExecutor();
       final BalancerStrategy balancerStrategy = balancerStrategyFactory.createBalancerStrategy(balancerExec);
       log.info(
           "Using balancer strategy [%s] with round-robin assignment [%s] and debug dimensions [%s].",
           balancerStrategy.getClass().getSimpleName(),
-          dynamicConfig.isUseRoundRobinSegmentAssignment(), dynamicConfig.getDebugDimensions()
+          segmentLoadingConfig.isUseRoundRobinSegmentAssignment(),
+          dynamicConfig.getDebugDimensions()
       );
 
       params = params.buildFromExisting()
                      .withDruidCluster(cluster)
-                     .withDynamicConfigs(recomputeDynamicConfig(params))
                      .withBalancerStrategy(balancerStrategy)
                      .withSegmentAssignerUsing(loadQueueManager)
                      .build();
@@ -824,44 +829,6 @@ public class DruidCoordinator
       segmentReplicantLookup = params.getSegmentReplicantLookup();
 
       return params;
-    }
-
-    /**
-     * Recomputes dynamic config values if {@code smartLoadQueue} is enabled.
-     */
-    private CoordinatorDynamicConfig recomputeDynamicConfig(DruidCoordinatorRuntimeParams params)
-    {
-      final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-      if (!dynamicConfig.isSmartSegmentLoading()) {
-        return dynamicConfig;
-      }
-
-      // Impose a lower bound on both replicationThrottleLimit and maxSegmentsToMove
-      final int throttlePercentage = 2;
-      final int replicationThrottleLimit = Math.max(
-          100,
-          params.getUsedSegments().size() * throttlePercentage / 100
-      );
-
-      // Impose an upper bound on maxSegmentsToMove to ensure that coordinator
-      // run times are bounded. This limit can be relaxed as performance of
-      // the CostBalancerStrategy.computeCost() is improved.
-      final int maxSegmentsToMove = Math.min(1000, replicationThrottleLimit);
-
-      log.info(
-          "Smart segment loading is enabled. Recomputed replicationThrottleLimit"
-          + " [%d] (%d%% of used segments) and maxSegmentsToMove [%d].",
-          replicationThrottleLimit, throttlePercentage, maxSegmentsToMove
-      );
-
-      return CoordinatorDynamicConfig.builder()
-                                     .withMaxSegmentsInNodeLoadingQueue(0)
-                                     .withReplicationThrottleLimit(replicationThrottleLimit)
-                                     .withMaxSegmentsToMove(maxSegmentsToMove)
-                                     .withUseRoundRobinSegmentAssignment(true)
-                                     .withUseBatchedSegmentSampler(true)
-                                     .withEmitBalancingStats(false)
-                                     .build(dynamicConfig);
     }
 
     /**
@@ -931,7 +898,11 @@ public class DruidCoordinator
       }
     }
 
-    DruidCluster prepareCluster(CoordinatorDynamicConfig dynamicConfig, List<ImmutableDruidServer> currentServers)
+    DruidCluster prepareCluster(
+        CoordinatorDynamicConfig dynamicConfig,
+        SegmentLoadingConfig segmentLoadingConfig,
+        List<ImmutableDruidServer> currentServers
+    )
     {
       final Set<String> decommissioningServers = dynamicConfig.getDecommissioningNodes();
       final DruidCluster.Builder cluster = DruidCluster.builder();
@@ -941,8 +912,8 @@ public class DruidCoordinator
                 server,
                 loadManagementPeons.get(server.getName()),
                 decommissioningServers.contains(server.getHost()),
-                dynamicConfig.getMaxSegmentsInNodeLoadingQueue(),
-                dynamicConfig.getReplicantLifetime()
+                segmentLoadingConfig.getMaxSegmentsInLoadQueue(),
+                segmentLoadingConfig.getMaxLifetimeInLoadQueue()
             )
         );
       }

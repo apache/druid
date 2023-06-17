@@ -22,9 +22,9 @@ package org.apache.druid.server.coordinator;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
-import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
-import org.apache.druid.server.coordinator.loadqueue.SegmentHolder;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loading.SegmentAction;
+import org.apache.druid.server.coordinator.loading.SegmentHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -143,7 +143,7 @@ public class ServerHolder implements Comparable<ServerHolder>
           }
 
           final SegmentAction action = holder.getAction();
-          updateQueuedSegments(holder.getSegment(), simplify(action), true);
+          addToQueuedSegments(holder.getSegment(), simplify(action));
 
           if (action == SegmentAction.MOVE_TO) {
             movingSegmentCount.incrementAndGet();
@@ -155,7 +155,7 @@ public class ServerHolder implements Comparable<ServerHolder>
     );
 
     peon.getSegmentsMarkedToDrop().forEach(
-        segment -> updateQueuedSegments(segment, SegmentAction.MOVE_FROM, true)
+        segment -> addToQueuedSegments(segment, SegmentAction.MOVE_FROM)
     );
 
     if (!expiredSegments.isEmpty()) {
@@ -309,16 +309,26 @@ public class ServerHolder implements Comparable<ServerHolder>
       ++totalAssignmentsInRun;
     }
 
-    updateQueuedSegments(segment, simplify(action), true);
+    addToQueuedSegments(segment, simplify(action));
     return true;
   }
 
   public boolean cancelOperation(SegmentAction action, DataSegment segment)
   {
+    // Cancel only if the action is currently in queue
     final SegmentAction queuedAction = queuedSegments.get(segment);
-    return queuedAction == simplify(action)
-           && (queuedAction == SegmentAction.MOVE_FROM || peon.cancelOperation(segment))
-           && updateQueuedSegments(segment, queuedAction, false);
+    if (queuedAction != simplify(action)) {
+      return false;
+    }
+
+    // Try cancelling the operation on the peon
+    // MOVE_FROM operations are not sent to the peon, so they can be considered cancelled
+    if (queuedAction == SegmentAction.MOVE_FROM || peon.cancelOperation(segment)) {
+      removeFromQueuedSegments(segment, queuedAction);
+      return true;
+    } else {
+      return false;
+    }
   }
 
   public boolean hasSegmentLoaded(SegmentId segmentId)
@@ -337,29 +347,42 @@ public class ServerHolder implements Comparable<ServerHolder>
     return action == SegmentAction.REPLICATE ? SegmentAction.LOAD : action;
   }
 
-  private boolean updateQueuedSegments(DataSegment segment, SegmentAction action, boolean addToQueue)
+  private void addToQueuedSegments(DataSegment segment, SegmentAction action)
   {
-    if (addToQueue) {
-      queuedSegments.put(segment, action);
-    } else {
-      queuedSegments.remove(segment);
-    }
+    queuedSegments.put(segment, action);
 
-    final long sizeDelta = addToQueue ? segment.getSize() : -segment.getSize();
+    // Add to projected if load is started, remove from projected if drop has started
     if (action.isLoad()) {
-      sizeOfLoadingSegments += sizeDelta;
-    } else if (action == SegmentAction.DROP) {
-      sizeOfDroppingSegments += sizeDelta;
+      projectedSegments.add(segment);
+    } else {
+      projectedSegments.remove(segment);
     }
 
-    // Remove from projected if load is cancelled or drop is started, add otherwise
-    if (addToQueue ^ action.isLoad()) {
+    if (action.isLoad()) {
+      sizeOfLoadingSegments += segment.getSize();
+    } else if (action == SegmentAction.DROP) {
+      sizeOfDroppingSegments += segment.getSize();
+    } else {
+      // MOVE_FROM actions graduate to DROP after the corresponding MOVE_TO has finished
+      // Do not consider size delta until then, otherwise we might over-assign the server
+    }
+  }
+
+  private void removeFromQueuedSegments(DataSegment segment, SegmentAction action)
+  {
+    queuedSegments.remove(segment);
+
+    if (action.isLoad()) {
       projectedSegments.remove(segment);
     } else {
       projectedSegments.add(segment);
     }
 
-    return true;
+    if (action.isLoad()) {
+      sizeOfLoadingSegments -= segment.getSize();
+    } else if (action == SegmentAction.DROP) {
+      sizeOfDroppingSegments -= segment.getSize();
+    }
   }
 
   @Override
@@ -388,5 +411,11 @@ public class ServerHolder implements Comparable<ServerHolder>
   public int hashCode()
   {
     return Objects.hash(server.getHost(), server.getTier(), server.getType());
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ServerHolder{" + server.getHost() + "}";
   }
 }

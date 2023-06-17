@@ -35,16 +35,16 @@ import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.ClusterCostCache;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
-import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
-import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
-import org.apache.druid.server.coordinator.loadqueue.SegmentHolder;
-import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loading.SegmentAction;
+import org.apache.druid.server.coordinator.loading.SegmentHolder;
+import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -167,15 +167,6 @@ public class LoadRuleTest
       DataSegment... usedSegments
   )
   {
-    return makeCoordinatorRuntimeParams(druidCluster, false, usedSegments);
-  }
-
-  private DruidCoordinatorRuntimeParams makeCoordinatorRuntimeParams(
-      DruidCluster druidCluster,
-      boolean replicateAfterLoadTimeout,
-      DataSegment... usedSegments
-  )
-  {
     return DruidCoordinatorRuntimeParams
         .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(druidCluster)
@@ -183,6 +174,7 @@ public class LoadRuleTest
         .withUsedSegmentsInTest(usedSegments)
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
+                                    .withSmartSegmentLoading(false)
                                     .withUseRoundRobinSegmentAssignment(useRoundRobinAssignment)
                                     .build()
         )
@@ -261,7 +253,7 @@ public class LoadRuleTest
     CoordinatorRunStats stats = runRuleAndGetStats(
         rule,
         segment,
-        makeCoordinatorRuntimeParams(druidCluster, true, segment)
+        makeCoordinatorRuntimeParams(druidCluster, segment)
     );
 
     // Ensure that the segment is assigned to one of the historicals
@@ -279,7 +271,7 @@ public class LoadRuleTest
     CoordinatorRunStats statsAfterLoadPrimary = runRuleAndGetStats(
         rule,
         segment,
-        makeCoordinatorRuntimeParams(withLoadTimeout, true, segment)
+        makeCoordinatorRuntimeParams(withLoadTimeout, segment)
     );
 
     Assert.assertEquals(1L, statsAfterLoadPrimary.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
@@ -508,6 +500,7 @@ public class LoadRuleTest
         .withUsedSegmentsInTest(dataSegment1, dataSegment2, dataSegment3)
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
+                                    .withSmartSegmentLoading(false)
                                     .withMaxSegmentsInNodeLoadingQueue(maxSegmentsInQueue)
                                     .withUseRoundRobinSegmentAssignment(useRoundRobinAssignment)
                                     .build()

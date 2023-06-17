@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.DruidServer;
@@ -29,19 +28,16 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.balancer.BalancerSegmentHolder;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
-import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.easymock.IExpectationSetters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -49,10 +45,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
 
 public class BalanceSegmentsTest
@@ -113,7 +106,7 @@ public class BalanceSegmentsTest
   @Test
   public void testMoveToEmptyServerBalancer()
   {
-    final ServerHolder serverHolder1 = createHolder(server1, allSegments);
+    final ServerHolder serverHolder1 = createHolder(server1, segment1, segment2, segment3, segment4);
     final ServerHolder serverHolder2 = createHolder(server2);
 
     DruidCoordinatorRuntimeParams params =
@@ -123,8 +116,9 @@ public class BalanceSegmentsTest
             .build();
 
     CoordinatorRunStats stats = runBalancer(params);
-    Assert.assertEquals(2, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1"));
-    Assert.assertEquals(1, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2"));
+    long totalMoved = stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1")
+                      + stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2");
+    Assert.assertEquals(2L, totalMoved);
   }
 
   /**
@@ -143,23 +137,13 @@ public class BalanceSegmentsTest
     final ServerHolder serverHolder3 = createHolder(server3, false);
 
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
-    expectPickLoadingSegmentsAndReturnEmpty(strategy).times(2);
-    expectPickLoadedSegmentsAndReturn(
-        strategy,
-        new BalancerSegmentHolder(serverHolder2, segment3),
-        new BalancerSegmentHolder(serverHolder2, segment4)
-    ).once();
-    expectPickLoadedSegmentsAndReturn(
-        strategy,
-        new BalancerSegmentHolder(serverHolder1, segment1),
-        new BalancerSegmentHolder(serverHolder1, segment2)
-    ).once();
     expectFindDestinationAndReturn(strategy, serverHolder3);
     EasyMock.replay(strategy);
 
     // ceil(3 * 0.6) = 2 segments from decommissioning servers
     CoordinatorDynamicConfig dynamicConfig =
         CoordinatorDynamicConfig.builder()
+                                .withSmartSegmentLoading(false)
                                 .withMaxSegmentsToMove(3)
                                 .withDecommissioningMaxPercentOfMaxSegmentsToMove(60)
                                 .build();
@@ -174,12 +158,14 @@ public class BalanceSegmentsTest
     CoordinatorRunStats stats = runBalancer(params);
 
     EasyMock.verify(strategy);
+
+    // 2 segments are moved from the decommissioning server and 1 from the active server
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1"));
     Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2"));
-    Assert.assertEquals(
-        ImmutableSet.of(segment1, segment3, segment4),
-        serverHolder3.getPeon().getSegmentsToLoad()
-    );
+    Set<DataSegment> segmentsMoved = serverHolder3.getPeon().getSegmentsToLoad();
+    Assert.assertTrue(segmentsMoved.contains(segment3));
+    Assert.assertTrue(segmentsMoved.contains(segment4));
+    Assert.assertTrue(segmentsMoved.contains(segment1) || segmentsMoved.contains(segment2));
   }
 
   @Test
@@ -190,7 +176,9 @@ public class BalanceSegmentsTest
     final ServerHolder holder3 = createHolder(server3, false);
 
     CoordinatorDynamicConfig dynamicConfig =
-        CoordinatorDynamicConfig.builder().withDecommissioningMaxPercentOfMaxSegmentsToMove(0)
+        CoordinatorDynamicConfig.builder()
+                                .withSmartSegmentLoading(false)
+                                .withDecommissioningMaxPercentOfMaxSegmentsToMove(0)
                                 .withMaxSegmentsToMove(1).build();
     DruidCoordinatorRuntimeParams params =
         defaultRuntimeParamsBuilder(holder1, holder2, holder3).withDynamicConfigs(dynamicConfig).build();
@@ -212,6 +200,7 @@ public class BalanceSegmentsTest
 
     CoordinatorDynamicConfig dynamicConfig =
         CoordinatorDynamicConfig.builder()
+                                .withSmartSegmentLoading(false)
                                 .withDecommissioningMaxPercentOfMaxSegmentsToMove(100)
                                 .withMaxSegmentsToMove(1).build();
     DruidCoordinatorRuntimeParams params =
@@ -234,19 +223,14 @@ public class BalanceSegmentsTest
     final ServerHolder serverHolder1 = createHolder(server1, segment1, segment2);
     final ServerHolder serverHolder2 = createHolder(server2, segment3, segment4);
     final ServerHolder serverHolder3 = createHolder(server3);
+
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
-    expectPickLoadingSegmentsAndReturnEmpty(strategy).once();
-    expectPickLoadedSegmentsAndReturn(
-        strategy,
-        new BalancerSegmentHolder(serverHolder1, segment2),
-        new BalancerSegmentHolder(serverHolder2, segment3),
-        new BalancerSegmentHolder(serverHolder2, segment4)
-    ).once();
     expectFindDestinationAndReturn(strategy, serverHolder3);
     EasyMock.replay(strategy);
 
     CoordinatorDynamicConfig dynamicConfig =
         CoordinatorDynamicConfig.builder()
+                                .withSmartSegmentLoading(false)
                                 .withMaxSegmentsToMove(3)
                                 .withDecommissioningMaxPercentOfMaxSegmentsToMove(9)
                                 .build();
@@ -259,12 +243,10 @@ public class BalanceSegmentsTest
 
     CoordinatorRunStats stats = runBalancer(params);
     EasyMock.verify(strategy);
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1"));
-    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2"));
-    Assert.assertEquals(
-        ImmutableSet.of(segment2, segment3, segment4),
-        serverHolder3.getPeon().getSegmentsToLoad()
-    );
+    long totalMoved = stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1")
+                      + stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2");
+    Assert.assertEquals(3L, totalMoved);
+    Assert.assertEquals(3, serverHolder3.getPeon().getSegmentsToLoad().size());
   }
 
   /**
@@ -273,26 +255,15 @@ public class BalanceSegmentsTest
   @Test
   public void testMoveToDecommissioningServer()
   {
-    final ServerHolder serverHolder1 = createHolder(server1, false, allSegments);
-    final ServerHolder serverHolder2 = createHolder(server2, true);
+    final ServerHolder activeServer = createHolder(server1, false, allSegments);
+    final ServerHolder decommissioningServer = createHolder(server2, true);
 
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
-    expectPickLoadingSegmentsAndReturnEmpty(strategy).times(2);
-    expectPickLoadedSegmentsAndReturn(
-        strategy,
-        new BalancerSegmentHolder(serverHolder1, segment1)
-    ).times(2);
-    EasyMock.expect(
-        strategy.findDestinationServerToMoveSegment(
-            EasyMock.anyObject(),
-            EasyMock.anyObject(),
-            EasyMock.anyObject()
-        )
-    ).andAnswer(() -> ((List<ServerHolder>) EasyMock.getCurrentArguments()[2]).get(0)).anyTimes();
+    expectFindDestinationAndReturn(strategy, decommissioningServer);
     EasyMock.replay(strategy);
 
     DruidCoordinatorRuntimeParams params =
-        defaultRuntimeParamsBuilder(serverHolder1, serverHolder2)
+        defaultRuntimeParamsBuilder(activeServer, decommissioningServer)
             .withBalancerStrategy(strategy)
             .withBroadcastDatasources(broadcastDatasources)
             .build();
@@ -305,26 +276,27 @@ public class BalanceSegmentsTest
   @Test
   public void testMoveFromDecommissioningServer()
   {
-    final ServerHolder holder1 = createHolder(server1, allSegments);
-    final ServerHolder holder2 = createHolder(server2);
+    final ServerHolder decommissioningServer = createHolder(server1, true, allSegments);
+    final ServerHolder activeServer = createHolder(server2);
 
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
-    expectPickLoadingSegmentsAndReturnEmpty(strategy).once();
-    expectPickLoadedSegmentsAndReturn(strategy, new BalancerSegmentHolder(holder1, segment1)).once();
-    expectFindDestinationAndReturn(strategy, holder2);
+    expectFindDestinationAndReturn(strategy, activeServer);
     EasyMock.replay(strategy);
 
-    DruidCoordinatorRuntimeParams params = defaultRuntimeParamsBuilder(holder1, holder2)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(1).build())
+    DruidCoordinatorRuntimeParams params = defaultRuntimeParamsBuilder(decommissioningServer, activeServer)
+        .withDynamicConfigs(
+            CoordinatorDynamicConfig.builder()
+                                    .withSmartSegmentLoading(false)
+                                    .withMaxSegmentsToMove(3).build()
+        )
         .withBalancerStrategy(strategy)
         .withBroadcastDatasources(broadcastDatasources)
         .build();
 
-    CoordinatorRunStats stats = runBalancer(params);
+    runBalancer(params);
     EasyMock.verify(strategy);
-    Assert.assertEquals(1, stats.getSegmentStat(Stats.Segments.MOVED, "normal", segment1.getDataSource()));
-    Assert.assertEquals(0, holder1.getPeon().getSegmentsToLoad().size());
-    Assert.assertEquals(1, holder2.getPeon().getSegmentsToLoad().size());
+    Assert.assertEquals(0, decommissioningServer.getPeon().getSegmentsToLoad().size());
+    Assert.assertEquals(3, activeServer.getPeon().getSegmentsToLoad().size());
   }
 
   @Test
@@ -336,6 +308,7 @@ public class BalanceSegmentsTest
 
     final CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig
         .builder()
+        .withSmartSegmentLoading(false)
         .withMaxSegmentsInNodeLoadingQueue(maxSegmentsInQueue)
         .build();
     DruidCoordinatorRuntimeParams params =
@@ -378,7 +351,7 @@ public class BalanceSegmentsTest
   }
 
   @Test
-  public void testThatMaxSegmentsToMoveIsHonored()
+  public void testMaxSegmentsToMoveIsHonored()
   {
     // Move from non-decomissioning servers
     final ServerHolder holder1 = createHolder(server1, segment1, segment2);
@@ -386,8 +359,6 @@ public class BalanceSegmentsTest
     final ServerHolder holder3 = createHolder(server3);
 
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
-    expectPickLoadingSegmentsAndReturnEmpty(strategy).once();
-    expectPickLoadedSegmentsAndReturn(strategy, new BalancerSegmentHolder(holder2, segment3)).once();
     expectFindDestinationAndReturn(strategy, holder3);
     EasyMock.replay(strategy);
 
@@ -395,6 +366,7 @@ public class BalanceSegmentsTest
         defaultRuntimeParamsBuilder(holder1, holder2, holder3)
             .withDynamicConfigs(
                 CoordinatorDynamicConfig.builder()
+                                        .withSmartSegmentLoading(false)
                                         .withMaxSegmentsToMove(1)
                                         .withUseBatchedSegmentSampler(true)
                                         .withPercentOfSegmentsToConsiderPerMove(40)
@@ -406,8 +378,10 @@ public class BalanceSegmentsTest
 
     CoordinatorRunStats stats = runBalancer(params);
     EasyMock.verify(strategy);
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2"));
-    Assert.assertEquals(ImmutableSet.of(segment3), holder3.getPeon().getSegmentsToLoad());
+    long totalMoved = stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1")
+                      + stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2");
+    Assert.assertEquals(1L, totalMoved);
+    Assert.assertEquals(1, holder3.getPeon().getSegmentsToLoad().size());
   }
 
   @Test
@@ -421,6 +395,7 @@ public class BalanceSegmentsTest
     )
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
+                                    .withSmartSegmentLoading(false)
                                     .withMaxSegmentsToMove(2)
                                     .withUseBatchedSegmentSampler(true)
                                     .build()
@@ -488,35 +463,6 @@ public class BalanceSegmentsTest
     );
   }
 
-  private IExpectationSetters<Iterator<BalancerSegmentHolder>> expectPickLoadingSegmentsAndReturnEmpty(
-      BalancerStrategy strategy
-  )
-  {
-    return EasyMock.expect(
-        strategy.pickSegmentsToMove(
-            EasyMock.anyObject(),
-            EasyMock.anyObject(),
-            EasyMock.anyInt(),
-            EasyMock.eq(true)
-        )
-    ).andReturn(Collections.emptyIterator());
-  }
-
-  private IExpectationSetters<Iterator<BalancerSegmentHolder>> expectPickLoadedSegmentsAndReturn(
-      BalancerStrategy strategy,
-      BalancerSegmentHolder... pickedLoadedSegments
-  )
-  {
-    return EasyMock.expect(
-        strategy.pickSegmentsToMove(
-            EasyMock.anyObject(),
-            EasyMock.anyObject(),
-            EasyMock.anyInt(),
-            EasyMock.eq(false)
-        )
-    ).andReturn(Arrays.asList(pickedLoadedSegments).iterator());
-  }
-
   private void expectFindDestinationAndReturn(BalancerStrategy strategy, ServerHolder chosenServer)
   {
     EasyMock.expect(
@@ -526,16 +472,6 @@ public class BalanceSegmentsTest
             EasyMock.anyObject()
         )
     ).andReturn(chosenServer).anyTimes();
-  }
-
-  private ReplicationThrottler createReplicationThrottler()
-  {
-    CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig.builder().build();
-    return new ReplicationThrottler(
-        null,
-        dynamicConfig.getReplicationThrottleLimit(),
-        dynamicConfig.getMaxNonPrimaryReplicantsToLoad()
-    );
   }
 
   private DataSegment createHourlySegment(String datasource, DateTime start, String version)

@@ -44,10 +44,12 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
-import org.apache.druid.server.coordinator.loadqueue.CuratorLoadQueuePeon;
-import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
-import org.apache.druid.server.coordinator.loadqueue.LoadQueueTaskMaster;
-import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.CuratorLoadQueuePeon;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
+import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
+import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -296,8 +298,13 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
             .andReturn(druidDataSource);
     EasyMock.expect(coordinatorRuntimeParams.getDataSourcesSnapshot())
             .andReturn(dataSourcesSnapshot).anyTimes();
+    final CoordinatorDynamicConfig dynamicConfig =
+        CoordinatorDynamicConfig.builder().withUseRoundRobinSegmentAssignment(false).build();
     EasyMock.expect(coordinatorRuntimeParams.getCoordinatorDynamicConfig())
-            .andReturn(CoordinatorDynamicConfig.builder().withUseRoundRobinSegmentAssignment(false).build())
+            .andReturn(dynamicConfig)
+            .anyTimes();
+    EasyMock.expect(coordinatorRuntimeParams.getSegmentLoadingConfig())
+            .andReturn(new SegmentLoadingConfig(dynamicConfig, 100))
             .anyTimes();
 
     final ServerHolder sourceServer = new ServerHolder(source.toImmutableDruidServer(), sourceLoadQueuePeon);
@@ -426,12 +433,11 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
       DruidCoordinatorRuntimeParams params
   )
   {
-    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     return new StrategicSegmentAssigner(
         loadQueueManager,
         params.getDruidCluster(),
         params.getBalancerStrategy(),
-        dynamicConfig,
+        params.getSegmentLoadingConfig(),
         new CoordinatorRunStats()
     );
   }

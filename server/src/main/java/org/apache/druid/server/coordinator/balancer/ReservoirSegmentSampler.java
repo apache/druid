@@ -21,28 +21,86 @@ package org.apache.druid.server.coordinator.balancer;
 
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
+import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 
-final class ReservoirSegmentSampler
+public final class ReservoirSegmentSampler
 {
 
   private static final EmittingLogger log = new EmittingLogger(ReservoirSegmentSampler.class);
 
-  static List<BalancerSegmentHolder> getRandomBalancerSegmentHolders(
+  /**
+   * Picks segments currently loading on the given set of servers that can be
+   * moved to other servers for balancing.
+   *
+   * @param serverHolders        Set of historicals to consider for picking segments
+   * @param maxSegmentsToPick    Maximum number of segments to pick
+   * @param broadcastDatasources Segments belonging to these datasources will not
+   *                             be picked for balancing, since they should be
+   *                             loaded on all servers anyway.
+   * @return Iterator over {@link BalancerSegmentHolder}s, each of which contains
+   * a segment picked for moving and the server currently loading it.
+   */
+  public static List<BalancerSegmentHolder> pickMovableLoadingSegmentsFrom(
+      List<ServerHolder> serverHolders,
+      int maxSegmentsToPick,
+      Set<String> broadcastDatasources
+  )
+  {
+    return pickSegmentsToMove(
+        serverHolders,
+        broadcastDatasources,
+        maxSegmentsToPick,
+        ServerHolder::getLoadingSegments
+    );
+  }
+
+  /**
+   * Picks segments currently loaded on the given set of servers that can be
+   * moved to other servers for balancing.
+   *
+   * @param serverHolders        Set of historicals to consider for picking segments
+   * @param maxSegmentsToPick    Maximum number of segments to pick
+   * @param broadcastDatasources Segments belonging to these datasources will not
+   *                             be picked for balancing, since they should be
+   *                             loaded on all servers anyway.
+   * @return Iterator over {@link BalancerSegmentHolder}s, each of which contains
+   * a segment picked for moving and the server currently serving it.
+   */
+  public static List<BalancerSegmentHolder> pickMovableLoadedSegmentsFrom(
+      List<ServerHolder> serverHolders,
+      int maxSegmentsToPick,
+      Set<String> broadcastDatasources
+  )
+  {
+    return pickSegmentsToMove(
+        serverHolders,
+        broadcastDatasources,
+        maxSegmentsToPick,
+        server -> server.getServer().iterateAllSegments()
+    );
+  }
+
+  private static List<BalancerSegmentHolder> pickSegmentsToMove(
       List<ServerHolder> serverHolders,
       Set<String> broadcastDatasources,
       int maxSegmentsToPick,
-      boolean pickLoadingSegments
+      Function<ServerHolder, Collection<DataSegment>> segmentProvider
   )
   {
-    List<BalancerSegmentHolder> holders = new ArrayList<>(maxSegmentsToPick);
+    if (maxSegmentsToPick == 0 || serverHolders.isEmpty()) {
+      return Collections.emptyList();
+    }
+
+    final List<BalancerSegmentHolder> pickedSegments = new ArrayList<>(maxSegmentsToPick);
     int numSoFar = 0;
 
     for (ServerHolder server : serverHolders) {
@@ -51,10 +109,7 @@ final class ReservoirSegmentSampler
         continue;
       }
 
-      final Collection<DataSegment> movableSegments = pickLoadingSegments
-                                                      ? server.getLoadingSegments()
-                                                      : server.getServer().iterateAllSegments();
-
+      final Collection<DataSegment> movableSegments = segmentProvider.apply(server);
       for (DataSegment segment : movableSegments) {
         if (broadcastDatasources.contains(segment.getDataSource())) {
           // we don't need to rebalance segments that were assigned via broadcast rules
@@ -65,18 +120,18 @@ final class ReservoirSegmentSampler
         }
 
         if (numSoFar < maxSegmentsToPick) {
-          holders.add(new BalancerSegmentHolder(server, segment));
+          pickedSegments.add(new BalancerSegmentHolder(server, segment));
           numSoFar++;
           continue;
         }
         int randNum = ThreadLocalRandom.current().nextInt(numSoFar + 1);
         if (randNum < maxSegmentsToPick) {
-          holders.set(randNum, new BalancerSegmentHolder(server, segment));
+          pickedSegments.set(randNum, new BalancerSegmentHolder(server, segment));
         }
         numSoFar++;
       }
     }
-    return holders;
+    return pickedSegments;
   }
 
   /**

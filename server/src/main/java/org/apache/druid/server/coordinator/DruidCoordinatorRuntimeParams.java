@@ -26,7 +26,10 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
-import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
+import org.apache.druid.server.coordinator.loading.SegmentReplicantLookup;
+import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.timeline.DataSegment;
@@ -68,6 +71,7 @@ public class DruidCoordinatorRuntimeParams
   private final ServiceEmitter emitter;
   private final CoordinatorDynamicConfig coordinatorDynamicConfig;
   private final CoordinatorCompactionConfig coordinatorCompactionConfig;
+  private final SegmentLoadingConfig segmentLoadingConfig;
   private final CoordinatorRunStats stats;
   private final BalancerStrategy balancerStrategy;
   private final Set<String> broadcastDatasources;
@@ -82,6 +86,7 @@ public class DruidCoordinatorRuntimeParams
       ServiceEmitter emitter,
       CoordinatorDynamicConfig coordinatorDynamicConfig,
       CoordinatorCompactionConfig coordinatorCompactionConfig,
+      SegmentLoadingConfig segmentLoadingConfig,
       CoordinatorRunStats stats,
       BalancerStrategy balancerStrategy,
       Set<String> broadcastDatasources
@@ -96,6 +101,7 @@ public class DruidCoordinatorRuntimeParams
     this.emitter = emitter;
     this.coordinatorDynamicConfig = coordinatorDynamicConfig;
     this.coordinatorCompactionConfig = coordinatorCompactionConfig;
+    this.segmentLoadingConfig = segmentLoadingConfig;
     this.stats = stats;
     this.balancerStrategy = balancerStrategy;
     this.broadcastDatasources = broadcastDatasources;
@@ -154,6 +160,11 @@ public class DruidCoordinatorRuntimeParams
     return coordinatorCompactionConfig;
   }
 
+  public SegmentLoadingConfig getSegmentLoadingConfig()
+  {
+    return segmentLoadingConfig;
+  }
+
   public CoordinatorRunStats getCoordinatorStats()
   {
     return stats;
@@ -192,6 +203,7 @@ public class DruidCoordinatorRuntimeParams
         emitter,
         coordinatorDynamicConfig,
         coordinatorCompactionConfig,
+        segmentLoadingConfig,
         stats,
         balancerStrategy,
         broadcastDatasources
@@ -210,6 +222,7 @@ public class DruidCoordinatorRuntimeParams
     private ServiceEmitter emitter;
     private CoordinatorDynamicConfig coordinatorDynamicConfig;
     private CoordinatorCompactionConfig coordinatorCompactionConfig;
+    private SegmentLoadingConfig segmentLoadingConfig;
     private CoordinatorRunStats stats;
     private BalancerStrategy balancerStrategy;
     private Set<String> broadcastDatasources;
@@ -232,6 +245,7 @@ public class DruidCoordinatorRuntimeParams
         ServiceEmitter emitter,
         CoordinatorDynamicConfig coordinatorDynamicConfig,
         CoordinatorCompactionConfig coordinatorCompactionConfig,
+        SegmentLoadingConfig segmentLoadingConfig,
         CoordinatorRunStats stats,
         BalancerStrategy balancerStrategy,
         Set<String> broadcastDatasources
@@ -246,6 +260,7 @@ public class DruidCoordinatorRuntimeParams
       this.emitter = emitter;
       this.coordinatorDynamicConfig = coordinatorDynamicConfig;
       this.coordinatorCompactionConfig = coordinatorCompactionConfig;
+      this.segmentLoadingConfig = segmentLoadingConfig;
       this.stats = stats;
       this.balancerStrategy = balancerStrategy;
       this.broadcastDatasources = broadcastDatasources;
@@ -254,6 +269,7 @@ public class DruidCoordinatorRuntimeParams
     public DruidCoordinatorRuntimeParams build()
     {
       initStatsIfRequired();
+      initSegmentLoadingConfigIfRequired();
       initSegmentAssignerIfRequired();
 
       return new DruidCoordinatorRuntimeParams(
@@ -266,6 +282,7 @@ public class DruidCoordinatorRuntimeParams
           emitter,
           coordinatorDynamicConfig,
           coordinatorCompactionConfig,
+          segmentLoadingConfig,
           stats,
           balancerStrategy,
           broadcastDatasources
@@ -279,6 +296,15 @@ public class DruidCoordinatorRuntimeParams
       stats = stats == null ? new CoordinatorRunStats(debugDimensions) : stats;
     }
 
+    private void initSegmentLoadingConfigIfRequired()
+    {
+      if (segmentLoadingConfig == null
+          && coordinatorDynamicConfig != null
+          && usedSegments != null) {
+        segmentLoadingConfig = new SegmentLoadingConfig(coordinatorDynamicConfig, usedSegments.size());
+      }
+    }
+
     private void initSegmentAssignerIfRequired()
     {
       if (segmentAssigner != null || loadQueueManager == null) {
@@ -287,13 +313,14 @@ public class DruidCoordinatorRuntimeParams
 
       Preconditions.checkNotNull(druidCluster);
       Preconditions.checkNotNull(balancerStrategy);
-      Preconditions.checkNotNull(coordinatorDynamicConfig);
+      Preconditions.checkNotNull(segmentLoadingConfig);
+      Preconditions.checkNotNull(usedSegments);
       Preconditions.checkNotNull(stats);
       segmentAssigner = new StrategicSegmentAssigner(
           loadQueueManager,
           druidCluster,
           balancerStrategy,
-          coordinatorDynamicConfig,
+          segmentLoadingConfig,
           stats
       );
     }

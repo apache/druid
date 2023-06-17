@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.loadqueue;
+package org.apache.druid.server.coordinator.loading;
 
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;

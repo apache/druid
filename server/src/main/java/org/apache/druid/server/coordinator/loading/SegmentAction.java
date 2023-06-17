@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.loadqueue;
+package org.apache.druid.server.coordinator.loading;
 
 /**
  * Represents actions that can be performed on a server for a single segment.

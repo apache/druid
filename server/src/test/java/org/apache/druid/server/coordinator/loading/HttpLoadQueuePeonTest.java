@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.loadqueue;
+package org.apache.druid.server.coordinator.loading;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.util.concurrent.Futures;

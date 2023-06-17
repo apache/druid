@@ -17,7 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.loading;
+
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
 import java.util.HashMap;
 import java.util.HashSet;

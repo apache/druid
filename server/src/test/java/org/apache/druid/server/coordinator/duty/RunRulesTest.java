@@ -44,8 +44,8 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
-import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
-import org.apache.druid.server.coordinator.loadqueue.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
@@ -153,6 +153,7 @@ public class RunRulesTest
             CoordinatorDynamicConfig
                 .builder()
                 .withMaxNonPrimaryReplicantsToLoad(10)
+                .withSmartSegmentLoading(false)
                 .build()
         )
         .withSegmentAssignerUsing(loadQueueManager)
@@ -215,6 +216,7 @@ public class RunRulesTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withMaxNonPrimaryReplicantsToLoad(10)
+                                    .withSmartSegmentLoading(false)
                                     .build()
         )
         .withSegmentAssignerUsing(loadQueueManager)

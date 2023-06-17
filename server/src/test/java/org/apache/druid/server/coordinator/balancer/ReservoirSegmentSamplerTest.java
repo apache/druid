@@ -24,8 +24,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeonTester;
-import org.apache.druid.server.coordinator.loadqueue.SegmentAction;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Before;
@@ -75,7 +75,7 @@ public class ReservoirSegmentSamplerTest
       // due to the pseudo-randomness of this method, we may not select a segment every single time no matter what.
       segmentCountMap.compute(
           ReservoirSegmentSampler
-              .getRandomBalancerSegmentHolders(servers, Collections.emptySet(), 1, false)
+              .pickMovableLoadedSegmentsFrom(servers, 1, Collections.emptySet())
               .get(0).getSegment(),
           (segment, count) -> count == null ? 1 : count + 1
       );
@@ -133,7 +133,7 @@ public class ReservoirSegmentSamplerTest
 
     // Pick only loading segments
     Set<DataSegment> pickedSegments = ReservoirSegmentSampler
-        .getRandomBalancerSegmentHolders(Arrays.asList(server1, server2), Collections.emptySet(), 10, true)
+        .pickMovableLoadingSegmentsFrom(Arrays.asList(server1, server2), 10, Collections.emptySet())
         .stream().map(BalancerSegmentHolder::getSegment).collect(Collectors.toSet());
 
     // Verify that only loading segments are picked
@@ -142,7 +142,7 @@ public class ReservoirSegmentSamplerTest
 
     // Pick only loaded segments
     pickedSegments = ReservoirSegmentSampler
-        .getRandomBalancerSegmentHolders(Arrays.asList(server1, server2), Collections.emptySet(), 10, false)
+        .pickMovableLoadedSegmentsFrom(Arrays.asList(server1, server2), 10, Collections.emptySet())
         .stream().map(BalancerSegmentHolder::getSegment).collect(Collectors.toSet());
 
     // Verify that only loaded segments are picked
@@ -164,11 +164,9 @@ public class ReservoirSegmentSamplerTest
     );
 
     // Try to pick all the segments on the servers
-    List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler.getRandomBalancerSegmentHolders(
+    List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler.pickMovableLoadedSegmentsFrom(
         Arrays.asList(historical, broker),
-        Collections.emptySet(),
-        10,
-        false
+        10, Collections.emptySet()
     );
 
     // Verify that only the segments on the historical are picked
@@ -197,7 +195,7 @@ public class ReservoirSegmentSamplerTest
 
     // Try to pick all the segments on the servers
     List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler
-        .getRandomBalancerSegmentHolders(servers, Collections.singleton(broadcastDatasource), 10, false);
+        .pickMovableLoadedSegmentsFrom(servers, 10, Collections.singleton(broadcastDatasource));
 
     // Verify that none of the broadcast segments are picked
     Assert.assertEquals(2, pickedSegments.size());
@@ -249,7 +247,7 @@ public class ReservoirSegmentSamplerTest
     int numIterations = 1;
     for (; numIterations < 10000; ++numIterations) {
       ReservoirSegmentSampler
-          .getRandomBalancerSegmentHolders(servers, Collections.emptySet(), sampleSize, false)
+          .pickMovableLoadedSegmentsFrom(servers, sampleSize, Collections.emptySet())
           .forEach(holder -> pickedSegments.add(holder.getSegment()));
 
       if (pickedSegments.size() >= numSegments) {

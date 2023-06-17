@@ -20,10 +20,10 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.balancer.TierSegmentBalancer;
+import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
 
 /**
  *
@@ -41,15 +41,15 @@ public class BalanceSegments implements CoordinatorDuty
     }
 
     final DruidCluster cluster = params.getDruidCluster();
-    final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
-    final int maxSegmentsToMove = dynamicConfig.getMaxSegmentsToMove();
+    final SegmentLoadingConfig loadingConfig = params.getSegmentLoadingConfig();
+    final int maxSegmentsToMove = loadingConfig.getMaxSegmentsToMove();
     if (maxSegmentsToMove <= 0) {
       log.info("Skipping balance as maxSegmentsToMove is [%d].", maxSegmentsToMove);
       return params;
     } else {
       log.info(
           "Balancing segments in tiers [%s] with maxSegmentsToMove=[%d], maxLifetime=[%d].",
-          cluster.getTierNames(), maxSegmentsToMove, dynamicConfig.getReplicantLifetime()
+          cluster.getTierNames(), maxSegmentsToMove, loadingConfig.getMaxLifetimeInLoadQueue()
       );
     }
 

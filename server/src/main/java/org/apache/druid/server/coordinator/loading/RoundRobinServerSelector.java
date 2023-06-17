@@ -17,8 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.coordinator.loading;
 
+import org.apache.druid.server.coordinator.DruidCluster;
+import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.concurrent.NotThreadSafe;

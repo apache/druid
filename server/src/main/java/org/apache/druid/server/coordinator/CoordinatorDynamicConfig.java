@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
-import org.apache.druid.server.coordinator.loadqueue.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.Dimension;
 
 import javax.annotation.Nonnull;
@@ -37,7 +37,6 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.util.Collection;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -236,19 +235,12 @@ public class CoordinatorDynamicConfig
       return validDebugDimensions;
     }
 
-    final Map<String, Dimension> nameToDimension = new HashMap<>();
     for (Dimension dimension : Dimension.values()) {
-      nameToDimension.put(dimension.reportedName(), dimension);
+      final String dimensionValue = debugDimensions.get(dimension.reportedName());
+      if (dimensionValue != null) {
+        validDebugDimensions.put(dimension, dimensionValue);
+      }
     }
-
-    debugDimensions.forEach(
-        (dimensionName, value) -> {
-          Dimension dimension = nameToDimension.get(dimensionName);
-          if (dimension != null && value != null) {
-            validDebugDimensions.put(dimension, value);
-          }
-        }
-    );
 
     return validDebugDimensions;
   }
@@ -511,7 +503,8 @@ public class CoordinatorDynamicConfig
            && Objects.equals(
                dataSourcesToNotKillStalePendingSegmentsIn,
                that.dataSourcesToNotKillStalePendingSegmentsIn)
-           && Objects.equals(decommissioningNodes, that.decommissioningNodes);
+           && Objects.equals(decommissioningNodes, that.decommissioningNodes)
+           && Objects.equals(debugDimensions, that.debugDimensions);
   }
 
   @Override
@@ -534,7 +527,8 @@ public class CoordinatorDynamicConfig
         decommissioningNodes,
         decommissioningMaxPercentOfMaxSegmentsToMove,
         pauseCoordination,
-        maxNonPrimaryReplicantsToLoad
+        maxNonPrimaryReplicantsToLoad,
+        debugDimensions
     );
   }
 

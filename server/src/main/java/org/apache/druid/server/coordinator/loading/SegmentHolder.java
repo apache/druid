@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.loadqueue;
+package org.apache.druid.server.coordinator.loading;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;

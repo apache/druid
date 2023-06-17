@@ -22,10 +22,10 @@ package org.apache.druid.server.coordinator.balancer;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.StrategicSegmentAssigner;
+import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
+import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
@@ -33,7 +33,6 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +57,7 @@ public class TierSegmentBalancer
   private final StrategicSegmentAssigner segmentAssigner;
 
   private final BalancerStrategy strategy;
-  private final CoordinatorDynamicConfig dynamicConfig;
+  private final SegmentLoadingConfig loadingConfig;
   private final CoordinatorRunStats runStats;
 
   private final Set<ServerHolder> allServers;
@@ -79,8 +78,8 @@ public class TierSegmentBalancer
     this.segmentAssigner = params.getSegmentAssigner();
 
     this.strategy = params.getBalancerStrategy();
-    this.dynamicConfig = params.getCoordinatorDynamicConfig();
-    this.totalMaxSegmentsToMove = dynamicConfig.getMaxSegmentsToMove();
+    this.loadingConfig = params.getSegmentLoadingConfig();
+    this.totalMaxSegmentsToMove = loadingConfig.getMaxSegmentsToMove();
     this.runStats = segmentAssigner.getStats();
 
     Map<Boolean, List<ServerHolder>> partitions =
@@ -111,7 +110,7 @@ public class TierSegmentBalancer
     // Move segments from decommissioning to active servers
     int movedDecommSegments = 0;
     if (!decommissioningServers.isEmpty()) {
-      int maxDecommPercentToMove = dynamicConfig.getDecommissioningMaxPercentOfMaxSegmentsToMove();
+      int maxDecommPercentToMove = loadingConfig.getPercentDecommSegmentsToMove();
       int maxDecommSegmentsToMove = (int) Math.ceil(totalMaxSegmentsToMove * (maxDecommPercentToMove / 100.0));
       movedDecommSegments +=
           moveSegmentsFromTo(decommissioningServers, activeServers, maxDecommSegmentsToMove);
@@ -130,7 +129,7 @@ public class TierSegmentBalancer
         movedGeneralSegments, maxGeneralSegmentsToMove, tier
     );
 
-    if (dynamicConfig.emitBalancingStats()) {
+    if (loadingConfig.isEmitBalancingStats()) {
       strategy.emitStats(tier, runStats, Lists.newArrayList(allServers));
     }
   }
@@ -145,60 +144,38 @@ public class TierSegmentBalancer
       return 0;
     }
 
+    final Set<String> broadcastDatasources = params.getBroadcastDatasources();
+
     // Always move loading segments first as it is a cheaper operation
-    Iterator<BalancerSegmentHolder> pickedSegments
-        = pickSegmentsFrom(sourceServers, maxSegmentsToMove, true);
+    List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler
+        .pickMovableLoadingSegmentsFrom(sourceServers, maxSegmentsToMove, broadcastDatasources);
     int movedCount = moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove);
 
     // Move loaded segments only if tier is not already busy moving segments
     if (movingSegmentCount <= 0) {
       maxSegmentsToMove -= movedCount;
-      pickedSegments = pickSegmentsFrom(sourceServers, maxSegmentsToMove, false);
+      pickedSegments = ReservoirSegmentSampler
+          .pickMovableLoadedSegmentsFrom(sourceServers, maxSegmentsToMove, broadcastDatasources);
       movedCount += moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove);
     }
 
     return movedCount;
   }
 
-  private Iterator<BalancerSegmentHolder> pickSegmentsFrom(
-      List<ServerHolder> sourceServers,
-      int maxSegmentsToPick,
-      boolean pickLoadingSegments
-  )
-  {
-    if (maxSegmentsToPick <= 0 || sourceServers.isEmpty()) {
-      return Collections.emptyIterator();
-    } else if (dynamicConfig.useBatchedSegmentSampler()) {
-      return strategy.pickSegmentsToMove(
-          sourceServers,
-          params.getBroadcastDatasources(),
-          maxSegmentsToPick,
-          pickLoadingSegments
-      );
-    } else if (pickLoadingSegments) {
-      // non-batched sampler cannot pick loading segments
-      return Collections.emptyIterator();
-    } else {
-      return strategy.pickSegmentsToMove(
-          sourceServers,
-          params.getBroadcastDatasources(),
-          dynamicConfig.getPercentOfSegmentsToConsiderPerMove()
-      );
-    }
-  }
-
   private int moveSegmentsTo(
       List<ServerHolder> destinationServers,
-      Iterator<BalancerSegmentHolder> segmentsToMove,
+      List<BalancerSegmentHolder> movableSegments,
       int maxSegmentsToMove
   )
   {
     int processed = 0;
     int movedCount = 0;
-    while (segmentsToMove.hasNext() && processed < maxSegmentsToMove) {
+
+    final Iterator<BalancerSegmentHolder> segmentIterator = movableSegments.iterator();
+    while (segmentIterator.hasNext() && processed < maxSegmentsToMove) {
       ++processed;
 
-      final BalancerSegmentHolder segmentHolder = segmentsToMove.next();
+      final BalancerSegmentHolder segmentHolder = segmentIterator.next();
       DataSegment segmentToMove = getLoadableSegment(segmentHolder.getSegment());
       if (segmentToMove != null &&
           segmentAssigner.moveSegment(segmentToMove, segmentHolder.getServer(), destinationServers)) {
@@ -221,7 +198,8 @@ public class TierSegmentBalancer
       return null;
     }
 
-    ImmutableDruidDataSource datasource = params.getDataSourcesSnapshot().getDataSource(segmentToMove.getDataSource());
+    ImmutableDruidDataSource datasource = params.getDataSourcesSnapshot()
+                                                .getDataSource(segmentToMove.getDataSource());
     if (datasource == null) {
       markUnmoved("Invalid datasource", segmentToMove);
       return null;
