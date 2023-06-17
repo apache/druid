@@ -68,6 +68,38 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
   }
 
   @Test
+  public void testMultiTopicCheckPointDataSourceMetadataActionSerde() throws IOException
+  {
+    MAPPER.registerSubtypes(KafkaDataSourceMetadata.class);
+    MAPPER.registerSubtypes(KafkaTopicPartition.class);
+
+    final KafkaDataSourceMetadata kafkaDataSourceMetadata =
+        new KafkaDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(
+                "topic1,topic2",
+                ImmutableMap.of(
+                    new KafkaTopicPartition(true, "topic1", 0), 10L,
+                    new KafkaTopicPartition(true, "topic1", 1), 20L,
+                    new KafkaTopicPartition(true, "topic2", 0), 30L),
+                ImmutableSet.of()
+            )
+        );
+    final CheckPointDataSourceMetadataAction checkpointAction = new CheckPointDataSourceMetadataAction(
+        "id_1",
+        1,
+        null,
+        kafkaDataSourceMetadata
+    );
+
+    final String serialized = MAPPER.writeValueAsString(checkpointAction);
+    final CheckPointDataSourceMetadataAction deserialized = MAPPER.readValue(
+        serialized,
+        CheckPointDataSourceMetadataAction.class
+    );
+    Assert.assertEquals(checkpointAction, deserialized);
+  }
+
+  @Test
   public void testCheckPointDataSourceMetadataActionOldJsonSerde() throws IOException
   {
     MAPPER.registerSubtypes(KafkaDataSourceMetadata.class);
