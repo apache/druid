@@ -135,7 +135,9 @@ public class DruidPlanner implements Closeable
     try {
       handler.validate();
       plannerContext.setResourceActions(handler.resourceActions());
-      plannerContext.setExplainAttributes(handler.explainAttributes());
+      if (root.getKind() == SqlKind.EXPLAIN) {
+        plannerContext.setExplainAttributes(handler.explainAttributes());
+      }
     }
     catch (RuntimeException e) {
       throw new ValidationException(e);
