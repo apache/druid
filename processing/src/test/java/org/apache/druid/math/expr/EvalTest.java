@@ -22,6 +22,7 @@ package org.apache.druid.math.expr;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import junitparams.converters.Nullable;
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -1383,11 +1384,17 @@ public class EvalTest extends InitializedNullHandlingTest
         new Object[] {"1.0", "2", "3", "true", "false"}
     );
 
-    // best effort of doesn't know of nested type, what happens if we have some nested data?
     assertBestEffortOf(
         ImmutableMap.of("x", 1L, "y", 2L),
-        ExpressionType.UNKNOWN_COMPLEX,
+        ExpressionType.NESTED_DATA,
         ImmutableMap.of("x", 1L, "y", 2L)
+    );
+
+    SerializablePair<String, Long> someOtherComplex = new SerializablePair<>("hello", 1234L);
+    assertBestEffortOf(
+        someOtherComplex,
+        ExpressionType.UNKNOWN_COMPLEX,
+        someOtherComplex
     );
   }
 

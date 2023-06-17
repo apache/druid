@@ -16,40 +16,27 @@
  * limitations under the License.
  */
 
-@import '../../variables';
-@import '../../blueprint-overrides/common/colors';
+import React from 'react';
 
-.ingestion-view {
-  height: 100%;
-  width: 100%;
+import { Capabilities } from '../../helpers';
+import { shallow } from '../../utils/shallow-renderer';
 
-  .top-pane {
-    position: absolute;
-    width: 100%;
-    top: 0;
-    bottom: 0;
+import { SupervisorsView } from './supervisors-view';
 
-    .view-control-bar {
-      margin-bottom: $standard-padding;
-    }
-  }
-
-  &.splitter-layout.splitter-layout-vertical > .layout-splitter {
-    height: 3px;
-    background-color: $gray1;
-  }
-
-  .bottom-pane {
-    position: absolute;
-    width: 100%;
-    top: 12px;
-    bottom: 0;
-  }
-
-  .ReactTable {
-    position: absolute;
-    top: $view-control-bar-height + $standard-padding;
-    bottom: 0;
-    width: 100%;
-  }
-}
+describe('SupervisorsView', () => {
+  it('matches snapshot', () => {
+    const taskView = shallow(
+      <SupervisorsView
+        filters={[]}
+        onFiltersChange={() => {}}
+        openSupervisorDialog={undefined}
+        goToDatasource={() => {}}
+        goToQuery={() => {}}
+        goToStreamingDataLoader={() => {}}
+        goToTasks={() => {}}
+        capabilities={Capabilities.FULL}
+      />,
+    );
+    expect(taskView).toMatchSnapshot();
+  });
+});

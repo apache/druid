@@ -737,6 +737,25 @@ public class MSQInsertTest extends MSQTestBase
   }
 
   @Test
+  public void testInsertWithClusteredByDescendingThrowsException()
+  {
+    // Add a DESC clustered by column, which should not be allowed
+    testIngestQuery().setSql("INSERT INTO foo1 "
+                             + "SELECT __time, dim1 , count(*) as cnt "
+                             + "FROM foo "
+                             + "GROUP BY 1, 2"
+                             + "PARTITIONED BY DAY "
+                             + "CLUSTERED BY dim1 DESC"
+                     )
+                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
+                         CoreMatchers.instanceOf(SqlPlanningException.class),
+                         ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+                             "[`dim1` DESC] is invalid. CLUSTERED BY columns cannot be sorted in descending order."))
+                     ))
+                     .verifyPlanningErrors();
+  }
+
+  @Test
   public void testRollUpOnFoo1WithTimeFunctionComplexCol()
   {
     RowSignature rowSignature = RowSignature.builder()

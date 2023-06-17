@@ -21,19 +21,17 @@ import React from 'react';
 import { Capabilities } from '../../helpers';
 import { shallow } from '../../utils/shallow-renderer';
 
-import { IngestionView } from './ingestion-view';
+import { TasksView } from './tasks-view';
 
-describe('IngestionView', () => {
+describe('TasksView', () => {
   it('matches snapshot', () => {
     const taskView = shallow(
-      <IngestionView
-        openDialog="test"
-        taskId={undefined}
-        taskGroupId="test"
-        datasourceId="datasource"
+      <TasksView
+        filters={[]}
+        onFiltersChange={() => {}}
+        openTaskDialog={undefined}
         goToDatasource={() => {}}
         goToQuery={() => {}}
-        goToStreamingDataLoader={() => {}}
         goToClassicBatchDataLoader={() => {}}
         capabilities={Capabilities.FULL}
       />,
