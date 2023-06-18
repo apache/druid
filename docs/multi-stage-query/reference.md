@@ -365,7 +365,7 @@ For detailed information about the settings related to durable storage, see [Dur
 
 ### Use durable storage for queries
 
-When you run a query,  include the context parameter `durableShuffleStorage` and set it to `true`. 
+When you run a query, include the context parameter `durableShuffleStorage` and set it to `true`.
 
 For queries where you want to use fault tolerance for workers,  set `faultTolerance` to `true`, which automatically sets `durableShuffleStorage` to `true`.
 

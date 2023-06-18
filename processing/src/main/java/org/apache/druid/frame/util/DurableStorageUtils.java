@@ -20,11 +20,13 @@
 package org.apache.druid.frame.util;
 
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * Helper class that fetches the directory and file names corresponding to file location
@@ -32,11 +34,17 @@ import java.util.Iterator;
 public class DurableStorageUtils
 {
   public static final String SUCCESS_MARKER_FILENAME = "__success";
-  public static final Splitter SPLITTER = Splitter.on("/").limit(2);
+  public static final Splitter SPLITTER = Splitter.on("/").limit(3);
+  public static final String QUERY_RESULTS_DIR = "query-results";
 
   public static String getControllerDirectory(final String controllerTaskId)
   {
     return StringUtils.format("controller_%s", IdUtils.validateId("controller task ID", controllerTaskId));
+  }
+
+  public static String getControllerIntermediateDirectory(final String controllerTaskId)
+  {
+    return StringUtils.format("%s/durable-shuffle-intermediate", getControllerDirectory(controllerTaskId));
   }
 
   public static String getSuccessFilePath(
@@ -64,7 +72,7 @@ public class DurableStorageUtils
   {
     return StringUtils.format(
         "%s/stage_%d/worker_%d",
-        getControllerDirectory(controllerTaskId),
+        getControllerIntermediateDirectory(controllerTaskId),
         stageNumber,
         workerNumber
     );
@@ -149,5 +157,17 @@ public class DurableStorageUtils
     } else {
       return null;
     }
+  }
+
+  public static boolean isQueryResultPath(String path) {
+    if (path == null) {
+      return false;
+    }
+    Iterator<String> elementsIterator = SPLITTER.split(path).iterator();
+    List<String> elements = ImmutableList.copyOf(elementsIterator);
+    if (elements.size() < 2) {
+      return false;
+    }
+    return QUERY_RESULTS_DIR.equals(elements.get(1));
   }
 }
