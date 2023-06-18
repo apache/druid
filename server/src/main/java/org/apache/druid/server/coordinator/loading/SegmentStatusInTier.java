@@ -70,7 +70,8 @@ public class SegmentStatusInTier
     } else if (server.canLoadSegment(segment)) {
       eligibleLoadServers.add(server);
     } else if (action != null) {
-      serversWithQueuedActions.computeIfAbsent(action, a -> new ArrayList<>()).add(server);
+      serversWithQueuedActions.computeIfAbsent(action, a -> new ArrayList<>())
+                              .add(server);
     }
   }
 

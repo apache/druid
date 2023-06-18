@@ -72,12 +72,10 @@ import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
-import org.apache.druid.server.coordinator.loading.ReplicationThrottler;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
 import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
-import org.apache.druid.server.coordinator.loading.SegmentReplicantLookup;
-import org.apache.druid.server.coordinator.rules.LoadRule;
+import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -110,22 +108,19 @@ import java.util.stream.Collectors;
 public class DruidCoordinator
 {
   /**
-   * This comparator orders "freshest" segments first, i. e. segments with most recent intervals.
-   * <p>
-   * It is used in historical nodes' {@link LoadQueuePeon}s to make historicals load more recent segment first.
-   * <p>
-   * It is also used in {@link DruidCoordinatorRuntimeParams} for {@link
-   * DruidCoordinatorRuntimeParams#getUsedSegments()} - a collection of segments to be considered during some
-   * coordinator run for different {@link CoordinatorDuty}s. The order matters only for {@link
-   * RunRules}, which tries to apply the rules while iterating the segments in the order imposed by
-   * this comparator. In {@link LoadRule} the throttling limit may be hit (via {@link ReplicationThrottler}; see
-   * {@link CoordinatorDynamicConfig#getReplicationThrottleLimit()}). So before we potentially hit this limit, we want
-   * to schedule loading the more recent segments (among all of those that need to be loaded).
-   * <p>
-   * In both {@link LoadQueuePeon}s and {@link RunRules}, we want to load more recent segments first
-   * because presumably they are queried more often and contain are more important data for users, so if the Druid
-   * cluster has availability problems and struggling to make all segments available immediately, at least we try to
-   * make more "important" (more recent) segments available as soon as possible.
+   * Orders newest segments (i.e. segments with most recent intervals) first.
+   * Used by:
+   * <ul>
+   * <li>{@link RunRules} duty to prioritize assignment of more recent segments.
+   * The order of segments matters because the {@link CoordinatorDynamicConfig#replicationThrottleLimit}
+   * might cause only a few segments to be picked for replication in a coordinator run.
+   * </li>
+   * <li>{@link LoadQueuePeon}s to prioritize load of more recent segments.</li>
+   * </ul>
+   * It is presumed that more recent segments are queried more often and contain
+   * more important data for users. This ordering thus ensures that if the cluster
+   * has availability or loading problems, the most recent segments are made
+   * available as soon as possible.
    */
   public static final Ordering<DataSegment> SEGMENT_COMPARATOR_RECENT_FIRST = Ordering
       .from(Comparators.intervalsByEndThenStart())
@@ -146,8 +141,7 @@ public class DruidCoordinator
   private final IndexingServiceClient indexingServiceClient;
   private final ScheduledExecutorService exec;
   private final LoadQueueTaskMaster taskMaster;
-  private final ConcurrentHashMap<String, LoadQueuePeon> loadManagementPeons
-      = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, LoadQueuePeon> loadManagementPeons = new ConcurrentHashMap<>();
   private final SegmentLoadQueueManager loadQueueManager;
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
@@ -160,7 +154,19 @@ public class DruidCoordinator
   private final CompactSegments compactSegments;
 
   private volatile boolean started = false;
-  private volatile SegmentReplicantLookup segmentReplicantLookup = null;
+
+  /**
+   * Used to determine count of under-replicated or unavailable segments.
+   * Updated in each coordinator run in the {@link UpdateReplicationStatus} duty.
+   * <p>
+   * This might have stale information if coordinator runs are delayed. But as
+   * long as the {@link SegmentsMetadataManager} has the latest information of
+   * used segments, we would only have false negatives and not false positives.
+   * In other words, we might report some segments as under-replicated or
+   * unavailable even if they are fully replicated. But if a segment is reported
+   * as fully replicated, it is guaranteed to be so.
+   */
+  private volatile SegmentReplicationStatus segmentReplicationStatus = null;
 
   private int cachedBalancerThreadNumber;
   private ListeningExecutorService balancerExec;
@@ -227,23 +233,12 @@ public class DruidCoordinator
     return loadManagementPeons;
   }
 
-  /**
-   * @return tier -> { dataSource -> underReplicationCount } map
-   */
   public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicatedCount(boolean useClusterView)
   {
     final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
     return computeUnderReplicated(dataSegments, useClusterView);
   }
 
-  /**
-   * segmentReplicantLookup use in this method could potentially be stale since it is only updated on coordinator runs.
-   * However, this is ok as long as the {@param dataSegments} is refreshed/latest as this would at least still ensure
-   * that the stale data in segmentReplicantLookup would be under counting replication levels,
-   * rather than potentially falsely reporting that everything is available.
-   *
-   * @return tier -> { dataSource -> underReplicationCount } map
-   */
   public Map<String, Object2LongMap<String>> getTierToDatasourceToUnderReplicatedCount(
       Iterable<DataSegment> dataSegments,
       boolean useClusterView
@@ -254,7 +249,7 @@ public class DruidCoordinator
 
   public Object2IntMap<String> getDatasourceToUnavailableSegmentCount()
   {
-    if (segmentReplicantLookup == null) {
+    if (segmentReplicationStatus == null) {
       return Object2IntMaps.emptyMap();
     }
 
@@ -262,10 +257,10 @@ public class DruidCoordinator
 
     final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
     for (DataSegment segment : dataSegments) {
-      SegmentReplicaCount replicaCount = segmentReplicantLookup.getReplicaCountsInCluster(segment.getId());
+      SegmentReplicaCount replicaCount = segmentReplicationStatus.getReplicaCountsInCluster(segment.getId());
       datasourceToUnavailableSegments.addTo(
           segment.getDataSource(),
-          replicaCount.loaded() == 0 ? 1 : 0
+          replicaCount.totalLoaded() == 0 ? 1 : 0
       );
     }
 
@@ -287,7 +282,7 @@ public class DruidCoordinator
         final DruidDataSource loadedView = druidServer.getDataSource(dataSource.getName());
         if (loadedView != null) {
           // This does not use segments.removeAll(loadedView.getSegments()) for performance reasons.
-          // Please see https://github.com/apache/druid/pull/5632 and LoadStatusBenchmark for more info.
+          // Please see https://github.com/apache/druid/pull/5632 for more info.
           for (DataSegment serverSegment : loadedView.getSegments()) {
             segments.remove(serverSegment);
           }
@@ -296,7 +291,7 @@ public class DruidCoordinator
       final int numUnavailableSegments = segments.size();
       loadStatus.put(
           dataSource.getName(),
-          100 * ((double) (numPublishedSegments - numUnavailableSegments) / (double) numPublishedSegments)
+          (numPublishedSegments - numUnavailableSegments) * 100.0 / numPublishedSegments
       );
     }
 
@@ -419,10 +414,10 @@ public class DruidCoordinator
       boolean computeUsingClusterView
   )
   {
-    if (segmentReplicantLookup == null) {
+    if (segmentReplicationStatus == null) {
       return Collections.emptyMap();
     } else {
-      return segmentReplicantLookup.getTierToDatasourceToUnderReplicated(dataSegments, !computeUsingClusterView);
+      return segmentReplicationStatus.getTierToDatasourceToUnderReplicated(dataSegments, !computeUsingClusterView);
     }
   }
 
@@ -482,7 +477,7 @@ public class DruidCoordinator
             )
         );
         log.info(
-            "Done making custom coordinator duties %s for group %s",
+            "Done making custom coordinator duties [%s] for group [%s]",
             customDutyGroup.getCustomDutyList().stream()
                            .map(duty -> duty.getClass().getName()).collect(Collectors.toList()),
             customDutyGroup.getName()
@@ -572,6 +567,7 @@ public class DruidCoordinator
     return ImmutableList.of(
         new UpdateCoordinatorStateAndPrepareCluster(),
         new RunRules(),
+        new UpdateReplicationStatus(),
         new UnloadUnusedSegments(loadQueueManager),
         new MarkOvershadowedSegmentsAsUnused(DruidCoordinator.this),
         new BalanceSegments(),
@@ -789,10 +785,18 @@ public class DruidCoordinator
   }
 
   /**
-   * Updates the enclosing {@link DruidCoordinator}'s state and prepares an immutable view of the cluster state (which
-   * consists of {@link DruidCluster} and {@link SegmentReplicantLookup}) and feeds it into {@link
-   * DruidCoordinatorRuntimeParams} for use in subsequent {@link CoordinatorDuty}s (see the order in {@link
-   * #makeHistoricalManagementDuties()}).
+   * This duty does the following:
+   * <ul>
+   *   <li>Prepares an immutable {@link DruidCluster} consisting of {@link ServerHolder}s
+   *   which represent the current state of the servers in the cluster.</li>
+   *   <li>Starts and stops load peons for new and disappeared servers respectively.</li>
+   *   <li>Cancels in-progress loads on all decommissioning servers. This is done
+   *   here to ensure that under-replicated segments are assigned to active servers
+   *   in the {@link RunRules} duty after this.</li>
+   *   <li>Initializes the {@link BalancerStrategy} for the run.</li>
+   * </ul>
+   *
+   * @see #makeHistoricalManagementDuties() for the order of duties
    */
   private class UpdateCoordinatorStateAndPrepareCluster implements CoordinatorDuty
   {
@@ -820,15 +824,11 @@ public class DruidCoordinator
           dynamicConfig.getDebugDimensions()
       );
 
-      params = params.buildFromExisting()
-                     .withDruidCluster(cluster)
-                     .withBalancerStrategy(balancerStrategy)
-                     .withSegmentAssignerUsing(loadQueueManager)
-                     .build();
-
-      segmentReplicantLookup = params.getSegmentReplicantLookup();
-
-      return params;
+      return params.buildFromExisting()
+                   .withDruidCluster(cluster)
+                   .withBalancerStrategy(balancerStrategy)
+                   .withSegmentAssignerUsing(loadQueueManager)
+                   .build();
     }
 
     /**
@@ -932,6 +932,23 @@ public class DruidCoordinator
         peon.stop();
       }
     }
+  }
+
+  /**
+   * Updates replication status of all used segments. This duty must run after
+   * {@link RunRules} so that the number of required replicas for all segments
+   * has been determined.
+   */
+  private class UpdateReplicationStatus implements CoordinatorDuty
+  {
+
+    @Override
+    public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
+    {
+      segmentReplicationStatus = params.getSegmentReplicationStatus();
+      return params;
+    }
+
   }
 }
 

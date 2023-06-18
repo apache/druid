@@ -28,7 +28,7 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
-import org.apache.druid.server.coordinator.loading.SegmentReplicantLookup;
+import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -123,9 +123,9 @@ public class DruidCoordinatorRuntimeParams
   }
 
   @Nullable
-  public SegmentReplicantLookup getSegmentReplicantLookup()
+  public SegmentReplicationStatus getSegmentReplicationStatus()
   {
-    return segmentAssigner == null ? null : segmentAssigner.getReplicantLookup();
+    return segmentAssigner == null ? null : segmentAssigner.getReplicationStatus();
   }
 
   public StrategicSegmentAssigner getSegmentAssigner()
@@ -314,7 +314,6 @@ public class DruidCoordinatorRuntimeParams
       Preconditions.checkNotNull(druidCluster);
       Preconditions.checkNotNull(balancerStrategy);
       Preconditions.checkNotNull(segmentLoadingConfig);
-      Preconditions.checkNotNull(usedSegments);
       Preconditions.checkNotNull(stats);
       segmentAssigner = new StrategicSegmentAssigner(
           loadQueueManager,

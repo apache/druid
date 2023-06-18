@@ -34,13 +34,13 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -56,7 +56,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private final SegmentLoadQueueManager loadQueueManager;
   private final DruidCluster cluster;
   private final CoordinatorRunStats stats;
-  private final SegmentReplicantLookup replicantLookup;
+  private final SegmentReplicaCountMap replicaCountMap;
   private final ReplicationThrottler replicationThrottler;
   private final RoundRobinServerSelector serverSelector;
   private final BalancerStrategy strategy;
@@ -64,6 +64,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private final boolean useRoundRobinAssignment;
 
   private final Set<String> tiersWithNoServer = new HashSet<>();
+  private final Map<String, Integer> tierToHistoricalCount = new HashMap<>();
 
   public StrategicSegmentAssigner(
       SegmentLoadQueueManager loadQueueManager,
@@ -77,10 +78,14 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     this.cluster = cluster;
     this.strategy = strategy;
     this.loadQueueManager = loadQueueManager;
-    this.replicantLookup = SegmentReplicantLookup.make(cluster);
+    this.replicaCountMap = new SegmentReplicaCountMap(cluster);
     this.replicationThrottler = createReplicationThrottler(cluster, loadingConfig);
     this.useRoundRobinAssignment = loadingConfig.isUseRoundRobinSegmentAssignment();
     this.serverSelector = useRoundRobinAssignment ? new RoundRobinServerSelector(cluster) : null;
+
+    cluster.getHistoricals().forEach(
+        (tier, historicals) -> tierToHistoricalCount.put(tier, historicals.size())
+    );
   }
 
   public CoordinatorRunStats getStats()
@@ -88,9 +93,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     return stats;
   }
 
-  public SegmentReplicantLookup getReplicantLookup()
+  public SegmentReplicationStatus getReplicationStatus()
   {
-    return replicantLookup;
+    return replicaCountMap.toReplicationStatus();
   }
 
   public void makeAlerts()
@@ -167,7 +172,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     if (serverA.isLoadingSegment(segment)) {
       // Cancel the load on serverA and load on serverB instead
       if (serverA.cancelOperation(SegmentAction.LOAD, segment)) {
-        int loadedCountOnTier = replicantLookup.getReplicaCountsOnTier(segment.getId(), tier)
+        int loadedCountOnTier = replicaCountMap.get(segment.getId(), tier)
                                                .loadedNotDropping();
         if (loadedCountOnTier >= 1) {
           return replicateSegment(segment, serverB);
@@ -186,27 +191,28 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   }
 
   @Override
-  public void updateSegmentReplicasInTiers(DataSegment segment, Map<String, Integer> tierToReplicaCount)
+  public void replicateSegment(DataSegment segment, Map<String, Integer> tierToReplicaCount)
   {
     // Identify empty tiers and determine total required replicas
-    final AtomicInteger requiredTotalReplicas = new AtomicInteger(0);
-    final Set<String> allTiers = Sets.newHashSet(cluster.getTierNames());
+    final Set<String> allTiersInCluster = Sets.newHashSet(cluster.getTierNames());
     tierToReplicaCount.forEach((tier, requiredReplicas) -> {
       reportTierCapacityStats(segment, requiredReplicas, tier);
-      replicantLookup.setRequiredReplicas(segment.getId(), tier, requiredReplicas);
-      if (allTiers.contains(tier)) {
-        requiredTotalReplicas.addAndGet(requiredReplicas);
-      } else {
+
+      SegmentReplicaCount replicaCount = replicaCountMap.computeIfAbsent(segment.getId(), tier);
+      replicaCount.setRequired(requiredReplicas, tierToHistoricalCount.getOrDefault(tier, 0));
+
+      if (!allTiersInCluster.contains(tier)) {
         tiersWithNoServer.add(tier);
       }
     });
 
-    SegmentReplicaCount replicaCountInCluster = replicantLookup.getReplicaCountsInCluster(segment.getId());
-    final int replicaSurplus = replicaCountInCluster.loadedNotDropping() - requiredTotalReplicas.get();
+    SegmentReplicaCount replicaCountInCluster = replicaCountMap.getTotal(segment.getId());
+    final int replicaSurplus = replicaCountInCluster.loadedNotDropping()
+                               - replicaCountInCluster.requiredAndLoadable();
 
     // Update replicas in every tier
     int dropsQueued = 0;
-    for (String tier : allTiers) {
+    for (String tier : allTiersInCluster) {
       dropsQueued += updateReplicasInTier(
           segment,
           tier,
@@ -234,7 +240,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   )
   {
     final SegmentReplicaCount replicaCountOnTier
-        = replicantLookup.getReplicaCountsOnTier(segment.getId(), tier);
+        = replicaCountMap.get(segment.getId(), tier);
 
     final int projectedReplicas = replicaCountOnTier.loadedNotDropping()
                                   + replicaCountOnTier.loading();
@@ -327,8 +333,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
     // Update required replica counts
     tierToRequiredReplicas.object2IntEntrySet().fastForEach(
-        entry -> replicantLookup
-            .setRequiredBroadcastReplicas(segment.getId(), entry.getKey(), entry.getIntValue())
+        entry -> replicaCountMap.computeIfAbsent(segment.getId(), entry.getKey())
+                                .setRequired(entry.getIntValue(), entry.getIntValue())
     );
   }
 

@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -327,7 +326,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
             if (status.getState() == SegmentLoadDropHandler.Status.STATE.FAILED) {
               onRequestFailed(holder, status.getFailureCause());
             } else {
-              onRequestCompleted(holder, SegmentStatusInQueue.SUCCESS);
+              onRequestCompleted(holder, RequestStatus.SUCCESS);
             }
           }
         }, null
@@ -371,7 +370,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       stopped = true;
 
       // Cancel all queued requests
-      queuedSegments.forEach(holder -> onRequestCompleted(holder, SegmentStatusInQueue.CANCELLED));
+      queuedSegments.forEach(holder -> onRequestCompleted(holder, RequestStatus.CANCELLED));
       log.info("Cancelled [%d] requests queued on server [%s].", queuedSegments.size(), serverId);
 
       segmentsToDrop.clear();
@@ -411,7 +410,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         segmentsToLoad.put(segment, holder);
         queuedSegments.add(holder);
         processingExecutor.execute(this::doSegmentManagement);
-        incrementStat(holder, SegmentStatusInQueue.ASSIGNED);
+        incrementStat(holder, RequestStatus.ASSIGNED);
       } else {
         holder.addCallback(callback);
       }
@@ -440,7 +439,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         segmentsToDrop.put(segment, holder);
         queuedSegments.add(holder);
         processingExecutor.execute(this::doSegmentManagement);
-        incrementStat(holder, SegmentStatusInQueue.ASSIGNED);
+        incrementStat(holder, RequestStatus.ASSIGNED);
       } else {
         holder.addCallback(callback);
       }
@@ -524,10 +523,10 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         "Server[%s] failed segment[%s] request[%s] with cause [%s].",
         serverId, holder.getSegment().getId(), holder.getAction(), failureCause
     );
-    onRequestCompleted(holder, SegmentStatusInQueue.FAILED);
+    onRequestCompleted(holder, RequestStatus.FAILED);
   }
 
-  private void onRequestCompleted(SegmentHolder holder, SegmentStatusInQueue status)
+  private void onRequestCompleted(SegmentHolder holder, RequestStatus status)
   {
     final SegmentAction action = holder.getAction();
     log.trace(
@@ -539,15 +538,12 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       queuedSize.addAndGet(-holder.getSegment().getSize());
     }
     incrementStat(holder, status);
-    executeCallbacks(holder, status == SegmentStatusInQueue.SUCCESS);
+    executeCallbacks(holder, status == RequestStatus.SUCCESS);
   }
 
-  private void incrementStat(SegmentHolder holder, SegmentStatusInQueue status)
+  private void incrementStat(SegmentHolder holder, RequestStatus status)
   {
-    stats.add(status.getStatForAction(holder.getAction()), 1);
-    if (status.datasourceStat != null) {
-      stats.addToDatasourceStat(status.datasourceStat, holder.getSegment().getDataSource(), 1);
-    }
+    stats.addToDatasourceStat(status.datasourceStat, holder.getSegment().getDataSource(), 1);
   }
 
   private void executeCallbacks(SegmentHolder holder, boolean success)
@@ -580,47 +576,23 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       }
 
       queuedSegments.remove(holder);
-      onRequestCompleted(holder, SegmentStatusInQueue.CANCELLED);
+      onRequestCompleted(holder, RequestStatus.CANCELLED);
       return true;
     }
   }
 
-  private enum SegmentStatusInQueue
+  private enum RequestStatus
   {
     ASSIGNED(Stats.SegmentQueue.ASSIGNED_ACTIONS),
     SUCCESS(Stats.SegmentQueue.COMPLETED_ACTIONS),
     FAILED(Stats.SegmentQueue.FAILED_ACTIONS),
     CANCELLED(Stats.SegmentQueue.CANCELLED_ACTIONS);
 
-    final CoordinatorStat loadStat;
-    final CoordinatorStat moveStat;
-    final CoordinatorStat dropStat;
     final CoordinatorStat datasourceStat;
 
-    SegmentStatusInQueue(CoordinatorStat datasourceStat)
+    RequestStatus(CoordinatorStat datasourceStat)
     {
-      // These stats are not emitted and are tracked for debugging purposes only
-      final String prefix = StringUtils.toLowerCase(name());
-      this.loadStat = new CoordinatorStat(prefix + "Load");
-      this.moveStat = new CoordinatorStat(prefix + "Move");
-      this.dropStat = new CoordinatorStat(prefix + "Drop");
-
       this.datasourceStat = datasourceStat;
-    }
-
-    CoordinatorStat getStatForAction(SegmentAction action)
-    {
-      switch (action) {
-        case LOAD:
-        case REPLICATE:
-          return loadStat;
-        case MOVE_TO:
-          return moveStat;
-        case DROP:
-          return dropStat;
-      }
-
-      throw new IAE("Invalid segment action: " + action);
     }
   }
 

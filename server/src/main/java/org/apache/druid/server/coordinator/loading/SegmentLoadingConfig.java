@@ -24,7 +24,7 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
 /**
  * Contains recomputed configs from {@link CoordinatorDynamicConfig} based on
- * whether {@code smartSegmentLoading} is enabled or not.
+ * whether {@link CoordinatorDynamicConfig#isSmartSegmentLoading} is enabled or not.
  */
 public class SegmentLoadingConfig
 {

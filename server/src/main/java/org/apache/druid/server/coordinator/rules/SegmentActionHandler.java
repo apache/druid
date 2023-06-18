@@ -32,9 +32,9 @@ public interface SegmentActionHandler
 
   /**
    * Queues load or drop of replicas of the given segment to achieve the
-   * target replication level on all the tiers.
+   * target replication level on all historical tiers.
    */
-  void updateSegmentReplicasInTiers(DataSegment segment, Map<String, Integer> tierToReplicaCount);
+  void replicateSegment(DataSegment segment, Map<String, Integer> tierToReplicaCount);
 
   /**
    * Marks the given segment as unused. Unused segments are eventually unloaded

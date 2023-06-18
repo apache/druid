@@ -32,7 +32,7 @@ public abstract class LoadRule implements Rule
   @Override
   public void run(DataSegment segment, SegmentActionHandler handler)
   {
-    handler.updateSegmentReplicasInTiers(segment, getTieredReplicants());
+    handler.replicateSegment(segment, getTieredReplicants());
   }
 
   protected static void validateTieredReplicants(final Map<String, Integer> tieredReplicants)

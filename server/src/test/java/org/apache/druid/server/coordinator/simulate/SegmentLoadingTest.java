@@ -143,21 +143,23 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     Assert.assertEquals(2, getNumLoadedSegments(historicalT21, historicalT22));
     Assert.assertEquals(2, getNumLoadedSegments(historicalT11, historicalT12));
 
-    // Run 3: total loaded replicas (4) > total required replicas (3)
-    // no server to assign third replica in T2, one replica is dropped from T1
+    // Run 3: total loaded replicas (4) > total required replicas (3) > total loadable replicas (2)
+    // no server to assign third replica in T2, but all replicas are dropped from T1
     runCoordinatorCycle();
 
-    verifyValue(Metric.DROPPED_COUNT, filterByTier(Tier.T1), 1L);
+    verifyValue(Metric.DROPPED_COUNT, filterByTier(Tier.T1), 2L);
     verifyValue(Metric.ASSIGNED_COUNT, filterByTier(Tier.T2), 0L);
 
     loadQueuedSegments();
     Assert.assertEquals(2, getNumLoadedSegments(historicalT21, historicalT22));
-    Assert.assertEquals(1, getNumLoadedSegments(historicalT11, historicalT12));
+    Assert.assertEquals(0, getNumLoadedSegments(historicalT11, historicalT12));
 
-    // Run 4: another server added to T2, third replica can now be assigned
-    // nothing is dropped from T1
+    // Run 4: Add 3rd server to T2, third replica can now be assigned
+    // Add 3rd server to T1 with replica loaded, but it will not be dropped
     final DruidServer historicalT23 = createHistorical(3, Tier.T2, 10_000);
     addServer(historicalT23);
+    historicalT13.addDataSegment(segment);
+    addServer(historicalT13);
     runCoordinatorCycle();
 
     verifyNotEmitted(Metric.DROPPED_COUNT);
@@ -165,9 +167,9 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     loadQueuedSegments();
     Assert.assertEquals(3, getNumLoadedSegments(historicalT21, historicalT22, historicalT23));
-    Assert.assertEquals(1, getNumLoadedSegments(historicalT11, historicalT12));
+    Assert.assertEquals(1, historicalT13.getTotalSegments());
 
-    // Run 5: segment is fully replicated on T2, all replicas will now be dropped from T1
+    // Run 5: segment is fully replicated on T2, remaining replica will now be dropped from T1
     runCoordinatorCycle();
 
     verifyValue(Metric.DROPPED_COUNT, filterByTier(Tier.T1), 1L);
@@ -175,7 +177,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     loadQueuedSegments();
     Assert.assertEquals(3, getNumLoadedSegments(historicalT21, historicalT22, historicalT23));
-    Assert.assertEquals(0, getNumLoadedSegments(historicalT11, historicalT12));
+    Assert.assertEquals(0, getNumLoadedSegments(historicalT11, historicalT12, historicalT13));
     verifyDatasourceIsFullyLoaded(datasource);
   }
 

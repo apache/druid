@@ -20,42 +20,42 @@
 package org.apache.druid.server.coordinator.loading;
 
 /**
- * Counts of replicas of a segment in different states.
+ * Counts the number of replicas of a segment in different states (loading, loaded, etc)
+ * in a tier or the whole cluster.
  */
 public class SegmentReplicaCount
 {
-  private static final SegmentReplicaCount EMPTY_INSTANCE = new SegmentReplicaCount();
-
-  private int possible;
+  private int requiredAndLoadable;
   private int required;
 
   private int loaded;
-  private int loadedBroadcast;
+  private int loadedNonHistorical;
 
   private int loading;
   private int dropping;
   private int moving;
 
-  static SegmentReplicaCount empty()
-  {
-    return EMPTY_INSTANCE;
-  }
-
-  void addLoaded()
+  /**
+   * Increments number of replicas loaded on historical servers.
+   */
+  void incrementLoaded()
   {
     ++loaded;
   }
 
   /**
-   * Increments number of segments loaded on non-historical servers. This value
+   * Increments number of replicas loaded on non-historical servers. This value
    * is used only for computing level of under-replication of broadcast segments.
    */
-  void addLoadedBroadcast()
+  void incrementLoadedOnNonHistoricalServer()
   {
-    ++loadedBroadcast;
+    ++loadedNonHistorical;
   }
 
-  void addQueued(SegmentAction action)
+  /**
+   * Increments number of replicas queued for the given action.
+   */
+  void incrementQueued(SegmentAction action)
   {
     switch (action) {
       case REPLICATE:
@@ -73,14 +73,34 @@ public class SegmentReplicaCount
     }
   }
 
-  void setRequired(int required)
+  /**
+   * Sets the number of required replicas of this segment.
+   *
+   * @param required          Number of replicas as required by load or broadcast rules.
+   * @param numLoadingServers Number of servers that can load replicas of this segment.
+   */
+  void setRequired(int required, int numLoadingServers)
   {
     this.required = required;
+    this.requiredAndLoadable = Math.min(required, numLoadingServers);
   }
 
-  void setPossible(int possible)
+  /**
+   * Required number of replicas of the segment as dictated by load rules.
+   * This includes replicas that may be in excess of the cluster capacity.
+   */
+  int required()
   {
-    this.possible = possible;
+    return required;
+  }
+
+  /**
+   * Required number of replicas of the segment as dictated by load rules.
+   * This does not include replicas that are in excess of the cluster capacity.
+   */
+  int requiredAndLoadable()
+  {
+    return requiredAndLoadable;
   }
 
   int loading()
@@ -94,27 +114,39 @@ public class SegmentReplicaCount
   }
 
   /**
-   * Number of loaded replicas. This also includes replicas that are currently
-   * being dropped.
+   * Number of replicas loaded on all servers. This includes replicas that are
+   * currently being dropped.
    */
-  public int loaded()
+  public int totalLoaded()
   {
-    return loaded;
+    return loaded + loadedNonHistorical;
   }
 
   /**
-   * Number of replicas which are safely loaded and are not being dropped.
+   * Number of replicas which are safely loaded on historical servers and are
+   * not being dropped.
    */
   int loadedNotDropping()
   {
     return loaded - dropping;
   }
 
-  int underReplicated(boolean ignoreMissingServers)
+  /**
+   * Number of replicas that are required to be loaded but are missing.
+   * This includes replicas that may be in excess of the cluster capacity.
+   */
+  int missing()
   {
-    int totalLoaded = loaded + loadedBroadcast;
-    int targetCount = ignoreMissingServers ? required : Math.min(required, possible);
-    return targetCount > totalLoaded ? targetCount - totalLoaded : 0;
+    return Math.max(required() - totalLoaded(), 0);
+  }
+
+  /**
+   * Number of replicas that are required to be loaded but are missing.
+   * This does not include replicas that are in excess of the cluster capacity.
+   */
+  int missingAndLoadable()
+  {
+    return Math.max(requiredAndLoadable() - totalLoaded(), 0);
   }
 
   /**
@@ -122,11 +154,11 @@ public class SegmentReplicaCount
    */
   void accumulate(SegmentReplicaCount other)
   {
-    this.possible += other.possible;
     this.required += other.required;
+    this.requiredAndLoadable += other.requiredAndLoadable;
 
     this.loaded += other.loaded;
-    this.loadedBroadcast += other.loadedBroadcast;
+    this.loadedNonHistorical += other.loadedNonHistorical;
 
     this.loading += other.loading;
     this.dropping += other.dropping;
