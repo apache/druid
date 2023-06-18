@@ -21,6 +21,8 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.client.ImmutableDruidServer;
@@ -79,6 +81,7 @@ public class SegmentReplicantLookup
 
   private final Table<SegmentId, String, Integer> segmentsInCluster;
   private final Table<SegmentId, String, Integer> loadingSegments;
+  private final Map<SegmentId, Integer> segmentIdToReplicationFactor = new HashMap<>();
   private final DruidCluster cluster;
 
   private SegmentReplicantLookup(
@@ -112,6 +115,18 @@ public class SegmentReplicantLookup
   {
     Integer retVal = segmentsInCluster.get(segmentId, tier);
     return (retVal == null) ? 0 : retVal;
+  }
+
+  // TODO: Refactor this setter, as this class is following a singleton pattern with only getters, and this breaks convention.
+  // This would be revamped in https://github.com/apache/druid/pull/13197
+  public void setReplicationFactor(SegmentId segmentId, Integer requiredReplicas)
+  {
+    segmentIdToReplicationFactor.put(segmentId, requiredReplicas);
+  }
+
+  public Object2IntMap<SegmentId> getSegmentIdToReplicationFactor()
+  {
+    return new Object2IntOpenHashMap<>(segmentIdToReplicationFactor);
   }
 
   private int getLoadingReplicants(SegmentId segmentId, String tier)

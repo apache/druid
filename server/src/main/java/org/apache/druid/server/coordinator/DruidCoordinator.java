@@ -154,6 +154,13 @@ public class DruidCoordinator
 
   private volatile boolean started = false;
   private volatile SegmentReplicantLookup segmentReplicantLookup = null;
+
+  /**
+   * Contains a map of segmentId to total replication factor across all tiers. This map is refreshed when load rules are
+   * evaluated. It is used by {@link DruidCoordinator} to supply this value to
+   * {@link org.apache.druid.server.http.MetadataResource}.
+   */
+  private volatile Object2IntMap<SegmentId> segmentIdToReplicationFactor = null;
   private volatile DruidCluster cluster = null;
 
   private int cachedBalancerThreadNumber;
@@ -817,6 +824,12 @@ public class DruidCoordinator
     return ImmutableList.of(compactSegments);
   }
 
+  @Nullable
+  public Integer getReplicationFactorForSegment(SegmentId segmentId)
+  {
+    return segmentIdToReplicationFactor == null ? null : segmentIdToReplicationFactor.getInt(segmentId);
+  }
+
   @VisibleForTesting
   protected class DutiesRunnable implements Runnable
   {
@@ -943,6 +956,13 @@ public class DruidCoordinator
             }
           }
         }
+
+        // Update the immutable replication factor map with latest values.
+        // This value is set here as it is recalculated during load rule evaluation.
+        if (params.getSegmentReplicantLookup() != null) {
+          segmentIdToReplicationFactor = params.getSegmentReplicantLookup().getSegmentIdToReplicationFactor();
+        }
+
         // Emit the runtime of the full DutiesRunnable
         params.getEmitter().emit(
             new ServiceMetricEvent.Builder()
