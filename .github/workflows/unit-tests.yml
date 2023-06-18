@@ -38,7 +38,32 @@ on:
           }}
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    # Required permissions
+    permissions:
+      pull-requests: read
+    # Set job outputs to values from filter step
+    outputs:
+      extensions: ${{ steps.filter.outputs.extensions }}
+      core: ${{ steps.filter.outputs.core }}
+    steps:
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            extensions:
+              - 'extension*/**'
+            core:
+              - '!extension*/**'
+            kafka:
+              - 'extensions-core/kafka-indexing-service/**'
+            kinesis:
+              - 'extensions-core/kinesis-indexing-service/**'
+
   indexing_modules_test:
+    needs: changes
+    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.kafka == 'true' || needs.changes.outputs.kinesis == 'true'}}
     uses: ./.github/workflows/reusable-unit-tests.yml
     with:
       jdk: ${{ inputs.jdk }}
@@ -47,6 +72,8 @@ jobs:
       maven_projects: 'indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
 
   processing_modules_test:
+    needs: changes
+    if: ${{ needs.changes.outputs.core == 'true' }}
     uses: ./.github/workflows/reusable-unit-tests.yml
     with:
       jdk: ${{ inputs.jdk }}
@@ -55,6 +82,8 @@ jobs:
       maven_projects: 'processing'
 
   server_modules_test:
+    needs: changes
+    if: ${{ needs.changes.outputs.core == 'true' }}
     uses: ./.github/workflows/reusable-unit-tests.yml
     with:
       jdk: ${{ inputs.jdk }}
