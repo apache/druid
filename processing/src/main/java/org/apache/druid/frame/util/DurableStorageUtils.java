@@ -42,7 +42,7 @@ public class DurableStorageUtils
     return StringUtils.format("controller_%s", IdUtils.validateId("controller task ID", controllerTaskId));
   }
 
-  public static String getControllerIntermediateDirectory(final String controllerTaskId)
+  public static String getControllerIntermediateFilesDirectory(final String controllerTaskId)
   {
     return StringUtils.format("%s/durable-shuffle-intermediate", getControllerDirectory(controllerTaskId));
   }
@@ -72,7 +72,7 @@ public class DurableStorageUtils
   {
     return StringUtils.format(
         "%s/stage_%d/worker_%d",
-        getControllerIntermediateDirectory(controllerTaskId),
+        getControllerIntermediateFilesDirectory(controllerTaskId),
         stageNumber,
         workerNumber
     );

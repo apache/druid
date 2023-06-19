@@ -88,13 +88,21 @@ public class DurableStorageCleaner implements OverlordDuty
                                            .map(TaskRunnerWorkItem::getTaskId)
                                            .map(DurableStorageUtils::getControllerDirectory)
                                            .collect(Collectors.toSet());
+    Set<String> knownTaskIds = taskRunner.getKnownTasks()
+                                         .stream()
+                                         .map(TaskRunnerWorkItem::getTaskId)
+                                         .map(DurableStorageUtils::getControllerDirectory)
+                                         .collect(Collectors.toSet());
 
     Set<String> filesToRemove = new HashSet<>();
     while (allFiles.hasNext()) {
       String currentFile = allFiles.next();
       String taskIdFromPathOrEmpty = DurableStorageUtils.getControllerTaskIdWithPrefixFromPath(currentFile);
       if (taskIdFromPathOrEmpty != null && !taskIdFromPathOrEmpty.isEmpty()) {
-        if (runningTaskIds.contains(taskIdFromPathOrEmpty) || DurableStorageUtils.isQueryResultPath(currentFile)) {
+        if (runningTaskIds.contains(taskIdFromPathOrEmpty)) {
+          // do nothing
+        } else if (DurableStorageUtils.isQueryResultPath(currentFile) && knownTaskIds.contains(taskIdFromPathOrEmpty)) {
+          // query results should not be cleaned even if the task has finished running
           // do nothing
         } else {
           filesToRemove.add(currentFile);

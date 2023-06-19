@@ -75,6 +75,9 @@ public class DurableStorageCleanerTest
     EasyMock.expect((Collection<TaskRunnerWorkItem>) TASK_RUNNER.getRunningTasks())
             .andReturn(ImmutableList.of(TASK_RUNNER_WORK_ITEM))
             .anyTimes();
+    EasyMock.expect((Collection<TaskRunnerWorkItem>) TASK_RUNNER.getKnownTasks())
+            .andReturn(ImmutableList.of(TASK_RUNNER_WORK_ITEM))
+            .anyTimes();
     EasyMock.expect(TASK_MASTER.getTaskRunner()).andReturn(Optional.of(TASK_RUNNER)).anyTimes();
     Capture<Set<String>> capturedArguments = EasyMock.newCapture();
     STORAGE_CONNECTOR.deleteFiles(EasyMock.capture(capturedArguments));
@@ -90,15 +93,21 @@ public class DurableStorageCleanerTest
   public void testRunExcludesQueryDirectory() throws Exception
   {
     final String resultPath = DurableStorageUtils.getControllerDirectory(TASK_ID) + "/" + DurableStorageUtils.QUERY_RESULTS_DIR + "/results.json";
+    final String intermediateFilesPath = DurableStorageUtils.getControllerIntermediateFilesDirectory(TASK_ID) + "/results.json";
     EasyMock.expect(STORAGE_CONNECTOR.listDir(EasyMock.anyString()))
-            .andReturn(ImmutableList.of(resultPath, STRAY_DIR)
+            .andReturn(ImmutableList.of(resultPath, STRAY_DIR, intermediateFilesPath)
                                     .stream()
                                     .iterator())
+            .anyTimes();
+    EasyMock.expect(TASK_MASTER.getTaskRunner()).andReturn(Optional.of(TASK_RUNNER)).anyTimes();
+    EasyMock.expect(TASK_RUNNER_WORK_ITEM.getTaskId()).andReturn(TASK_ID)
             .anyTimes();
     EasyMock.expect((Collection<TaskRunnerWorkItem>) TASK_RUNNER.getRunningTasks())
             .andReturn(ImmutableList.of())
             .anyTimes();
-    EasyMock.expect(TASK_MASTER.getTaskRunner()).andReturn(Optional.of(TASK_RUNNER)).anyTimes();
+    EasyMock.expect((Collection<TaskRunnerWorkItem>) TASK_RUNNER.getKnownTasks())
+            .andReturn(ImmutableList.of(TASK_RUNNER_WORK_ITEM))
+            .anyTimes();
     Capture<Set<String>> capturedArguments = EasyMock.newCapture();
     STORAGE_CONNECTOR.deleteFiles(EasyMock.capture(capturedArguments));
     EasyMock.expectLastCall().once();
@@ -106,7 +115,7 @@ public class DurableStorageCleanerTest
 
     durableStorageCleaner.run();
 
-    Assert.assertEquals(Sets.newHashSet(STRAY_DIR), capturedArguments.getValue());
+    Assert.assertEquals(Sets.newHashSet(STRAY_DIR, intermediateFilesPath), capturedArguments.getValue());
   }
 
   @Test
