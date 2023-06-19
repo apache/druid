@@ -250,8 +250,8 @@ public class DruidVolcanoCost implements RelOptCost
   }
 
   /**
-   * Implementation of {@link org.apache.calcite.plan.RelOptCostFactory}
-   * that creates {@link org.apache.calcite.plan.volcano.DruidVolcanoCost}s.
+   * Implementation of {@link RelOptCostFactory}
+   * that creates {@link DruidVolcanoCost}s.
    */
   public static class Factory implements RelOptCostFactory
   {
