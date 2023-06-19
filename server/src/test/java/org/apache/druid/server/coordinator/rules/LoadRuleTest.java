@@ -712,7 +712,7 @@ public class LoadRuleTest
 
   private static LoadRule loadForever(final Map<String, Integer> tieredReplicants)
   {
-    return new ForeverLoadRule(tieredReplicants);
+    return new ForeverLoadRule(tieredReplicants, null);
   }
 
   private static LoadQueuePeon createEmptyPeon()
