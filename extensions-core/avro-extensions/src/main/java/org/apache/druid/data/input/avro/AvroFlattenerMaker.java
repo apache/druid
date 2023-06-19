@@ -24,6 +24,7 @@ import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.spi.json.JsonProvider;
+import org.apache.avro.AvroRuntimeException;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericArray;
 import org.apache.avro.generic.GenericEnumSymbol;
@@ -141,7 +142,11 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   @Override
   public Object getRootField(final GenericRecord record, final String key)
   {
-    return transformValue(record.get(key));
+    try {
+      return transformValue(record.get(key));
+    } catch (AvroRuntimeException e) {
+      return null;
+    }
   }
 
   @Override
