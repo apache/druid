@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.rules;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -37,14 +38,27 @@ public class IntervalLoadRule extends LoadRule
 
   private final Interval interval;
   private final Map<String, Integer> tieredReplicants;
+  private final boolean allowEmptyTieredReplicants;
+
+  public IntervalLoadRule(Interval interval, Map<String, Integer> tieredReplicants)
+  {
+    this(interval, tieredReplicants, null);
+  }
 
   @JsonCreator
   public IntervalLoadRule(
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
+      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants,
+      @JsonProperty("allowEmptyTieredReplicants") Boolean allowEmptyTieredReplicants
   )
   {
-    this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of() : tieredReplicants;
+    this.allowEmptyTieredReplicants = allowEmptyTieredReplicants != null && allowEmptyTieredReplicants;
+
+    if (!this.allowEmptyTieredReplicants) {
+      this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS) : tieredReplicants;
+    } else {
+      this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of() : tieredReplicants;
+    }
     validateTieredReplicants(this.tieredReplicants);
     this.interval = interval;
   }
@@ -61,6 +75,12 @@ public class IntervalLoadRule extends LoadRule
   public Map<String, Integer> getTieredReplicants()
   {
     return tieredReplicants;
+  }
+
+  @JsonProperty
+  public boolean isAllowEmptyTieredReplicants()
+  {
+    return allowEmptyTieredReplicants;
   }
 
   @Override

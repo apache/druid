@@ -54,7 +54,7 @@ public class IntervalLoadRuleTest
   public void testSerdeNullTieredReplicants() throws Exception
   {
     IntervalLoadRule rule = new IntervalLoadRule(
-        Intervals.of("0/3000"), null
+        Intervals.of("0/3000"), null, true
     );
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();
@@ -83,5 +83,44 @@ public class IntervalLoadRuleTest
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();
     jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
+  }
+
+  @Test
+  public void testWithoutAllowEmptyReplicantShouldCreateDefaultTier() throws Exception
+  {
+    String inputJson = "     {\n"
+                       + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
+                       + "      \"type\": \"loadByInterval\"\n"
+                       + "   }";
+    String expectedJson = "     {\n"
+                          + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
+                          + "      \"tieredReplicants\": {\n"
+                          + "          \"" + DruidServer.DEFAULT_TIER + "\": " + DruidServer.DEFAULT_NUM_REPLICANTS + "\n"
+                          + "      },\n"
+                          + "      \"type\": \"loadByInterval\"\n"
+                          + "   }";
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    IntervalLoadRule inputForeverLoadRule = jsonMapper.readValue(inputJson, IntervalLoadRule.class);
+    IntervalLoadRule expectedForeverLoadRule = jsonMapper.readValue(expectedJson, IntervalLoadRule.class);
+    Assert.assertEquals(expectedForeverLoadRule.getTieredReplicants(), inputForeverLoadRule.getTieredReplicants());
+  }
+
+  @Test
+  public void testWithAllowEmptyReplicantShouldDefaultToEmpty() throws Exception
+  {
+    String inputJson = "     {\n"
+                       + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
+                       + "      \"type\": \"loadByInterval\",\n"
+                       + "      \"allowEmptyTieredReplicants\": \"true\"\n"
+                       + "   }";
+    String expectedJson = "     {\n"
+                          + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
+                          + "      \"tieredReplicants\": {},\n"
+                          + "      \"type\": \"loadByInterval\"\n"
+                          + "   }";
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    IntervalLoadRule inputForeverLoadRule = jsonMapper.readValue(inputJson, IntervalLoadRule.class);
+    IntervalLoadRule expectedForeverLoadRule = jsonMapper.readValue(expectedJson, IntervalLoadRule.class);
+    Assert.assertEquals(expectedForeverLoadRule.getTieredReplicants(), inputForeverLoadRule.getTieredReplicants());
   }
 }

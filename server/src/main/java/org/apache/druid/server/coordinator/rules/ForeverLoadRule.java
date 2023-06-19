@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.rules;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -34,14 +35,33 @@ import java.util.Objects;
 public class ForeverLoadRule extends LoadRule
 {
   private final Map<String, Integer> tieredReplicants;
+  private final boolean allowEmptyTieredReplicants;
+
+  public ForeverLoadRule(Map<String, Integer> tieredReplicants)
+  {
+    this(tieredReplicants, null);
+  }
 
   @JsonCreator
   public ForeverLoadRule(
-      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
+      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants,
+      @JsonProperty("allowEmptyTieredReplicants") Boolean allowEmptyTieredReplicants
   )
   {
-    this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of() : tieredReplicants;
+    this.allowEmptyTieredReplicants = allowEmptyTieredReplicants != null && allowEmptyTieredReplicants;
+
+    if (!this.allowEmptyTieredReplicants) {
+      this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS) : tieredReplicants;
+    } else {
+      this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of() : tieredReplicants;
+    }
     validateTieredReplicants(this.tieredReplicants);
+  }
+
+  @JsonProperty
+  public boolean isAllowEmptyTieredReplicants()
+  {
+    return allowEmptyTieredReplicants;
   }
 
   @Override

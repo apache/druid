@@ -33,11 +33,21 @@ import java.util.Map;
 public class ForeverLoadRuleTest
 {
   @Test
-  public void testSerdeNullTieredReplicants() throws Exception
+  public void testSerdeNullTieredReplicantWithoutAllowEmptyFlag() throws Exception
   {
-    ForeverLoadRule rule = new ForeverLoadRule(
-        null
-    );
+    ForeverLoadRule rule = new ForeverLoadRule(null, null);
+
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
+
+    Assert.assertEquals(rule.getTieredReplicants(), ((ForeverLoadRule) reread).getTieredReplicants());
+    Assert.assertEquals(ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS), rule.getTieredReplicants());
+  }
+
+  @Test
+  public void testSerdeNullTieredReplicantWithAllowEmptyFlag() throws Exception
+  {
+    ForeverLoadRule rule = new ForeverLoadRule(null, true);
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();
     Rule reread = jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
@@ -49,14 +59,14 @@ public class ForeverLoadRuleTest
   @Test(expected = IAE.class)
   public void testCreatingNegativeTieredReplicants()
   {
-    new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, -1));
+    new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, -1), null);
   }
 
   @Test
   public void testEmptyTieredReplicants() throws Exception
   {
-    ForeverLoadRule rule = new ForeverLoadRule(
-        ImmutableMap.of()
+    ForeverLoadRule rule = new ForeverLoadRule(ImmutableMap.of(),
+        true
     );
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();
@@ -71,10 +81,46 @@ public class ForeverLoadRuleTest
     Map<String, Integer> tieredReplicants = new HashMap<>();
     tieredReplicants.put("tier", null);
     ForeverLoadRule rule = new ForeverLoadRule(
-        tieredReplicants
+        tieredReplicants,
+        true
     );
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();
     jsonMapper.readValue(jsonMapper.writeValueAsString(rule), Rule.class);
+  }
+
+  @Test
+  public void testWithoutAllowEmptyReplicantShouldCreateDefaultTier() throws Exception
+  {
+    String inputJson = "    {\n"
+                       + "     \"type\": \"loadForever\"\n"
+                       + "  }";
+    String expectedJson = "    {\n"
+                          + "     \"tieredReplicants\": {\n"
+                          + "         \"" + DruidServer.DEFAULT_TIER + "\": " + DruidServer.DEFAULT_NUM_REPLICANTS + "\n"
+                          + "      },\n"
+                          + "     \"type\": \"loadForever\"\n"
+                          + "  }";
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    ForeverLoadRule inputForeverLoadRule = jsonMapper.readValue(inputJson, ForeverLoadRule.class);
+    ForeverLoadRule expectedForeverLoadRule = jsonMapper.readValue(expectedJson, ForeverLoadRule.class);
+    Assert.assertEquals(expectedForeverLoadRule.getTieredReplicants(), inputForeverLoadRule.getTieredReplicants());
+  }
+
+  @Test
+  public void testWithAllowEmptyReplicantShouldDefaultToEmpty() throws Exception
+  {
+    String inputJson = "    {\n"
+                       + "     \"type\": \"loadForever\"\n,"
+                       + "     \"allowEmptyTieredReplicants\": \"true\"\n"
+                       + "  }";
+    String expectedJson = "    {\n"
+                          + "     \"tieredReplicants\": {},\n"
+                          + "     \"type\": \"loadForever\"\n"
+                          + "  }";
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    ForeverLoadRule inputForeverLoadRule = jsonMapper.readValue(inputJson, ForeverLoadRule.class);
+    ForeverLoadRule expectedForeverLoadRule = jsonMapper.readValue(expectedJson, ForeverLoadRule.class);
+    Assert.assertEquals(expectedForeverLoadRule.getTieredReplicants(), inputForeverLoadRule.getTieredReplicants());
   }
 }
