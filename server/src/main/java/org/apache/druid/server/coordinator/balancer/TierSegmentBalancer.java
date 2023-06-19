@@ -147,15 +147,23 @@ public class TierSegmentBalancer
     final Set<String> broadcastDatasources = params.getBroadcastDatasources();
 
     // Always move loading segments first as it is a cheaper operation
-    List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler
-        .pickMovableLoadingSegmentsFrom(sourceServers, maxSegmentsToMove, broadcastDatasources);
+    List<BalancerSegmentHolder> pickedSegments = ReservoirSegmentSampler.pickMovableSegmentsFrom(
+        sourceServers,
+        maxSegmentsToMove,
+        ServerHolder::getLoadingSegments,
+        broadcastDatasources
+    );
     int movedCount = moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove);
 
     // Move loaded segments only if tier is not already busy moving segments
     if (movingSegmentCount <= 0) {
       maxSegmentsToMove -= movedCount;
-      pickedSegments = ReservoirSegmentSampler
-          .pickMovableLoadedSegmentsFrom(sourceServers, maxSegmentsToMove, broadcastDatasources);
+      pickedSegments = ReservoirSegmentSampler.pickMovableSegmentsFrom(
+          sourceServers,
+          maxSegmentsToMove,
+          server -> server.getServer().iterateAllSegments(),
+          broadcastDatasources
+      );
       movedCount += moveSegmentsTo(destServers, pickedSegments, maxSegmentsToMove);
     }
 

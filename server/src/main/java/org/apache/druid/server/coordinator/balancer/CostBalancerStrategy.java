@@ -280,7 +280,7 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
     double cost = 0;
     for (ServerHolder server : serverHolders) {
-      for (DataSegment segment : server.getServer().iterateAllSegments()) {
+      for (DataSegment segment : server.getServedSegments()) {
         cost += computeJointSegmentsCost(segment, segment);
       }
     }

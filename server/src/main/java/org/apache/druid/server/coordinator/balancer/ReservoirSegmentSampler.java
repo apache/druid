@@ -38,8 +38,8 @@ public final class ReservoirSegmentSampler
   private static final EmittingLogger log = new EmittingLogger(ReservoirSegmentSampler.class);
 
   /**
-   * Picks segments currently loading on the given set of servers that can be
-   * moved to other servers for balancing.
+   * Picks segments from the given set of servers that can be moved to other
+   * servers for balancing.
    *
    * @param serverHolders        Set of historicals to consider for picking segments
    * @param maxSegmentsToPick    Maximum number of segments to pick
@@ -47,53 +47,13 @@ public final class ReservoirSegmentSampler
    *                             be picked for balancing, since they should be
    *                             loaded on all servers anyway.
    * @return Iterator over {@link BalancerSegmentHolder}s, each of which contains
-   * a segment picked for moving and the server currently loading it.
+   * a segment picked for moving and the server from which it was picked.
    */
-  public static List<BalancerSegmentHolder> pickMovableLoadingSegmentsFrom(
+  public static List<BalancerSegmentHolder> pickMovableSegmentsFrom(
       List<ServerHolder> serverHolders,
       int maxSegmentsToPick,
+      Function<ServerHolder, Collection<DataSegment>> segmentProvider,
       Set<String> broadcastDatasources
-  )
-  {
-    return pickSegmentsToMove(
-        serverHolders,
-        broadcastDatasources,
-        maxSegmentsToPick,
-        ServerHolder::getLoadingSegments
-    );
-  }
-
-  /**
-   * Picks segments currently loaded on the given set of servers that can be
-   * moved to other servers for balancing.
-   *
-   * @param serverHolders        Set of historicals to consider for picking segments
-   * @param maxSegmentsToPick    Maximum number of segments to pick
-   * @param broadcastDatasources Segments belonging to these datasources will not
-   *                             be picked for balancing, since they should be
-   *                             loaded on all servers anyway.
-   * @return Iterator over {@link BalancerSegmentHolder}s, each of which contains
-   * a segment picked for moving and the server currently serving it.
-   */
-  public static List<BalancerSegmentHolder> pickMovableLoadedSegmentsFrom(
-      List<ServerHolder> serverHolders,
-      int maxSegmentsToPick,
-      Set<String> broadcastDatasources
-  )
-  {
-    return pickSegmentsToMove(
-        serverHolders,
-        broadcastDatasources,
-        maxSegmentsToPick,
-        server -> server.getServer().iterateAllSegments()
-    );
-  }
-
-  private static List<BalancerSegmentHolder> pickSegmentsToMove(
-      List<ServerHolder> serverHolders,
-      Set<String> broadcastDatasources,
-      int maxSegmentsToPick,
-      Function<ServerHolder, Collection<DataSegment>> segmentProvider
   )
   {
     if (maxSegmentsToPick == 0 || serverHolders.isEmpty()) {

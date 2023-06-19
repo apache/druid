@@ -37,9 +37,11 @@ public class SegmentReplicaCountMap
 {
   private final Map<SegmentId, Map<String, SegmentReplicaCount>> replicaCounts = new HashMap<>();
 
-  SegmentReplicaCountMap(DruidCluster cluster)
+  static SegmentReplicaCountMap create(DruidCluster cluster)
   {
-    initReplicaCounts(cluster);
+    final SegmentReplicaCountMap replicaCountMap = new SegmentReplicaCountMap();
+    replicaCountMap.initReplicaCounts(cluster);
+    return replicaCountMap;
   }
 
   private void initReplicaCounts(DruidCluster cluster)
@@ -48,7 +50,7 @@ public class SegmentReplicaCountMap
         (tier, historicals) -> historicals.forEach(
             serverHolder -> {
               // Add segments already loaded on this server
-              for (DataSegment segment : serverHolder.getServer().iterateAllSegments()) {
+              for (DataSegment segment : serverHolder.getServedSegments()) {
                 computeIfAbsent(segment.getId(), tier).incrementLoaded();
               }
 

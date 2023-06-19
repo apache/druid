@@ -304,7 +304,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
             .andReturn(dynamicConfig)
             .anyTimes();
     EasyMock.expect(coordinatorRuntimeParams.getSegmentLoadingConfig())
-            .andReturn(new SegmentLoadingConfig(dynamicConfig, 100))
+            .andReturn(SegmentLoadingConfig.create(dynamicConfig, 100))
             .anyTimes();
 
     final ServerHolder sourceServer = new ServerHolder(source.toImmutableDruidServer(), sourceLoadQueuePeon);

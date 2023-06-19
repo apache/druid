@@ -301,7 +301,7 @@ public class DruidCoordinatorRuntimeParams
       if (segmentLoadingConfig == null
           && coordinatorDynamicConfig != null
           && usedSegments != null) {
-        segmentLoadingConfig = new SegmentLoadingConfig(coordinatorDynamicConfig, usedSegments.size());
+        segmentLoadingConfig = SegmentLoadingConfig.create(coordinatorDynamicConfig, usedSegments.size());
       }
     }
 

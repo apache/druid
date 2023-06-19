@@ -29,6 +29,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -272,6 +273,14 @@ public class ServerHolder implements Comparable<ServerHolder>
   }
 
   /**
+   * Segments that are currently loaded on this server.
+   */
+  public Collection<DataSegment> getServedSegments()
+  {
+    return server.iterateAllSegments();
+  }
+
+  /**
    * Returns true if this server has the segment loaded and is not dropping it.
    */
   public boolean isServingSegment(DataSegment segment)
@@ -354,15 +363,12 @@ public class ServerHolder implements Comparable<ServerHolder>
     // Add to projected if load is started, remove from projected if drop has started
     if (action.isLoad()) {
       projectedSegments.add(segment);
+      sizeOfLoadingSegments += segment.getSize();
     } else {
       projectedSegments.remove(segment);
-    }
-
-    if (action.isLoad()) {
-      sizeOfLoadingSegments += segment.getSize();
-    } else if (action == SegmentAction.DROP) {
-      sizeOfDroppingSegments += segment.getSize();
-    } else {
+      if (action == SegmentAction.DROP) {
+        sizeOfDroppingSegments += segment.getSize();
+      }
       // MOVE_FROM actions graduate to DROP after the corresponding MOVE_TO has finished
       // Do not consider size delta until then, otherwise we might over-assign the server
     }
@@ -374,14 +380,12 @@ public class ServerHolder implements Comparable<ServerHolder>
 
     if (action.isLoad()) {
       projectedSegments.remove(segment);
+      sizeOfLoadingSegments -= segment.getSize();
     } else {
       projectedSegments.add(segment);
-    }
-
-    if (action.isLoad()) {
-      sizeOfLoadingSegments -= segment.getSize();
-    } else if (action == SegmentAction.DROP) {
-      sizeOfDroppingSegments -= segment.getSize();
+      if (action == SegmentAction.DROP) {
+        sizeOfDroppingSegments -= segment.getSize();
+      }
     }
   }
 

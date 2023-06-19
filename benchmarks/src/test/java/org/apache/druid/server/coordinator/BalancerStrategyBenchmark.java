@@ -120,7 +120,7 @@ public class BalancerStrategyBenchmark
   public void pickSegmentsToMove(Blackhole blackhole)
   {
     Iterator<BalancerSegmentHolder> iterator = ReservoirSegmentSampler
-        .pickMovableLoadedSegmentsFrom(serverHolders, reservoirSize, Collections.emptySet())
+        .pickMovableSegmentsFrom(serverHolders, reservoirSize, ServerHolder::getServedSegments, Collections.emptySet())
         .iterator();
 
     for (int i = 0; i < maxSegmentsToMove && iterator.hasNext(); i++) {

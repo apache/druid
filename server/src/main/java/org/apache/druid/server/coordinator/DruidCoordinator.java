@@ -258,10 +258,11 @@ public class DruidCoordinator
     final Iterable<DataSegment> dataSegments = segmentsMetadataManager.iterateAllUsedSegments();
     for (DataSegment segment : dataSegments) {
       SegmentReplicaCount replicaCount = segmentReplicationStatus.getReplicaCountsInCluster(segment.getId());
-      datasourceToUnavailableSegments.addTo(
-          segment.getDataSource(),
-          replicaCount.totalLoaded() == 0 ? 1 : 0
-      );
+      if (replicaCount != null && replicaCount.totalLoaded() > 0) {
+        datasourceToUnavailableSegments.addTo(segment.getDataSource(), 0);
+      } else {
+        datasourceToUnavailableSegments.addTo(segment.getDataSource(), 1);
+      }
     }
 
     return datasourceToUnavailableSegments;

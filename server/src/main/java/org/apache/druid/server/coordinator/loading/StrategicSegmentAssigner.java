@@ -78,7 +78,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     this.cluster = cluster;
     this.strategy = strategy;
     this.loadQueueManager = loadQueueManager;
-    this.replicaCountMap = new SegmentReplicaCountMap(cluster);
+    this.replicaCountMap = SegmentReplicaCountMap.create(cluster);
     this.replicationThrottler = createReplicationThrottler(cluster, loadingConfig);
     this.useRoundRobinAssignment = loadingConfig.isUseRoundRobinSegmentAssignment();
     this.serverSelector = useRoundRobinAssignment ? new RoundRobinServerSelector(cluster) : null;

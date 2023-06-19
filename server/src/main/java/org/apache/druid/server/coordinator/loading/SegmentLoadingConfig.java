@@ -41,17 +41,15 @@ public class SegmentLoadingConfig
   private final boolean useRoundRobinSegmentAssignment;
   private final boolean emitBalancingStats;
 
-  public SegmentLoadingConfig(CoordinatorDynamicConfig dynamicConfig, int numUsedSegments)
+  /**
+   * Creates a new SegmentLoadingConfig with recomputed coordinator config values from
+   * based on whether {@link CoordinatorDynamicConfig#isSmartSegmentLoading()}
+   * is enabled or not.
+   */
+  public static SegmentLoadingConfig create(CoordinatorDynamicConfig dynamicConfig, int numUsedSegments)
   {
     if (dynamicConfig.isSmartSegmentLoading()) {
       // Compute recommended values
-      this.maxSegmentsInLoadQueue = 0;
-      this.useRoundRobinSegmentAssignment = true;
-      this.emitBalancingStats = false;
-      this.maxLifetimeInLoadQueue = dynamicConfig.getReplicantLifetime();
-      this.maxReplicaAssignmentsInRun = Integer.MAX_VALUE;
-      this.percentDecommSegmentsToMove = 100;
-
       // Impose a lower bound on both replicationThrottleLimit and maxSegmentsToMove
       final int throttlePercentage = 2;
       final int replicationThrottleLimit = Math.max(100, numUsedSegments * throttlePercentage / 100);
@@ -67,19 +65,50 @@ public class SegmentLoadingConfig
           replicationThrottleLimit, throttlePercentage, numUsedSegments, maxSegmentsToMove
       );
 
-      this.replicationThrottleLimit = replicationThrottleLimit;
-      this.maxSegmentsToMove = maxSegmentsToMove;
+      return new SegmentLoadingConfig(
+          0,
+          replicationThrottleLimit,
+          Integer.MAX_VALUE,
+          dynamicConfig.getReplicantLifetime(),
+          maxSegmentsToMove,
+          100,
+          true,
+          false
+      );
     } else {
       // Use the configured values
-      this.maxSegmentsInLoadQueue = dynamicConfig.getMaxSegmentsInNodeLoadingQueue();
-      this.replicationThrottleLimit = dynamicConfig.getReplicationThrottleLimit();
-      this.maxLifetimeInLoadQueue = dynamicConfig.getReplicantLifetime();
-      this.maxSegmentsToMove = dynamicConfig.getMaxSegmentsToMove();
-      this.useRoundRobinSegmentAssignment = dynamicConfig.isUseRoundRobinSegmentAssignment();
-      this.emitBalancingStats = dynamicConfig.emitBalancingStats();
-      this.maxReplicaAssignmentsInRun = dynamicConfig.getMaxNonPrimaryReplicantsToLoad();
-      this.percentDecommSegmentsToMove = dynamicConfig.getDecommissioningMaxPercentOfMaxSegmentsToMove();
+      return new SegmentLoadingConfig(
+          dynamicConfig.getMaxSegmentsInNodeLoadingQueue(),
+          dynamicConfig.getReplicationThrottleLimit(),
+          dynamicConfig.getMaxNonPrimaryReplicantsToLoad(),
+          dynamicConfig.getReplicantLifetime(),
+          dynamicConfig.getMaxSegmentsToMove(),
+          dynamicConfig.getDecommissioningMaxPercentOfMaxSegmentsToMove(),
+          dynamicConfig.isUseRoundRobinSegmentAssignment(),
+          dynamicConfig.emitBalancingStats()
+      );
     }
+  }
+
+  private SegmentLoadingConfig(
+      int maxSegmentsInLoadQueue,
+      int replicationThrottleLimit,
+      int maxReplicaAssignmentsInRun,
+      int maxLifetimeInLoadQueue,
+      int maxSegmentsToMove,
+      int percentDecommSegmentsToMove,
+      boolean useRoundRobinSegmentAssignment,
+      boolean emitBalancingStats
+  )
+  {
+    this.maxSegmentsInLoadQueue = maxSegmentsInLoadQueue;
+    this.replicationThrottleLimit = replicationThrottleLimit;
+    this.maxReplicaAssignmentsInRun = maxReplicaAssignmentsInRun;
+    this.maxLifetimeInLoadQueue = maxLifetimeInLoadQueue;
+    this.maxSegmentsToMove = maxSegmentsToMove;
+    this.percentDecommSegmentsToMove = percentDecommSegmentsToMove;
+    this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
+    this.emitBalancingStats = emitBalancingStats;
   }
 
   public int getMaxSegmentsInLoadQueue()
