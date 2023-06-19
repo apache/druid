@@ -26,10 +26,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
-import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
@@ -102,6 +103,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSuppl
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardPlannerComponentSupplier;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.sql.http.SqlParameter;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -487,6 +489,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     queryFramework = null;
   }
 
+  protected static DruidExceptionMatcher invalidSqlIs(String s)
+  {
+    return DruidExceptionMatcher.invalidSqlInput().expectMessageIs(s);
+  }
+
+  protected static DruidExceptionMatcher invalidSqlContains(String s)
+  {
+    return DruidExceptionMatcher.invalidSqlInput().expectMessageContains(s);
+  }
+
   @Rule
   public QueryLogHook getQueryLogHook()
   {
@@ -633,23 +645,25 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void assertQueryIsUnplannable(final PlannerConfig plannerConfig, final String sql, String expectedError)
   {
-    Exception e = null;
     try {
       testQuery(plannerConfig, sql, CalciteTests.REGULAR_USER_AUTH_RESULT, ImmutableList.of(), ImmutableList.of());
     }
-    catch (Exception e1) {
-      e = e1;
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
+              .expectMessageIs(
+                  StringUtils.format(
+                      "Query planning failed for unknown reason, our best guess is this [%s]",
+                      expectedError
+                  )
+              )
+      );
     }
-
-    if (!(e instanceof RelOptPlanner.CannotPlanException)) {
-      log.error(e, "Expected CannotPlanException for query: %s", sql);
+    catch (Exception e) {
+      log.error(e, "Expected DruidException for query: %s", sql);
       Assert.fail(sql);
     }
-    Assert.assertEquals(
-        sql,
-        StringUtils.format("Query not supported. %s SQL was: %s", expectedError, sql),
-        e.getMessage()
-    );
   }
 
   /**
@@ -986,7 +1000,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return getSqlStatementFactory(
         plannerConfig,
         new AuthConfig()
-     );
+    );
   }
 
   /**
@@ -1028,6 +1042,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   /**
    * Override not just the outer query context, but also the contexts of all subqueries.
+   *
    * @return
    */
   public static <T> Query<?> recursivelyClearContext(final Query<T> query, ObjectMapper queryJsonMapper)
@@ -1150,7 +1165,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField);
 
     try {
-      output.put(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, queryFramework().queryJsonMapper().writeValueAsString(granularity));
+      output.put(
+          GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY,
+          queryFramework().queryJsonMapper().writeValueAsString(granularity)
+      );
     }
     catch (JsonProcessingException e) {
       throw new RuntimeException(e);

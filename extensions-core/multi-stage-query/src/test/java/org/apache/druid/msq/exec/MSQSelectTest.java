@@ -25,6 +25,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -64,7 +66,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -72,7 +73,6 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
@@ -95,7 +95,6 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class MSQSelectTest extends MSQTestBase
 {
-
   @Parameterized.Parameters(name = "{index}:with context {0}")
   public static Collection<Object[]> data()
   {
@@ -1186,10 +1185,9 @@ public class MSQSelectTest extends MSQTestBase
   {
     testSelectQuery()
         .setSql("select a from ")
-        .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(SqlPlanningException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Encountered \"from <EOF>\""))
-        ))
+        .setExpectedValidationErrorMatcher(
+            invalidSqlContains("Received an unexpected token [from <EOF>] (line [1], column [10]), acceptable options")
+        )
         .setQueryContext(context)
         .verifyPlanningErrors();
   }
@@ -1201,11 +1199,7 @@ public class MSQSelectTest extends MSQTestBase
         .setSql("SELECT * FROM INFORMATION_SCHEMA.SCHEMATA")
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(SqlPlanningException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table INFORMATION_SCHEMA.SCHEMATA with SQL engine 'msq-task'."))
-            )
+            invalidSqlIs("Cannot query table(s) [INFORMATION_SCHEMA.SCHEMATA] with SQL engine [msq-task]")
         )
         .verifyPlanningErrors();
   }
@@ -1217,11 +1211,7 @@ public class MSQSelectTest extends MSQTestBase
         .setSql("SELECT * FROM sys.segments")
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(SqlPlanningException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table sys.segments with SQL engine 'msq-task'."))
-            )
+            invalidSqlIs("Cannot query table(s) [sys.segments] with SQL engine [msq-task]")
         )
         .verifyPlanningErrors();
   }
@@ -1233,11 +1223,7 @@ public class MSQSelectTest extends MSQTestBase
         .setSql("select s.segment_id, s.num_rows, f.dim1 from sys.segments as s, foo as f")
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(SqlPlanningException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table sys.segments with SQL engine 'msq-task'."))
-            )
+            invalidSqlIs("Cannot query table(s) [sys.segments] with SQL engine [msq-task]")
         )
         .verifyPlanningErrors();
   }
@@ -1250,15 +1236,10 @@ public class MSQSelectTest extends MSQTestBase
                 + "select segment_source.segment_id, segment_source.num_rows from segment_source")
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(SqlPlanningException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table sys.segments with SQL engine 'msq-task'."))
-            )
+            invalidSqlIs("Cannot query table(s) [sys.segments] with SQL engine [msq-task]")
         )
         .verifyPlanningErrors();
   }
-
 
   @Test
   public void testSelectOnUserDefinedSourceContainingWith()
@@ -1644,8 +1625,13 @@ public class MSQSelectTest extends MSQTestBase
                 + "FROM kttm_data "
                 + "GROUP BY 1")
         .setExpectedValidationErrorMatcher(
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "LATEST() aggregator depends on __time column"))
+            new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
+                .expectMessageIs(
+                    "Query planning failed for unknown reason, our best guess is this "
+                    + "[LATEST and EARLIEST aggregators implicitly depend on the __time column, "
+                    + "but the table queried doesn't contain a __time column.  "
+                    + "Please use LATEST_BY or EARLIEST_BY and specify the column explicitly.]"
+                )
         )
         .setExpectedRowSignature(rowSignature)
         .verifyPlanningErrors();
@@ -1676,7 +1662,7 @@ public class MSQSelectTest extends MSQTestBase
         .setSql("select unique_dim1 from foo2 group by unique_dim1")
         .setQueryContext(context)
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(UnsupportedSQLQueryException.class),
+            CoreMatchers.instanceOf(DruidException.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                 "SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported"))
         ))

@@ -30,13 +30,10 @@ import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
-import org.hamcrest.CoreMatchers;
 import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.ArgumentMatchers;
@@ -327,17 +324,15 @@ public class MSQReplaceTest extends MSQTestBase
   @Test
   public void testReplaceIncorrectSyntax()
   {
-    testIngestQuery().setSql("REPLACE INTO foo1 OVERWRITE SELECT * FROM foo PARTITIONED BY ALL TIME")
-                     .setExpectedDataSource("foo1")
-                     .setQueryContext(context)
-                     .setExpectedValidationErrorMatcher(
-                         CoreMatchers.allOf(
-                             CoreMatchers.instanceOf(SqlPlanningException.class),
-                             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                                 "Missing time chunk information in OVERWRITE clause for REPLACE. Use OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table."))
-                         )
-                     )
-                     .verifyPlanningErrors();
+    testIngestQuery()
+        .setSql("REPLACE INTO foo1 OVERWRITE SELECT * FROM foo PARTITIONED BY ALL TIME")
+        .setExpectedDataSource("foo1")
+        .setQueryContext(context)
+        .setExpectedValidationErrorMatcher(invalidSqlContains(
+            "Missing time chunk information in OVERWRITE clause for REPLACE. "
+            + "Use OVERWRITE WHERE <__time based condition> or OVERWRITE ALL to overwrite the entire table."
+        ))
+        .verifyPlanningErrors();
   }
 
   @Test
@@ -581,10 +576,8 @@ public class MSQReplaceTest extends MSQTestBase
                              + "LIMIT 50"
                              + "PARTITIONED BY MONTH")
                      .setQueryContext(context)
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))
+                     .setExpectedValidationErrorMatcher(invalidSqlContains(
+                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""
                      ))
                      .verifyPlanningErrors();
   }
@@ -599,10 +592,8 @@ public class MSQReplaceTest extends MSQTestBase
                              + "LIMIT 50 "
                              + "OFFSET 10"
                              + "PARTITIONED BY ALL TIME")
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have an OFFSET"))
+                     .setExpectedValidationErrorMatcher(invalidSqlContains(
+                             "INSERT and REPLACE queries cannot have an OFFSET"
                      ))
                      .setQueryContext(context)
                      .verifyPlanningErrors();
@@ -742,11 +733,9 @@ public class MSQReplaceTest extends MSQTestBase
                              + "PARTITIONED BY ALL TIME "
                              + "CLUSTERED BY m2, m1 DESC"
                              )
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                             "[`m1` DESC] is invalid. CLUSTERED BY columns cannot be sorted in descending order."))
-                     ))
+                     .setExpectedValidationErrorMatcher(
+                         invalidSqlIs("Invalid CLUSTERED BY clause [`m1` DESC]: cannot sort in descending order.")
+                     )
                      .verifyPlanningErrors();
   }
 
