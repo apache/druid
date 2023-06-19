@@ -43,6 +43,7 @@ import java.util.zip.Deflater;
 public class ServerConfig
 {
   public static final int DEFAULT_GZIP_INFLATE_BUFFER_SIZE = 4096;
+  public static final long DEFAULT_MAX_SUBQUERY_BYTES = -1L;
 
   /**
    * The ServerConfig is normally created using {@link org.apache.druid.guice.JsonConfigProvider} binding.
@@ -130,7 +131,7 @@ public class ServerConfig
   private int maxSubqueryRows = 100000;
 
   @JsonProperty
-  private long maxSubqueryBytes = -1;
+  private long maxSubqueryBytes = DEFAULT_MAX_SUBQUERY_BYTES;
 
   @JsonProperty
   private boolean useNestedForUnknownTypeInSubquery = false;
