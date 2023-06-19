@@ -35,12 +35,7 @@ public abstract class LoadRule implements Rule
   @Override
   public void run(DataSegment segment, SegmentActionHandler handler)
   {
-    Map<String, Integer> tieredReplicants = getTieredReplicants();
-    if (tieredReplicants.isEmpty()) {
-      handler.replicateSegment(segment, ImmutableMap.of(DruidServer.DEFAULT_TIER, 0));
-    } else {
-      handler.replicateSegment(segment, tieredReplicants);
-    }
+    handler.replicateSegment(segment, getTieredReplicants());
   }
 
   /**
