@@ -741,7 +741,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 
 
     Cursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
-        resultSequence.map(ResultRow::getArray),
+        resultsAsArrays(query, resultSequence),
         rowSignature
     );
 

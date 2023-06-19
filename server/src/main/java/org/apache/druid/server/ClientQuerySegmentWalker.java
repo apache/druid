@@ -706,6 +706,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     return dataSource;
   }
 
+  /**
+   * This method materializes the query results as Frames. The method defaults back to materializing as rows in case
+   * one cannot materialize the results as frames
+   */
   private static <T, QueryType extends Query<T>> Optional<DataSource> materializeResultsAsFrames(
       final QueryType query,
       final Sequence<T> results,
@@ -727,10 +731,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       );
     }
     catch (Exception e) {
+      log.debug(e, "Unable to materialize the results as frames due to an unhandleable exception "
+                   + "while conversion. Defaulting to materializing the results as rows");
       return Optional.empty();
     }
 
     if (!framesOptional.isPresent()) {
+      log.debug("Unable to materialize the results as frames. Defaulting to materializing the results as rows");
       return Optional.empty();
     }
 
@@ -752,6 +759,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     return Optional.of(new FrameBasedInlineDataSource(frameSignaturePairs, toolChest.resultArraySignature(query)));
   }
 
+  /**
+   * This method materializes the query results as {@code List<Objects[]>}
+   */
   private static <T, QueryType extends Query<T>> DataSource materializeResultsAsArray(
       final QueryType query,
       final Sequence<T> results,
