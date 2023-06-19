@@ -89,7 +89,7 @@ public class SegmentReplicaCount
    * Required number of replicas of the segment as dictated by load rules.
    * This includes replicas that may be in excess of the cluster capacity.
    */
-  int required()
+  public int required()
   {
     return required;
   }
@@ -98,7 +98,7 @@ public class SegmentReplicaCount
    * Required number of replicas of the segment as dictated by load rules.
    * This does not include replicas that are in excess of the cluster capacity.
    */
-  int requiredAndLoadable()
+  public int requiredAndLoadable()
   {
     return requiredAndLoadable;
   }

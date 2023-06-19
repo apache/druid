@@ -299,6 +299,16 @@ public class DruidCoordinator
   }
 
   @Nullable
+  public Integer getReplicationFactor(SegmentId segmentId)
+  {
+    if (segmentReplicationStatus != null) {
+      return segmentReplicationStatus.getReplicaCountsInCluster(segmentId).required();
+    } else {
+      return null;
+    }
+  }
+
+  @Nullable
   public Long getTotalSizeOfSegmentsAwaitingCompaction(String dataSource)
   {
     return compactSegments.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
