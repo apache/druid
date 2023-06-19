@@ -767,8 +767,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql(sql)
         .expectValidationError(
-            SqlPlanningException.class,
-            "[`dim1` DESC] is invalid. CLUSTERED BY columns cannot be sorted in descending order."
+            invalidSqlIs("Invalid CLUSTERED BY clause [`dim1` DESC]: cannot sort in descending order.")
         )
         .verify();
   }

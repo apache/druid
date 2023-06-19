@@ -357,7 +357,7 @@ public class QueryResourceTest
     final ErrorResponse entity = (ErrorResponse) response.getEntity();
     MatcherAssert.assertThat(
         entity.getUnderlyingException(),
-        new DruidExceptionMatcher(DruidException.Persona.OPERATOR, DruidException.Category.RUNTIME_FAILURE, "adhoc")
+        new DruidExceptionMatcher(DruidException.Persona.OPERATOR, DruidException.Category.RUNTIME_FAILURE, "general")
             .expectMessageIs("failing for coverage!")
     );
 

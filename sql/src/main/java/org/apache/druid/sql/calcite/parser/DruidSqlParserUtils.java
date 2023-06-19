@@ -276,7 +276,6 @@ public class DruidSqlParserUtils
    * @throws ValidationException if any of the clustered by columns contain DESCENDING order.
    */
   public static SqlOrderBy convertClusterByToOrderBy(SqlNode query, SqlNodeList clusteredByList)
-      throws ValidationException
   {
     validateClusteredByColumns(clusteredByList);
     // If we have a CLUSTERED BY clause, extract the information in that CLUSTERED BY and create a new
@@ -306,10 +305,9 @@ public class DruidSqlParserUtils
   /**
    * Validates the clustered by columns to ensure that it does not contain DESCENDING order columns.
    *
-   * @param clusteredByNodes  List of SqlNodes representing columns to be clustered by.
-   * @throws ValidationException if any of the clustered by columns contain DESCENDING order.
+   * @param clusteredByNodes List of SqlNodes representing columns to be clustered by.
    */
-  public static void validateClusteredByColumns(final SqlNodeList clusteredByNodes) throws ValidationException
+  public static void validateClusteredByColumns(final SqlNodeList clusteredByNodes)
   {
     if (clusteredByNodes == null) {
       return;
@@ -317,10 +315,9 @@ public class DruidSqlParserUtils
 
     for (final SqlNode clusteredByNode : clusteredByNodes.getList()) {
       if (clusteredByNode.isA(ImmutableSet.of(SqlKind.DESCENDING))) {
-        throw new ValidationException(
-            StringUtils.format("[%s] is invalid."
-                               + " CLUSTERED BY columns cannot be sorted in descending order.", clusteredByNode.toString()
-            )
+        throw InvalidSqlInput.exception(
+            "Invalid CLUSTERED BY clause [%s]: cannot sort in descending order.",
+            clusteredByNode
         );
       }
     }

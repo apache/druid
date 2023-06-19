@@ -744,11 +744,9 @@ public class MSQInsertTest extends MSQTestBase
                              + "PARTITIONED BY DAY "
                              + "CLUSTERED BY dim1 DESC"
                      )
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                             "[`dim1` DESC] is invalid. CLUSTERED BY columns cannot be sorted in descending order."))
-                     ))
+                     .setExpectedValidationErrorMatcher(
+                         invalidSqlIs("Invalid CLUSTERED BY clause [`dim1` DESC]: cannot sort in descending order.")
+                     )
                      .verifyPlanningErrors();
   }
 
@@ -979,7 +977,7 @@ public class MSQInsertTest extends MSQTestBase
             "insert into foo1 select  __time, dim1 , count(*) as cnt from foo  where dim1 is not null group by 1, 2 clustered by dim1"
         )
         .setExpectedValidationErrorMatcher(invalidSqlContains(
-            "LUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
+            "CLUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
         ))
         .verifyPlanningErrors();
   }
@@ -1092,11 +1090,11 @@ public class MSQInsertTest extends MSQTestBase
                              + "FROM foo "
                              + "LIMIT 50 "
                              + "PARTITIONED BY MONTH")
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(DruidException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))
-                     ))
+                     .setExpectedValidationErrorMatcher(
+                         invalidSqlContains(
+                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""
+                         )
+                     )
                      .setQueryContext(context)
                      .verifyPlanningErrors();
   }
@@ -1110,11 +1108,9 @@ public class MSQInsertTest extends MSQTestBase
                              + "LIMIT 50 "
                              + "OFFSET 10"
                              + "PARTITIONED BY ALL TIME")
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(DruidException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have an OFFSET"))
-                     ))
+                     .setExpectedValidationErrorMatcher(
+                         invalidSqlContains("INSERT and REPLACE queries cannot have an OFFSET")
+                     )
                      .setQueryContext(context)
                      .verifyPlanningErrors();
   }

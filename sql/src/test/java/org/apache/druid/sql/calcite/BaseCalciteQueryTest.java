@@ -651,7 +651,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     catch (DruidException e) {
       MatcherAssert.assertThat(
           e,
-          new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "adhoc")
+          new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
               .expectMessageIs(
                   StringUtils.format(
                       "Query planning failed for unknown reason, our best guess is this [%s]",

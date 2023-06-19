@@ -21,6 +21,13 @@ package org.apache.druid.error;
 
 import org.apache.druid.query.QueryException;
 
+/**
+ * A {@link DruidException.Failure} that serves to cover conversions from {@link QueryException}.
+ *
+ * When/if QueryException is completely eliminated from the code base, this compat layer should also be able to
+ * be removed.  Additionally, it is the hope that nobody should actually be interacting with this class as it should
+ * be an implementation detail of {@link DruidException} and not really seen outside of that.
+ */
 public class QueryExceptionCompat extends DruidException.Failure
 {
   public static final String ERROR_CODE = "legacyQueryException";

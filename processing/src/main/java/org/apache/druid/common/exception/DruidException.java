@@ -21,6 +21,9 @@ package org.apache.druid.common.exception;
 
 /**
  * A generic exception thrown by Druid.
+ *
+ * This class is deprecated and should not be used.  {@link org.apache.druid.error.DruidException} should be used for
+ * any error that is intended to be delivered to the end user.
  */
 @Deprecated
 public class DruidException extends RuntimeException

@@ -134,12 +134,8 @@ public class DruidSqlParserUtilsTest
     public void testEmptyClusteredByColumnsValid()
     {
       final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);
-      try {
-        DruidSqlParserUtils.validateClusteredByColumns(clusteredByArgs);
-      }
-      catch (ValidationException e) {
-        Assert.fail("Did not expect an exception" + e.getMessage());
-      }
+
+      DruidSqlParserUtils.validateClusteredByColumns(clusteredByArgs);
     }
 
     /**
@@ -153,12 +149,7 @@ public class DruidSqlParserUtilsTest
       clusteredByArgs.add(new SqlIdentifier("DIM2 ASC", SqlParserPos.ZERO));
       clusteredByArgs.add(SqlLiteral.createExactNumeric("3", SqlParserPos.ZERO));
 
-      try {
-        DruidSqlParserUtils.validateClusteredByColumns(clusteredByArgs);
-      }
-      catch (ValidationException e) {
-        Assert.fail("Did not expect an exception" + e.getMessage());
-      }
+      DruidSqlParserUtils.validateClusteredByColumns(clusteredByArgs);
     }
 
     /**
@@ -181,14 +172,10 @@ public class DruidSqlParserUtilsTest
       );
       clusteredByArgs.add(sqlBasicCall);
 
-      ValidationException e = Assert.assertThrows(
-          ValidationException.class,
-          () -> DruidSqlParserUtils.validateClusteredByColumns(clusteredByArgs)
-      );
-      Assert.assertEquals(
-          "[`DIM4` DESC] is invalid. CLUSTERED BY columns cannot be sorted in descending order.",
-          e.getMessage()
-      );
+      DruidExceptionMatcher
+          .invalidSqlInput()
+          .expectMessageIs("Invalid CLUSTERED BY clause [`DIM4` DESC]: cannot sort in descending order.")
+          .assertThrowsAndMatches(() -> DruidSqlParserUtils.validateClusteredByColumns(clusteredByArgs));
     }
   }
 

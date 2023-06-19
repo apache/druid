@@ -1399,7 +1399,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     validateErrorResponse(
         exception,
-        "adhoc",
+        "general",
         DruidException.Persona.ADMIN,
         DruidException.Category.INVALID_INPUT,
         "Query planning failed for unknown reason, our best guess is this "

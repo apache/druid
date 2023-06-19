@@ -104,7 +104,7 @@ import java.util.Map;
  * codes) for similar exception messages.
  * <p>
  * The error code is a code that indicates a grouping of error messages.  There is no forced structure around whether
- * a specific error code can be reused for different problems or not.  That is, an error code like "adhoc" will get
+ * a specific error code can be reused for different problems or not.  That is, an error code like "general" will get
  * reused in many different places as it's the basic error code used whenever a DruidException is created in-line.  But,
  * we might decide that a specific type of error should be identified explicitly by its error code and should only mean
  * one thing, in which case that error code might only exist on a single error.
@@ -120,7 +120,7 @@ import java.util.Map;
  * <p>
  * A DruidException can be built from one of 2 static methods: {@link #forPersona} or {@link #fromFailure(Failure)}.
  * The only way to set a specific error code is to build a DruidException from a Failure, when built in-line using
- * forPersona, it will always be an "adhoc" error.
+ * forPersona, it will always be an "general" error.
  * <p>
  * Additionally, DruidException is not intended to be directly serialized.  The intention is that something converts
  * it into an {@link ErrorResponse} first using {@link ErrorResponse#ErrorResponse(DruidException)} and then that
@@ -132,14 +132,14 @@ import java.util.Map;
 public class DruidException extends RuntimeException
 {
   /**
-   * Starts building an "adhoc" DruidException targetting the specific persona.
+   * Starts building an "general" DruidException targetting the specific persona.
    *
    * @param persona the target persona of the exception message
    * @return a builder that can be used to complete the creation of the DruidException
    */
   public static PartialDruidExceptionBuilder forPersona(Persona persona)
   {
-    return new PartialDruidExceptionBuilder("adhoc", persona);
+    return new PartialDruidExceptionBuilder("general", persona);
   }
 
   /**

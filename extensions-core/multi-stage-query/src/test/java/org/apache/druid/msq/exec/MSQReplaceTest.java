@@ -733,11 +733,9 @@ public class MSQReplaceTest extends MSQTestBase
                              + "PARTITIONED BY ALL TIME "
                              + "CLUSTERED BY m2, m1 DESC"
                              )
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                             "[`m1` DESC] is invalid. CLUSTERED BY columns cannot be sorted in descending order."))
-                     ))
+                     .setExpectedValidationErrorMatcher(
+                         invalidSqlIs("Invalid CLUSTERED BY clause [`m1` DESC]: cannot sort in descending order.")
+                     )
                      .verifyPlanningErrors();
   }
 

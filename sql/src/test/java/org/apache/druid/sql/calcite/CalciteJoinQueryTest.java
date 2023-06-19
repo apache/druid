@@ -1500,7 +1500,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     catch (DruidException e) {
       MatcherAssert.assertThat(
           e,
-          new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "adhoc")
+          new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
               .expectMessageIs(
                   "Query planning failed for unknown reason, our best guess is this "
                   + "[LATEST and EARLIEST aggregators implicitly depend on the __time column, "

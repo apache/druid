@@ -1625,7 +1625,7 @@ public class MSQSelectTest extends MSQTestBase
                 + "FROM kttm_data "
                 + "GROUP BY 1")
         .setExpectedValidationErrorMatcher(
-            new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "adhoc")
+            new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
                 .expectMessageIs(
                     "Query planning failed for unknown reason, our best guess is this "
                     + "[LATEST and EARLIEST aggregators implicitly depend on the __time column, "
