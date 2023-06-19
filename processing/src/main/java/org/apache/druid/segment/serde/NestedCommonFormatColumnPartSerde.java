@@ -79,7 +79,14 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory
   )
   {
-    return new NestedCommonFormatColumnPartSerde(logicalType, hasNulls, isVariantType, byteOrder, bitmapSerdeFactory, null);
+    return new NestedCommonFormatColumnPartSerde(
+        logicalType,
+        hasNulls,
+        isVariantType,
+        byteOrder,
+        bitmapSerdeFactory,
+        null
+    );
   }
 
   private final ColumnType logicalType;
@@ -202,6 +209,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
     }
     return (buffer, builder, columnConfig) -> {
       NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
+          logicalType,
           hasNulls,
           buffer,
           builder,
@@ -300,7 +308,14 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
 
     public NestedCommonFormatColumnPartSerde build()
     {
-      return new NestedCommonFormatColumnPartSerde(logicalType, hasNulls, isVariantType, byteOrder, bitmapSerdeFactory, serializer);
+      return new NestedCommonFormatColumnPartSerde(
+          logicalType,
+          hasNulls,
+          isVariantType,
+          byteOrder,
+          bitmapSerdeFactory,
+          serializer
+      );
     }
   }
 }

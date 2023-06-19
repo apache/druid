@@ -35,8 +35,8 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.Optionality;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
@@ -60,7 +60,6 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -78,7 +77,13 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   {
     EARLIEST {
       @Override
-      AggregatorFactory createAggregatorFactory(String name, String fieldName, String timeColumn, ColumnType type, int maxStringBytes)
+      AggregatorFactory createAggregatorFactory(
+          String name,
+          String fieldName,
+          String timeColumn,
+          ColumnType type,
+          int maxStringBytes
+      )
       {
         switch (type.getType()) {
           case LONG:
@@ -91,14 +96,20 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case COMPLEX:
             return new StringFirstAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
-            throw new UnsupportedSQLQueryException("EARLIEST aggregator is not supported for '%s' type", type);
+            throw SimpleSqlAggregator.badTypeException(fieldName, "EARLIEST", type);
         }
       }
     },
 
     LATEST {
       @Override
-      AggregatorFactory createAggregatorFactory(String name, String fieldName, String timeColumn, ColumnType type, int maxStringBytes)
+      AggregatorFactory createAggregatorFactory(
+          String name,
+          String fieldName,
+          String timeColumn,
+          ColumnType type,
+          int maxStringBytes
+      )
       {
         switch (type.getType()) {
           case LONG:
@@ -111,14 +122,20 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case COMPLEX:
             return new StringLastAggregatorFactory(name, fieldName, timeColumn, maxStringBytes);
           default:
-            throw new UnsupportedSQLQueryException("LATEST aggregator is not supported for '%s' type", type);
+            throw SimpleSqlAggregator.badTypeException(fieldName, "LATEST", type);
         }
       }
     },
 
     ANY_VALUE {
       @Override
-      AggregatorFactory createAggregatorFactory(String name, String fieldName, String timeColumn, ColumnType type, int maxStringBytes)
+      AggregatorFactory createAggregatorFactory(
+          String name,
+          String fieldName,
+          String timeColumn,
+          ColumnType type,
+          int maxStringBytes
+      )
       {
         switch (type.getType()) {
           case LONG:
@@ -130,7 +147,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case STRING:
             return new StringAnyAggregatorFactory(name, fieldName, maxStringBytes);
           default:
-            throw new UnsupportedSQLQueryException("ANY aggregation is not supported for '%s' type", type);
+            throw SimpleSqlAggregator.badTypeException(fieldName, "ANY", type);
         }
       }
     };
@@ -188,21 +205,30 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     final String aggregatorName = finalizeAggregations ? Calcites.makePrefixedName(name, "a") : name;
     final ColumnType outputType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());
     if (outputType == null) {
-      throw new ISE(
-          "Cannot translate output sqlTypeName[%s] to Druid type for aggregator[%s]",
-          aggregateCall.getType().getSqlTypeName(),
-          aggregateCall.getName()
-      );
+      throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                          .ofCategory(DruidException.Category.DEFENSIVE)
+                          .build(
+                              "Cannot convert output SQL type[%s] to a Druid type for function [%s]",
+                              aggregateCall.getName(),
+                              aggregateCall.getType().getSqlTypeName()
+                          );
     }
 
     final String fieldName = getColumnName(plannerContext, virtualColumnRegistry, args.get(0), rexNodes.get(0));
 
     if (!rowSignature.contains(ColumnHolder.TIME_COLUMN_NAME) && (aggregatorType == AggregatorType.LATEST || aggregatorType == AggregatorType.EARLIEST)) {
-      plannerContext.setPlanningError("%s() aggregator depends on __time column, the underlying datasource "
-                                      + "or extern function you are querying doesn't contain __time column, "
-                                      + "Please use %s_BY() and specify the time column you want to use",
-                                      aggregatorType.name(),
-                                      aggregatorType.name()
+      // This code is being run as part of the exploratory volcano planner, currently, the definition of these
+      // aggregators does not tell Calcite that they depend on a __time column being in existence, instead we are
+      // allowing the volcano planner to explore paths that put projections which eliminate the time column in between
+      // the table scan and the aggregation and then relying on this check to tell Calcite that the plan is bogus.
+      // In some future, it would be good to make the aggregator definition capable of telling Calcite that it depends
+      // on a __time column to be in existence.  Or perhaps we should just kill these aggregators and have everything
+      // move to the _BY aggregators that require an explicit definition.  Either way, for now, we set this potential
+      // error and let the volcano planner continue exploring
+      plannerContext.setPlanningError(
+          "LATEST and EARLIEST aggregators implicitly depend on the __time column, but the "
+          + "table queried doesn't contain a __time column.  Please use LATEST_BY or EARLIEST_BY "
+          + "and specify the column explicitly."
       );
       return null;
     }
@@ -218,7 +244,11 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           maxStringBytes = RexLiteral.intValue(rexNodes.get(1));
         }
         catch (AssertionError ae) {
-          plannerContext.setPlanningError("The second argument '%s' to function '%s' is not a number", rexNodes.get(1), aggregateCall.getName());
+          plannerContext.setPlanningError(
+              "The second argument '%s' to function '%s' is not a number",
+              rexNodes.get(1),
+              aggregateCall.getName()
+          );
           return null;
         }
         theAggFactory = aggregatorType.createAggregatorFactory(
@@ -230,11 +260,10 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         );
         break;
       default:
-        throw new IAE(
-            "aggregation[%s], Invalid number of arguments[%,d] to [%s] operator",
-            aggregatorName,
-            args.size(),
-            aggregatorType.name()
+        throw InvalidSqlInput.exception(
+            "Function [%s] expects 1 or 2 arguments but found [%s]",
+            aggregateCall.getName(),
+            args.size()
         );
     }
 

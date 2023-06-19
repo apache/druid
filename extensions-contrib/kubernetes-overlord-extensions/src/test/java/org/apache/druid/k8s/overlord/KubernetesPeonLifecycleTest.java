@@ -163,7 +163,9 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         EasyMock.anyLong(),
         EasyMock.eq(TimeUnit.MILLISECONDS)
     )).andReturn(null);
-
+    EasyMock.expect(kubernetesClient.deletePeonJob(
+      new K8sTaskId(ID)
+    )).andReturn(true);
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
     replayAll();

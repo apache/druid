@@ -46,7 +46,9 @@ public class ForeverLoadRule extends LoadRule
     this.allowEmptyTieredReplicants = allowEmptyTieredReplicants != null && allowEmptyTieredReplicants;
 
     if (!this.allowEmptyTieredReplicants) {
-      this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS) : tieredReplicants;
+      this.tieredReplicants = tieredReplicants == null
+                              ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS)
+                              : tieredReplicants;
     } else {
       this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of() : tieredReplicants;
     }
