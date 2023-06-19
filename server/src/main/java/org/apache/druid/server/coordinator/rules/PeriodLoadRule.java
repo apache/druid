@@ -66,7 +66,7 @@ public class PeriodLoadRule extends LoadRule
     } else {
       this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of() : tieredReplicants;
     }
-    validateTieredReplicants(this.tieredReplicants);
+    validateTieredReplicants(this.tieredReplicants, this.allowEmptyTieredReplicants);
     this.period = period;
     this.includeFuture = includeFuture == null ? DEFAULT_INCLUDE_FUTURE : includeFuture;
   }

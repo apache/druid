@@ -94,17 +94,9 @@ public class IntervalLoadRuleTest
                        + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
                        + "      \"type\": \"loadByInterval\"\n"
                        + "   }";
-    String expectedJson = "     {\n"
-                          + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
-                          + "      \"tieredReplicants\": {\n"
-                          + "          \"" + DruidServer.DEFAULT_TIER + "\": " + DruidServer.DEFAULT_NUM_REPLICANTS + "\n"
-                          + "      },\n"
-                          + "      \"type\": \"loadByInterval\"\n"
-                          + "   }";
     ObjectMapper jsonMapper = new DefaultObjectMapper();
     IntervalLoadRule inputForeverLoadRule = jsonMapper.readValue(inputJson, IntervalLoadRule.class);
-    IntervalLoadRule expectedForeverLoadRule = jsonMapper.readValue(expectedJson, IntervalLoadRule.class);
-    Assert.assertEquals(expectedForeverLoadRule.getTieredReplicants(), inputForeverLoadRule.getTieredReplicants());
+    Assert.assertEquals(ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS), inputForeverLoadRule.getTieredReplicants());
   }
 
   @Test
@@ -115,14 +107,8 @@ public class IntervalLoadRuleTest
                        + "      \"type\": \"loadByInterval\",\n"
                        + "      \"allowEmptyTieredReplicants\": \"true\"\n"
                        + "   }";
-    String expectedJson = "     {\n"
-                          + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
-                          + "      \"tieredReplicants\": {},\n"
-                          + "      \"type\": \"loadByInterval\"\n"
-                          + "   }";
     ObjectMapper jsonMapper = new DefaultObjectMapper();
     IntervalLoadRule inputForeverLoadRule = jsonMapper.readValue(inputJson, IntervalLoadRule.class);
-    IntervalLoadRule expectedForeverLoadRule = jsonMapper.readValue(expectedJson, IntervalLoadRule.class);
-    Assert.assertEquals(expectedForeverLoadRule.getTieredReplicants(), inputForeverLoadRule.getTieredReplicants());
+    Assert.assertEquals(ImmutableMap.of(), inputForeverLoadRule.getTieredReplicants());
   }
 }

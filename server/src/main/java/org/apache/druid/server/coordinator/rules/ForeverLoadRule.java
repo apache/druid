@@ -50,7 +50,7 @@ public class ForeverLoadRule extends LoadRule
     } else {
       this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of() : tieredReplicants;
     }
-    validateTieredReplicants(this.tieredReplicants);
+    validateTieredReplicants(this.tieredReplicants, this.allowEmptyTieredReplicants);
   }
 
   @JsonProperty

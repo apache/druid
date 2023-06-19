@@ -550,10 +550,10 @@ public abstract class LoadRule implements Rule
     return numToDrop;
   }
 
-  protected static void validateTieredReplicants(final Map<String, Integer> tieredReplicants)
+  protected static void validateTieredReplicants(final Map<String, Integer> tieredReplicants, boolean allowEmptyTieredReplicants)
   {
-    if (tieredReplicants == null || tieredReplicants.isEmpty()) {
-      return;
+    if (tieredReplicants.size() == 0 && !allowEmptyTieredReplicants) {
+      throw new IAE("A rule with empty tiered replicants is invalid unless \"allowEmptyTieredReplicants\" is set to true.");
     }
     for (Map.Entry<String, Integer> entry : tieredReplicants.entrySet()) {
       if (entry.getValue() == null) {

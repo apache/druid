@@ -29,6 +29,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -890,6 +891,12 @@ public class LoadRuleTest
     Assert.assertEquals(0, mockPeon3.getSegmentsToDrop().size());
 
     EasyMock.verify(throttler);
+  }
+
+  @Test(expected = IAE.class)
+  public void testValidateTieredReplicantsEmptyTierReplicantsWithoutAllowEmptyFlag()
+  {
+    new ForeverLoadRule(ImmutableMap.of(), null);
   }
 
   private DataSegment createDataSegment(String dataSource)
