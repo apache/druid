@@ -37,8 +37,6 @@ import oshi.software.os.InternetProtocolStats;
 import oshi.software.os.OSFileStore;
 import oshi.software.os.OperatingSystem;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -64,7 +62,14 @@ public class OshiSysMonitor extends FeedDefiningMonitor
   private final HardwareAbstractionLayer hal;
   private final OperatingSystem os;
   private static final List<String> NET_ADDRESS_BLACKLIST = ImmutableList.of("0.0.0.0", "127.0.0.1");
-  private final List<Stats> statsList;
+  private final MemStats memStats;
+  private final SwapStats swapStats;
+  private final FsStats fsStats;
+  private final DiskStats diskStats;
+  private final NetStats netStats;
+  private final CpuStats cpuStats;
+  private final SysStats sysStats;
+  private final TcpStats tcpStats;
 
   private final Map<String, String[]> dimensions;
 
@@ -88,19 +93,15 @@ public class OshiSysMonitor extends FeedDefiningMonitor
     this.hal = si.getHardware();
     this.os = si.getOperatingSystem();
 
-    this.statsList = new ArrayList<Stats>();
-    this.statsList.addAll(
-        Arrays.asList(
-            new MemStats(),
-            new SwapStats(),
-            new FsStats(),
-            new DiskStats(),
-            new NetStats(),
-            new CpuStats(),
-            new SysStats(),
-            new TcpStats()
-        )
-    );
+    this.memStats = new MemStats();
+    this.swapStats = new SwapStats();
+    this.fsStats = new FsStats();
+    this.diskStats = new DiskStats();
+    this.netStats = new NetStats();
+    this.cpuStats = new CpuStats();
+    this.sysStats = new SysStats();
+    this.tcpStats = new TcpStats();
+
   }
 
   // Create an object with mocked systemInfo for testing purposes
@@ -113,34 +114,62 @@ public class OshiSysMonitor extends FeedDefiningMonitor
     this.hal = si.getHardware();
     this.os = si.getOperatingSystem();
 
-    this.statsList = new ArrayList<Stats>();
-    this.statsList.addAll(
-        Arrays.asList(
-            new MemStats(),
-            new SwapStats(),
-            new FsStats(),
-            new DiskStats(),
-            new NetStats(),
-            new CpuStats(),
-            new SysStats(),
-            new TcpStats()
-        )
-    );
+    this.memStats = new MemStats();
+    this.swapStats = new SwapStats();
+    this.fsStats = new FsStats();
+    this.diskStats = new DiskStats();
+    this.netStats = new NetStats();
+    this.cpuStats = new CpuStats();
+    this.sysStats = new SysStats();
+    this.tcpStats = new TcpStats();
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    for (Stats stats : statsList) {
-      stats.emit(emitter);
-    }
+    monitorMemStats(emitter);
+    monitorSwapStats(emitter);
+    monitorFsStats(emitter);
+    monitorDiskStats(emitter);
+    monitorNetStats(emitter);
+    monitorCpuStats(emitter);
+    monitorSysStats(emitter);
+    monitorTcpStats(emitter);
     return true;
   }
 
   // Emit stats for a particular stat(mem, swap, filestore, etc) from statsList for testing
-  public void monitorStats(int statIndex, ServiceEmitter emitter)
+  public void monitorMemStats(ServiceEmitter emitter)
   {
-    statsList.get(statIndex).emit(emitter);
+    memStats.emit(emitter);
+  }
+  public void monitorSwapStats(ServiceEmitter emitter)
+  {
+    swapStats.emit(emitter);
+  }
+  public void monitorFsStats(ServiceEmitter emitter)
+  {
+    fsStats.emit(emitter);
+  }
+  public void monitorDiskStats(ServiceEmitter emitter)
+  {
+    diskStats.emit(emitter);
+  }
+  public void monitorNetStats(ServiceEmitter emitter)
+  {
+    netStats.emit(emitter);
+  }
+  public void monitorCpuStats(ServiceEmitter emitter)
+  {
+    cpuStats.emit(emitter);
+  }
+  public void monitorSysStats(ServiceEmitter emitter)
+  {
+    sysStats.emit(emitter);
+  }
+  public void monitorTcpStats(ServiceEmitter emitter)
+  {
+    tcpStats.emit(emitter);
   }
 
   /**
@@ -226,10 +255,7 @@ public class OshiSysMonitor extends FeedDefiningMonitor
                                                     .build();
         final ServiceMetricEvent.Builder builder = builder()
             .setDimension("fsDevName", fs.getVolume())
-            .setDimension("fsDirName", fs.getMount())
-            .setDimension("fsTypeName", "local")  // Only local disk types displayed
-            .setDimension("fsSysTypeName", fs.getType())
-            .setDimension("fsOptions", fs.getOptions().split(","));
+            .setDimension("fsDirName", fs.getMount());
         MonitorUtils.addDimensionsToBuilder(builder, dimensions);
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
           emitter.emit(builder.build(entry.getKey(), entry.getValue()));

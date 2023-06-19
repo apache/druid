@@ -19,6 +19,8 @@
 
 package org.apache.druid.java.util.metrics;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -30,10 +32,13 @@ import oshi.SystemInfo;
 import oshi.hardware.GlobalMemory;
 import oshi.hardware.HardwareAbstractionLayer;
 import oshi.hardware.VirtualMemory;
+import oshi.software.os.FileSystem;
+import oshi.software.os.OSFileStore;
 import oshi.software.os.OperatingSystem;
 import oshi.util.Util;
 
 import java.util.List;
+import java.util.Map;
 
 public class OshiSysMonitorTest
 {
@@ -95,7 +100,7 @@ public class OshiSysMonitorTest
 
     OshiSysMonitor m = new OshiSysMonitor(si);
     m.start();
-    m.monitorStats(STATS.MEM.ordinal(), emitter);
+    m.monitorMemStats(emitter);
     m.stop();
     Assert.assertEquals(3, emitter.getEvents().size());
     emitter.verifyEmitted("sys/mem/max", 1);
@@ -121,7 +126,7 @@ public class OshiSysMonitorTest
 
     OshiSysMonitor m = new OshiSysMonitor(si);
     m.start();
-    m.monitorStats(STATS.SWAP.ordinal(), emitter);
+    m.monitorSwapStats(emitter);
     Assert.assertEquals(4, emitter.getEvents().size());
     emitter.verifyEmitted("sys/swap/pageIn", 1);
     emitter.verifyEmitted("sys/swap/pageOut", 1);
@@ -136,11 +141,82 @@ public class OshiSysMonitorTest
     Mockito.when(swap.getSwapPagesOut()).thenReturn(250L);
     Mockito.when(swap.getSwapUsed()).thenReturn(500L);
     emitter.flush();
-    m.monitorStats(STATS.SWAP.ordinal(), emitter);
+    m.monitorSwapStats(emitter);
     emitter.verifyValue("sys/swap/pageIn", 100L);
     emitter.verifyValue("sys/swap/pageOut", 50L);
     emitter.verifyValue("sys/swap/max", 1000L);
     emitter.verifyValue("sys/swap/free", 500L);
+    m.stop();
+  }
+
+  @Test
+  public void testFsStats()
+  {
+    StubServiceEmitter emitter = new StubServiceEmitter("dev/monitor-test", "localhost:0000");
+    FileSystem fileSystem = Mockito.mock(FileSystem.class);
+    OSFileStore fs1 = Mockito.mock(OSFileStore.class);
+    OSFileStore fs2 = Mockito.mock(OSFileStore.class);
+    Mockito.when(fs1.getTotalSpace()).thenReturn(300L);
+    Mockito.when(fs1.getUsableSpace()).thenReturn(200L);
+    Mockito.when(fs1.getTotalInodes()).thenReturn(1000L);
+    Mockito.when(fs1.getFreeInodes()).thenReturn(700L);
+    Mockito.when(fs1.getVolume()).thenReturn("/dev/disk1");
+    Mockito.when(fs1.getMount()).thenReturn("/System/Volumes/boot1");
+    Mockito.when(fs2.getTotalSpace()).thenReturn(400L);
+    Mockito.when(fs2.getUsableSpace()).thenReturn(320L);
+    Mockito.when(fs2.getTotalInodes()).thenReturn(800L);
+    Mockito.when(fs2.getFreeInodes()).thenReturn(600L);
+    Mockito.when(fs2.getVolume()).thenReturn("/dev/disk2");
+    Mockito.when(fs2.getMount()).thenReturn("/System/Volumes/boot2");
+    List<OSFileStore> osFileStores = ImmutableList.of(fs1, fs2);
+    Mockito.when(fileSystem.getFileStores(true)).thenReturn(osFileStores);
+    Mockito.when(os.getFileSystem()).thenReturn(fileSystem);
+
+    OshiSysMonitor m = new OshiSysMonitor(si);
+    m.start();
+    m.monitorFsStats(emitter);
+    Assert.assertEquals(8, emitter.getEvents().size());
+    emitter.verifyEmitted("sys/fs/max", 2);
+    emitter.verifyEmitted("sys/fs/used", 2);
+    emitter.verifyEmitted("sys/fs/files/count", 2);
+    emitter.verifyEmitted("sys/fs/files/free", 2);
+    Map<String, Object> userDims1 = ImmutableMap.of(
+        "fsDevName",
+        "/dev/disk1",
+        "fsDirName",
+        "/System/Volumes/boot1"
+    );
+    List<Number> metricValues1 = emitter.getMetricValues("sys/fs/max", userDims1);
+    Assert.assertEquals(1, metricValues1.size());
+    Assert.assertEquals(300L, metricValues1.get(0));
+    metricValues1 = emitter.getMetricValues("sys/fs/used", userDims1);
+    Assert.assertEquals(1, metricValues1.size());
+    Assert.assertEquals(100L, metricValues1.get(0));
+    metricValues1 = emitter.getMetricValues("sys/fs/files/count", userDims1);
+    Assert.assertEquals(1, metricValues1.size());
+    Assert.assertEquals(1000L, metricValues1.get(0));
+    metricValues1 = emitter.getMetricValues("sys/fs/files/free", userDims1);
+    Assert.assertEquals(1, metricValues1.size());
+    Assert.assertEquals(700L, metricValues1.get(0));
+
+    Map<String, Object> userDims2 = ImmutableMap.of(
+        "fsDevName",
+        "/dev/disk2",
+        "fsDirName",
+        "/System/Volumes/boot2"
+    );
+    List<Number> metricValues2 = emitter.getMetricValues("sys/fs/max", userDims2);
+    Assert.assertEquals(1, metricValues2.size());
+    Assert.assertEquals(400L, metricValues2.get(0));
+    metricValues2 = emitter.getMetricValues("sys/fs/used", userDims2);
+    Assert.assertEquals(1, metricValues2.size());
+    Assert.assertEquals(80L, metricValues2.get(0));
+    metricValues2 = emitter.getMetricValues("sys/fs/files/count", userDims2);
+    Assert.assertEquals(1, metricValues2.size());
+    Assert.assertEquals(800L, metricValues2.get(0));
+    metricValues2 = emitter.getMetricValues("sys/fs/files/free", userDims2);
+    Assert.assertEquals(1, metricValues2.size());
+    Assert.assertEquals(600L, metricValues2.get(0));
     m.stop();
   }
 
