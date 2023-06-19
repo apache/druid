@@ -33,12 +33,10 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
-import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.BadJsonQueryException;
 import org.apache.druid.query.Query;
@@ -46,7 +44,6 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
@@ -266,48 +263,6 @@ public class QueryResource implements QueryCountStatsProvider
     void incrementInterrupted();
 
     void incrementTimedOut();
-  }
-
-  public static void attachResponseContextToHttpResponse(
-      String queryId,
-      ResponseContext responseContext,
-      Response.ResponseBuilder responseBuilder,
-      ObjectMapper jsonMapper, ResponseContextConfig responseContextConfig, DruidNode selfNode
-  ) throws JsonProcessingException
-  {
-    transferEntityTag(responseContext, responseBuilder);
-
-    DirectDruidClient.removeMagicResponseContextFields(responseContext);
-
-    // Limit the response-context header, see https://github.com/apache/druid/issues/2331
-    // Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
-    // and encodes the string using ASCII, so 1 char is = 1 byte
-    final ResponseContext.SerializationResult serializationResult = responseContext.serializeWith(
-        jsonMapper,
-        responseContextConfig.getMaxResponseContextHeaderSize()
-    );
-
-    if (serializationResult.isTruncated()) {
-      final String logToPrint = StringUtils.format(
-          "Response Context truncated for id [%s]. Full context is [%s].",
-          queryId,
-          serializationResult.getFullResult()
-      );
-      if (responseContextConfig.shouldFailOnTruncatedResponseContext()) {
-        log.error(logToPrint);
-        throw new QueryInterruptedException(
-            new TruncatedResponseContextException(
-                "Serialized response context exceeds the max size[%s]",
-                responseContextConfig.getMaxResponseContextHeaderSize()
-            ),
-            selfNode.getHostAndPortToUse()
-        );
-      } else {
-        log.warn(logToPrint);
-      }
-    }
-
-    responseBuilder.header(HEADER_RESPONSE_CONTEXT, serializationResult.getResult());
   }
 
   private Query<?> readQuery(
