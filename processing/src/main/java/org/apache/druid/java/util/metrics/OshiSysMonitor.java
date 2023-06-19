@@ -103,6 +103,31 @@ public class OshiSysMonitor extends FeedDefiningMonitor
     );
   }
 
+  // Create an object with mocked systemInfo for testing purposes
+  public OshiSysMonitor(SystemInfo systemInfo)
+  {
+    super("metrics");
+    this.dimensions = ImmutableMap.of();
+
+    this.si = systemInfo;
+    this.hal = si.getHardware();
+    this.os = si.getOperatingSystem();
+
+    this.statsList = new ArrayList<Stats>();
+    this.statsList.addAll(
+        Arrays.asList(
+            new MemStats(),
+            new SwapStats(),
+            new FsStats(),
+            new DiskStats(),
+            new NetStats(),
+            new CpuStats(),
+            new SysStats(),
+            new TcpStats()
+        )
+    );
+  }
+
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
@@ -110,6 +135,12 @@ public class OshiSysMonitor extends FeedDefiningMonitor
       stats.emit(emitter);
     }
     return true;
+  }
+
+  // Emit stats for a particular stat(mem, swap, filestore, etc) from statsList for testing
+  public void monitorStats(int statIndex, ServiceEmitter emitter)
+  {
+    statsList.get(statIndex).emit(emitter);
   }
 
   /**
