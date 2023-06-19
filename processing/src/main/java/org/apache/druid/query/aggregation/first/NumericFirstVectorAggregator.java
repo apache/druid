@@ -79,7 +79,6 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
       }
     }
 
-    // find the first non-null value
     final long earliestTime = timeVector[index];
     if (earliestTime < firstTime) {
       firstTime = earliestTime;

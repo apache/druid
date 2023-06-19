@@ -1370,6 +1370,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOffHeapEarliestGroupBy()
   {
+    notMsqCompatible();
+
     testQuery(
         "SELECT dim2, EARLIEST(m1) AS val1 FROM foo GROUP BY dim2",
         ImmutableList.of(
@@ -14745,6 +14747,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testEarliestVectorAggregators()
   {
+    notMsqCompatible();
+
     testQuery(
         "SELECT "
         + "EARLIEST(cnt), EARLIEST(cnt + 1), EARLIEST(m1), EARLIEST(m1+1) "

@@ -38,7 +38,7 @@ public class StringFirstVectorAggregator implements VectorAggregator
   private final BaseLongVectorValueSelector timeSelector;
   private final VectorObjectSelector valueSelector;
   private final int maxStringBytes;
-  protected long firstTime;
+  //protected long firstTime;
 
   public StringFirstVectorAggregator(
       BaseLongVectorValueSelector timeSelector,
@@ -65,7 +65,7 @@ public class StringFirstVectorAggregator implements VectorAggregator
     }
     long[] times = timeSelector.getLongVector();
     Object[] objectsWhichMightBeStrings = valueSelector.getObjectVector();
-    firstTime = buf.getLong(position);
+    long firstTime = buf.getLong(position);
     int index;
     for (int i = startRow; i < endRow; i++) {
       if (times[i] > firstTime) {
@@ -80,7 +80,7 @@ public class StringFirstVectorAggregator implements VectorAggregator
             index
         );
         if (inPair != null) {
-          final long firstTime = buf.getLong(position);
+          firstTime = buf.getLong(position);
           if (inPair.lhs < firstTime) {
             StringFirstLastUtils.writePair(
                 buf,

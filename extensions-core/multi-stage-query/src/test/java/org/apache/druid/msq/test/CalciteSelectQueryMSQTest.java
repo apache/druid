@@ -156,27 +156,9 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
 
   }
 
-  // The numeric varieties of the EARLIEST and LATEST aggregators do not work properly.
-  // Attempting to use the numeric varieties of these aggregators lead to an error
-  // like java.lang.ClassCastException: class java.lang.Double cannot be cast
-  // to class org.apache.druid.collections.SerializablePair.
   @Ignore
   @Override
   public void testQueryWithMoreThanMaxNumericInFilter()
-  {
-
-  }
-
-  // MSQ currently does not su
-  @Ignore
-  @Override
-  public void testEarliestVectorAggregators()
-  {
-
-  }
-  @Ignore
-  @Override
-  public void testOffHeapEarliestGroupBy()
   {
 
   }

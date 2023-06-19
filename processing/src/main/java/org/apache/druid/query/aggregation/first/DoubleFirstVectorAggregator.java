@@ -25,9 +25,6 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-/**
- * Vectorized version of on heap 'earliest' aggregator for column selectors with type LONG..
- */
 public class DoubleFirstVectorAggregator extends NumericFirstVectorAggregator
 {
   double firstValue;
