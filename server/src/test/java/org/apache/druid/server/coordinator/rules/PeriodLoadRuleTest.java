@@ -55,7 +55,8 @@ public class PeriodLoadRuleTest
     PeriodLoadRule rule = new PeriodLoadRule(
         new Period("P5000Y"),
         false,
-        ImmutableMap.of("", 0)
+        ImmutableMap.of("", 0),
+        null
     );
 
     Assert.assertTrue(rule.appliesTo(BUILDER.interval(Intervals.of("2012-01-01/2012-12-31")).build(), now));
@@ -70,7 +71,8 @@ public class PeriodLoadRuleTest
     PeriodLoadRule rule = new PeriodLoadRule(
         new Period("P1M"),
         false,
-        ImmutableMap.of("", 0)
+        ImmutableMap.of("", 0),
+        null
     );
 
     Assert.assertTrue(rule.appliesTo(BUILDER.interval(new Interval(now.minusWeeks(1), now)).build(), now));
@@ -97,7 +99,8 @@ public class PeriodLoadRuleTest
     PeriodLoadRule rule = new PeriodLoadRule(
         new Period("P1M"),
         false,
-        ImmutableMap.of("", 0)
+        ImmutableMap.of("", 0),
+        null
     );
 
     Assert.assertTrue(
@@ -123,12 +126,14 @@ public class PeriodLoadRuleTest
     PeriodLoadRule includeFutureRule = new PeriodLoadRule(
         new Period("P2D"),
         true,
-        ImmutableMap.of("", 0)
+        ImmutableMap.of("", 0),
+        null
     );
     PeriodLoadRule notIncludeFutureRule = new PeriodLoadRule(
         new Period("P2D"),
         false,
-        ImmutableMap.of("", 0)
+        ImmutableMap.of("", 0),
+        null
     );
 
     Assert.assertTrue(
@@ -208,7 +213,7 @@ public class PeriodLoadRuleTest
   @Test(expected = IAE.class)
   public void testCreatingNegativeTieredReplicants()
   {
-    new PeriodLoadRule(Period.days(1), true, ImmutableMap.of(DruidServer.DEFAULT_TIER, -1));
+    new PeriodLoadRule(Period.days(1), true, ImmutableMap.of(DruidServer.DEFAULT_TIER, -1), true);
   }
 
   @Test(expected = IAE.class)
@@ -220,7 +225,8 @@ public class PeriodLoadRuleTest
     PeriodLoadRule rule = new PeriodLoadRule(
         Period.days(1),
         true,
-        tieredReplicants
+        tieredReplicants,
+        true
     );
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();

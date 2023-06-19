@@ -56,7 +56,7 @@ public class BalanceSegmentsProfiler
   List<DataSegment> segments = new ArrayList<>();
   ServiceEmitter emitter;
   MetadataRuleManager manager;
-  PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"), null, ImmutableMap.of("normal", 3));
+  PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"), null, ImmutableMap.of("normal", 3), null);
   List<Rule> rules = ImmutableList.of(loadRule);
 
   @Before

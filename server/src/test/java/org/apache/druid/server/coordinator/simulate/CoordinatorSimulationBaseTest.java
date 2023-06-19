@@ -289,7 +289,7 @@ public abstract class CoordinatorSimulationBaseTest implements
 
     Rule forever()
     {
-      return new ForeverLoadRule(tieredReplicants);
+      return new ForeverLoadRule(tieredReplicants, null);
     }
   }
 }

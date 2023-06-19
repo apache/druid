@@ -40,11 +40,6 @@ public class IntervalLoadRule extends LoadRule
   private final Map<String, Integer> tieredReplicants;
   private final boolean allowEmptyTieredReplicants;
 
-  public IntervalLoadRule(Interval interval, Map<String, Integer> tieredReplicants)
-  {
-    this(interval, tieredReplicants, null);
-  }
-
   @JsonCreator
   public IntervalLoadRule(
       @JsonProperty("interval") Interval interval,

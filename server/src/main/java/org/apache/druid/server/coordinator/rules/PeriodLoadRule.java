@@ -51,11 +51,6 @@ public class PeriodLoadRule extends LoadRule
    */
   private final boolean allowEmptyTieredReplicants;
 
-  public PeriodLoadRule(Period period, Boolean includeFuture, Map<String, Integer> tieredReplicants)
-  {
-    this(period, includeFuture, tieredReplicants, null);
-  }
-
   @JsonCreator
   public PeriodLoadRule(
       @JsonProperty("period") Period period,

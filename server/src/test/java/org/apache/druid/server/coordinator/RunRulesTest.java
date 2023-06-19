@@ -114,7 +114,8 @@ public class RunRulesTest
         Collections.singletonList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
-                ImmutableMap.of("normal", 2)
+                ImmutableMap.of("normal", 2),
+                null
             )
         )).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
@@ -172,7 +173,8 @@ public class RunRulesTest
         Collections.singletonList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
-                ImmutableMap.of("hot", 2, "normal", 2)
+                ImmutableMap.of("hot", 2, "normal", 2),
+                null
             )
         )).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
@@ -242,15 +244,18 @@ public class RunRulesTest
         Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"),
-                ImmutableMap.of("hot", 1)
+                ImmutableMap.of("hot", 1),
+                null
             ),
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.of("normal", 1)
+                ImmutableMap.of("normal", 1),
+                null
             ),
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
-                ImmutableMap.of("cold", 1)
+                ImmutableMap.of("cold", 1),
+                null
             )
         )).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
@@ -353,11 +358,13 @@ public class RunRulesTest
         Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T06:00:00.000Z"),
-                ImmutableMap.of("hot", 2)
+                ImmutableMap.of("hot", 2),
+                null
             ),
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
-                ImmutableMap.of("cold", 1)
+                ImmutableMap.of("cold", 1),
+                null
             )
         )
     ).atLeastOnce();
@@ -422,11 +429,13 @@ public class RunRulesTest
         Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.of("hot", 1)
+                ImmutableMap.of("hot", 1),
+                null
             ),
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
-                ImmutableMap.of("normal", 1)
+                ImmutableMap.of("normal", 1),
+                null
             )
         )
     ).atLeastOnce();
@@ -488,11 +497,13 @@ public class RunRulesTest
         Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.of("hot", 1)
+                ImmutableMap.of("hot", 1),
+                null
             ),
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"),
-                ImmutableMap.of("normal", 1)
+                ImmutableMap.of("normal", 1),
+                null
             )
         )
     ).atLeastOnce();
@@ -538,7 +549,8 @@ public class RunRulesTest
             Collections.singletonList(
                 new IntervalLoadRule(
                     Intervals.of("2012-01-02T00:00:00.000Z/2012-01-03T00:00:00.000Z"),
-                    ImmutableMap.of("normal", 1)
+                    ImmutableMap.of("normal", 1),
+                    null
                 )
             )
         )
@@ -585,7 +597,8 @@ public class RunRulesTest
         Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.of("normal", 1)
+                ImmutableMap.of("normal", 1),
+                null
             ),
             new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
@@ -634,7 +647,8 @@ public class RunRulesTest
         Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.of("normal", 1)
+                ImmutableMap.of("normal", 1),
+                null
             ),
             new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
@@ -698,7 +712,8 @@ public class RunRulesTest
         Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.of("hot", 1)
+                ImmutableMap.of("hot", 1),
+                null
             ),
             new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
@@ -751,7 +766,8 @@ public class RunRulesTest
         Lists.newArrayList(
             new IntervalLoadRule(
                 Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T12:00:00.000Z"),
-                ImmutableMap.of("hot", 1)
+                ImmutableMap.of("hot", 1),
+                null
             ),
             new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
@@ -801,7 +817,8 @@ public class RunRulesTest
             Collections.singletonList(
                 new IntervalLoadRule(
                     Intervals.of("2012-01-01T00:00:00.000Z/2012-01-01T01:00:00.000Z"),
-                    ImmutableMap.of("normal", 0)
+                    ImmutableMap.of("normal", 0),
+                    null
                 )
             )
         )
@@ -879,7 +896,8 @@ public class RunRulesTest
             Collections.singletonList(
                 new IntervalLoadRule(
                     Intervals.of("2012-01-01T00:00:00.000Z/2013-01-01T00:00:00.000Z"),
-                    ImmutableMap.of("hot", 2)
+                    ImmutableMap.of("hot", 2),
+                    null
                 )
             )
         )
@@ -981,7 +999,8 @@ public class RunRulesTest
                     ImmutableMap.of(
                         "hot", 1,
                         DruidServer.DEFAULT_TIER, 1
-                    )
+                    ),
+                    null
                 )
             )
         )
@@ -1046,7 +1065,8 @@ public class RunRulesTest
         .andReturn(
             Collections.singletonList(new IntervalLoadRule(
                     Intervals.of("2012-01-01T00:00:00.000Z/2013-01-02T00:00:00.000Z"),
-                    ImmutableMap.of("normal", 1)
+                    ImmutableMap.of("normal", 1),
+                    null
                 )
             )
         )
@@ -1144,7 +1164,7 @@ public class RunRulesTest
     mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Collections.singletonList(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1)))).atLeastOnce();
+        Collections.singletonList(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1), null))).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = DruidClusterBuilder
@@ -1210,7 +1230,8 @@ public class RunRulesTest
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
         Collections.singletonList(
             new ForeverLoadRule(
-                ImmutableMap.of(DruidServer.DEFAULT_TIER, 3)
+                ImmutableMap.of(DruidServer.DEFAULT_TIER, 3),
+                null
             )
         )).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
@@ -1278,7 +1299,8 @@ public class RunRulesTest
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
         Collections.singletonList(
             new ForeverLoadRule(
-                ImmutableMap.of(DruidServer.DEFAULT_TIER, 1)
+                ImmutableMap.of(DruidServer.DEFAULT_TIER, 1),
+                null
             )
         )).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
@@ -1337,7 +1359,8 @@ public class RunRulesTest
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
         Collections.singletonList(
             new ForeverLoadRule(
-                ImmutableMap.of(DruidServer.DEFAULT_TIER, numReplicants)
+                ImmutableMap.of(DruidServer.DEFAULT_TIER, numReplicants),
+                null
             )
         )).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
@@ -1397,7 +1420,8 @@ public class RunRulesTest
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
         Collections.singletonList(
             new ForeverLoadRule(
-                ImmutableMap.of(DruidServer.DEFAULT_TIER, numReplicants)
+                ImmutableMap.of(DruidServer.DEFAULT_TIER, numReplicants),
+                null
             )
         )).atLeastOnce();
     EasyMock.replay(databaseRuleManager);

@@ -37,11 +37,6 @@ public class ForeverLoadRule extends LoadRule
   private final Map<String, Integer> tieredReplicants;
   private final boolean allowEmptyTieredReplicants;
 
-  public ForeverLoadRule(Map<String, Integer> tieredReplicants)
-  {
-    this(tieredReplicants, null);
-  }
-
   @JsonCreator
   public ForeverLoadRule(
       @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants,
