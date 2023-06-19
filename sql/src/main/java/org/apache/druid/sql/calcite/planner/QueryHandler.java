@@ -54,11 +54,11 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -109,10 +109,15 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   }
 
   @Override
-  public void validate() throws ValidationException
+  public void validate()
   {
     CalcitePlanner planner = handlerContext.planner();
-    validatedQueryNode = planner.validate(rewriteParameters());
+    try {
+      validatedQueryNode = planner.validate(rewriteParameters());
+    }
+    catch (ValidationException e) {
+      throw DruidPlanner.translateException(e);
+    }
 
     final SqlValidator validator = planner.getValidator();
     SqlResourceCollectorShuttle resourceCollectorShuttle = new SqlResourceCollectorShuttle(
@@ -186,7 +191,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   }
 
   @Override
-  public PlannerResult plan() throws ValidationException
+  public PlannerResult plan()
   {
     prepare();
     final Set<RelOptTable> bindableTables = getBindableTables(rootQueryRel.rel);
@@ -199,15 +204,12 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
         // Consider BINDABLE convention when necessary. Used for metadata tables.
 
         if (!handlerContext.plannerContext().featureAvailable(EngineFeature.ALLOW_BINDABLE_PLAN)) {
-          throw new ValidationException(
-              StringUtils.format(
-                  "Cannot query table%s %s with SQL engine '%s'.",
-                  bindableTables.size() != 1 ? "s" : "",
-                  bindableTables.stream()
-                                .map(table -> Joiner.on(".").join(table.getQualifiedName()))
-                                .collect(Collectors.joining(", ")),
-                  handlerContext.engine().name()
-              )
+          throw InvalidSqlInput.exception(
+              "Cannot query table(s) [%s] with SQL engine [%s]",
+              bindableTables.stream()
+                            .map(table -> Joiner.on(".").join(table.getQualifiedName()))
+                            .collect(Collectors.joining(", ")),
+              handlerContext.engine().name()
           );
         }
 
@@ -217,20 +219,30 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
         return planForDruid();
       }
     }
-    catch (Exception e) {
-      Throwable cannotPlanException = Throwables.getCauseOfType(e, RelOptPlanner.CannotPlanException.class);
-      if (null == cannotPlanException) {
-        // Not a CannotPlanException, rethrow without logging.
+    catch (RelOptPlanner.CannotPlanException e) {
+      throw buildSQLPlanningError(e);
+    }
+    catch (RuntimeException e) {
+      if (e instanceof DruidException) {
         throw e;
       }
 
-      Logger logger = log;
-      if (!handlerContext.queryContext().isDebug()) {
-        logger = log.noStackTrace();
+      // Calcite throws a Runtime exception as the result of an IllegalTargetException
+      // as the result of invoking a method dynamically, when that method throws an
+      // exception. Unwrap the exception if this exception is from Calcite.
+      RelOptPlanner.CannotPlanException cpe = Throwables.getCauseOfType(e, RelOptPlanner.CannotPlanException.class);
+      if (cpe != null) {
+        throw buildSQLPlanningError(cpe);
       }
-      String errorMessage = buildSQLPlanningErrorMessage(cannotPlanException);
-      logger.warn(e, errorMessage);
-      throw new UnsupportedSQLQueryException(errorMessage);
+      DruidException de = Throwables.getCauseOfType(e, DruidException.class);
+      if (de != null) {
+        throw de;
+      }
+      throw DruidPlanner.translateException(e);
+    }
+    catch (Exception e) {
+      // Not sure what this is. Should it have been translated sooner?
+      throw DruidPlanner.translateException(e);
     }
   }
 
@@ -277,10 +289,10 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
    * things that are not directly translatable to native Druid queries such
    * as system tables and just a general purpose (but definitely not optimized)
    * fall-back.
-   *
+   * <p>
    * See {@link #planWithDruidConvention} which will handle things which are
    * directly translatable to native Druid queries.
-   *
+   * <p>
    * The bindable path handles parameter substitution of any values not
    * bound by the earlier steps.
    */
@@ -316,43 +328,43 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     } else {
       final BindableRel theRel = bindableRel;
       final DataContext dataContext = plannerContext.createDataContext(
-              planner.getTypeFactory(),
-              plannerContext.getParameters()
+          planner.getTypeFactory(),
+          plannerContext.getParameters()
       );
       final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> {
         final Enumerable<?> enumerable = theRel.bind(dataContext);
         final Enumerator<?> enumerator = enumerable.enumerator();
         return QueryResponse.withEmptyContext(
             Sequences.withBaggage(new BaseSequence<>(
-              new BaseSequence.IteratorMaker<Object[], QueryHandler.EnumeratorIterator<Object[]>>()
-              {
-                @Override
-                public QueryHandler.EnumeratorIterator<Object[]> make()
+                new BaseSequence.IteratorMaker<Object[], QueryHandler.EnumeratorIterator<Object[]>>()
                 {
-                  return new QueryHandler.EnumeratorIterator<>(new Iterator<Object[]>()
+                  @Override
+                  public QueryHandler.EnumeratorIterator<Object[]> make()
                   {
-                    @Override
-                    public boolean hasNext()
+                    return new QueryHandler.EnumeratorIterator<>(new Iterator<Object[]>()
                     {
-                      return enumerator.moveNext();
-                    }
+                      @Override
+                      public boolean hasNext()
+                      {
+                        return enumerator.moveNext();
+                      }
 
-                    @Override
-                    public Object[] next()
-                    {
-                      return (Object[]) enumerator.current();
-                    }
-                  });
+                      @Override
+                      public Object[] next()
+                      {
+                        return (Object[]) enumerator.current();
+                      }
+                    });
+                  }
+
+                  @Override
+                  public void cleanup(QueryHandler.EnumeratorIterator<Object[]> iterFromMake)
+                  {
+
+                  }
                 }
-
-                @Override
-                public void cleanup(QueryHandler.EnumeratorIterator<Object[]> iterFromMake)
-                {
-
-                }
-              }
-          ), enumerator::close)
-      );
+            ), enumerator::close)
+        );
       };
       return new PlannerResult(resultsSupplier, rootQueryRel.validatedRowType);
     }
@@ -617,12 +629,11 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
    * This method wraps the root with a {@link LogicalSort} that applies a limit (no ordering change). If the outer rel
    * is already a {@link Sort}, we can merge our outerLimit into it, similar to what is going on in
    * {@link org.apache.druid.sql.calcite.rule.SortCollapseRule}.
-   *
+   * <p>
    * The {@link PlannerContext#CTX_SQL_OUTER_LIMIT} flag that controls this wrapping is meant for internal use only by
    * the web console, allowing it to apply a limit to queries without rewriting the original SQL.
    *
    * @param root root node
-   *
    * @return root node wrapped with a limiting logical sort if a limit is specified in the query context.
    */
   @Nullable
@@ -666,23 +677,28 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
   protected abstract QueryMaker buildQueryMaker(RelRoot rootQueryRel) throws ValidationException;
 
-  private String buildSQLPlanningErrorMessage(Throwable exception)
+  private DruidException buildSQLPlanningError(RelOptPlanner.CannotPlanException exception)
   {
     String errorMessage = handlerContext.plannerContext().getPlanningError();
     if (null == errorMessage && exception instanceof UnsupportedSQLQueryException) {
       errorMessage = exception.getMessage();
     }
-    if (null == errorMessage) {
-      errorMessage = "Please check Broker logs for additional details.";
+    if (errorMessage == null) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .build(exception, "Unhandled Query Planning Failure, see broker logs for details");
     } else {
       // Planning errors are more like hints: it isn't guaranteed that the planning error is actually what went wrong.
-      errorMessage = "Possible error: " + errorMessage;
+      // For this reason, we consider these as targetting a more expert persona, i.e. the admin instead of the actual
+      // user.
+      throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              exception,
+                              "Query planning failed for unknown reason, our best guess is this [%s]",
+                              errorMessage
+                          );
     }
-    // Finally, add the query itself to error message that user will get.
-    return StringUtils.format(
-        "Query not supported. %s SQL was: %s", errorMessage,
-        handlerContext.plannerContext().getSql()
-    );
   }
 
   public static class SelectHandler extends QueryHandler
@@ -690,19 +706,17 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     public SelectHandler(
         HandlerContext handlerContext,
         SqlNode sqlNode,
-        SqlExplain explain)
+        SqlExplain explain
+    )
     {
       super(handlerContext, sqlNode, explain);
     }
 
     @Override
-    public void validate() throws ValidationException
+    public void validate()
     {
       if (!handlerContext.plannerContext().featureAvailable(EngineFeature.CAN_SELECT)) {
-        throw new ValidationException(StringUtils.format(
-            "Cannot execute SELECT with SQL engine '%s'.",
-            handlerContext.engine().name())
-        );
+        throw InvalidSqlInput.exception("Cannot execute SELECT with SQL engine [%s]", handlerContext.engine().name());
       }
       super.validate();
     }
@@ -728,7 +742,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     {
       return handlerContext.engine().buildQueryMakerForSelect(
           rootQueryRel,
-          handlerContext.plannerContext());
+          handlerContext.plannerContext()
+      );
     }
   }
 

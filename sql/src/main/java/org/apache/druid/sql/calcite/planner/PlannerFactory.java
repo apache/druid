@@ -31,13 +31,11 @@ import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.volcano.DruidVolcanoCost;
 import org.apache.calcite.rel.RelCollationTraitDef;
-import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -127,12 +125,7 @@ public class PlannerFactory extends PlannerToolbox
     final DruidPlanner thePlanner = createPlanner(engine, sql, queryContext, null);
     thePlanner.getPlannerContext()
               .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
-    try {
-      thePlanner.validate();
-    }
-    catch (SqlParseException | ValidationException e) {
-      throw new RuntimeException(e);
-    }
+    thePlanner.validate();
     thePlanner.authorize(ra -> Access.OK, ImmutableSet.of());
     return thePlanner;
   }

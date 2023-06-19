@@ -25,13 +25,16 @@ import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
+import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -158,43 +161,27 @@ public abstract class CoordinatorSimulationBaseTest implements
 
   // Utility methods
 
-  /**
-   * Creates a {@link CoordinatorDynamicConfig} with the specified values of:
-   * {@code maxSegmentsToMove, maxSegmentsInNodeLoadingQueue and replicationThrottleLimit}.
-   * The created config always has {@code useBatchedSegmentSampler=true} to avoid
-   * flakiness in tests.
-   *
-   * @see CoordinatorSimulationBaseTest
-   */
-  static CoordinatorDynamicConfig createDynamicConfig(
-      int maxSegmentsToMove,
-      int maxSegmentsInNodeLoadingQueue,
-      int replicationThrottleLimit
-  )
+  static Map<String, Object> filterByServer(DruidServer server)
   {
-    return CoordinatorDynamicConfig.builder()
-                                   .withMaxSegmentsToMove(maxSegmentsToMove)
-                                   .withReplicationThrottleLimit(replicationThrottleLimit)
-                                   .withMaxSegmentsInNodeLoadingQueue(maxSegmentsInNodeLoadingQueue)
-                                   .withUseBatchedSegmentSampler(true)
-                                   .build();
+    return filter(Dimension.SERVER, server.getName());
+  }
+
+  static Map<String, Object> filterByTier(String tier)
+  {
+    return filter(Dimension.TIER, tier);
+  }
+
+  static Map<String, Object> filterByDatasource(String datasource)
+  {
+    return filter(Dimension.DATASOURCE, datasource);
   }
 
   /**
    * Creates a map containing dimension key-values to filter out metric events.
    */
-  static Map<String, Object> filter(String... dimensionValues)
+  static Map<String, Object> filter(Dimension dimension, String value)
   {
-    if (dimensionValues.length < 2 || dimensionValues.length % 2 == 1) {
-      throw new IllegalArgumentException("Dimension key-values must be specified in pairs.");
-    }
-
-    final Map<String, Object> filters = new HashMap<>();
-    for (int i = 0; i < dimensionValues.length; ) {
-      filters.put(dimensionValues[i], dimensionValues[i + 1]);
-      i += 2;
-    }
-    return filters;
+    return Collections.singletonMap(dimension.reportedName(), value);
   }
 
   /**
@@ -204,7 +191,7 @@ public abstract class CoordinatorSimulationBaseTest implements
   static DruidServer createHistorical(int uniqueIdInTier, String tier, long serverSizeMb)
   {
     final String name = tier + "__" + "hist__" + uniqueIdInTier;
-    return new DruidServer(name, name, name, serverSizeMb, ServerType.HISTORICAL, tier, 1);
+    return new DruidServer(name, name, name, serverSizeMb << 20, ServerType.HISTORICAL, tier, 1);
   }
 
   // Utility and constant holder classes
@@ -219,16 +206,16 @@ public abstract class CoordinatorSimulationBaseTest implements
   {
     static final String T1 = "tier_t1";
     static final String T2 = "tier_t2";
-    static final String T3 = "tier_t3";
   }
 
   static class Metric
   {
     static final String ASSIGNED_COUNT = "segment/assigned/count";
     static final String MOVED_COUNT = "segment/moved/count";
-    static final String UNMOVED_COUNT = "segment/unmoved/count";
     static final String DROPPED_COUNT = "segment/dropped/count";
     static final String LOAD_QUEUE_COUNT = "segment/loadQueue/count";
+    static final String DROP_QUEUE_COUNT = "segment/dropQueue/count";
+    static final String CANCELLED_ACTIONS = "segment/loadQueue/cancelled";
   }
 
   static class Segments
@@ -290,6 +277,17 @@ public abstract class CoordinatorSimulationBaseTest implements
     Rule forever()
     {
       return new ForeverLoadRule(tieredReplicants);
+    }
+  }
+
+  /**
+   * Builder for a broadcast rule.
+   */
+  static class Broadcast
+  {
+    static Rule forever()
+    {
+      return new ForeverBroadcastDistributionRule();
     }
   }
 }
