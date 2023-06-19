@@ -27,8 +27,8 @@ import React, { useCallback, useState } from 'react';
 import { useStore } from 'zustand';
 
 import { Loader } from '../../../components';
-import type { Execution } from '../../../druid-models';
-import { WorkbenchQuery } from '../../../druid-models';
+import type { TaskStatusWithCanceled } from '../../../druid-models';
+import { Execution, WorkbenchQuery } from '../../../druid-models';
 import { cancelTaskExecution, getTaskExecution } from '../../../helpers';
 import { useClock, useInterval, useQueryManager } from '../../../hooks';
 import { AppToaster } from '../../../singletons';
@@ -38,9 +38,7 @@ import { workStateStore } from '../work-state-store';
 
 import './recent-query-task-panel.scss';
 
-type TaskStatus = 'RUNNING' | 'WAITING' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELED';
-
-function statusToIconAndColor(status: TaskStatus): [IconName, string] {
+function statusToIconAndColor(status: TaskStatusWithCanceled): [IconName, string] {
   switch (status) {
     case 'RUNNING':
       return [IconNames.REFRESH, '#2167d5'];
@@ -59,7 +57,7 @@ function statusToIconAndColor(status: TaskStatus): [IconName, string] {
 }
 
 interface RecentQueryEntry {
-  taskStatus: TaskStatus;
+  taskStatus: TaskStatusWithCanceled;
   taskId: string;
   datasource: string;
   createdTime: string;
@@ -69,7 +67,7 @@ interface RecentQueryEntry {
 
 function formatDetail(entry: RecentQueryEntry): string | undefined {
   const lines: string[] = [];
-  if (entry.datasource !== WorkbenchQuery.INLINE_DATASOURCE_MARKER) {
+  if (entry.datasource !== Execution.INLINE_DATASOURCE_MARKER) {
     lines.push(`Datasource: ${entry.datasource}`);
   }
   if (entry.errorMessage) {
@@ -191,7 +189,7 @@ LIMIT 100`,
                   }}
                 />
                 {w.taskStatus === 'SUCCESS' &&
-                  w.datasource !== WorkbenchQuery.INLINE_DATASOURCE_MARKER && (
+                  w.datasource !== Execution.INLINE_DATASOURCE_MARKER && (
                     <MenuItem
                       icon={IconNames.APPLICATION}
                       text={`SELECT * FROM ${T(w.datasource)}`}
@@ -241,17 +239,17 @@ LIMIT 100`,
                     <Icon
                       className="output-icon"
                       icon={
-                        w.datasource === WorkbenchQuery.INLINE_DATASOURCE_MARKER
+                        w.datasource === Execution.INLINE_DATASOURCE_MARKER
                           ? IconNames.APPLICATION
                           : IconNames.CLOUD_UPLOAD
                       }
                     />
                     <div
                       className={classNames('output-datasource', {
-                        query: w.datasource === WorkbenchQuery.INLINE_DATASOURCE_MARKER,
+                        query: w.datasource === Execution.INLINE_DATASOURCE_MARKER,
                       })}
                     >
-                      {w.datasource === WorkbenchQuery.INLINE_DATASOURCE_MARKER
+                      {w.datasource === Execution.INLINE_DATASOURCE_MARKER
                         ? 'data in report'
                         : w.datasource}
                     </div>

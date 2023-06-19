@@ -71,8 +71,6 @@ export interface WorkbenchQueryValue {
 }
 
 export class WorkbenchQuery {
-  static INLINE_DATASOURCE_MARKER = '__query_select';
-
   private static enabledQueryEngines: DruidEngine[] = ['native', 'sql-native'];
 
   static blank(): WorkbenchQuery {
@@ -622,6 +620,7 @@ export class WorkbenchQuery {
     }
 
     if (engine === 'sql-msq-task') {
+      apiQuery.context.executionMode ??= 'async';
       apiQuery.context.finalizeAggregations ??= !ingestQuery;
       apiQuery.context.groupByEnableMultiValueUnnesting ??= !ingestQuery;
     }

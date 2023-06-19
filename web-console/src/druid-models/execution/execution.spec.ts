@@ -20,16 +20,13 @@ import { Execution } from './execution';
 import { EXECUTION_INGEST_COMPLETE } from './execution-ingest-complete.mock';
 
 describe('Execution', () => {
-  describe('.fromTaskDetail', () => {
+  describe('.fromTaskReport', () => {
     it('fails for bad status (error: null)', () => {
       expect(() =>
-        Execution.fromTaskPayloadAndReport(
-          {} as any,
-          {
-            asyncResultId: 'multi-stage-query-sql-1392d806-c17f-4937-94ee-8fa0a3ce1566',
-            error: null,
-          } as any,
-        ),
+        Execution.fromTaskReport({
+          asyncResultId: 'multi-stage-query-sql-1392d806-c17f-4937-94ee-8fa0a3ce1566',
+          error: null,
+        } as any),
       ).toThrowError('Invalid payload');
     });
 

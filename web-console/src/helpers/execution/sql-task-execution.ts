@@ -19,7 +19,7 @@
 import type { AxiosResponse, CancelToken } from 'axios';
 import { L, QueryResult } from 'druid-query-toolkit';
 
-import type { QueryContext } from '../../druid-models';
+import type { AsyncStatusResponse, QueryContext } from '../../druid-models';
 import { Execution } from '../../druid-models';
 import { Api } from '../../singletons';
 import {
@@ -31,6 +31,7 @@ import {
 } from '../../utils';
 import { maybeGetClusterCapacity } from '../capacity';
 
+const USE_TASK_REPORTS = false;
 const WAIT_FOR_SEGMENT_METADATA_TIMEOUT = 180000; // 3 minutes to wait until segments appear in the metadata
 const WAIT_FOR_SEGMENT_LOAD_TIMEOUT = 540000; // 9 minutes to wait for segments to load at all
 
@@ -85,27 +86,32 @@ export async function submitTaskQuery(
     }
   }
 
-  let sqlTaskResp: AxiosResponse;
-
+  let sqlAsyncResp: AxiosResponse<AsyncStatusResponse>;
   try {
-    sqlTaskResp = await Api.instance.post(`/druid/v2/sql/task`, jsonQuery, { cancelToken });
+    sqlAsyncResp = await Api.instance.post<AsyncStatusResponse>(
+      `/druid/v2/sql/statements`,
+      jsonQuery,
+      {
+        cancelToken,
+      },
+    );
   } catch (e) {
-    const druidError = deepGet(e, 'response.data.error');
+    const druidError = deepGet(e, 'response.data');
     if (!druidError) throw e;
     throw new DruidError(druidError, prefixLines);
   }
 
-  const sqlTaskPayload = sqlTaskResp.data;
+  const sqlAsyncStatus = sqlAsyncResp.data;
 
-  if (!sqlTaskPayload.taskId) {
-    if (!Array.isArray(sqlTaskPayload)) throw new Error('unexpected task payload');
+  if (!sqlAsyncStatus.queryId) {
+    if (!Array.isArray(sqlAsyncStatus)) throw new Error('unexpected task payload');
     return Execution.fromResult(
       'sql-msq-task',
-      QueryResult.fromRawResult(sqlTaskPayload, false, true, true, true),
+      QueryResult.fromRawResult(sqlAsyncStatus, false, true, true, true),
     );
   }
 
-  let execution = Execution.fromTaskSubmit(sqlTaskPayload, sqlQuery, context);
+  let execution = Execution.fromAsyncStatus(sqlAsyncStatus, sqlQuery, context);
 
   if (onSubmitted) {
     onSubmitted(execution.id);
@@ -161,9 +167,7 @@ export async function updateExecutionWithTaskIfNeeded(
   if (!execution.isWaitingForQuery()) return execution;
 
   // Inherit old payload so as not to re-query it
-  return execution.updateWith(
-    await getTaskExecution(execution.id, execution._payload, cancelToken),
-  );
+  return await getTaskExecution(execution.id, execution._payload, cancelToken);
 }
 
 export async function getTaskExecution(
@@ -173,59 +177,68 @@ export async function getTaskExecution(
 ): Promise<Execution> {
   const encodedId = Api.encodePath(id);
 
-  let taskPayloadResp: AxiosResponse | undefined;
-  if (!taskPayloadOverride) {
+  let execution: Execution | undefined;
+
+  if (USE_TASK_REPORTS) {
+    let taskReport: any;
     try {
-      taskPayloadResp = await Api.instance.get(`/druid/indexer/v1/task/${encodedId}`, {
+      taskReport = (
+        await Api.instance.get(`/druid/indexer/v1/task/${encodedId}/reports`, {
+          cancelToken,
+        })
+      ).data;
+    } catch (e) {
+      if (Api.isNetworkError(e)) throw e;
+    }
+    if (taskReport) {
+      try {
+        execution = Execution.fromTaskReport(taskReport);
+      } catch {
+        // We got a bad payload, wait a bit and try to get the payload again (also log it)
+        // This whole catch block is a hack, and we should make the detail route more robust
+        console.error(
+          `Got unusable response from the reports endpoint (/druid/indexer/v1/task/${encodedId}/reports) going to retry`,
+        );
+        console.log('Report response:', taskReport);
+      }
+    }
+  }
+
+  if (!execution) {
+    const statusResp = await Api.instance.get<AsyncStatusResponse>(
+      `/druid/v2/sql/statements/${encodedId}`,
+      {
         cancelToken,
-      });
+      },
+    );
+
+    execution = Execution.fromAsyncStatus(statusResp.data);
+  }
+
+  let taskPayload: any = taskPayloadOverride;
+  if (!taskPayload) {
+    try {
+      taskPayload = (
+        await Api.instance.get(`/druid/indexer/v1/task/${encodedId}`, {
+          cancelToken,
+        })
+      ).data;
     } catch (e) {
       if (Api.isNetworkError(e)) throw e;
     }
   }
-
-  let taskReportResp: AxiosResponse | undefined;
-  try {
-    taskReportResp = await Api.instance.get(`/druid/indexer/v1/task/${encodedId}/reports`, {
-      cancelToken,
-    });
-  } catch (e) {
-    if (Api.isNetworkError(e)) throw e;
+  if (taskPayload) {
+    execution = execution.updateWithTaskPayload(taskPayload);
   }
 
-  if ((taskPayloadResp || taskPayloadOverride) && taskReportResp) {
-    let execution: Execution | undefined;
-    try {
-      execution = Execution.fromTaskPayloadAndReport(
-        taskPayloadResp ? taskPayloadResp.data : taskPayloadOverride,
-        taskReportResp.data,
-      );
-    } catch {
-      // We got a bad payload, wait a bit and try to get the payload again (also log it)
-      // This whole catch block is a hack, and we should make the detail route more robust
-      console.error(
-        `Got unusable response from the reports endpoint (/druid/indexer/v1/task/${encodedId}/reports) going to retry`,
-      );
-      console.log('Report response:', taskReportResp.data);
-    }
-
-    if (execution) {
-      if (execution?.hasPotentiallyStuckStage()) {
-        const capacityInfo = await maybeGetClusterCapacity();
-        if (capacityInfo) {
-          execution = execution.changeCapacityInfo(capacityInfo);
-        }
-      }
-
-      return execution;
+  if (execution.hasPotentiallyStuckStage()) {
+    const capacityInfo = await maybeGetClusterCapacity();
+    if (capacityInfo) {
+      execution = execution.changeCapacityInfo(capacityInfo);
     }
   }
 
-  const statusResp = await Api.instance.get(`/druid/indexer/v1/task/${encodedId}/status`, {
-    cancelToken,
-  });
-
-  return Execution.fromTaskStatus(statusResp.data);
+  return execution;
 }
 
 export async function updateExecutionWithDatasourceLoadedIfNeeded(
