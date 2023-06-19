@@ -21,24 +21,36 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.Ignore;
 import org.junit.Test;
 
 public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 {
+  private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES = ImmutableMap.of(
+      PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED,
+      QueryContexts.ENABLE_DEBUG, true
+  );
+
   @Override
   protected QueryTestBuilder testBuilder()
   {
     return new QueryTestBuilder(
-        new CalciteTestConfig(
-            ImmutableMap.of(
-                PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED,
-                QueryContexts.ENABLE_DEBUG, true)
-        ))
+        new CalciteTestConfig(CONTEXT_OVERRIDES)
+        {
+          @Override
+          public SqlTestFramework.PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig)
+          {
+            plannerConfig = plannerConfig.withOverrides(CONTEXT_OVERRIDES);
+            return queryFramework().plannerFixture(DecoupledPlanningCalciteQueryTest.this, plannerConfig, authConfig);
+          }
+        })
         .cannotVectorize(cannotVectorize)
         .skipVectorize(skipVectorize);
   }
+
 
   @Override
   @Ignore

@@ -74,8 +74,8 @@ public class PlannerConfig
 
   @JsonProperty
   private String nativeQuerySqlPlanningMode = NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED; // can be COUPLED or DECOUPLED
-  public static String NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED = "COUPLED";
-  public static String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
+  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED = "COUPLED";
+  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
 
   private boolean serializeComplexValues = true;
 

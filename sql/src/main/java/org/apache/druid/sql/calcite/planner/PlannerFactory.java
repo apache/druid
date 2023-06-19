@@ -164,7 +164,6 @@ public class PlannerFactory extends PlannerToolbox
         .typeSystem(DruidTypeSystem.INSTANCE)
         .defaultSchema(rootSchema.getSubSchema(druidSchemaName))
         .sqlToRelConverterConfig(sqlToRelConverterConfig)
-        .costFactory(new DruidVolcanoCost.Factory())
         .context(new Context()
         {
           @Override
@@ -195,8 +194,8 @@ public class PlannerFactory extends PlannerToolbox
           }
         });
 
-    if (plannerConfig().getNativeQuerySqlPlanningMode()
-                       .equals(PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
+    if (PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
+        .equals(plannerConfig().getNativeQuerySqlPlanningMode())
     ) {
       frameworkConfigBuilder.costFactory(new DruidVolcanoCost.Factory());
     }
