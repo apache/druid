@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.timeline.DataSegment;
 
@@ -42,10 +43,30 @@ public abstract class LoadRule implements Rule
     }
   }
 
-  protected static void validateTieredReplicants(final Map<String, Integer> tieredReplicants, boolean allowEmptyTieredReplicants)
+  /**
+   * Function to create a tiered replicants map choosing default values, in case the map is null.
+   * {@code useDefaultTierForNull} decides the default value.
+   * <br>
+   * If the boolean is true, the default value is a singleton map with key {@link DruidServer#DEFAULT_NUM_REPLICANTS}
+   * and value @{@link DruidServer#DEFAULT_TIER}.
+   * <br>
+   * If the boolean is false, the default value is an empty map. This will enable the new behaviour of not loading
+   * segments to a historical unless the tier and number of replicants are explicitly specified.
+   */
+  protected static Map<String, Integer> createTieredReplicants(final Map<String, Integer> tieredReplicants, boolean useDefaultTierForNull)
   {
-    if (tieredReplicants.size() == 0 && !allowEmptyTieredReplicants) {
-      throw new IAE("A rule with empty tiered replicants is invalid unless \"allowEmptyTieredReplicants\" is set to true.");
+    if (useDefaultTierForNull) {
+      return Configs.valueOrDefault(tieredReplicants, ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS));
+    } else {
+      return Configs.valueOrDefault(tieredReplicants, ImmutableMap.of());
+    }
+  }
+
+  protected static void validateTieredReplicants(final Map<String, Integer> tieredReplicants, boolean useDefaultTierForNull)
+  {
+    if (tieredReplicants.size() == 0 && useDefaultTierForNull) {
+      // If useDefaultTierForNull is true, null is translated to a default tier, and an empty replicant tier map is not allowed.
+      throw new IAE("A rule with empty tiered replicants is invalid unless \"useDefaultTierForNull\" is set to false.");
     }
     for (Map.Entry<String, Integer> entry : tieredReplicants.entrySet()) {
       if (entry.getValue() == null) {

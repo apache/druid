@@ -21,13 +21,13 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.DruidServer;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -38,23 +38,18 @@ public class IntervalLoadRule extends LoadRule
 
   private final Interval interval;
   private final Map<String, Integer> tieredReplicants;
-  private final boolean allowEmptyTieredReplicants;
+  private final boolean useDefaultTierForNull;
 
   @JsonCreator
   public IntervalLoadRule(
       @JsonProperty("interval") Interval interval,
       @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants,
-      @JsonProperty("allowEmptyTieredReplicants") Boolean allowEmptyTieredReplicants
+      @JsonProperty("useDefaultTierForNull") @Nullable Boolean useDefaultTierForNull
   )
   {
-    this.allowEmptyTieredReplicants = allowEmptyTieredReplicants != null && allowEmptyTieredReplicants;
-
-    if (!this.allowEmptyTieredReplicants) {
-      this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS) : tieredReplicants;
-    } else {
-      this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of() : tieredReplicants;
-    }
-    validateTieredReplicants(this.tieredReplicants, this.allowEmptyTieredReplicants);
+    this.useDefaultTierForNull = Configs.valueOrDefault(useDefaultTierForNull, true);
+    this.tieredReplicants = createTieredReplicants(tieredReplicants, this.useDefaultTierForNull);
+    validateTieredReplicants(this.tieredReplicants, this.useDefaultTierForNull);
     this.interval = interval;
   }
 
@@ -72,10 +67,10 @@ public class IntervalLoadRule extends LoadRule
     return tieredReplicants;
   }
 
-  @JsonProperty
-  public boolean isAllowEmptyTieredReplicants()
+  @JsonProperty("useDefaultTierForNull")
+  public boolean useDefaultTierForNull()
   {
-    return allowEmptyTieredReplicants;
+    return useDefaultTierForNull;
   }
 
   @Override

@@ -55,7 +55,7 @@ public class IntervalLoadRuleTest
   public void testSerdeNullTieredReplicants() throws Exception
   {
     IntervalLoadRule rule = new IntervalLoadRule(
-        Intervals.of("0/3000"), null, true
+        Intervals.of("0/3000"), null, false
     );
 
     ObjectMapper jsonMapper = new DefaultObjectMapper();
@@ -88,27 +88,40 @@ public class IntervalLoadRuleTest
   }
 
   @Test
-  public void testWithoutAllowEmptyReplicantShouldCreateDefaultTier() throws Exception
+  public void testShouldCreateDefaultTier() throws Exception
   {
     String inputJson = "     {\n"
                        + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
                        + "      \"type\": \"loadByInterval\"\n"
                        + "   }";
     ObjectMapper jsonMapper = new DefaultObjectMapper();
-    IntervalLoadRule inputForeverLoadRule = jsonMapper.readValue(inputJson, IntervalLoadRule.class);
-    Assert.assertEquals(ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS), inputForeverLoadRule.getTieredReplicants());
+    IntervalLoadRule inputIntervalLoadRule = jsonMapper.readValue(inputJson, IntervalLoadRule.class);
+    Assert.assertEquals(ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS), inputIntervalLoadRule.getTieredReplicants());
   }
 
   @Test
-  public void testWithAllowEmptyReplicantShouldDefaultToEmpty() throws Exception
+  public void testUseDefaultTierAsTrueShouldCreateDefaultTier() throws Exception
   {
     String inputJson = "     {\n"
                        + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
                        + "      \"type\": \"loadByInterval\",\n"
-                       + "      \"allowEmptyTieredReplicants\": \"true\"\n"
+                       + "      \"useDefaultTierForNull\": \"true\"\n"
                        + "   }";
     ObjectMapper jsonMapper = new DefaultObjectMapper();
-    IntervalLoadRule inputForeverLoadRule = jsonMapper.readValue(inputJson, IntervalLoadRule.class);
-    Assert.assertEquals(ImmutableMap.of(), inputForeverLoadRule.getTieredReplicants());
+    IntervalLoadRule inputIntervalLoadRule = jsonMapper.readValue(inputJson, IntervalLoadRule.class);
+    Assert.assertEquals(ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS), inputIntervalLoadRule.getTieredReplicants());
+  }
+
+  @Test
+  public void testUseDefaultTierAsFalseShouldCreateEmptyMap() throws Exception
+  {
+    String inputJson = "     {\n"
+                       + "      \"interval\": \"0000-01-01T00:00:00.000-05:50:36/3000-01-01T00:00:00.000-06:00\",\n"
+                       + "      \"type\": \"loadByInterval\",\n"
+                       + "      \"useDefaultTierForNull\": \"false\"\n"
+                       + "   }";
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    IntervalLoadRule inputIntervalLoadRule = jsonMapper.readValue(inputJson, IntervalLoadRule.class);
+    Assert.assertEquals(ImmutableMap.of(), inputIntervalLoadRule.getTieredReplicants());
   }
 }

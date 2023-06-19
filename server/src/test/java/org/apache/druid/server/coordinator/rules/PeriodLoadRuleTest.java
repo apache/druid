@@ -218,7 +218,7 @@ public class PeriodLoadRuleTest
 
 
   @Test
-  public void testWithoutAllowEmptyReplicantShouldCreateDefaultTier() throws Exception
+  public void testShouldCreateDefaultTier() throws Exception
   {
     String inputJson = "      {\n"
                        + "      \"period\": \"P1D\",\n"
@@ -231,12 +231,26 @@ public class PeriodLoadRuleTest
   }
 
   @Test
-  public void testWithAllowEmptyReplicantShouldDefaultToEmpty() throws Exception
+  public void testUseDefaultTierAsTrueShouldCreateDefaultTier() throws Exception
+  {
+    String inputJson = "      {\n"
+                       + "      \"period\": \"P1D\",\n"
+                       + "      \"includeFuture\": " + PeriodLoadRule.DEFAULT_INCLUDE_FUTURE + ",\n"
+                       + "      \"useDefaultTierForNull\": \"true\",\n"
+                       + "      \"type\": \"loadByPeriod\"\n"
+                       + "    }";
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    PeriodLoadRule inputPeriodLoadRule = jsonMapper.readValue(inputJson, PeriodLoadRule.class);
+    Assert.assertEquals(ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS), inputPeriodLoadRule.getTieredReplicants());
+  }
+
+  @Test
+  public void testUseDefaultTierAsFalseShouldCreateEmptyMap() throws Exception
   {
     String inputJson = "    {\n"
                        + "     \"period\": \"P1D\",\n"
                        + "     \"includeFuture\": " + PeriodLoadRule.DEFAULT_INCLUDE_FUTURE + ",\n"
-                       + "     \"allowEmptyTieredReplicants\": \"true\",\n"
+                       + "     \"useDefaultTierForNull\": \"false\",\n"
                        + "     \"type\": \"loadByPeriod\"\n"
                        + "  }";
     ObjectMapper jsonMapper = new DefaultObjectMapper();
