@@ -313,8 +313,9 @@ public class OshiSysMonitor extends FeedDefiningMonitor
         for (String addr : net.getIPv4addr()) {
           if (!NET_ADDRESS_BLACKLIST.contains(addr)) {
             // Only emit metrics for non black-listed ip addresses
+            String mapKey = name + "_" + addr;    // Network_Name_IPV4 address as key, ex: wifi_192.1.0.1 to uniquely identify the dimension
             final Map<String, Long> stats = diff.to(
-                name,
+                mapKey,
                 ImmutableMap.<String, Long>builder()
                             .put("sys/net/read/size", net.getBytesRecv())
                             .put("sys/net/read/packets", net.getPacketsRecv())
@@ -374,6 +375,7 @@ public class OshiSysMonitor extends FeedDefiningMonitor
                         .put("irq", irq) // irq = Δirq / Δtotal
                         .put("softIrq", softirq) // softIrq = ΔsoftIrq / Δtotal
                         .put("stolen", steal) // stolen = Δstolen / Δtotal
+                        .put("idle", idle) // idle = Δidle / Δtotal
                         .put("_total", totalCpu) // (not reported)
                         .build()
         );
