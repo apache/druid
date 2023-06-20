@@ -858,6 +858,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public class CalciteTestConfig implements QueryTestBuilder.QueryTestConfig
   {
     private boolean isRunningMSQ = false;
+    private Map<String, Object> baseQueryContext;
 
     public CalciteTestConfig()
     {
@@ -866,6 +867,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     public CalciteTestConfig(boolean isRunningMSQ)
     {
       this.isRunningMSQ = isRunningMSQ;
+    }
+
+    public CalciteTestConfig(Map<String, Object> baseQueryContext)
+    {
+      this.baseQueryContext = baseQueryContext;
     }
 
     @Override
@@ -908,6 +914,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     public boolean isRunningMSQ()
     {
       return isRunningMSQ;
+    }
+
+    @Override
+    public Map<String, Object> baseQueryContext()
+    {
+      return baseQueryContext;
     }
   }
 

@@ -29,6 +29,7 @@ import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.ConventionTraitDef;
+import org.apache.calcite.plan.volcano.DruidVolcanoCost;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.apache.calcite.sql.validate.SqlConformance;
@@ -145,7 +146,7 @@ public class PlannerFactory extends PlannerToolbox
             plannerContext.queryContext().getInSubQueryThreshold()
         )
         .build();
-    return Frameworks
+    Frameworks.ConfigBuilder frameworkConfigBuilder = Frameworks
         .newConfigBuilder()
         .parserConfig(PARSER_CONFIG)
         .traitDefs(ConventionTraitDef.INSTANCE, RelCollationTraitDef.INSTANCE)
@@ -184,7 +185,15 @@ public class PlannerFactory extends PlannerToolbox
               return null;
             }
           }
-        })
-        .build();
+        });
+
+    if (PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
+        .equals(plannerConfig().getNativeQuerySqlPlanningMode())
+    ) {
+      frameworkConfigBuilder.costFactory(new DruidVolcanoCost.Factory());
+    }
+
+    return frameworkConfigBuilder.build();
+
   }
 }
