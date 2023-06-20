@@ -1498,7 +1498,7 @@ public class ControllerImpl implements Controller
   private void cleanUpDurableStorageIfNeeded()
   {
     if (isDurableStorageEnabled) {
-      final String controllerDirName = DurableStorageUtils.getControllerIntermediateFilesDirectory(task.getId());
+      final String controllerDirName = DurableStorageUtils.getControllerDirectory(task.getId());
       try {
         // Delete all temporary files as a failsafe
         MSQTasks.makeStorageConnector(context.injector()).deleteRecursively(controllerDirName);

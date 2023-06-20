@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.util;
 
+import com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -26,13 +27,39 @@ public class DurableStorageUtilsTest
 {
 
   @Test
-  public void getControllerTaskIdWithPrefixFromPath()
+  public void getNextDirNameWithPrefixFromPath()
   {
-    Assert.assertEquals("", DurableStorageUtils.getControllerTaskIdWithPrefixFromPath("/123/123"));
-    Assert.assertEquals("123", DurableStorageUtils.getControllerTaskIdWithPrefixFromPath("123"));
+    Assert.assertEquals("", DurableStorageUtils.getNextDirNameWithPrefixFromPath("/123/123"));
+    Assert.assertEquals("123", DurableStorageUtils.getNextDirNameWithPrefixFromPath("123"));
     Assert.assertEquals("controller_query_123",
-                        DurableStorageUtils.getControllerTaskIdWithPrefixFromPath("controller_query_123/123"));
-    Assert.assertEquals("", DurableStorageUtils.getControllerTaskIdWithPrefixFromPath(""));
-    Assert.assertNull(DurableStorageUtils.getControllerTaskIdWithPrefixFromPath(null));
+                        DurableStorageUtils.getNextDirNameWithPrefixFromPath("controller_query_123/123"));
+    Assert.assertEquals("", DurableStorageUtils.getNextDirNameWithPrefixFromPath(""));
+    Assert.assertNull(DurableStorageUtils.getNextDirNameWithPrefixFromPath(null));
+  }
+
+  @Test
+  public void isQueryResultFileActive()
+  {
+
+    Assert.assertTrue(DurableStorageUtils.isQueryResultFileActive(
+        DurableStorageUtils.QUERY_RESULTS_DIR + "/123/result",
+        ImmutableSet.of("123")
+    ));
+    Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
+        DurableStorageUtils.QUERY_RESULTS_DIR + "/123/result",
+        ImmutableSet.of("")
+    ));
+    Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
+        DurableStorageUtils.QUERY_RESULTS_DIR + "/",
+        ImmutableSet.of("123")
+    ));
+    Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
+        null,
+        ImmutableSet.of("123")
+    ));
+    Assert.assertFalse(DurableStorageUtils.isQueryResultFileActive(
+        DurableStorageUtils.QUERY_RESULTS_DIR,
+        ImmutableSet.of("123")
+    ));
   }
 }

@@ -92,8 +92,8 @@ public class DurableStorageCleanerTest
   @Test
   public void testRunExcludesQueryDirectory() throws Exception
   {
-    final String resultPath = DurableStorageUtils.getControllerDirectory(TASK_ID) + "/" + DurableStorageUtils.QUERY_RESULTS_DIR + "/results.json";
-    final String intermediateFilesPath = DurableStorageUtils.getControllerIntermediateFilesDirectory(TASK_ID) + "/results.json";
+    final String resultPath = DurableStorageUtils.QUERY_RESULTS_DIR + "/" + DurableStorageUtils.getControllerDirectory(TASK_ID) + "/results.json";
+    final String intermediateFilesPath = DurableStorageUtils.getControllerDirectory(TASK_ID) + "/intermediate.frame";
     EasyMock.expect(STORAGE_CONNECTOR.listDir(EasyMock.anyString()))
             .andReturn(ImmutableList.of(resultPath, STRAY_DIR, intermediateFilesPath)
                                     .stream()

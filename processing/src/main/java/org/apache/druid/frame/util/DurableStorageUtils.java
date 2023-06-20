@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Helper class that fetches the directory and file names corresponding to file location
@@ -40,11 +41,6 @@ public class DurableStorageUtils
   public static String getControllerDirectory(final String controllerTaskId)
   {
     return StringUtils.format("controller_%s", IdUtils.validateId("controller task ID", controllerTaskId));
-  }
-
-  public static String getControllerIntermediateFilesDirectory(final String controllerTaskId)
-  {
-    return StringUtils.format("%s/durable-shuffle-intermediate", getControllerDirectory(controllerTaskId));
   }
 
   public static String getSuccessFilePath(
@@ -72,7 +68,7 @@ public class DurableStorageUtils
   {
     return StringUtils.format(
         "%s/stage_%d/worker_%d",
-        getControllerIntermediateFilesDirectory(controllerTaskId),
+        getControllerDirectory(controllerTaskId),
         stageNumber,
         workerNumber
     );
@@ -146,7 +142,7 @@ public class DurableStorageUtils
    * </ul>
    */
   @Nullable
-  public static String getControllerTaskIdWithPrefixFromPath(String path)
+  public static String getNextDirNameWithPrefixFromPath(String path)
   {
     if (path == null) {
       return null;
@@ -159,7 +155,14 @@ public class DurableStorageUtils
     }
   }
 
-  public static boolean isQueryResultPath(String path) {
+  /**
+   * Tries to parse out the controller taskID from the query results path, and checks if the taskID is present in the
+   * set of known tasks.
+   * Returns true if the set contains the taskId.
+   * Returns false if taskId could not be parsed or if the set does not contain the taskId.
+   */
+  public static boolean isQueryResultFileActive(String path, Set<String> knownTasks)
+  {
     if (path == null) {
       return false;
     }
@@ -168,6 +171,6 @@ public class DurableStorageUtils
     if (elements.size() < 2) {
       return false;
     }
-    return QUERY_RESULTS_DIR.equals(elements.get(1));
+    return knownTasks.contains(elements.get(1));
   }
 }
