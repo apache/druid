@@ -23,38 +23,37 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class CoordinatorStatusMonitorTest {
+public class ServiceStatusMonitorTest {
 
-  private DruidCoordinator coordinator;
-  private CoordinatorStatusMonitor monitor;
+  private ServiceStatusProvider provider;
+  private ServiceStatusMonitor monitor;
 
   @Before
   public void setUp() throws Exception {
-    coordinator = mock(DruidCoordinator.class);
+    provider = mock(ServiceStatusProvider.class);
 
-    monitor = new CoordinatorStatusMonitor(coordinator);
+    monitor = new ServiceStatusMonitor(provider);
   }
 
   @Test
   public void testLeaderCount() {
-    when(coordinator.isLeader()).thenReturn(false);
+    when(provider.heartbeat()).thenReturn(0);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
 
     Assert.assertEquals(1, emitter.getEvents().size());
-    Assert.assertEquals("leader/count", emitter.getEvents().get(0).toMap().get("metric"));
+    Assert.assertEquals("druid/heartbeat", emitter.getEvents().get(0).toMap().get("metric"));
     Assert.assertEquals(0, emitter.getEvents().get(0).toMap().get("value"));
 
-    when(coordinator.isLeader()).thenReturn(true);
+    when(provider.heartbeat()).thenReturn(1);
     emitter.flush();
     monitor.doMonitor(emitter);
     Assert.assertEquals(1, emitter.getEvents().size());
-    Assert.assertEquals("leader/count", emitter.getEvents().get(0).toMap().get("metric"));
+    Assert.assertEquals("druid/heartbeat", emitter.getEvents().get(0).toMap().get("metric"));
     Assert.assertEquals(1, emitter.getEvents().get(0).toMap().get("value"));
   }
 }

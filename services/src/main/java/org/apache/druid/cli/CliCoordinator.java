@@ -114,6 +114,7 @@ import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
+import org.apache.druid.server.metrics.ServiceStatusProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.Duration;
@@ -222,6 +223,7 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
             binder.bind(CoordinatorServerView.class);
             binder.bind(DruidCoordinator.class);
+            binder.bind(ServiceStatusProvider.class).to(DruidCoordinator.class);
 
             LifecycleModule.register(binder, CoordinatorServerView.class);
             LifecycleModule.register(binder, MetadataStorage.class);

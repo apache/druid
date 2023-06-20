@@ -17,32 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.stats;
+package org.apache.druid.server.metrics;
 
 import javax.inject.Inject;
-import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 
 /**
- * Monitor Overlord running status.
+ * Monitor service running status.
+ * For Overlord/Coordinator, the metric reported is service leader count.
  */
-public class OverlordStatusMonitor extends AbstractMonitor {
+public class ServiceStatusMonitor extends AbstractMonitor {
 
-  private final TaskMaster taskMaster;
+  private final ServiceStatusProvider provider;
 
   @Inject
-  public OverlordStatusMonitor(TaskMaster taskMaster) {
-    this.taskMaster = taskMaster;
+  public ServiceStatusMonitor(ServiceStatusProvider provider) {
+    this.provider = provider;
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter) {
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-
-    builder.setDimension("serviceType", "overlord");
-    emitter.emit(builder.build("leader/count", taskMaster.isLeader() ? 1 : 0));
+    builder.setDimension("heartbeatType", provider.heartbeatType());
+    emitter.emit(builder.build("druid/heartbeat", provider.heartbeat()));
 
     return true;
   }

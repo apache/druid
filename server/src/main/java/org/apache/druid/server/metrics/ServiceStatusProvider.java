@@ -19,31 +19,13 @@
 
 package org.apache.druid.server.metrics;
 
-import javax.inject.Inject;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.java.util.metrics.AbstractMonitor;
-import org.apache.druid.server.coordinator.DruidCoordinator;
-
 /**
- * Monitor Coordinator running status.
+ * Monitor service running status.
  */
-public class CoordinatorStatusMonitor extends AbstractMonitor {
+public interface ServiceStatusProvider {
 
-  private final DruidCoordinator coordinator;
+  String heartbeatType();
 
-  @Inject
-  public CoordinatorStatusMonitor(DruidCoordinator coordinator) {
-    this.coordinator = coordinator;
-  }
+  int heartbeat();
 
-  @Override
-  public boolean doMonitor(ServiceEmitter emitter) {
-    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-
-    builder.setDimension("serviceType", "coordinator");
-    emitter.emit(builder.build("leader/count", coordinator.isLeader() ? 1 : 0));
-
-    return true;
-  }
 }
