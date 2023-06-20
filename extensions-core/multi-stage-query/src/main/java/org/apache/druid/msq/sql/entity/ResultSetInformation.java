@@ -38,7 +38,6 @@ public class ResultSetInformation
 
   private final ResultFormat resultFormat;
 
-  private final Boolean header;
 
   @Nullable
   private final List<Object> records;
@@ -47,8 +46,6 @@ public class ResultSetInformation
   public ResultSetInformation(
       @Nullable
       @JsonProperty ResultFormat resultFormat,
-      @Nullable
-      @JsonProperty Boolean header,
       @JsonProperty @Nullable Long totalRows,
       @JsonProperty @Nullable Long totalSize,
       @JsonProperty("sampleRecords") @Nullable
@@ -58,7 +55,6 @@ public class ResultSetInformation
     this.totalRows = totalRows;
     this.totalSize = totalSize;
     this.resultFormat = resultFormat;
-    this.header = header;
     this.records = records;
   }
 
@@ -86,13 +82,6 @@ public class ResultSetInformation
     return resultFormat;
   }
 
-  @JsonProperty
-  @Nullable
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Boolean getHeader()
-  {
-    return header;
-  }
 
   @Nullable
   @JsonProperty("sampleRecords")
@@ -116,14 +105,13 @@ public class ResultSetInformation
     return Objects.equals(totalRows, that.totalRows)
            && Objects.equals(totalSize, that.totalSize)
            && resultFormat == that.resultFormat
-           && Objects.equals(header, that.header)
            && Objects.equals(records, that.records);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(totalRows, totalSize, resultFormat, header, records);
+    return Objects.hash(totalRows, totalSize, resultFormat, records);
   }
 
   @Override
@@ -133,7 +121,6 @@ public class ResultSetInformation
            "totalRows=" + totalRows +
            ", totalSize=" + totalSize +
            ", resultFormat=" + resultFormat +
-           ", header=" + header +
            ", records=" + records +
            '}';
   }

@@ -227,6 +227,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
                   .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
                   .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
+                  .put(MSQTaskQueryMaker.USER_KEY, "allowAll")
                   .build();
 
   public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
@@ -267,10 +268,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected File localFileStorageDir;
   protected LocalFileStorageConnector localFileStorageConnector;
   private static final Logger log = new Logger(MSQTestBase.class);
-  private ObjectMapper objectMapper;
-  private MSQTestOverlordServiceClient indexingServiceClient;
+  protected ObjectMapper objectMapper;
+  protected MSQTestOverlordServiceClient indexingServiceClient;
   protected MSQTestTaskActionClient testTaskActionClient;
-  private SqlStatementFactory sqlStatementFactory;
+  protected SqlStatementFactory sqlStatementFactory;
   private IndexIO indexIO;
 
   private MSQTestSegmentManager segmentManager;
@@ -1080,7 +1081,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         verifyWorkerCount(reportPayload.getCounters());
         verifyCounters(reportPayload.getCounters());
 
-        MSQSpec foundSpec = indexingServiceClient.getQuerySpecForTask(controllerId);
+        MSQSpec foundSpec = indexingServiceClient.getMSQControllerTask(controllerId).getQuerySpec();
         log.info(
             "found generated segments: %s",
             segmentManager.getAllDataSegments().stream().map(s -> s.toString()).collect(
@@ -1299,7 +1300,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           log.info("found row signature %s", payload.getResults().getSignature());
           log.info(rows.stream().map(Arrays::toString).collect(Collectors.joining("\n")));
 
-          final MSQSpec spec = indexingServiceClient.getQuerySpecForTask(controllerId);
+          final MSQSpec spec = indexingServiceClient.getMSQControllerTask(controllerId).getQuerySpec();
           log.info("Found spec: %s", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(spec));
           return new Pair<>(spec, Pair.of(payload.getResults().getSignature(), rows));
         }

@@ -62,8 +62,8 @@ public class SqlStatementResult
       DateTime createdAt,
       @Nullable @JsonProperty("schema")
       List<ColNameAndType> sqlRowSignature,
-      @Nullable @JsonProperty("durationInMs")
-      Long durationInMs,
+      @Nullable @JsonProperty("durationMs")
+      Long durationMs,
       @Nullable @JsonProperty("result")
       ResultSetInformation resultSetInformation,
       @Nullable @JsonProperty("exception")
@@ -75,7 +75,7 @@ public class SqlStatementResult
     this.state = state;
     this.createdAt = createdAt;
     this.sqlRowSignature = sqlRowSignature;
-    this.durationInMs = durationInMs;
+    this.durationInMs = durationMs;
     this.resultSetInformation = resultSetInformation;
     this.queryException = queryException;
   }

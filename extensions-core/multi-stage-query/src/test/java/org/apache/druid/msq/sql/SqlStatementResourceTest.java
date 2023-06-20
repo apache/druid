@@ -19,13 +19,14 @@
 
 package org.apache.druid.msq.sql;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.util.Maps;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Futures;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskLocation;
@@ -56,11 +57,13 @@ import org.apache.druid.msq.sql.entity.ColNameAndType;
 import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.sql.resources.SqlStatementResource;
+import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -68,14 +71,12 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
-import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlResourceTest;
 import org.joda.time.DateTime;
 import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
@@ -91,7 +92,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class SqlStatementResourceTest extends CalciteTestBase
+public class SqlStatementResourceTest extends MSQTestBase
 {
 
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
@@ -194,28 +195,82 @@ public class SqlStatementResourceTest extends CalciteTestBase
       null
   );
 
-  @Mock
-  private static IndexingServiceClient indexingServiceClient;
-
-  private static final DateTime CREATED_TIME = DateTimes.of("2023-05-31T12:00Z");
-  private static final DateTime QUEUE_INSERTION_TIME = DateTimes.of("2023-05-31T12:01Z");
-
   private static final List<Object[]> RESULT_ROWS = ImmutableList.of(
       new Object[]{123, "foo", "bar"},
       new Object[]{234, "foo1", "bar1"}
   );
+
+  private static final MSQTaskReport MSQ_SELECT_TASK_REPORT = new MSQTaskReport(
+      FINISHED_SELECT_MSQ_QUERY,
+      new MSQTaskReportPayload(
+          new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, 1, 2),
+          MSQStagesReport.create(
+              MSQTaskReportTest.QUERY_DEFINITION,
+              ImmutableMap.of(),
+              ImmutableMap.of(),
+              ImmutableMap.of(),
+              ImmutableMap.of()
+          ),
+          new CounterSnapshotsTree(),
+          new MSQResultsReport(
+              ImmutableList.of(
+                  new MSQResultsReport.ColumnAndType("_time", ColumnType.LONG),
+                  new MSQResultsReport.ColumnAndType("alias", ColumnType.STRING),
+                  new MSQResultsReport.ColumnAndType("market", ColumnType.STRING)
+              ),
+              ImmutableList.of(SqlTypeName.TIMESTAMP, SqlTypeName.VARCHAR, SqlTypeName.VARCHAR),
+              Yielders.each(Sequences.simple(RESULT_ROWS))
+          )
+      )
+  );
+
+  private static final MSQTaskReport MSQ_INSERT_TASK_REPORT = new MSQTaskReport(
+      FINISHED_INSERT_MSQ_QUERY,
+      new MSQTaskReportPayload(
+          new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, 1, 2),
+          MSQStagesReport.create(
+              MSQTaskReportTest.QUERY_DEFINITION,
+              ImmutableMap.of(),
+              ImmutableMap.of(),
+              ImmutableMap.of(),
+              ImmutableMap.of()
+          ),
+          new CounterSnapshotsTree(),
+          null
+      )
+  );
+
+  @Mock
+  private static OverlordClient overlordClient;
+
+  private static final DateTime CREATED_TIME = DateTimes.of("2023-05-31T12:00Z");
+  private static final DateTime QUEUE_INSERTION_TIME = DateTimes.of("2023-05-31T12:01Z");
+
 
   private static final Map<String, Object> ROW1 = ImmutableMap.of("_time", 123, "alias", "foo", "market", "bar");
   private static final Map<String, Object> ROW2 = ImmutableMap.of("_time", 234, "alias", "foo1", "market", "bar1");
 
   private static final String FAILURE_MSG = "failure msg";
 
-  @BeforeClass
-  public static void init() throws Exception
+  @Before
+  public void init() throws Exception
   {
-    indexingServiceClient = Mockito.mock(IndexingServiceClient.class);
-    Mockito.when(indexingServiceClient.getTaskStatus(ArgumentMatchers.eq(ACCEPTED_SELECT_MSQ_QUERY)))
-           .thenReturn(new TaskStatusResponse(
+    overlordClient = Mockito.mock(OverlordClient.class);
+    setupMocks(overlordClient);
+    resource = new SqlStatementResource(
+        sqlStatementFactory,
+        new ServerConfig(),
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        JSON_MAPPER,
+        overlordClient
+    );
+  }
+
+  private static void setupMocks(OverlordClient indexingServiceClient) throws JsonProcessingException
+  {
+
+    Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(ACCEPTED_SELECT_MSQ_QUERY)))
+           .thenReturn(Futures.immediateFuture(new TaskStatusResponse(
                ACCEPTED_SELECT_MSQ_QUERY,
                new TaskStatusPlus(
                    ACCEPTED_SELECT_MSQ_QUERY,
@@ -230,13 +285,16 @@ public class SqlStatementResourceTest extends CalciteTestBase
                    null,
                    null
                )
-           ));
+           )));
 
-    Mockito.when(indexingServiceClient.getTaskPayload(ArgumentMatchers.eq(ACCEPTED_SELECT_MSQ_QUERY)))
-           .thenReturn(new TaskPayloadResponse(ACCEPTED_SELECT_MSQ_QUERY, MSQ_CONTROLLER_SELECT_PAYLOAD));
+    Mockito.when(indexingServiceClient.taskPayload(ArgumentMatchers.eq(ACCEPTED_SELECT_MSQ_QUERY)))
+           .thenReturn(Futures.immediateFuture(new TaskPayloadResponse(
+               ACCEPTED_SELECT_MSQ_QUERY,
+               MSQ_CONTROLLER_SELECT_PAYLOAD
+           )));
 
-    Mockito.when(indexingServiceClient.getTaskStatus(ArgumentMatchers.eq(RUNNING_SELECT_MSQ_QUERY)))
-           .thenReturn(new TaskStatusResponse(
+    Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(RUNNING_SELECT_MSQ_QUERY)))
+           .thenReturn(Futures.immediateFuture(new TaskStatusResponse(
                RUNNING_SELECT_MSQ_QUERY,
                new TaskStatusPlus(
                    RUNNING_SELECT_MSQ_QUERY,
@@ -251,14 +309,17 @@ public class SqlStatementResourceTest extends CalciteTestBase
                    null,
                    null
                )
-           ));
+           )));
 
-    Mockito.when(indexingServiceClient.getTaskPayload(RUNNING_SELECT_MSQ_QUERY))
-           .thenReturn(new TaskPayloadResponse(RUNNING_SELECT_MSQ_QUERY, MSQ_CONTROLLER_SELECT_PAYLOAD));
+    Mockito.when(indexingServiceClient.taskPayload(RUNNING_SELECT_MSQ_QUERY))
+           .thenReturn(Futures.immediateFuture(new TaskPayloadResponse(
+               RUNNING_SELECT_MSQ_QUERY,
+               MSQ_CONTROLLER_SELECT_PAYLOAD
+           )));
 
 
-    Mockito.when(indexingServiceClient.getTaskStatus(ArgumentMatchers.eq(FINISHED_SELECT_MSQ_QUERY)))
-           .thenReturn(new TaskStatusResponse(
+    Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(FINISHED_SELECT_MSQ_QUERY)))
+           .thenReturn(Futures.immediateFuture(new TaskStatusResponse(
                FINISHED_SELECT_MSQ_QUERY,
                new TaskStatusPlus(
                    FINISHED_SELECT_MSQ_QUERY,
@@ -273,51 +334,30 @@ public class SqlStatementResourceTest extends CalciteTestBase
                    null,
                    null
                )
-           ));
+           )));
 
-    Mockito.when(indexingServiceClient.getTaskPayload(FINISHED_SELECT_MSQ_QUERY))
-           .thenReturn(new TaskPayloadResponse(FINISHED_SELECT_MSQ_QUERY, MSQ_CONTROLLER_SELECT_PAYLOAD));
+    Mockito.when(indexingServiceClient.taskPayload(FINISHED_SELECT_MSQ_QUERY))
+           .thenReturn(Futures.immediateFuture(new TaskPayloadResponse(
+               FINISHED_SELECT_MSQ_QUERY,
+               MSQ_CONTROLLER_SELECT_PAYLOAD
+           )));
 
-    final MSQTaskReport report = new MSQTaskReport(
-        FINISHED_SELECT_MSQ_QUERY,
-        new MSQTaskReportPayload(
-            new MSQStatusReport(TaskState.SUCCESS, null, new ArrayDeque<>(), null, 0, 1, 2),
-            MSQStagesReport.create(
-                MSQTaskReportTest.QUERY_DEFINITION,
-                ImmutableMap.of(),
-                ImmutableMap.of(),
-                ImmutableMap.of(),
-                ImmutableMap.of()
-            ),
-            new CounterSnapshotsTree(),
-            new MSQResultsReport(
-                ImmutableList.of(
-                    new MSQResultsReport.ColumnAndType("_time", ColumnType.LONG),
-                    new MSQResultsReport.ColumnAndType("alias", ColumnType.STRING),
-                    new MSQResultsReport.ColumnAndType("market", ColumnType.STRING)
-                ),
-                ImmutableList.of(SqlTypeName.TIMESTAMP, SqlTypeName.VARCHAR, SqlTypeName.VARCHAR),
-                Yielders.each(Sequences.simple(RESULT_ROWS))
-            )
-        )
-    );
 
     final ObjectMapper mapper = TestHelper.makeJsonMapper()
                                           .registerModules(new MSQIndexingModule().getJacksonModules());
 
-    Map<String, Object> reportPayload = mapper.readValue(
-        mapper.writeValueAsString(TaskReport.buildTaskReports(report)),
-        new TypeReference<Map<String, Object>>()
-        {
-        }
-    );
 
-    Mockito.when(indexingServiceClient.getTaskReport(FINISHED_SELECT_MSQ_QUERY))
-           .thenReturn(reportPayload);
+    Mockito.when(indexingServiceClient.taskReportAsMap(FINISHED_SELECT_MSQ_QUERY))
+           .thenReturn(Futures.immediateFuture(mapper.readValue(
+               mapper.writeValueAsString(TaskReport.buildTaskReports(MSQ_SELECT_TASK_REPORT)),
+               new TypeReference<Map<String, Object>>()
+               {
+               }
+           )));
 
 
-    Mockito.when(indexingServiceClient.getTaskStatus(ArgumentMatchers.eq(ERRORED_SELECT_MSQ_QUERY)))
-           .thenReturn(new TaskStatusResponse(
+    Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(ERRORED_SELECT_MSQ_QUERY)))
+           .thenReturn(Futures.immediateFuture(new TaskStatusResponse(
                ERRORED_SELECT_MSQ_QUERY,
                new TaskStatusPlus(
                    ERRORED_SELECT_MSQ_QUERY,
@@ -332,11 +372,11 @@ public class SqlStatementResourceTest extends CalciteTestBase
                    null,
                    FAILURE_MSG
                )
-           ));
+           )));
 
 
-    Mockito.when(indexingServiceClient.getTaskStatus(ArgumentMatchers.eq(RUNNING_NON_MSQ_TASK)))
-           .thenReturn(new TaskStatusResponse(
+    Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(RUNNING_NON_MSQ_TASK)))
+           .thenReturn(Futures.immediateFuture(new TaskStatusResponse(
                RUNNING_NON_MSQ_TASK,
                new TaskStatusPlus(
                    RUNNING_NON_MSQ_TASK,
@@ -351,11 +391,11 @@ public class SqlStatementResourceTest extends CalciteTestBase
                    null,
                    null
                )
-           ));
+           )));
 
 
-    Mockito.when(indexingServiceClient.getTaskStatus(ArgumentMatchers.eq(FAILED_NON_MSQ_TASK)))
-           .thenReturn(new TaskStatusResponse(
+    Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(FAILED_NON_MSQ_TASK)))
+           .thenReturn(Futures.immediateFuture(new TaskStatusResponse(
                FAILED_NON_MSQ_TASK,
                new TaskStatusPlus(
                    FAILED_NON_MSQ_TASK,
@@ -370,11 +410,11 @@ public class SqlStatementResourceTest extends CalciteTestBase
                    null,
                    FAILURE_MSG
                )
-           ));
+           )));
 
 
-    Mockito.when(indexingServiceClient.getTaskStatus(ArgumentMatchers.eq(FINISHED_NON_MSQ_TASK)))
-           .thenReturn(new TaskStatusResponse(
+    Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(FINISHED_NON_MSQ_TASK)))
+           .thenReturn(Futures.immediateFuture(new TaskStatusResponse(
                FINISHED_NON_MSQ_TASK,
                new TaskStatusPlus(
                    FINISHED_NON_MSQ_TASK,
@@ -389,11 +429,11 @@ public class SqlStatementResourceTest extends CalciteTestBase
                    null,
                    null
                )
-           ));
+           )));
 
 
-    Mockito.when(indexingServiceClient.getTaskStatus(ArgumentMatchers.eq(ACCEPTED_INSERT_MSQ_TASK)))
-           .thenReturn(new TaskStatusResponse(
+    Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(ACCEPTED_INSERT_MSQ_TASK)))
+           .thenReturn(Futures.immediateFuture(new TaskStatusResponse(
                ACCEPTED_SELECT_MSQ_QUERY,
                new TaskStatusPlus(
                    ACCEPTED_SELECT_MSQ_QUERY,
@@ -408,13 +448,16 @@ public class SqlStatementResourceTest extends CalciteTestBase
                    null,
                    null
                )
-           ));
+           )));
 
-    Mockito.when(indexingServiceClient.getTaskPayload(ArgumentMatchers.eq(ACCEPTED_INSERT_MSQ_TASK)))
-           .thenReturn(new TaskPayloadResponse(ACCEPTED_INSERT_MSQ_TASK, MSQ_CONTROLLER_INSERT_PAYLOAD));
+    Mockito.when(indexingServiceClient.taskPayload(ArgumentMatchers.eq(ACCEPTED_INSERT_MSQ_TASK)))
+           .thenReturn(Futures.immediateFuture(new TaskPayloadResponse(
+               ACCEPTED_INSERT_MSQ_TASK,
+               MSQ_CONTROLLER_INSERT_PAYLOAD
+           )));
 
-    Mockito.when(indexingServiceClient.getTaskStatus(ArgumentMatchers.eq(RUNNING_INSERT_MSQ_QUERY)))
-           .thenReturn(new TaskStatusResponse(
+    Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(RUNNING_INSERT_MSQ_QUERY)))
+           .thenReturn(Futures.immediateFuture(new TaskStatusResponse(
                RUNNING_INSERT_MSQ_QUERY,
                new TaskStatusPlus(
                    RUNNING_INSERT_MSQ_QUERY,
@@ -429,14 +472,17 @@ public class SqlStatementResourceTest extends CalciteTestBase
                    null,
                    null
                )
-           ));
+           )));
 
-    Mockito.when(indexingServiceClient.getTaskPayload(RUNNING_INSERT_MSQ_QUERY))
-           .thenReturn(new TaskPayloadResponse(RUNNING_INSERT_MSQ_QUERY, MSQ_CONTROLLER_INSERT_PAYLOAD));
+    Mockito.when(indexingServiceClient.taskPayload(RUNNING_INSERT_MSQ_QUERY))
+           .thenReturn(Futures.immediateFuture(new TaskPayloadResponse(
+               RUNNING_INSERT_MSQ_QUERY,
+               MSQ_CONTROLLER_INSERT_PAYLOAD
+           )));
 
 
-    Mockito.when(indexingServiceClient.getTaskStatus(ArgumentMatchers.eq(FINISHED_INSERT_MSQ_QUERY)))
-           .thenReturn(new TaskStatusResponse(
+    Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(FINISHED_INSERT_MSQ_QUERY)))
+           .thenReturn(Futures.immediateFuture(new TaskStatusResponse(
                FINISHED_INSERT_MSQ_QUERY,
                new TaskStatusPlus(
                    FINISHED_INSERT_MSQ_QUERY,
@@ -451,14 +497,24 @@ public class SqlStatementResourceTest extends CalciteTestBase
                    null,
                    null
                )
-           ));
+           )));
 
-    Mockito.when(indexingServiceClient.getTaskPayload(FINISHED_INSERT_MSQ_QUERY))
-           .thenReturn(new TaskPayloadResponse(FINISHED_INSERT_MSQ_QUERY, MSQ_CONTROLLER_INSERT_PAYLOAD));
+    Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(FINISHED_INSERT_MSQ_QUERY)))
+           .thenReturn(Futures.immediateFuture(mapper.readValue(
+               mapper.writeValueAsString(TaskReport.buildTaskReports(MSQ_INSERT_TASK_REPORT)),
+               new TypeReference<Map<String, Object>>()
+               {
+               }
+           )));
 
+    Mockito.when(indexingServiceClient.taskPayload(FINISHED_INSERT_MSQ_QUERY))
+           .thenReturn(Futures.immediateFuture(new TaskPayloadResponse(
+               FINISHED_INSERT_MSQ_QUERY,
+               MSQ_CONTROLLER_INSERT_PAYLOAD
+           )));
 
-    Mockito.when(indexingServiceClient.getTaskStatus(ArgumentMatchers.eq(ERRORED_INSERT_MSQ_QUERY)))
-           .thenReturn(new TaskStatusResponse(
+    Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(ERRORED_INSERT_MSQ_QUERY)))
+           .thenReturn(Futures.immediateFuture(new TaskStatusResponse(
                ERRORED_INSERT_MSQ_QUERY,
                new TaskStatusPlus(
                    ERRORED_INSERT_MSQ_QUERY,
@@ -473,17 +529,8 @@ public class SqlStatementResourceTest extends CalciteTestBase
                    null,
                    FAILURE_MSG
                )
-           ));
-
-    resource = new SqlStatementResource(
-        new SqlStatementFactory(null),
-        new ServerConfig(),
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
-        JSON_MAPPER,
-        indexingServiceClient
-    );
+           )));
   }
-
 
   @Test
   public void testMSQSelectAcceptedQuery()
@@ -565,7 +612,6 @@ public class SqlStatementResourceTest extends CalciteTestBase
         100L,
         new ResultSetInformation(
             null,
-            false,
             2L,
             null,
             RESULT_ROWS.stream().map(Arrays::asList).collect(Collectors.toList())
@@ -667,6 +713,77 @@ public class SqlStatementResourceTest extends CalciteTestBase
 
 
   @Test
+  public void testFinishedInsertMSQQuery() throws Exception
+  {
+    Response response = resource.doGetStatus(FINISHED_INSERT_MSQ_QUERY, makeOkRequest());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assert.assertEquals(new SqlStatementResult(
+        FINISHED_INSERT_MSQ_QUERY,
+        SqlStatementState.SUCCESS,
+        CREATED_TIME,
+        null,
+        100L,
+        null,
+        null
+    ), response.getEntity());
+
+    Response resultsResponse = resource.doGetResults(
+        FINISHED_INSERT_MSQ_QUERY,
+        null,
+        null,
+        null,
+        null,
+        makeOkRequest()
+    );
+    Assert.assertEquals(
+        Response.Status.OK.getStatusCode(), resultsResponse.getStatus());
+
+
+    Assert.assertNull(
+        getResultRowsFromResponse(resource.doGetResults(
+            FINISHED_INSERT_MSQ_QUERY,
+            1L,
+            null,
+            null,
+            null,
+            makeOkRequest()
+        ))
+    );
+    Assert.assertNull(
+        getResultRowsFromResponse(resource.doGetResults(
+            FINISHED_INSERT_MSQ_QUERY,
+            0L,
+            1L,
+            null,
+            null,
+            makeOkRequest()
+        ))
+    );
+    Assert.assertNull(
+        getResultRowsFromResponse(resource.doGetResults(
+            FINISHED_INSERT_MSQ_QUERY,
+            0L,
+            3L,
+            null,
+            null,
+            makeOkRequest()
+        ))
+    );
+
+    Assert.assertEquals(
+        Response.Status.PRECONDITION_FAILED.getStatusCode(),
+        resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, -1L, 3L, null, null, makeOkRequest())
+                .getStatus()
+    );
+    Assert.assertEquals(
+        Response.Status.PRECONDITION_FAILED.getStatusCode(),
+        resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, null, -1L, null, null, makeOkRequest())
+                .getStatus()
+    );
+
+  }
+
+  @Test
   public void testNonMSQTasks()
   {
     for (String queryID : ImmutableList.of(RUNNING_NON_MSQ_TASK, FAILED_NON_MSQ_TASK, FINISHED_NON_MSQ_TASK)) {
@@ -738,13 +855,13 @@ public class SqlStatementResourceTest extends CalciteTestBase
   }
 
 
-  private static void assertNullResponse(Response response, Response.Status expectectedStatus)
+  public static void assertNullResponse(Response response, Response.Status expectectedStatus)
   {
     Assert.assertEquals(expectectedStatus.getStatusCode(), response.getStatus());
     Assert.assertNull(response.getEntity());
   }
 
-  private static void assertExceptionMessage(
+  public static void assertExceptionMessage(
       Response response,
       String exceptionMessage,
       Response.Status expectectedStatus
@@ -754,9 +871,13 @@ public class SqlStatementResourceTest extends CalciteTestBase
     Assert.assertEquals(exceptionMessage, getQueryExceptionFromResponse(response).getMessage());
   }
 
-  private static List getResultRowsFromResponse(Response resultsResponse) throws IOException
+  public static List getResultRowsFromResponse(Response resultsResponse) throws IOException
   {
-    return JSON_MAPPER.readValue(SqlResourceTest.responseToByteArray(resultsResponse), List.class);
+    byte[] bytes = SqlResourceTest.responseToByteArray(resultsResponse);
+    if (bytes == null) {
+      return null;
+    }
+    return JSON_MAPPER.readValue(bytes, List.class);
   }
 
   private static QueryException getQueryExceptionFromResponse(Response response)
@@ -768,17 +889,17 @@ public class SqlStatementResourceTest extends CalciteTestBase
     }
   }
 
-  private MockHttpServletRequest makeOkRequest()
+  public static MockHttpServletRequest makeOkRequest()
   {
     return makeExpectedReq(CalciteTests.REGULAR_USER_AUTH_RESULT);
   }
 
-  private MockHttpServletRequest makeOtherUserRequest()
+  public static MockHttpServletRequest makeOtherUserRequest()
   {
     return makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT);
   }
 
-  private MockHttpServletRequest makeExpectedReq(AuthenticationResult authenticationResult)
+  public static MockHttpServletRequest makeExpectedReq(AuthenticationResult authenticationResult)
   {
     MockHttpServletRequest req = new MockHttpServletRequest();
     req.attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);

@@ -23,13 +23,14 @@ package org.apache.druid.msq.sql.resources;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingOutputStream;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.exception.SanitizableException;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -58,6 +59,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
@@ -106,7 +108,7 @@ public class SqlStatementResource
   private final ServerConfig serverConfig;
   private final AuthorizerMapper authorizerMapper;
   private final ObjectMapper jsonMapper;
-  private final IndexingServiceClient overlordClient;
+  private final OverlordClient overlordClient;
 
 
   @Inject
@@ -115,7 +117,7 @@ public class SqlStatementResource
       final ServerConfig serverConfig,
       final AuthorizerMapper authorizerMapper,
       final ObjectMapper jsonMapper,
-      final IndexingServiceClient overlordClient
+      final OverlordClient overlordClient
   )
   {
     this.msqSqlStatementFactory = msqSqlStatementFactory;
@@ -316,7 +318,7 @@ public class SqlStatementResource
       AuthorizationUtils.authorizeAllResourceActions(req, Collections.emptyList(), authorizerMapper);
       final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
-      TaskStatusResponse taskResponse = overlordClient.getTaskStatus(queryId);
+      TaskStatusResponse taskResponse = overlordWork(overlordClient.taskStatus(queryId));
       if (taskResponse == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
@@ -347,7 +349,10 @@ public class SqlStatementResource
       } else {
         MSQControllerTask msqControllerTask = getMSQControllerTaskOrThrow(queryId, authenticationResult.getIdentity());
         Optional<List<ColNameAndType>> signature = getSignature(msqControllerTask);
-        Optional<List<Object>> results = getResults(overlordClient.getTaskReport(queryId));
+        if (!signature.isPresent()) {
+          return Response.ok().build();
+        }
+        Optional<List<Object>> results = getResults(overlordWork(overlordClient.taskReportAsMap(queryId)));
 
         return Response.ok(
             (StreamingOutput) outputStream -> {
@@ -609,13 +614,12 @@ public class SqlStatementResource
   {
     // only populate sample results in case a select query is successful
     if (isSelectQuery && sqlStatementState == SqlStatementState.SUCCESS) {
-      Map<String, Object> report = overlordClient.getTaskReport(asyncResultId);
+      Map<String, Object> report = overlordWork(overlordClient.taskReportAsMap(asyncResultId));
       Optional<List<Object>> rows = getResults(report);
 
       if (rows.isPresent()) {
         return Optional.of(new ResultSetInformation(
             null,
-            false,
             (long) rows.get().size(),
             null,
             rows.get()
@@ -633,7 +637,7 @@ public class SqlStatementResource
   private Optional<SqlStatementResult> getStatementStatus(String queryId, String currentUser, boolean withResults)
       throws QueryException, ForbiddenException
   {
-    TaskStatusResponse taskResponse = overlordClient.getTaskStatus(queryId);
+    TaskStatusResponse taskResponse = overlordWork(overlordClient.taskStatus(queryId));
     if (taskResponse == null) {
       return Optional.empty();
     }
@@ -679,7 +683,7 @@ public class SqlStatementResource
 
   private MSQControllerTask getMSQControllerTaskOrThrow(String queryId, String currentUser) throws ForbiddenException
   {
-    TaskPayloadResponse taskPayloadResponse = overlordClient.getTaskPayload(queryId);
+    TaskPayloadResponse taskPayloadResponse = overlordWork(overlordClient.taskPayload(queryId));
     checkTaskPayloadOrThrow(taskPayloadResponse, queryId);
 
     MSQControllerTask msqControllerTask = (MSQControllerTask) taskPayloadResponse.getPayload();
@@ -690,6 +694,16 @@ public class SqlStatementResource
       throw new ForbiddenException();
     }
     return msqControllerTask;
+  }
+
+  private <T> T overlordWork(final ListenableFuture<T> future)
+  {
+    try {
+      return FutureUtils.getUnchecked(future, true);
+    }
+    catch (RuntimeException e) {
+      throw new QueryException(null, "Unable to contact overlord " + e.getMessage(), null, null);
+    }
   }
 
   private static SqlStatementState getSqlStatementState(TaskStatusPlus taskStatusPlus)

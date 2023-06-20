@@ -2038,6 +2038,10 @@ public class SqlResourceTest extends CalciteTestBase
   public static byte[] responseToByteArray(Response resp) throws IOException
   {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+    if (resp.getEntity() == null) {
+      return null;
+    }
     ((StreamingOutput) resp.getEntity()).write(baos);
     return baos.toByteArray();
   }

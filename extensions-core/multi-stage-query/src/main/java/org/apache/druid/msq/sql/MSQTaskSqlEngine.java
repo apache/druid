@@ -297,7 +297,6 @@ public class MSQTaskSqlEngine implements SqlEngine
   {
     return typeFactory.createStructType(
         ImmutableList.of(
-            Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR),
             Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)
         ),
         TASK_STRUCT_FIELD_NAMES
