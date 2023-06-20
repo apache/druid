@@ -143,48 +143,50 @@ public class OshiSysMonitor extends FeedDefiningMonitor
   {
     memStats.emit(emitter);
   }
+
   public void monitorSwapStats(ServiceEmitter emitter)
   {
     swapStats.emit(emitter);
   }
+
   public void monitorFsStats(ServiceEmitter emitter)
   {
     fsStats.emit(emitter);
   }
+
   public void monitorDiskStats(ServiceEmitter emitter)
   {
     diskStats.emit(emitter);
   }
+
   public void monitorNetStats(ServiceEmitter emitter)
   {
     netStats.emit(emitter);
   }
+
   public void monitorCpuStats(ServiceEmitter emitter)
   {
     cpuStats.emit(emitter);
   }
+
   public void monitorSysStats(ServiceEmitter emitter)
   {
     sysStats.emit(emitter);
   }
+
   public void monitorTcpStats(ServiceEmitter emitter)
   {
     tcpStats.emit(emitter);
   }
 
   /**
-   * Interface to implement Stats
+   * Implementation of Memstats
    * <p>
    * Define a method {@link #emit(ServiceEmitter)} to emit metrices in emiters
    */
-  private interface Stats
-  {
-    void emit(ServiceEmitter emitter);
-  }
 
-  private class MemStats implements Stats
+  private class MemStats
   {
-    @Override
     public void emit(ServiceEmitter emitter)
     {
       GlobalMemory mem = hal.getMemory();
@@ -207,12 +209,11 @@ public class OshiSysMonitor extends FeedDefiningMonitor
     }
   }
 
-  private class SwapStats implements Stats
+  private class SwapStats
   {
     private long prevPageIn = 0;
     private long prevPageOut = 0;
 
-    @Override
     public void emit(ServiceEmitter emitter)
     {
       VirtualMemory swap = hal.getMemory().getVirtualMemory();
@@ -239,9 +240,8 @@ public class OshiSysMonitor extends FeedDefiningMonitor
     }
   }
 
-  private class FsStats implements Stats
+  private class FsStats
   {
-    @Override
     public void emit(ServiceEmitter emitter)
     {
       FileSystem fileSystem = os.getFileSystem();
@@ -264,12 +264,11 @@ public class OshiSysMonitor extends FeedDefiningMonitor
     }
   }
 
-  private class DiskStats implements Stats
+  private class DiskStats
   {
     // Difference b/w metrics of two consecutive values. It tells Δmetric (increase/decrease in metrics value)
     private final KeyedDiff diff = new KeyedDiff();
 
-    @Override
     public void emit(ServiceEmitter emitter)
     {
       List<HWDiskStore> disks = hal.getDiskStores();
@@ -300,11 +299,10 @@ public class OshiSysMonitor extends FeedDefiningMonitor
     }
   }
 
-  private class NetStats implements Stats
+  private class NetStats
   {
     private final KeyedDiff diff = new KeyedDiff();
 
-    @Override
     public void emit(ServiceEmitter emitter)
     {
       List<NetworkIF> networkIFS = hal.getNetworkIFs();
@@ -313,7 +311,9 @@ public class OshiSysMonitor extends FeedDefiningMonitor
         for (String addr : net.getIPv4addr()) {
           if (!NET_ADDRESS_BLACKLIST.contains(addr)) {
             // Only emit metrics for non black-listed ip addresses
-            String mapKey = name + "_" + addr;    // Network_Name_IPV4 address as key, ex: wifi_192.1.0.1 to uniquely identify the dimension
+            String mapKey = name
+                            + "_"
+                            + addr;    // Network_Name_IPV4 address as key, ex: wifi_192.1.0.1 to uniquely identify the dimension
             final Map<String, Long> stats = diff.to(
                 mapKey,
                 ImmutableMap.<String, Long>builder()
@@ -343,12 +343,11 @@ public class OshiSysMonitor extends FeedDefiningMonitor
     }
   }
 
-  private class CpuStats implements Stats
+  private class CpuStats
   {
     private final KeyedDiff diff = new KeyedDiff();
 
 
-    @Override
     public void emit(ServiceEmitter emitter)
     {
       CentralProcessor processor = hal.getProcessor();
@@ -397,9 +396,9 @@ public class OshiSysMonitor extends FeedDefiningMonitor
     }
   }
 
-  private class SysStats implements Stats
+  private class SysStats
   {
-    @Override
+
     public void emit(ServiceEmitter emitter)
     {
       final ServiceMetricEvent.Builder builder = builder();
@@ -429,11 +428,10 @@ public class OshiSysMonitor extends FeedDefiningMonitor
     }
   }
 
-  private class TcpStats implements Stats
+  private class TcpStats
   {
     private final KeyedDiff diff = new KeyedDiff();
 
-    @Override
     public void emit(ServiceEmitter emitter)
     {
       final ServiceMetricEvent.Builder builder = builder();
