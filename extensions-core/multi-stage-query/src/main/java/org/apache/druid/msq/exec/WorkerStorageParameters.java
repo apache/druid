@@ -32,10 +32,10 @@ import java.util.Objects;
 /**
  * Class for determining the amount of temporary disk space to allocate to various purposes, given the per-worker limit.
  * Similar to {@link WorkerMemoryParameters}, but for temporary disk space.
- *
+ * <br>
  * Currently only used to allocate disk space for intermediate output from super sorter storage, if intermediate super
  * sorter storage is enabled.
- *
+ * <br>
  * If it is enabled, keeps {@link #MINIMUM_BASIC_OPERATIONS_BYTES} for miscellaneous operations and
  * configures the super sorter to use {@link #SUPER_SORTER_TMP_STORAGE_USABLE_FRACTION} of the remaining space for
  * intermediate files. If this value is less than {@link #MINIMUM_SUPER_SORTER_TMP_STORAGE_BYTES},
@@ -100,6 +100,8 @@ public class WorkerStorageParameters
 
     Preconditions.checkArgument(tmpStorageBytesPerTask > 0, "Temporary storage bytes passed: [%s] should be > 0", tmpStorageBytesPerTask);
     long intermediateSuperSorterStorageMaxLocalBytes = computeUsableStorage(tmpStorageBytesPerTask);
+
+    log.info("Useable storage: [%s]", intermediateSuperSorterStorageMaxLocalBytes);
 
     if (intermediateSuperSorterStorageMaxLocalBytes < MINIMUM_SUPER_SORTER_TMP_STORAGE_BYTES) {
       throw new MSQException(
