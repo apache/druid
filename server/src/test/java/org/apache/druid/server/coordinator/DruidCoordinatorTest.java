@@ -249,6 +249,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(serverInventoryView, loadQueueTaskMaster);
 
     coordinator.start();
+
+    Assert.assertNull(coordinator.getReplicationFactor(dataSegment.getId()));
+
     // Wait for this coordinator to become leader
     leaderAnnouncerLatch.await();
 
@@ -306,6 +309,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     // the segments are replicated as many times as they can be given state of cluster, therefore should not be
     // under-replicated.
     Assert.assertEquals(0L, underRepliicationCountsPerDataSourceUsingClusterView.getLong(dataSource));
+    Assert.assertEquals(Integer.valueOf(2), coordinator.getReplicationFactor(dataSegment.getId()));
 
     coordinator.stop();
     leaderUnannouncerLatch.await();
@@ -397,6 +401,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
     Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
+
+    dataSegments.values().forEach(dataSegment -> Assert.assertEquals(Integer.valueOf(1), coordinator.getReplicationFactor(dataSegment.getId())));
 
     coordinator.stop();
     leaderUnannouncerLatch.await();
