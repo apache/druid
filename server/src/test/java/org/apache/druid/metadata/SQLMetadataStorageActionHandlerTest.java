@@ -44,7 +44,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.sql.ResultSet;
 import java.util.HashMap;
@@ -60,11 +59,7 @@ public class SQLMetadataStorageActionHandlerTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  @Rule
-  public final ExpectedException thrown = ExpectedException.none();
-
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
-
 
   private static final Random RANDOM = new Random(1);
 
@@ -138,17 +133,10 @@ public class SQLMetadataStorageActionHandlerTest
 
     handler.insert(entryId, DateTimes.of("2014-01-02T00:00:00.123"), "testDataSource", entry, true, null, "type", "group");
 
-    Assert.assertEquals(
-        Optional.of(entry),
-        handler.getEntry(entryId)
-    );
-
+    Assert.assertEquals(Optional.of(entry), handler.getEntry(entryId));
     Assert.assertEquals(Optional.absent(), handler.getEntry("non_exist_entry"));
-
     Assert.assertEquals(Optional.absent(), handler.getStatus(entryId));
-
     Assert.assertEquals(Optional.absent(), handler.getStatus("non_exist_entry"));
-
     Assert.assertTrue(handler.setStatus(entryId, true, status1));
 
     Assert.assertEquals(
@@ -182,21 +170,12 @@ public class SQLMetadataStorageActionHandlerTest
     // inactive statuses cannot be updated, this should fail
     Assert.assertFalse(handler.setStatus(entryId, false, status2));
 
-    Assert.assertEquals(
-        Optional.of(status1),
-        handler.getStatus(entryId)
-    );
-
-    Assert.assertEquals(
-        Optional.of(entry),
-        handler.getEntry(entryId)
-    );
-
+    Assert.assertEquals(Optional.of(status1), handler.getStatus(entryId));
+    Assert.assertEquals(Optional.of(entry), handler.getEntry(entryId));
     Assert.assertEquals(
         ImmutableList.of(),
         handler.getTaskInfos(CompleteTaskLookup.withTasksCreatedPriorTo(null, DateTimes.of("2014-01-03")), null)
     );
-
     Assert.assertEquals(
         ImmutableList.of(status1),
         handler.getTaskInfos(CompleteTaskLookup.withTasksCreatedPriorTo(null, DateTimes.of("2014-01-01")), null)
@@ -218,10 +197,7 @@ public class SQLMetadataStorageActionHandlerTest
     }
 
     final List<TaskInfo<Map<String, Object>, Map<String, Object>>> statuses = handler.getTaskInfos(
-        CompleteTaskLookup.withTasksCreatedPriorTo(
-            7,
-            DateTimes.of("2014-01-01")
-        ),
+        CompleteTaskLookup.withTasksCreatedPriorTo(7, DateTimes.of("2014-01-01")),
         null
     );
     Assert.assertEquals(7, statuses.size());
@@ -243,10 +219,7 @@ public class SQLMetadataStorageActionHandlerTest
     }
 
     final List<TaskInfo<Map<String, Object>, Map<String, Object>>> statuses = handler.getTaskInfos(
-        CompleteTaskLookup.withTasksCreatedPriorTo(
-            10,
-            DateTimes.of("2014-01-01")
-        ),
+        CompleteTaskLookup.withTasksCreatedPriorTo(10, DateTimes.of("2014-01-01")),
         null
     );
     Assert.assertEquals(5, statuses.size());
