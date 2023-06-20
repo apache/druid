@@ -39,7 +39,8 @@ import org.apache.calcite.sql.SqlTimestampLiteral;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.tools.ValidationException;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -72,7 +73,6 @@ import java.util.stream.Collectors;
 
 public class DruidSqlParserUtils
 {
-
   private static final Logger log = new Logger(DruidSqlParserUtils.class);
   public static final String ALL = "all";
 
@@ -85,6 +85,9 @@ public class DruidSqlParserUtils
     try {
       return convertSqlNodeToGranularity(sqlNode);
     }
+    catch (DruidException e) {
+      throw e;
+    }
     catch (Exception e) {
       log.debug(e, StringUtils.format("Unable to convert %s to a valid granularity.", sqlNode.toString()));
       throw new ParseException(e.getMessage());
@@ -95,7 +98,7 @@ public class DruidSqlParserUtils
    * This method is used to extract the granularity from a SqlNode representing following function calls:
    * 1. FLOOR(__time TO TimeUnit)
    * 2. TIME_FLOOR(__time, 'PT1H')
-   *
+   * <p>
    * Validation on the sqlNode is contingent to following conditions:
    * 1. sqlNode is an instance of SqlCall
    * 2. Operator is either one of TIME_FLOOR or FLOOR
@@ -103,7 +106,7 @@ public class DruidSqlParserUtils
    * 4. First operand is a SimpleIdentifier representing __time
    * 5. If operator is TIME_FLOOR, the second argument is a literal, and can be converted to the Granularity class
    * 6. If operator is FLOOR, the second argument is a TimeUnit, and can be mapped using {@link TimeUnits}
-   *
+   * <p>
    * Since it is to be used primarily while parsing the SqlNode, it is wrapped in {@code convertSqlNodeToGranularityThrowingParseExceptions}
    *
    * @param sqlNode SqlNode representing a call to a function
@@ -112,16 +115,8 @@ public class DruidSqlParserUtils
    */
   public static Granularity convertSqlNodeToGranularity(SqlNode sqlNode) throws ParseException
   {
-
-    final String genericParseFailedMessageFormatString = "Encountered %s after PARTITIONED BY. "
-                                                         + "Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or %s function";
-
     if (!(sqlNode instanceof SqlCall)) {
-      throw new ParseException(StringUtils.format(
-          genericParseFailedMessageFormatString,
-          sqlNode.toString(),
-          TimeFloorOperatorConversion.SQL_FUNCTION_NAME
-      ));
+      throw makeInvalidPartitionByException(sqlNode);
     }
     SqlCall sqlCall = (SqlCall) sqlNode;
 
@@ -170,7 +165,9 @@ public class DruidSqlParserUtils
       catch (IllegalArgumentException e) {
         throw new ParseException(StringUtils.format("%s is an invalid period string", granularitySqlNode.toString()));
       }
-      return new PeriodGranularity(period, null, null);
+      final PeriodGranularity retVal = new PeriodGranularity(period, null, null);
+      validateSupportedGranularityForPartitionedBy(sqlNode, retVal);
+      return retVal;
 
     } else if ("FLOOR".equalsIgnoreCase(operatorName)) { // If the floor function is of form FLOOR(__time TO DAY)
       SqlNode granularitySqlNode = operandList.get(1);
@@ -191,15 +188,22 @@ public class DruidSqlParserUtils
               granularityIntervalQualifier.timeUnitRange.toString()
           )
       );
-      return new PeriodGranularity(period, null, null);
+      final PeriodGranularity retVal = new PeriodGranularity(period, null, null);
+      validateSupportedGranularityForPartitionedBy(sqlNode, retVal);
+      return retVal;
     }
 
     // Shouldn't reach here
-    throw new ParseException(StringUtils.format(
-        genericParseFailedMessageFormatString,
-        sqlNode.toString(),
-        TimeFloorOperatorConversion.SQL_FUNCTION_NAME
-    ));
+    throw makeInvalidPartitionByException(sqlNode);
+  }
+
+  private static DruidException makeInvalidPartitionByException(SqlNode sqlNode)
+  {
+    return InvalidSqlInput.exception(
+        "Invalid granularity [%s] after PARTITIONED BY.  "
+        + "Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR() or TIME_FLOOR()",
+        sqlNode
+    );
   }
 
   /**
@@ -207,7 +211,7 @@ public class DruidSqlParserUtils
    * be used in creating an ingestion spec. If the sqlNode is an SqlLiteral of {@link #ALL}, returns a singleton list of
    * "ALL". Otherwise, it converts and optimizes the query using {@link MoveTimeFiltersToIntervals} into a list of
    * intervals which contain all valid values of time as per the query.
-   *
+   * <p>
    * The following validations are performed
    * 1. Only __time column and timestamp literals are present in the query
    * 2. The interval after optimization is not empty
@@ -215,8 +219,8 @@ public class DruidSqlParserUtils
    * 4. The intervals after adjusting for timezone are aligned with the granularity parameter
    *
    * @param replaceTimeQuery Sql node representing the query
-   * @param granularity granularity of the query for validation
-   * @param dateTimeZone timezone
+   * @param granularity      granularity of the query for validation
+   * @param dateTimeZone     timezone
    * @return List of string representation of intervals
    * @throws ValidationException if the SqlNode cannot be converted to a list of intervals
    */
@@ -224,7 +228,7 @@ public class DruidSqlParserUtils
       SqlNode replaceTimeQuery,
       Granularity granularity,
       DateTimeZone dateTimeZone
-  ) throws ValidationException
+  )
   {
     if (replaceTimeQuery instanceof SqlLiteral && ALL.equalsIgnoreCase(((SqlLiteral) replaceTimeQuery).toValue())) {
       return ImmutableList.of(ALL);
@@ -237,19 +241,31 @@ public class DruidSqlParserUtils
     List<Interval> intervals = filtration.getIntervals();
 
     if (filtration.getDimFilter() != null) {
-      throw new ValidationException("Only " + ColumnHolder.TIME_COLUMN_NAME + " column is supported in OVERWRITE WHERE clause");
+      throw InvalidSqlInput.exception(
+          "OVERWRITE WHERE clause only supports filtering on the __time column, got [%s]",
+          filtration.getDimFilter()
+      );
     }
 
     if (intervals.isEmpty()) {
-      throw new ValidationException("Intervals for replace are empty");
+      throw InvalidSqlInput.exception(
+          "The OVERWRITE WHERE clause [%s] produced no time intervals, are the bounds overly restrictive?",
+          dimFilter,
+          intervals
+      );
     }
 
     for (Interval interval : intervals) {
       DateTime intervalStart = interval.getStart();
       DateTime intervalEnd = interval.getEnd();
-      if (!granularity.bucketStart(intervalStart).equals(intervalStart) || !granularity.bucketStart(intervalEnd).equals(intervalEnd)) {
-        throw new ValidationException("OVERWRITE WHERE clause contains an interval " + intervals +
-                                      " which is not aligned with PARTITIONED BY granularity " + granularity);
+      if (!granularity.bucketStart(intervalStart).equals(intervalStart)
+          || !granularity.bucketStart(intervalEnd).equals(intervalEnd)) {
+        throw InvalidSqlInput.exception(
+            "OVERWRITE WHERE clause identified interval [%s]" +
+            " which is not aligned with PARTITIONED BY granularity [%s]",
+            interval,
+            granularity
+        );
       }
     }
     return intervals
@@ -261,13 +277,12 @@ public class DruidSqlParserUtils
   /**
    * Extracts and converts the information in the CLUSTERED BY clause to a new SqlOrderBy node.
    *
-   * @param query sql query
+   * @param query           sql query
    * @param clusteredByList List of clustered by columns
    * @return SqlOrderBy node containing the clusteredByList information
    * @throws ValidationException if any of the clustered by columns contain DESCENDING order.
    */
   public static SqlOrderBy convertClusterByToOrderBy(SqlNode query, SqlNodeList clusteredByList)
-      throws ValidationException
   {
     validateClusteredByColumns(clusteredByList);
     // If we have a CLUSTERED BY clause, extract the information in that CLUSTERED BY and create a new
@@ -373,10 +388,9 @@ public class DruidSqlParserUtils
   /**
    * Validates the clustered by columns to ensure that it does not contain DESCENDING order columns.
    *
-   * @param clusteredByNodes  List of SqlNodes representing columns to be clustered by.
-   * @throws ValidationException if any of the clustered by columns contain DESCENDING order.
+   * @param clusteredByNodes List of SqlNodes representing columns to be clustered by.
    */
-  public static void validateClusteredByColumns(final SqlNodeList clusteredByNodes) throws ValidationException
+  public static void validateClusteredByColumns(final SqlNodeList clusteredByNodes)
   {
     if (clusteredByNodes == null) {
       return;
@@ -384,10 +398,9 @@ public class DruidSqlParserUtils
 
     for (final SqlNode clusteredByNode : clusteredByNodes.getList()) {
       if (clusteredByNode.isA(ImmutableSet.of(SqlKind.DESCENDING))) {
-        throw new ValidationException(
-            StringUtils.format("[%s] is invalid."
-                               + " CLUSTERED BY columns cannot be sorted in descending order.", clusteredByNode.toString()
-            )
+        throw InvalidSqlInput.exception(
+            "Invalid CLUSTERED BY clause [%s]: cannot sort in descending order.",
+            clusteredByNode
         );
       }
     }
@@ -399,111 +412,121 @@ public class DruidSqlParserUtils
    * are AND, OR, NOT, >, <, >=, <= and BETWEEN operators in the sql query.
    *
    * @param replaceTimeQuery Sql node representing the query
-   * @param dateTimeZone timezone
+   * @param dateTimeZone     timezone
    * @return Dimfilter for the query
    * @throws ValidationException if the SqlNode cannot be converted a Dimfilter
    */
   public static DimFilter convertQueryToDimFilter(SqlNode replaceTimeQuery, DateTimeZone dateTimeZone)
-      throws ValidationException
   {
     if (!(replaceTimeQuery instanceof SqlBasicCall)) {
-      log.error("Expected SqlBasicCall during parsing, but found " + replaceTimeQuery.getClass().getName());
-      throw new ValidationException("Invalid OVERWRITE WHERE clause");
+      throw InvalidSqlInput.exception(
+          "Invalid OVERWRITE WHERE clause [%s]: expected clause including AND, OR, NOT, >, <, >=, <= OR BETWEEN operators",
+          replaceTimeQuery
+      );
     }
-    String columnName;
-    SqlBasicCall sqlBasicCall = (SqlBasicCall) replaceTimeQuery;
-    List<SqlNode> operandList = sqlBasicCall.getOperandList();
-    switch (sqlBasicCall.getOperator().getKind()) {
-      case AND:
-        List<DimFilter> dimFilters = new ArrayList<>();
-        for (SqlNode sqlNode : sqlBasicCall.getOperandList()) {
-          dimFilters.add(convertQueryToDimFilter(sqlNode, dateTimeZone));
-        }
-        return new AndDimFilter(dimFilters);
-      case OR:
-        dimFilters = new ArrayList<>();
-        for (SqlNode sqlNode : sqlBasicCall.getOperandList()) {
-          dimFilters.add(convertQueryToDimFilter(sqlNode, dateTimeZone));
-        }
-        return new OrDimFilter(dimFilters);
-      case NOT:
-        return new NotDimFilter(convertQueryToDimFilter(sqlBasicCall.getOperandList().get(0), dateTimeZone));
-      case GREATER_THAN_OR_EQUAL:
-        columnName = parseColumnName(operandList.get(0));
-        return new BoundDimFilter(
-            columnName,
-            parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
-            null,
-            false,
-            null,
-            null,
-            null,
-            StringComparators.NUMERIC
-        );
-      case LESS_THAN_OR_EQUAL:
-        columnName = parseColumnName(operandList.get(0));
-        return new BoundDimFilter(
-            columnName,
-            null,
-            parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
-            null,
-            false,
-            null,
-            null,
-            StringComparators.NUMERIC
-        );
-      case GREATER_THAN:
-        columnName = parseColumnName(operandList.get(0));
-        return new BoundDimFilter(
-            columnName,
-            parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
-            null,
-            true,
-            null,
-            null,
-            null,
-            StringComparators.NUMERIC
-        );
-      case LESS_THAN:
-        columnName = parseColumnName(operandList.get(0));
-        return new BoundDimFilter(
-            columnName,
-            null,
-            parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
-            null,
-            true,
-            null,
-            null,
-            StringComparators.NUMERIC
-        );
-      case BETWEEN:
-        columnName = parseColumnName(operandList.get(0));
-        return new BoundDimFilter(
-            columnName,
-            parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
-            parseTimeStampWithTimeZone(operandList.get(2), dateTimeZone),
-            false,
-            false,
-            null,
-            null,
-            StringComparators.NUMERIC
-        );
-      default:
-        throw new ValidationException("Unsupported operation in OVERWRITE WHERE clause: " + sqlBasicCall.getOperator().getName());
+
+    try {
+      String columnName;
+      SqlBasicCall sqlBasicCall = (SqlBasicCall) replaceTimeQuery;
+      List<SqlNode> operandList = sqlBasicCall.getOperandList();
+      switch (sqlBasicCall.getOperator().getKind()) {
+        case AND:
+          List<DimFilter> dimFilters = new ArrayList<>();
+          for (SqlNode sqlNode : sqlBasicCall.getOperandList()) {
+            dimFilters.add(convertQueryToDimFilter(sqlNode, dateTimeZone));
+          }
+          return new AndDimFilter(dimFilters);
+        case OR:
+          dimFilters = new ArrayList<>();
+          for (SqlNode sqlNode : sqlBasicCall.getOperandList()) {
+            dimFilters.add(convertQueryToDimFilter(sqlNode, dateTimeZone));
+          }
+          return new OrDimFilter(dimFilters);
+        case NOT:
+          return new NotDimFilter(convertQueryToDimFilter(sqlBasicCall.getOperandList().get(0), dateTimeZone));
+        case GREATER_THAN_OR_EQUAL:
+          columnName = parseColumnName(operandList.get(0));
+          return new BoundDimFilter(
+              columnName,
+              parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
+              null,
+              false,
+              null,
+              null,
+              null,
+              StringComparators.NUMERIC
+          );
+        case LESS_THAN_OR_EQUAL:
+          columnName = parseColumnName(operandList.get(0));
+          return new BoundDimFilter(
+              columnName,
+              null,
+              parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
+              null,
+              false,
+              null,
+              null,
+              StringComparators.NUMERIC
+          );
+        case GREATER_THAN:
+          columnName = parseColumnName(operandList.get(0));
+          return new BoundDimFilter(
+              columnName,
+              parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
+              null,
+              true,
+              null,
+              null,
+              null,
+              StringComparators.NUMERIC
+          );
+        case LESS_THAN:
+          columnName = parseColumnName(operandList.get(0));
+          return new BoundDimFilter(
+              columnName,
+              null,
+              parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
+              null,
+              true,
+              null,
+              null,
+              StringComparators.NUMERIC
+          );
+        case BETWEEN:
+          columnName = parseColumnName(operandList.get(0));
+          return new BoundDimFilter(
+              columnName,
+              parseTimeStampWithTimeZone(operandList.get(1), dateTimeZone),
+              parseTimeStampWithTimeZone(operandList.get(2), dateTimeZone),
+              false,
+              false,
+              null,
+              null,
+              StringComparators.NUMERIC
+          );
+        default:
+          throw InvalidSqlInput.exception(
+              "Unsupported operation [%s] in OVERWRITE WHERE clause.",
+              sqlBasicCall.getOperator().getName()
+          );
+      }
+    }
+    catch (DruidException e) {
+      throw e.prependAndBuild("Invalid OVERWRITE WHERE clause [%s]", replaceTimeQuery);
     }
   }
 
   /**
    * Converts a {@link SqlNode} identifier into a string representation
    *
-   * @param sqlNode the sql node
+   * @param sqlNode the SQL node
    * @return string representing the column name
-   * @throws ValidationException if the sql node is not an SqlIdentifier
+   * @throws DruidException if the SQL node is not an SqlIdentifier
    */
-  public static String parseColumnName(SqlNode sqlNode) throws ValidationException
+  public static String parseColumnName(SqlNode sqlNode)
   {
     if (!(sqlNode instanceof SqlIdentifier)) {
-      throw new ValidationException("Expressions must be of the form __time <operator> TIMESTAMP");
+      throw InvalidSqlInput.exception("Cannot parse column name from SQL expression [%s]", sqlNode);
     }
     return ((SqlIdentifier) sqlNode).getSimple();
   }
@@ -511,15 +534,15 @@ public class DruidSqlParserUtils
   /**
    * Converts a {@link SqlNode} into a timestamp, taking into account the timezone
    *
-   * @param sqlNode the sql node
+   * @param sqlNode  the SQL node
    * @param timeZone timezone
    * @return the timestamp string as milliseconds from epoch
-   * @throws ValidationException if the sql node is not a SqlTimestampLiteral
+   * @throws DruidException if the SQL node is not a SqlTimestampLiteral
    */
-  public static String parseTimeStampWithTimeZone(SqlNode sqlNode, DateTimeZone timeZone) throws ValidationException
+  private static String parseTimeStampWithTimeZone(SqlNode sqlNode, DateTimeZone timeZone)
   {
     if (!(sqlNode instanceof SqlTimestampLiteral)) {
-      throw new ValidationException("Expressions must be of the form __time <operator> TIMESTAMP");
+      throw InvalidSqlInput.exception("Cannot get a timestamp from sql expression [%s]", sqlNode);
     }
 
     Timestamp sqlTimestamp = Timestamp.valueOf(((SqlTimestampLiteral) sqlNode).toFormattedString());
@@ -527,17 +550,12 @@ public class DruidSqlParserUtils
     return String.valueOf(zonedTimestamp.toInstant().toEpochMilli());
   }
 
-  /**
-   * Throws an IAE with appropriate message if the granularity supplied is not present in
-   * {@link org.apache.druid.java.util.common.granularity.Granularities}. It also filters out NONE as it is not a valid
-   * granularity that can be supplied in PARTITIONED BY
-   */
-  public static void throwIfUnsupportedGranularityInPartitionedBy(Granularity granularity)
+  public static void validateSupportedGranularityForPartitionedBy(SqlNode originalNode, Granularity granularity)
   {
     if (!GranularityType.isStandard(granularity)) {
-      throw new IAE(
-          "The granularity specified in PARTITIONED BY is not supported. "
-          + "Please use an equivalent of these granularities: %s.",
+      throw InvalidSqlInput.exception(
+          "The granularity specified in PARTITIONED BY [%s] is not supported.  Valid options: [%s]",
+          originalNode == null ? granularity : originalNode,
           Arrays.stream(GranularityType.values())
                 .filter(granularityType -> !granularityType.equals(GranularityType.NONE))
                 .map(Enum::name)
@@ -545,5 +563,10 @@ public class DruidSqlParserUtils
                 .collect(Collectors.joining(", "))
       );
     }
+  }
+
+  public static DruidException problemParsing(String message)
+  {
+    return InvalidSqlInput.exception(message);
   }
 }

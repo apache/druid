@@ -23,14 +23,15 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
-import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
-import org.apache.druid.server.coordinator.DruidClusterBuilder;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.LoadQueuePeonTester;
-import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategy;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
@@ -54,12 +55,18 @@ public class BroadcastDistributionRuleTest
   private ServerHolder activeServer;
   private ServerHolder decommissioningServer1;
   private ServerHolder decommissioningServer2;
+  private SegmentLoadQueueManager loadQueueManager;
+
+  private static final String DS_SMALL = "small_source";
+  private static final String TIER_1 = "tier1";
+  private static final String TIER_2 = "tier2";
 
   @Before
   public void setUp()
   {
+    loadQueueManager = new SegmentLoadQueueManager(null, null, null);
     smallSegment = new DataSegment(
-        "small_source",
+        DS_SMALL,
         Intervals.of("0/1000"),
         DateTimes.nowUtc().toString(),
         new HashMap<>(),
@@ -109,7 +116,7 @@ public class BroadcastDistributionRuleTest
             null,
             1000,
             ServerType.HISTORICAL,
-            "hot",
+            TIER_1,
             0
         ).addDataSegment(smallSegment)
          .toImmutableDruidServer(),
@@ -124,7 +131,7 @@ public class BroadcastDistributionRuleTest
                 null,
                 1000,
                 ServerType.HISTORICAL,
-                "hot",
+                TIER_1,
                 0
             ).addDataSegment(largeSegments.get(0))
              .toImmutableDruidServer(),
@@ -139,7 +146,7 @@ public class BroadcastDistributionRuleTest
                 null,
                 1000,
                 ServerType.HISTORICAL,
-                DruidServer.DEFAULT_TIER,
+                TIER_2,
                 0
             ).addDataSegment(largeSegments.get(1))
              .toImmutableDruidServer(),
@@ -154,7 +161,7 @@ public class BroadcastDistributionRuleTest
                 null,
                 100,
                 ServerType.HISTORICAL,
-                DruidServer.DEFAULT_TIER,
+                TIER_2,
                 0
             ).addDataSegment(largeSegments.get(2))
              .toImmutableDruidServer(),
@@ -170,7 +177,7 @@ public class BroadcastDistributionRuleTest
                 null,
                 1000,
                 ServerType.HISTORICAL,
-                "hot",
+                TIER_1,
                 0
             ).addDataSegment(largeSegments2.get(0))
              .toImmutableDruidServer(),
@@ -185,7 +192,7 @@ public class BroadcastDistributionRuleTest
                 null,
                 100,
                 ServerType.HISTORICAL,
-                DruidServer.DEFAULT_TIER,
+                TIER_2,
                 0
             ).addDataSegment(largeSegments2.get(1))
              .toImmutableDruidServer(),
@@ -200,7 +207,7 @@ public class BroadcastDistributionRuleTest
             null,
             100,
             ServerType.HISTORICAL,
-            "tier1",
+            TIER_1,
             0
         ).addDataSegment(largeSegments.get(0))
          .toImmutableDruidServer(),
@@ -214,7 +221,7 @@ public class BroadcastDistributionRuleTest
             null,
             100,
             ServerType.HISTORICAL,
-            "tier1",
+            TIER_1,
             0
         ).addDataSegment(smallSegment)
          .toImmutableDruidServer(),
@@ -229,7 +236,7 @@ public class BroadcastDistributionRuleTest
             null,
             100,
             ServerType.HISTORICAL,
-            "tier1",
+            TIER_1,
             0
         ).addDataSegment(largeSegments.get(1))
          .toImmutableDruidServer(),
@@ -237,26 +244,26 @@ public class BroadcastDistributionRuleTest
         true
     );
 
-    druidCluster = DruidClusterBuilder
-        .newBuilder()
+    druidCluster = DruidCluster
+        .builder()
         .addTier(
-            "hot",
+            TIER_1,
             holdersOfLargeSegments.get(0),
             holderOfSmallSegment,
             holdersOfLargeSegments2.get(0)
         )
         .addTier(
-            DruidServer.DEFAULT_TIER,
+            TIER_2,
             holdersOfLargeSegments.get(1),
             holdersOfLargeSegments.get(2),
             holdersOfLargeSegments2.get(1)
         )
         .build();
 
-    secondCluster = DruidClusterBuilder
-        .newBuilder()
+    secondCluster = DruidCluster
+        .builder()
         .addTier(
-            "tier1",
+            TIER_1,
             activeServer,
             decommissioningServer1,
             decommissioningServer2
@@ -270,8 +277,9 @@ public class BroadcastDistributionRuleTest
     final ForeverBroadcastDistributionRule rule =
         new ForeverBroadcastDistributionRule();
 
-    CoordinatorStats stats = rule.run(
-        null,
+    CoordinatorRunStats stats = runRuleAndGetStats(
+        rule,
+        smallSegment,
         makeCoordinartorRuntimeParams(
             druidCluster,
             smallSegment,
@@ -280,36 +288,36 @@ public class BroadcastDistributionRuleTest
             largeSegments.get(2),
             largeSegments2.get(0),
             largeSegments2.get(1)
-        ),
-        smallSegment
+        )
     );
 
-    Assert.assertEquals(5L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
-    Assert.assertFalse(stats.hasPerTierStats());
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, DS_SMALL));
+    Assert.assertEquals(3L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_2, DS_SMALL));
 
     Assert.assertTrue(
-        holdersOfLargeSegments.stream()
-                              .allMatch(holder -> holder.getPeon().getSegmentsToLoad().contains(smallSegment))
+        holdersOfLargeSegments.stream().allMatch(
+            holder -> holder.isLoadingSegment(smallSegment)
+        )
     );
-
     Assert.assertTrue(
-        holdersOfLargeSegments2.stream()
-                               .allMatch(holder -> holder.getPeon().getSegmentsToLoad().contains(smallSegment))
+        holdersOfLargeSegments2.stream().allMatch(
+            holder -> holder.isLoadingSegment(smallSegment)
+        )
     );
-
     Assert.assertTrue(holderOfSmallSegment.isServingSegment(smallSegment));
   }
 
-  private static DruidCoordinatorRuntimeParams makeCoordinartorRuntimeParams(
+  private DruidCoordinatorRuntimeParams makeCoordinartorRuntimeParams(
       DruidCluster druidCluster,
       DataSegment... usedSegments
   )
   {
-    return CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
+    return DruidCoordinatorRuntimeParams
+        .newBuilder(DateTimes.nowUtc())
         .withDruidCluster(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false))
         .withUsedSegmentsInTest(usedSegments)
+        .withBalancerStrategy(new RandomBalancerStrategy())
+        .withSegmentAssignerUsing(loadQueueManager)
         .build();
   }
 
@@ -332,20 +340,18 @@ public class BroadcastDistributionRuleTest
     final ForeverBroadcastDistributionRule rule =
         new ForeverBroadcastDistributionRule();
 
-    CoordinatorStats stats = rule.run(
-        null,
+    CoordinatorRunStats stats = runRuleAndGetStats(
+        rule,
+        smallSegment,
         makeCoordinartorRuntimeParams(
             secondCluster,
             smallSegment,
             largeSegments.get(0),
             largeSegments.get(1)
-        ),
-        smallSegment
+        )
     );
 
-    Assert.assertEquals(1L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
-    Assert.assertFalse(stats.hasPerTierStats());
-
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, DS_SMALL));
     Assert.assertEquals(1, activeServer.getPeon().getSegmentsToLoad().size());
     Assert.assertEquals(1, decommissioningServer1.getPeon().getSegmentsToDrop().size());
     Assert.assertEquals(0, decommissioningServer2.getPeon().getSegmentsToLoad().size());
@@ -354,11 +360,11 @@ public class BroadcastDistributionRuleTest
   @Test
   public void testBroadcastToMultipleDataSources()
   {
-    final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule(
-    );
+    final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
 
-    CoordinatorStats stats = rule.run(
-        null,
+    CoordinatorRunStats stats = runRuleAndGetStats(
+        rule,
+        smallSegment,
         makeCoordinartorRuntimeParams(
             druidCluster,
             smallSegment,
@@ -367,24 +373,23 @@ public class BroadcastDistributionRuleTest
             largeSegments.get(2),
             largeSegments2.get(0),
             largeSegments2.get(1)
-        ),
-        smallSegment
+        )
     );
 
-    Assert.assertEquals(5L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
-    Assert.assertFalse(stats.hasPerTierStats());
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, DS_SMALL));
+    Assert.assertEquals(3L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_2, DS_SMALL));
 
     Assert.assertTrue(
-        holdersOfLargeSegments.stream()
-                              .allMatch(holder -> holder.getPeon().getSegmentsToLoad().contains(smallSegment))
+        holdersOfLargeSegments.stream().allMatch(
+            holder -> holder.isLoadingSegment(smallSegment)
+        )
     );
-
     Assert.assertTrue(
-        holdersOfLargeSegments2.stream()
-                               .allMatch(holder -> holder.getPeon().getSegmentsToLoad().contains(smallSegment))
+        holdersOfLargeSegments2.stream().allMatch(
+            holder -> holder.isLoadingSegment(smallSegment)
+        )
     );
-
-    Assert.assertFalse(holderOfSmallSegment.getPeon().getSegmentsToLoad().contains(smallSegment));
+    Assert.assertFalse(holderOfSmallSegment.isLoadingSegment(smallSegment));
   }
 
   @Test
@@ -392,8 +397,9 @@ public class BroadcastDistributionRuleTest
   {
     final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
 
-    CoordinatorStats stats = rule.run(
-        null,
+    CoordinatorRunStats stats = runRuleAndGetStats(
+        rule,
+        smallSegment,
         makeCoordinartorRuntimeParams(
             druidCluster,
             smallSegment,
@@ -402,18 +408,27 @@ public class BroadcastDistributionRuleTest
             largeSegments.get(2),
             largeSegments2.get(0),
             largeSegments2.get(1)
-        ),
-        smallSegment
+        )
     );
 
-    Assert.assertEquals(5L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
-    Assert.assertFalse(stats.hasPerTierStats());
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, DS_SMALL));
+    Assert.assertEquals(3L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_2, DS_SMALL));
 
     Assert.assertTrue(
-        druidCluster
-            .getAllServers()
-            .stream()
-            .allMatch(holder -> holder.isLoadingSegment(smallSegment) || holder.isServingSegment(smallSegment))
+        druidCluster.getAllServers().stream().allMatch(
+            holder -> holder.isLoadingSegment(smallSegment) || holder.isServingSegment(smallSegment)
+        )
     );
+  }
+
+  private CoordinatorRunStats runRuleAndGetStats(
+      Rule rule,
+      DataSegment segment,
+      DruidCoordinatorRuntimeParams params
+  )
+  {
+    StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
+    rule.run(segment, segmentAssigner);
+    return segmentAssigner.getStats();
   }
 }
