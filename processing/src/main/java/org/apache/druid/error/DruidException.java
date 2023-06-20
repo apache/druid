@@ -69,7 +69,7 @@ import java.util.Map;
  * <li>USER persona: Cannot find a queryable server, contact your cluster administrator to validate that all services are
  * operational</li>
  * <li>OPERATOR persona: Router unable to find a broker, check that brokers are up and active</li>
- *
+ * </ul>
  * The user-facing message doesn't talk about any Druid-specific concepts and just tries to relay a high-level
  * understanding of what happened.  The admin-facing message includes Druid notions in it as it expects that an Admin
  * will understand the various node types of Druid.
