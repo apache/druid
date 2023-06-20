@@ -241,6 +241,7 @@ public class DruidJoinRule extends RelOptRule
     final List<RexNode> subConditions = decomposeAnd(condition);
     final List<Pair<RexNode, RexInputRef>> equalitySubConditions = new ArrayList<>();
     final List<RexLiteral> literalSubConditions = new ArrayList<>();
+    final List<RexInputRef> inputRefSubConditions = new ArrayList<>();
     final int numLeftFields = leftRowType.getFieldCount();
     final Set<RexInputRef> rightColumns = new HashSet<>();
 
@@ -263,6 +264,11 @@ public class DruidJoinRule extends RelOptRule
           // Literals are always OK.
           literalSubConditions.add((RexLiteral) subCondition);
         }
+        continue;
+      }
+
+      if (subCondition.isA(SqlKind.INPUT_REF)) {
+        inputRefSubConditions.add((RexInputRef) subCondition);
         continue;
       }
 
@@ -310,7 +316,13 @@ public class DruidJoinRule extends RelOptRule
       }
     }
 
-    return Optional.of(new ConditionAnalysis(numLeftFields, equalitySubConditions, literalSubConditions));
+    return Optional.of(
+        new ConditionAnalysis(
+            numLeftFields,
+            equalitySubConditions,
+            literalSubConditions,
+            inputRefSubConditions
+        ));
   }
 
   @VisibleForTesting
@@ -375,15 +387,19 @@ public class DruidJoinRule extends RelOptRule
      */
     private final List<RexLiteral> literalSubConditions;
 
+    private final List<RexInputRef> inputRefs;
+
     ConditionAnalysis(
         int numLeftFields,
         List<Pair<RexNode, RexInputRef>> equalitySubConditions,
-        List<RexLiteral> literalSubConditions
+        List<RexLiteral> literalSubConditions,
+        List<RexInputRef> inputRefs
     )
     {
       this.numLeftFields = numLeftFields;
       this.equalitySubConditions = equalitySubConditions;
       this.literalSubConditions = literalSubConditions;
+      this.inputRefs = inputRefs;
     }
 
     public ConditionAnalysis pushThroughLeftProject(final Project leftProject)
@@ -403,7 +419,8 @@ public class DruidJoinRule extends RelOptRule
                   )
               )
               .collect(Collectors.toList()),
-          literalSubConditions
+          literalSubConditions,
+          inputRefs
       );
     }
 
@@ -428,7 +445,8 @@ public class DruidJoinRule extends RelOptRule
                   )
               )
               .collect(Collectors.toList()),
-          literalSubConditions
+          literalSubConditions,
+          inputRefs
       );
     }
 
@@ -454,6 +472,10 @@ public class DruidJoinRule extends RelOptRule
               equalitySubConditions
                   .stream()
                   .map(equality -> rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, equality.lhs, equality.rhs))
+                  .collect(Collectors.toList()),
+              inputRefs
+                  .stream()
+                  .map(inputRef -> rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, inputRef, rexBuilder.makeLiteral(true)))
                   .collect(Collectors.toList())
           ),
           false
