@@ -403,6 +403,13 @@ public class SegmentMetadataCache
   @VisibleForTesting
   void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
+    long startMillis = System.currentTimeMillis();
+
+    emitter.emit(ServiceMetricEvent.builder().build(
+        "segmentMetadataCache/refreshSegments",
+        segmentsToRefresh.size()
+    ));
+
     // Refresh the segments.
     final Set<SegmentId> refreshed = refreshSegments(segmentsToRefresh);
 
@@ -432,6 +439,12 @@ public class SegmentMetadataCache
         log.debug("%s [%s] signature is unchanged.", description, dataSource);
       }
     }
+
+    long endMillis = System.currentTimeMillis();
+    emitter.emit(ServiceMetricEvent.builder().build(
+        "segmentMetadataCache/refreshTime",
+        endMillis - startMillis
+    ));
   }
 
   @LifecycleStop
