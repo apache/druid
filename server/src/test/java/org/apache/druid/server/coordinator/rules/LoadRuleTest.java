@@ -26,7 +26,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -687,12 +686,6 @@ public class LoadRuleTest
     Assert.assertEquals(0, mockPeon1.getSegmentsToDrop().size());
     Assert.assertEquals(1, mockPeon2.getSegmentsToDrop().size());
     Assert.assertEquals(0, mockPeon3.getSegmentsToDrop().size());
-  }
-
-  @Test(expected = IAE.class)
-  public void testValidateTieredReplicantsEmptyTierReplicantsWithoutAllowEmptyFlag()
-  {
-    new ForeverLoadRule(ImmutableMap.of(), null);
   }
 
   private DataSegment createDataSegment(String dataSource)
