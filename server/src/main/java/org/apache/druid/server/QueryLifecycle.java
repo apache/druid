@@ -221,7 +221,25 @@ public class QueryLifecycle
    */
   public Access authorize(HttpServletRequest req)
   {
-    return authorize(AuthorizationUtils.authenticationResultFromRequest(req));
+    transition(State.INITIALIZED, State.AUTHORIZING);
+    final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
+        Iterables.transform(
+            baseQuery.getDataSource().getTableNames(),
+            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
+        ),
+        Iterables.transform(
+            authConfig.contextKeysToAuthorize(userContextKeys),
+            contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
+        )
+    );
+    return doAuthorize(
+        AuthorizationUtils.authenticationResultFromRequest(req),
+        AuthorizationUtils.authorizeAllResourceActions(
+            req,
+            resourcesToAuthorize,
+            authorizerMapper
+        )
+    );
   }
 
   /**
