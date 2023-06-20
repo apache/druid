@@ -36,26 +36,26 @@ import java.util.Map;
  * be using the DruidException.
  * <p>
  * Said another way, when a developer builds a DruidException in the code, they should be confident that the exception
- * will make its way back to the user.  DruidException is always the answer to "how do I generate an error message and
+ * will make its way back to the user.  DruidException is always the answer to "How do I generate an error message and
  * deliver it to the user"?
  * <p>
  * At the time that DruidException was introduced, this type of "show this to the user please" exception was largely
  * handled by created {@link org.apache.druid.java.util.common.RE}, {@link org.apache.druid.java.util.common.IAE}, or
  * {@link org.apache.druid.java.util.common.ISE} objects.  It is intended that DruidException replaces all usage of
  * these exceptions where the intention is to deliver a message to the user, which we believe to be the vast majority
- * of usages.  In cases where those exceptions are with the intention of being caught and acted upon, they should
+ * of usages.  In cases where those exceptions are thrown with the intention of being caught and acted upon,
  * no change should occur.
- *
- * <h>Notes about exception messages</h>
+ * <p>
+ * <h3>Notes about exception messages:</h3>
  *
  * Firstly, exception messages should always be written with the notions from the style conventions covered in
  * {@code dev/style-conventions.md}.  Whenever possible, we should also try to provide an action to take to resolve
  * the issue.
- *
+ * <p>
  * Secondly, given that the DruidException requires defining a target persona, exception messages should always be
  * written with that target persona in mind.  Reviewers should use the targetPersona as added input to help validate
  * that an exception message in meaningful.
- *
+ * <br>
  * For example, at the time that this exception was introduced, there is an exception that the router throws which is
  * an {@link org.apache.druid.java.util.common.ISE} with the message {@code "No default server found!"}.  This
  * exception is thrown when the router is unable to find a broker to forward a request to.  It is completely
@@ -64,12 +64,11 @@ import java.util.Map;
  * DEVELOPER persona as that is the only persona who should actually be able to figure out what a default server is
  * and why it is important.  That said, does it makes sense for an exception that means "router cannot find a broker
  * to forward the query to" to only be targetting the DEVELOPER?  The answer to that is no, it's something that should
- * really be made meaningful to a wider group.  Some options could be
- *
- * USER persona: Cannot find a queryable server, contact your cluster administrator to validate that all services are
- * operational
- *
- * OPERATOR persona: Router unable to find a broker, check that brokers are up and active
+ * really be made meaningful to a wider group.  Some options could be:
+ * <ul>
+ * <li>USER persona: Cannot find a queryable server, contact your cluster administrator to validate that all services are
+ * operational</li>
+ * <li>OPERATOR persona: Router unable to find a broker, check that brokers are up and active</li>
  *
  * The user-facing message doesn't talk about any Druid-specific concepts and just tries to relay a high-level
  * understanding of what happened.  The admin-facing message includes Druid notions in it as it expects that an Admin
@@ -79,8 +78,8 @@ import java.util.Map;
  * which is something that we would expect an operator to be in charge of.  So, we would pick the OPERATOR persona
  * message, which also allows us to include more specific information about what server was not found and provide a
  * more meaningful action to take (check the health of your brokers).
- *
- * <h>Description of fields of DruidException</h>
+ * <p>
+ * <h3>Description of fields of DruidException</h3>
  * Every error consists of:
  * <ul>
  * <li>A target persona</li>
@@ -91,7 +90,7 @@ import java.util.Map;
  * </ul>
  * <p>
  * <p>
- * The target persona indicates who the message is written for.  This is important for 2 reasons
+ * The target persona indicates who the message is written for.  This is important for 2 reasons.
  * <ol>
  *   <li>It identifies why the developer is creating the exception and who they believe can take action on it.
  *   This context allows for code reviewers and other developers to evaluate the message with the persona in mind</li>
@@ -115,8 +114,8 @@ import java.util.Map;
  * The context is a place to add extra information about the error that is not necessarily interpolated into the
  * error message.  It's a way to carry extra information that might be useful to a developer, but not necessarily to
  * the target persona.
- *
- * <h>Notes for developers working with DruidException</h>
+ * <p>
+ * <h3>Notes for developers working with DruidException:</h3>
  * <p>
  * A DruidException can be built from one of 2 static methods: {@link #forPersona} or {@link #fromFailure(Failure)}.
  * The only way to set a specific error code is to build a DruidException from a Failure, when built in-line using
@@ -132,7 +131,7 @@ import java.util.Map;
 public class DruidException extends RuntimeException
 {
   /**
-   * Starts building an "general" DruidException targetting the specific persona.
+   * Starts building a "general" DruidException targeting the specified persona.
    *
    * @param persona the target persona of the exception message
    * @return a builder that can be used to complete the creation of the DruidException
@@ -356,8 +355,8 @@ public class DruidException extends RuntimeException
 
   public static class PartialDruidExceptionBuilder
   {
-    private String errorCode;
-    private Persona targetPersona;
+    private final String errorCode;
+    private final Persona targetPersona;
 
     private PartialDruidExceptionBuilder(String errorCode, Persona targetPersona)
     {
@@ -373,7 +372,7 @@ public class DruidException extends RuntimeException
 
   public static class DruidExceptionBuilder
   {
-    private String errorCode;
+    private final String errorCode;
     private Persona targetPersona;
     private Category category;
 

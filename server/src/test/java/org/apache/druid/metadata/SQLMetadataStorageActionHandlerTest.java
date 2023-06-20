@@ -25,6 +25,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
@@ -206,7 +207,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testGetRecentStatuses() throws EntryExistsException
+  public void testGetRecentStatuses()
   {
     for (int i = 1; i < 11; i++) {
       final String entryId = "abcd_" + i;
@@ -231,7 +232,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testGetRecentStatuses2() throws EntryExistsException
+  public void testGetRecentStatuses2()
   {
     for (int i = 1; i < 6; i++) {
       final String entryId = "abcd_" + i;
@@ -264,8 +265,12 @@ public class SQLMetadataStorageActionHandlerTest
 
     handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
 
-    thrown.expect(EntryExistsException.class);
-    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group")
+    );
+    Assert.assertEquals("invalidInput", exception.getErrorCode());
+    Assert.assertEquals("Task [abcd] already exists", exception.getMessage());
   }
 
   @Test
@@ -346,7 +351,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testReplaceLock() throws EntryExistsException
+  public void testReplaceLock()
   {
     final String entryId = "ABC123";
     Map<String, Object> entry = ImmutableMap.of("a", 1);
@@ -376,7 +381,7 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testGetLockId() throws EntryExistsException
+  public void testGetLockId()
   {
     final String entryId = "ABC123";
     Map<String, Object> entry = ImmutableMap.of("a", 1);

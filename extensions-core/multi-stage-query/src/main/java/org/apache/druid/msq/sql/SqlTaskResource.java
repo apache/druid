@@ -25,7 +25,6 @@ import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -40,6 +39,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.server.QueryResponse;
+import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -162,10 +162,7 @@ public class SqlTaskResource
     }
     catch (DruidException e) {
       stmt.reporter().failed(e);
-      return Response.status(e.getStatusCode())
-                     .type(MediaType.APPLICATION_JSON_TYPE)
-                     .entity(new ErrorResponse(e))
-                     .build();
+      return ServletResourceUtils.buildErrorResponseFrom(e);
     }
     // Kitchen-sinking the errors since they are all unchecked.
     // Just copied from SqlResource.

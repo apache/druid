@@ -20,9 +20,9 @@
 package org.apache.druid.query.lookup;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 
 import javax.ws.rs.GET;

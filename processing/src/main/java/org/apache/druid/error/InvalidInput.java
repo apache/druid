@@ -19,6 +19,10 @@
 
 package org.apache.druid.error;
 
+/**
+ * A failure type used to make {@link DruidException}s of category
+ * {@link DruidException.Category#INVALID_INPUT} for persona {@link DruidException.Persona#USER}.
+ */
 public class InvalidInput extends DruidException.Failure
 {
   public static DruidException exception(String msg, Object... args)

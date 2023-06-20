@@ -36,7 +36,7 @@ import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.common.exception.DruidException;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
@@ -70,6 +70,7 @@ import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.apache.druid.server.http.HttpMediaType;
+import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -228,9 +229,7 @@ public class OverlordResource
             return Response.ok(ImmutableMap.of("task", task.getId())).build();
           }
           catch (DruidException e) {
-            return Response.status(e.getResponseCode())
-                           .entity(ImmutableMap.of("error", e.getMessage()))
-                           .build();
+            return ServletResourceUtils.buildErrorResponseFrom(e);
           }
         }
     );
