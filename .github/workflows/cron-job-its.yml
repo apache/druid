@@ -110,6 +110,7 @@ jobs:
     if: github.repository == 'apache/druid'
     name: security vulnerabilities
     strategy:
+      fail-fast: false
       matrix:
         HADOOP_PROFILE: [ '', '-Phadoop2' ]
     runs-on: ubuntu-latest
