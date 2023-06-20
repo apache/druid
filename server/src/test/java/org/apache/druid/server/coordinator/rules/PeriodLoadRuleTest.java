@@ -27,11 +27,9 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -209,14 +207,8 @@ public class PeriodLoadRuleTest
                 true
             )
         ),
-        DruidExceptionMatcher.invalidInput().expectMessage(
-            Matchers.containsString(
-                StringUtils.format(
-                    "Invalid number of replicas for tier [%s]. Value [%d] must be positive.",
-                    DruidServer.DEFAULT_TIER,
-                    -1
-                )
-            )
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            "Invalid number of replicas for tier [_default_tier]. Value [-1] must be positive."
         )
     );
   }
@@ -237,13 +229,8 @@ public class PeriodLoadRuleTest
                 true
             )
         ),
-        DruidExceptionMatcher.invalidInput().expectMessage(
-            Matchers.containsString(
-                StringUtils.format(
-                    "Invalid number of replicas for tier [%s]. Value must not be null.",
-                    "tier"
-                )
-            )
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            "Invalid number of replicas for tier [tier]. Value must not be null."
         )
     );
   }
