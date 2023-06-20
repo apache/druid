@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -37,8 +36,6 @@ public class IntervalLoadRule extends LoadRule
   private static final Logger log = new Logger(IntervalLoadRule.class);
 
   private final Interval interval;
-  private final Map<String, Integer> tieredReplicants;
-  private final boolean useDefaultTierForNull;
 
   @JsonCreator
   public IntervalLoadRule(
@@ -47,9 +44,7 @@ public class IntervalLoadRule extends LoadRule
       @JsonProperty("useDefaultTierForNull") @Nullable Boolean useDefaultTierForNull
   )
   {
-    this.useDefaultTierForNull = Configs.valueOrDefault(useDefaultTierForNull, true);
-    this.tieredReplicants = createTieredReplicants(tieredReplicants, this.useDefaultTierForNull);
-    validateTieredReplicants(this.tieredReplicants, this.useDefaultTierForNull);
+    super(tieredReplicants, useDefaultTierForNull);
     this.interval = interval;
   }
 
@@ -58,19 +53,6 @@ public class IntervalLoadRule extends LoadRule
   public String getType()
   {
     return "loadByInterval";
-  }
-
-  @Override
-  @JsonProperty
-  public Map<String, Integer> getTieredReplicants()
-  {
-    return tieredReplicants;
-  }
-
-  @JsonProperty("useDefaultTierForNull")
-  public boolean useDefaultTierForNull()
-  {
-    return useDefaultTierForNull;
   }
 
   @Override

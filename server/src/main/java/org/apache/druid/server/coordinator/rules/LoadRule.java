@@ -19,10 +19,11 @@
 
 package org.apache.druid.server.coordinator.rules;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.common.config.Configs;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Map;
@@ -32,6 +33,28 @@ import java.util.Map;
  */
 public abstract class LoadRule implements Rule
 {
+  protected final Map<String, Integer> tieredReplicants;
+  protected final boolean useDefaultTierForNull;
+
+  protected LoadRule(Map<String, Integer> tieredReplicants, Boolean useDefaultTierForNull)
+  {
+    this.useDefaultTierForNull = Configs.valueOrDefault(useDefaultTierForNull, true);
+    this.tieredReplicants = handleNullTieredReplicants(tieredReplicants, this.useDefaultTierForNull);
+    validateTieredReplicants(this.tieredReplicants);
+  }
+
+  @JsonProperty
+  public Map<String, Integer> getTieredReplicants()
+  {
+    return tieredReplicants;
+  }
+
+  @JsonProperty
+  public boolean useDefaultTierForNull()
+  {
+    return useDefaultTierForNull;
+  }
+
   @Override
   public void run(DataSegment segment, SegmentActionHandler handler)
   {
@@ -39,16 +62,14 @@ public abstract class LoadRule implements Rule
   }
 
   /**
-   * Function to create a tiered replicants map choosing default values, in case the map is null.
-   * {@code useDefaultTierForNull} decides the default value.
-   * <br>
-   * If the boolean is true, the default value is a singleton map with key {@link DruidServer#DEFAULT_NUM_REPLICANTS}
-   * and value @{@link DruidServer#DEFAULT_TIER}.
-   * <br>
-   * If the boolean is false, the default value is an empty map. This will enable the new behaviour of not loading
-   * segments to a historical unless the tier and number of replicants are explicitly specified.
+   * Returns the given {@code tieredReplicants} map unchanged if it is non-null (including empty).
+   * Returns the following default values if the given map is null.
+   * <ul>
+   * <li>If {@code useDefaultTierForNull} is true, returns a singleton map from {@link DruidServer#DEFAULT_TIER} to {@link DruidServer#DEFAULT_NUM_REPLICANTS}.</li>
+   * <li>If {@code useDefaultTierForNull} is false, returns an empty map. This causes segments to have a replication factor of 0 and not get assigned to any historical.</li>
+   * </ul>
    */
-  protected static Map<String, Integer> createTieredReplicants(final Map<String, Integer> tieredReplicants, boolean useDefaultTierForNull)
+  protected static Map<String, Integer> handleNullTieredReplicants(final Map<String, Integer> tieredReplicants, boolean useDefaultTierForNull)
   {
     if (useDefaultTierForNull) {
       return Configs.valueOrDefault(tieredReplicants, ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS));
@@ -57,23 +78,17 @@ public abstract class LoadRule implements Rule
     }
   }
 
-  protected static void validateTieredReplicants(final Map<String, Integer> tieredReplicants, boolean useDefaultTierForNull)
+  protected static void validateTieredReplicants(final Map<String, Integer> tieredReplicants)
   {
-    if (tieredReplicants.size() == 0 && useDefaultTierForNull) {
-      // If useDefaultTierForNull is true, null is translated to a default tier, and an empty replicant tier map is not allowed.
-      throw new IAE("A rule with empty tiered replicants is invalid unless \"useDefaultTierForNull\" is set to false.");
-    }
     for (Map.Entry<String, Integer> entry : tieredReplicants.entrySet()) {
       if (entry.getValue() == null) {
-        throw new IAE("Replicant value cannot be empty");
+        throw InvalidInput.exception("Invalid number of replicas for tier [%s]. Value must not be null.", entry.getKey());
       }
       if (entry.getValue() < 0) {
-        throw new IAE("Replicant value [%d] is less than 0, which is not allowed", entry.getValue());
+        throw InvalidInput.exception("Invalid number of replicas for tier [%s]. Value [%d] must be positive.", entry.getKey(), entry.getValue());
       }
     }
   }
-
-  public abstract Map<String, Integer> getTieredReplicants();
 
   public abstract int getNumReplicants(String tier);
 

@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.common.config.Configs;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -34,24 +33,13 @@ import java.util.Objects;
  */
 public class ForeverLoadRule extends LoadRule
 {
-  private final Map<String, Integer> tieredReplicants;
-  private final boolean useDefaultTierForNull;
-
   @JsonCreator
   public ForeverLoadRule(
       @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants,
       @JsonProperty("useDefaultTierForNull") @Nullable Boolean useDefaultTierForNull
   )
   {
-    this.useDefaultTierForNull = Configs.valueOrDefault(useDefaultTierForNull, true);
-    this.tieredReplicants = createTieredReplicants(tieredReplicants, this.useDefaultTierForNull);
-    validateTieredReplicants(this.tieredReplicants, this.useDefaultTierForNull);
-  }
-
-  @JsonProperty("useDefaultTierForNull")
-  public boolean useDefaultTierForNull()
-  {
-    return useDefaultTierForNull;
+    super(tieredReplicants, useDefaultTierForNull);
   }
 
   @Override
@@ -59,13 +47,6 @@ public class ForeverLoadRule extends LoadRule
   public String getType()
   {
     return "loadForever";
-  }
-
-  @Override
-  @JsonProperty
-  public Map<String, Integer> getTieredReplicants()
-  {
-    return tieredReplicants;
   }
 
   @Override

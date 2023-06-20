@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -40,8 +39,6 @@ public class PeriodLoadRule extends LoadRule
 
   private final Period period;
   private final boolean includeFuture;
-  private final Map<String, Integer> tieredReplicants;
-  private final boolean useDefaultTierForNull;
 
   @JsonCreator
   public PeriodLoadRule(
@@ -51,9 +48,7 @@ public class PeriodLoadRule extends LoadRule
       @JsonProperty("useDefaultTierForNull") @Nullable Boolean useDefaultTierForNull
   )
   {
-    this.useDefaultTierForNull = Configs.valueOrDefault(useDefaultTierForNull, true);
-    this.tieredReplicants = createTieredReplicants(tieredReplicants, this.useDefaultTierForNull);
-    validateTieredReplicants(this.tieredReplicants, this.useDefaultTierForNull);
+    super(tieredReplicants, useDefaultTierForNull);
     this.period = period;
     this.includeFuture = includeFuture == null ? DEFAULT_INCLUDE_FUTURE : includeFuture;
   }
@@ -78,23 +73,10 @@ public class PeriodLoadRule extends LoadRule
   }
 
   @Override
-  @JsonProperty
-  public Map<String, Integer> getTieredReplicants()
-  {
-    return tieredReplicants;
-  }
-
-  @Override
   public int getNumReplicants(String tier)
   {
     final Integer retVal = tieredReplicants.get(tier);
     return retVal == null ? 0 : retVal;
-  }
-
-  @JsonProperty("useDefaultTierForNull")
-  public boolean useDefaultTierForNull()
-  {
-    return useDefaultTierForNull;
   }
 
   @Override
