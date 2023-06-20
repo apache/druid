@@ -302,11 +302,11 @@ public class DruidCoordinator
   @Nullable
   public Integer getReplicationFactor(SegmentId segmentId)
   {
-    if (segmentReplicationStatus != null) {
-      return segmentReplicationStatus.getReplicaCountsInCluster(segmentId).required();
-    } else {
+    if (segmentReplicationStatus == null) {
       return null;
     }
+    SegmentReplicaCount replicaCountsInCluster = segmentReplicationStatus.getReplicaCountsInCluster(segmentId);
+    return replicaCountsInCluster == null ? null : replicaCountsInCluster.required();
   }
 
   @Nullable
