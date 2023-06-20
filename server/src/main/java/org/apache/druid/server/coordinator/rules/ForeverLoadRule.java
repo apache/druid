@@ -27,7 +27,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  */
@@ -50,13 +49,6 @@ public class ForeverLoadRule extends LoadRule
   }
 
   @Override
-  public int getNumReplicants(String tier)
-  {
-    Integer retVal = tieredReplicants.get(tier);
-    return (retVal == null) ? 0 : retVal;
-  }
-
-  @Override
   public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
   {
     return true;
@@ -68,22 +60,4 @@ public class ForeverLoadRule extends LoadRule
     return true;
   }
 
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    ForeverLoadRule that = (ForeverLoadRule) o;
-    return Objects.equals(tieredReplicants, that.tieredReplicants);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(tieredReplicants);
-  }
 }

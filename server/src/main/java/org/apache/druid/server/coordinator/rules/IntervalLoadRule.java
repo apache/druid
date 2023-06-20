@@ -28,6 +28,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -53,13 +54,6 @@ public class IntervalLoadRule extends LoadRule
   public String getType()
   {
     return "loadByInterval";
-  }
-
-  @Override
-  public int getNumReplicants(String tier)
-  {
-    final Integer retVal = tieredReplicants.get(tier);
-    return retVal == null ? 0 : retVal;
   }
 
   @JsonProperty
@@ -89,24 +83,16 @@ public class IntervalLoadRule extends LoadRule
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
+    if (!super.equals(o)) {
+      return false;
+    }
     IntervalLoadRule that = (IntervalLoadRule) o;
-
-    if (interval != null ? !interval.equals(that.interval) : that.interval != null) {
-      return false;
-    }
-    if (tieredReplicants != null ? !tieredReplicants.equals(that.tieredReplicants) : that.tieredReplicants != null) {
-      return false;
-    }
-
-    return true;
+    return Objects.equals(interval, that.interval);
   }
 
   @Override
   public int hashCode()
   {
-    int result = interval != null ? interval.hashCode() : 0;
-    result = 31 * result + (tieredReplicants != null ? tieredReplicants.hashCode() : 0);
-    return result;
+    return Objects.hash(super.hashCode(), interval);
   }
 }

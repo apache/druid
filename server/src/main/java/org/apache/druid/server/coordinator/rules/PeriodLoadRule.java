@@ -29,6 +29,7 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -73,13 +74,6 @@ public class PeriodLoadRule extends LoadRule
   }
 
   @Override
-  public int getNumReplicants(String tier)
-  {
-    final Integer retVal = tieredReplicants.get(tier);
-    return retVal == null ? 0 : retVal;
-  }
-
-  @Override
   public boolean appliesTo(DataSegment segment, DateTime referenceTimestamp)
   {
     return appliesTo(segment.getInterval(), referenceTimestamp);
@@ -89,5 +83,27 @@ public class PeriodLoadRule extends LoadRule
   public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
   {
     return Rules.eligibleForLoad(period, interval, referenceTimestamp, includeFuture);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    PeriodLoadRule that = (PeriodLoadRule) o;
+    return includeFuture == that.includeFuture && Objects.equals(period, that.period);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), period, includeFuture);
   }
 }

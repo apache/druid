@@ -27,14 +27,15 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * LoadRules indicate the number of replicants a segment should have in a given tier.
  */
 public abstract class LoadRule implements Rule
 {
-  protected final Map<String, Integer> tieredReplicants;
-  protected final boolean useDefaultTierForNull;
+  private final Map<String, Integer> tieredReplicants;
+  private final boolean useDefaultTierForNull;
 
   protected LoadRule(Map<String, Integer> tieredReplicants, Boolean useDefaultTierForNull)
   {
@@ -69,7 +70,7 @@ public abstract class LoadRule implements Rule
    * <li>If {@code useDefaultTierForNull} is false, returns an empty map. This causes segments to have a replication factor of 0 and not get assigned to any historical.</li>
    * </ul>
    */
-  protected static Map<String, Integer> handleNullTieredReplicants(final Map<String, Integer> tieredReplicants, boolean useDefaultTierForNull)
+  private static Map<String, Integer> handleNullTieredReplicants(final Map<String, Integer> tieredReplicants, boolean useDefaultTierForNull)
   {
     if (useDefaultTierForNull) {
       return Configs.valueOrDefault(tieredReplicants, ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS));
@@ -78,7 +79,7 @@ public abstract class LoadRule implements Rule
     }
   }
 
-  protected static void validateTieredReplicants(final Map<String, Integer> tieredReplicants)
+  private static void validateTieredReplicants(final Map<String, Integer> tieredReplicants)
   {
     for (Map.Entry<String, Integer> entry : tieredReplicants.entrySet()) {
       if (entry.getValue() == null) {
@@ -90,6 +91,31 @@ public abstract class LoadRule implements Rule
     }
   }
 
-  public abstract int getNumReplicants(String tier);
+  public int getNumReplicants(String tier)
+  {
+    Integer retVal = getTieredReplicants().get(tier);
+    return (retVal == null) ? 0 : retVal;
+  }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    LoadRule loadRule = (LoadRule) o;
+    return useDefaultTierForNull == loadRule.useDefaultTierForNull && Objects.equals(
+        tieredReplicants,
+        loadRule.tieredReplicants
+    );
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(tieredReplicants, useDefaultTierForNull);
+  }
 }
