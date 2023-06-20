@@ -45,9 +45,7 @@ services:
   zookeeper:
     image: zookeeper:latest
     container_name: zookeeper
-    profiles: ["druid-jupyter", "all-services"]
-    ports:
-      - "2181:2181"
+    profiles: ["druid-jupyter", "kafka-jupyter", "all-services"]
     environment:
       - ZOO_MY_ID=1
       - ALLOW_ANONYMOUS_LOGIN=yes
@@ -55,7 +53,7 @@ services:
   kafka:
     image: bitnami/kafka:latest
     container_name: kafka-broker
-    profiles: ["all-services"]
+    profiles: ["kafka-jupyter", "all-services"]
     ports:
     # To learn about configuring Kafka for access across networks see
     # https://www.confluent.io/blog/kafka-client-cannot-connect-to-broker-on-aws-on-docker-etc/
@@ -163,7 +161,7 @@ services:
       context: ..
       dockerfile: Dockerfile
     container_name: jupyter
-    profiles: ["jupyter", "druid-jupyter", "all-services"]
+    profiles: ["jupyter", "kafka-jupyter", "druid-jupyter", "all-services"]
     environment:
       JUPYTER_ENABLE_LAB: "yes"
       JUPYTER_TOKEN: "docker"
