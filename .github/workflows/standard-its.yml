@@ -61,6 +61,7 @@ jobs:
       group: ${{ matrix.testing_group }}
 
   integration-index-tests-indexer:
+    needs: changes
     strategy:
       fail-fast: false
       matrix:
@@ -75,6 +76,7 @@ jobs:
       group: ${{ matrix.testing_group }}
 
   integration-query-tests-middleManager:
+    needs: changes
     strategy:
       fail-fast: false
       matrix:
@@ -90,6 +92,7 @@ jobs:
       group: ${{ matrix.testing_group }}
 
   integration-query-tests-middleManager-mariaDB:
+    needs: changes
     strategy:
       fail-fast: false
       matrix:
@@ -120,6 +123,7 @@ jobs:
       group: shuffle deep store
 
   integration-custom-coordinator-duties-tests:
+    needs: changes
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ (needs.changes.outputs.non-msq == 'true' && needs.changes.outputs.non-contrib == 'true') || needs.changes.outputs.run-all == 'true' }}
     with:
@@ -131,6 +135,7 @@ jobs:
       group: custom coordinator duties
 
   integration-k8s-leadership-tests:
+    needs: changes
     name: (Compile=openjdk8, Run=openjdk8, Cluster Build On K8s) ITNestedQueryPushDownTest integration test
     if: ${{ (needs.changes.outputs.non-msq == 'true' && needs.changes.outputs.non-contrib == 'true') || needs.changes.outputs.run-all == 'true' }}
     runs-on: ubuntu-22.04
