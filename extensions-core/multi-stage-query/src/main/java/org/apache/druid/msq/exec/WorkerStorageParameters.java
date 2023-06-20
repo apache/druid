@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.Injector;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.NotEnoughTemporaryStorageFault;
 
@@ -42,6 +43,8 @@ import java.util.Objects;
  */
 public class WorkerStorageParameters
 {
+  private static final Logger log = new Logger(WorkerStorageParameters.class);
+
   /**
    * Fraction of temporary worker storage that can be allocated to super sorter intermediate files.
    */
@@ -71,6 +74,7 @@ public class WorkerStorageParameters
   )
   {
     long tmpStorageBytesPerTask = injector.getInstance(TaskConfig.class).getTmpStorageBytesPerTask();
+    log.info("Creating WorkerStorageParameters with value of tmpStorageBytesPerTask: [%s]", tmpStorageBytesPerTask);
     return createInstance(tmpStorageBytesPerTask, isIntermediateSuperSorterStorageEnabled);
   }
 
