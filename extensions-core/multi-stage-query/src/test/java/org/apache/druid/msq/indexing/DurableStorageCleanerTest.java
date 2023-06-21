@@ -49,7 +49,7 @@ public class DurableStorageCleanerTest
   private DurableStorageCleaner durableStorageCleaner;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     EasyMock.reset(TASK_RUNNER, TASK_RUNNER_WORK_ITEM, STORAGE_CONNECTOR, TASK_MASTER);
     DurableStorageCleanerConfig durableStorageCleanerConfig = new DurableStorageCleanerConfig();
