@@ -28,6 +28,7 @@ import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface SegmentCounts {
   total: number;
+  cached_on_historical: number;
   unavailable: number;
 }
 
@@ -37,12 +38,14 @@ export interface SegmentsCardProps {
 
 export const SegmentsCard = React.memo(function SegmentsCard(props: SegmentsCardProps) {
   const [segmentCountState] = useQueryManager<Capabilities, SegmentCounts>({
+    initQuery: props.capabilities,
     processQuery: async capabilities => {
       if (capabilities.hasSql()) {
         const segments = await queryDruidSql({
           query: `SELECT
   COUNT(*) as "total",
-  COUNT(*) FILTER (WHERE is_active = 1 AND is_available = 0) as "unavailable"
+  COUNT(*) FILTER (WHERE is_active = 1 AND is_available = 1) as "cached_on_historical",
+  COUNT(*) FILTER (WHERE is_active = 1 AND is_available = 0 AND replication_factor > 0) + 1 as "unavailable"
 FROM sys.segments`,
         });
         return segments.length === 1 ? segments[0] : null;
@@ -61,16 +64,20 @@ FROM sys.segments`,
 
         return {
           total: availableSegmentNum + unavailableSegmentNum,
+          cached_on_historical: availableSegmentNum, // This is not correct
           unavailable: unavailableSegmentNum,
         };
       } else {
         throw new Error(`must have SQL or coordinator access`);
       }
     },
-    initQuery: props.capabilities,
   });
 
-  const segmentCount = segmentCountState.data || { total: 0, unavailable: 0 };
+  const segmentCount = segmentCountState.data || {
+    total: 0,
+    cached_on_historical: 0,
+    unavailable: 0,
+  };
   return (
     <HomeViewCard
       className="segments-card"
@@ -80,9 +87,10 @@ FROM sys.segments`,
       loading={segmentCountState.loading}
       error={segmentCountState.error}
     >
-      <p>{pluralIfNeeded(segmentCount.total, 'segment')}</p>
+      <p>{pluralIfNeeded(segmentCount.total, 'segment')} total</p>
+      <p>{pluralIfNeeded(segmentCount.cached_on_historical, 'segment')} cached on historicals</p>
       {Boolean(segmentCount.unavailable) && (
-        <p>{pluralIfNeeded(segmentCount.unavailable, 'unavailable segment')}</p>
+        <p>{pluralIfNeeded(segmentCount.unavailable, 'segment')} waiting to be cached</p>
       )}
     </HomeViewCard>
   );

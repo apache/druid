@@ -88,6 +88,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Num rows',
     'Avg. row size',
     'Replicas',
+    'Replication factor',
     'Is available',
     'Is active',
     'Is realtime',
@@ -118,6 +119,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Num rows',
     'Avg. row size',
     'Replicas',
+    'Replication factor',
     'Is available',
     'Is active',
     'Is realtime',
@@ -162,6 +164,7 @@ interface SegmentQueryResultRow {
   num_rows: NumberLike;
   avg_row_size: NumberLike;
   num_replicas: number;
+  replication_factor: number;
   is_available: number;
   is_active: number;
   is_realtime: number;
@@ -214,6 +217,7 @@ END AS "time_span"`,
       visibleColumns.shown('Avg. row size') &&
         `CASE WHEN "num_rows" <> 0 THEN ("size" / "num_rows") ELSE 0 END AS "avg_row_size"`,
       visibleColumns.shown('Replicas') && `"num_replicas"`,
+      visibleColumns.shown('Replication factor') && `"replication_factor"`,
       visibleColumns.shown('Is available') && `"is_available"`,
       visibleColumns.shown('Is active') && `"is_active"`,
       visibleColumns.shown('Is realtime') && `"is_realtime"`,
@@ -413,6 +417,7 @@ END AS "time_span"`,
                 num_rows: -1,
                 avg_row_size: -1,
                 num_replicas: -1,
+                replication_factor: -1,
                 is_available: -1,
                 is_active: -1,
                 is_realtime: -1,
@@ -781,7 +786,7 @@ END AS "time_span"`,
             ),
           },
           {
-            Header: twoLines('Avg. row size', '(bytes)'),
+            Header: twoLines('Avg. row size', <i>(bytes)</i>),
             show: capabilities.hasSql() && visibleColumns.shown('Avg. row size'),
             accessor: 'avg_row_size',
             filterable: false,
@@ -799,10 +804,19 @@ END AS "time_span"`,
             },
           },
           {
-            Header: 'Replicas',
+            Header: twoLines('Replicas', <i>(actual)</i>),
             show: hasSql && visibleColumns.shown('Replicas'),
             accessor: 'num_replicas',
-            width: 60,
+            width: 80,
+            filterable: false,
+            defaultSortDesc: true,
+            className: 'padded',
+          },
+          {
+            Header: twoLines('Replication factor', <i>(desired)</i>),
+            show: hasSql && visibleColumns.shown('Replication factor'),
+            accessor: 'replication_factor',
+            width: 80,
             filterable: false,
             defaultSortDesc: true,
             className: 'padded',
