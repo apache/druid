@@ -153,9 +153,7 @@ public class SqlStatementResource
   @POST
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response doPost(
-      final SqlQuery sqlQuery, @Context final HttpServletRequest req
-  )
+  public Response doPost(final SqlQuery sqlQuery, @Context final HttpServletRequest req)
   {
     final HttpStatement stmt = msqSqlStatementFactory.httpStatement(sqlQuery, req);
     final String sqlQueryId = stmt.sqlQueryId();
@@ -460,7 +458,10 @@ public class SqlStatementResource
   }
 
   private Response buildStandardResponse(
-      Sequence<Object[]> sequence, SqlQuery sqlQuery, String sqlQueryId, SqlRowTransformer rowTransformer
+      Sequence<Object[]> sequence,
+      SqlQuery sqlQuery,
+      String sqlQueryId,
+      SqlRowTransformer rowTransformer
   ) throws IOException
   {
     final Yielder<Object[]> yielder0 = Yielders.each(sequence);
@@ -621,10 +622,12 @@ public class SqlStatementResource
   }
 
   private Optional<ResultSetInformation> getSampleResults(
-      String asyncResultId, boolean isSelectQuery, String dataSource, SqlStatementState sqlStatementState
+      String asyncResultId,
+      boolean isSelectQuery,
+      String dataSource,
+      SqlStatementState sqlStatementState
   )
   {
-
     if (sqlStatementState == SqlStatementState.SUCCESS) {
       Map<String, Object> payload = getPayload(overlordWork(overlordClient.taskReportAsMap(asyncResultId)));
       Optional<Pair<Long, Long>> rowsAndSize = getRowsAndSizeFromPayload(payload, isSelectQuery);
