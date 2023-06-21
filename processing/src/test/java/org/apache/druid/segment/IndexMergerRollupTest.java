@@ -22,7 +22,13 @@ package org.apache.druid.segment;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
+import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
 import org.apache.druid.segment.data.IncrementalIndexTest;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -61,7 +67,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
     indexSpec = IndexSpec.DEFAULT;
   }
 
-  private void testStringFirstLastRollup(
+  private void testFirstLastRollup(
       AggregatorFactory[] aggregatorFactories
   ) throws Exception
   {
@@ -71,6 +77,9 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
           {
             put("d", "d1");
             put("m", "m1");
+            put("l", 123L);
+            put("f", 123.0F);
+            put("dl", 123.5D);
           }
         },
         new HashMap<String, Object>()
@@ -78,6 +87,9 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
           {
             put("d", "d1");
             put("m", "m2");
+            put("l", 124L);
+            put("f", 124.0F);
+            put("dl", 124.5D);
           }
         }
     );
@@ -102,20 +114,26 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testStringFirstRollup() throws Exception
+  public void testFirstRollup() throws Exception
   {
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
-        new StringFirstAggregatorFactory("m", "m", null, 1024)
+        new StringFirstAggregatorFactory("m", "m", null, 1024),
+        new LongFirstAggregatorFactory("l", "l", null),
+        new FloatFirstAggregatorFactory("f", "f", null),
+        new DoubleFirstAggregatorFactory("dl", "dl", null),
     };
-    testStringFirstLastRollup(aggregatorFactories);
+    testFirstLastRollup(aggregatorFactories);
   }
 
   @Test
-  public void testStringLastRollup() throws Exception
+  public void testLastRollup() throws Exception
   {
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
-        new StringLastAggregatorFactory("m", "m", null, 1024)
+        new StringLastAggregatorFactory("m", "m", null, 1024),
+        new LongLastAggregatorFactory("l", "l", null),
+        new FloatLastAggregatorFactory("f", "f", null),
+        new DoubleLastAggregatorFactory("dl", "dl", null),
     };
-    testStringFirstLastRollup(aggregatorFactories);
+    testFirstLastRollup(aggregatorFactories);
   }
 }

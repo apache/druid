@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.last;
 
-import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.query.aggregation.SerializablePairLongDouble;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -57,7 +57,7 @@ public class DoubleLastVectorAggregator extends NumericLastVectorAggregator
   public Object get(ByteBuffer buf, int position)
   {
     final boolean rhsNull = isValueNull(buf, position);
-    return new SerializablePair<>(buf.getLong(position), rhsNull ? null : buf.getDouble(position + VALUE_OFFSET));
+    return new SerializablePairLongDouble(buf.getLong(position), rhsNull ? null : buf.getDouble(position + VALUE_OFFSET));
   }
 }
 

@@ -126,7 +126,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
           metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector,
           maxStringBytes,
-          StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
+          StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName), SerializablePairLongString.class)
       );
     }
   }
@@ -142,7 +142,7 @@ public class StringLastAggregatorFactory extends AggregatorFactory
           metricFactory.makeColumnValueSelector(timeColumn),
           valueSelector,
           maxStringBytes,
-          StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName))
+          StringFirstLastUtils.selectorNeedsFoldCheck(valueSelector, metricFactory.getColumnCapabilities(fieldName), SerializablePairLongString.class)
       );
     }
   }

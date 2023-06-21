@@ -19,53 +19,48 @@
 
 package org.apache.druid.query.aggregation.last;
 
-import org.apache.druid.query.aggregation.SerializablePairLongLong;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
+import com.google.common.primitives.Longs;
+import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.segment.ColumnValueSelector;
 
-public class LongLastAggregator extends NumericLastAggregator
+import javax.annotation.Nullable;
+
+public class GenericLastAggregateCombiner<T extends SerializablePair<Long, ?>> extends ObjectAggregateCombiner<T>
 {
-  long lastValue;
+  private T lastValue;
+  private final Class<T> pairClass;
 
-  public LongLastAggregator(BaseLongColumnValueSelector timeSelector, ColumnValueSelector valueSelector, boolean needsFoldCheck)
+  public GenericLastAggregateCombiner(Class<T> pairClass)
   {
-    super(timeSelector, valueSelector, needsFoldCheck);
-    lastValue = 0;
+    this.pairClass = pairClass;
   }
 
   @Override
-  void setLastValue(ColumnValueSelector valueSelector)
+  public void reset(ColumnValueSelector selector)
   {
-    lastValue = valueSelector.getLong();
+    lastValue = (T) selector.getObject();
   }
 
   @Override
-  void setLastValue(Number lastValue)
+  public void fold(ColumnValueSelector selector)
   {
-    this.lastValue = lastValue.longValue();
+    T newValue = (T) selector.getObject();
+    if (Longs.compare(lastValue.lhs, newValue.lhs) <= 0) {
+      lastValue = newValue;
+    }
   }
 
+  @Nullable
   @Override
-  public Object get()
-  {
-    return new SerializablePairLongLong(lastTime, rhsNull ? null : lastValue);
-  }
-
-  @Override
-  public float getFloat()
-  {
-    return (float) lastValue;
-  }
-
-  @Override
-  public double getDouble()
-  {
-    return (double) lastValue;
-  }
-
-  @Override
-  public long getLong()
+  public T getObject()
   {
     return lastValue;
+  }
+
+  @Override
+  public Class<? extends T> classOfObject()
+  {
+    return pairClass;
   }
 }

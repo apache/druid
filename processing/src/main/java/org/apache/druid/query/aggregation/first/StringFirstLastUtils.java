@@ -42,7 +42,8 @@ public class StringFirstLastUtils
    */
   public static boolean selectorNeedsFoldCheck(
       final BaseObjectColumnValueSelector<?> valueSelector,
-      @Nullable final ColumnCapabilities valueSelectorCapabilities
+      @Nullable final ColumnCapabilities valueSelectorCapabilities,
+      Class pairClass
   )
   {
     if (valueSelectorCapabilities != null && !valueSelectorCapabilities.is(ValueType.COMPLEX)) {
@@ -57,8 +58,8 @@ public class StringFirstLastUtils
 
     // Check if the selector class could possibly be a SerializablePairLongString (either a superclass or subclass).
     final Class<?> clazz = valueSelector.classOfObject();
-    return clazz.isAssignableFrom(SerializablePairLongString.class)
-           || SerializablePairLongString.class.isAssignableFrom(clazz);
+    return clazz.isAssignableFrom(pairClass)
+           || pairClass.isAssignableFrom(clazz);
   }
 
   /**

@@ -19,53 +19,48 @@
 
 package org.apache.druid.query.aggregation.first;
 
-import org.apache.druid.query.aggregation.SerializablePairLongLong;
-import org.apache.druid.segment.BaseLongColumnValueSelector;
+import com.google.common.primitives.Longs;
+import org.apache.druid.collections.SerializablePair;
+import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.segment.ColumnValueSelector;
 
-public class LongFirstAggregator extends NumericFirstAggregator
+import javax.annotation.Nullable;
+
+public class GenericFirstAggregateCombiner<T extends SerializablePair<Long, ?>> extends ObjectAggregateCombiner<T>
 {
-  long firstValue;
+  private T firstValue;
+  private final Class<T> pairClass;
 
-  public LongFirstAggregator(BaseLongColumnValueSelector timeSelector, ColumnValueSelector valueSelector, boolean needsFoldCheck)
+  public GenericFirstAggregateCombiner(Class<T> pairClass)
   {
-    super(timeSelector, valueSelector, needsFoldCheck);
-    firstValue = 0;
+    this.pairClass = pairClass;
   }
 
   @Override
-  void setFirstValue(ColumnValueSelector valueSelector)
+  public void reset(ColumnValueSelector selector)
   {
-    firstValue = valueSelector.getLong();
+    firstValue = (T) selector.getObject();
   }
 
   @Override
-  void setFirstValue(Number firstValue)
+  public void fold(ColumnValueSelector selector)
   {
-    this.firstValue = firstValue.longValue();
+    T newValue = (T) selector.getObject();
+    if (Longs.compare(firstValue.lhs, newValue.lhs) > 0) {
+      firstValue = newValue;
+    }
   }
 
+  @Nullable
   @Override
-  public Object get()
-  {
-    return new SerializablePairLongLong(firstTime, rhsNull ? null : firstValue);
-  }
-
-  @Override
-  public float getFloat()
-  {
-    return (float) firstValue;
-  }
-
-  @Override
-  public double getDouble()
-  {
-    return (double) firstValue;
-  }
-
-  @Override
-  public long getLong()
+  public T getObject()
   {
     return firstValue;
+  }
+
+  @Override
+  public Class<T> classOfObject()
+  {
+    return pairClass;
   }
 }
