@@ -89,6 +89,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -708,6 +709,8 @@ public class SegmentMetadataCache
   private Set<SegmentId> refreshSegmentsForDataSource(final String dataSource, final Set<SegmentId> segments)
       throws IOException
   {
+    final long startTimeNanos = System.nanoTime();
+
     if (!segments.stream().allMatch(segmentId -> segmentId.getDataSource().equals(dataSource))) {
       // Sanity check. We definitely expect this to pass.
       throw new ISE("'segments' must all match 'dataSource'!");
@@ -720,7 +723,6 @@ public class SegmentMetadataCache
 
     emitter.emit(builder.build("segment/metadatacache/refresh/count", segments.size()));
 
-    final long startNanos = System.nanoTime();
 
     // Segment id string -> SegmentId object.
     final Map<String, SegmentId> segmentIdMap = Maps.uniqueIndex(segments, SegmentId::toString);
@@ -789,7 +791,7 @@ public class SegmentMetadataCache
       yielder.close();
     }
 
-    long refreshDurationMillis = (System.nanoTime() - startNanos) / 1_000_000;
+    long refreshDurationMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
     emitter.emit(builder.build("segment/metadatacache/refresh/time", refreshDurationMillis));
 
     log.debug(

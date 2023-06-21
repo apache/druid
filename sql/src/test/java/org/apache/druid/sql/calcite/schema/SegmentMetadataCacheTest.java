@@ -39,6 +39,11 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
@@ -85,10 +90,13 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -281,10 +289,15 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
 
   public SegmentMetadataCache buildSchemaMarkAndTableLatch() throws InterruptedException
   {
-    return buildSchemaMarkAndTableLatch(SEGMENT_CACHE_CONFIG_DEFAULT);
+    return buildSchemaMarkAndTableLatch(SEGMENT_CACHE_CONFIG_DEFAULT, new NoopServiceEmitter());
   }
 
   public SegmentMetadataCache buildSchemaMarkAndTableLatch(SegmentMetadataCacheConfig config) throws InterruptedException
+  {
+    return buildSchemaMarkAndTableLatch(config, new NoopServiceEmitter());
+  }
+
+  public SegmentMetadataCache buildSchemaMarkAndTableLatch(SegmentMetadataCacheConfig config, ServiceEmitter serviceEmitter) throws InterruptedException
   {
     Preconditions.checkState(runningSchema == null);
     runningSchema = new SegmentMetadataCache(
@@ -298,7 +311,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         config,
         new NoopEscalator(),
         new BrokerInternalQueryConfig(),
-        new NoopServiceEmitter()
+        serviceEmitter
     )
     {
       @Override
@@ -1445,6 +1458,31 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     Assert.assertNull(schema.getDatasource("wat"));
     schema.refresh(segments, datasources);
     Assert.assertNull(schema.getDatasource("wat"));
+  }
+
+  @Test
+  public void testRefreshShouldEmitMetrics() throws InterruptedException
+  {
+    ServiceEmitter mockEmitter = Mockito.mock(ServiceEmitter.class);
+    Map<String, ServiceMetricEvent> emittedEvents = new HashMap<>();
+    Mockito.doCallRealMethod().when(mockEmitter).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
+    Mockito
+        .doAnswer(invocation -> {
+          ServiceMetricEvent e = invocation.getArgument(0);
+          emittedEvents.put(e.getMetric(), e);
+          return null;
+        })
+        .when(mockEmitter).emit(ArgumentMatchers.any(Event.class));
+
+    buildSchemaMarkAndTableLatch(SEGMENT_CACHE_CONFIG_DEFAULT, mockEmitter);
+
+    Assert.assertTrue(emittedEvents.containsKey("init/metadatacache/time"));
+    Assert.assertEquals(emittedEvents.get("segment/metadatacache/refresh/count")
+                                     .getUserDims()
+                                     .get(DruidMetrics.DATASOURCE), "some_datasource");
+    Assert.assertEquals(emittedEvents.get("segment/metadatacache/refresh/time")
+                                     .getUserDims()
+                                     .get(DruidMetrics.DATASOURCE), "some_datasource");
   }
 
   private static DataSegment newSegment(String datasource, int partitionId)
