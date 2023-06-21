@@ -19,7 +19,8 @@
 
 package org.apache.druid.segment.nested;
 
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -74,7 +75,7 @@ public class NestedPathFinder
     List<NestedPathPart> parts = new ArrayList<>();
 
     if (!path.startsWith(JSON_PATH_ROOT)) {
-      badFormatJsonPath(path, "must start with '$'");
+      badFormatJsonPath(path, "it must start with '$'");
     }
 
     if (path.length() == 1) {
@@ -97,7 +98,7 @@ public class NestedPathFinder
         partMark = i + 1;
       } else if (current == '[' && arrayMark < 0 && quoteMark < 0) {
         if (dotMark == (i - 1) && dotMark != 0) {
-          badFormatJsonPath(path, "invalid position " + i + " for '[', must not follow '.' or must be contained with '");
+          badFormatJsonPath(path, "found '[' at invalid position [%s], must not follow '.' or must be contained with '", i);
         }
         if (dotMark >= 0 && i > 1) {
           parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
@@ -115,13 +116,13 @@ public class NestedPathFinder
           partMark = i + 1;
         }
         catch (NumberFormatException ignored) {
-          badFormatJsonPath(path, "expected number for array specifier got " + maybeNumber + " instead. Use ' if this value was meant to be a field name");
+          badFormatJsonPath(path, "array specifier [%s] should be a number, it was not.  Use ' if this value was meant to be a field name", maybeNumber);
         }
       } else if (dotMark == -1 && arrayMark == -1) {
         badFormatJsonPath(path, "path parts must be separated with '.'");
       } else if (current == '\'' && quoteMark < 0) {
         if (arrayMark != i - 1) {
-          badFormatJsonPath(path, "' must be immediately after '['");
+          badFormatJsonPath(path, "single-quote (') must be immediately after '['");
         }
         quoteMark = i;
         partMark = i + 1;
@@ -130,7 +131,7 @@ public class NestedPathFinder
           if (arrayMark >= 0) {
             continue;
           }
-          badFormatJsonPath(path, "closing ' must immediately precede ']'");
+          badFormatJsonPath(path, "closing single-quote (') must immediately precede ']'");
         }
 
         parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
@@ -147,7 +148,7 @@ public class NestedPathFinder
     // add the last element, this should never be an array because they close themselves
     if (partMark < path.length()) {
       if (quoteMark != -1) {
-        badFormatJsonPath(path, "unterminated '");
+        badFormatJsonPath(path, "unterminated single-quote (')");
       }
       if (arrayMark != -1) {
         badFormatJsonPath(path, "unterminated '['");
@@ -195,7 +196,7 @@ public class NestedPathFinder
     List<NestedPathPart> parts = new ArrayList<>();
 
     if (path.charAt(0) != '.') {
-      badFormat(path, "must start with '.'");
+      badFormat(path, "it must start with '.'");
     }
 
     int partMark = -1;  // position to start the next substring to build the path part
@@ -217,13 +218,13 @@ public class NestedPathFinder
             parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
             dotMark = -1;
           } else {
-            badFormat(path, "invalid position " + i + " for '?'");
+            badFormat(path, "found '?' at invalid position [%s]", i);
           }
         }
         partMark = i + 1;
       } else if (current == '[' && arrayMark < 0 && quoteMark < 0) {
         if (dotMark == (i - 1) && dotMark != 0) {
-          badFormat(path, "invalid position " + i + " for '[', must not follow '.' or must be contained with '\"'");
+          badFormat(path, "found '[' at invalid position [%s], must not follow '.' or must be contained with '\"'", i);
         }
         if (dotMark >= 0 && i > 1) {
           parts.add(new NestedPathField(getPathSubstring(path, partMark, i)));
@@ -241,16 +242,16 @@ public class NestedPathFinder
           partMark = i + 1;
         }
         catch (NumberFormatException ignored) {
-          badFormat(path, "expected number for array specifier got " + maybeNumber + " instead. Use \"\" if this value was meant to be a field name");
+          badFormat(path, "array specifier [%s] should be a number, it was not.  Use \"\" if this value was meant to be a field name", maybeNumber);
         }
       } else if (dotMark == -1 && arrayMark == -1) {
         badFormat(path, "path parts must be separated with '.'");
       } else if (current == '"' && quoteMark < 0) {
         if (partMark != i) {
-          badFormat(path, "invalid position " + i + " for '\"', must immediately follow '.' or '['");
+          badFormat(path, "found '\"' at invalid position [%s], it must immediately follow '.' or '['", i);
         }
         if (arrayMark > 0 && arrayMark != i - 1) {
-          badFormat(path, "'\"' within '[' must be immediately after");
+          badFormat(path, "'\"' within '[', must be immediately after");
         }
         quoteMark = i;
         partMark = i + 1;
@@ -295,14 +296,14 @@ public class NestedPathFinder
     return path.substring(start, end);
   }
 
-  private static void badFormat(String path, String message)
+  private static void badFormat(String path, String message, Object... args)
   {
-    throw new IAE("Bad format, '%s' is not a valid 'jq' path: %s", path, message);
+    throw InvalidInput.exception("jq path [%s] is invalid, %s", path, StringUtils.format(message, args));
   }
 
-  private static void badFormatJsonPath(String path, String message)
+  private static void badFormatJsonPath(String path, String message, Object... args)
   {
-    throw new IAE("Bad format, '%s' is not a valid JSONPath path: %s", path, message);
+    throw InvalidInput.exception("JSONPath [%s] is invalid, %s", path, StringUtils.format(message, args));
   }
 
   /**

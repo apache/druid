@@ -279,6 +279,9 @@ SOURCE/JAVA-CORE
     This product contains lpad and rpad methods adapted from Apache Flink.
       * processing/src/main/java/org/apache/druid/java/util/common/StringUtils.java
 
+    This product contains SystemInfo methods adapted from oshi
+      * processing/src/main/java/org/apache/druid/java/util/metrics/OshiSysMonitor.java
+
 
 MIT License
 ================================

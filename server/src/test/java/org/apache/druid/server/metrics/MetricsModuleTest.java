@@ -44,7 +44,9 @@ import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
 import org.apache.druid.java.util.metrics.ClockDriftSafeMonitorScheduler;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.java.util.metrics.NoopOshiSysMonitor;
 import org.apache.druid.java.util.metrics.NoopSysMonitor;
+import org.apache.druid.java.util.metrics.OshiSysMonitor;
 import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.server.DruidNode;
 import org.hamcrest.CoreMatchers;
@@ -196,6 +198,30 @@ public class MetricsModuleTest
     sysMonitor.doMonitor(emitter);
 
     Assert.assertFalse(sysMonitor instanceof NoopSysMonitor);
+    Mockito.verify(emitter, Mockito.atLeastOnce()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
+  }
+  @Test
+  public void testGetOshiSysMonitorViaInjector()
+  {
+
+    final Injector injector = createInjector(new Properties(), ImmutableSet.of(NodeRole.PEON));
+    final OshiSysMonitor sysMonitor = injector.getInstance(OshiSysMonitor.class);
+    final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    sysMonitor.doMonitor(emitter);
+
+    Assert.assertTrue(sysMonitor instanceof NoopOshiSysMonitor);
+    Mockito.verify(emitter, Mockito.never()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
+  }
+  @Test
+  public void testGetOshiSysMonitorWhenNull()
+  {
+
+    Injector injector = createInjector(new Properties(), ImmutableSet.of());
+    final OshiSysMonitor sysMonitor = injector.getInstance(OshiSysMonitor.class);
+    final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    sysMonitor.doMonitor(emitter);
+
+    Assert.assertFalse(sysMonitor instanceof NoopOshiSysMonitor);
     Mockito.verify(emitter, Mockito.atLeastOnce()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
 
