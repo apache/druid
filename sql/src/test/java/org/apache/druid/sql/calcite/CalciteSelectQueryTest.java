@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -43,7 +44,6 @@ import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -311,8 +311,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectConstantExpressionEquivalentToNaN()
   {
-    expectedException.expectMessage(
-        "'(log10(0) - log10(0))' evaluates to 'NaN' that is not supported in SQL. You can either cast the expression as BIGINT ('CAST((log10(0) - log10(0)) as BIGINT)') or VARCHAR ('CAST((log10(0) - log10(0)) as VARCHAR)') or change the expression itself");
+    expectedException.expect(invalidSqlIs(
+        "Expression [(log10(0) - log10(0))] evaluates to an unsupported value [NaN], "
+        + "expected something that can be a Double.  Consider casting with 'CAST(<col> AS BIGINT)'"
+    ));
     testQuery(
         "SELECT log10(0) - log10(0), dim1 FROM foo LIMIT 1",
         ImmutableList.of(),
@@ -323,8 +325,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectConstantExpressionEquivalentToInfinity()
   {
-    expectedException.expectMessage(
-        "'log10(0)' evaluates to '-Infinity' that is not supported in SQL. You can either cast the expression as BIGINT ('CAST(log10(0) as BIGINT)') or VARCHAR ('CAST(log10(0) as VARCHAR)') or change the expression itself");
+    expectedException.expect(invalidSqlIs(
+        "Expression [log10(0)] evaluates to an unsupported value [-Infinity], "
+        + "expected something that can be a Double.  Consider casting with 'CAST(<col> AS BIGINT)'"
+    ));
     testQuery(
         "SELECT log10(0), dim1 FROM foo LIMIT 1",
         ImmutableList.of(),
@@ -964,7 +968,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT CURRENT_TIMESTAMP(4)",
         expectedException -> {
-          expectedException.expect(SqlPlanningException.class);
+          expectedException.expect(DruidException.class);
           expectedException.expectMessage(
               "Argument to function 'CURRENT_TIMESTAMP' must be a valid precision between '0' and '3'"
           );

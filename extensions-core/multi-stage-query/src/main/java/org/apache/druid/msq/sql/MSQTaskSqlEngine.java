@@ -32,6 +32,7 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -86,7 +87,7 @@ public class MSQTaskSqlEngine implements SqlEngine
   }
 
   @Override
-  public void validateContext(Map<String, Object> queryContext) throws ValidationException
+  public void validateContext(Map<String, Object> queryContext)
   {
     SqlEngines.validateNoSpecialContextKeys(queryContext, SYSTEM_CONTEXT_PARAMETERS);
   }
@@ -250,18 +251,17 @@ public class MSQTaskSqlEngine implements SqlEngine
    * queries, because we use these output names to generate columns in segments. They must be unique.
    */
   private static void validateNoDuplicateAliases(final List<Pair<Integer, String>> fieldMappings)
-      throws ValidationException
   {
     final Set<String> aliasesSeen = new HashSet<>();
 
     for (final Pair<Integer, String> field : fieldMappings) {
       if (!aliasesSeen.add(field.right)) {
-        throw new ValidationException("Duplicate field in SELECT: [" + field.right + "]");
+        throw InvalidSqlInput.exception("Duplicate field in SELECT: [%s]", field.right);
       }
     }
   }
 
-  private static void validateLimitAndOffset(final RelNode topRel, final boolean limitOk) throws ValidationException
+  private static void validateLimitAndOffset(final RelNode topRel, final boolean limitOk)
   {
     Sort sort = null;
 
@@ -283,13 +283,13 @@ public class MSQTaskSqlEngine implements SqlEngine
       // The segment generator relies on shuffle statistics to determine segment intervals when PARTITIONED BY is not ALL,
       // and LIMIT/OFFSET prevent shuffle statistics from being generated. This is because they always send everything
       // to a single partition, so there are no shuffle statistics.
-      throw new ValidationException(
+      throw InvalidSqlInput.exception(
           "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\"."
       );
     }
     if (sort != null && sort.offset != null) {
       // Found an outer OFFSET that is not allowed.
-      throw new ValidationException("INSERT and REPLACE queries cannot have an OFFSET.");
+      throw InvalidSqlInput.exception("INSERT and REPLACE queries cannot have an OFFSET.");
     }
   }
 
