@@ -45,6 +45,8 @@ public class ServerConfig
   public static final int DEFAULT_GZIP_INFLATE_BUFFER_SIZE = 4096;
   public static final long DEFAULT_MAX_SUBQUERY_BYTES = -1L;
 
+  private static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
+
   /**
    * The ServerConfig is normally created using {@link org.apache.druid.guice.JsonConfigProvider} binding.
    *
@@ -134,7 +136,7 @@ public class ServerConfig
   private long maxSubqueryBytes = DEFAULT_MAX_SUBQUERY_BYTES;
 
   @JsonProperty
-  private boolean useNestedForUnknownTypeInSubquery = false;
+  private boolean useNestedForUnknownTypeInSubquery = DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY;
 
   @JsonProperty
   @Min(1)

@@ -112,7 +112,6 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_DEBUG = false;
   public static final int DEFAULT_IN_SUB_QUERY_THRESHOLD = Integer.MAX_VALUE;
   public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
-  public static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
