@@ -169,7 +169,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       String columnName,
       String path,
       String outputName,
-      ColumnType expectedType
+      @Nullable ColumnType expectedType
   )
   {
     this(columnName, outputName, expectedType, null, null, path, false);
