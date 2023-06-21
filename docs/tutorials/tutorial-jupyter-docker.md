@@ -40,7 +40,7 @@ You can run the following combination of applications:
 Jupyter in Docker requires that you have **Docker** and **Docker Compose**.
 We recommend installing these through [Docker Desktop](https://docs.docker.com/desktop/).
 
-For ARM-based devices, consult the section [Tutorial setup for ARM-based devices]() for tutorial configuration instructions.
+For ARM-based devices, consult the section [Tutorial setup for ARM-based devices](#tutorial-setup-for-arm-based-devices) for instructions.
 
 ## Launch the Docker containers
 
@@ -212,7 +212,7 @@ You should now be able to access and complete the tutorials.
    assume that you are using the quickstart, so no authentication or authorization
    is expected unless explicitly mentioned.
 2. Start Kafka and Jupyter using the command from [Start Kafka and Jupyter](#start-kafka-and-jupyter).
-3. Before starting each tutorial, open the notebook and edit the `host` variable to `"host.docker.internal"`.
+3. Before starting a tutorial, open the notebook and edit the `host` variable to `"host.docker.internal"`.
 
 ## Learn more
 
