@@ -113,9 +113,9 @@ If you have a single tier, Druid automatically names the tier `_default`. If you
 
 `useDefaultTierForNull` is an optional parameter that can be passed to a Load Rule. This parameter determines the default value of `tieredReplicants` only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
-If this parameter is true, a missing `tieredReplicant` in the load rule is assumed to mean that the segment matching this rule should be loaded on historicals by default. This will initilaize `tieredReplicants` with the default tier `"tieredReplicants": { "_default_tier": 2 }`.
+If this parameter is true, a missing `tieredReplicant` in the load rule is assumed to mean that the segment matching this rule should be loaded on historicals by default. This will initialize `tieredReplicants` with the default tier `"tieredReplicants": { "_default_tier": 2 }`.
 
-If this parameter is false, a missing `tieredReplicants` in the load rule is assumed to mean that the segment matching this rule does not need to be loaded on any historical by default. This will mean that these segments are excluded from most queries as well. This will initilaize `tieredReplicants` as an empty map.
+If this parameter is false, a missing `tieredReplicants` in the load rule is assumed to mean that the segment matching this rule does not need to be loaded on any historical by default. This will mean that these segments are excluded from most queries as well. This will initialize `tieredReplicants` as an empty map.
 
 Example:
 
