@@ -109,83 +109,11 @@ In the web console you can use the up and down arrows on the right side of the i
 
 Load rules define how Druid assigns segments to [historical process tiers](./mixed-workloads.md#historical-tiering), and how many replicas of a segment exist in each tier.
 
-If you have a single tier, Druid automatically names the tier `_default` and loads all segments onto it. If you define an additional tier, you must define a load rule to specify which segments to load on that tier. Until you define a load rule, your new tier remains empty.
-
-### Forever load rule
-
-The forever load rule assigns all datasource segments to specified tiers. It is the default rule Druid applies to datasources. Forever load rules have type `loadForever`.
-
-The following example places one replica of each segment on a custom tier named `hot`, and another single replica on the default tier.
-
-```json
-{
-  "type": "loadForever",
-  "tieredReplicants": {
-    "hot": 1,
-    "_default_tier": 1
-  }
-}
-```
-
-Set the following property:
-
-- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
-
-### Period load rule
-
-You can use a period load rule to assign segment data in a specific period to a tier. Druid compares a segment's interval to the period you specify in the rule and loads the matching data.
-
-Period load rules have type `loadByPeriod`. The following example places one replica of data in a one-month period on a custom tier named `hot`, and another single replica on the default tier.
-
-```json
-{
-  "type": "loadByPeriod",
-  "period": "P1M",
-  "includeFuture": true,
-  "tieredReplicants": {
-      "hot": 1,
-      "_default_tier": 1
-  }
-}
-```
-
-Set the following properties:
-
-- `period`: a JSON object representing [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the present, or into the future if `includeFuture` is set to `true`.
-- `includeFuture`: a boolean flag to instruct Druid to match a segment if:
-  - the segment interval overlaps the rule interval, or
-  - the segment interval starts any time after the rule interval starts.
-
-  You can use this property to load segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
-- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
-
-### Interval load rule
-
-You can use an interval rule to assign a specific range of data to a tier. For example, analysts may typically work with the complete data set for all of last week and not so much with the data for the current week.
-
-Interval load rules have type `loadByInterval`. The following example places one replica of data matching the specified interval on a custom tier named `hot`, and another single replica on the default tier.
-
-```json
-{
-  "type": "loadByInterval",
-  "interval": "2012-01-01/2013-01-01",
-  "tieredReplicants": {
-    "hot": 1,
-    "_default_tier": 1
-  }
-}
-```
-
-Set the following properties:
-
-- `interval`: the load interval specified as an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
-- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
-
-## Default Value for tiered replicants
+If you have a single tier, Druid automatically names the tier `_default`. If you define an additional tier, you must define a load rule to specify which segments to load on that tier. Until you define a load rule, your new tier remains empty.
 
 `useDefaultTierForNull` is an optional parameter that can be passed to a Load Rule. This parameter determines the default value of `tieredReplicants` only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
-If this parameter is true, a missing `tieredReplicant` in the load rule is assumed to mean that the segment matching this rule should be loaded on historicals be default. This will initilaize `tieredReplicants` with `"tieredReplicants": { "_default_tier": 2 }`
+If this parameter is true, a missing `tieredReplicant` in the load rule is assumed to mean that the segment matching this rule should be loaded on historicals by default. This will initilaize `tieredReplicants` with the default tier `"tieredReplicants": { "_default_tier": 2 }`.
 
 If this parameter is false, a missing `tieredReplicants` in the load rule is assumed to mean that the segment matching this rule does not need to be loaded on any historical by default. This will mean that these segments are excluded from most queries as well. This will initilaize `tieredReplicants` as an empty map.
 
@@ -232,6 +160,88 @@ is converted to
   "tieredReplicants": {}
 }
 ```
+
+
+### Forever load rule
+
+The forever load rule assigns all datasource segments to specified tiers. It is the default rule Druid applies to datasources. Forever load rules have type `loadForever`.
+
+The following example places one replica of each segment on a custom tier named `hot`, and another single replica on the default tier.
+
+```json
+{
+  "type": "loadForever",
+  "tieredReplicants": {
+    "hot": 1,
+    "_default_tier": 1
+  }
+}
+```
+
+Set the following property:
+
+- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
+- `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
+
+### Period load rule
+
+You can use a period load rule to assign segment data in a specific period to a tier. Druid compares a segment's interval to the period you specify in the rule and loads the matching data.
+
+Period load rules have type `loadByPeriod`. The following example places one replica of data in a one-month period on a custom tier named `hot`, and another single replica on the default tier.
+
+```json
+{
+  "type": "loadByPeriod",
+  "period": "P1M",
+  "includeFuture": true,
+  "tieredReplicants": {
+      "hot": 1,
+      "_default_tier": 1
+  }
+}
+```
+
+Set the following properties:
+
+- `period`: a JSON object representing [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the present, or into the future if `includeFuture` is set to `true`.
+- `includeFuture`: a boolean flag to instruct Druid to match a segment if:
+  - the segment interval overlaps the rule interval, or
+  - the segment interval starts any time after the rule interval starts.
+
+  You can use this property to load segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
+- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
+- `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
+
+### Interval load rule
+
+You can use an interval rule to assign a specific range of data to a tier. For example, analysts may typically work with the complete data set for all of last week and not so much with the data for the current week.
+
+Interval load rules have type `loadByInterval`. The following example places one replica of data matching the specified interval on a custom tier named `hot`, and another single replica on the default tier.
+
+```json
+{
+  "type": "loadByInterval",
+  "interval": "2012-01-01/2013-01-01",
+  "tieredReplicants": {
+    "hot": 1,
+    "_default_tier": 1
+  }
+}
+```
+
+Set the following properties:
+
+- `interval`: the load interval specified as an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
+- `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
+- `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
+
+## Default Value for tiered replicants
+
+`useDefaultTierForNull` is an optional parameter that can be passed to a Load Rule. This parameter determines the default value of `tieredReplicants` only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
+
+If this parameter is true, a missing `tieredReplicant` in the load rule is assumed to mean that the segment matching this rule should be loaded on historicals be default. This will initilaize `tieredReplicants` with `"tieredReplicants": { "_default_tier": 2 }`
+
+If this parameter is false, a missing `tieredReplicants` in the load rule is assumed to mean that the segment matching this rule does not need to be loaded on any historical by default. This will mean that these segments are excluded from most queries as well. This will initilaize `tieredReplicants` as an empty map.
 
 ## Drop rules
 
