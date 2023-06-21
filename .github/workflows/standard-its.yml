@@ -106,6 +106,7 @@ jobs:
       group: query
 
   integration-shuffle-deep-store-tests:
+    needs: changes
     strategy:
       fail-fast: false
       matrix:

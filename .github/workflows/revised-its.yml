@@ -44,6 +44,7 @@ jobs:
               - '!extension*/**'
 
   it:
+    needs: changes
     strategy:
       fail-fast: false
       matrix:
@@ -63,6 +64,7 @@ jobs:
       mysql_driver: com.mysql.jdbc.Driver
 
   s3-deep-storage-minio:
+    needs: changes
     uses: ./.github/workflows/reusable-revised-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
