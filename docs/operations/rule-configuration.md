@@ -111,56 +111,14 @@ Load rules define how Druid assigns segments to [historical process tiers](./mix
 
 If you have a single tier, Druid automatically names the tier `_default`. If you define an additional tier, you must define a load rule to specify which segments to load on that tier. Until you define a load rule, your new tier remains empty.
 
-`useDefaultTierForNull` is an optional parameter that can be passed to a Load Rule. This parameter determines the default value of `tieredReplicants` only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
+All load rules can have these properties:
 
-If this parameter is true, a missing `tieredReplicant` in the load rule is assumed to mean that the segment matching this rule should be loaded on historicals by default. This will initialize `tieredReplicants` with the default tier `"tieredReplicants": { "_default_tier": 2 }`.
+|Property|Description|Required|Default value|
+|---------|-----------|---------|-------------|
+| `tieredReplicants`| Map from tier names to the respective number of segment replicas to be loaded on those tiers. The number of replicas for each tier must be either 0 or a positive integer.| No | When `useDefaultTierForNull` is `true`, the default value is `{"_default_tier": 2}` i.e. 2 replicas to be loaded on the `_default_tier`.<br/><br/>When `useDefaultTierForNull` is `false`, the default value is `{}` i.e. no replicas to be loaded on any tier. |
+|`useDefaultTierForNull`|Determines the default value of `tieredReplicants` if it is not specified or set to `null`.| No | `true`|
 
-If this parameter is false, a missing `tieredReplicants` in the load rule is assumed to mean that the segment matching this rule does not need to be loaded on any historical by default. This will mean that these segments are excluded from most queries as well. This will initialize `tieredReplicants` as an empty map.
-
-Example:
-
-With `useDefaultTierForNull` as true:
-
-```json
-{
-  "type": "loadForever",
-  "useDefaultTierForNull": true
-}
-```
-
-is converted to
-
-```json
-{
-  "type": "loadForever",
-  "useDefaultTierForNull": true,
-  "tieredReplicants": {
-    "_default_tier": 2
-  }
-}
-```
-
-With `useDefaultTierForNull` as false:
-
-```json
-{
-  "type": "loadByInterval",
-  "useDefaultTierForNull": false,
-  "interval": "2012-01-01/2013-01-01"
-}
-```
-
-is converted to
-
-```json
-{
-  "type": "loadByInterval",
-  "useDefaultTierForNull": false,
-  "interval": "2012-01-01/2013-01-01",
-  "tieredReplicants": {}
-}
-```
-
+Specific types of load rules discussed below may have other properties too.
 
 ### Forever load rule
 
