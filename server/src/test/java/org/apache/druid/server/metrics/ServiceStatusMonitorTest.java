@@ -19,29 +19,30 @@
 
 package org.apache.druid.server.metrics;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
+import com.google.common.base.Supplier;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class ServiceStatusMonitorTest {
 
-  private ServiceStatusProvider provider;
   private ServiceStatusMonitor monitor;
+  private Map<String, Number> heartbeatTags = new HashMap<>();
+  private Supplier<Map<String, Number>> heartbeatTagsSupplier = () -> heartbeatTags;
 
   @Before
   public void setUp() throws Exception {
-    provider = mock(ServiceStatusProvider.class);
-
-    monitor = new ServiceStatusMonitor(provider);
+    monitor = new ServiceStatusMonitor();
+    monitor.heartbeatTagsSupplier = heartbeatTagsSupplier;
   }
 
   @Test
   public void testLeaderCount() {
-    when(provider.heartbeat()).thenReturn(0);
+    heartbeatTags.put("leader", 0);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
 
@@ -49,7 +50,7 @@ public class ServiceStatusMonitorTest {
     Assert.assertEquals("druid/heartbeat", emitter.getEvents().get(0).toMap().get("metric"));
     Assert.assertEquals(0, emitter.getEvents().get(0).toMap().get("value"));
 
-    when(provider.heartbeat()).thenReturn(1);
+    heartbeatTags.put("leader", 1);
     emitter.flush();
     monitor.doMonitor(emitter);
     Assert.assertEquals(1, emitter.getEvents().size());

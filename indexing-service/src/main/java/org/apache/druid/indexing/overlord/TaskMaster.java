@@ -43,7 +43,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
-import org.apache.druid.server.metrics.ServiceStatusProvider;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
 import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 
@@ -55,8 +54,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Encapsulates the indexer leadership lifecycle.
  */
-public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsProvider,
-    ServiceStatusProvider
+public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
 
@@ -434,15 +432,5 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
     } else {
       return null;
     }
-  }
-
-  @Override
-  public String heartbeatType() {
-    return "leader";
-  }
-
-  @Override
-  public int heartbeat() {
-    return isLeader() ? 1 : 0;
   }
 }

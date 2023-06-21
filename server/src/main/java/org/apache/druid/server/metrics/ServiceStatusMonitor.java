@@ -19,10 +19,14 @@
 
 package org.apache.druid.server.metrics;
 
-import javax.inject.Inject;
+import com.google.common.base.Supplier;
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
+
+import java.util.Map;
 
 /**
  * Monitor service running status.
@@ -30,19 +34,25 @@ import org.apache.druid.java.util.metrics.AbstractMonitor;
  */
 public class ServiceStatusMonitor extends AbstractMonitor {
 
-  private final ServiceStatusProvider provider;
+  @Named("heartbeat")
+  @Inject(optional = true)
+  Supplier<Map<String, Number>> heartbeatTagsSupplier = null;
 
   @Inject
-  public ServiceStatusMonitor(ServiceStatusProvider provider) {
-    this.provider = provider;
+  public ServiceStatusMonitor() {
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter) {
-    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-    builder.setDimension("heartbeatType", provider.heartbeatType());
-    emitter.emit(builder.build("druid/heartbeat", provider.heartbeat()));
+    if (heartbeatTagsSupplier == null) {
+      return true;
+    }
 
+    heartbeatTagsSupplier.get().forEach((k, v) -> {
+      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+      builder.setDimension("heartbeatType", k);
+      emitter.emit(builder.build("druid/heartbeat", v));
+    });
     return true;
   }
 }

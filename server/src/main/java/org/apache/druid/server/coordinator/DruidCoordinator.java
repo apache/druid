@@ -82,7 +82,6 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
-import org.apache.druid.server.metrics.ServiceStatusProvider;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -106,7 +105,7 @@ import java.util.stream.Collectors;
  *
  */
 @ManageLifecycle
-public class DruidCoordinator implements ServiceStatusProvider
+public class DruidCoordinator
 {
   /**
    * Orders newest segments (i.e. segments with most recent intervals) first.
@@ -645,16 +644,6 @@ public class DruidCoordinator implements ServiceStatusProvider
   private List<CoordinatorDuty> makeCompactSegmentsDuty()
   {
     return ImmutableList.of(compactSegments);
-  }
-
-  @Override
-  public String heartbeatType() {
-    return "leader";
-  }
-
-  @Override
-  public int heartbeat() {
-    return isLeader() ? 1 : 0;
   }
 
   private class DutiesRunnable implements Runnable

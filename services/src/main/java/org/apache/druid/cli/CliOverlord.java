@@ -21,6 +21,7 @@ package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.rvesse.airline.annotations.Command;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
@@ -32,6 +33,7 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
+import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
@@ -117,7 +119,6 @@ import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.druid.server.metrics.ServiceStatusProvider;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
 import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 import org.apache.druid.server.security.AuthConfig;
@@ -135,7 +136,9 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -198,7 +201,6 @@ public class CliOverlord extends ServerRunnable
             binder.bind(TaskMaster.class).in(ManageLifecycle.class);
             binder.bind(TaskCountStatsProvider.class).to(TaskMaster.class);
             binder.bind(TaskSlotCountStatsProvider.class).to(TaskMaster.class);
-            binder.bind(ServiceStatusProvider.class).to(TaskMaster.class);
 
             binder.bind(TaskLogStreamer.class)
                   .to(SwitchingTaskLogStreamer.class)
@@ -355,6 +357,18 @@ public class CliOverlord extends ServerRunnable
               public TaskStorageDirTracker getTaskStorageDirTracker(WorkerConfig workerConfig, TaskConfig taskConfig)
               {
                 return TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig);
+              }
+
+              @Provides
+              @LazySingleton
+              @Named("heartbeat")
+              public Supplier<Map<String, Number>> getHeartbeatSupplier(TaskMaster taskMaster) {
+                return () -> {
+                  Map<String, Number> heartbeatTags = new HashMap<>();
+                  heartbeatTags.put("leader", taskMaster.isLeader() ? 1 : 0);
+
+                  return heartbeatTags;
+                };
               }
             };
           }

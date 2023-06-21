@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.rvesse.airline.annotations.Command;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -31,6 +32,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
+import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import org.apache.curator.framework.CuratorFramework;
@@ -114,14 +116,15 @@ import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
-import org.apache.druid.server.metrics.ServiceStatusProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.Duration;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -223,7 +226,6 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
             binder.bind(CoordinatorServerView.class);
             binder.bind(DruidCoordinator.class);
-            binder.bind(ServiceStatusProvider.class).to(DruidCoordinator.class);
 
             LifecycleModule.register(binder, CoordinatorServerView.class);
             LifecycleModule.register(binder, MetadataStorage.class);
@@ -371,6 +373,18 @@ public class CliCoordinator extends ServerRunnable
                 httpClient,
                 zkPaths
             );
+          }
+
+          @Provides
+          @LazySingleton
+          @Named("heartbeat")
+          public Supplier<Map<String, Number>> getHeartbeatSupplier(DruidCoordinator coordinator) {
+            return () -> {
+              Map<String, Number> heartbeatTags = new HashMap<>();
+              heartbeatTags.put("leader", coordinator.isLeader() ? 1 : 0);
+
+              return heartbeatTags;
+            };
           }
         }
     );
