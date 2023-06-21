@@ -149,7 +149,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testLock() throws Exception
+  public void testLock()
   {
     validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
@@ -176,7 +176,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testTrySharedLock() throws Exception
+  public void testTrySharedLock()
   {
     final Interval interval = Intervals.of("2017-01/2017-02");
 
@@ -427,7 +427,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testSyncWithUnknownTaskTypesFromModuleNotLoaded() throws Exception
+  public void testSyncWithUnknownTaskTypesFromModuleNotLoaded()
   {
     // ensure that if we don't know how to deserialize a task it won't explode the lockbox
     // (or anything else that uses taskStorage.getActiveTasks() and doesn't expect null which is most things)
@@ -1201,7 +1201,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testGetLockedIntervalsForLowPriorityTask() throws Exception
+  public void testGetLockedIntervalsForLowPriorityTask()
   {
     // Acquire lock for a low priority task
     final Task lowPriorityTask = NoopTask.create(5);
@@ -1221,7 +1221,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testGetLockedIntervalsForEqualPriorityTask() throws Exception
+  public void testGetLockedIntervalsForEqualPriorityTask()
   {
     // Acquire lock for a low priority task
     final Task task = NoopTask.create(5);
@@ -1245,7 +1245,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testExclusiveLockCompatibility() throws Exception
+  public void testExclusiveLockCompatibility()
   {
     final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
@@ -1282,7 +1282,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testExclusiveLockCanRevokeAllIncompatible() throws Exception
+  public void testExclusiveLockCanRevokeAllIncompatible()
   {
     final TaskLockboxValidator validator = new TaskLockboxValidator(lockbox, taskStorage);
 
@@ -1325,7 +1325,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testSharedLockCompatibility() throws Exception
+  public void testSharedLockCompatibility()
   {
     final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.SHARED,
@@ -1374,7 +1374,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testSharedLockCanRevokeAllIncompatible() throws Exception
+  public void testSharedLockCanRevokeAllIncompatible()
   {
     final TaskLock exclusiveLock = validator.expectLockCreated(
         TaskLockType.EXCLUSIVE,
@@ -1415,7 +1415,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testAppendLockCompatibility() throws Exception
+  public void testAppendLockCompatibility()
   {
     final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.APPEND,
@@ -1473,7 +1473,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testAppendLockCanRevokeAllIncompatible() throws Exception
+  public void testAppendLockCanRevokeAllIncompatible()
   {
     final TaskLock sharedLock = validator.expectLockCreated(
         TaskLockType.SHARED,
@@ -1521,7 +1521,7 @@ public class TaskLockboxTest
 
 
   @Test
-  public void testReplaceLockCompatibility() throws Exception
+  public void testReplaceLockCompatibility()
   {
     final TaskLock theLock = validator.expectLockCreated(
         TaskLockType.REPLACE,
@@ -1566,7 +1566,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testReplaceLockCanRevokeAllIncompatible() throws Exception
+  public void testReplaceLockCanRevokeAllIncompatible()
   {
     final TaskLock appendLock0 = validator.expectLockCreated(
         TaskLockType.APPEND,
@@ -1619,7 +1619,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testGetLockedIntervalsForRevokedLocks() throws Exception
+  public void testGetLockedIntervalsForRevokedLocks()
   {
     // Acquire lock for a low priority task
     final Task lowPriorityTask = NoopTask.create(5);
@@ -1663,7 +1663,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testFailedToReacquireTaskLock() throws Exception
+  public void testFailedToReacquireTaskLock()
   {
     // Tasks to be failed have a group id with the substring "FailingLockAcquisition"
     // Please refer to NullLockPosseTaskLockbox
@@ -1704,7 +1704,7 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testConflictsWithOverlappingSharedLocks() throws Exception
+  public void testConflictsWithOverlappingSharedLocks()
   {
     TaskLock conflictingLock = validator.expectLockCreated(
         TaskLockType.SHARED,
@@ -1744,7 +1744,7 @@ public class TaskLockboxTest
       this.taskStorage = taskStorage;
     }
 
-    public TaskLock expectLockCreated(TaskLockType type, Interval interval, int priority) throws Exception
+    public TaskLock expectLockCreated(TaskLockType type, Interval interval, int priority)
     {
       final TaskLock lock = tryTaskLock(type, interval, priority);
       Assert.assertNotNull(lock);
@@ -1757,7 +1757,7 @@ public class TaskLockboxTest
       lockbox.revokeLock(lockToTaskIdMap.get(lock), lock);
     }
 
-    public void expectLockNotGranted(TaskLockType type, Interval interval, int priority) throws Exception
+    public void expectLockNotGranted(TaskLockType type, Interval interval, int priority)
     {
       final TaskLock lock = tryTaskLock(type, interval, priority);
       Assert.assertNull(lock);
@@ -1785,7 +1785,7 @@ public class TaskLockboxTest
       }
     }
 
-    private TaskLock tryTaskLock(TaskLockType type, Interval interval, int priority) throws Exception
+    private TaskLock tryTaskLock(TaskLockType type, Interval interval, int priority)
     {
       final Task task = NoopTask.create(priority);
       tasks.add(task);

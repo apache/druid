@@ -23,8 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
-import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.druid.common.exception.SanitizableException;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -161,6 +162,13 @@ public class SqlTaskResource
         return buildStandardResponse(sequence, sqlQuery, sqlQueryId, rowTransformer);
       }
     }
+    catch (DruidException e) {
+      stmt.reporter().failed(e);
+      return Response.status(e.getStatusCode())
+                     .type(MediaType.APPLICATION_JSON_TYPE)
+                     .entity(new ErrorResponse(e))
+                     .build();
+    }
     // Kitchen-sinking the errors since they are all unchecked.
     // Just copied from SqlResource.
     catch (QueryCapacityExceededException cap) {
@@ -183,14 +191,6 @@ public class SqlTaskResource
       // No request logs for forbidden queries; same as SqlResource
       throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy()
                                              .transformIfNeeded(e); // let ForbiddenExceptionMapper handle this
-    }
-    catch (RelOptPlanner.CannotPlanException e) {
-      stmt.reporter().failed(e);
-      SqlPlanningException spe = new SqlPlanningException(
-          SqlPlanningException.PlanningError.UNSUPPORTED_SQL_ERROR,
-          e.getMessage()
-      );
-      return buildNonOkResponse(BadQueryException.STATUS_CODE, spe, sqlQueryId);
     }
     // Calcite throws a java.lang.AssertionError which is type Error not Exception. Using Throwable catches both.
     catch (Throwable e) {

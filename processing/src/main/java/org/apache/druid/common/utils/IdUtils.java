@@ -21,10 +21,9 @@ package org.apache.druid.common.utils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -43,23 +42,32 @@ public class IdUtils
 
   public static String validateId(String thingToValidate, String stringToValidate)
   {
-    Preconditions.checkArgument(
-        !Strings.isNullOrEmpty(stringToValidate),
-        "%s cannot be null or empty. Please provide a %s.", thingToValidate, thingToValidate
-    );
-    Preconditions.checkArgument(
-        !stringToValidate.startsWith("."),
-        "%s cannot start with the '.' character.", thingToValidate
-    );
-    Preconditions.checkArgument(
-        !stringToValidate.contains("/"),
-        "%s cannot contain the '/' character.", thingToValidate
-    );
+    if (Strings.isNullOrEmpty(stringToValidate)) {
+      throw InvalidInput.exception("Invalid value for field [%s]: must not be null", thingToValidate);
+    }
+    if (stringToValidate.startsWith(".")) {
+      throw InvalidInput.exception(
+          "Invalid value for field [%s]: Value [%s] cannot start with '.'.",
+          thingToValidate,
+          stringToValidate
+      );
+    }
+    if (stringToValidate.contains("/")) {
+      throw InvalidInput.exception(
+          "Invalid value for field [%s]: Value [%s] cannot contain '/'.",
+          thingToValidate,
+          stringToValidate
+      );
+    }
+
     Matcher m = INVALIDCHARS.matcher(stringToValidate);
-    Preconditions.checkArgument(
-        !m.matches(),
-        "%s cannot contain whitespace character except space.", thingToValidate
-    );
+    if (m.matches()) {
+      throw InvalidInput.exception(
+          "Invalid value for field [%s]: Value [%s] contains illegal whitespace characters.  Only space is allowed.",
+          thingToValidate,
+          stringToValidate
+      );
+    }
 
     for (int i = 0; i < stringToValidate.length(); i++) {
       final char c = stringToValidate.charAt(i);
@@ -68,7 +76,13 @@ public class IdUtils
       // znode paths. The first two ranges are control characters, the second two ranges correspond to surrogate
       // pairs. This means that characters outside the basic multilingual plane, such as emojis, are not allowed. 😢
       if (c > 0 && c < 31 || c > 127 && c < 159 || c > '\ud800' && c < '\uf8ff' || c > '\ufff0' && c < '\uffff') {
-        throw new IAE("%s cannot contain character #%d (at position %d).", thingToValidate, (int) c, i);
+        throw InvalidInput.exception(
+            "Invalid value for field [%s]: Value [%s] contains illegal UTF8 character [#%d] at position [%d]",
+            thingToValidate,
+            stringToValidate,
+            (int) c,
+            i
+        );
       }
     }
 
@@ -94,7 +108,12 @@ public class IdUtils
     return newTaskId(null, typeName, dataSource, interval);
   }
 
-  public static String newTaskId(@Nullable String idPrefix, String typeName, String dataSource, @Nullable Interval interval)
+  public static String newTaskId(
+      @Nullable String idPrefix,
+      String typeName,
+      String dataSource,
+      @Nullable Interval interval
+  )
   {
     return newTaskId(idPrefix, getRandomId(), DateTimes.nowUtc(), typeName, dataSource, interval);
   }

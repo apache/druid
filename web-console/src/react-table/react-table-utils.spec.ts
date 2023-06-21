@@ -16,7 +16,11 @@
  * limitations under the License.
  */
 
-import { sqlQueryCustomTableFilter } from './react-table-utils';
+import {
+  sqlQueryCustomTableFilter,
+  stringToTableFilters,
+  tableFiltersToString,
+} from './react-table-utils';
 
 describe('react-table-utils', () => {
   describe('sqlQueryCustomTableFilter', () => {
@@ -52,5 +56,24 @@ describe('react-table-utils', () => {
         ),
       ).toEqual(`"datasource" <= 'Hello'`);
     });
+  });
+
+  it('tableFiltersToString', () => {
+    expect(
+      tableFiltersToString([
+        { id: 'x', value: '~y' },
+        { id: 'z', value: '=w&' },
+      ]),
+    ).toEqual('x~y&z=w%26');
+  });
+
+  it('stringToTableFilters', () => {
+    expect(stringToTableFilters(undefined)).toEqual([]);
+    expect(stringToTableFilters('')).toEqual([]);
+    expect(stringToTableFilters('x~y')).toEqual([{ id: 'x', value: '~y' }]);
+    expect(stringToTableFilters('x~y&z=w%26')).toEqual([
+      { id: 'x', value: '~y' },
+      { id: 'z', value: '=w&' },
+    ]);
   });
 });
