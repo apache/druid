@@ -47,6 +47,18 @@ public class SegmentReplicantLookup
      */
     final Table<SegmentId, String, Integer> loadingSegments = HashBasedTable.create();
 
+    for (ServerHolder serverHolder : cluster.getRealtimes()) {
+      ImmutableDruidServer server = serverHolder.getServer();
+
+      for (DataSegment segment : server.iterateAllSegments()) {
+        Integer numReplicants = segmentsInCluster.get(segment.getId(), server.getTier());
+        if (numReplicants == null) {
+          numReplicants = 0;
+        }
+        segmentsInCluster.put(segment.getId(), server.getTier(), numReplicants + 1);
+      }
+    }
+
     for (SortedSet<ServerHolder> serversByType : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serversByType) {
         ImmutableDruidServer server = serverHolder.getServer();
