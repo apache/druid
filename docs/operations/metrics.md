@@ -329,11 +329,11 @@ If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configurati
 
 ## General Health
 
-### Overlord/Coordinator
+### Service Health
 
-| Metric         | Description                                                                                                   | Dimensions      | Normal Value |
-|----------------|---------------------------------------------------------------------------------------------------------------|-----------------|--------------|
-| `druid/heartbeat` | Report Overlord/Coordinator service health by looking at leader count. `ServiceStatusMonitor` must be enabled. | `heartbeatType` | 1            |
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`druid/heartbeat`| Report service health. For Overlord/Coordinator, the metric is leader count. `ServiceStatusMonitor` must be enabled. |`heartbeatType`|1|
 
 ### Historical
 

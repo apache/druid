@@ -32,19 +32,17 @@ import java.util.Map;
  * Monitor service running status.
  * For Overlord/Coordinator, the metric reported is service leader count.
  */
-public class ServiceStatusMonitor extends AbstractMonitor {
+public class ServiceStatusMonitor extends AbstractMonitor
+{
 
   @Named("heartbeat")
   @Inject(optional = true)
   Supplier<Map<String, Number>> heartbeatTagsSupplier = null;
 
-  @Inject
-  public ServiceStatusMonitor() {
-  }
-
   @Override
-  public boolean doMonitor(ServiceEmitter emitter) {
-    if (heartbeatTagsSupplier == null) {
+  public boolean doMonitor(ServiceEmitter emitter)
+  {
+    if (heartbeatTagsSupplier == null || heartbeatTagsSupplier.get() == null) {
       return true;
     }
 
@@ -56,3 +54,4 @@ public class ServiceStatusMonitor extends AbstractMonitor {
     return true;
   }
 }
+
