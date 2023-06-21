@@ -378,9 +378,9 @@ public class CliCoordinator extends ServerRunnable
           @Provides
           @LazySingleton
           @Named("heartbeat")
-          public Supplier<Map<String, Number>> getHeartbeatSupplier(DruidCoordinator coordinator) {
+          public Supplier<Map<String, Object>> getHeartbeatSupplier(DruidCoordinator coordinator) {
             return () -> {
-              Map<String, Number> heartbeatTags = new HashMap<>();
+              Map<String, Object> heartbeatTags = new HashMap<>();
               heartbeatTags.put("leader", coordinator.isLeader() ? 1 : 0);
 
               return heartbeatTags;

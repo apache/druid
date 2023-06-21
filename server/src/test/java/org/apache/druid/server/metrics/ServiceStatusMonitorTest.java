@@ -28,32 +28,37 @@ import org.junit.Test;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ServiceStatusMonitorTest {
+public class ServiceStatusMonitorTest
+{
 
   private ServiceStatusMonitor monitor;
-  private Map<String, Number> heartbeatTags = new HashMap<>();
-  private Supplier<Map<String, Number>> heartbeatTagsSupplier = () -> heartbeatTags;
+  private Map<String, Object> heartbeatTags = new HashMap<>();
+  private Supplier<Map<String, Object>> heartbeatTagsSupplier = () -> heartbeatTags;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() throws Exception
+  {
     monitor = new ServiceStatusMonitor();
     monitor.heartbeatTagsSupplier = heartbeatTagsSupplier;
   }
 
   @Test
-  public void testLeaderCount() {
+  public void testLeaderCount()
+  {
     heartbeatTags.put("leader", 0);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
 
     Assert.assertEquals(1, emitter.getEvents().size());
+    Assert.assertEquals(0, emitter.getEvents().get(0).toMap().get("leader"));
     Assert.assertEquals("druid/heartbeat", emitter.getEvents().get(0).toMap().get("metric"));
-    Assert.assertEquals(0, emitter.getEvents().get(0).toMap().get("value"));
+    Assert.assertEquals(1, emitter.getEvents().get(0).toMap().get("value"));
 
     heartbeatTags.put("leader", 1);
     emitter.flush();
     monitor.doMonitor(emitter);
     Assert.assertEquals(1, emitter.getEvents().size());
+    Assert.assertEquals(1, emitter.getEvents().get(0).toMap().get("leader"));
     Assert.assertEquals("druid/heartbeat", emitter.getEvents().get(0).toMap().get("metric"));
     Assert.assertEquals(1, emitter.getEvents().get(0).toMap().get("value"));
   }

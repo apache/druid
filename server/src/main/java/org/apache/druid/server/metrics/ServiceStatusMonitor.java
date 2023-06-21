@@ -30,27 +30,28 @@ import java.util.Map;
 
 /**
  * Monitor service running status.
- * For Overlord/Coordinator, the metric reported is service leader count.
+ * For Overlord/Coordinator, the dimension reported is service leader count.
  */
 public class ServiceStatusMonitor extends AbstractMonitor
 {
 
   @Named("heartbeat")
   @Inject(optional = true)
-  Supplier<Map<String, Number>> heartbeatTagsSupplier = null;
+  Supplier<Map<String, Object>> heartbeatTagsSupplier = null;
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
+    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     if (heartbeatTagsSupplier == null || heartbeatTagsSupplier.get() == null) {
+      emitter.emit(builder.build("druid/heartbeat", 1));
       return true;
     }
 
     heartbeatTagsSupplier.get().forEach((k, v) -> {
-      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-      builder.setDimension("heartbeatType", k);
-      emitter.emit(builder.build("druid/heartbeat", v));
+      builder.setDimension(k, v);
     });
+    emitter.emit(builder.build("druid/heartbeat", 1));
     return true;
   }
 }
