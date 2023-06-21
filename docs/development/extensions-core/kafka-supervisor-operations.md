@@ -162,7 +162,7 @@ new reading tasks will be created. Therefore to allow for reading tasks and publ
 should be a minimum capacity of:
 
 ```
-workerCapacity = replicas * (taskCount + 1)
+workerCapacity = 2 * replicas * taskCount
 ```
 
 This value is for the ideal situation in which there is at most one set of tasks publishing while another set is reading.
