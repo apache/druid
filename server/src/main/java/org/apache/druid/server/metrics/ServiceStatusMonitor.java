@@ -43,14 +43,12 @@ public class ServiceStatusMonitor extends AbstractMonitor
   public boolean doMonitor(ServiceEmitter emitter)
   {
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-    if (heartbeatTagsSupplier == null || heartbeatTagsSupplier.get() == null) {
-      emitter.emit(builder.build("druid/heartbeat", 1));
-      return true;
+    if (heartbeatTagsSupplier != null && heartbeatTagsSupplier.get() != null) {
+      heartbeatTagsSupplier.get().forEach((k, v) -> {
+        builder.setDimension(k, v);
+      });
     }
 
-    heartbeatTagsSupplier.get().forEach((k, v) -> {
-      builder.setDimension(k, v);
-    });
     emitter.emit(builder.build("druid/heartbeat", 1));
     return true;
   }
