@@ -33,7 +33,6 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.segment.AutoTypeColumnSchema;
-import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -256,9 +255,9 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
                              new LongDimensionSchema("long"),
                              new DoubleDimensionSchema("double"),
                              new StringDimensionSchema("bool"),
-                             new NestedDataDimensionSchema("variant"),
-                             new NestedDataDimensionSchema("array"),
-                             new NestedDataDimensionSchema("nested")
+                             new AutoTypeColumnSchema("variant"),
+                             new AutoTypeColumnSchema("array"),
+                             new AutoTypeColumnSchema("nested")
             )
         ).build(),
         null,
@@ -291,8 +290,8 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
                     .add("long", ColumnType.LONG)
                     .add("double", ColumnType.DOUBLE)
                     .add("bool", ColumnType.STRING)
-                    .add("variant", ColumnType.NESTED_DATA)
-                    .add("array", ColumnType.NESTED_DATA)
+                    .add("variant", ColumnType.STRING)
+                    .add("array", ColumnType.LONG_ARRAY)
                     .add("nested", ColumnType.NESTED_DATA)
                     .build(),
         response.getLogicalSegmentSchema()

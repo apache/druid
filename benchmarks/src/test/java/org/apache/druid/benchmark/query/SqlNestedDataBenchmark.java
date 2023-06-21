@@ -34,8 +34,8 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.FrontCodedIndexed;
@@ -304,7 +304,7 @@ public class SqlNestedDataBenchmark
     );
     List<DimensionSchema> dims = ImmutableList.<DimensionSchema>builder()
                                               .addAll(schemaInfo.getDimensionsSpec().getDimensions())
-                                              .add(new NestedDataDimensionSchema("nested"))
+                                              .add(new AutoTypeColumnSchema("nested"))
                                               .build();
     DimensionsSpec dimsSpec = new DimensionsSpec(dims);
 
