@@ -212,6 +212,7 @@ You should now be able to access and complete the tutorials.
 ## Tutorial setup for ARM-based devices
 
 For ARM-based devices, follow this setup to start Druid externally, while keeping Kafka and Jupyter within the Docker Compose environment:
+
 1. Start Druid using the `start-druid` script. You can follow [Quickstart (local)](./index.md) instructions. The tutorials
    assume that you are using the quickstart, so no authentication or authorization is expected unless explicitly mentioned.
 2. Start either Kafka and Jupyter or only Jupyter using the following commands in the same directory as `docker-compose.yaml` and `environment`:
