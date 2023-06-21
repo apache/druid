@@ -323,6 +323,7 @@ public class Windowing
                 QueryException.SQL_QUERY_UNSUPPORTED_ERROR_CODE,
                 StringUtils.format("Cannot handle ordering with direction[%s]", field.direction),
                 null,
+                null,
                 null
             );
         }

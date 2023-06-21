@@ -50,7 +50,7 @@ public class QueryInterruptedException extends QueryException
       @JsonProperty("host") @Nullable String host
   )
   {
-    super(errorCode, errorMessage, errorClass, host);
+    super(errorCode, errorMessage, errorClass, host, null);
   }
 
   /**

@@ -36,6 +36,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -60,6 +61,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
@@ -94,6 +96,7 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -151,8 +154,7 @@ public class SqlStatementResource
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   public Response doPost(
-      final SqlQuery sqlQuery,
-      @Context final HttpServletRequest req
+      final SqlQuery sqlQuery, @Context final HttpServletRequest req
   )
   {
     final HttpStatement stmt = msqSqlStatementFactory.httpStatement(sqlQuery, req);
@@ -175,6 +177,7 @@ public class SqlStatementResource
                     QueryContexts.CTX_EXECUTION_MODE,
                     ExecutionMode.ASYNC
                 ),
+                null,
                 null,
                 null
             ),
@@ -252,8 +255,7 @@ public class SqlStatementResource
   @Path("/{id}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response doGetStatus(
-      @PathParam("id") final String queryId,
-      @Context final HttpServletRequest req
+      @PathParam("id") final String queryId, @Context final HttpServletRequest req
   )
   {
     try {
@@ -272,8 +274,7 @@ public class SqlStatementResource
       }
     }
     catch (ForbiddenException e) {
-      throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy()
-                                             .transformIfNeeded(e);
+      throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(e);
     }
     catch (QueryException e) {
       return buildNonOkResponse(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), e, queryId);
@@ -299,14 +300,26 @@ public class SqlStatementResource
     if (offset != null && offset < 0) {
       return buildNonOkResponse(
           Response.Status.PRECONDITION_FAILED.getStatusCode(),
-          new QueryException(null, "offset cannot be negative. Please pass a positive number.", null, null),
+          new QueryException(
+              null,
+              "offset cannot be negative. Please pass a positive number.",
+              null,
+              null,
+              null
+          ),
           queryId
       );
     }
     if (numberOfRows != null && numberOfRows < 0) {
       return buildNonOkResponse(
           Response.Status.PRECONDITION_FAILED.getStatusCode(),
-          new QueryException(null, "numRows cannot be negative. Please pass a positive number.", null, null),
+          new QueryException(
+              null,
+              "numRows cannot be negative. Please pass a positive number.",
+              null,
+              null,
+              null
+          ),
           queryId
       );
     }
@@ -330,20 +343,20 @@ public class SqlStatementResource
       SqlStatementState sqlStatementState = getSqlStatementState(statusPlus);
 
       if (sqlStatementState == SqlStatementState.RUNNING || sqlStatementState == SqlStatementState.ACCEPTED) {
-        return buildNonOkResponse(
-            Response.Status.NOT_FOUND.getStatusCode(),
-            new QueryException(
-                null,
-                StringUtils.format("Query is [%s]. Please wait for it to complete.", sqlStatementState),
-                null,
-                null
+        return buildNonOkResponse(Response.Status.NOT_FOUND.getStatusCode(), new QueryException(
+            null,
+            StringUtils.format(
+                "Query is [%s]. Please wait for it to complete.",
+                sqlStatementState
             ),
-            queryId
-        );
+            null,
+            null,
+            null
+        ), queryId);
       } else if (sqlStatementState == SqlStatementState.FAILED) {
         return buildNonOkResponse(
             Response.Status.NOT_FOUND.getStatusCode(),
-            new QueryException(null, statusPlus.getErrorMsg(), null, null),
+            new QueryException(null, statusPlus.getErrorMsg(), null, null, null),
             queryId
         );
       } else {
@@ -352,38 +365,35 @@ public class SqlStatementResource
         if (!signature.isPresent()) {
           return Response.ok().build();
         }
-        Optional<List<Object>> results = getResults(overlordWork(overlordClient.taskReportAsMap(queryId)));
+        Optional<List<Object>> results = getResults(getPayload(overlordWork(overlordClient.taskReportAsMap(queryId))));
 
-        return Response.ok(
-            (StreamingOutput) outputStream -> {
-              CountingOutputStream os = new CountingOutputStream(outputStream);
+        return Response.ok((StreamingOutput) outputStream -> {
+          CountingOutputStream os = new CountingOutputStream(outputStream);
 
-              try (final ResultFormat.Writer writer = ResultFormat.OBJECT.createFormatter(os, jsonMapper)) {
-                List<ColNameAndType> rowSignature = signature.get();
-                writer.writeResponseStart();
+          try (final ResultFormat.Writer writer = ResultFormat.OBJECT.createFormatter(os, jsonMapper)) {
+            List<ColNameAndType> rowSignature = signature.get();
+            writer.writeResponseStart();
 
-                for (int k = (int) start; k < Math.min(last, results.get().size()); k++) {
-                  writer.writeRowStart();
-                  for (int i = 0; i < rowSignature.size(); i++) {
-                    writer.writeRowField(rowSignature.get(i).getColName(), ((List) results.get().get(k)).get(i));
-                  }
-                  writer.writeRowEnd();
-                }
-
-                writer.writeResponseEnd();
+            for (int k = (int) start; k < Math.min(last, results.get().size()); k++) {
+              writer.writeRowStart();
+              for (int i = 0; i < rowSignature.size(); i++) {
+                writer.writeRowField(rowSignature.get(i).getColName(), ((List) results.get().get(k)).get(i));
               }
-              catch (Exception e) {
-                log.error(e, "Unable to stream results back for query[%s]", queryId);
-                throw new ISE(e, "Unable to stream results back for query[%s]", queryId);
-              }
+              writer.writeRowEnd();
             }
-        ).build();
+
+            writer.writeResponseEnd();
+          }
+          catch (Exception e) {
+            log.error(e, "Unable to stream results back for query[%s]", queryId);
+            throw new ISE(e, "Unable to stream results back for query[%s]", queryId);
+          }
+        }).build();
 
       }
     }
     catch (ForbiddenException e) {
-      throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy()
-                                             .transformIfNeeded(e);
+      throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(e);
     }
     catch (QueryException e) {
       return buildNonOkResponse(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), e, queryId);
@@ -438,8 +448,7 @@ public class SqlStatementResource
 
     }
     catch (ForbiddenException e) {
-      throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy()
-                                             .transformIfNeeded(e);
+      throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(e);
     }
     catch (QueryException e) {
       return buildNonOkResponse(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), e, queryId);
@@ -451,55 +460,48 @@ public class SqlStatementResource
   }
 
   private Response buildStandardResponse(
-      Sequence<Object[]> sequence,
-      SqlQuery sqlQuery,
-      String sqlQueryId,
-      SqlRowTransformer rowTransformer
+      Sequence<Object[]> sequence, SqlQuery sqlQuery, String sqlQueryId, SqlRowTransformer rowTransformer
   ) throws IOException
   {
     final Yielder<Object[]> yielder0 = Yielders.each(sequence);
 
     try {
-      final Response.ResponseBuilder responseBuilder = Response
-          .ok(
-              (StreamingOutput) outputStream -> {
-                CountingOutputStream os = new CountingOutputStream(outputStream);
-                Yielder<Object[]> yielder = yielder0;
+      final Response.ResponseBuilder responseBuilder = Response.ok((StreamingOutput) outputStream -> {
+        CountingOutputStream os = new CountingOutputStream(outputStream);
+        Yielder<Object[]> yielder = yielder0;
 
-                try (final ResultFormat.Writer writer = sqlQuery.getResultFormat()
-                                                                .createFormatter(os, jsonMapper)) {
-                  writer.writeResponseStart();
+        try (final ResultFormat.Writer writer = sqlQuery.getResultFormat().createFormatter(os, jsonMapper)) {
+          writer.writeResponseStart();
 
-                  if (sqlQuery.includeHeader()) {
-                    writer.writeHeader(
-                        rowTransformer.getRowType(),
-                        sqlQuery.includeTypesHeader(),
-                        sqlQuery.includeSqlTypesHeader()
-                    );
-                  }
+          if (sqlQuery.includeHeader()) {
+            writer.writeHeader(
+                rowTransformer.getRowType(),
+                sqlQuery.includeTypesHeader(),
+                sqlQuery.includeSqlTypesHeader()
+            );
+          }
 
-                  while (!yielder.isDone()) {
-                    final Object[] row = yielder.get();
-                    writer.writeRowStart();
-                    for (int i = 0; i < rowTransformer.getFieldList().size(); i++) {
-                      final Object value = rowTransformer.transform(row, i);
-                      writer.writeRowField(rowTransformer.getFieldList().get(i), value);
-                    }
-                    writer.writeRowEnd();
-                    yielder = yielder.next(null);
-                  }
+          while (!yielder.isDone()) {
+            final Object[] row = yielder.get();
+            writer.writeRowStart();
+            for (int i = 0; i < rowTransformer.getFieldList().size(); i++) {
+              final Object value = rowTransformer.transform(row, i);
+              writer.writeRowField(rowTransformer.getFieldList().get(i), value);
+            }
+            writer.writeRowEnd();
+            yielder = yielder.next(null);
+          }
 
-                  writer.writeResponseEnd();
-                }
-                catch (Exception e) {
-                  log.error(e, "Unable to send SQL response [%s]", sqlQueryId);
-                  throw new RuntimeException(e);
-                }
-                finally {
-                  yielder.close();
-                }
-              }
-          );
+          writer.writeResponseEnd();
+        }
+        catch (Exception e) {
+          log.error(e, "Unable to send SQL response [%s]", sqlQueryId);
+          throw new RuntimeException(e);
+        }
+        finally {
+          yielder.close();
+        }
+      });
 
       if (sqlQuery.includeHeader()) {
         responseBuilder.header(SqlResource.SQL_HEADER_RESPONSE_HEADER, SqlResource.SQL_HEADER_VALUE);
@@ -537,6 +539,7 @@ public class SqlStatementResource
                     taskId
                 ),
                 null,
+                null,
                 null
             ),
             taskId
@@ -552,13 +555,8 @@ public class SqlStatementResource
   {
     // Though transformIfNeeded returns an exception, its purpose is to return
     // a QueryException
-    Exception cleaned = serverConfig
-        .getErrorResponseTransformStrategy()
-        .transformIfNeeded(e);
-    return Response
-        .status(status)
-        .entity(cleaned)
-        .build();
+    Exception cleaned = serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(e);
+    return Response.status(status).entity(cleaned).build();
   }
 
 
@@ -570,13 +568,21 @@ public class SqlStatementResource
     if (msqControllerTask.getQuerySpec().getDestination().getClass() == TaskReportMSQDestination.class) {
       ColumnMappings columnMappings = msqControllerTask.getQuerySpec().getColumnMappings();
       List<SqlTypeName> sqlTypeNames = msqControllerTask.getSqlTypeNames();
-      if (sqlTypeNames == null) {
+      if (sqlTypeNames == null || sqlTypeNames.size() != columnMappings.size()) {
+        return Optional.empty();
+      }
+      List<ColumnType> nativeTypeNames = msqControllerTask.getNativeTypeNames();
+      if (nativeTypeNames == null || nativeTypeNames.size() != columnMappings.size()) {
         return Optional.empty();
       }
       List<ColNameAndType> signature = new ArrayList<>(columnMappings.size());
       int index = 0;
       for (String colName : columnMappings.getOutputColumnNames()) {
-        signature.add(new ColNameAndType(colName, sqlTypeNames.get(index).getName()));
+        signature.add(new ColNameAndType(
+            colName,
+            sqlTypeNames.get(index).getName(),
+            nativeTypeNames.get(index).asTypeString()
+        ));
         index++;
       }
       return Optional.of(signature);
@@ -588,48 +594,93 @@ public class SqlStatementResource
   private void checkTaskPayloadOrThrow(TaskPayloadResponse taskPayloadResponse, String queryId) throws QueryException
   {
     if (taskPayloadResponse == null || taskPayloadResponse.getPayload() == null) {
-      throw new QueryException(QueryException.UNKNOWN_EXCEPTION_ERROR_CODE,
-                               StringUtils.format(
-                                   "Could not get payload details of query[%s] from the overlord",
-                                   queryId
-                               ), null, null
+      throw new QueryException(
+          QueryException.UNKNOWN_EXCEPTION_ERROR_CODE,
+          StringUtils.format(
+              "Could not get payload details for query[%s] from the overlord",
+              queryId
+          ),
+          null,
+          null,
+          null
       );
     }
 
     if (MSQControllerTask.class != taskPayloadResponse.getPayload().getClass()) {
-      throw new QueryException(QueryException.UNKNOWN_EXCEPTION_ERROR_CODE,
-                               StringUtils.format(
-                                   "Fetched an unexpected payload details of query[%s] from the overlord.",
-                                   queryId
-                               ), null, null
+      throw new QueryException(
+          QueryException.UNKNOWN_EXCEPTION_ERROR_CODE,
+          StringUtils.format(
+              "Fetched an unexpected payload for query[%s] from the overlord.",
+              queryId
+          ),
+          null,
+          null,
+          null
       );
     }
   }
 
   private Optional<ResultSetInformation> getSampleResults(
-      String asyncResultId,
-      boolean isSelectQuery,
-      SqlStatementState sqlStatementState
+      String asyncResultId, boolean isSelectQuery, String dataSource, SqlStatementState sqlStatementState
   )
   {
-    // only populate sample results in case a select query is successful
-    if (isSelectQuery && sqlStatementState == SqlStatementState.SUCCESS) {
-      Map<String, Object> report = overlordWork(overlordClient.taskReportAsMap(asyncResultId));
-      Optional<List<Object>> rows = getResults(report);
 
-      if (rows.isPresent()) {
-        return Optional.of(new ResultSetInformation(
-            null,
-            (long) rows.get().size(),
-            null,
-            rows.get()
-        ));
-      } else {
-        return Optional.empty();
-      }
-
+    if (sqlStatementState == SqlStatementState.SUCCESS) {
+      Map<String, Object> payload = getPayload(overlordWork(overlordClient.taskReportAsMap(asyncResultId)));
+      Optional<Pair<Long, Long>> rowsAndSize = getRowsAndSizeFromPayload(payload, isSelectQuery);
+      return Optional.of(new ResultSetInformation(
+          null,
+          // since the rows can be sampled, get the number of rows from counters
+          rowsAndSize.orElse(new Pair<>(null, null)).lhs,
+          rowsAndSize.orElse(new Pair<>(null, null)).rhs,
+          dataSource,
+          // only populate sample results in case a select query is successful
+          isSelectQuery ? getResults(payload).orElse(null) : null
+      ));
     } else {
       return Optional.empty();
+    }
+  }
+
+  private Optional<Pair<Long, Long>> getRowsAndSizeFromPayload(Map<String, Object> payload, boolean isSelectQuery)
+  {
+    List stages = getList(payload, "stages");
+    if (stages == null || stages.isEmpty()) {
+      return Optional.empty();
+    } else {
+      int maxStage = stages.size() - 1; // Last stage output is the total number of rows returned to the end user.
+      Map<String, Object> counterMap = getMap(getMap(payload, "counters"), String.valueOf(maxStage));
+      Long rows = -1L;
+      Long sizeInBytes = -1L;
+      if (counterMap == null) {
+        return Optional.empty();
+      }
+      for (Map.Entry<String, Object> worker : counterMap.entrySet()) {
+        Object workerChannels = worker.getValue();
+        if (workerChannels == null || !(workerChannels instanceof Map)) {
+          return Optional.empty();
+        }
+        if (isSelectQuery) {
+          Object output = ((Map<?, ?>) workerChannels).get("output");
+          if (output != null && output instanceof Map) {
+            List<Integer> rowsPerChannel = (List<Integer>) ((Map<String, Object>) output).get("rows");
+            List<Integer> bytesPerChannel = (List<Integer>) ((Map<String, Object>) output).get("bytes");
+            for (Integer row : rowsPerChannel) {
+              rows = rows + row;
+            }
+            for (Integer bytes : bytesPerChannel) {
+              sizeInBytes = sizeInBytes + bytes;
+            }
+          }
+        } else {
+          Object output = ((Map<?, ?>) workerChannels).get("segmentGenerationProgress");
+          if (output != null && output instanceof Map) {
+            rows += (Integer) ((Map<String, Object>) output).get("rowsPushed");
+          }
+        }
+      }
+
+      return Optional.of(new Pair<>(rows == -1L ? null : rows + 1, sizeInBytes == -1L ? null : sizeInBytes + 1));
     }
   }
 
@@ -650,35 +701,61 @@ public class SqlStatementResource
     SqlStatementState sqlStatementState = getSqlStatementState(statusPlus);
 
     if (SqlStatementState.FAILED == sqlStatementState) {
+      Map<String, Object> exceptionDetails = getQueryExceptionDetails(getPayload(overlordWork(overlordClient.taskReportAsMap(
+          queryId))));
+      Map<String, Object> exception = getMap(exceptionDetails, "error");
+      if (exceptionDetails == null || exception == null) {
+        return Optional.of(new SqlStatementResult(
+            queryId,
+            sqlStatementState,
+            taskResponse.getStatus().getCreatedTime(),
+            null,
+            taskResponse.getStatus().getDuration(),
+            null,
+            new QueryException(null, statusPlus.getErrorMsg(), null, null, null)
+        ));
+      }
+
+      final String errorMessage = String.valueOf(exception.getOrDefault("errorMessage", statusPlus.getErrorMsg()));
+      exception.remove("errorMessage");
+      String host = (String) exceptionDetails.getOrDefault("host", null);
+      Map<String, String> stringException = new HashMap<>();
+      for (Map.Entry<String, Object> exceptionKeys : exception.entrySet()) {
+        stringException.put(exceptionKeys.getKey(), String.valueOf(exceptionKeys.getValue()));
+      }
       return Optional.of(new SqlStatementResult(
           queryId,
           sqlStatementState,
-          taskResponse.getStatus()
-                      .getCreatedTime(),
+          taskResponse.getStatus().getCreatedTime(),
           null,
           taskResponse.getStatus().getDuration(),
           null,
-          new QueryException(null, statusPlus.getErrorMsg(), null, null)
+          new QueryException(null, errorMessage, null, host, stringException)
+      ));
+    } else {
+      MSQControllerTask msqControllerTask = getMSQControllerTaskOrThrow(queryId, currentUser);
+      Optional<List<ColNameAndType>> signature = getSignature(msqControllerTask);
+
+      return Optional.of(new SqlStatementResult(
+          queryId,
+          sqlStatementState,
+          taskResponse.getStatus().getCreatedTime(),
+          signature.orElse(null),
+          taskResponse.getStatus().getDuration(),
+          withResults ? getSampleResults(
+              queryId,
+              signature.isPresent(),
+              msqControllerTask.getDataSource(),
+              sqlStatementState
+          ).orElse(null) : null,
+          null
       ));
     }
+  }
 
-    MSQControllerTask msqControllerTask = getMSQControllerTaskOrThrow(queryId, currentUser);
-    Optional<List<ColNameAndType>> signature = getSignature(msqControllerTask);
-
-    return Optional.of(new SqlStatementResult(
-        queryId,
-        sqlStatementState,
-        taskResponse.getStatus()
-                    .getCreatedTime(),
-        signature.orElse(null),
-        taskResponse.getStatus().getDuration(),
-        withResults ? getSampleResults(
-            queryId,
-            signature.isPresent(),
-            sqlStatementState
-        ).orElse(null) : null,
-        null
-    ));
+  private Map<String, Object> getQueryExceptionDetails(Map<String, Object> payload)
+  {
+    return getMap(getMap(payload, "status"), "errorReport");
   }
 
   private MSQControllerTask getMSQControllerTaskOrThrow(String queryId, String currentUser) throws ForbiddenException
@@ -702,7 +779,7 @@ public class SqlStatementResource
       return FutureUtils.getUnchecked(future, true);
     }
     catch (RuntimeException e) {
-      throw new QueryException(null, "Unable to contact overlord " + e.getMessage(), null, null);
+      throw new QueryException(null, "Unable to contact overlord " + e.getMessage(), null, null, null);
     }
   }
 
@@ -738,14 +815,21 @@ public class SqlStatementResource
     return (Map<String, Object>) map.get(key);
   }
 
+  @SuppressWarnings("rawtypes")
+  private List getList(Map<String, Object> map, String key)
+  {
+    if (map == null) {
+      return null;
+    }
+    return (List) map.get(key);
+  }
+
   /**
    * Get results from report
    */
   @SuppressWarnings("unchecked")
-  private Optional<List<Object>> getResults(Map<String, Object> results)
+  private Optional<List<Object>> getResults(Map<String, Object> payload)
   {
-    Map<String, Object> msqReport = getMap(results, "multiStageQuery");
-    Map<String, Object> payload = getMap(msqReport, "payload");
     Map<String, Object> resultsHolder = getMap(payload, "results");
 
     if (resultsHolder == null) {
@@ -758,6 +842,13 @@ public class SqlStatementResource
       rows.addAll(data);
     }
     return Optional.of(rows);
+  }
+
+  private Map<String, Object> getPayload(Map<String, Object> results)
+  {
+    Map<String, Object> msqReport = getMap(results, "multiStageQuery");
+    Map<String, Object> payload = getMap(msqReport, "payload");
+    return payload;
   }
 
   private static long getLastIndex(Long numberOfRows, long start)

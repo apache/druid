@@ -28,8 +28,7 @@ import com.google.inject.Injector;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
-import org.apache.druid.indexer.TaskLocation;
-import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -55,6 +54,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   private Map<String, Controller> inMemoryControllers = new HashMap<>();
   private Map<String, Map<String, TaskReport>> reports = new HashMap<>();
   private Map<String, MSQControllerTask> inMemoryControllerTask = new HashMap<>();
+  private Map<String, TaskStatus> inMemoryTaskStatus = new HashMap<>();
 
   public static final DateTime CREATED_TIME = DateTimes.of("2023-05-31T12:00Z");
   public static final DateTime QUEUE_INSERTION_TIME = DateTimes.of("2023-05-31T12:01Z");
@@ -94,7 +94,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
 
       inMemoryControllers.put(controller.id(), controller);
 
-      controller.run();
+      inMemoryTaskStatus.put(taskId, controller.run());
       return Futures.immediateFuture(null);
     }
     catch (Exception e) {
@@ -145,18 +145,19 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   public ListenableFuture<TaskStatusResponse> taskStatus(String taskId)
   {
     SettableFuture<TaskStatusResponse> future = SettableFuture.create();
+    TaskStatus taskStatus = inMemoryTaskStatus.get(taskId);
     future.set(new TaskStatusResponse(taskId, new TaskStatusPlus(
         taskId,
         null,
         MSQControllerTask.TYPE,
         CREATED_TIME,
         QUEUE_INSERTION_TIME,
-        TaskState.SUCCESS,
+        taskStatus.getStatusCode(),
         null,
         DURATION,
-        new TaskLocation("localhost", 1, 1),
+        taskStatus.getLocation(),
         null,
-        null
+        taskStatus.getErrorMsg()
     )));
 
     return future;

@@ -41,7 +41,8 @@ public class SqlTaskStatusTest
             "error code",
             "error message",
             "error class",
-            "host"
+            "host",
+            null
         )
     );
 

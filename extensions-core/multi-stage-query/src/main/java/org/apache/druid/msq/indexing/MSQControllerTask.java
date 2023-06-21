@@ -50,6 +50,7 @@ import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.run.SqlResults;
 import org.joda.time.Interval;
@@ -92,6 +93,9 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
   @Nullable
   private final List<SqlTypeName> sqlTypeNames;
 
+  @Nullable
+  private final List<ColumnType> nativeTypeNames;
+
   // Using an Injector directly because tasks do not have a way to provide their own Guice modules.
   @JacksonInject
   private Injector injector;
@@ -106,6 +110,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
       @JsonProperty("sqlQueryContext") @Nullable Map<String, Object> sqlQueryContext,
       @JsonProperty("sqlResultsContext") @Nullable SqlResults.Context sqlResultsContext,
       @JsonProperty("sqlTypeNames") @Nullable List<SqlTypeName> sqlTypeNames,
+      @JsonProperty("nativeTypeNames") @Nullable List<ColumnType> nativeTypeNames,
       @JsonProperty("context") @Nullable Map<String, Object> context
   )
   {
@@ -122,6 +127,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
     this.sqlQueryContext = sqlQueryContext;
     this.sqlResultsContext = sqlResultsContext;
     this.sqlTypeNames = sqlTypeNames;
+    this.nativeTypeNames = nativeTypeNames;
 
     addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
   }
@@ -153,6 +159,15 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
   public List<SqlTypeName> getSqlTypeNames()
   {
     return sqlTypeNames;
+  }
+
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<ColumnType> getNativeTypeNames()
+  {
+    return nativeTypeNames;
   }
 
   @Nullable

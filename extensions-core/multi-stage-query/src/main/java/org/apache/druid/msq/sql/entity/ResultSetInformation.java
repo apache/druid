@@ -32,9 +32,9 @@ public class ResultSetInformation
 {
 
   @Nullable
-  private final Long totalRows;
+  private final Long numRows;
   @Nullable
-  private final Long totalSize;
+  private final Long sizeInBytes;
 
   private final ResultFormat resultFormat;
 
@@ -42,36 +42,41 @@ public class ResultSetInformation
   @Nullable
   private final List<Object> records;
 
+  @Nullable
+  private final String dataSource;
+
   @JsonCreator
   public ResultSetInformation(
       @Nullable
       @JsonProperty ResultFormat resultFormat,
-      @JsonProperty @Nullable Long totalRows,
-      @JsonProperty @Nullable Long totalSize,
+      @JsonProperty @Nullable Long numRows,
+      @JsonProperty @Nullable Long sizeInBytes,
+      @JsonProperty @Nullable String dataSource,
       @JsonProperty("sampleRecords") @Nullable
       List<Object> records
   )
   {
-    this.totalRows = totalRows;
-    this.totalSize = totalSize;
+    this.numRows = numRows;
+    this.sizeInBytes = sizeInBytes;
     this.resultFormat = resultFormat;
+    this.dataSource = dataSource;
     this.records = records;
   }
 
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Long getTotalRows()
+  public Long getNumRows()
   {
-    return totalRows;
+    return numRows;
   }
 
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Long getTotalSize()
+  public Long getSizeInBytes()
   {
-    return totalSize;
+    return sizeInBytes;
   }
 
   @JsonProperty
@@ -82,6 +87,13 @@ public class ResultSetInformation
     return resultFormat;
   }
 
+  @JsonProperty
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getDataSource()
+  {
+    return dataSource;
+  }
 
   @Nullable
   @JsonProperty("sampleRecords")
@@ -102,27 +114,30 @@ public class ResultSetInformation
       return false;
     }
     ResultSetInformation that = (ResultSetInformation) o;
-    return Objects.equals(totalRows, that.totalRows)
-           && Objects.equals(totalSize, that.totalSize)
+    return Objects.equals(numRows, that.numRows)
+           && Objects.equals(sizeInBytes, that.sizeInBytes)
            && resultFormat == that.resultFormat
-           && Objects.equals(records, that.records);
+           && Objects.equals(records, that.records)
+           && Objects.equals(dataSource, that.dataSource);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(totalRows, totalSize, resultFormat, records);
+    return Objects.hash(numRows, sizeInBytes, resultFormat, records, dataSource);
   }
 
   @Override
   public String toString()
   {
     return "ResultSetInformation{" +
-           "totalRows=" + totalRows +
-           ", totalSize=" + totalSize +
+           "totalRows=" + numRows +
+           ", totalSize=" + sizeInBytes +
            ", resultFormat=" + resultFormat +
            ", records=" + records +
+           ", dataSource='" + dataSource + '\'' +
            '}';
   }
+
 }
 

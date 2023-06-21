@@ -48,21 +48,21 @@ public class QueryTimeoutException extends QueryException
       @JsonProperty("host") @Nullable String host
   )
   {
-    super(errorCode, errorMessage, errorClass, host);
+    super(errorCode, errorMessage, errorClass, host, null);
   }
 
   public QueryTimeoutException()
   {
-    super(QUERY_TIMEOUT_ERROR_CODE, ERROR_MESSAGE, ERROR_CLASS, resolveHostname());
+    super(QUERY_TIMEOUT_ERROR_CODE, ERROR_MESSAGE, ERROR_CLASS, resolveHostname(), null);
   }
 
   public QueryTimeoutException(String errorMessage)
   {
-    super(QUERY_TIMEOUT_ERROR_CODE, errorMessage, ERROR_CLASS, resolveHostname());
+    super(QUERY_TIMEOUT_ERROR_CODE, errorMessage, ERROR_CLASS, resolveHostname(), null);
   }
 
   public QueryTimeoutException(String errorMessage, String host)
   {
-    super(QUERY_TIMEOUT_ERROR_CODE, errorMessage, ERROR_CLASS, host);
+    super(QUERY_TIMEOUT_ERROR_CODE, errorMessage, ERROR_CLASS, host, null);
   }
 }

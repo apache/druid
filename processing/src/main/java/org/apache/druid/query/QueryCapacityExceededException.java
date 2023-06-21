@@ -47,12 +47,12 @@ public class QueryCapacityExceededException extends QueryException
 
   public QueryCapacityExceededException(int capacity)
   {
-    super(QUERY_CAPACITY_EXCEEDED_ERROR_CODE, makeTotalErrorMessage(capacity), ERROR_CLASS, null);
+    super(QUERY_CAPACITY_EXCEEDED_ERROR_CODE, makeTotalErrorMessage(capacity), ERROR_CLASS, null, null);
   }
 
   public QueryCapacityExceededException(String lane, int capacity)
   {
-    super(QUERY_CAPACITY_EXCEEDED_ERROR_CODE, makeLaneErrorMessage(lane, capacity), ERROR_CLASS, null);
+    super(QUERY_CAPACITY_EXCEEDED_ERROR_CODE, makeLaneErrorMessage(lane, capacity), ERROR_CLASS, null, null);
   }
 
   /**
@@ -77,7 +77,7 @@ public class QueryCapacityExceededException extends QueryException
       @JsonProperty("host") String host
   )
   {
-    super(errorCode, errorMessage, errorClass, host);
+    super(errorCode, errorMessage, errorClass, host, null);
   }
 
   @VisibleForTesting

@@ -20,13 +20,17 @@
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Joiner;
 import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.net.InetAddress;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -151,17 +155,27 @@ public class QueryException extends RuntimeException implements SanitizableExcep
   private final String errorClass;
   private final String host;
 
+  private final Map<String, String> details;
+
   protected QueryException(Throwable cause, String errorCode, String errorClass, String host)
   {
-    this(cause, errorCode, cause == null ? null : cause.getMessage(), errorClass, host);
+    this(cause, errorCode, cause == null ? null : cause.getMessage(), errorClass, host, null);
   }
 
-  protected QueryException(Throwable cause, String errorCode, String errorMessage, String errorClass, String host)
+  protected QueryException(
+      Throwable cause,
+      String errorCode,
+      String errorMessage,
+      String errorClass,
+      String host,
+      Map<String, String> details
+  )
   {
     super(errorMessage, cause);
     this.errorCode = errorCode;
     this.errorClass = errorClass;
     this.host = host;
+    this.details = details;
   }
 
   @JsonCreator
@@ -169,13 +183,15 @@ public class QueryException extends RuntimeException implements SanitizableExcep
       @JsonProperty("error") @Nullable String errorCode,
       @JsonProperty("errorMessage") String errorMessage,
       @JsonProperty("errorClass") @Nullable String errorClass,
-      @JsonProperty("host") @Nullable String host
+      @JsonProperty("host") @Nullable String host,
+      @JsonProperty("details") @Nullable Map<String, String> details
   )
   {
     super(errorMessage);
     this.errorCode = errorCode;
     this.errorClass = errorClass;
     this.host = host;
+    this.details = details;
   }
 
   @Nullable
@@ -204,6 +220,14 @@ public class QueryException extends RuntimeException implements SanitizableExcep
     return host;
   }
 
+  @JsonProperty
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Map<String, String> getDetails()
+  {
+    return details;
+  }
+
   @Nullable
   protected static String resolveHostname()
   {
@@ -218,7 +242,7 @@ public class QueryException extends RuntimeException implements SanitizableExcep
   @Override
   public QueryException sanitize(@NotNull Function<String, String> errorMessageTransformFunction)
   {
-    return new QueryException(errorCode, errorMessageTransformFunction.apply(getMessage()), null, null);
+    return new QueryException(errorCode, errorMessageTransformFunction.apply(getMessage()), null, null, null);
   }
 
   public FailType getFailType()
@@ -230,12 +254,35 @@ public class QueryException extends RuntimeException implements SanitizableExcep
   public String toString()
   {
     return StringUtils.format(
-        "%s{msg=%s, code=%s, class=%s, host=%s}",
+        "%s{msg=%s, code=%s, class=%s, host=%s, details=%s}",
         getClass().getSimpleName(),
         getMessage(),
         getErrorCode(),
         getErrorClass(),
-        getHost()
+        getHost(),
+        getDetails() != null ? Joiner.on(",").withKeyValueSeparator("=").join(getDetails()) : null
     );
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    QueryException that = (QueryException) o;
+    return Objects.equals(errorCode, that.errorCode)
+           && Objects.equals(errorClass, that.errorClass)
+           && Objects.equals(host, that.host)
+           && Objects.equals(details, that.details);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(errorCode, errorClass, host, details);
   }
 }

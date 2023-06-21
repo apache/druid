@@ -31,12 +31,19 @@ public class ColNameAndType
   private final String colName;
   private final String sqlTypeName;
 
+  private final String nativeTypeName;
+
   @JsonCreator
-  public ColNameAndType(@JsonProperty("name") String colName, @JsonProperty("type") String sqlTypeName)
+  public ColNameAndType(
+      @JsonProperty("name") String colName,
+      @JsonProperty("type") String sqlTypeName,
+      @JsonProperty("nativeType") String nativeTypeName
+  )
   {
 
     this.colName = colName;
     this.sqlTypeName = sqlTypeName;
+    this.nativeTypeName = nativeTypeName;
   }
 
   @JsonProperty("name")
@@ -51,6 +58,12 @@ public class ColNameAndType
     return sqlTypeName;
   }
 
+  @JsonProperty("nativeType")
+  public String getNativeTypeName()
+  {
+    return nativeTypeName;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -61,13 +74,15 @@ public class ColNameAndType
       return false;
     }
     ColNameAndType that = (ColNameAndType) o;
-    return Objects.equals(colName, that.colName) && Objects.equals(sqlTypeName, that.sqlTypeName);
+    return Objects.equals(colName, that.colName)
+           && Objects.equals(sqlTypeName, that.sqlTypeName)
+           && Objects.equals(nativeTypeName, that.nativeTypeName);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(colName, sqlTypeName);
+    return Objects.hash(colName, sqlTypeName, nativeTypeName);
   }
 
   @Override
@@ -76,6 +91,7 @@ public class ColNameAndType
     return "ColNameAndType{" +
            "colName='" + colName + '\'' +
            ", sqlTypeName='" + sqlTypeName + '\'' +
+           ", nativeTypeName='" + nativeTypeName + '\'' +
            '}';
   }
 }

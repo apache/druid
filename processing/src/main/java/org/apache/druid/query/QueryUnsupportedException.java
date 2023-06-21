@@ -46,11 +46,11 @@ public class QueryUnsupportedException extends QueryException
       @JsonProperty("host") @Nullable String host
   )
   {
-    super(errorCode, errorMessage, errorClass, host);
+    super(errorCode, errorMessage, errorClass, host, null);
   }
 
   public QueryUnsupportedException(String errorMessage)
   {
-    super(QUERY_UNSUPPORTED_ERROR_CODE, errorMessage, ERROR_CLASS, resolveHostname());
+    super(QUERY_UNSUPPORTED_ERROR_CODE, errorMessage, ERROR_CLASS, resolveHostname(), null);
   }
 }

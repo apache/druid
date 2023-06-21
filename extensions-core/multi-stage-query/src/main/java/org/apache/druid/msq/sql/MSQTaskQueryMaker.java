@@ -179,6 +179,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         finalizeAggregations ? null /* Not needed */ : buildAggregationIntermediateTypeMap(druidQuery);
 
     final List<SqlTypeName> sqlTypeNames = new ArrayList<>();
+    final List<ColumnType> columnTypeList = new ArrayList<>();
     final List<ColumnMapping> columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery);
 
     for (final Pair<Integer, String> entry : fieldMapping) {
@@ -192,8 +193,8 @@ public class MSQTaskQueryMaker implements QueryMaker
       } else {
         sqlTypeName = druidQuery.getOutputRowType().getFieldList().get(entry.getKey()).getType().getSqlTypeName();
       }
-
       sqlTypeNames.add(sqlTypeName);
+      columnTypeList.add(druidQuery.getOutputRowSignature().getColumnType(queryColumn).orElse(ColumnType.STRING));
     }
 
     final MSQDestination destination;
@@ -253,6 +254,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         plannerContext.queryContextMap(),
         SqlResults.Context.fromPlannerContext(plannerContext),
         sqlTypeNames,
+        columnTypeList,
         null
     );
 

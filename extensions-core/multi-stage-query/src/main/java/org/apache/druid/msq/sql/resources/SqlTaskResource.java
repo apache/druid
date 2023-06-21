@@ -71,15 +71,15 @@ import java.util.Collections;
 
 /**
  * Endpoint for SQL execution using MSQ tasks.
- *
+ * <p>
  * Unlike the SQL endpoint in {@link SqlResource}, this endpoint returns task IDs instead of inline results. Queries
  * are executed asynchronously using MSQ tasks via the indexing service (Overlord + MM or Indexer). This endpoint
  * does not provide a way for users to get the status or results of a query. That must be done using Overlord APIs
  * for status and reports.
- *
+ * <p>
  * One exception: EXPLAIN query results are returned inline by this endpoint, in the same way as {@link SqlResource}
  * would return them.
- *
+ * <p>
  * This endpoint does not support system tables or INFORMATION_SCHEMA. Queries on those tables result in errors.
  */
 @Path("/druid/v2/sql/task/")
@@ -131,7 +131,7 @@ public class SqlTaskResource
 
   /**
    * Post a query task.
-   *
+   * <p>
    * Execution uses {@link MSQTaskSqlEngine} to ship the query off to the Overlord as an indexing task using
    * {@link org.apache.druid.msq.indexing.MSQControllerTask}. The task ID is returned immediately to the caller,
    * and execution proceeds asynchronously.
@@ -333,7 +333,7 @@ public class SqlTaskResource
   {
     return Response
         .status(status)
-        .entity(new SqlTaskStatus(id, TaskState.FAILED, new QueryException("FAILED", msg, null, null)))
+        .entity(new SqlTaskStatus(id, TaskState.FAILED, new QueryException("FAILED", msg, null, null, null)))
         .build();
   }
 }

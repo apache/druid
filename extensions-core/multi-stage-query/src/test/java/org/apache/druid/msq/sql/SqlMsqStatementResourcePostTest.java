@@ -24,6 +24,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.msq.indexing.MSQControllerTask;
+import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.sql.entity.ColNameAndType;
 import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
@@ -32,6 +34,8 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryException;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlQuery;
@@ -81,8 +85,7 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(
-            QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.ASYNC.name()),
+        ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.ASYNC.name()),
         null
     ), SqlStatementResourceTest.makeOkRequest());
 
@@ -91,24 +94,27 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
 
     String taskId = ((SqlStatementResult) response.getEntity()).getQueryId();
 
-    SqlStatementResult sqlStatementResult =
+    SqlStatementResult expected =
         new SqlStatementResult(taskId, SqlStatementState.SUCCESS,
                                MSQTestOverlordServiceClient.CREATED_TIME,
                                ImmutableList.of(
                                    new ColNameAndType(
                                        "cnt",
-                                       SqlTypeName.BIGINT.getName()
+                                       SqlTypeName.BIGINT.getName(),
+                                       ValueType.LONG.name()
                                    ),
                                    new ColNameAndType(
                                        "dim1",
-                                       SqlTypeName.VARCHAR.getName()
+                                       SqlTypeName.VARCHAR.getName(),
+                                       ValueType.STRING.name()
                                    )
                                ),
                                MSQTestOverlordServiceClient.DURATION,
                                new ResultSetInformation(
                                    null,
                                    6L,
-                                   null,
+                                   316L,
+                                   MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT,
                                    objectMapper.readValue(
                                        objectMapper.writeValueAsString(
                                            results),
@@ -120,9 +126,49 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
                                null
         );
 
-    Assert.assertEquals(sqlStatementResult, response.getEntity());
+    Assert.assertEquals(expected, response.getEntity());
+  }
 
 
+  @Test
+  public void insertCannotBeEmptyFaultTest()
+  {
+    Response response = resource.doPost(new SqlQuery(
+        "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time < TIMESTAMP '1971-01-01 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1",
+        null,
+        false,
+        false,
+        false,
+        ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.ASYNC.name()),
+        null
+    ), SqlStatementResourceTest.makeOkRequest());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+
+    SqlStatementResult actual = (SqlStatementResult) response.getEntity();
+
+    InsertCannotBeEmptyFault insertCannotBeEmptyFault = new InsertCannotBeEmptyFault("foo1");
+
+    SqlStatementResult expected = new SqlStatementResult(
+        actual.getQueryId(),
+        SqlStatementState.FAILED,
+        MSQTestOverlordServiceClient.CREATED_TIME,
+        null,
+        MSQTestOverlordServiceClient.DURATION,
+        null,
+        new QueryException(
+            null,
+            insertCannotBeEmptyFault.getErrorMessage(),
+            null,
+            "localhost:8080",
+            ImmutableMap.of(
+                "errorCode",
+                InsertCannotBeEmptyFault.CODE,
+                "dataSource",
+                insertCannotBeEmptyFault.getDataSource()
+            )
+        )
+    );
+    Assert.assertEquals(expected, actual);
   }
 
 

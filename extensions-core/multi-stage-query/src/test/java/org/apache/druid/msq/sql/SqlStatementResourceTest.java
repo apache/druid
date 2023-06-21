@@ -67,6 +67,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.security.AuthConfig;
@@ -160,6 +161,7 @@ public class SqlStatementResourceTest extends MSQTestBase
       Maps.newHashMap(),
       null,
       ImmutableList.of(SqlTypeName.TIMESTAMP, SqlTypeName.VARCHAR, SqlTypeName.VARCHAR),
+      ImmutableList.of(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING),
       null
   );
 
@@ -192,6 +194,7 @@ public class SqlStatementResourceTest extends MSQTestBase
       Maps.newHashMap(),
       null,
       ImmutableList.of(SqlTypeName.TIMESTAMP, SqlTypeName.VARCHAR, SqlTypeName.VARCHAR),
+      ImmutableList.of(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING),
       null
   );
 
@@ -249,6 +252,12 @@ public class SqlStatementResourceTest extends MSQTestBase
 
   private static final Map<String, Object> ROW1 = ImmutableMap.of("_time", 123, "alias", "foo", "market", "bar");
   private static final Map<String, Object> ROW2 = ImmutableMap.of("_time", 234, "alias", "foo1", "market", "bar1");
+
+  private static final ImmutableList<ColNameAndType> COL_NAME_AND_TYPES = ImmutableList.of(
+      new ColNameAndType("_time", SqlTypeName.TIMESTAMP.getName(), ValueType.LONG.name()),
+      new ColNameAndType("alias", SqlTypeName.VARCHAR.getName(), ValueType.STRING.name()),
+      new ColNameAndType("market", SqlTypeName.VARCHAR.getName(), ValueType.STRING.name())
+  );
 
   private static final String FAILURE_MSG = "failure msg";
 
@@ -541,11 +550,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         ACCEPTED_SELECT_MSQ_QUERY,
         SqlStatementState.ACCEPTED,
         CREATED_TIME,
-        ImmutableList.of(
-            new ColNameAndType("_time", SqlTypeName.TIMESTAMP.getName()),
-            new ColNameAndType("alias", SqlTypeName.VARCHAR.getName()),
-            new ColNameAndType("market", SqlTypeName.VARCHAR.getName())
-        ),
+        COL_NAME_AND_TYPES,
         null,
         null,
         null
@@ -573,11 +578,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         RUNNING_SELECT_MSQ_QUERY,
         SqlStatementState.RUNNING,
         CREATED_TIME,
-        ImmutableList.of(
-            new ColNameAndType("_time", SqlTypeName.TIMESTAMP.getName()),
-            new ColNameAndType("alias", SqlTypeName.VARCHAR.getName()),
-            new ColNameAndType("market", SqlTypeName.VARCHAR.getName())
-        ),
+        COL_NAME_AND_TYPES,
         null,
         null,
         null
@@ -604,15 +605,12 @@ public class SqlStatementResourceTest extends MSQTestBase
         FINISHED_SELECT_MSQ_QUERY,
         SqlStatementState.SUCCESS,
         CREATED_TIME,
-        ImmutableList.of(
-            new ColNameAndType("_time", SqlTypeName.TIMESTAMP.getName()),
-            new ColNameAndType("alias", SqlTypeName.VARCHAR.getName()),
-            new ColNameAndType("market", SqlTypeName.VARCHAR.getName())
-        ),
+        COL_NAME_AND_TYPES,
         100L,
         new ResultSetInformation(
             null,
             2L,
+            null,
             null,
             RESULT_ROWS.stream().map(Arrays::asList).collect(Collectors.toList())
         ),
