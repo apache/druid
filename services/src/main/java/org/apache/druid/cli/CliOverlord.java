@@ -362,7 +362,8 @@ public class CliOverlord extends ServerRunnable
               @Provides
               @LazySingleton
               @Named("heartbeat")
-              public Supplier<Map<String, Object>> getHeartbeatSupplier(TaskMaster taskMaster) {
+              public Supplier<Map<String, Object>> getHeartbeatSupplier(TaskMaster taskMaster)
+              {
                 return () -> {
                   Map<String, Object> heartbeatTags = new HashMap<>();
                   heartbeatTags.put("leader", taskMaster.isLeader() ? 1 : 0);
