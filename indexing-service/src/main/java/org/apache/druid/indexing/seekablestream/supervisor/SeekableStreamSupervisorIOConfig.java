@@ -50,7 +50,7 @@ public abstract class SeekableStreamSupervisorIOConfig
   @Nullable private final AutoScalerConfig autoScalerConfig;
   @Nullable private final IdleConfig idleConfig;
 
-  private final Integer stopTaskCount;
+  private final int stopTaskCount;
 
   public SeekableStreamSupervisorIOConfig(
       String stream,
