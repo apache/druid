@@ -104,7 +104,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     )
     {
       final ExprEval<?> eval = ExprEval.bestEffortArray(array);
-      if (eval.type().isArray() && eval.type().getElementType().isPrimitive()) {
+      if (eval.type().isArrayPrimitive()) {
         final String fieldName = NestedPathFinder.toNormalizedJsonPath(fieldPath);
         FieldIndexer fieldIndexer = fieldIndexers.get(fieldName);
         if (fieldIndexer == null) {
