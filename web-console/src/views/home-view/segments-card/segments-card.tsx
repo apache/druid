@@ -27,9 +27,10 @@ import { deepGet, pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface SegmentCounts {
-  total: number;
+  active: number;
   cached_on_historical: number;
   unavailable: number;
+  realtime: number;
 }
 
 export interface SegmentsCardProps {
@@ -43,10 +44,12 @@ export const SegmentsCard = React.memo(function SegmentsCard(props: SegmentsCard
       if (capabilities.hasSql()) {
         const segments = await queryDruidSql({
           query: `SELECT
-  COUNT(*) as "total",
-  COUNT(*) FILTER (WHERE is_active = 1 AND is_available = 1) as "cached_on_historical",
-  COUNT(*) FILTER (WHERE is_active = 1 AND is_available = 0 AND replication_factor > 0) + 1 as "unavailable"
-FROM sys.segments`,
+  COUNT(*) AS "active",
+  COUNT(*) FILTER (WHERE is_available = 1) AS "cached_on_historical",
+  COUNT(*) FILTER (WHERE is_available = 0 AND replication_factor > 0) AS "unavailable",
+  COUNT(*) FILTER (WHERE is_realtime = 1) AS "realtime"
+FROM sys.segments
+WHERE is_active = 1`,
         });
         return segments.length === 1 ? segments[0] : null;
       } else if (capabilities.hasCoordinatorAccess()) {
@@ -63,7 +66,7 @@ FROM sys.segments`,
         );
 
         return {
-          total: availableSegmentNum + unavailableSegmentNum,
+          active: availableSegmentNum + unavailableSegmentNum,
           cached_on_historical: availableSegmentNum, // This is not correct
           unavailable: unavailableSegmentNum,
         };
@@ -73,10 +76,11 @@ FROM sys.segments`,
     },
   });
 
-  const segmentCount = segmentCountState.data || {
-    total: 0,
+  const segmentCount: SegmentCounts = segmentCountState.data || {
+    active: 0,
     cached_on_historical: 0,
     unavailable: 0,
+    realtime: 0,
   };
   return (
     <HomeViewCard
@@ -87,10 +91,15 @@ FROM sys.segments`,
       loading={segmentCountState.loading}
       error={segmentCountState.error}
     >
-      <p>{pluralIfNeeded(segmentCount.total, 'segment')} total</p>
+      <p>{pluralIfNeeded(segmentCount.active, 'active segment')}</p>
       <p>{pluralIfNeeded(segmentCount.cached_on_historical, 'segment')} cached on historicals</p>
       {Boolean(segmentCount.unavailable) && (
-        <p>{pluralIfNeeded(segmentCount.unavailable, 'segment')} waiting to be cached</p>
+        <p>
+          {pluralIfNeeded(segmentCount.unavailable, 'segment')} waiting to be cached on historicals
+        </p>
+      )}
+      {Boolean(segmentCount.realtime) && (
+        <p>{pluralIfNeeded(segmentCount.realtime, 'realtime segment')}</p>
       )}
     </HomeViewCard>
   );

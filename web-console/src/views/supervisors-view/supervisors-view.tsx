@@ -81,7 +81,6 @@ interface SupervisorQueryResultRow {
   supervisor_id: string;
   type: string;
   source: string;
-  state: string;
   detailed_state: string;
   suspended: boolean;
   running_tasks?: number;
@@ -124,8 +123,8 @@ export interface SupervisorsViewState {
   visibleColumns: LocalStorageBackedVisibility;
 }
 
-function stateToColor(status: string): string {
-  switch (status) {
+function detailedStateToColor(detailedState: string): string {
+  switch (detailedState) {
     case 'UNHEALTHY_SUPERVISOR':
     case 'UNHEALTHY_TASKS':
       return '#d5100a';
@@ -157,13 +156,17 @@ export class SupervisorsView extends React.PureComponent<
   >;
 
   static SUPERVISOR_SQL = `SELECT
-  "supervisor_id", "type", "source", "state", "detailed_state", "suspended" = 1 AS "suspended"
-FROM sys.supervisors
+  "supervisor_id",
+  "type",
+  "source",
+  CASE WHEN "suspended" = 0 THEN "detailed_state" ELSE 'SUSPENDED' END AS "detailed_state",
+  "suspended" = 1 AS "suspended"
+FROM "sys"."supervisors"
 ORDER BY "supervisor_id"`;
 
   static RUNNING_TASK_SQL = `SELECT
   "datasource", "type", COUNT(*) AS "num_running_tasks"
-FROM sys.tasks WHERE "status" = 'RUNNING' AND "runner_status" = 'RUNNING'
+FROM "sys"."tasks" WHERE "status" = 'RUNNING' AND "runner_status" = 'RUNNING'
 GROUP BY 1, 2`;
 
   constructor(props: SupervisorsViewProps) {
@@ -549,16 +552,16 @@ GROUP BY 1, 2`;
             id: 'status',
             width: 250,
             accessor: 'detailed_state',
-            Cell: row => (
+            Cell: ({ value }) => (
               <TableFilterableCell
                 field="status"
-                value={row.value}
+                value={value}
                 filters={filters}
                 onFiltersChange={onFiltersChange}
               >
                 <span>
-                  <span style={{ color: stateToColor(row.original.state) }}>&#x25cf;&nbsp;</span>
-                  {row.value}
+                  <span style={{ color: detailedStateToColor(value) }}>&#x25cf;&nbsp;</span>
+                  {value}
                 </span>
               </TableFilterableCell>
             ),
@@ -578,9 +581,11 @@ GROUP BY 1, 2`;
               >
                 {typeof value === 'undefined'
                   ? 'n/a'
-                  : !value
-                  ? `No running tasks`
-                  : pluralIfNeeded(value, 'running task')}
+                  : value > 0
+                  ? pluralIfNeeded(value, 'running task')
+                  : original.suspended
+                  ? ''
+                  : `No running tasks`}
               </TableClickableCell>
             ),
             show: visibleColumns.shown('Running tasks'),
