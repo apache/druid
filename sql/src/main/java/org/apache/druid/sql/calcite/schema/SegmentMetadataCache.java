@@ -48,6 +48,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
@@ -403,13 +404,6 @@ public class SegmentMetadataCache
   @VisibleForTesting
   void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
-    long startMillis = System.currentTimeMillis();
-
-    emitter.emit(ServiceMetricEvent.builder().build(
-        "segmentMetadataCache/refreshSegments",
-        segmentsToRefresh.size()
-    ));
-
     // Refresh the segments.
     final Set<SegmentId> refreshed = refreshSegments(segmentsToRefresh);
 
@@ -439,12 +433,6 @@ public class SegmentMetadataCache
         log.debug("%s [%s] signature is unchanged.", description, dataSource);
       }
     }
-
-    long endMillis = System.currentTimeMillis();
-    emitter.emit(ServiceMetricEvent.builder().build(
-        "segmentMetadataCache/refreshTime",
-        endMillis - startMillis
-    ));
   }
 
   @LifecycleStop
@@ -727,7 +715,12 @@ public class SegmentMetadataCache
 
     log.debug("Refreshing metadata for dataSource[%s].", dataSource);
 
-    final long startTime = System.currentTimeMillis();
+    final ServiceMetricEvent.Builder builder =
+        new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
+
+    emitter.emit(builder.build("segment/metadatacache/refresh/count", segments.size()));
+
+    final long startNanos = System.nanoTime();
 
     // Segment id string -> SegmentId object.
     final Map<String, SegmentId> segmentIdMap = Maps.uniqueIndex(segments, SegmentId::toString);
@@ -796,10 +789,13 @@ public class SegmentMetadataCache
       yielder.close();
     }
 
+    long refreshDurationMillis = (System.nanoTime() - startNanos) / 1_000_000;
+    emitter.emit(builder.build("segment/metadatacache/refresh/time", refreshDurationMillis));
+
     log.debug(
         "Refreshed metadata for dataSource [%s] in %,d ms (%d segments queried, %d segments left).",
         dataSource,
-        System.currentTimeMillis() - startTime,
+        refreshDurationMillis,
         retVal.size(),
         segments.size() - retVal.size()
     );
