@@ -33,11 +33,14 @@ You can run the following combination of applications:
 * [Jupyter only](#start-only-the-jupyter-container)
 * [Jupyter and Druid](#start-jupyter-and-druid)
 * [Jupyter, Druid, and Kafka](#start-jupyter-druid-and-kafka)
+* [Kafka and Jupyter](#start-kafka-and-jupyter)
 
 ## Prerequisites
 
 Jupyter in Docker requires that you have **Docker** and **Docker Compose**.
 We recommend installing these through [Docker Desktop](https://docs.docker.com/desktop/).
+
+For ARM-based devices, consult the section [Tutorial setup for ARM-based devices]() for tutorial configuration instructions.
 
 ## Launch the Docker containers
 
@@ -84,6 +87,17 @@ In the same directory as `docker-compose.yaml` and `environment`, start the appl
 ```bash
 DRUID_VERSION={{DRUIDVERSION}} docker compose --profile all-services up -d
 ```
+
+### Start Kafka and Jupyter
+
+Running Druid in Docker requires the `environment` file as well as the `DRUID_VERSION` environment variable.
+
+In the same directory as `docker-compose.yaml` and `environment`, start the application:
+
+```bash
+DRUID_VERSION={{DRUIDVERSION}} docker compose --profile kafka-jupyter up -d
+```
+
 
 ### Update image from Docker Hub
 
@@ -192,6 +206,13 @@ as well as the [Python client for Druid](tutorial-jupyter-index.md#python-api-fo
    test `README.md` for details.
 
 You should now be able to access and complete the tutorials.
+
+## Tutorial setup for ARM-based devices
+1. Start Druid. You can use the [Quickstart (local)](./index.md) instance. The tutorials
+   assume that you are using the quickstart, so no authentication or authorization
+   is expected unless explicitly mentioned.
+2. Start Kafka and Jupyter using the command from [Start Kafka and Jupyter](#start-kafka-and-jupyter).
+3. Before starting each tutorial, open the notebook and edit the `host` variable to `"host.docker.internal"`.
 
 ## Learn more
 
