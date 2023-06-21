@@ -26,7 +26,11 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.type.OperandTypes;
+import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -51,6 +55,13 @@ import java.util.List;
 
 public abstract class BaseVarianceSqlAggregator implements SqlAggregator
 {
+  private static final SqlAggFunction VARIANCE_SQL_AGG_FUNC_INSTANCE = new VarianceSqlAggFunction();
+  private static final SqlAggFunction VARIANCE_POP_SQL_AGG_FUNC_INSTANCE = new VarPopSqlAggFunction();
+  private static final SqlAggFunction VARIANCE_SAMP_SQL_AGG_FUNC_INSTANCE = new VarSampSqlAggFunction();
+  private static final SqlAggFunction STDDEV_SQL_AGG_FUNC_INSTANCE = new StdDevSqlAggFunction();
+  private static final SqlAggFunction STDDEV_POP_SQL_AGG_FUNC_INSTANCE = new StdDevPopSqlAggFunction();
+  private static final SqlAggFunction STDDEV_SAMP_SQL_AGG_FUNC_INSTANCE = new StdDevSampSqlAggFunction();
+
   @Nullable
   @Override
   public Aggregation toDruidAggregation(
@@ -104,12 +115,13 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
 
     if (inputType.isNumeric()) {
       inputTypeName = StringUtils.toLowerCase(inputType.getType().name());
+    } else if (inputType.equals(VarianceAggregatorFactory.TYPE)) {
+      inputTypeName = VarianceAggregatorFactory.VARIANCE_TYPE_NAME;
     } else {
       throw new IAE("VarianceSqlAggregator[%s] has invalid inputType[%s]", func, inputType.asTypeString());
     }
 
-
-    if (func == SqlStdOperatorTable.VAR_POP || func == SqlStdOperatorTable.STDDEV_POP) {
+    if (func instanceof VarPopSqlAggFunction || func instanceof StdDevPopSqlAggFunction) {
       estimator = "population";
     } else {
       estimator = "sample";
@@ -122,9 +134,9 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
         inputTypeName
     );
 
-    if (func == SqlStdOperatorTable.STDDEV_POP
-        || func == SqlStdOperatorTable.STDDEV_SAMP
-        || func == SqlStdOperatorTable.STDDEV) {
+    if (func instanceof StdDevPopSqlAggFunction
+        || func instanceof StdDevSampSqlAggFunction
+        || func instanceof StdDevSqlAggFunction) {
       postAggregator = new StandardDeviationPostAggregator(
           name,
           aggregatorFactory.getName(),
@@ -137,21 +149,77 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
     );
   }
 
+  private static class VarPopSqlAggFunction extends SqlAggFunction
+  {
+    VarPopSqlAggFunction()
+    {
+      super(
+          SqlKind.VAR_POP.name(),
+          null,
+          SqlKind.VAR_POP,
+          ReturnTypes.AVG_AGG_FUNCTION,
+          null,
+          OperandTypes.ANY, // Can be more specific after https://github.com/apache/druid/pull/14195 is merged
+          SqlFunctionCategory.NUMERIC,
+          false,
+          false,
+          Optionality.FORBIDDEN
+      );
+    }
+  }
   public static class VarPopSqlAggregator extends BaseVarianceSqlAggregator
   {
     @Override
     public SqlAggFunction calciteFunction()
     {
-      return SqlStdOperatorTable.VAR_POP;
+      return VARIANCE_POP_SQL_AGG_FUNC_INSTANCE;
     }
   }
-  
+
+  private static class VarSampSqlAggFunction extends SqlAggFunction
+  {
+    VarSampSqlAggFunction()
+    {
+      super(
+          SqlKind.VAR_SAMP.name(),
+          null,
+          SqlKind.VAR_SAMP,
+          ReturnTypes.AVG_AGG_FUNCTION,
+          null,
+          OperandTypes.ANY, // Can be more specific after https://github.com/apache/druid/pull/14195 is merged
+          SqlFunctionCategory.NUMERIC,
+          false,
+          false,
+          Optionality.FORBIDDEN
+      );
+    }
+  }
+
   public static class VarSampSqlAggregator extends BaseVarianceSqlAggregator
   {
     @Override
     public SqlAggFunction calciteFunction()
     {
-      return SqlStdOperatorTable.VAR_SAMP;
+      return VARIANCE_SAMP_SQL_AGG_FUNC_INSTANCE;
+    }
+  }
+
+  private static class VarianceSqlAggFunction extends SqlAggFunction
+  {
+    VarianceSqlAggFunction()
+    {
+      super(
+          "VARIANCE",
+          null,
+          SqlKind.VAR_SAMP,
+          ReturnTypes.AVG_AGG_FUNCTION,
+          null,
+          OperandTypes.ANY, // Can be more specific after https://github.com/apache/druid/pull/14195 is merged
+          SqlFunctionCategory.NUMERIC,
+          false,
+          false,
+          Optionality.FORBIDDEN
+      );
     }
   }
 
@@ -160,34 +228,88 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
     @Override
     public SqlAggFunction calciteFunction()
     {
-      return SqlStdOperatorTable.VARIANCE;
+      return VARIANCE_SQL_AGG_FUNC_INSTANCE;
     }
   }
 
+  private static class StdDevPopSqlAggFunction extends SqlAggFunction
+  {
+    StdDevPopSqlAggFunction()
+    {
+      super(
+          SqlKind.STDDEV_POP.name(),
+          null,
+          SqlKind.STDDEV_POP,
+          ReturnTypes.AVG_AGG_FUNCTION,
+          null,
+          OperandTypes.ANY, // Can be more specific after https://github.com/apache/druid/pull/14195 is merged
+          SqlFunctionCategory.NUMERIC,
+          false,
+          false,
+          Optionality.FORBIDDEN
+      );
+    }
+  }
   public static class StdDevPopSqlAggregator extends BaseVarianceSqlAggregator
   {
     @Override
     public SqlAggFunction calciteFunction()
     {
-      return SqlStdOperatorTable.STDDEV_POP;
+      return STDDEV_POP_SQL_AGG_FUNC_INSTANCE;
     }
   }
 
+  private static class StdDevSampSqlAggFunction extends SqlAggFunction
+  {
+    StdDevSampSqlAggFunction()
+    {
+      super(
+          SqlKind.STDDEV_SAMP.name(),
+          null,
+          SqlKind.STDDEV_SAMP,
+          ReturnTypes.AVG_AGG_FUNCTION,
+          null,
+          OperandTypes.ANY, // Can be more specific after https://github.com/apache/druid/pull/14195 is merged
+          SqlFunctionCategory.NUMERIC,
+          false,
+          false,
+          Optionality.FORBIDDEN
+      );
+    }
+  }
   public static class StdDevSampSqlAggregator extends BaseVarianceSqlAggregator
   {
     @Override
     public SqlAggFunction calciteFunction()
     {
-      return SqlStdOperatorTable.STDDEV_SAMP;
+      return STDDEV_SAMP_SQL_AGG_FUNC_INSTANCE;
     }
   }
 
+  private static class StdDevSqlAggFunction extends SqlAggFunction
+  {
+    StdDevSqlAggFunction()
+    {
+      super(
+          "STDDEV",
+          null,
+          SqlKind.STDDEV_SAMP,
+          ReturnTypes.AVG_AGG_FUNCTION,
+          null,
+          OperandTypes.ANY, // Can be more specific after https://github.com/apache/druid/pull/14195 is merged
+          SqlFunctionCategory.NUMERIC,
+          false,
+          false,
+          Optionality.FORBIDDEN
+      );
+    }
+  }
   public static class StdDevSqlAggregator extends BaseVarianceSqlAggregator
   {
     @Override
     public SqlAggFunction calciteFunction()
     {
-      return SqlStdOperatorTable.STDDEV;
+      return STDDEV_SQL_AGG_FUNC_INSTANCE;
     }
   }
 }
