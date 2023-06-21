@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -223,43 +222,43 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
 
     expr = Parser.parse("json_value(nesterer, '$.x.a1')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
-    Assert.assertArrayEquals(new Object[]{1L, NullHandling.defaultLongValue(), 3L}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[]{1L, null, 3L}, (Object[]) eval.value());
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
 
     expr = Parser.parse("json_value(nesterer, '$.x.a1', 'ARRAY<STRING>')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
-    Assert.assertArrayEquals(new Object[]{"1", NullHandling.replaceWithDefault() ? "0" : null, "3"}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[]{"1", null, "3"}, (Object[]) eval.value());
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
 
     expr = Parser.parse("json_value(nesterer, '$.x.a1', 'ARRAY<DOUBLE>')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
-    Assert.assertArrayEquals(new Object[]{1.0, NullHandling.defaultDoubleValue(), 3.0}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[]{1.0, null, 3.0}, (Object[]) eval.value());
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
 
     expr = Parser.parse("json_value(nesterer, '$.x.a2')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
-    Assert.assertArrayEquals(new Object[]{1.1, NullHandling.defaultDoubleValue(), 3.3}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[]{1.1, null, 3.3}, (Object[]) eval.value());
     Assert.assertEquals(ExpressionType.DOUBLE_ARRAY, eval.type());
 
     expr = Parser.parse("json_value(nesterer, '$.x.a2', 'ARRAY<LONG>')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
-    Assert.assertArrayEquals(new Object[]{1L, NullHandling.defaultLongValue(), 3L}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[]{1L, null, 3L}, (Object[]) eval.value());
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());
 
     expr = Parser.parse("json_value(nesterer, '$.x.a2', 'ARRAY<STRING>')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
-    Assert.assertArrayEquals(new Object[]{"1.1", NullHandling.replaceWithDefault() ? "0.0" : null, "3.3"}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[]{"1.1", null, "3.3"}, (Object[]) eval.value());
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
 
     expr = Parser.parse("json_value(nesterer, '$.x.a3')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
-    Assert.assertArrayEquals(new Object[]{"a", NullHandling.defaultLongValue(), "b", "100"}, (Object[]) eval.value());
+    Assert.assertArrayEquals(new Object[]{"a", null, "b", "100"}, (Object[]) eval.value());
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
 
     expr = Parser.parse("json_value(nesterer, '$.x.a3', 'ARRAY<LONG>')", MACRO_TABLE);
     eval = expr.eval(inputBindings);
     Assert.assertArrayEquals(
-        new Object[]{NullHandling.defaultLongValue(), NullHandling.defaultLongValue(), NullHandling.defaultLongValue(), 100L},
+        new Object[]{null, null, null, 100L},
         (Object[]) eval.value()
     );
     Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.type());

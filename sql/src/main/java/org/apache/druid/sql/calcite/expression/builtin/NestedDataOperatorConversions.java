@@ -686,7 +686,7 @@ public class NestedDataOperatorConversions
             (name, outputType, expression, macroTable) -> new NestedFieldVirtualColumn(
                 druidExpressions.get(0).getDirectColumn(),
                 name,
-                outputType,
+                null,
                 parts,
                 false,
                 null,
