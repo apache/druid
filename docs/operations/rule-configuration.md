@@ -181,6 +181,58 @@ Set the following properties:
 - `interval`: the load interval specified as an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
 - `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
 
+## Default Value for tiered replicants
+
+`useDefaultTierForNull` is an optional parameter that can be passed to a Load Rule. This parameter determines the default value of `tieredReplicants` only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
+
+If this parameter is true, a missing `tieredReplicant` in the load rule is assumed to mean that the segment matching this rule should be loaded on historicals be default. This will initilaize `tieredReplicants` with `"tieredReplicants": { "_default_tier": 2 }`
+
+If this parameter is false, a missing `tieredReplicants` in the load rule is assumed to mean that the segment matching this rule does not need to be loaded on any historical by default. This will mean that these segments are excluded from most queries as well. This will initilaize `tieredReplicants` as an empty map.
+
+Example:
+
+With `useDefaultTierForNull` as true:
+
+```json
+{
+  "type": "loadForever",
+  "useDefaultTierForNull": true
+}
+```
+
+is converted to
+
+```json
+{
+  "type": "loadForever",
+  "useDefaultTierForNull": true,
+  "tieredReplicants": {
+    "_default_tier": 2
+  }
+}
+```
+
+With `useDefaultTierForNull` as false:
+
+```json
+{
+  "type": "loadByInterval",
+  "useDefaultTierForNull": false,
+  "interval": "2012-01-01/2013-01-01"
+}
+```
+
+is converted to
+
+```json
+{
+  "type": "loadByInterval",
+  "useDefaultTierForNull": false,
+  "interval": "2012-01-01/2013-01-01",
+  "tieredReplicants": {}
+}
+```
+
 ## Drop rules
 
 Drop rules define when Druid drops segments from the cluster. Druid keeps dropped data in deep storage. Note that if you enable automatic cleanup of unused segments, or you run a kill task, Druid deletes the data from deep storage. See [Data deletion](../data-management/delete.md) for more information on deleting data.

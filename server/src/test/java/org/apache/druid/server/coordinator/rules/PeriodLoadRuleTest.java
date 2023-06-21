@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
@@ -272,5 +273,14 @@ public class PeriodLoadRuleTest
                        + "  }";
     PeriodLoadRule inputPeriodLoadRule = OBJECT_MAPPER.readValue(inputJson, PeriodLoadRule.class);
     Assert.assertEquals(ImmutableMap.of(), inputPeriodLoadRule.getTieredReplicants());
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(PeriodLoadRule.class)
+                  .withNonnullFields("tieredReplicants")
+                  .usingGetClass()
+                  .verify();
   }
 }

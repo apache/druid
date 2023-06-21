@@ -35,6 +35,9 @@ import java.util.Objects;
 public abstract class LoadRule implements Rule
 {
   private final Map<String, Integer> tieredReplicants;
+  /**
+   * Used to determing the default value if tieredReplicants is null in {@link #handleNullTieredReplicants}.
+   */
   private final boolean useDefaultTierForNull;
 
   protected LoadRule(Map<String, Integer> tieredReplicants, Boolean useDefaultTierForNull)
