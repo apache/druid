@@ -235,14 +235,6 @@ Set the following properties:
 - `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
 - `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
-## Default Value for tiered replicants
-
-`useDefaultTierForNull` is an optional parameter that can be passed to a Load Rule. This parameter determines the default value of `tieredReplicants` only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
-
-If this parameter is true, a missing `tieredReplicant` in the load rule is assumed to mean that the segment matching this rule should be loaded on historicals be default. This will initilaize `tieredReplicants` with `"tieredReplicants": { "_default_tier": 2 }`
-
-If this parameter is false, a missing `tieredReplicants` in the load rule is assumed to mean that the segment matching this rule does not need to be loaded on any historical by default. This will mean that these segments are excluded from most queries as well. This will initilaize `tieredReplicants` as an empty map.
-
 ## Drop rules
 
 Drop rules define when Druid drops segments from the cluster. Druid keeps dropped data in deep storage. Note that if you enable automatic cleanup of unused segments, or you run a kill task, Druid deletes the data from deep storage. See [Data deletion](../data-management/delete.md) for more information on deleting data.
