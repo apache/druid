@@ -130,13 +130,6 @@ function formatRangeDimensionValue(dimension: any, value: any): string {
   return `${C(String(dimension))}=${L(String(value))}`;
 }
 
-export interface SegmentsViewProps {
-  goToQuery(queryWithContext: QueryWithContext): void;
-  datasource: string | undefined;
-  onlyUnavailable: boolean | undefined;
-  capabilities: Capabilities;
-}
-
 interface Sorted {
   id: string;
   desc: boolean;
@@ -176,9 +169,15 @@ interface SegmentQueryResultRow {
   is_overshadowed: number;
 }
 
+export interface SegmentsViewProps {
+  filters: Filter[];
+  onFiltersChange(filters: Filter[]): void;
+  goToQuery(queryWithContext: QueryWithContext): void;
+  capabilities: Capabilities;
+}
+
 export interface SegmentsViewState {
   segmentsState: QueryState<SegmentQueryResultRow[]>;
-  segmentFilter: Filter[];
   segmentTableActionDialogId?: string;
   datasourceTableActionDialogId?: string;
   actions: BasicAction[];
@@ -256,14 +255,9 @@ END AS "time_span"`,
   constructor(props: SegmentsViewProps) {
     super(props);
 
-    const segmentFilter: Filter[] = [];
-    if (props.datasource) segmentFilter.push({ id: 'datasource', value: `=${props.datasource}` });
-    if (props.onlyUnavailable) segmentFilter.push({ id: 'is_available', value: 'false' });
-
     this.state = {
       actions: [],
       segmentsState: QueryState.INIT,
-      segmentFilter,
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
         ['Time span', 'Is published', 'Is overshadowed'],
@@ -494,14 +488,14 @@ END AS "time_span"`,
   }
 
   private renderFilterableCell(field: string, enableComparisons = false) {
-    const { segmentFilter } = this.state;
+    const { filters, onFiltersChange } = this.props;
 
     return (row: { value: any }) => (
       <TableFilterableCell
         field={field}
         value={row.value}
-        filters={segmentFilter}
-        onFiltersChange={filters => this.setState({ segmentFilter: filters })}
+        filters={filters}
+        onFiltersChange={onFiltersChange}
         enableComparisons={enableComparisons}
       >
         {row.value}
@@ -510,8 +504,8 @@ END AS "time_span"`,
   }
 
   renderSegmentsTable() {
-    const { segmentsState, segmentFilter, visibleColumns, groupByInterval } = this.state;
-    const { capabilities } = this.props;
+    const { capabilities, filters, onFiltersChange } = this.props;
+    const { segmentsState, visibleColumns, groupByInterval } = this.state;
 
     const segments = segmentsState.data || [];
 
@@ -526,7 +520,7 @@ END AS "time_span"`,
     // Only allow filtering of columns other than datasource if in SQL mode, or if we are filtering on an exact datasource
     const allowGeneralFilter =
       hasSql ||
-      segmentFilter.some(
+      filters.some(
         filter => filter.id === 'datasource' && parseFilterModeAndNeedle(filter)?.mode === '=',
       );
 
@@ -538,10 +532,8 @@ END AS "time_span"`,
         noDataText={segmentsState.isEmpty() ? 'No segments' : segmentsState.getErrorMessage() || ''}
         manual
         filterable
-        filtered={segmentFilter}
-        onFilteredChange={filtered => {
-          this.setState({ segmentFilter: filtered });
-        }}
+        filtered={filters}
+        onFilteredChange={onFiltersChange}
         defaultSorted={[hasSql ? { id: 'start', desc: true } : { id: 'datasource', desc: false }]}
         onFetchData={tableState => {
           this.fetchData(groupByInterval, tableState);
