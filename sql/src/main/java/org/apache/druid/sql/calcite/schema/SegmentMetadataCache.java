@@ -723,7 +723,6 @@ public class SegmentMetadataCache
 
     emitter.emit(builder.build("segment/metadatacache/refresh/count", segments.size()));
 
-
     // Segment id string -> SegmentId object.
     final Map<String, SegmentId> segmentIdMap = Maps.uniqueIndex(segments, SegmentId::toString);
 

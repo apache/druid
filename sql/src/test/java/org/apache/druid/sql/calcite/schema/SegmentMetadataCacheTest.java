@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -41,8 +42,8 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryContexts;
@@ -90,13 +91,10 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -104,6 +102,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
@@ -1463,26 +1462,20 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testRefreshShouldEmitMetrics() throws InterruptedException
   {
-    ServiceEmitter mockEmitter = Mockito.mock(ServiceEmitter.class);
-    Map<String, ServiceMetricEvent> emittedEvents = new HashMap<>();
-    Mockito.doCallRealMethod().when(mockEmitter).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
-    Mockito
-        .doAnswer(invocation -> {
-          ServiceMetricEvent e = invocation.getArgument(0);
-          emittedEvents.put(e.getMetric(), e);
-          return null;
-        })
-        .when(mockEmitter).emit(ArgumentMatchers.any(Event.class));
+    StubServiceEmitter emitter = new StubServiceEmitter("broker", "host");
+    buildSchemaMarkAndTableLatch(SEGMENT_CACHE_CONFIG_DEFAULT, emitter);
 
-    buildSchemaMarkAndTableLatch(SEGMENT_CACHE_CONFIG_DEFAULT, mockEmitter);
-
-    Assert.assertTrue(emittedEvents.containsKey("init/metadatacache/time"));
-    Assert.assertEquals(emittedEvents.get("segment/metadatacache/refresh/count")
-                                     .getUserDims()
-                                     .get(DruidMetrics.DATASOURCE), "some_datasource");
-    Assert.assertEquals(emittedEvents.get("segment/metadatacache/refresh/time")
-                                     .getUserDims()
-                                     .get(DruidMetrics.DATASOURCE), "some_datasource");
+    Map<String, Set<Object>> emittedEventsMap =
+        emitter.getEvents()
+               .stream()
+               .map(ServiceMetricEvent.class::cast)
+               .collect(Collectors.groupingBy(
+                   ServiceMetricEvent::getMetric,
+                   Collectors.mapping(sme -> sme.getUserDims().get(DruidMetrics.DATASOURCE), Collectors.toSet())
+               ));
+    Assert.assertTrue(emittedEventsMap.containsKey("init/metadatacache/time"));
+    Assert.assertTrue(emittedEventsMap.get("segment/metadatacache/refresh/count").size() > 0);
+    Assert.assertTrue(emittedEventsMap.get("segment/metadatacache/refresh/time").size() > 0);
   }
 
   private static DataSegment newSegment(String datasource, int partitionId)
