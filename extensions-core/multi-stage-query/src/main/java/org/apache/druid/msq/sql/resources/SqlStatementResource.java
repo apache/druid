@@ -701,6 +701,8 @@ public class SqlStatementResource
       return Optional.empty();
     }
 
+    // since we need the controller payload for auth checks.
+    MSQControllerTask msqControllerTask = getMSQControllerTaskOrThrow(queryId, currentUser);
     SqlStatementState sqlStatementState = getSqlStatementState(statusPlus);
 
     if (SqlStatementState.FAILED == sqlStatementState) {
@@ -736,7 +738,6 @@ public class SqlStatementResource
           new QueryException(null, errorMessage, null, host, stringException)
       ));
     } else {
-      MSQControllerTask msqControllerTask = getMSQControllerTaskOrThrow(queryId, currentUser);
       Optional<List<ColNameAndType>> signature = getSignature(msqControllerTask);
 
       return Optional.of(new SqlStatementResult(

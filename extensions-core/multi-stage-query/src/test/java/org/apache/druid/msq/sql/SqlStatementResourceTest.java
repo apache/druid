@@ -222,7 +222,8 @@ public class SqlStatementResourceTest extends MSQTestBase
                   new MSQResultsReport.ColumnAndType("market", ColumnType.STRING)
               ),
               ImmutableList.of(SqlTypeName.TIMESTAMP, SqlTypeName.VARCHAR, SqlTypeName.VARCHAR),
-              Yielders.each(Sequences.simple(RESULT_ROWS))
+              Yielders.each(Sequences.simple(RESULT_ROWS)),
+              null
           )
       )
   );
@@ -383,6 +384,14 @@ public class SqlStatementResourceTest extends MSQTestBase
                )
            )));
 
+    Mockito.when(indexingServiceClient.taskPayload(ArgumentMatchers.eq(ERRORED_SELECT_MSQ_QUERY)))
+           .thenReturn(Futures.immediateFuture(new TaskPayloadResponse(
+               FINISHED_INSERT_MSQ_QUERY,
+               MSQ_CONTROLLER_SELECT_PAYLOAD
+           )));
+
+    Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(ERRORED_SELECT_MSQ_QUERY)))
+           .thenReturn(Futures.immediateFuture(null));
 
     Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(RUNNING_NON_MSQ_TASK)))
            .thenReturn(Futures.immediateFuture(new TaskStatusResponse(
@@ -539,6 +548,16 @@ public class SqlStatementResourceTest extends MSQTestBase
                    FAILURE_MSG
                )
            )));
+
+    Mockito.when(indexingServiceClient.taskPayload(ArgumentMatchers.eq(ERRORED_INSERT_MSQ_QUERY)))
+           .thenReturn(Futures.immediateFuture(new TaskPayloadResponse(
+               ERRORED_INSERT_MSQ_QUERY,
+               MSQ_CONTROLLER_INSERT_PAYLOAD
+           )));
+
+    Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(ERRORED_INSERT_MSQ_QUERY)))
+           .thenReturn(Futures.immediateFuture(null));
+
   }
 
   @Test
@@ -609,9 +628,9 @@ public class SqlStatementResourceTest extends MSQTestBase
         100L,
         new ResultSetInformation(
             null,
-            2L,
             null,
             null,
+            MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT,
             RESULT_ROWS.stream().map(Arrays::asList).collect(Collectors.toList())
         ),
         null
@@ -721,7 +740,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         CREATED_TIME,
         null,
         100L,
-        null,
+        new ResultSetInformation(null, null, null, "test", null),
         null
     ), response.getEntity());
 
