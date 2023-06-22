@@ -19,5 +19,6 @@
 
 # Test with deep storage as intermediate location to store shuffle data
 # Local deep storage will be used here
+# If you are making a change in load list below, make the necessary changes in github actions too
 druid_extensions_loadList=["mysql-metadata-storage","druid-basic-security","simple-client-sslcontext","druid-testing-tools","druid-lookups-cached-global","druid-histogram","druid-datasketches"]
 druid_processing_intermediaryData_storage_type=deepstore

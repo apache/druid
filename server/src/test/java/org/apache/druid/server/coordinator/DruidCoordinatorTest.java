@@ -207,7 +207,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     String tier = "hot";
 
     // Setup MetadataRuleManager
-    Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(tier, 2));
+    Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(tier, 2), null);
     EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
             .andReturn(ImmutableList.of(foreverLoadRule)).atLeastOnce();
 
@@ -325,8 +325,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
   public void testCoordinatorTieredRun() throws Exception
   {
     final String dataSource = "dataSource", hotTierName = "hot", coldTierName = "cold";
-    final Rule hotTier = new IntervalLoadRule(Intervals.of("2018-01-01/P1M"), ImmutableMap.of(hotTierName, 1));
-    final Rule coldTier = new ForeverLoadRule(ImmutableMap.of(coldTierName, 1));
+    final Rule hotTier = new IntervalLoadRule(Intervals.of("2018-01-01/P1M"), ImmutableMap.of(hotTierName, 1), null);
+    final Rule coldTier = new ForeverLoadRule(ImmutableMap.of(coldTierName, 1), null);
     final String loadPathCold = "/druid/loadqueue/cold:1234";
     final DruidServer hotServer = new DruidServer("hot", "hot", null, 5L, ServerType.HISTORICAL, hotTierName, 0);
     final DruidServer coldServer = new DruidServer("cold", "cold", null, 5L, ServerType.HISTORICAL, coldTierName, 0);

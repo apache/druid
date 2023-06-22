@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
@@ -705,7 +706,7 @@ public class LoadRuleTest
 
   private static LoadRule loadForever(final Map<String, Integer> tieredReplicants)
   {
-    return new ForeverLoadRule(tieredReplicants);
+    return new ForeverLoadRule(tieredReplicants, null);
   }
 
   private static LoadQueuePeon createEmptyPeon()
@@ -763,5 +764,14 @@ public class LoadRuleTest
   {
     static final String T1 = "tier1";
     static final String T2 = "tier2";
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(LoadRule.class)
+                  .withNonnullFields("tieredReplicants")
+                  .usingGetClass()
+                  .verify();
   }
 }
