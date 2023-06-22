@@ -50,13 +50,14 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.SingleIndexedInt;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
 
-public class FilteredAggregatorTest
+public class FilteredAggregatorTest extends InitializedNullHandlingTest
 {
   private void aggregate(TestFloatColumnSelector selector, FilteredAggregator agg)
   {
@@ -82,6 +83,40 @@ public class FilteredAggregatorTest
     double expectedThird = expectedSecond;
 
     assertValues(agg, selector, expectedFirst, expectedSecond, expectedThird);
+  }
+
+  @Test
+  public void testAggregateWithNullableSelectorAndNullValues()
+  {
+    NullHandling.initializeForTestsWithValues(false, true);
+
+    final TestFloatNullableColumnSelector selector = new TestFloatNullableColumnSelector(null);
+
+    final FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
+        new FloatMaxAggregatorFactory("loss", "value"),
+        new SelectorDimFilter("dim", "a", null)
+    );
+
+    final FilteredAggregator agg = (FilteredAggregator) factory.factorize(makeColumnSelector(selector));
+    aggregate(selector, agg);
+    assertValues(agg, selector);
+  }
+
+  @Test
+  public void testAggregateWithNullableSelectorAndNonNullValues()
+  {
+    NullHandling.initializeForTestsWithValues(false, true);
+    final float[] values = {0.15f, 0.27f, 0.12f};
+    final TestFloatNullableColumnSelector selector = new TestFloatNullableColumnSelector(values);
+
+    final FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
+        new FloatMaxAggregatorFactory("loss", "value"),
+        new SelectorDimFilter("dim", "a", null)
+    );
+
+    final FilteredAggregator agg = (FilteredAggregator) factory.factorize(makeColumnSelector(selector));
+    aggregate(selector, agg);
+    assertValues(agg, selector, 0.15f, 0.27f, 0.12f);
   }
 
   private ColumnSelectorFactory makeColumnSelector(final TestFloatColumnSelector selector)
@@ -218,14 +253,22 @@ public class FilteredAggregatorTest
 
   private void assertValues(FilteredAggregator agg, TestFloatColumnSelector selector, double... expectedVals)
   {
-    Assert.assertEquals(NullHandling.defaultDoubleValue(), agg.get());
-    Assert.assertEquals(NullHandling.defaultDoubleValue(), agg.get());
-    Assert.assertEquals(NullHandling.defaultDoubleValue(), agg.get());
-    for (double expectedVal : expectedVals) {
-      aggregate(selector, agg);
-      Assert.assertEquals(expectedVal, agg.get());
-      Assert.assertEquals(expectedVal, agg.get());
-      Assert.assertEquals(expectedVal, agg.get());
+    if (!agg.isNull()) {
+      Assert.assertEquals(NullHandling.defaultDoubleValue(), agg.get());
+      Assert.assertEquals(NullHandling.defaultDoubleValue(), agg.get());
+      Assert.assertEquals(NullHandling.defaultDoubleValue(), agg.get());
+      for (double expectedVal : expectedVals) {
+        aggregate(selector, agg);
+        Assert.assertEquals(expectedVal, agg.get());
+        Assert.assertEquals(expectedVal, agg.get());
+        Assert.assertEquals(expectedVal, agg.get());
+        Assert.assertEquals(expectedVal, agg.getDouble(), 0.001);
+        Assert.assertEquals((float) expectedVal, agg.getFloat(), 0.001);
+        Assert.assertEquals((long) expectedVal, agg.getLong(), 0.001);
+      }
+    } else {
+      Assert.assertNull(agg.get());
+      Assert.assertEquals(NullHandling.defaultDoubleValue(), agg.get());
     }
   }
 

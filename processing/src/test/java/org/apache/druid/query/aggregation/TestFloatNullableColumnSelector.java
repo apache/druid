@@ -19,60 +19,19 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.query.filter.ValueMatcher;
 
-public class FilteredAggregator implements Aggregator
+public class TestFloatNullableColumnSelector extends TestFloatColumnSelector
 {
-  private final ValueMatcher matcher;
-  private final Aggregator delegate;
 
-  public FilteredAggregator(ValueMatcher matcher, Aggregator delegate)
+  public TestFloatNullableColumnSelector(float[] floats)
   {
-    this.matcher = matcher;
-    this.delegate = delegate;
-  }
-
-  @Override
-  public void aggregate()
-  {
-    if (matcher.matches()) {
-      delegate.aggregate();
-    }
-  }
-
-  @Override
-  public Object get()
-  {
-    return delegate.get();
+    super(floats);
   }
 
   @Override
   public boolean isNull()
   {
-    return delegate.isNull();
-  }
-
-  @Override
-  public float getFloat()
-  {
-    return delegate.getFloat();
-  }
-
-  @Override
-  public long getLong()
-  {
-    return delegate.getLong();
-  }
-
-  @Override
-  public double getDouble()
-  {
-    return delegate.getDouble();
-  }
-
-  @Override
-  public void close()
-  {
-    delegate.close();
+    return true;
   }
 }
+
