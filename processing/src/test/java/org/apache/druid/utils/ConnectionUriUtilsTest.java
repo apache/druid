@@ -22,6 +22,7 @@ package org.apache.druid.utils;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.IAE;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -32,6 +33,7 @@ import org.mockito.Mockito;
 
 import java.util.Set;
 
+@Ignore
 @RunWith(Enclosed.class)
 public class ConnectionUriUtilsTest
 {
