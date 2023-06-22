@@ -340,11 +340,6 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     }
   }
 
-  private void updateFinalPredicate()
-  {
-    finalPredicate = Predicates.or(defaultFilter, Predicates.or(segmentPredicates.values()));
-  }
-
   /**
    * Waits until the sync wait timeout for all servers to be synced at least once.
    * Finally calls {@link SegmentCallback#segmentViewInitialized()} regardless of
@@ -421,6 +416,11 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     }
   }
 
+  private void updateFinalPredicate()
+  {
+    finalPredicate = Predicates.or(defaultFilter, Predicates.or(segmentPredicates.values()));
+  }
+
   /**
    * This method returns the debugging information exposed by {@link HttpServerInventoryViewResource} and meant
    * for that use only. It must not be used for any other purpose.
@@ -445,15 +445,15 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       serversCopy.forEach((serverName, serverHolder) -> {
         eventBuilder.setDimension("server", serverName);
 
-        final boolean isHealthy = serverHolder.syncer.isSyncingSuccessfully();
+        final boolean isSynced = serverHolder.syncer.isSyncingSuccessfully();
         serviceEmitter.emit(
-            eventBuilder.build("cluster/serverview/healthy", isHealthy ? 1 : 0)
+            eventBuilder.build("cluster/serverview/synced", isSynced ? 1 : 0)
         );
 
         final long unstableTimeMillis = serverHolder.syncer.getUnstableTimeMillis();
         if (unstableTimeMillis > 0) {
           serviceEmitter.emit(
-              eventBuilder.build("cluster/serverview/unstable/time", unstableTimeMillis)
+              eventBuilder.build("cluster/serverview/unsynced/time", unstableTimeMillis)
           );
         }
       });
@@ -482,7 +482,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               serverHolder.druidServer.getName(), serverHolder.syncer.getDebugInfo()
           );
           serverRemoved(serverHolder.druidServer);
-          serverAdded(DruidServer.copyWithoutSegments(serverHolder.druidServer));
+          serverAdded(serverHolder.druidServer.copyWithoutSegments());
         }
       }
     }

@@ -72,19 +72,6 @@ public class DruidServer implements Comparable<DruidServer>
     );
   }
 
-  public static DruidServer copyWithoutSegments(DruidServer other)
-  {
-    return new DruidServer(
-        other.getName(),
-        other.getHostAndPort(),
-        other.getHostAndTlsPort(),
-        other.getMaxSize(),
-        other.getType(),
-        other.getTier(),
-        other.getPriority()
-    );
-  }
-
   @JsonCreator
   public DruidServer(
       @JsonProperty("name") String name,
@@ -332,5 +319,18 @@ public class DruidServer implements Comparable<DruidServer>
     int totalSegments =
         immutableDataSources.values().stream().mapToInt(dataSource -> dataSource.getSegments().size()).sum();
     return new ImmutableDruidServer(metadata, size, immutableDataSources, totalSegments);
+  }
+
+  public DruidServer copyWithoutSegments()
+  {
+    return new DruidServer(
+        getName(),
+        getHostAndPort(),
+        getHostAndTlsPort(),
+        getMaxSize(),
+        getType(),
+        getTier(),
+        getPriority()
+    );
   }
 }

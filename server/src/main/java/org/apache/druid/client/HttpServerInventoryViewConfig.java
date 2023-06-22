@@ -36,14 +36,14 @@ public class HttpServerInventoryViewConfig
 
   @JsonCreator
   public HttpServerInventoryViewConfig(
-      @JsonProperty("serverTimeout") Period requestTimeout,
-      @JsonProperty("serverUnstabilityTimeout") Period unstableAlertTimeout,
+      @JsonProperty("serverTimeout") Period serverTimeout,
+      @JsonProperty("serverUnstabilityTimeout") Period serverUnstabilityTimeout,
       @JsonProperty("numThreads") Integer numThreads
   )
   {
-    this.requestTimeout = Configs.valueOrDefault(requestTimeout, Period.minutes(4))
+    this.requestTimeout = Configs.valueOrDefault(serverTimeout, Period.minutes(4))
                                  .toStandardDuration();
-    this.unstableAlertTimeout = Configs.valueOrDefault(unstableAlertTimeout, Period.minutes(1))
+    this.unstableAlertTimeout = Configs.valueOrDefault(serverUnstabilityTimeout, Period.minutes(1))
                                        .toStandardDuration();
     this.numThreads = Configs.valueOrDefault(numThreads, 5);
 
@@ -51,6 +51,9 @@ public class HttpServerInventoryViewConfig
     Preconditions.checkArgument(this.numThreads > 1, "numThreads must be > 1");
   }
 
+  /**
+   * Timeout duration for HTTP requests.
+   */
   public Duration getRequestTimeout()
   {
     return requestTimeout;

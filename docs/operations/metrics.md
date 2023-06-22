@@ -66,6 +66,8 @@ Metrics may have additional dimensions beyond those listed above.
 |`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 |`init/serverview/time`|Time taken to initialize the broker server view. Useful to detect if brokers are taking too long to start.||Depends on the number of segments.|
 |`init/metadatacache/time`|Time taken to initialize the broker segment metadata cache. Useful to detect if brokers are taking too long to start||Depends on the number of segments.|
+|`cluster/serverview/synced`|Sync status of the broker server view with a process serving segments. Emitted only when using [HTTP-based server view](../configuration/index.md#segment-management).|`server`|1 for fully synced servers, 0 otherwise|
+|`cluster/serverview/unsynced/time`|Milliseconds since the last successful sync of the broker server view with a process serving segments. Emitted for unsynced servers only when using [HTTP-based server view](../configuration/index.md#segment-management).|`server`|Not emitted for synced servers.|
 
 ### Historical
 
@@ -152,8 +154,8 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 
 ## General native ingestion metrics
 
-|Metric|Description| Dimensions                                              |Normal Value|
-|------|-----------|---------------------------------------------------------|------------|
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
 |`ingest/count`|Count of `1` every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |Always `1`.|
 |`ingest/segments/count`|Count of final segments created by job (includes tombstones). | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |At least `1`.|
 |`ingest/tombstones/count`|Count of tombstones created by job. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |Zero or more for replace. Always zero for non-replace tasks (always zero for legacy replace, see below).|
@@ -167,12 +169,12 @@ The mode is decided using the values
 of the `isAppendToExisting` and `isDropExisting` flags in the
 task's `IOConfig` as follows:
 
-| `isAppendToExisting` | `isDropExisting` | mode |
-|----------------------|-------------------|------|
-| `true`               | `false` | `APPEND`|
-| `true`               | `true  ` | Invalid combination, exception thrown. |
-| `false`              | `false` | `REPLACE_LEGACY` (this is the default for native batch ingestion). |
- | `false`              | `true` | `REPLACE`|
+|`isAppendToExisting`|`isDropExisting`|Mode|
+|--------------------|----------------|----|
+|`true`|`false`|`APPEND`|
+|`true`|`true`| Invalid combination, results in an exception.|
+|`false`|`false`|`REPLACE_LEGACY` (this is the default for native batch ingestion).|
+|`false`|`true`|`REPLACE`|
 
 The `tags` dimension is reported only for metrics emitted from ingestion tasks whose ingest spec specifies the `tags`
 field in the `context` field of the ingestion spec. `tags` is expected to be a map of string to object.  
@@ -321,6 +323,8 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`metadata/kill/rule/count`|Total number of rules that were automatically deleted from metadata store per each Coordinator kill rule duty run. This metric can help adjust `druid.coordinator.kill.rule.durationToRetain` configuration based on whether more or less rules need to be deleted per cycle. Note that this metric is only emitted when `druid.coordinator.kill.rule.on` is set to true.| |Varies|
 |`metadata/kill/datasource/count`|Total number of datasource metadata that were automatically deleted from metadata store per each Coordinator kill datasource duty run (Note: datasource metadata only exists for datasource created from supervisor). This metric can help adjust `druid.coordinator.kill.datasource.durationToRetain` configuration based on whether more or less datasource metadata need to be deleted per cycle. Note that this metric is only emitted when `druid.coordinator.kill.datasource.on` is set to true.| |Varies|
 |`init/serverview/time`|Time taken to initialize the coordinator server view.||Depends on the number of segments|
+|`cluster/serverview/synced`|Sync status of the coordinator server view with a process serving segments. Emitted only when using [HTTP-based server view](../configuration/index.md#segment-management).|`server`|1 for fully synced servers, 0 otherwise|
+|`cluster/serverview/unsynced/time`|Milliseconds since the last successful sync of the coordinator server view with a process serving segments. Emitted for unsynced servers only when using [HTTP-based server view](../configuration/index.md#segment-management).|`server`|Not emitted for synced servers.|
 
 If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configuration](../configuration/index.md#dynamic-configuration), then [log entries](../configuration/logging.md) for class `org.apache.druid.server.coordinator.duty.EmitClusterStatsAndMetrics` will have extra information on balancing decisions.
 
