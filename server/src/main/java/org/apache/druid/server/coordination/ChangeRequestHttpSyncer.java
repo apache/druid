@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -89,11 +90,12 @@ public class ChangeRequestHttpSyncer<T>
 
   private final String logIdentity;
 
-  private long syncerStartTimeNanos;
-  private long unstableStartTimeNanos;
-  private int consecutiveFailedAttemptCount;
-  private long lastSuccessfulSyncTimeNanos;
-  private long lastSyncTimeNanos;
+  private int numRecentFailures;
+
+  private final Stopwatch sinceSyncerStart = Stopwatch.createUnstarted();
+  private final Stopwatch sinceUnstable = Stopwatch.createUnstarted();
+  private final Stopwatch sinceLastSuccess = Stopwatch.createUnstarted();
+  private final Stopwatch sinceLastSync = Stopwatch.createUnstarted();
 
   @Nullable
   private ChangeRequestHistory.Counter counter = null;
@@ -140,7 +142,7 @@ public class ChangeRequestHttpSyncer<T>
         startStopLock.exitStart();
       }
 
-      syncerStartTimeNanos = System.nanoTime();
+      sinceSyncerStart.reset().start();
       addNextSyncToWorkQueue();
     }
   }
@@ -176,14 +178,13 @@ public class ChangeRequestHttpSyncer<T>
   public Map<String, Object> getDebugInfo()
   {
     return ImmutableMap.of(
-        "lastSyncDelayMillis",
-        lastSyncTimeNanos == 0 ? "Never synced" : DateTimes.millisElapsedSince(lastSyncTimeNanos),
-        "lastSuccessfulSyncDelayMillis",
-        hasSyncedSuccessfullyOnce() ? DateTimes.millisElapsedSince(lastSuccessfulSyncTimeNanos)
-                                    : "Never synced successfully",
-        "unstableStartDelayMillis",
-        unstableStartTimeNanos == 0 ? "Stable" : DateTimes.millisElapsedSince(unstableStartTimeNanos),
-        "consecutiveFailedAttemptCount", consecutiveFailedAttemptCount,
+        "millisSinceLastSync",
+        sinceLastSync.isRunning() ? DateTimes.millisElapsed(sinceLastSync) : "Never synced",
+        "millisSinceLastSuccess",
+        sinceLastSuccess.isRunning() ? DateTimes.millisElapsed(sinceLastSuccess) : "Never synced successfully",
+        "millisUnstableDuration",
+        sinceUnstable.isRunning() ? DateTimes.millisElapsed(sinceUnstable) : "Stable",
+        "numRecentFailures", numRecentFailures,
         "syncScheduled", startStopLock.isStarted()
     );
   }
@@ -200,7 +201,7 @@ public class ChangeRequestHttpSyncer<T>
    */
   public boolean hasSyncedRecently()
   {
-    return !DateTimes.hasElapsedSince(syncTimeout, lastSyncTimeNanos);
+    return DateTimes.hasNotElapsed(syncTimeout, sinceLastSync);
   }
 
   /**
@@ -210,19 +211,18 @@ public class ChangeRequestHttpSyncer<T>
   public boolean isSyncingSuccessfully()
   {
     final Duration timeoutDuration = Duration.millis(3 * serverHttpTimeoutMillis);
-    if (consecutiveFailedAttemptCount > 0) {
+    if (numRecentFailures > 0) {
       return false;
     } else if (hasSyncedSuccessfullyOnce()) {
-      return !DateTimes.hasElapsedSince(timeoutDuration, lastSuccessfulSyncTimeNanos);
+      return DateTimes.hasNotElapsed(timeoutDuration, sinceLastSuccess);
     } else {
-      return !DateTimes.hasElapsedSince(timeoutDuration, syncerStartTimeNanos);
+      return DateTimes.hasNotElapsed(timeoutDuration, sinceSyncerStart);
     }
   }
 
   public long getUnstableTimeMillis()
   {
-    return consecutiveFailedAttemptCount <= 0
-           ? 0 : DateTimes.millisElapsedSince(unstableStartTimeNanos);
+    return numRecentFailures <= 0 ? 0 : DateTimes.millisElapsed(sinceUnstable);
   }
 
   public long getServerHttpTimeoutMillis()
@@ -237,7 +237,7 @@ public class ChangeRequestHttpSyncer<T>
       return;
     }
 
-    lastSyncTimeNanos = System.nanoTime();
+    sinceLastSync.reset().start();
 
     try {
       final String req = getRequestString();
@@ -273,7 +273,7 @@ public class ChangeRequestHttpSyncer<T>
                   final int responseStatus = responseHandler.getStatus();
                   if (responseStatus == HttpServletResponse.SC_NO_CONTENT) {
                     log.info("Received NO CONTENT from server[%s]", logIdentity);
-                    lastSuccessfulSyncTimeNanos = System.nanoTime();
+                    sinceLastSuccess.reset().start();
                     return;
                   } else if (responseStatus != HttpServletResponse.SC_OK) {
                     handleFailure(new ISE("Received invalid sync response"));
@@ -306,13 +306,13 @@ public class ChangeRequestHttpSyncer<T>
                     log.info("Server[%s] synced successfully for the first time.", logIdentity);
                   }
 
-                  if (consecutiveFailedAttemptCount > 0) {
-                    consecutiveFailedAttemptCount = 0;
-                    unstableStartTimeNanos = 0;
+                  if (numRecentFailures > 0) {
+                    numRecentFailures = 0;
+                    sinceUnstable.reset();
                     log.info("Server[%s] synced successfully.", logIdentity);
                   }
 
-                  lastSuccessfulSyncTimeNanos = System.nanoTime();
+                  sinceLastSuccess.reset().start();
                 }
                 catch (Exception ex) {
                   markServerUnstableAndAlert(ex, "processing sync response");
@@ -386,10 +386,10 @@ public class ChangeRequestHttpSyncer<T>
       }
 
       try {
-        if (consecutiveFailedAttemptCount > 0) {
+        if (numRecentFailures > 0) {
           long sleepMillis = Math.min(
               MAX_RETRY_BACKOFF_MILLIS,
-              RetryUtils.nextRetrySleepMillis(consecutiveFailedAttemptCount)
+              RetryUtils.nextRetrySleepMillis(numRecentFailures)
           );
           log.info("Scheduling next syncup in [%d] millis for server[%s].", sleepMillis, logIdentity);
           executor.schedule(this::sync, sleepMillis, TimeUnit.MILLISECONDS);
@@ -413,18 +413,18 @@ public class ChangeRequestHttpSyncer<T>
 
   private void markServerUnstableAndAlert(Throwable error, String action)
   {
-    if (consecutiveFailedAttemptCount++ == 0) {
-      unstableStartTimeNanos = System.nanoTime();
+    if (numRecentFailures++ == 0) {
+      sinceUnstable.reset().start();
     }
 
     final long unstableSeconds = getUnstableTimeMillis() / 1000;
     final String message = StringUtils.format(
         "Sync failed for server[%s] while [%s]. Already failed [%d] times in the last [%d] seconds.",
-        baseServerURL, action, consecutiveFailedAttemptCount, unstableSeconds
+        baseServerURL, action, numRecentFailures, unstableSeconds
     );
 
     // Alert if unstable alert timeout has been exceeded
-    if (DateTimes.hasElapsedSince(unstableAlertTimeout, unstableStartTimeNanos)) {
+    if (DateTimes.hasElapsed(unstableAlertTimeout, sinceUnstable)) {
       log.makeAlert(error, "Server[%s] has been unstable for [%d] seconds", baseServerURL, unstableSeconds)
          .addData("message", message)
          .emit();

@@ -19,12 +19,16 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.base.Stopwatch;
+import org.apache.commons.lang3.ThreadUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 public class DateTimesTest
 {
@@ -122,5 +126,31 @@ public class DateTimesTest
     Assert.assertFalse(DateTimes.canCompareAsString(
         DateTimes.of("2000").withZone(DateTimes.inferTzFromString("America/Los_Angeles")))
     );
+  }
+
+  @Test
+  public void testMillisElapsed() throws Exception
+  {
+    Stopwatch stopwatch = Stopwatch.createUnstarted();
+    stopwatch.start();
+    Thread.sleep(100);
+    stopwatch.stop();
+
+    Assert.assertEquals(
+        stopwatch.elapsed(TimeUnit.MILLISECONDS),
+        DateTimes.millisElapsed(stopwatch)
+    );
+  }
+
+  @Test
+  public void testHasElapsed() throws Exception
+  {
+    Stopwatch stopwatch = Stopwatch.createUnstarted();
+    stopwatch.start();
+    Thread.sleep(100);
+    stopwatch.stop();
+
+    Assert.assertTrue(DateTimes.hasElapsed(Duration.millis(50), stopwatch));
+    Assert.assertTrue(DateTimes.hasNotElapsed(Duration.millis(500), stopwatch));
   }
 }

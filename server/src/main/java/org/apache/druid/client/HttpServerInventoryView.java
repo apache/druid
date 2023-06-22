@@ -26,6 +26,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -347,12 +348,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
    */
   private void serverInventoryInitialized()
   {
-    final long startNanos = System.nanoTime();
+    final Stopwatch stopwatch = Stopwatch.createUnstarted();
     final Duration syncWaitTimeout = config.getRequestTimeout()
                                            .plus(2 * ChangeRequestHttpSyncer.HTTP_TIMEOUT_EXTRA_MILLIS);
 
     final List<DruidServerHolder> uninitializedServers = new ArrayList<>(servers.values());
-    while (!DateTimes.hasElapsedSince(syncWaitTimeout, startNanos)) {
+    while (DateTimes.hasNotElapsed(syncWaitTimeout, stopwatch)) {
       uninitializedServers.removeIf(
           serverHolder -> serverHolder.isSyncedSuccessfullyAtleastOnce()
                           || serverHolder.isStopped()

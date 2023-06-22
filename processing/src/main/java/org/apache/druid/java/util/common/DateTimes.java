@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
 import io.netty.util.SuppressForbidden;
 import org.joda.time.Chronology;
@@ -197,25 +198,28 @@ public final class DateTimes
   }
 
   /**
-   * Computes the milliseconds elapsed since the given start time.
-   *
-   * @param startTimeNanos Start time obtained using {@link System#nanoTime()}.
-   * @return Milliseconds elapsed since {@code startTimeNanos}.
+   * Returns the milliseconds elapsed on the stopwatch.
    */
-  public static long millisElapsedSince(long startTimeNanos)
+  public static long millisElapsed(Stopwatch stopwatch)
   {
-    return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
+    return stopwatch.elapsed(TimeUnit.MILLISECONDS);
   }
 
   /**
-   * Checks if the given duration has already elapsed since the start time.
-   *
-   * @param duration       Timeout duration
-   * @param startTimeNanos Start time obtained using {@link System#nanoTime()}.
+   * Checks if the given duration has already elapsed on the stopwatch.
    */
-  public static boolean hasElapsedSince(Duration duration, long startTimeNanos)
+  public static boolean hasElapsed(Duration duration, Stopwatch stopwatch)
   {
-    return millisElapsedSince(startTimeNanos) >= duration.getMillis();
+    return stopwatch.elapsed(TimeUnit.MILLISECONDS) >= duration.getMillis();
+  }
+
+  /**
+   * Checks that the given duration has not elapsed on the stopwatch. Calling this
+   * method is the same as {@code !hasElapsed(duration, stopwatch)}.
+   */
+  public static boolean hasNotElapsed(Duration duration, Stopwatch stopwatch)
+  {
+    return !hasElapsed(duration, stopwatch);
   }
 
   private DateTimes()
