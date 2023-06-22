@@ -38,6 +38,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
@@ -57,6 +58,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Duration;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -76,10 +78,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class HttpServerInventoryViewTest
 {
 
+  private StubServiceEmitter serviceEmitter;
+
   @BeforeClass
-  public static void setup()
+  public static void setupClass()
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
+  }
+
+  @Before
+  public void setup()
+  {
+    serviceEmitter = new StubServiceEmitter("test", "localhost");
   }
 
   @Test(timeout = 60_000L)
@@ -195,7 +205,8 @@ public class HttpServerInventoryViewTest
         druidNodeDiscoveryProvider,
         (pair) -> !pair.rhs.getDataSource().equals("non-loading-datasource"),
         new HttpServerInventoryViewConfig(null, null, null),
-        "test"
+        "test",
+        serviceEmitter
     );
 
     CountDownLatch initializeCallback1 = new CountDownLatch(1);
@@ -329,7 +340,8 @@ public class HttpServerInventoryViewTest
         druidNodeDiscoveryProvider,
         (pair) -> !pair.rhs.getDataSource().equals("non-loading-datasource"),
         new HttpServerInventoryViewConfig(null, null, null),
-        "test"
+        "test",
+        serviceEmitter
     );
 
     httpServerInventoryView.start();
@@ -337,7 +349,7 @@ public class HttpServerInventoryViewTest
     httpServerInventoryView.serverAdded(makeServer("xyz.com:8080"));
     httpServerInventoryView.serverAdded(makeServer("lol.com:8080"));
     Assert.assertEquals(3, httpServerInventoryView.getDebugInfo().size());
-    httpServerInventoryView.syncMonitoring();
+    httpServerInventoryView.checkAndResetUnhealthyServers();
     Assert.assertEquals(3, httpServerInventoryView.getDebugInfo().size());
   }
 

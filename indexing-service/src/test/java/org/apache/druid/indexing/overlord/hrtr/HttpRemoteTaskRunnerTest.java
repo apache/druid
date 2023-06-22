@@ -1789,7 +1789,7 @@ public class HttpRemoteTaskRunnerTest
   private WorkerHolder createNonSyncingWorkerHolder(Worker worker)
   {
     ChangeRequestHttpSyncer syncer = EasyMock.createMock(ChangeRequestHttpSyncer.class);
-    EasyMock.expect(syncer.isOK()).andReturn(false).anyTimes();
+    EasyMock.expect(syncer.hasSyncedRecently()).andReturn(false).anyTimes();
     EasyMock.expect(syncer.getDebugInfo()).andReturn(Collections.emptyMap()).anyTimes();
     WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
     EasyMock.expect(workerHolder.getUnderlyingSyncer()).andReturn(syncer).anyTimes();

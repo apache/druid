@@ -117,8 +117,8 @@ public class WorkerHolder
         TaskRunnerUtils.makeWorkerURL(worker, "/"),
         "/druid-internal/v1/worker",
         WORKER_SYNC_RESP_TYPE_REF,
-        config.getSyncRequestTimeout().toStandardDuration().getMillis(),
-        config.getServerUnstabilityTimeout().toStandardDuration().getMillis(),
+        config.getSyncRequestTimeout().toStandardDuration(),
+        config.getServerUnstabilityTimeout().toStandardDuration(),
         createSyncListener()
     );
 
@@ -340,7 +340,7 @@ public class WorkerHolder
 
   public void waitForInitialization() throws InterruptedException
   {
-    if (!syncer.awaitInitialization(3 * syncer.getServerHttpTimeout(), TimeUnit.MILLISECONDS)) {
+    if (!syncer.awaitInitialization(3 * syncer.getServerHttpTimeoutMillis(), TimeUnit.MILLISECONDS)) {
       throw new RE("Failed to sync with worker[%s].", worker.getHost());
     }
   }

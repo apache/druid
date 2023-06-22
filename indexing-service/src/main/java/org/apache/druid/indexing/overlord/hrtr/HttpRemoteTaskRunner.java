@@ -791,7 +791,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     final Set<Map.Entry<String, WorkerHolder>> workerEntrySet = ImmutableSet.copyOf(workers.entrySet());
     for (Map.Entry<String, WorkerHolder> e : workerEntrySet) {
       WorkerHolder workerHolder = e.getValue();
-      if (!workerHolder.getUnderlyingSyncer().isOK()) {
+      if (!workerHolder.getUnderlyingSyncer().hasSyncedRecently()) {
         synchronized (workers) {
           // check again that server is still there and only then reset.
           if (workers.containsKey(e.getKey())) {

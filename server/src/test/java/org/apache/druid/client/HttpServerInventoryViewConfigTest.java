@@ -19,25 +19,27 @@
 
 package org.apache.druid.client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.TestHelper;
+import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  */
 public class HttpServerInventoryViewConfigTest
 {
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
+
   @Test
   public void testDeserializationWithDefaults() throws Exception
   {
     String json = "{}";
 
-    HttpServerInventoryViewConfig config = TestHelper.makeJsonMapper().readValue(json, HttpServerInventoryViewConfig.class);
+    HttpServerInventoryViewConfig config = MAPPER.readValue(json, HttpServerInventoryViewConfig.class);
 
-    Assert.assertEquals(TimeUnit.MINUTES.toMillis(4), config.getServerTimeout());
-    Assert.assertEquals(TimeUnit.MINUTES.toMillis(1), config.getServerUnstabilityTimeout());
+    Assert.assertEquals(Duration.standardMinutes(4), config.getRequestTimeout());
+    Assert.assertEquals(Duration.standardMinutes(1), config.getUnstableAlertTimeout());
     Assert.assertEquals(5, config.getNumThreads());
   }
 
@@ -50,10 +52,10 @@ public class HttpServerInventoryViewConfigTest
                   + "  \"numThreads\": 7\n"
                   + "}";
 
-    HttpServerInventoryViewConfig config = TestHelper.makeJsonMapper().readValue(json, HttpServerInventoryViewConfig.class);
+    HttpServerInventoryViewConfig config = MAPPER.readValue(json, HttpServerInventoryViewConfig.class);
 
-    Assert.assertEquals(TimeUnit.MINUTES.toMillis(2), config.getServerTimeout());
-    Assert.assertEquals(TimeUnit.MINUTES.toMillis(3), config.getServerUnstabilityTimeout());
+    Assert.assertEquals(Duration.standardMinutes(2), config.getRequestTimeout());
+    Assert.assertEquals(Duration.standardMinutes(3), config.getUnstableAlertTimeout());
     Assert.assertEquals(7, config.getNumThreads());
   }
 }

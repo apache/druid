@@ -137,8 +137,8 @@ public class ChangeRequestHttpSyncerTest
         new URL("http://localhost:8080/"),
         "/xx",
         typeRef,
-        50000,
-        10000,
+        Duration.standardSeconds(50),
+        Duration.standardSeconds(10),
         listener
     );
 

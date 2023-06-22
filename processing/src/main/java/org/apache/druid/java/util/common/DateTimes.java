@@ -24,6 +24,7 @@ import io.netty.util.SuppressForbidden;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Months;
 import org.joda.time.chrono.ISOChronology;
@@ -32,6 +33,7 @@ import org.joda.time.format.ISODateTimeFormat;
 
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 public final class DateTimes
@@ -192,6 +194,28 @@ public final class DateTimes
     return dateTime.getMillis() >= COMPARE_DATE_AS_STRING_MIN.getMillis()
            && dateTime.getMillis() <= COMPARE_DATE_AS_STRING_MAX.getMillis()
            && ISOChronology.getInstanceUTC().equals(dateTime.getChronology());
+  }
+
+  /**
+   * Computes the milliseconds elapsed since the given start time.
+   *
+   * @param startTimeNanos Start time obtained using {@link System#nanoTime()}.
+   * @return Milliseconds elapsed since {@code startTimeNanos}.
+   */
+  public static long millisElapsedSince(long startTimeNanos)
+  {
+    return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
+  }
+
+  /**
+   * Checks if the given duration has already elapsed since the start time.
+   *
+   * @param duration       Timeout duration
+   * @param startTimeNanos Start time obtained using {@link System#nanoTime()}.
+   */
+  public static boolean hasElapsedSince(Duration duration, long startTimeNanos)
+  {
+    return millisElapsedSince(startTimeNanos) >= duration.getMillis();
   }
 
   private DateTimes()

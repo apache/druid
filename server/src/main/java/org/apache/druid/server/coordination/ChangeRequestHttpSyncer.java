@@ -28,8 +28,8 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.concurrent.LifecycleLock;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -60,9 +60,9 @@ public class ChangeRequestHttpSyncer<T>
 {
   private static final EmittingLogger log = new EmittingLogger(ChangeRequestHttpSyncer.class);
 
-  public static final long HTTP_TIMEOUT_EXTRA_MS = 5000;
+  public static final long HTTP_TIMEOUT_EXTRA_MILLIS = 5000;
 
-  private static final long MAX_RETRY_BACKOFF = TimeUnit.MINUTES.toMillis(2);
+  private static final long MAX_RETRY_BACKOFF_MILLIS = TimeUnit.MINUTES.toMillis(2);
 
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
@@ -70,13 +70,15 @@ public class ChangeRequestHttpSyncer<T>
   private final URL baseServerURL;
   private final String baseRequestPath;
   private final TypeReference<ChangeRequestsSnapshot<T>> responseTypeReferences;
-  private final long serverTimeoutMS;
-  private final long serverUnstabilityTimeout;
-  private final long serverHttpTimeout;
+  private final long serverHttpTimeoutMillis;
+
+  private final Duration requestTimeout;
+  private final Duration unstableAlertTimeout;
+  private final Duration syncTimeout;
 
   private final Listener<T> listener;
 
-  private final CountDownLatch initializationLatch = new CountDownLatch(1);
+  private final CountDownLatch successfulSyncLatch = new CountDownLatch(1);
 
   /**
    * This lock is used to ensure proper start-then-stop semantics and making sure after stopping no state update happens
@@ -86,10 +88,12 @@ public class ChangeRequestHttpSyncer<T>
   private final LifecycleLock startStopLock = new LifecycleLock();
 
   private final String logIdentity;
-  private long unstableStartTime = -1;
-  private int consecutiveFailedAttemptCount = 0;
-  private long lastSuccessfulSyncTime = 0;
-  private long lastSyncTime = 0;
+
+  private long syncerStartTimeNanos;
+  private long unstableStartTimeNanos;
+  private int consecutiveFailedAttemptCount;
+  private long lastSuccessfulSyncTimeNanos;
+  private long lastSyncTimeNanos;
 
   @Nullable
   private ChangeRequestHistory.Counter counter = null;
@@ -101,8 +105,8 @@ public class ChangeRequestHttpSyncer<T>
       URL baseServerURL,
       String baseRequestPath,
       TypeReference<ChangeRequestsSnapshot<T>> responseTypeReferences,
-      long serverTimeoutMS,
-      long serverUnstabilityTimeout,
+      Duration requestTimeout,
+      Duration unstableAlertTimeout,
       Listener<T> listener
   )
   {
@@ -112,23 +116,23 @@ public class ChangeRequestHttpSyncer<T>
     this.baseServerURL = baseServerURL;
     this.baseRequestPath = baseRequestPath;
     this.responseTypeReferences = responseTypeReferences;
-    this.serverTimeoutMS = serverTimeoutMS;
-    this.serverUnstabilityTimeout = serverUnstabilityTimeout;
-    this.serverHttpTimeout = serverTimeoutMS + HTTP_TIMEOUT_EXTRA_MS;
+    this.serverHttpTimeoutMillis = requestTimeout.getMillis() + HTTP_TIMEOUT_EXTRA_MILLIS;
     this.listener = listener;
     this.logIdentity = StringUtils.format("%s_%d", baseServerURL, System.currentTimeMillis());
+
+    this.requestTimeout = requestTimeout;
+    this.unstableAlertTimeout = unstableAlertTimeout;
+    this.syncTimeout = Duration.millis(MAX_RETRY_BACKOFF_MILLIS + 3 * serverHttpTimeoutMillis);
   }
 
   public void start()
   {
-
     synchronized (startStopLock) {
-
       if (!startStopLock.canStart()) {
         throw new ISE("Can't start ChangeRequestHttpSyncer[%s].", logIdentity);
       }
-      try {
 
+      try {
         log.info("Starting ChangeRequestHttpSyncer[%s].", logIdentity);
         startStopLock.started();
       }
@@ -136,6 +140,7 @@ public class ChangeRequestHttpSyncer<T>
         startStopLock.exitStart();
       }
 
+      syncerStartTimeNanos = System.nanoTime();
       addNextSyncToWorkQueue();
     }
   }
@@ -157,31 +162,35 @@ public class ChangeRequestHttpSyncer<T>
     }
   }
 
-  /** Wait for first fetch of segment listing from server. */
+  /**
+   * Waits for the first successful sync with this server.
+   */
   public boolean awaitInitialization(long timeout, TimeUnit timeUnit) throws InterruptedException
   {
-    return initializationLatch.await(timeout, timeUnit);
+    return successfulSyncLatch.await(timeout, timeUnit);
   }
 
   /**
-   * This method returns the debugging information for printing, must not be used for any other purpose.
+   * Returns debugging information for printing, must not be used for any other purpose.
    */
   public Map<String, Object> getDebugInfo()
   {
-    long currTime = System.currentTimeMillis();
-
-    Object notSuccessfullySyncedFor;
-    if (lastSuccessfulSyncTime == 0) {
-      notSuccessfullySyncedFor = "Never Successfully Synced";
-    } else {
-      notSuccessfullySyncedFor = (currTime - lastSuccessfulSyncTime) / 1000;
-    }
     return ImmutableMap.of(
-        "notSyncedForSecs", lastSyncTime == 0 ? "Never Synced" : (currTime - lastSyncTime) / 1000,
-        "notSuccessfullySyncedFor", notSuccessfullySyncedFor,
+        "lastSyncDelayMillis",
+        lastSyncTimeNanos == 0 ? "Never synced" : DateTimes.millisElapsedSince(lastSyncTimeNanos),
+        "lastSuccessfulSyncDelayMillis",
+        hasSyncedSuccessfullyOnce() ? DateTimes.millisElapsedSince(lastSuccessfulSyncTimeNanos)
+                                    : "Never synced successfully",
+        "unstableStartDelayMillis",
+        unstableStartTimeNanos == 0 ? "Stable" : DateTimes.millisElapsedSince(unstableStartTimeNanos),
         "consecutiveFailedAttemptCount", consecutiveFailedAttemptCount,
         "syncScheduled", startStopLock.isStarted()
     );
+  }
+
+  private boolean hasSyncedSuccessfullyOnce()
+  {
+    return successfulSyncLatch.getCount() <= 0;
   }
 
   /**
@@ -189,24 +198,46 @@ public class ChangeRequestHttpSyncer<T>
    * ever returns false then caller of this method must create an alert and it should be looked into for any
    * bugs.
    */
-  public boolean isOK()
+  public boolean hasSyncedRecently()
   {
-    return (System.currentTimeMillis() - lastSyncTime) < MAX_RETRY_BACKOFF + 3 * serverHttpTimeout;
+    return !DateTimes.hasElapsedSince(syncTimeout, lastSyncTimeNanos);
   }
 
-  public long getServerHttpTimeout()
+  /**
+   * @return true if there have been no sync failures recently and the last sync
+   * was not more than {@code 3 * serverHttpTimeoutMillis} ago.
+   */
+  public boolean isSyncingSuccessfully()
   {
-    return serverHttpTimeout;
+    final Duration timeoutDuration = Duration.millis(3 * serverHttpTimeoutMillis);
+    if (consecutiveFailedAttemptCount > 0) {
+      return false;
+    } else if (hasSyncedSuccessfullyOnce()) {
+      return !DateTimes.hasElapsedSince(timeoutDuration, lastSuccessfulSyncTimeNanos);
+    } else {
+      return !DateTimes.hasElapsedSince(timeoutDuration, syncerStartTimeNanos);
+    }
+  }
+
+  public long getUnstableTimeMillis()
+  {
+    return consecutiveFailedAttemptCount <= 0
+           ? 0 : DateTimes.millisElapsedSince(unstableStartTimeNanos);
+  }
+
+  public long getServerHttpTimeoutMillis()
+  {
+    return serverHttpTimeoutMillis;
   }
 
   private void sync()
   {
     if (!startStopLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
-      log.info("Skipping sync() call for server[%s].", logIdentity);
+      log.info("Skipping sync for server[%s] as lifecycle has not started.", logIdentity);
       return;
     }
 
-    lastSyncTime = System.currentTimeMillis();
+    lastSyncTimeNanos = System.nanoTime();
 
     try {
       final String req = getRequestString();
@@ -220,10 +251,10 @@ public class ChangeRequestHttpSyncer<T>
               .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
               .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
           responseHandler,
-          Duration.millis(serverHttpTimeout)
+          Duration.millis(serverHttpTimeoutMillis)
       );
 
-      log.debug("Sent sync request to [%s]", logIdentity);
+      log.debug("Sent sync request to server[%s]", logIdentity);
 
       Futures.addCallback(
           syncRequestFuture,
@@ -234,28 +265,30 @@ public class ChangeRequestHttpSyncer<T>
             {
               synchronized (startStopLock) {
                 if (!startStopLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
-                  log.info("Skipping sync() success for server[%s].", logIdentity);
+                  log.info("Not handling sync response for server[%s] as lifecycle has not started.", logIdentity);
                   return;
                 }
 
                 try {
-                  if (responseHandler.getStatus() == HttpServletResponse.SC_NO_CONTENT) {
-                    log.debug("Received NO CONTENT from server[%s]", logIdentity);
-                    lastSuccessfulSyncTime = System.currentTimeMillis();
+                  final int responseStatus = responseHandler.getStatus();
+                  if (responseStatus == HttpServletResponse.SC_NO_CONTENT) {
+                    log.info("Received NO CONTENT from server[%s]", logIdentity);
+                    lastSuccessfulSyncTimeNanos = System.nanoTime();
                     return;
-                  } else if (responseHandler.getStatus() != HttpServletResponse.SC_OK) {
-                    handleFailure(new RE("Bad Sync Response."));
+                  } else if (responseStatus != HttpServletResponse.SC_OK) {
+                    handleFailure(new ISE("Received invalid sync response"));
                     return;
                   }
 
-                  log.debug("Received sync response from [%s]", logIdentity);
-
+                  log.debug("Received response from server[%s]", logIdentity);
                   ChangeRequestsSnapshot<T> changes = smileMapper.readValue(stream, responseTypeReferences);
-
-                  log.debug("Finished reading sync response from [%s]", logIdentity);
+                  log.debug("Finished reading response from server[%s]", logIdentity);
 
                   if (changes.isResetCounter()) {
-                    log.info("[%s] requested resetCounter for reason [%s].", logIdentity, changes.getResetCause());
+                    log.info(
+                        "Server[%s] requested resetCounter for reason [%s].",
+                        logIdentity, changes.getResetCause()
+                    );
                     counter = null;
                     return;
                   }
@@ -268,31 +301,21 @@ public class ChangeRequestHttpSyncer<T>
 
                   counter = changes.getCounter();
 
-                  if (initializationLatch.getCount() > 0) {
-                    initializationLatch.countDown();
-                    log.info("[%s] synced successfully for the first time.", logIdentity);
+                  if (successfulSyncLatch.getCount() > 0) {
+                    successfulSyncLatch.countDown();
+                    log.info("Server[%s] synced successfully for the first time.", logIdentity);
                   }
 
                   if (consecutiveFailedAttemptCount > 0) {
                     consecutiveFailedAttemptCount = 0;
-                    log.info("[%s] synced successfully.", logIdentity);
+                    unstableStartTimeNanos = 0;
+                    log.info("Server[%s] synced successfully.", logIdentity);
                   }
 
-                  lastSuccessfulSyncTime = System.currentTimeMillis();
+                  lastSuccessfulSyncTimeNanos = System.nanoTime();
                 }
                 catch (Exception ex) {
-                  String logMsg = StringUtils.nonStrictFormat(
-                      "Error processing sync response from [%s]. Reason [%s]",
-                      logIdentity,
-                      ex.getMessage()
-                  );
-
-                  if (incrementFailedAttemptAndCheckUnstabilityTimeout()) {
-                    log.error(ex, logMsg);
-                  } else {
-                    log.info("Temporary Failure. %s", logMsg);
-                    log.debug(ex, logMsg);
-                  }
+                  markServerUnstableAndAlert(ex, "processing sync response");
                 }
                 finally {
                   addNextSyncToWorkQueue();
@@ -305,7 +328,7 @@ public class ChangeRequestHttpSyncer<T>
             {
               synchronized (startStopLock) {
                 if (!startStopLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
-                  log.info("Skipping sync() failure for URL[%s].", logIdentity);
+                  log.info("Not handling sync failure for server[%s] as lifecycle has not started.", logIdentity);
                   return;
                 }
 
@@ -320,36 +343,20 @@ public class ChangeRequestHttpSyncer<T>
 
             private void handleFailure(Throwable t)
             {
-              String logMsg = StringUtils.nonStrictFormat(
-                  "failed to get sync response from [%s]. Return code [%s], Reason: [%s]",
-                  logIdentity,
+              String logMsg = StringUtils.format(
+                  "Handling response with code[%d], description[%s]",
                   responseHandler.getStatus(),
                   responseHandler.getDescription()
               );
-
-              if (incrementFailedAttemptAndCheckUnstabilityTimeout()) {
-                log.error(t, logMsg);
-              } else {
-                log.info("Temporary Failure. %s", logMsg);
-                log.debug(t, logMsg);
-              }
+              markServerUnstableAndAlert(t, logMsg);
             }
           },
           executor
       );
     }
-    catch (Throwable th) {
+    catch (Throwable t) {
       try {
-        String logMsg = StringUtils.nonStrictFormat(
-            "Fatal error while fetching segment list from [%s].", logIdentity
-        );
-
-        if (incrementFailedAttemptAndCheckUnstabilityTimeout()) {
-          log.makeAlert(th, logMsg).emit();
-        } else {
-          log.info("Temporary Failure. %s", logMsg);
-          log.debug(th, logMsg);
-        }
+        markServerUnstableAndAlert(t, "sending sync request");
       }
       finally {
         addNextSyncToWorkQueue();
@@ -359,19 +366,15 @@ public class ChangeRequestHttpSyncer<T>
 
   private String getRequestString()
   {
-    final String req;
-    if (counter != null) {
-      req = StringUtils.format(
-          "%s?counter=%s&hash=%s&timeout=%s",
-          baseRequestPath,
-          counter.getCounter(),
-          counter.getHash(),
-          serverTimeoutMS
-      );
+    final long requestTimeoutMillis = requestTimeout.getMillis();
+    if (counter == null) {
+      return StringUtils.format("%s?counter=-1&timeout=%s", baseRequestPath, requestTimeoutMillis);
     } else {
-      req = StringUtils.format("%s?counter=-1&timeout=%s", baseRequestPath, serverTimeoutMS);
+      return StringUtils.format(
+          "%s?counter=%s&hash=%s&timeout=%s",
+          baseRequestPath, counter.getCounter(), counter.getHash(), requestTimeoutMillis
+      );
     }
-    return req;
   }
 
   private void addNextSyncToWorkQueue()
@@ -385,7 +388,7 @@ public class ChangeRequestHttpSyncer<T>
       try {
         if (consecutiveFailedAttemptCount > 0) {
           long sleepMillis = Math.min(
-              MAX_RETRY_BACKOFF,
+              MAX_RETRY_BACKOFF_MILLIS,
               RetryUtils.nextRetrySleepMillis(consecutiveFailedAttemptCount)
           );
           log.info("Scheduling next syncup in [%d] millis for server[%s].", sleepMillis, logIdentity);
@@ -396,16 +399,11 @@ public class ChangeRequestHttpSyncer<T>
       }
       catch (Throwable th) {
         if (executor.isShutdown()) {
-          log.warn(
-              th,
-              "Couldn't schedule next sync. [%s] is not being synced any more, probably because executor is stopped.",
-              logIdentity
-          );
+          log.warn(th, "Could not schedule sync for server[%s] because executor is stopped.", logIdentity);
         } else {
           log.makeAlert(
               th,
-              "Couldn't schedule next sync. [%s] is not being synced any more, restarting Druid process on that "
-              + "server might fix the issue.",
+              "Could not schedule sync for server[%s]. Try restarting the Druid process on that server.",
               logIdentity
           ).emit();
         }
@@ -413,18 +411,28 @@ public class ChangeRequestHttpSyncer<T>
     }
   }
 
-  private boolean incrementFailedAttemptAndCheckUnstabilityTimeout()
+  private void markServerUnstableAndAlert(Throwable error, String action)
   {
-    if (consecutiveFailedAttemptCount > 0
-        && (System.currentTimeMillis() - unstableStartTime) > serverUnstabilityTimeout) {
-      return true;
-    }
-
     if (consecutiveFailedAttemptCount++ == 0) {
-      unstableStartTime = System.currentTimeMillis();
+      unstableStartTimeNanos = System.nanoTime();
     }
 
-    return false;
+    final long unstableSeconds = getUnstableTimeMillis() / 1000;
+    final String message = StringUtils.format(
+        "Sync failed for server[%s] while [%s]. Already failed [%d] times in the last [%d] seconds.",
+        baseServerURL, action, consecutiveFailedAttemptCount, unstableSeconds
+    );
+
+    // Alert if unstable alert timeout has been exceeded
+    if (DateTimes.hasElapsedSince(unstableAlertTimeout, unstableStartTimeNanos)) {
+      log.makeAlert(error, "Server[%s] has been unstable for [%d] seconds", baseServerURL, unstableSeconds)
+         .addData("message", message)
+         .emit();
+    } else if (log.isDebugEnabled()) {
+      log.debug(error, message);
+    } else {
+      log.noStackTrace().info(error, message);
+    }
   }
 
   @VisibleForTesting
@@ -444,6 +452,7 @@ public class ChangeRequestHttpSyncer<T>
      * first request to the server.
      */
     void fullSync(List<T> changes);
+
     void deltaSync(List<T> changes);
   }
 }
