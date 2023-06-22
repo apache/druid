@@ -224,7 +224,6 @@ For ARM-based devices, follow this setup to start Druid externally, while keepin
    DRUID_VERSION={{DRUIDVERSION}} docker compose --profile kafka-jupyter up -d
 
    # Start only Jupyter
-   ```bash
    docker compose --profile jupyter up -d
    ```
 
