@@ -37,7 +37,7 @@ public class ServiceStatusMonitorTest
   private static String HEARTBEAT_METRIC_KEY = "service/heartbeat";
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     monitor = new ServiceStatusMonitor();
     heartbeatTags = new HashMap<>();
