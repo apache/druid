@@ -342,6 +342,20 @@ public class FutureUtilsTest
   }
 
   @Test
+  public void test_getAllWithTimeout() throws Exception
+  {
+    final CompletableFuture<String> futureA = CompletableFuture.completedFuture("a");
+    final CompletableFuture<String> futureB = CompletableFuture.completedFuture("b");
+
+    List<String> results = FutureUtils.getAllWithTimeout(
+        Arrays.asList(futureA, futureB),
+        100,
+        TimeUnit.MILLISECONDS
+    );
+    Assert.assertEquals(Arrays.asList("a", "b"), results);
+  }
+
+  @Test
   public void test_getAllWithTimeout_futureCancelled()
   {
     final List<Future<String>> futures
@@ -357,6 +371,28 @@ public class FutureUtilsTest
   }
 
   @Test
+  public void test_getAllWithTimeout_executorShutdown()
+  {
+    final ScheduledExecutorService executor = ScheduledExecutors.fixed(1, "test-future");
+    Future<String> longRunningTask = executor.submit(() -> {
+      Thread.sleep(1000);
+      return "a";
+    });
+    Future<String> waitingTask = executor.submit(() -> "b");
+    executor.shutdownNow();
+
+    final List<Future<String>> futures = Arrays.asList(longRunningTask, waitingTask);
+    ExecutionException executionException = Assert.assertThrows(
+        ExecutionException.class,
+        () -> FutureUtils.getAllWithTimeout(futures, 300, TimeUnit.MILLISECONDS)
+    );
+    Throwable cause = executionException.getCause();
+    Assert.assertTrue(cause instanceof InterruptedException);
+    Assert.assertTrue(longRunningTask.isDone());
+    Assert.assertFalse(waitingTask.isDone());
+  }
+
+  @Test
   public void test_getAllWithTimeout_partialCompletion()
   {
     final CompletableFuture<String> futureA = new CompletableFuture<>();
@@ -364,19 +400,15 @@ public class FutureUtilsTest
 
     final List<Future<String>> futures = Arrays.asList(futureA, futureB);
     final ScheduledExecutorService executor = ScheduledExecutors.fixed(1, "test-future");
-    try {
-      executor.schedule(() -> futureA.complete("a"), 400, TimeUnit.MILLISECONDS);
-      executor.schedule(() -> futureB.complete("b"), 700, TimeUnit.MILLISECONDS);
+    executor.schedule(() -> futureA.complete("a"), 100, TimeUnit.MILLISECONDS);
+    executor.schedule(() -> futureB.complete("b"), 700, TimeUnit.MILLISECONDS);
 
-      Assert.assertThrows(
-          TimeoutException.class,
-          () -> FutureUtils.getAllWithTimeout(futures, 500, TimeUnit.MILLISECONDS)
-      );
+    Assert.assertThrows(
+        TimeoutException.class,
+        () -> FutureUtils.getAllWithTimeout(futures, 300, TimeUnit.MILLISECONDS)
+    );
 
-      Assert.assertTrue(futureA.isDone());
-      Assert.assertFalse(futureB.isDone());
-    } finally {
-      executor.shutdownNow();
-    }
+    Assert.assertTrue(futureA.isDone());
+    Assert.assertFalse(futureB.isDone());
   }
 }

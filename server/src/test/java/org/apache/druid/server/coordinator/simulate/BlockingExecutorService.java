@@ -167,9 +167,7 @@ public class BlockingExecutorService implements ExecutorService
   public void shutdown()
   {
     isShutdown = true;
-    taskQueue.forEach(
-        task -> task.future.cancel(true)
-    );
+    taskQueue.forEach(task -> task.future.cancel(true));
     taskQueue.clear();
   }
 
