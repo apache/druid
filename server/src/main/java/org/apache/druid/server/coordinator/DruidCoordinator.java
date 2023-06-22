@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
@@ -97,6 +96,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -169,7 +169,7 @@ public class DruidCoordinator
   private volatile SegmentReplicationStatus segmentReplicationStatus = null;
 
   private int cachedBalancerThreadNumber;
-  private ListeningExecutorService balancerExec;
+  private ExecutorService balancerExec;
 
   public static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
   private static final String METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP = "MetadataStoreManagementDuties";
@@ -355,7 +355,7 @@ public class DruidCoordinator
   }
 
   @VisibleForTesting
-  public ListeningExecutorService getBalancerExec()
+  public ExecutorService getBalancerExec()
   {
     return balancerExec;
   }
@@ -565,12 +565,10 @@ public class DruidCoordinator
     }
   }
 
-  private ListeningExecutorService createNewBalancerExecutor(int numThreads)
+  private ExecutorService createNewBalancerExecutor(int numThreads)
   {
     cachedBalancerThreadNumber = numThreads;
-    return MoreExecutors.listeningDecorator(
-        Execs.multiThreaded(numThreads, "coordinator-cost-balancer-%s")
-    );
+    return Execs.multiThreaded(numThreads, "coordinator-cost-balancer-%s");
   }
 
   private List<CoordinatorDuty> makeHistoricalManagementDuties()

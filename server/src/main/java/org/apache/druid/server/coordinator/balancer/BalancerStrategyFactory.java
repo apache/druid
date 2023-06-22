@@ -21,7 +21,8 @@ package org.apache.druid.server.coordinator.balancer;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.util.concurrent.ListeningExecutorService;
+
+import java.util.concurrent.ExecutorService;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "strategy", defaultImpl = CostBalancerStrategyFactory.class)
 @JsonSubTypes(value = {
@@ -32,5 +33,5 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 })
 public interface BalancerStrategyFactory
 {
-  BalancerStrategy createBalancerStrategy(ListeningExecutorService exec);
+  BalancerStrategy createBalancerStrategy(ExecutorService exec);
 }

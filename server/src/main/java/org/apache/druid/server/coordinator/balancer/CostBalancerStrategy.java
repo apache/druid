@@ -20,10 +20,8 @@
 package org.apache.druid.server.coordinator.balancer;
 
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.commons.math3.util.FastMath;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -41,6 +39,8 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -190,11 +190,11 @@ public class CostBalancerStrategy implements BalancerStrategy
     }
   }
 
-  private final ListeningExecutorService exec;
+  private final ExecutorService executor;
 
-  public CostBalancerStrategy(ListeningExecutorService exec)
+  public CostBalancerStrategy(ExecutorService executor)
   {
-    this.exec = exec;
+    this.executor = executor;
   }
 
   @Override
@@ -345,10 +345,10 @@ public class CostBalancerStrategy implements BalancerStrategy
       String action
   )
   {
-    final List<ListenableFuture<Pair<Double, ServerHolder>>> futures = new ArrayList<>();
+    final List<Future<Pair<Double, ServerHolder>>> futures = new ArrayList<>();
     for (ServerHolder server : serverHolders) {
       futures.add(
-          exec.submit(
+          executor.submit(
               () -> Pair.of(computeCost(proposalSegment, server, includeCurrentServer), server)
           )
       );
@@ -360,7 +360,7 @@ public class CostBalancerStrategy implements BalancerStrategy
       // 1 minute is the typical time for a full run of all historical management duties
       // and is more than enough time for the cost computation of a single segment
       costPrioritizedServers.addAll(
-          Futures.allAsList(futures).get(1, TimeUnit.MINUTES)
+          FutureUtils.getAllWithTimeout(futures, 1, TimeUnit.MINUTES)
       );
     }
     catch (Exception e) {
@@ -376,8 +376,8 @@ public class CostBalancerStrategy implements BalancerStrategy
   private void alertOnFailure(Exception e, String action)
   {
     // Do not alert if the executor has been shutdown
-    if (exec.isShutdown()) {
-      log.noStackTrace().info("Balancer executor was terminated. Failing action [%s].", action);
+    if (executor.isShutdown()) {
+      log.noStackTrace().info(e, "Balancer executor was terminated. Failing action [%s].", action);
       return;
     }
 

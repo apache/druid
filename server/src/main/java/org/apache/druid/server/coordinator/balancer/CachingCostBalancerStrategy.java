@@ -21,20 +21,18 @@ package org.apache.druid.server.coordinator.balancer;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Collections;
 import java.util.Set;
-
+import java.util.concurrent.ExecutorService;
 
 public class CachingCostBalancerStrategy extends CostBalancerStrategy
 {
-
   private final ClusterCostCache clusterCostCache;
 
-  public CachingCostBalancerStrategy(ClusterCostCache clusterCostCache, ListeningExecutorService exec)
+  public CachingCostBalancerStrategy(ClusterCostCache clusterCostCache, ExecutorService exec)
   {
     super(exec);
     this.clusterCostCache = Preconditions.checkNotNull(clusterCostCache);

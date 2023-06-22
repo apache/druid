@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.balancer;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -123,7 +122,7 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
   }
 
   @Override
-  public BalancerStrategy createBalancerStrategy(final ListeningExecutorService exec)
+  public BalancerStrategy createBalancerStrategy(ExecutorService exec)
   {
     if (!isInitialized() && config.isAwaitInitialization()) {
       try {

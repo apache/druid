@@ -19,12 +19,12 @@
 
 package org.apache.druid.server.coordinator.balancer;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
+import java.util.concurrent.ExecutorService;
 
 public class DiskNormalizedCostBalancerStrategyFactory implements BalancerStrategyFactory
 {
   @Override
-  public BalancerStrategy createBalancerStrategy(ListeningExecutorService exec)
+  public BalancerStrategy createBalancerStrategy(ExecutorService exec)
   {
     return new DiskNormalizedCostBalancerStrategy(exec);
   }

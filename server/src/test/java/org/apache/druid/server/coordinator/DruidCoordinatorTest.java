@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.curator.framework.CuratorFramework;
@@ -81,6 +80,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -630,20 +630,20 @@ public class DruidCoordinatorTest extends CuratorTestBase
     // first initialization
     c.initBalancerExecutor();
     Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
-    ListeningExecutorService firstExec = c.getBalancerExec();
+    ExecutorService firstExec = c.getBalancerExec();
     Assert.assertNotNull(firstExec);
 
     // second initialization, expect no changes as cachedBalancerThreadNumber is not changed
     c.initBalancerExecutor();
     Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
-    ListeningExecutorService secondExec = c.getBalancerExec();
+    ExecutorService secondExec = c.getBalancerExec();
     Assert.assertNotNull(secondExec);
     Assert.assertSame(firstExec, secondExec);
 
     // third initialization, expect executor recreated as cachedBalancerThreadNumber is changed to 10
     c.initBalancerExecutor();
     Assert.assertEquals(10, c.getCachedBalancerThreadNumber());
-    ListeningExecutorService thirdExec = c.getBalancerExec();
+    ExecutorService thirdExec = c.getBalancerExec();
     Assert.assertNotNull(thirdExec);
     Assert.assertNotSame(secondExec, thirdExec);
     Assert.assertNotSame(firstExec, thirdExec);

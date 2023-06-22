@@ -32,6 +32,9 @@ import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 
 public class FutureUtils
@@ -159,6 +162,27 @@ public class FutureUtils
           return eithers;
         }
     );
+  }
+
+  /**
+   * Calls {@link Future#get(long, TimeUnit)} on each of the given futures.
+   * The {@code totalWaitTime} is the total time to wait in the given {@code timeUnit}.
+   */
+  public static <T> List<T> getAllWithTimeout(List<Future<T>> futures, long totalWaitTime, TimeUnit timeUnit)
+      throws InterruptedException, ExecutionException, TimeoutException
+  {
+    final long startTimeNanos = System.nanoTime();
+    final long maxWaitMillis = timeUnit.toMillis(totalWaitTime);
+
+    final List<T> results = new ArrayList<>();
+    for (Future<T> future : futures) {
+      long millisElapsed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
+      long remainingTimeMillis = Math.max(0, maxWaitMillis - millisElapsed);
+
+      results.add(future.get(remainingTimeMillis, TimeUnit.MILLISECONDS));
+    }
+
+    return results;
   }
 
   /**

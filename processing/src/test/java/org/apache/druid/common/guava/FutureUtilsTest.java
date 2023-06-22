@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
@@ -36,16 +37,21 @@ import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class FutureUtilsTest
 {
@@ -333,5 +339,44 @@ public class FutureUtilsTest
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IllegalStateException.class));
     MatcherAssert.assertThat(e.getCause(), ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("error!")));
     Assert.assertEquals(1, baggageHandled.get());
+  }
+
+  @Test
+  public void test_getAllWithTimeout_futureCancelled()
+  {
+    final List<Future<String>> futures
+        = IntStream.range(0, 2)
+                   .mapToObj(id -> new CompletableFuture<String>())
+                   .collect(Collectors.toList());
+
+    futures.get(0).cancel(false);
+    Assert.assertThrows(
+        CancellationException.class,
+        () -> FutureUtils.getAllWithTimeout(futures, 500, TimeUnit.MILLISECONDS)
+    );
+  }
+
+  @Test
+  public void test_getAllWithTimeout_partialCompletion()
+  {
+    final CompletableFuture<String> futureA = new CompletableFuture<>();
+    final CompletableFuture<String> futureB = new CompletableFuture<>();
+
+    final List<Future<String>> futures = Arrays.asList(futureA, futureB);
+    final ScheduledExecutorService executor = ScheduledExecutors.fixed(1, "test-future");
+    try {
+      executor.schedule(() -> futureA.complete("a"), 400, TimeUnit.MILLISECONDS);
+      executor.schedule(() -> futureB.complete("b"), 700, TimeUnit.MILLISECONDS);
+
+      Assert.assertThrows(
+          TimeoutException.class,
+          () -> FutureUtils.getAllWithTimeout(futures, 500, TimeUnit.MILLISECONDS)
+      );
+
+      Assert.assertTrue(futureA.isDone());
+      Assert.assertFalse(futureB.isDone());
+    } finally {
+      executor.shutdownNow();
+    }
   }
 }
