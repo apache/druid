@@ -91,6 +91,7 @@ DRUID_VERSION={{DRUIDVERSION}} docker compose --profile all-services up -d
 ```
 
 ### Start Kafka and Jupyter
+
 If you already have Druid running externally, such as an existing cluster or a dedicated infrastructure for Druid, you can run only Kafka and Jupyter in the Docker Compose environment to complete the tutorials.
 
 In the same directory as `docker-compose.yaml` and `environment`, start the application:
