@@ -29,8 +29,7 @@ import org.apache.druid.java.util.metrics.AbstractMonitor;
 import java.util.Map;
 
 /**
- * Monitor service running status.
- * For Overlord/Coordinator, the dimension reported is service leader count.
+ * Reports a heartbeat for the service.
  */
 public class ServiceStatusMonitor extends AbstractMonitor
 {
@@ -49,7 +48,7 @@ public class ServiceStatusMonitor extends AbstractMonitor
       });
     }
 
-    emitter.emit(builder.build("druid/heartbeat", 1));
+    emitter.emit(builder.build("service/heartbeat", 1));
     return true;
   }
 }

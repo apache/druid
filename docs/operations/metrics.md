@@ -333,7 +333,7 @@ If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configurati
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`druid/heartbeat`| Report service health. For Overlord/Coordinator, the dimension is leader count. `ServiceStatusMonitor` must be enabled. |`heartbeatType`|1|
+| `service/heartbeat` | Metric indicating the service is up. `ServiceStatusMonitor` must be enabled. |`leader` on the Overlord and Coordinator.|1|
 
 ### Historical
 
