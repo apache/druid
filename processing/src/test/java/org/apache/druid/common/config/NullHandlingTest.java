@@ -26,7 +26,7 @@ import org.junit.Test;
 import static org.apache.druid.common.config.NullHandling.replaceWithDefault;
 import static org.junit.Assert.assertEquals;
 
-public class NullHandlingTest extends InitializedNullHandlingTest
+public final class NullHandlingTest extends InitializedNullHandlingTest
 {
   @Test
   public void test_defaultValueForClass_float()
