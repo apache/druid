@@ -231,6 +231,6 @@ For ARM-based devices, follow this setup to start Druid externally, while keepin
 ## Learn more
 
 See the following topics for more information:
-* [Jupyter Notebook tutorials](tutorial-jupyter-index.md) for the available Jupyter Notebook-based tutorials for Druid
-* [Tutorial: Run with Docker](docker.md) for running Druid from a Docker container
+* [Jupyter Notebook tutorials](./tutorial-jupyter-index.md) for the available Jupyter Notebook-based tutorials for Druid
+* [Tutorial: Run with Docker](./docker.md) for running Druid from a Docker container
 
