@@ -26,6 +26,7 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskLocation;
@@ -391,7 +392,8 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
                             {
                               retVal.setException(t);
                             }
-                          }
+                          },
+                          MoreExecutors.directExecutor()
                       ),
                   sleepTime,
                   TimeUnit.MILLISECONDS
@@ -568,7 +570,8 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
                 retVal.set(either.valueOrThrow());
               }
             }
-          }
+          },
+          MoreExecutors.directExecutor()
       );
 
       return retVal;

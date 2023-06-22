@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -198,7 +199,8 @@ public class ExecutorLifecycle
               throw new RuntimeException(e);
             }
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 

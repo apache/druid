@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.common.guava.FutureUtils;
@@ -258,7 +259,7 @@ public class IndexerWorkerClient implements WorkerClient
           {
             retVal.setException(t);
           }
-        }
+        }, MoreExecutors.directExecutor()
     );
 
     return retVal;

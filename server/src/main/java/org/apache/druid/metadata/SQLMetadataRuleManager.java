@@ -236,7 +236,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     try {
     
       ImmutableMap<String, List<Rule>> newRules = ImmutableMap.copyOf(
-          dbi.withHandle(
+          (Iterable<? extends Map.Entry<? extends String, ? extends List<Rule>>>) dbi.withHandle(
               handle -> handle.createQuery(
                   // Return latest version rule by dataSource
                   StringUtils.format(
