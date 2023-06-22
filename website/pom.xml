@@ -71,6 +71,17 @@
               <installDirectory>${project.build.directory}</installDirectory>
             </configuration>
           </execution>
+          <execution>
+            <id>spellcheck</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <phase>test</phase>
+            <configuration>
+              <arguments>run spellcheck</arguments>
+              <workingDirectory>${project.build.directory}</workingDirectory>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
