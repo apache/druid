@@ -19,39 +19,106 @@
 
 package org.apache.druid.server.coordinator.rules;
 
-import org.apache.druid.java.util.common.IAE;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.DruidServer;
+import org.apache.druid.common.config.Configs;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * LoadRules indicate the number of replicants a segment should have in a given tier.
  */
 public abstract class LoadRule implements Rule
 {
+  private final Map<String, Integer> tieredReplicants;
+  /**
+   * Used to determing the default value if tieredReplicants is null in {@link #handleNullTieredReplicants}.
+   */
+  private final boolean useDefaultTierForNull;
+
+  protected LoadRule(Map<String, Integer> tieredReplicants, Boolean useDefaultTierForNull)
+  {
+    this.useDefaultTierForNull = Configs.valueOrDefault(useDefaultTierForNull, true);
+    this.tieredReplicants = handleNullTieredReplicants(tieredReplicants, this.useDefaultTierForNull);
+    validateTieredReplicants(this.tieredReplicants);
+  }
+
+  @JsonProperty
+  public Map<String, Integer> getTieredReplicants()
+  {
+    return tieredReplicants;
+  }
+
+  @JsonProperty
+  public boolean useDefaultTierForNull()
+  {
+    return useDefaultTierForNull;
+  }
+
   @Override
   public void run(DataSegment segment, SegmentActionHandler handler)
   {
     handler.replicateSegment(segment, getTieredReplicants());
   }
 
-  protected static void validateTieredReplicants(final Map<String, Integer> tieredReplicants)
+  /**
+   * Returns the given {@code tieredReplicants} map unchanged if it is non-null (including empty).
+   * Returns the following default values if the given map is null.
+   * <ul>
+   * <li>If {@code useDefaultTierForNull} is true, returns a singleton map from {@link DruidServer#DEFAULT_TIER} to {@link DruidServer#DEFAULT_NUM_REPLICANTS}.</li>
+   * <li>If {@code useDefaultTierForNull} is false, returns an empty map. This causes segments to have a replication factor of 0 and not get assigned to any historical.</li>
+   * </ul>
+   */
+  private static Map<String, Integer> handleNullTieredReplicants(final Map<String, Integer> tieredReplicants, boolean useDefaultTierForNull)
   {
-    if (tieredReplicants.size() == 0) {
-      throw new IAE("A rule with empty tiered replicants is invalid");
+    if (useDefaultTierForNull) {
+      return Configs.valueOrDefault(tieredReplicants, ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS));
+    } else {
+      return Configs.valueOrDefault(tieredReplicants, ImmutableMap.of());
     }
+  }
+
+  private static void validateTieredReplicants(final Map<String, Integer> tieredReplicants)
+  {
     for (Map.Entry<String, Integer> entry : tieredReplicants.entrySet()) {
       if (entry.getValue() == null) {
-        throw new IAE("Replicant value cannot be empty");
+        throw InvalidInput.exception("Invalid number of replicas for tier [%s]. Value must not be null.", entry.getKey());
       }
       if (entry.getValue() < 0) {
-        throw new IAE("Replicant value [%d] is less than 0, which is not allowed", entry.getValue());
+        throw InvalidInput.exception("Invalid number of replicas for tier [%s]. Value [%d] must be positive.", entry.getKey(), entry.getValue());
       }
     }
   }
 
-  public abstract Map<String, Integer> getTieredReplicants();
+  public int getNumReplicants(String tier)
+  {
+    Integer retVal = getTieredReplicants().get(tier);
+    return (retVal == null) ? 0 : retVal;
+  }
 
-  public abstract int getNumReplicants(String tier);
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    LoadRule loadRule = (LoadRule) o;
+    return useDefaultTierForNull == loadRule.useDefaultTierForNull && Objects.equals(
+        tieredReplicants,
+        loadRule.tieredReplicants
+    );
+  }
 
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(tieredReplicants, useDefaultTierForNull);
+  }
 }
