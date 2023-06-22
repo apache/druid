@@ -67,7 +67,7 @@ Metrics may have additional dimensions beyond those listed above.
 |`init/serverview/time`|Time taken to initialize the broker server view. Useful to detect if brokers are taking too long to start.||Depends on the number of segments.|
 |`init/metadatacache/time`|Time taken to initialize the broker segment metadata cache. Useful to detect if brokers are taking too long to start||Depends on the number of segments.|
 |`cluster/serverview/synced`|Sync status of the broker server view with a process serving segments. Emitted only when using [HTTP-based server view](../configuration/index.md#segment-management).|`server`|1 for fully synced servers, 0 otherwise|
-|`cluster/serverview/unsynced/time`|Milliseconds since the last successful sync of the broker server view with a process serving segments. Emitted for unsynced servers only when using [HTTP-based server view](../configuration/index.md#segment-management).|`server`|Not emitted for synced servers.|
+|`cluster/serverview/unsynced/time`|Milliseconds since the last successful sync of the broker server view with a process serving segments. Emitted only for servers which are not synced when using [HTTP-based server view](../configuration/index.md#segment-management).|`server`|Not emitted for synced servers.|
 
 ### Historical
 
@@ -324,7 +324,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`metadata/kill/datasource/count`|Total number of datasource metadata that were automatically deleted from metadata store per each Coordinator kill datasource duty run (Note: datasource metadata only exists for datasource created from supervisor). This metric can help adjust `druid.coordinator.kill.datasource.durationToRetain` configuration based on whether more or less datasource metadata need to be deleted per cycle. Note that this metric is only emitted when `druid.coordinator.kill.datasource.on` is set to true.| |Varies|
 |`init/serverview/time`|Time taken to initialize the coordinator server view.||Depends on the number of segments|
 |`cluster/serverview/synced`|Sync status of the coordinator server view with a process serving segments. Emitted only when using [HTTP-based server view](../configuration/index.md#segment-management).|`server`|1 for fully synced servers, 0 otherwise|
-|`cluster/serverview/unsynced/time`|Milliseconds since the last successful sync of the coordinator server view with a process serving segments. Emitted for unsynced servers only when using [HTTP-based server view](../configuration/index.md#segment-management).|`server`|Not emitted for synced servers.|
+|`cluster/serverview/unsynced/time`|Milliseconds since the last successful sync of the coordinator server view with a process serving segments. Emitted only for servers which are not synced when using [HTTP-based server view](../configuration/index.md#segment-management).|`server`|Not emitted for synced servers.|
 
 If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configuration](../configuration/index.md#dynamic-configuration), then [log entries](../configuration/logging.md) for class `org.apache.druid.server.coordinator.duty.EmitClusterStatsAndMetrics` will have extra information on balancing decisions.
 
