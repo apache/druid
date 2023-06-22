@@ -28,6 +28,7 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.utils.CompressionUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -115,5 +116,36 @@ public class JsonInputFormatTest
         null
     );
     Assert.assertFalse(format.isKeepNullColumns());
+  }
+
+  @Test
+  public void test_getWeightedSize_withoutCompression()
+  {
+    final JsonInputFormat format = new JsonInputFormat(
+        new JSONPathSpec(true, null),
+        null,
+        false,
+        null,
+        null
+    );
+    final long unweightedSize = 100L;
+    Assert.assertEquals(unweightedSize, format.getWeightedSize("file.json", unweightedSize));
+  }
+
+  @Test
+  public void test_getWeightedSize_withGzCompression()
+  {
+    final JsonInputFormat format = new JsonInputFormat(
+        new JSONPathSpec(true, null),
+        null,
+        false,
+        null,
+        null
+    );
+    final long unweightedSize = 100L;
+    Assert.assertEquals(
+        unweightedSize * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR,
+        format.getWeightedSize("file.json.gz", unweightedSize)
+    );
   }
 }

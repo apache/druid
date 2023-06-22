@@ -333,7 +333,7 @@ Native join datasources have the following properties. All are required.
 |`left`|Left-hand datasource. Must be of type `table`, `join`, `lookup`, `query`, or `inline`. Placing another join as the left datasource allows you to join arbitrarily many datasources.|
 |`right`|Right-hand datasource. Must be of type `lookup`, `query`, or `inline`. Note that this is more rigid than what Druid SQL requires.|
 |`rightPrefix`|String prefix that will be applied to all columns from the right-hand datasource, to prevent them from colliding with columns from the left-hand datasource. Can be any string, so long as it is nonempty and is not be a prefix of the string `__time`. Any columns from the left-hand side that start with your `rightPrefix` will be shadowed. It is up to you to provide a prefix that will not shadow any important columns from the left side.|
-|`condition`|[Expression](../misc/math-expr.md) that must be an equality where one side is an expression of the left-hand side, and the other side is a simple column reference to the right-hand side. Note that this is more rigid than what Druid SQL requires: here, the right-hand reference must be a simple column reference; in SQL it can be an expression.|
+|`condition`|[Expression](math-expr.md) that must be an equality where one side is an expression of the left-hand side, and the other side is a simple column reference to the right-hand side. Note that this is more rigid than what Druid SQL requires: here, the right-hand reference must be a simple column reference; in SQL it can be an expression.|
 |`joinType`|`INNER` or `LEFT`.|
 
 #### Join performance

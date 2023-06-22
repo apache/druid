@@ -221,7 +221,7 @@ public class WorkerInputsTest
   {
     final StageDefinition stageDef =
         StageDefinition.builder(0)
-                       .inputs(new TestInputSpec(4_000_000_000L, 4_000_000_001L, 4_000_000_002L))
+                       .inputs(new TestInputSpec(200_000_000L, 200_000_001L, 200_000_002L))
                        .maxWorkerCount(4)
                        .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
                        .build(QUERY_ID);
@@ -236,8 +236,8 @@ public class WorkerInputsTest
 
     Assert.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
-                    .put(0, Collections.singletonList(new TestInputSlice(4_000_000_000L, 4_000_000_001L)))
-                    .put(1, Collections.singletonList(new TestInputSlice(4_000_000_002L)))
+                    .put(0, Collections.singletonList(new TestInputSlice(200_000_000L, 200_000_001L)))
+                    .put(1, Collections.singletonList(new TestInputSlice(200_000_002L)))
                     .build(),
         inputs.assignmentsMap()
     );
@@ -395,7 +395,7 @@ public class WorkerInputsTest
   @Test
   public void test_auto_shouldUseLeastWorkersPossible()
   {
-    TestInputSpec inputSpecToSplit = new TestInputSpec(1_000_000_000L, 1_000_000_000L, 1_000_000_000L);
+    TestInputSpec inputSpecToSplit = new TestInputSpec(100_000_000L, 100_000_000L, 100_000_000L);
     final StageDefinition stageDef =
         StageDefinition.builder(0)
                        .inputs(inputSpecToSplit)
@@ -417,7 +417,7 @@ public class WorkerInputsTest
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(
                         0,
-                        Collections.singletonList(new TestInputSlice(1_000_000_000L, 1_000_000_000L, 1_000_000_000L))
+                        Collections.singletonList(new TestInputSlice(100_000_000L, 100_000_000L, 100_000_000L))
                     )
                     .build(),
         inputs.assignmentsMap()

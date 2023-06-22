@@ -1,6 +1,7 @@
 ---
 id: cluster
-title: "Clustered deployment"
+title: Clustered deployment
+sidebar_label: Clustered deployment
 ---
 
 <!--

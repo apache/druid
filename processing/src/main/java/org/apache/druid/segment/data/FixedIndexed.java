@@ -214,19 +214,4 @@ public class FixedIndexed<T> implements Indexed<T>
     inspector.visit("typeStrategy", typeStrategy);
     inspector.visit("comparator", comparator);
   }
-
-  @Override
-  public String toString()
-  {
-    StringBuilder sb = new StringBuilder("FixedIndexed[");
-    if (size() > 0) {
-      for (int i = 0; i < size(); i++) {
-        T value = get(i);
-        sb.append(value).append(',').append(' ');
-      }
-      sb.setLength(sb.length() - 2);
-    }
-    sb.append(']');
-    return sb.toString();
-  }
 }

@@ -314,6 +314,10 @@ public class ForkingTaskRunner
                             MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.TASK_TYPE,
                             task.getType()
                         );
+                        command.addSystemProperty(
+                            MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.GROUP_ID,
+                            task.getGroupId()
+                        );
 
 
                         command.addSystemProperty("druid.host", childHost);

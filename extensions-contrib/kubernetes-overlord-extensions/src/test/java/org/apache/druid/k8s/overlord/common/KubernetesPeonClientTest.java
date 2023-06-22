@@ -27,6 +27,7 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientTimeoutException;
+import io.fabric8.kubernetes.client.dsl.LogWatch;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
 import org.apache.druid.java.util.common.StringUtils;
@@ -493,5 +494,79 @@ public class KubernetesPeonClientTest
         () -> instance.getPeonPodWithRetries(clientApi.getClient(), new K8sTaskId(ID), 1, 1),
         StringUtils.format("K8s pod with label: job-name=%s not found", ID)
     );
+  }
+
+  @Test
+  void test_getPeonLogsWatcher_withJob_returnsWatchLogInOptional()
+  {
+    server.expect().get()
+        .withPath("/apis/batch/v1/namespaces/namespace/jobs/id")
+        .andReturn(HttpURLConnection.HTTP_OK, new JobBuilder()
+            .withNewMetadata()
+            .withName(JOB_NAME)
+            .withUid("uid")
+            .endMetadata()
+            .withNewSpec()
+            .withNewTemplate()
+            .withNewSpec()
+            .addNewContainer()
+            .withName("main")
+            .endContainer()
+            .endSpec()
+            .endTemplate()
+            .endSpec()
+            .build()
+        ).once();
+
+    server.expect().get()
+        .withPath("/api/v1/namespaces/namespace/pods?labelSelector=controller-uid%3Duid")
+        .andReturn(HttpURLConnection.HTTP_OK, new PodListBuilder()
+            .addNewItem()
+            .withNewMetadata()
+            .withName(POD_NAME)
+            .addNewOwnerReference()
+            .withUid("uid")
+            .withController(true)
+            .endOwnerReference()
+            .endMetadata()
+            .withNewSpec()
+            .addNewContainer()
+            .withName("main")
+            .endContainer()
+            .endSpec()
+            .endItem()
+            .build()
+        ).once();
+
+    server.expect().get()
+        .withPath("/api/v1/namespaces/namespace/pods/id/log?pretty=false&container=main")
+        .andReturn(HttpURLConnection.HTTP_OK, "data")
+        .once();
+
+    Optional<LogWatch> maybeLogWatch = instance.getPeonLogWatcher(new K8sTaskId(ID));
+    Assertions.assertTrue(maybeLogWatch.isPresent());
+  }
+
+
+  @Test
+  void test_getPeonLogsWatcher_withoutJob_returnsEmptyOptional()
+  {
+    Optional<LogWatch> maybeLogWatch = instance.getPeonLogWatcher(new K8sTaskId(ID));
+    Assertions.assertFalse(maybeLogWatch.isPresent());
+  }
+
+  @Test
+  void test_getPeonLogWatcher_withJobWithoutPod_returnsEmptyOptional()
+  {
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(JOB_NAME)
+        .endMetadata()
+        .build();
+
+    client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
+
+    Optional<LogWatch> maybeLogWatch = instance.getPeonLogWatcher(new K8sTaskId(ID));
+    Assertions.assertFalse(maybeLogWatch.isPresent());
   }
 }

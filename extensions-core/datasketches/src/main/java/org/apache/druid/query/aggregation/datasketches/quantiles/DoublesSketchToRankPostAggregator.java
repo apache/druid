@@ -83,7 +83,7 @@ public class DoublesSketchToRankPostAggregator implements PostAggregator
   public Object compute(final Map<String, Object> combinedAggregators)
   {
     final DoublesSketch sketch = (DoublesSketch) field.compute(combinedAggregators);
-    return sketch.getRank(value);
+    return sketch.isEmpty() ? Double.NaN : sketch.getRank(value);
   }
 
   @Override
