@@ -285,15 +285,10 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
 
   public SegmentMetadataCache buildSchemaMarkAndTableLatch() throws InterruptedException
   {
-    return buildSchemaMarkAndTableLatch(SEGMENT_CACHE_CONFIG_DEFAULT, new NoopServiceEmitter());
+    return buildSchemaMarkAndTableLatch(SEGMENT_CACHE_CONFIG_DEFAULT);
   }
 
   public SegmentMetadataCache buildSchemaMarkAndTableLatch(SegmentMetadataCacheConfig config) throws InterruptedException
-  {
-    return buildSchemaMarkAndTableLatch(config, new NoopServiceEmitter());
-  }
-
-  public SegmentMetadataCache buildSchemaMarkAndTableLatch(SegmentMetadataCacheConfig config, ServiceEmitter serviceEmitter) throws InterruptedException
   {
     Preconditions.checkState(runningSchema == null);
     runningSchema = new SegmentMetadataCache(
@@ -307,7 +302,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         config,
         new NoopEscalator(),
         new BrokerInternalQueryConfig(),
-        serviceEmitter
+        new NoopServiceEmitter()
     )
     {
       @Override
@@ -1457,22 +1452,49 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   }
 
   @Test
-  public void testRefreshShouldEmitMetrics() throws InterruptedException
+  public void testRefreshShouldEmitMetrics() throws InterruptedException, IOException
   {
+    String datasource = "xyz";
+    CountDownLatch addSegmentLatch = new CountDownLatch(2);
     StubServiceEmitter emitter = new StubServiceEmitter("broker", "host");
-    buildSchemaMarkAndTableLatch(SEGMENT_CACHE_CONFIG_DEFAULT, emitter);
+    SegmentMetadataCache schema = new SegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        segmentManager,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig(),
+        emitter
+    )
+    {
+      @Override
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.addSegment(server, segment);
+        if (datasource.equals(segment.getDataSource())) {
+          addSegmentLatch.countDown();
+        }
+      }
 
-    Map<String, Set<Object>> emittedEventsMap =
-        emitter.getEvents()
-               .stream()
-               .map(ServiceMetricEvent.class::cast)
-               .collect(Collectors.groupingBy(
-                   ServiceMetricEvent::getMetric,
-                   Collectors.mapping(sme -> sme.getUserDims().get(DruidMetrics.DATASOURCE), Collectors.toSet())
-               ));
-    Assert.assertTrue(emittedEventsMap.containsKey("init/metadatacache/time"));
-    Assert.assertTrue(emittedEventsMap.get("segment/metadatacache/refresh/count").size() > 0);
-    Assert.assertTrue(emittedEventsMap.get("segment/metadatacache/refresh/time").size() > 0);
+      @Override
+      void removeSegment(final DataSegment segment)
+      {
+        super.removeSegment(segment);
+      }
+    };
+
+    List<DataSegment> segments = ImmutableList.of(
+        newSegment(datasource, 1),
+        newSegment(datasource, 2)
+    );
+    serverView.addSegment(segments.get(0), ServerType.HISTORICAL);
+    serverView.addSegment(segments.get(1), ServerType.REALTIME);
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(datasource));
+
+    emitter.verifyEmitted("segment/metadatacache/refresh/time", ImmutableMap.of(DruidMetrics.DATASOURCE, datasource), 1);
+    emitter.verifyEmitted("segment/metadatacache/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, datasource), 1);
   }
 
   private static DataSegment newSegment(String datasource, int partitionId)

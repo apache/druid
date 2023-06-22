@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Interner;
@@ -709,7 +710,7 @@ public class SegmentMetadataCache
   private Set<SegmentId> refreshSegmentsForDataSource(final String dataSource, final Set<SegmentId> segments)
       throws IOException
   {
-    final long startTimeNanos = System.nanoTime();
+    final Stopwatch stopwatch = Stopwatch.createStarted();
 
     if (!segments.stream().allMatch(segmentId -> segmentId.getDataSource().equals(dataSource))) {
       // Sanity check. We definitely expect this to pass.
@@ -790,7 +791,8 @@ public class SegmentMetadataCache
       yielder.close();
     }
 
-    long refreshDurationMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTimeNanos);
+    long refreshDurationMillis = stopwatch.elapsed(TimeUnit.MILLISECONDS);
+
     emitter.emit(builder.build("segment/metadatacache/refresh/time", refreshDurationMillis));
 
     log.debug(
