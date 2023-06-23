@@ -23,8 +23,6 @@ sidebar_label: Tasks
   ~ under the License.
   -->
 
-<style> get { color: blue; font-weight: bold } post { color: green; font-weight: bold } </style>
-
 This document describes the API endpoints for task retrieval, submission, and deletion for Apache Druid.
 
 ## Tasks
@@ -32,15 +30,15 @@ This document describes the API endpoints for task retrieval, submission, and de
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
 as in `2016-06-27_2016-06-28`.
 
-### Get a list of tasks
+### Get an array of tasks
 
 #### URL
-<get>`GET`</get> `/druid/indexer/v1/tasks`
+<code class="getAPI">GET</code> `/druid/indexer/v1/tasks`
 
 Retrieve list of tasks. 
 
 #### Query parameters
-|Query Parameter | Datatype |Description |
+|Query Parameter|Datatype|Description|
 |---|---|---|
 |`state`|String|Filter list of tasks by task state, valid options are `running`, `complete`, `waiting`, and `pending`.|
 | `datasource`|String| Return tasks filtered by Druid datasource.|
@@ -149,10 +147,10 @@ print(response.text)
 ]</code></pre>
 </details>
 
-### Get a list of complete tasks
+### Get an array of complete tasks
 
 #### URL
-<get>`GET`</get> `/druid/indexer/v1/completeTasks`
+<code class="getAPI">GET</code> `/druid/indexer/v1/completeTasks`
 
 Retrieve list of complete tasks. Equivalent to `/druid/indexer/v1/tasks?state=complete`.
 
@@ -233,10 +231,10 @@ print(response.text)
 ]</code></pre>
 </details>
 
-### Get a list of running tasks
+### Get an array of running tasks
 
 #### URL
-<get>`GET`</get> `/druid/indexer/v1/runningTasks`
+<code class="getAPI">GET</code> `/druid/indexer/v1/runningTasks`
 
 Retrieve a list of running tasks. Equivalent to `/druid/indexer/v1/tasks?state=running`.
 
@@ -296,10 +294,10 @@ print(response.text)
 ]</code></pre>
 </details>
 
-### Get a list of waiting tasks
+### Get an array of waiting tasks
 
 #### URL
-<get>`GET`</get> `/druid/indexer/v1/waitingTasks`
+<code class="getAPI">GET</code> `/druid/indexer/v1/waitingTasks`
 
 Retrieve list of waiting tasks. Equivalent to `/druid/indexer/v1/tasks?state=waiting`.
 
@@ -340,20 +338,126 @@ print(response.text)
   <pre><code>[]</code></pre>
 </details>
 
-### Get a list of pending tasks
+### Get an array of pending tasks
 
 #### URL
 
-`GET /druid/indexer/v1/pendingTasks`
+<code class="getAPI">GET</code> `/druid/indexer/v1/pendingTasks`
 
 Retrieve list of pending tasks. Equivalent to `/druid/indexer/v1/tasks?state=pending`.
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully retrieved list of pending tasks* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl "{domain}/druid/indexer/v1/pendingTasks"
+```
+<!--Python-->
+```python
+import requests
+
+url = "{domain}/druid/indexer/v1/pendingTasks"
+
+response = requests.get(url)
+
+print(response.text)
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+<details>
+  <summary>Toggle to show sample response</summary>
+  <pre><code>[
+    {
+        "id": "query-7b37c315-50a0-4b68-aaa8-b1ef1f060e67",
+        "groupId": "query-7b37c315-50a0-4b68-aaa8-b1ef1f060e67",
+        "type": "query_controller",
+        "createdTime": "2023-06-23T19:53:06.037Z",
+        "queueInsertionTime": "2023-06-23T19:53:06.037Z",
+        "statusCode": "RUNNING",
+        "status": "RUNNING",
+        "runnerStatusCode": "PENDING",
+        "duration": -1,
+        "location": {
+            "host": null,
+            "port": -1,
+            "tlsPort": -1
+        },
+        "dataSource": "wikipedia_api",
+        "errorMsg": null
+    },
+    {
+        "id": "query-544f0c41-f81d-4504-b98b-f9ab8b36ef36",
+        "groupId": "query-544f0c41-f81d-4504-b98b-f9ab8b36ef36",
+        "type": "query_controller",
+        "createdTime": "2023-06-23T19:53:06.616Z",
+        "queueInsertionTime": "2023-06-23T19:53:06.616Z",
+        "statusCode": "RUNNING",
+        "status": "RUNNING",
+        "runnerStatusCode": "PENDING",
+        "duration": -1,
+        "location": {
+            "host": null,
+            "port": -1,
+            "tlsPort": -1
+        },
+        "dataSource": "wikipedia_api",
+        "errorMsg": null
+    }
+]</code></pre>
+</details>
 
 ### Get task payload
 
 #### URL
-`GET /druid/indexer/v1/task/{taskId}`
+<code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}`
 
 Retrieve the 'payload' of a task.
+#### Responses 
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully retrieved payload of task* 
+<!--404 NOT FOUND-->
+<br/>
+*Cannot find task with id* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl "{domain}/druid/indexer/v1/task/query-32663269-ead9-405a-8eb6-0817a952ef47"
+```
+<!--Python-->
+```python
+import requests
+
+url = "{domain}/druid/indexer/v1/task/query-32663269-ead9-405a-8eb6-0817a952ef47"
+
+response = requests.get(url)
+
+print(response.text)
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
 
 #### Sample response
 
@@ -706,9 +810,41 @@ Retrieve the 'payload' of a task.
 ### Get task status
 
 #### URL
-`GET /druid/indexer/v1/task/{taskId}/status`
+<code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/status`
 
 Retrieve the status of a task.
+
+#### Responses 
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully retrieved task status* 
+<!--404 NOT FOUND-->
+<br/>
+*Cannot find task with id* 
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl "{domain}/druid/indexer/v1/task/query-32663269-ead9-405a-8eb6-0817a952ef47/status"
+```
+<!--Python-->
+```python
+import requests
+
+url = "{domain}/druid/indexer/v1/task/query-32663269-ead9-405a-8eb6-0817a952ef47/status"
+
+response = requests.get(url)
+
+print(response.text)
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
 
 #### Sample response
 <details>
@@ -725,27 +861,81 @@ Retrieve the status of a task.
   'duration': -1,
   'location': {'host': 'localhost', 'port': 8100, 'tlsPort': -1},
   'dataSource': 'wikipedia_api',
-  'errorMsg': None}}</code></pre>
+  'errorMsg': None}
+}</code></pre>
 </details>
 
 ### Get task segments
 
 #### URL
 
-`GET /druid/indexer/v1/task/{taskId}/segments`
+<code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/segments`
 
 > This API is deprecated and will be removed in future releases.
 
 Retrieve information about the segments of a task.
 
+#### Responses
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully retrieved task segments* 
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample request
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl "{domain}/druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports"
+```
+<!--HTTP-->
+```HTTP
+GET /druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports HTTP/1.1
+Host: {domain}
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+<details>
+  <summary>Toggle to show sample response</summary>
+  <pre><code>[]</code></pre>
+</details>
+
+
 ### Get task completion report
 
 #### URL
 
-`GET /druid/indexer/v1/task/{taskId}/reports`
+<code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/reports`
 
 Retrieve a [task completion report](../ingestion/tasks.md#task-reports) for a task. Only works for completed tasks.
 
+#### Responses
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully retrieved task report* 
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl "{domain}/druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports"
+```
+<!--HTTP-->
+```HTTP
+GET /druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports HTTP/1.1
+Host: {domain}
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
 <details>
   <summary>Toggle to show sample response</summary>
   <pre><code>{
@@ -1484,22 +1674,218 @@ Retrieve a [task completion report](../ingestion/tasks.md#task-reports) for a ta
 
 #### URL
 
-`POST /druid/indexer/v1/task`
+<code class="postAPI">POST</code> `/druid/indexer/v1/task`
 
 Endpoint for submitting tasks and supervisor specs to the Overlord. Returns the taskId of the submitted task.
 
-### Sample response
+#### Request body
+<details>
+  <summary>Toggle to show sample request body</summary>
+  <pre><code>{
+  "type" : "index_parallel",
+  "spec" : {
+    "dataSchema" : {
+      "dataSource" : "wikipedia_auto",
+      "timestampSpec": {
+        "column": "time",
+        "format": "iso"
+      },
+      "dimensionsSpec" : {
+        "useSchemaDiscovery": true
+      },
+      "metricsSpec" : [],
+      "granularitySpec" : {
+        "type" : "uniform",
+        "segmentGranularity" : "day",
+        "queryGranularity" : "none",
+        "intervals" : ["2015-09-12/2015-09-13"],
+        "rollup" : false
+      }
+    },
+    "ioConfig" : {
+      "type" : "index_parallel",
+      "inputSource" : {
+        "type" : "local",
+        "baseDir" : "quickstart/tutorial/",
+        "filter" : "wikiticker-2015-09-12-sampled.json.gz"
+      },
+      "inputFormat" : {
+        "type" : "json"
+      },
+      "appendToExisting" : false
+    },
+    "tuningConfig" : {
+      "type" : "index_parallel",
+      "maxRowsPerSegment" : 5000000,
+      "maxRowsInMemory" : 25000
+    }
+  }
+}</code></pre>
+</details>
+
+#### Responses
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully submitted task* 
+<!--400 BAD REQUEST-->
+<br/>
+*Missing information in query* 
+<!--415 UNSUPPORTED MEDIA TYPE-->
+<br/>
+*Incorrect request body media type* 
+<!--500 Server Error-->
+<br/>
+*Unexpected token or characters in request body* 
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl "{domain}/druid/indexer/v1/task" \
+--header "Content-Type: application/json" \
+--data "{
+  \"type\" : \"index_parallel\",
+  \"spec\" : {
+    \"dataSchema\" : {
+      \"dataSource\" : \"wikipedia_auto\",
+      \"timestampSpec\": {
+        \"column\": \"time\",
+        \"format\": \"iso\"
+      },
+      \"dimensionsSpec\" : {
+        \"useSchemaDiscovery\": true
+      },
+      \"metricsSpec\" : [],
+      \"granularitySpec\" : {
+        \"type\" : \"uniform\",
+        \"segmentGranularity\" : \"day\",
+        \"queryGranularity\" : \"none\",
+        \"intervals\" : [\"2015-09-12/2015-09-13\"],
+        \"rollup\" : false
+      }
+    },
+    \"ioConfig\" : {
+      \"type\" : \"index_parallel\",
+      \"inputSource\" : {
+        \"type\" : \"local\",
+        \"baseDir\" : \"quickstart/tutorial/\",
+        \"filter\" : \"wikiticker-2015-09-12-sampled.json.gz\"
+      },
+      \"inputFormat\" : {
+        \"type\" : \"json\"
+      },
+      \"appendToExisting\" : false
+    },
+    \"tuningConfig\" : {
+      \"type\" : \"index_parallel\",
+      \"maxRowsPerSegment\" : 5000000,
+      \"maxRowsInMemory\" : 25000
+    }
+  }
+}"
+```
+<!--HTTP-->
+```HTTP
+POST /druid/indexer/v1/task HTTP/1.1
+Host: {domain}
+Content-Type: application/json
+Content-Length: 952
+
+{
+  "type" : "index_parallel",
+  "spec" : {
+    "dataSchema" : {
+      "dataSource" : "wikipedia_auto",
+      "timestampSpec": {
+        "column": "time",
+        "format": "iso"
+      },
+      "dimensionsSpec" : {
+        "useSchemaDiscovery": true
+      },
+      "metricsSpec" : [],
+      "granularitySpec" : {
+        "type" : "uniform",
+        "segmentGranularity" : "day",
+        "queryGranularity" : "none",
+        "intervals" : ["2015-09-12/2015-09-13"],
+        "rollup" : false
+      }
+    },
+    "ioConfig" : {
+      "type" : "index_parallel",
+      "inputSource" : {
+        "type" : "local",
+        "baseDir" : "quickstart/tutorial/",
+        "filter" : "wikiticker-2015-09-12-sampled.json.gz"
+      },
+      "inputFormat" : {
+        "type" : "json"
+      },
+      "appendToExisting" : false
+    },
+    "tuningConfig" : {
+      "type" : "index_parallel",
+      "maxRowsPerSegment" : 5000000,
+      "maxRowsInMemory" : 25000
+    }
+  }
+}
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
 <details>
   <summary>Toggle to show sample response</summary>
-  <pre><code>{'taskId': 'query-577a83dd-a14e-4380-bd01-c942b781236b', 'state': 'RUNNING'}</code></pre>
+  <pre><code>{
+    "task": "index_parallel_wikipedia_odofhkle_2023-06-23T21:07:28.226Z"
+}</code></pre>
 </details>
 
 ### Shut down a task
 
 #### URL
-`POST /druid/indexer/v1/task/{taskId}/shutdown`
+<code class="postAPI">POST</code> `/druid/indexer/v1/task/{taskId}/shutdown`
 
-Shuts down a task.
+Shuts down a task. Returns a JSON object with the id of the task that was shutdown successfully.
+
+#### Responses
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully shut down task* 
+<!--404 NOT FOUND-->
+<br/>
+*Cannot find task with id* 
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl "{domain}/druid/indexer/v1/task/query-52as 8aafe-7265-4427-89fe-dc51275cc470/shutdown" \
+--header "Content-Type: application/json" \
+--data "[\"query-52a8aafe-7265-4427-89fe-dc51275cc470\"]"
+```
+<!--HTTP-->
+```HTTP
+POST /druid/indexer/v1/task/query-52as 8aafe-7265-4427-89fe-dc51275cc470/shutdown HTTP/1.1
+Host: {domain}
+Content-Type: application/json
+Content-Length: 46
+
+["query-52a8aafe-7265-4427-89fe-dc51275cc470"]
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
 <details>
@@ -1507,26 +1893,84 @@ Shuts down a task.
   <pre><code>{'task': 'query-577a83dd-a14e-4380-bd01-c942b781236b'}</code></pre>
 </details>
 
+### Shut down all tasks for a datasource
 
-`POST /druid/indexer/v1/datasources/{dataSource}/shutdownAllTasks`
+#### URL
+<code class="postAPI">POST</code> `/druid/indexer/v1/datasources/{dataSource}/shutdownAllTasks`
 
 Shuts down all tasks for a dataSource.
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully shut down tasks* 
+<!--404 NOT FOUND-->
+<br/>
+*Error or datasource does not have a running task* 
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl --request POST "{domain}/druid/indexer/v1/datasources/wikipedia_auto/shutdownAllTasks"
+```
+<!--HTTP-->
+```HTTP
+POST /druid/indexer/v1/datasources/wikipedia_auto/shutdownAllTasks HTTP/1.1
+Host: {domain}
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+<details>
+  <summary>Toggle to show sample response</summary>
+  <pre><code>{
+    "dataSource": "wikipedia_api"
+}</code></pre>
+</details>
+
 
 ### Retrieve status objects for tasks
 
 #### URL
-`POST /druid/indexer/v1/taskStatus`
+<code class="postAPI">POST</code> `/druid/indexer/v1/taskStatus`
 
 Retrieve list of task status objects for list of task id strings in request body.
 
 #### Request body
 
-An array of task id strings.
+A JSON object with an array of task id strings.
 
 <details>
   <summary>Toggle to show sample request body</summary>
   <pre><code>["query-52a8aafe-7265-4427-89fe-dc51275cc470"]</code></pre>
 </details>
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl "{domain}/druid/indexer/v1/taskStatus"
+```
+<!--HTTP-->
+```HTTP
+POST /druid/indexer/v1/taskStatus HTTP/1.1
+Host: {domain}
+Content-Type: application/json
+Content-Length: 46
+
+["query-52a8aafe-7265-4427-89fe-dc51275cc470"]
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
 
 
 #### Sample response
@@ -1547,11 +1991,46 @@ An array of task id strings.
 }</code></pre>
 </details>
 
+### Clean up pending segments for a data source.
 
+#### URL
 
-`DELETE /druid/indexer/v1/pendingSegments/{dataSource}`
+<code class="deleteAPI">DELETE</code> `/druid/indexer/v1/pendingSegments/{dataSource}`
 
 Manually clean up pending segments table in metadata storage for `datasource`. Returns a JSON object response with
 `numDeleted` and count of rows deleted from the pending segments table. This API is used by the
 `druid.coordinator.kill.pendingSegments.on` [coordinator setting](../configuration/index.md#coordinator-operation)
 which automates this operation to perform periodically.
+
+#### Responses
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully deleted pending segments* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl --request DELETE "{domain}/druid/indexer/v1/pendingSegments/wikipedia_api"
+```
+<!--HTTP-->
+```HTTP
+DELETE /druid/indexer/v1/pendingSegments/wikipedia_api HTTP/1.1
+Host: {domain}
+```
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+<details>
+  <summary>Toggle to show sample response</summary>
+  <pre><code>{
+    "numDeleted": 2
+}</code></pre>
+</details>
