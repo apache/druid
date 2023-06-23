@@ -1177,6 +1177,14 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     // Cannot vectorize due to usage of expressions.
     cannotVectorize();
 
+    final String expectedResult;
+
+    if (NullHandling.sqlCompatible()) {
+      expectedResult = "[\"\",\"10.1\",\"2\",\"1\",\"def\",\"abc\"]";
+    } else {
+      expectedResult = "[\"10.1\",\"2\",\"1\",\"def\",\"abc\"]";
+    }
+
     testBuilder()
         .sql("SELECT STRING_TO_MV(STRING_AGG(dim1, ','), ',') AS mv, COUNT(*) cnt FROM druid.numfoo")
         .expectedQuery(
@@ -1209,16 +1217,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         )
-        .expectedResults(
-            ImmutableList.of(
-                new Object[]{
-                    NullHandling.sqlCompatible()
-                    ? "[\"\",\"10.1\",\"2\",\"1\",\"def\",\"abc\"]"
-                    : "[\"10.1\",\"2\",\"1\",\"def\",\"abc\"]",
-                    6L
-                }
-            )
-        )
+        .expectedResults(ImmutableList.of(new Object[]{expectedResult, 6L}))
         .run();
   }
 
