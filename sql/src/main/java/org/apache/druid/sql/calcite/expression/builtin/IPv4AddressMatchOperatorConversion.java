@@ -42,7 +42,13 @@ public class IPv4AddressMatchOperatorConversion extends DirectOperatorConversion
 
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(IPv4AddressMatchExprMacro.FN_NAME))
-      .operandTypeChecker(OperandTypes.sequence("(expr,string)", ADDRESS_OPERAND, SUBNET_OPERAND))
+      .operandTypeChecker(
+          OperandTypes.sequence(
+              "'" + StringUtils.toUpperCase(IPv4AddressMatchExprMacro.FN_NAME) + "(expr, string)'",
+              ADDRESS_OPERAND,
+              SUBNET_OPERAND
+          )
+      )
       .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
       .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
       .build();

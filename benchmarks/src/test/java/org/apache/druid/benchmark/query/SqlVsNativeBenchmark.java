@@ -170,7 +170,7 @@ public class SqlVsNativeBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void queryPlanner(Blackhole blackhole) throws Exception
+  public void queryPlanner(Blackhole blackhole)
   {
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sqlQuery, Collections.emptyMap())) {
       final PlannerResult plannerResult = planner.plan();

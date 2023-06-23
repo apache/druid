@@ -428,7 +428,7 @@ public class QuerySchedulerTest
     final Properties properties = new Properties();
     properties.setProperty(propertyPrefix + ".numThreads", "10");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
-    final QueryScheduler scheduler = provider.get().get().get();
+    final QueryScheduler scheduler = provider.get().get();
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
     Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
@@ -449,7 +449,7 @@ public class QuerySchedulerTest
     properties.setProperty(propertyPrefix + ".laning.maxLowPercent", "20");
 
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
-    final QueryScheduler scheduler = provider.get().get().get();
+    final QueryScheduler scheduler = provider.get().get();
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
     Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
@@ -468,7 +468,7 @@ public class QuerySchedulerTest
     final Properties properties = new Properties();
     properties.setProperty(propertyPrefix + ".laning.strategy", "hilo");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
-    Throwable t = Assert.assertThrows(ProvisionException.class, () -> provider.get().get().get());
+    Throwable t = Assert.assertThrows(ProvisionException.class, () -> provider.get().get());
     Assert.assertEquals(
         "Unable to provision, see the following errors:\n"
         + "\n"
@@ -497,7 +497,7 @@ public class QuerySchedulerTest
     properties.setProperty(propertyPrefix + ".prioritization.adjustment", "5");
     properties.setProperty(propertyPrefix + ".prioritization.segmentCountThreshold", "1");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
-    final QueryScheduler scheduler = provider.get().get().get();
+    final QueryScheduler scheduler = provider.get().get();
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity(HiLoQueryLaningStrategy.LOW));
     Assert.assertEquals(QueryScheduler.UNAVAILABLE, scheduler.getLaneAvailableCapacity("non-existent"));
@@ -525,7 +525,7 @@ public class QuerySchedulerTest
     final Properties properties = new Properties();
     properties.setProperty(propertyPrefix + ".prioritization.strategy", "threshold");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
-    Throwable t = Assert.assertThrows(ProvisionException.class, () -> provider.get().get().get());
+    Throwable t = Assert.assertThrows(ProvisionException.class, () -> provider.get().get());
     Assert.assertEquals(
         "Unable to provision, see the following errors:\n"
         + "\n"
@@ -553,7 +553,7 @@ public class QuerySchedulerTest
     properties.put(propertyPrefix + ".laning.lanes.one", "1");
     properties.put(propertyPrefix + ".laning.lanes.two", "2");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
-    final QueryScheduler scheduler = provider.get().get().get();
+    final QueryScheduler scheduler = provider.get().get();
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(1, scheduler.getLaneAvailableCapacity("one"));
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity("two"));
@@ -576,7 +576,7 @@ public class QuerySchedulerTest
     properties.put(propertyPrefix + ".laning.lanes.one", "1");
     properties.put(propertyPrefix + ".laning.lanes.twenty", "20");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
-    final QueryScheduler scheduler = provider.get().get().get();
+    final QueryScheduler scheduler = provider.get().get();
     Assert.assertEquals(10, scheduler.getTotalAvailableCapacity());
     Assert.assertEquals(1, scheduler.getLaneAvailableCapacity("one"));
     Assert.assertEquals(2, scheduler.getLaneAvailableCapacity("twenty"));

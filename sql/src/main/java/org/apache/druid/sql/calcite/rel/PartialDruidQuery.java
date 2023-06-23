@@ -260,26 +260,48 @@ public class PartialDruidQuery
     if (selectProject == null) {
       theProject = newSelectProject;
     } else {
-      final List<RexNode> newProjectRexNodes = RelOptUtil.pushPastProject(
-          newSelectProject.getProjects(),
-          selectProject
-      );
-
-      if (RexUtil.isIdentity(newProjectRexNodes, selectProject.getInput().getRowType())) {
-        // The projection is gone.
-        theProject = null;
-      } else {
-        final RelBuilder relBuilder = builderSupplier.get();
-        relBuilder.push(selectProject.getInput());
-        relBuilder.project(
-            newProjectRexNodes,
-            newSelectProject.getRowType().getFieldNames(),
-            true
-        );
-        theProject = (Project) relBuilder.build();
-      }
+      return mergeProject(newSelectProject);
     }
 
+    return new PartialDruidQuery(
+        builderSupplier,
+        scan,
+        whereFilter,
+        theProject,
+        aggregate,
+        aggregateProject,
+        havingFilter,
+        sort,
+        sortProject,
+        window,
+        windowProject
+    );
+  }
+
+  public PartialDruidQuery mergeProject(Project newSelectProject)
+  {
+    if (stage() != Stage.SELECT_PROJECT) {
+      throw new ISE("Expected partial query state to be [%s], but found [%s]", Stage.SELECT_PROJECT, stage());
+    }
+    Project theProject;
+    final List<RexNode> newProjectRexNodes = RelOptUtil.pushPastProject(
+        newSelectProject.getProjects(),
+        selectProject
+    );
+
+    if (RexUtil.isIdentity(newProjectRexNodes, selectProject.getInput().getRowType())) {
+      // The projection is gone.
+      theProject = null;
+    } else {
+      final RelBuilder relBuilder = builderSupplier.get();
+      relBuilder.push(selectProject.getInput());
+      relBuilder.project(
+          newProjectRexNodes,
+          newSelectProject.getRowType().getFieldNames(),
+          true
+      );
+      theProject = (Project) relBuilder.build();
+    }
     return new PartialDruidQuery(
         builderSupplier,
         scan,

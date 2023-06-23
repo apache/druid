@@ -326,7 +326,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
-    if (fields.size() == 1 && rootFieldPath.equals(fields.get(0))) {
+    if (!logicalType.equals(ColumnType.NESTED_DATA) && fields.size() == 1 && rootFieldPath.equals(fields.get(0))) {
       return makeColumnValueSelector(
           ImmutableList.of(),
           offset
@@ -366,7 +366,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
   {
-    if (fields.size() == 1 && rootFieldPath.equals(fields.get(0))) {
+    if (!logicalType.equals(ColumnType.NESTED_DATA) && fields.size() == 1 && rootFieldPath.equals(fields.get(0))) {
       return makeVectorObjectSelector(
           Collections.emptyList(),
           offset
@@ -437,7 +437,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
   @Override
   public VectorValueSelector makeVectorValueSelector(ReadableVectorOffset offset)
   {
-    if (fields.size() == 1 && rootFieldPath.equals(fields.get(0))) {
+    if (!logicalType.equals(ColumnType.NESTED_DATA) && fields.size() == 1 && rootFieldPath.equals(fields.get(0))) {
       return makeVectorValueSelector(
           Collections.emptyList(),
           offset

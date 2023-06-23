@@ -54,8 +54,8 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
   private readonly log = React.createRef<HTMLTextAreaElement>();
   private interval: number | undefined;
 
-  constructor(props: ShowLogProps, context: any) {
-    super(props, context);
+  constructor(props: ShowLogProps) {
+    super(props);
     this.state = {
       logState: QueryState.INIT,
       tail: true,

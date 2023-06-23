@@ -17,6 +17,7 @@
 # under the License.
 #
 
+# If you are making a change in load list below, make the necessary changes in github actions too
 druid_extensions_loadList=["druid-kafka-indexing-service","mysql-metadata-storage","druid-s3-extensions","druid-basic-security","simple-client-sslcontext","druid-testing-tools","druid-lookups-cached-global","druid-histogram","druid-datasketches"]
 
 druid_coordinator_period_metadataStoreManagementPeriod=PT1H

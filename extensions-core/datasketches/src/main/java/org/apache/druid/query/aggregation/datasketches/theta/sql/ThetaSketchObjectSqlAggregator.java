@@ -62,7 +62,7 @@ public class ThetaSketchObjectSqlAggregator extends ThetaSketchBaseSqlAggregator
 
   private static class ThetaSketchObjectSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE = "'" + NAME + "(column, size)'\n";
+    private static final String SIGNATURE = "'" + NAME + "(column, size)'";
 
     ThetaSketchObjectSqlAggFunction()
     {
