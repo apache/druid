@@ -32,7 +32,6 @@ import org.apache.druid.query.rowsandcols.column.accessor.FloatColumnAccessorBas
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.BaseFloatVectorValueSelector;
@@ -40,6 +39,7 @@ import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class FloatFrameColumnReader implements FrameColumnReader
@@ -54,11 +54,7 @@ public class FloatFrameColumnReader implements FrameColumnReader
   @Override
   public Column readRACColumn(Frame frame)
   {
-    final Memory memory = frame.region(columnNumber);
-    validate(memory, frame.numRows());
-
-    final boolean hasNulls = getHasNulls(memory);
-    final FloatFrameColumn frameCol = new FloatFrameColumn(frame, hasNulls, memory);
+    final FloatFrameColumn frameCol = makeFloatFrameColumn(frame);
 
     return new ColumnAccessorBasedColumn(frameCol);
   }
@@ -66,17 +62,24 @@ public class FloatFrameColumnReader implements FrameColumnReader
   @Override
   public ColumnPlus readColumn(final Frame frame)
   {
+    final FloatFrameColumn frameCol = makeFloatFrameColumn(frame);
+
+    return new ColumnPlus(
+        frameCol,
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(frameCol.getType())
+                              .setHasNulls(NullHandling.sqlCompatible() && frameCol.hasNulls),
+        frame.numRows()
+    );
+  }
+
+  @Nonnull
+  private FloatFrameColumn makeFloatFrameColumn(Frame frame)
+  {
     final Memory memory = frame.region(columnNumber);
     validate(memory, frame.numRows());
 
     final boolean hasNulls = getHasNulls(memory);
-
-    return new ColumnPlus(
-        new FloatFrameColumn(frame, hasNulls, memory),
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT)
-                              .setHasNulls(NullHandling.sqlCompatible() && hasNulls),
-        frame.numRows()
-    );
+    return new FloatFrameColumn(frame, hasNulls, memory);
   }
 
   private void validate(final Memory region, final int numRows)

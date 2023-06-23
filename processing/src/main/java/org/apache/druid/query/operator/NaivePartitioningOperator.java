@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.operator;
 
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
@@ -111,7 +111,7 @@ public class NaivePartitioningOperator implements Operator
           public Signal push(RowsAndColumns rac)
           {
             if (rac == null) {
-              throw new ISE("huh?");
+              throw DruidException.defensive("Should never get a null rac here.");
             }
             ClusteredGroupPartitioner groupPartitioner = rac.as(ClusteredGroupPartitioner.class);
             if (groupPartitioner == null) {

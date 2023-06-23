@@ -39,36 +39,36 @@ import org.apache.druid.query.rowsandcols.semantic.DecoratableRowsAndColumns;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.filter.AndFilter;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class DecoratedRowsAndColumns implements DecoratableRowsAndColumns
+public class LazilyDecoratedRowsAndColumns implements DecoratableRowsAndColumns
 {
-  private final RowsAndColumns base;
+  private RowsAndColumns base;
+  private Interval interval;
+  private Filter filter;
+  private VirtualColumns virtualColumns;
+  private int limit;
+  private LinkedHashSet<String> viewableColumns;
+  private List<ColumnWithDirection> ordering;
 
-  private RowsAndColumns materialized = null;
-
-  private Interval interval = null;
-  private Filter filter = null;
-  private VirtualColumns virtualColumns = null;
-  private int limit = -1;
-  private LinkedHashSet<String> viewableColumns = null;
-  private List<ColumnWithDirection> ordering = null;
-
-  public DecoratedRowsAndColumns(
+  public LazilyDecoratedRowsAndColumns(
       RowsAndColumns base
   )
   {
-    this.base = base;
+    reset(base);
   }
 
   @Override
@@ -80,7 +80,8 @@ public class DecoratedRowsAndColumns implements DecoratableRowsAndColumns
   @Override
   public int numRows()
   {
-    return materializedOrBase().numRows();
+    maybeMaterialize();
+    return base.numRows();
   }
 
   @Nullable
@@ -91,7 +92,8 @@ public class DecoratedRowsAndColumns implements DecoratableRowsAndColumns
       return null;
     }
 
-    return materializedOrBase().findColumn(name);
+    maybeMaterialize();
+    return base.findColumn(name);
   }
 
   @Nullable
@@ -104,31 +106,71 @@ public class DecoratedRowsAndColumns implements DecoratableRowsAndColumns
   @Override
   public void limitTimeRange(Interval interval)
   {
-    this.interval = interval;
+    if (interval == null) {
+      this.interval = interval;
+    } else {
+      this.interval = this.interval.overlap(interval);
+    }
   }
 
   @Override
   public void addFilter(Filter filter)
   {
-    this.filter = filter;
+    if (filter == null) {
+      this.filter = filter;
+    } else {
+      LinkedHashSet<Filter> newFilters = new LinkedHashSet<>();
+      if (this.filter instanceof AndFilter) {
+        newFilters.addAll(((AndFilter) this.filter).getFilters());
+      } else {
+        newFilters.add(this.filter);
+      }
+
+      newFilters.add(filter);
+      this.filter = new AndFilter(newFilters);
+    }
   }
 
   @Override
   public void addVirtualColumns(VirtualColumns virtualColumns)
   {
-    this.virtualColumns = virtualColumns;
+    if (virtualColumns == null) {
+      this.virtualColumns = virtualColumns;
+    } else {
+      final VirtualColumn[] existing = this.virtualColumns.getVirtualColumns();
+      final VirtualColumn[] incoming = virtualColumns.getVirtualColumns();
+      ArrayList<VirtualColumn> cols = new ArrayList<>(existing.length + incoming.length);
+      cols.addAll(Arrays.asList(existing));
+      cols.addAll(Arrays.asList(incoming));
+
+      this.virtualColumns = VirtualColumns.create(cols);
+    }
   }
 
   @Override
   public void setLimit(int numRows)
   {
-    this.limit = numRows;
+    if (limit == -1) {
+      this.limit = numRows;
+    } else {
+      this.limit = Math.min(limit, numRows);
+    }
   }
 
   @Override
   public void restrictColumns(List<String> columns)
   {
-    this.viewableColumns = new LinkedHashSet<>(columns);
+    if (viewableColumns == null) {
+      this.viewableColumns = new LinkedHashSet<>(columns);
+    } else {
+      LinkedHashSet<String> cols = new LinkedHashSet<>();
+      for (String column : columns) {
+        if (viewableColumns.contains(column)) {
+          cols.add(column);
+        }
+      }
+      this.viewableColumns = cols;
+    }
   }
 
   @Override
@@ -137,25 +179,14 @@ public class DecoratedRowsAndColumns implements DecoratableRowsAndColumns
     this.ordering = ordering;
   }
 
-  private boolean maybeChangesWithMaterialization()
+  private void maybeMaterialize()
   {
-    return !(interval == null && filter == null && limit == -1 && ordering == null);
+    if (!(interval == null && filter == null && limit == -1 && ordering == null)) {
+      materialize();
+    }
   }
 
-  private RowsAndColumns materializedOrBase()
-  {
-    if (materialized != null) {
-      return materialized;
-    }
-
-    if (maybeChangesWithMaterialization()) {
-      materialized = materialize();
-      return materialized;
-    }
-    return base;
-  }
-
-  private RowsAndColumns materialize()
+  private void materialize()
   {
     final StorageAdapter as = base.as(StorageAdapter.class);
     if (as == null) {
@@ -237,10 +268,21 @@ public class DecoratedRowsAndColumns implements DecoratableRowsAndColumns
       // This means that the accumulate was never called, which can only happen if we didn't have any cursors.
       // We would only have zero cursors if we essentially didn't match anything, meaning that our RowsAndColumns
       // should be completely empty.
-      return new EmptyRowsAndColumns();
+      reset(new EmptyRowsAndColumns());
     } else {
       final byte[] bytes = writer.toByteArray();
-      return new FrameRowsAndColumns(Frame.wrap(bytes), siggy.get());
+      reset(new FrameRowsAndColumns(Frame.wrap(bytes), siggy.get()));
     }
+  }
+
+  private void reset(RowsAndColumns rac)
+  {
+    base = rac;
+    interval = null;
+    filter = null;
+    virtualColumns = null;
+    limit = -1;
+    viewableColumns = null;
+    ordering = null;
   }
 }

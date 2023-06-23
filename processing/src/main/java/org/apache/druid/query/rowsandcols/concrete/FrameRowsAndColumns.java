@@ -20,6 +20,7 @@
 package org.apache.druid.query.rowsandcols.concrete;
 
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -39,7 +40,7 @@ public class FrameRowsAndColumns implements RowsAndColumns
 
   public FrameRowsAndColumns(Frame frame, RowSignature signature)
   {
-    this.frame = frame;
+    this.frame = FrameType.COLUMNAR.ensureType(frame);
     this.signature = signature;
   }
 
@@ -80,6 +81,6 @@ public class FrameRowsAndColumns implements RowsAndColumns
   @Override
   public <T> T as(Class<T> clazz)
   {
-    throw new UnsupportedOperationException();
+    return null;
   }
 }

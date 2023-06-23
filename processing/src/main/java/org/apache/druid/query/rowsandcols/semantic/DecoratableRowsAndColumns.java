@@ -21,13 +21,22 @@ package org.apache.druid.query.rowsandcols.semantic;
 
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.operator.ColumnWithDirection;
-import org.apache.druid.query.rowsandcols.DecoratedRowsAndColumns;
+import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
 
 import java.util.List;
 
+/**
+ * An interface for "decorating" a rowsAndColumns.  This basically takes extra metadata that impacts the shape of the
+ * RowsAndColumns.  It is expected that implementations will generally do things as lazily as possible, but there's
+ * nothing forcing that in this interface.
+ *
+ * Once a method is called on this interface, the RowsAndColumns object is expected to be mutated to pretend that it
+ * has had the decoration applied.  That is, whether an implementation is lazy or not should not impact what is
+ * visible/not visible.
+ */
 public interface DecoratableRowsAndColumns extends RowsAndColumns
 {
   static DecoratableRowsAndColumns fromRAC(RowsAndColumns rac)
@@ -38,7 +47,7 @@ public interface DecoratableRowsAndColumns extends RowsAndColumns
 
     final DecoratableRowsAndColumns retVal = rac.as(DecoratableRowsAndColumns.class);
     if (retVal == null) {
-      return new DecoratedRowsAndColumns(rac);
+      return new LazilyDecoratedRowsAndColumns(rac);
     }
     return retVal;
   }

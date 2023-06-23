@@ -32,7 +32,6 @@ import org.apache.druid.query.rowsandcols.column.accessor.DoubleColumnAccessorBa
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
@@ -40,6 +39,7 @@ import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class DoubleFrameColumnReader implements FrameColumnReader
@@ -54,11 +54,7 @@ public class DoubleFrameColumnReader implements FrameColumnReader
   @Override
   public Column readRACColumn(Frame frame)
   {
-    final Memory memory = frame.region(columnNumber);
-    validate(memory, frame.numRows());
-
-    final boolean hasNulls = getHasNulls(memory);
-    final DoubleFrameColumn frameCol = new DoubleFrameColumn(frame, hasNulls, memory);
+    final DoubleFrameColumn frameCol = makeDoubleFrameColumn(frame);
 
     return new ColumnAccessorBasedColumn(frameCol);
   }
@@ -66,17 +62,24 @@ public class DoubleFrameColumnReader implements FrameColumnReader
   @Override
   public ColumnPlus readColumn(final Frame frame)
   {
+    final DoubleFrameColumn frameCol = makeDoubleFrameColumn(frame);
+
+    return new ColumnPlus(
+        frameCol,
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(frameCol.getType())
+                              .setHasNulls(NullHandling.sqlCompatible() && frameCol.hasNulls),
+        frame.numRows()
+    );
+  }
+
+  @Nonnull
+  private DoubleFrameColumn makeDoubleFrameColumn(Frame frame)
+  {
     final Memory memory = frame.region(columnNumber);
     validate(memory, frame.numRows());
 
     final boolean hasNulls = getHasNulls(memory);
-
-    return new ColumnPlus(
-        new DoubleFrameColumn(frame, hasNulls, memory),
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.DOUBLE)
-                              .setHasNulls(NullHandling.sqlCompatible() && hasNulls),
-        frame.numRows()
-    );
+    return new DoubleFrameColumn(frame, hasNulls, memory);
   }
 
   private void validate(final Memory region, final int numRows)

@@ -154,6 +154,28 @@ public class DruidException extends RuntimeException
     return failure.makeException(new DruidExceptionBuilder(failure.getErrorCode()));
   }
 
+  /**
+   * Build a "defensive" exception, this is an exception that should never actually be triggered, but we are
+   * throwing it inside of a defensive check.
+   *
+   * @return A builder for a defensive exception.
+   */
+  public static DruidExceptionBuilder defensive()
+  {
+    return forPersona(Persona.DEVELOPER).ofCategory(Category.DEFENSIVE);
+  }
+
+  /**
+   * Build a "defensive" exception, this is an exception that should never actually be triggered, but we are
+   * throwing it inside of a defensive check.
+   *
+   * @return A builder for a defensive exception.
+   */
+  public static DruidException defensive(String format, Object... args)
+  {
+    return forPersona(Persona.DEVELOPER).ofCategory(Category.DEFENSIVE).build(format, args);
+  }
+
   private final Persona targetPersona;
   private final Category category;
   private final String errorCode;

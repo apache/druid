@@ -32,7 +32,6 @@ import org.apache.druid.query.rowsandcols.column.accessor.LongColumnAccessorBase
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
@@ -40,6 +39,7 @@ import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class LongFrameColumnReader implements FrameColumnReader
@@ -54,11 +54,7 @@ public class LongFrameColumnReader implements FrameColumnReader
   @Override
   public Column readRACColumn(Frame frame)
   {
-    final Memory memory = frame.region(columnNumber);
-    validate(memory, frame.numRows());
-
-    final boolean hasNulls = getHasNulls(memory);
-    final LongFrameColumn frameCol = new LongFrameColumn(frame, hasNulls, memory);
+    final LongFrameColumn frameCol = makeLongFrameColumn(frame);
 
     return new ColumnAccessorBasedColumn(frameCol);
 
@@ -67,17 +63,24 @@ public class LongFrameColumnReader implements FrameColumnReader
   @Override
   public ColumnPlus readColumn(final Frame frame)
   {
+    final LongFrameColumn frameCol = makeLongFrameColumn(frame);
+
+    return new ColumnPlus(
+        frameCol,
+        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(frameCol.getType())
+                              .setHasNulls(NullHandling.sqlCompatible() && frameCol.hasNulls),
+        frame.numRows()
+    );
+  }
+
+  @Nonnull
+  private LongFrameColumn makeLongFrameColumn(Frame frame)
+  {
     final Memory memory = frame.region(columnNumber);
     validate(memory, frame.numRows());
 
     final boolean hasNulls = getHasNulls(memory);
-
-    return new ColumnPlus(
-        new LongFrameColumn(frame, hasNulls, memory),
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG)
-                              .setHasNulls(NullHandling.sqlCompatible() && hasNulls),
-        frame.numRows()
-    );
+    return new LongFrameColumn(frame, hasNulls, memory);
   }
 
   private void validate(final Memory region, final int numRows)

@@ -39,6 +39,7 @@ import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Comparator;
 
@@ -54,37 +55,25 @@ public class ComplexFrameColumnReader implements FrameColumnReader
   @Override
   public Column readRACColumn(Frame frame)
   {
-    final Memory memory = frame.region(columnNumber);
-    validate(memory, frame.numRows());
-
-    final int typeNameLength = memory.getInt(ComplexFrameMaker.TYPE_NAME_LENGTH_POSITION);
-    final byte[] typeNameBytes = new byte[typeNameLength];
-
-    memory.getByteArray(ComplexFrameMaker.TYPE_NAME_POSITION, typeNameBytes, 0, typeNameLength);
-
-    final String typeName = StringUtils.fromUtf8(typeNameBytes);
-    final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
-
-    if (serde == null) {
-      throw new ISE("Cannot read column with complexTypeName[%s]", typeName);
-    }
-
-    final long startOfOffsetSection = Byte.BYTES + Integer.BYTES + typeNameLength;
-    final long startOfDataSection = startOfOffsetSection + (long) frame.numRows() * Integer.BYTES;
-
-    final ComplexFrameColumn frameCol = new ComplexFrameColumn(
-        frame,
-        serde,
-        memory,
-        startOfOffsetSection,
-        startOfDataSection
-    );
-
-    return new ColumnAccessorBasedColumn(frameCol);
+    return new ColumnAccessorBasedColumn(makeComplexFrameColumn(frame));
   }
 
   @Override
   public ColumnPlus readColumn(final Frame frame)
+  {
+    final ComplexFrameColumn frameCol = makeComplexFrameColumn(frame);
+
+    return new ColumnPlus(
+        frameCol,
+        new ColumnCapabilitiesImpl()
+            .setType(frameCol.getType())
+            .setHasMultipleValues(false),
+        frame.numRows()
+    );
+  }
+
+  @Nonnull
+  private ComplexFrameColumn makeComplexFrameColumn(Frame frame)
   {
     final Memory memory = frame.region(columnNumber);
     validate(memory, frame.numRows());
@@ -104,17 +93,12 @@ public class ComplexFrameColumnReader implements FrameColumnReader
     final long startOfOffsetSection = Byte.BYTES + Integer.BYTES + typeNameLength;
     final long startOfDataSection = startOfOffsetSection + (long) frame.numRows() * Integer.BYTES;
 
-    return new ColumnPlus(
-        new ComplexFrameColumn(
-            frame,
-            serde,
-            memory,
-            startOfOffsetSection,
-            startOfDataSection
-        ),
-        new ColumnCapabilitiesImpl().setType(ColumnType.ofComplex(typeName))
-                                    .setHasMultipleValues(false),
-        frame.numRows()
+    return new ComplexFrameColumn(
+        frame,
+        serde,
+        memory,
+        startOfOffsetSection,
+        startOfDataSection
     );
   }
 
