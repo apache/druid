@@ -91,18 +91,19 @@ public class RegexpReplaceExprMacro implements ExprMacroTable.ExprMacro
       final Expr replacementExpr = args.get(2);
 
       if (!ExprUtils.isStringLiteral(patternExpr)
-          || NullHandling.nullToEmptyIfNeeded((String) patternExpr.getLiteralValue()) == null) {
+          && !(patternExpr.isLiteral() && patternExpr.getLiteralValue() == null)) {
         throw validationFailed("pattern must be a string literal");
       }
 
-      if (!replacementExpr.isLiteral()
-          || NullHandling.nullToEmptyIfNeeded((String) replacementExpr.getLiteralValue()) == null) {
-        throw validationFailed("index must be a string literal");
+      if (!ExprUtils.isStringLiteral(replacementExpr)
+          && !(replacementExpr.isLiteral() && replacementExpr.getLiteralValue() == null)) {
+        throw validationFailed("replacement must be a string literal");
       }
 
+      final String patternString = NullHandling.nullToEmptyIfNeeded((String) patternExpr.getLiteralValue());
+
       this.arg = args.get(0);
-      this.pattern =
-          Pattern.compile(NullHandling.nullToEmptyIfNeeded((String) patternExpr.getLiteralValue()));
+      this.pattern = patternString != null ? Pattern.compile(patternString) : null;
       this.replacement = NullHandling.nullToEmptyIfNeeded((String) replacementExpr.getLiteralValue());
     }
 
@@ -110,6 +111,10 @@ public class RegexpReplaceExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval<?> eval(final ObjectBinding bindings)
     {
+      if (pattern == null || replacement == null) {
+        return ExprEval.of(null);
+      }
+
       final String s = NullHandling.nullToEmptyIfNeeded(arg.eval(bindings).asString());
 
       if (s == null) {

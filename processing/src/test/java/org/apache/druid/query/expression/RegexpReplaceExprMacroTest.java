@@ -59,23 +59,28 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
   }
 
   @Test
-  public void testErrorNullPattern()
+  public void testErrorNonStringReplacement()
   {
-    if (NullHandling.sqlCompatible()) {
-      expectException(
-          IllegalArgumentException.class,
-          "Function[regexp_replace] pattern must be a string literal"
-      );
-    }
+    expectException(IllegalArgumentException.class, "Function[regexp_replace] replacement must be a string literal");
+    eval(
+        "regexp_replace(a, 'x', 1)",
+        InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
+    );
+  }
 
+  @Test
+  public void testNullPattern()
+  {
     final ExprEval<?> result = eval(
         "regexp_replace(a, null, 'x')",
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
     );
 
-    // SQL-compat should have thrown an error by now.
-    Assert.assertTrue(NullHandling.replaceWithDefault());
-    Assert.assertEquals("xfxoxox", result.value());
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertNull(result.value());
+    } else {
+      Assert.assertEquals("xfxoxox", result.value());
+    }
   }
 
   @Test
@@ -121,18 +126,16 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
   @Test
   public void testNullPatternOnEmptyString()
   {
-    if (NullHandling.sqlCompatible()) {
-      expectException(IllegalArgumentException.class, "Function[regexp_replace] pattern must be a string literal");
-    }
-
     final ExprEval<?> result = eval(
         "regexp_replace(a, null, 'x')",
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "")
     );
 
-    // SQL-compat should have thrown an error by now.
-    Assert.assertTrue(NullHandling.replaceWithDefault());
-    Assert.assertEquals("x", result.value());
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertNull(result.value());
+    } else {
+      Assert.assertEquals("x", result.value());
+    }
   }
 
   @Test
@@ -164,30 +167,18 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
   @Test
   public void testNullPatternOnNull()
   {
-    if (NullHandling.sqlCompatible()) {
-      expectException(
-          IllegalArgumentException.class,
-          "Function[regexp_replace] pattern must be a string literal"
-      );
-    }
-
     final ExprEval<?> result = eval("regexp_replace(a, null, 'x')", InputBindings.nilBindings());
 
-    // SQL-compat should have thrown an error by now.
-    Assert.assertTrue(NullHandling.replaceWithDefault());
-    Assert.assertEquals("x", result.value());
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertNull(result.value());
+    } else {
+      Assert.assertEquals("x", result.value());
+    }
   }
 
   @Test
   public void testNullPatternOnNullDynamic()
   {
-    if (NullHandling.sqlCompatible()) {
-      expectException(
-          IllegalArgumentException.class,
-          "Function[regexp_replace] pattern must be a string literal"
-      );
-    }
-
     final ExprEval<?> result = eval(
         "regexp_replace(a, pattern, replacement)",
         InputBindings.forInputSuppliers(
@@ -195,9 +186,11 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
         )
     );
 
-    // SQL-compat should have thrown an error by now.
-    Assert.assertTrue(NullHandling.replaceWithDefault());
-    Assert.assertEquals("x", result.value());
+    if (NullHandling.sqlCompatible()) {
+      Assert.assertNull(result.value());
+    } else {
+      Assert.assertEquals("x", result.value());
+    }
   }
 
   @Test
