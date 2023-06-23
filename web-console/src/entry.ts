@@ -22,7 +22,7 @@ import './bootstrap/ace';
 
 import { QueryRunner } from 'druid-query-toolkit';
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 
 import { bootstrapJsonParse } from './bootstrap/json-parser';
 import { bootstrapReactTable } from './bootstrap/react-table-defaults';
@@ -99,12 +99,13 @@ QueryRunner.defaultQueryExecutor = (payload, isSql, cancelToken) => {
   return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
 };
 
-ReactDOM.render(
+const root = createRoot(container);
+
+root.render(
   React.createElement(ConsoleApplication, {
     defaultQueryContext: consoleConfig.defaultQueryContext,
     mandatoryQueryContext: consoleConfig.mandatoryQueryContext,
   }),
-  container,
 );
 
 // ---------------------------------

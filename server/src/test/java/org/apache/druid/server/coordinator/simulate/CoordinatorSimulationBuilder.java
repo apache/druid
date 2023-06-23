@@ -35,21 +35,22 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.server.coordinator.BalancerStrategyFactory;
-import org.apache.druid.server.coordinator.CachingCostBalancerStrategyConfig;
-import org.apache.druid.server.coordinator.CachingCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
-import org.apache.druid.server.coordinator.CostBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.DiskNormalizedCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
-import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
-import org.apache.druid.server.coordinator.RandomBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
+import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
+import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyFactory;
+import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
+import org.apache.druid.server.coordinator.balancer.DiskNormalizedCostBalancerStrategyFactory;
+import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
+import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
@@ -83,10 +84,7 @@ public class CoordinatorSimulationBuilder
   private static final CompactionSegmentSearchPolicy COMPACTION_SEGMENT_SEARCH_POLICY =
       new NewestSegmentFirstPolicy(OBJECT_MAPPER);
   private String balancerStrategy;
-  private CoordinatorDynamicConfig dynamicConfig =
-      CoordinatorDynamicConfig.builder()
-                              .withUseBatchedSegmentSampler(true)
-                              .build();
+  private CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig.builder().build();
   private List<DruidServer> servers;
   private List<DataSegment> segments;
   private final Map<String, List<Rule>> datasourceRules = new HashMap<>();
@@ -156,7 +154,7 @@ public class CoordinatorSimulationBuilder
    * Default values: {@code useBatchedSegmentSampler = true}, other params as
    * specified in {@link CoordinatorDynamicConfig.Builder}.
    * <p>
-   * Tests that verify balancing behaviour should set
+   * Tests that verify balancing behaviour must set
    * {@link CoordinatorDynamicConfig#useBatchedSegmentSampler()} to true.
    * Otherwise, the segment sampling is random and can produce repeated values
    * leading to flakiness in the tests. The simulation sets this field to true by
@@ -205,6 +203,7 @@ public class CoordinatorSimulationBuilder
         env.executorFactory,
         null,
         env.loadQueueTaskMaster,
+        env.loadQueueManager,
         new ServiceAnnouncer.Noop(),
         null,
         Collections.emptySet(),
@@ -391,7 +390,7 @@ public class CoordinatorSimulationBuilder
     @Override
     public double getLoadPercentage(String datasource)
     {
-      return coordinator.getLoadStatus().get(datasource);
+      return coordinator.getDatasourceToLoadStatus().get(datasource);
     }
 
     @Override
@@ -419,6 +418,7 @@ public class CoordinatorSimulationBuilder
     private final TestMetadataRuleManager ruleManager = new TestMetadataRuleManager();
 
     private final LoadQueueTaskMaster loadQueueTaskMaster;
+    private final SegmentLoadQueueManager loadQueueManager;
 
     /**
      * Represents the current inventory of all servers (typically historicals)
@@ -479,6 +479,8 @@ public class CoordinatorSimulationBuilder
           httpClient,
           null
       );
+      this.loadQueueManager =
+          new SegmentLoadQueueManager(coordinatorInventoryView, segmentManager, loadQueueTaskMaster);
 
       this.jacksonConfigManager = mockConfigManager();
       setDynamicConfig(dynamicConfig);
