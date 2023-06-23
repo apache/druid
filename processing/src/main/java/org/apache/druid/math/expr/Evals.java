@@ -70,6 +70,28 @@ public class Evals
   }
 
   /**
+   * Best effort try to turn a value into a boolean:
+   *  {@link Boolean} will be passed directly through
+   *  {@link String} will use {@link #asBoolean(String)}
+   *  {@link Long} will use {@link #asBoolean(long)}
+   *  {@link Number} will use {@link #asBoolean(double)}
+   *  everything else, including null will be false
+   */
+  public static boolean objectAsBoolean(@Nullable Object val)
+  {
+    if (val instanceof Boolean) {
+      return (Boolean) val;
+    } else if (val instanceof String) {
+      return Evals.asBoolean((String) val);
+    } else if (val instanceof Long) {
+      return Evals.asBoolean((Long) val);
+    } else if (val instanceof Number) {
+      return Evals.asBoolean(((Number) val).doubleValue());
+    }
+    return false;
+  }
+
+  /**
    * Call {@link Object#toString()} on a non-null value
    */
   @Nullable

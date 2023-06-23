@@ -186,7 +186,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{
                 1.0,
-                4.0,
+                3.0,
                 6.0,
                 6.0,
                 12.0,
@@ -245,7 +245,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{
                 1.0,
-                4.0,
+                3.0,
                 6.0,
                 6.0,
                 6.0,
@@ -264,7 +264,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
       expectedResults = ImmutableList.of(
           new Object[]{
               0.0,
-              1.0,
+              0.0,
               10.1,
               10.1,
               20.2,
@@ -644,7 +644,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 "\n"
                   + "### Quantiles HeapUpdateDoublesSketch SUMMARY: \n"
                   + "   Empty                        : false\n"
-                  + "   Direct, Capacity bytes       : false, \n"
+                  + "   Memory, Capacity bytes       : false, \n"
                   + "   Estimation Mode              : false\n"
                   + "   K                            : 128\n"
                   + "   N                            : 6\n"
@@ -657,8 +657,8 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   + "   Updatable Storage Bytes      : 96\n"
                   + "   Normalized Rank Error        : 1.406%\n"
                   + "   Normalized Rank Error (PMF)  : 1.711%\n"
-                  + "   Min Value                    : 1.000000e+00\n"
-                  + "   Max Value                    : 1.000000e+00\n"
+                  + "   Min Item                     : 1.000000e+00\n"
+                  + "   Max Item                     : 1.000000e+00\n"
                   + "### END SKETCH SUMMARY\n"
             }
         )
@@ -670,7 +670,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT DS_GET_QUANTILE(y, 0.5), DS_GET_QUANTILE(y, 0.98) from ("
-        + "SELECT DS_QUANTILES_SKETCH(m1) as y FROM druid.foo ORDER BY  DS_GET_QUANTILE(DS_QUANTILES_SKETCH(m1), 0.5) DESC LIMIT 10"
+        + "SELECT DS_QUANTILES_SKETCH(m1) as y FROM druid.foo ORDER BY DS_GET_QUANTILE(DS_QUANTILES_SKETCH(m1), 0.5) DESC LIMIT 10"
         + ")",
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
@@ -706,7 +706,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{
-                4.0d,
+                3.0d,
                 6.0d
             }
         )

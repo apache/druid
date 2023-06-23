@@ -88,7 +88,7 @@ public class CacheConfigTest
     properties.put(PROPERTY_PREFIX + ".unCacheable", "[\"a\",\"b\"]");
 
     configProvider.inject(properties, configurator);
-    CacheConfig config = configProvider.get().get();
+    CacheConfig config = configProvider.get();
 
     injector.injectMembers(config);
     Assert.assertEquals(5, config.getNumBackgroundThreads());
@@ -103,7 +103,7 @@ public class CacheConfigTest
     properties.put(PROPERTY_PREFIX + ".useCache", "false");
 
     configProvider.inject(properties, configurator);
-    CacheConfig config = configProvider.get().get();
+    CacheConfig config = configProvider.get();
 
     Assert.assertEquals(99, config.getNumBackgroundThreads());
     Assert.assertEquals(false, config.isPopulateCache());
@@ -116,7 +116,7 @@ public class CacheConfigTest
     properties.put(PROPERTY_PREFIX + ".numBackgroundThreads", "-1");
 
     configProvider.inject(properties, configurator);
-    CacheConfig config = configProvider.get().get();
+    CacheConfig config = configProvider.get();
     Assert.assertNotEquals(-1, config.getNumBackgroundThreads());
   }
 
@@ -126,7 +126,7 @@ public class CacheConfigTest
   {
     properties.put(PROPERTY_PREFIX + ".numBackgroundThreads", "BABBA YAGA");
     configProvider.inject(properties, configurator);
-    CacheConfig config = configProvider.get().get();
+    CacheConfig config = configProvider.get();
     throw new IllegalStateException("Should have already failed");
   }
 
@@ -135,7 +135,7 @@ public class CacheConfigTest
   {
     properties.put(PROPERTY_PREFIX + ".populateCache", "TRUE");
     configProvider.inject(properties, configurator);
-    CacheConfig config = configProvider.get().get();
+    CacheConfig config = configProvider.get();
     throw new IllegalStateException("Should have already failed");
   }
 
@@ -144,7 +144,7 @@ public class CacheConfigTest
   {
     properties.put(PROPERTY_PREFIX + ".populateCache", "FALSE");
     configProvider.inject(properties, configurator);
-    CacheConfig config = configProvider.get().get();
+    CacheConfig config = configProvider.get();
     throw new IllegalStateException("Should have already failed");
   }
 
@@ -154,7 +154,7 @@ public class CacheConfigTest
   {
     properties.put(PROPERTY_PREFIX + ".populateCache", "FaLse");
     configProvider.inject(properties, configurator);
-    CacheConfig config = configProvider.get().get();
+    CacheConfig config = configProvider.get();
     throw new IllegalStateException("Should have already failed");
   }
 

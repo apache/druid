@@ -142,7 +142,7 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
 
   private static class DoublesSketchSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE2 = "'" + NAME + "(column, k)'\n";
+    private static final String SIGNATURE2 = "'" + NAME + "(column, k)'";
 
     DoublesSketchSqlAggFunction()
     {

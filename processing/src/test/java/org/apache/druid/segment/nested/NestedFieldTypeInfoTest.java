@@ -117,7 +117,7 @@ public class NestedFieldTypeInfoTest
     FieldTypeInfo.MutableTypeSet merge = new FieldTypeInfo.MutableTypeSet();
     for (ColumnType columnType : columnTypes) {
       typeSet.add(columnType);
-      merge.merge(new FieldTypeInfo.MutableTypeSet().add(columnType).getByteValue());
+      merge.merge(new FieldTypeInfo.MutableTypeSet().add(columnType).getByteValue(), false);
     }
 
     Assert.assertEquals(merge.getByteValue(), typeSet.getByteValue());

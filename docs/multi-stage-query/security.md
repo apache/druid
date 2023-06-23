@@ -44,12 +44,17 @@ Once a query is submitted, it executes as a [`query_controller`](concepts.md#exe
 users submit to the MSQ task engine are Overlord tasks, so they follow the Overlord's security model. This means that
 users with access to the Overlord API can perform some actions even if they didn't submit the query, including
 retrieving status or canceling a query. For more information about the Overlord API and the task API, see [APIs for
-SQL-based ingestion](./api.md).
+SQL-based ingestion](../api-reference/sql-ingestion-api.md). 
 
-To interact with a query through the Overlord API, users need the following permissions:
+> Keep in mind that any user with access to Overlord APIs can submit `query_controller` tasks with only the WRITE DATASOURCE permission.
 
-- `INSERT` or `REPLACE` queries: Users must have READ DATASOURCE permission on the output datasource.
-- `SELECT` queries: Users must have read permissions on the `__query_select` datasource, which is a stub datasource that gets created.
+Depending on what a user is trying to do, they might also need the following permissions:
+
+- `INSERT` or `REPLACE` queries: Users must have DATASOURCE READ permission on the output datasource.
+- `SELECT` queries: Users must have READ permission on the `__query_select` datasource, which is a stub datasource that gets created.
+  
+
+
 
 ## S3
 

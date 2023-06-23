@@ -518,8 +518,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     return null;
   }
 
-  constructor(props: ColumnTreeProps, context: any) {
-    super(props, context);
+  constructor(props: ColumnTreeProps) {
+    super(props);
     this.state = {
       selectedTreeIndex: -1,
     };

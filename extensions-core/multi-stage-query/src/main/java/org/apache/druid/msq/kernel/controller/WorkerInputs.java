@@ -59,7 +59,8 @@ public class WorkerInputs
       final StageDefinition stageDef,
       final Int2IntMap stageWorkerCountMap,
       final InputSpecSlicer slicer,
-      final WorkerAssignmentStrategy assignmentStrategy
+      final WorkerAssignmentStrategy assignmentStrategy,
+      final long maxInputBytesPerWorker
   )
   {
     // Split each inputSpec and assign to workers. This list maps worker number -> input number -> input slice.
@@ -91,7 +92,13 @@ public class WorkerInputs
         }
       } else {
         // Non-broadcast case: split slices across workers.
-        List<InputSlice> slices = assignmentStrategy.assign(stageDef, inputSpec, stageWorkerCountMap, slicer);
+        List<InputSlice> slices = assignmentStrategy.assign(
+            stageDef,
+            inputSpec,
+            stageWorkerCountMap,
+            slicer,
+            maxInputBytesPerWorker
+        );
 
         if (slices.isEmpty()) {
           // Need at least one slice, so we can have at least one worker. It's OK if it has nothing to read.

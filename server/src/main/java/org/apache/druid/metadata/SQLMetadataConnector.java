@@ -169,7 +169,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                          || e instanceof SQLTransientException
                          || e instanceof SQLRecoverableException
                          || e instanceof UnableToObtainConnectionException
-                         || e instanceof UnableToExecuteStatementException
+                         || (e instanceof UnableToExecuteStatementException && isTransientException(e.getCause()))
                          || connectorIsTransientException(e)
                          || (e instanceof SQLException && isTransientException(e.getCause()))
                          || (e instanceof DBIException && isTransientException(e.getCause())));
@@ -179,6 +179,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    * Vendor specific errors that are not covered by {@link #isTransientException(Throwable)}
    */
   protected boolean connectorIsTransientException(Throwable e)
+  {
+    return false;
+  }
+
+  /**
+   * Checks if the root cause of the given exception is a PacketTooBigException.
+   *
+   * @return false by default. Specific implementations should override this method
+   * to correctly classify their packet exceptions.
+   */
+  protected boolean isRootCausePacketTooBigException(Throwable t)
   {
     return false;
   }
@@ -336,12 +347,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     try {
       DatabaseMetaData databaseMetaData = handle.getConnection().getMetaData();
-      ResultSet columns = databaseMetaData.getColumns(
-          null,
-          null,
-          table,
-          column
-      );
+      ResultSet columns = databaseMetaData.getColumns(null, null, table, column);
       return columns.next();
     }
     catch (SQLException e) {

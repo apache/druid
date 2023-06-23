@@ -39,7 +39,7 @@ If you wish to jump straight to deploying Druid as a cluster, or if you have an 
 
 The [configuration reference](../configuration/index.md) describes all of Druid's configuration properties.
 
-The [API reference](../operations/api-reference.md) describes the APIs available on each Druid process.
+The [API reference](../api-reference/api-reference.md) describes the APIs available on each Druid process.
 
 The [basic cluster tuning guide](../operations/basic-cluster-tuning.md) is an introductory guide for tuning your Druid cluster.
 

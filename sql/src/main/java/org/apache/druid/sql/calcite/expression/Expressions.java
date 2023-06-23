@@ -508,7 +508,15 @@ public class Expressions
       }
 
       final DimFilter equalFilter;
-      if (druidExpression.isSimpleExtraction()) {
+      final ColumnType outputType = druidExpression.getDruidType();
+      final boolean isOutputNumeric = outputType != null && outputType.isNumeric();
+      // if a simple extraction, we can typically use the base column directly for filtering. however, some expressions
+      // such as cast also appear as a simple extraction because some native layer things can handle the cast
+      // themselves, so we check the output type of the expression and compare it to the type of the direct column. a
+      // string column might produce additional null values when converting to a number, so we should use the virtual
+      // column instead for filtering to ensure that results are correct
+      if (druidExpression.isSimpleExtraction() &&
+          !(isOutputNumeric && !rowSignature.isNumeric(druidExpression.getDirectColumn()))) {
         equalFilter = new SelectorDimFilter(
             druidExpression.getSimpleExtraction().getColumn(),
             NullHandling.defaultStringValue(),
