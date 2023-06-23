@@ -264,6 +264,12 @@ public class MultiStageQueryContextTest
   }
 
   @Test
+  public void limitSelectResultReturnsDefaultValue()
+  {
+    Assert.assertFalse(MultiStageQueryContext.limitSelectResults(QueryContext.empty()));
+  }
+
+  @Test
   public void testUseAutoSchemas()
   {
     Map<String, Object> propertyMap = ImmutableMap.of(CTX_USE_AUTO_SCHEMAS, true);
