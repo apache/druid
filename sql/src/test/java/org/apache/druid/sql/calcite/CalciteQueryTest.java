@@ -452,7 +452,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "WHERE IS_AGGREGATOR = 'NO'",
         ImmutableList.of(),
         ImmutableList.of(
-            new Object[]{152L}
+            new Object[]{153L}
         )
     );
   }

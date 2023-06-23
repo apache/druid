@@ -63,7 +63,7 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
     if (NullHandling.sqlCompatible()) {
       expectException(
           IllegalArgumentException.class,
-          "Function[regexp_replace] pattern must be a nonnull string literal"
+          "Function[regexp_replace] pattern must be a string literal"
       );
     }
 
@@ -121,7 +121,7 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
   public void testNullPatternOnEmptyString()
   {
     if (NullHandling.sqlCompatible()) {
-      expectException(IllegalArgumentException.class, "Function[regexp_replace] pattern must be a STRING literal");
+      expectException(IllegalArgumentException.class, "Function[regexp_replace] pattern must be a string literal");
     }
 
     final ExprEval<?> result = eval(
@@ -150,7 +150,7 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
     if (NullHandling.sqlCompatible()) {
       expectException(
           IllegalArgumentException.class,
-          "Function[regexp_replace] pattern must be a nonnull string literal"
+          "Function[regexp_replace] pattern must be a string literal"
       );
     }
 
@@ -181,10 +181,6 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "http://example.com/path/to?query")
     );
 
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertNull(result.value());
-    } else {
-      Assert.assertEquals("http://example.com/*/*", result.value());
-    }
+    Assert.assertEquals("http://example.com/*/*", result.value());
   }
 }
