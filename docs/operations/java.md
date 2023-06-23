@@ -55,7 +55,7 @@ not need to stray away from G1 with default settings.
 Java 9 and beyond (including Java 11 and 17) include the capability for
 [strong encapsulation](https://dev.java/learn/strong-encapsulation-\(of-jdk-internals\)/) of internal JDK APIs. Druid
 uses certain internal JDK APIs for functionality- and performance-related reasons. Therefore, to avoid warning messages
-in Java 11, and errors in Java 17, certain packages must be made openable.
+in Java 11, and errors in Java 17, certain packages must be added to `--add-exports` and `--add-opens`.
 
 Druid's out-of-box configuration does this transparently when you use the bundled `bin/start-druid` or similar commands.
 In this case, there is nothing special you need to do to run successfully on Java 11 or 17.
