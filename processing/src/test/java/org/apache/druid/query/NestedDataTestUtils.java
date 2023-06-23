@@ -77,6 +77,7 @@ public class NestedDataTestUtils
   public static final String ARRAY_TYPES_DATA_FILE = "nested-array-test-data.json";
 
   public static final String ARRAY_TYPES_DATA_FILE_2 = "nested-array-test-data-2.json";
+  public static final String ALL_TYPES_TEST_DATA_FILE = "nested-all-types-test-data.json";
 
   public static final String INCREMENTAL_SEGMENTS_NAME = "incremental";
   public static final String DEFAULT_SEGMENTS_NAME = "segments";

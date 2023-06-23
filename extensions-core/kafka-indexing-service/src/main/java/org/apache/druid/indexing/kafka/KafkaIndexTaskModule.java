@@ -33,6 +33,8 @@ import java.util.List;
 
 public class KafkaIndexTaskModule implements DruidModule
 {
+  public static final String SCHEME = "kafka";
+  
   @Override
   public List<? extends Module> getJacksonModules()
   {
@@ -40,15 +42,15 @@ public class KafkaIndexTaskModule implements DruidModule
         new SimpleModule(getClass().getSimpleName())
             .registerSubtypes(
                 new NamedType(KafkaIndexTask.class, "index_kafka"),
-                new NamedType(KafkaDataSourceMetadata.class, "kafka"),
-                new NamedType(KafkaIndexTaskIOConfig.class, "kafka"),
+                new NamedType(KafkaDataSourceMetadata.class, SCHEME),
+                new NamedType(KafkaIndexTaskIOConfig.class, SCHEME),
                 // "KafkaTuningConfig" is not the ideal name, but is needed for backwards compatibility.
                 // (Older versions of Druid didn't specify a type name and got this one by default.)
                 new NamedType(KafkaIndexTaskTuningConfig.class, "KafkaTuningConfig"),
-                new NamedType(KafkaSupervisorTuningConfig.class, "kafka"),
-                new NamedType(KafkaSupervisorSpec.class, "kafka"),
-                new NamedType(KafkaSamplerSpec.class, "kafka"),
-                new NamedType(KafkaInputFormat.class, "kafka")
+                new NamedType(KafkaSupervisorTuningConfig.class, SCHEME),
+                new NamedType(KafkaSupervisorSpec.class, SCHEME),
+                new NamedType(KafkaSamplerSpec.class, SCHEME),
+                new NamedType(KafkaInputFormat.class, SCHEME)
             )
     );
   }

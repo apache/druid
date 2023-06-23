@@ -41,7 +41,9 @@ public class ForeverLoadRule extends LoadRule
       @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
   )
   {
-    this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS) : tieredReplicants;
+    this.tieredReplicants = tieredReplicants == null
+                            ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS)
+                            : tieredReplicants;
     validateTieredReplicants(this.tieredReplicants);
   }
 

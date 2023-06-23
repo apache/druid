@@ -62,7 +62,7 @@ public class Limits
   /**
    * Maximum number of input bytes per worker in case number of tasks is determined automatically.
    */
-  public static final long DEFAULT_MAX_INPUT_BYTES_PER_WORKER = 10 * 1024 * 1024 * 1024L;
+  public static final long DEFAULT_MAX_INPUT_BYTES_PER_WORKER = 1024 * 1024 * 512L;
 
   /**
    * Maximum size of the kernel manipulation queue in {@link org.apache.druid.msq.indexing.MSQControllerTask}.
@@ -90,4 +90,11 @@ public class Limits
    * {@link ClusterStatisticsMergeMode#SEQUENTIAL} mode is chosen.
    */
   public static final long MAX_WORKERS_FOR_PARALLEL_MERGE = 100;
+
+  /**
+   * Max number of rows in the query reports of the SELECT queries run by MSQ. This ensures that the reports donot blow
+   * up for queries operating on larger datasets. The full result of the select query should be available once the
+   * MSQ is able to run async queries
+   */
+  public static final long MAX_SELECT_RESULT_ROWS = 3_000;
 }

@@ -68,7 +68,7 @@ public class ArrayOfDoublesSketchMergeComplexMetricSerde extends ComplexMetricSe
   @Override
   public void deserializeColumn(final ByteBuffer buffer, final ColumnBuilder builder)
   {
-    final GenericIndexed<ArrayOfDoublesSketch> ge = GenericIndexed.read(buffer, ArrayOfDoublesSketchObjectStrategy.STRATEGY);
+    final GenericIndexed<ArrayOfDoublesSketch> ge = GenericIndexed.read(buffer, ArrayOfDoublesSketchObjectStrategy.STRATEGY, builder.getFileMapper());
     builder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), ge));
   }
 
