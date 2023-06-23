@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.expression;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
@@ -145,6 +146,22 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
   }
 
   @Test
+  public void testEmptyStringPatternOnEmptyStringDynamic()
+  {
+    final ExprEval<?> result = eval(
+        "regexp_replace(a, pattern, replacement)",
+        InputBindings.forInputSuppliers(
+            ImmutableMap.of(
+                "a", InputBindings.inputSupplier(ExpressionType.STRING, () -> ""),
+                "pattern", InputBindings.inputSupplier(ExpressionType.STRING, () -> ""),
+                "replacement", InputBindings.inputSupplier(ExpressionType.STRING, () -> "x")
+            )
+        )
+    );
+    Assert.assertEquals("x", result.value());
+  }
+
+  @Test
   public void testNullPatternOnNull()
   {
     if (NullHandling.sqlCompatible()) {
@@ -155,6 +172,28 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
     }
 
     final ExprEval<?> result = eval("regexp_replace(a, null, 'x')", InputBindings.nilBindings());
+
+    // SQL-compat should have thrown an error by now.
+    Assert.assertTrue(NullHandling.replaceWithDefault());
+    Assert.assertEquals("x", result.value());
+  }
+
+  @Test
+  public void testNullPatternOnNullDynamic()
+  {
+    if (NullHandling.sqlCompatible()) {
+      expectException(
+          IllegalArgumentException.class,
+          "Function[regexp_replace] pattern must be a string literal"
+      );
+    }
+
+    final ExprEval<?> result = eval(
+        "regexp_replace(a, pattern, replacement)",
+        InputBindings.forInputSuppliers(
+            ImmutableMap.of("replacement", InputBindings.inputSupplier(ExpressionType.STRING, () -> "x"))
+        )
+    );
 
     // SQL-compat should have thrown an error by now.
     Assert.assertTrue(NullHandling.replaceWithDefault());
@@ -179,6 +218,26 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
     final ExprEval<?> result = eval(
         "regexp_replace(regexp_replace(a, '\\\\?(.*)$', ''), '/(\\\\w+)(?=/|$)', '/*')",
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "http://example.com/path/to?query")
+    );
+
+    Assert.assertEquals("http://example.com/*/*", result.value());
+  }
+
+  @Test
+  public void testUrlIdReplacementDynamic()
+  {
+    final ExprEval<?> result = eval(
+        "regexp_replace(regexp_replace(a, pattern1, replacement1), pattern2, replacement2)",
+        InputBindings.forInputSuppliers(
+            ImmutableMap
+                .<String, InputBindings.InputSupplier>builder()
+                .put("a", InputBindings.inputSupplier(ExpressionType.STRING, () -> "http://example.com/path/to?query"))
+                .put("pattern1", InputBindings.inputSupplier(ExpressionType.STRING, () -> "\\?(.*)$"))
+                .put("pattern2", InputBindings.inputSupplier(ExpressionType.STRING, () -> "/(\\w+)(?=/|$)"))
+                .put("replacement1", InputBindings.inputSupplier(ExpressionType.STRING, () -> ""))
+                .put("replacement2", InputBindings.inputSupplier(ExpressionType.STRING, () -> "/*"))
+                .build()
+        )
     );
 
     Assert.assertEquals("http://example.com/*/*", result.value());
