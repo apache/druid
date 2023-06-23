@@ -65,7 +65,6 @@ org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity
     e = Expression(ExprContext.ACCEPT_SUB_QUERY)
     {
       granularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
-      DruidSqlParserUtils.throwIfUnsupportedGranularityInPartitionedBy(granularity);
       unparseString = e.toString();
     }
   )
@@ -90,5 +89,20 @@ SqlNodeList ClusterItems() :
   )*
   {
     return new SqlNodeList(list, s.addAll(list).pos());
+  }
+}
+
+SqlTypeNameSpec DruidType() :
+{
+  String typeName;
+}
+{
+  <TYPE> <LPAREN> <QUOTED_STRING>
+  {
+    typeName = SqlParserUtil.trim(token.image, "'");
+  }
+  <RPAREN>
+  {
+    return new SqlUserDefinedTypeNameSpec(typeName, span().pos());
   }
 }

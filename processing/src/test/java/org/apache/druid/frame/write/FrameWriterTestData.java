@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -44,13 +45,6 @@ import java.util.stream.Stream;
  */
 public class FrameWriterTestData
 {
-  public enum Sortedness
-  {
-    UNSORTED,
-    ASCENDING,
-    DESCENDING
-  }
-
   public static final Dataset<String> TEST_STRINGS_SINGLE_VALUE = new Dataset<>(
       ColumnType.STRING,
       Stream.of(
@@ -234,14 +228,14 @@ public class FrameWriterTestData
       return type;
     }
 
-    public List<T> getData(final Sortedness sortedness)
+    public List<T> getData(final KeyOrder sortedness)
     {
       switch (sortedness) {
         case ASCENDING:
           return Collections.unmodifiableList(sortedData);
         case DESCENDING:
           return Collections.unmodifiableList(Lists.reverse(sortedData));
-        case UNSORTED:
+        case NONE:
           // Shuffle ("unsort") the list, using the same seed every time for consistency.
           final List<T> newList = new ArrayList<>(sortedData);
           Collections.shuffle(newList, new Random(0));

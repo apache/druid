@@ -228,6 +228,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         return GroupByStrategySelector.STRATEGY_V1;
       }
     };
+
     final GroupByQueryConfig v1SingleThreadedConfig = new GroupByQueryConfig()
     {
       @Override
@@ -361,6 +362,20 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
   }
 
+  public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
+      final GroupByQueryConfig config
+  )
+  {
+    return makeQueryRunnerFactory(
+        DEFAULT_MAPPER,
+        config,
+        new TestGroupByBuffers(
+            DEFAULT_PROCESSING_CONFIG.intermediateComputeSizeBytes(),
+            DEFAULT_PROCESSING_CONFIG.getNumMergeBuffers()
+        ),
+        DEFAULT_PROCESSING_CONFIG
+    );
+  }
   public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
       final GroupByQueryConfig config,
       final TestGroupByBuffers bufferPools
@@ -13398,7 +13413,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             "minExpression",
             NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null,
             "minVc",
-            NullHandling.replaceWithDefault() ? Float.POSITIVE_INFINITY : null
+            Float.POSITIVE_INFINITY
         )
     );
 

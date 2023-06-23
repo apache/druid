@@ -163,6 +163,7 @@ public class FallbackVirtualColumn implements VirtualColumn
     return ColumnCapabilitiesImpl.createDefault();
   }
 
+  @Nullable
   @SuppressWarnings("ConstantConditions")
   @Override
   public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)

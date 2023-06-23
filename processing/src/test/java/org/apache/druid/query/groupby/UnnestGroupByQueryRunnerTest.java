@@ -26,7 +26,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunner;
@@ -49,7 +51,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -227,28 +228,18 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     return GroupByQueryRunnerTestHelper.createExpectedRow(query, timestamp, vals);
   }
 
-  private static ResultRow makeRow(final GroupByQuery query, final DateTime timestamp, final Object... vals)
-  {
-    return GroupByQueryRunnerTestHelper.createExpectedRow(query, timestamp, vals);
-  }
-
-  private static List<ResultRow> makeRows(
-      final GroupByQuery query,
-      final String[] columnNames,
-      final Object[]... values
-  )
-  {
-    return GroupByQueryRunnerTestHelper.createExpectedRows(query, columnNames, values);
-  }
-
   @Test
   public void testGroupBy()
   {
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(UnnestDataSource.create(
             new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+            new ExpressionVirtualColumn(
+                QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+                "\"" + QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + "\"",
+                null,
+                ExprMacroTable.nil()
+            ),
             null
         ))
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -443,17 +434,8 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
             252L
         )
     );
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
-    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
-        factory,
-        new IncrementalIndexSegment(
-            rtIndex,
-            QueryRunnerTestHelper.SEGMENT_ID
-        ),
-        query,
-        "rtIndexvc"
-    );
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, queryRunner, query);
+
+    Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 
@@ -466,8 +448,12 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(UnnestDataSource.create(
             new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION,
-            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+            new ExpressionVirtualColumn(
+                QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+                "\"" + QueryRunnerTestHelper.PLACEMENTISH_DIMENSION + "\"",
+                null,
+                ExprMacroTable.nil()
+            ),
             null
         ))
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -487,17 +473,8 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
             "rows", 52L
         )
     );
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
-    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
-        factory,
-        new IncrementalIndexSegment(
-            rtIndex,
-            QueryRunnerTestHelper.SEGMENT_ID
-        ),
-        query,
-        "rtIndexvc"
-    );
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, queryRunner, query);
+
+    Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "missing-column");
   }
 
@@ -509,9 +486,8 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.UNNEST_DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(
-            new DefaultDimensionSpec(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "alias0")
-        ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setDimensions(new DefaultDimensionSpec(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "alias0"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
@@ -523,12 +499,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
             "2011-04-01",
             "alias0", "a",
             "rows", 2L
-        ),
-        makeRow(
-            query,
-            "2011-04-01",
-            "alias0", "preferred",
-            "rows", 26L
         ),
         makeRow(
             query,
@@ -569,21 +539,18 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(
             query,
             "2011-04-01",
+            "alias0", "preferred",
+            "rows", 26L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
             "alias0", "t",
             "rows", 4L
         )
     );
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
-    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
-        factory,
-        new IncrementalIndexSegment(
-            rtIndex,
-            QueryRunnerTestHelper.SEGMENT_ID
-        ),
-        query,
-        "rtIndexvc"
-    );
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, queryRunner, query);
+
+    Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-column");
   }
 
@@ -594,8 +561,12 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     final DataSource unnestDataSource = UnnestDataSource.create(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-        "vc",
-        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+        new ExpressionVirtualColumn(
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+            "mv_to_array(placementish)",
+            ColumnType.STRING_ARRAY,
+            TestExprMacroTable.INSTANCE
+        ),
         null
     );
 
@@ -606,14 +577,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
             new DefaultDimensionSpec(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "alias0")
         ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
-        .setVirtualColumns(
-            new ExpressionVirtualColumn(
-                "vc",
-                "mv_to_array(placementish)",
-                ColumnType.STRING_ARRAY,
-                TestExprMacroTable.INSTANCE
-            )
-        )
         .addOrderByColumn("alias0", OrderByColumnSpec.Direction.ASCENDING)
         .build();
 
@@ -623,13 +586,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(
             query,
             "2011-04-01",
-            "alias0", "preferred",
-            "rows", 26L
-        ),
-        makeRow(
-            query,
-            "2011-04-01",
-            "alias0", "e",
+            "alias0", "a",
             "rows", 2L
         ),
         makeRow(
@@ -641,13 +598,13 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(
             query,
             "2011-04-01",
-            "alias0", "h",
+            "alias0", "e",
             "rows", 2L
         ),
         makeRow(
             query,
             "2011-04-01",
-            "alias0", "a",
+            "alias0", "h",
             "rows", 2L
         ),
         makeRow(
@@ -671,23 +628,18 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(
             query,
             "2011-04-01",
+            "alias0", "preferred",
+            "rows", 26L
+        ),
+        makeRow(
+            query,
+            "2011-04-01",
             "alias0", "t",
             "rows", 4L
         )
     );
 
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
-    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
-        factory,
-        new IncrementalIndexSegment(
-            rtIndex,
-            QueryRunnerTestHelper.SEGMENT_ID
-        ),
-        query,
-        "rtIndexvc"
-    );
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, queryRunner, query);
-
+    Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-column");
   }
 
@@ -698,32 +650,32 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     final DataSource unnestDataSource = UnnestDataSource.create(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-        "vc",
-        QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+        new ExpressionVirtualColumn(
+            QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST,
+            "array(\"market\",\"quality\")",
+            ColumnType.STRING,
+            TestExprMacroTable.INSTANCE
+        ),
         null
     );
 
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(unnestDataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setDimensions(
-            new DefaultDimensionSpec(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "alias0")
-        ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setDimensions(new DefaultDimensionSpec(QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST, "alias0"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
-        .setVirtualColumns(
-            new ExpressionVirtualColumn(
-                "vc",
-                "array(\"market\",\"quality\")",
-                ColumnType.STRING,
-                TestExprMacroTable.INSTANCE
-            )
-        )
         .setLimit(3)
         .build();
 
-    // Total rows should add up to 26 * 2 = 52
-    // 26 rows and each has 2 entries in the column to be unnested
+    // Each count should be 2, since we are unnesting "market" and "quality", which are singly-valued fields.
     List<ResultRow> expectedResults = Arrays.asList(
+        makeRow(
+            query,
+            "2011-04-01",
+            "alias0", "automotive",
+            "rows", 2L
+        ),
         makeRow(
             query,
             "2011-04-01",
@@ -733,28 +685,12 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(
             query,
             "2011-04-01",
-            "alias0", "health",
-            "rows", 2L
-        ),
-        makeRow(
-            query,
-            "2011-04-01",
-            "alias0", "travel",
+            "alias0", "entertainment",
             "rows", 2L
         )
     );
 
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
-    final QueryRunner queryRunner = QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
-        factory,
-        new IncrementalIndexSegment(
-            rtIndex,
-            QueryRunnerTestHelper.SEGMENT_ID
-        ),
-        query,
-        "rtIndexvc"
-    );
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, queryRunner, query);
+    Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-columns");
   }
 
@@ -767,13 +703,24 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     return GroupByQuery.builder().overrideContext(makeContext());
   }
 
-  /**
-   * Use this method instead of makeQueryBuilder() to make sure the context is set properly. Also, avoid
-   * setContext in tests. Only use overrideContext.
-   */
-  private GroupByQuery.Builder makeQueryBuilder(final GroupByQuery query)
+  private Iterable<ResultRow> runQuery(final GroupByQuery query, final IncrementalIndex index)
   {
-    return new GroupByQuery.Builder(query).overrideContext(makeContext());
+    final QueryRunner<?> queryRunner = factory.mergeRunners(
+        DirectQueryProcessingPool.INSTANCE,
+        Collections.singletonList(
+            QueryRunnerTestHelper.makeQueryRunnerWithSegmentMapFn(
+                factory,
+                new IncrementalIndexSegment(
+                    index,
+                    QueryRunnerTestHelper.SEGMENT_ID
+                ),
+                query,
+                "rtIndexvc"
+            )
+        )
+    );
+
+    return GroupByQueryRunnerTestHelper.runQuery(factory, queryRunner, query);
   }
 
   private Map<String, Object> makeContext()

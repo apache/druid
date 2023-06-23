@@ -613,7 +613,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       {
         metadataUpdateCounter.getAndIncrement();
         if (attemptCounter.getAndIncrement() == 0) {
-          return DataStoreMetadataUpdateResult.TRY_AGAIN;
+          return new DataStoreMetadataUpdateResult(true, true, null);
         } else {
           return super.updateDataSourceMetadataWithHandle(handle, dataSource, startMetadata, endMetadata);
         }
@@ -680,7 +680,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Aborting transaction!"), result1);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Inconsistent metadata state. This can " +
+        "happen if you update input topic in a spec without changing the supervisor name. " +
+        "Stored state: [null], " +
+        "Target state: [ObjectMetadata{theObject={foo=bar}}]."), result1);
 
     // Should only be tried once.
     Assert.assertEquals(1, metadataUpdateCounter.get());
@@ -711,7 +714,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null,
         null
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Aborting transaction!"), result1);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Not dropping segments, " +
+        "as not all segments belong to the datasource[fooDataSource]."), result1);
 
     // Should only be tried once. Since dropSegmentsWithHandle will return FAILURE (not TRY_AGAIN) as set of
     // segments to drop contains more than one datasource.
@@ -778,7 +782,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         null
     );
     Assert.assertEquals(SegmentPublishResult.fail(
-        "org.apache.druid.metadata.RetryTransactionException: Aborting transaction!"), result1);
+        "org.apache.druid.metadata.RetryTransactionException: Failed to drop some segments. " +
+            "Only 1 could be dropped out of 2. Trying again"), result1);
 
     Assert.assertEquals(MAX_SQL_MEATADATA_RETRY_FOR_TEST, segmentTableDropUpdateCounter.get());
 
@@ -805,7 +810,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(null),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Aborting transaction!"), result2);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Inconsistent metadata state. This can " +
+        "happen if you update input topic in a spec without changing the supervisor name. " +
+        "Stored state: [ObjectMetadata{theObject={foo=baz}}], " +
+        "Target state: [ObjectMetadata{theObject=null}]."), result2);
 
     // Should only be tried once per call.
     Assert.assertEquals(2, metadataUpdateCounter.get());
@@ -828,7 +836,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         new ObjectMetadata(ImmutableMap.of("foo", "qux")),
         new ObjectMetadata(ImmutableMap.of("foo", "baz"))
     );
-    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Aborting transaction!"), result2);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Inconsistent metadata state. This can " +
+        "happen if you update input topic in a spec without changing the supervisor name. " +
+        "Stored state: [ObjectMetadata{theObject={foo=baz}}], " +
+        "Target state: [ObjectMetadata{theObject={foo=qux}}]."), result2);
 
     // Should only be tried once per call.
     Assert.assertEquals(2, metadataUpdateCounter.get());
@@ -2256,7 +2267,11 @@ public class IndexerSQLMetadataStorageCoordinatorTest
           ImmutableSet.of(defaultSegment),
           defaultSegment.getDataSource()
       );
-      Assert.assertEquals(IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult.TRY_AGAIN, result);
+      Assert.assertEquals(new IndexerSQLMetadataStorageCoordinator.DataStoreMetadataUpdateResult(
+          true,
+          true,
+          "Failed to drop some segments. Only 0 could be dropped out of 1. Trying again"),
+          result);
     }
   }
 

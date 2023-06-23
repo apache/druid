@@ -23,19 +23,20 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerSpec;
-import org.apache.druid.data.input.ByteBufferInputRowParser;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
-import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
+import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
@@ -88,10 +89,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     final InputSource inputSource;
     final InputFormat inputFormat;
     if (dataSchema.getParser() != null) {
-      inputSource = new FirehoseFactoryToInputSourceAdaptor(
-          new SeekableStreamSamplerFirehoseFactory(),
-          dataSchema.getParser()
-      );
+      inputSource = new SeekableStreamSamplerInputSource(dataSchema.getParser());
       inputFormat = null;
     } else {
       RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
@@ -120,18 +118,18 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
 
   protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> createRecordSupplier();
 
-  private class SeekableStreamSamplerFirehoseFactory implements FiniteFirehoseFactory<ByteBufferInputRowParser, Object>
+  private class SeekableStreamSamplerInputSource extends AbstractInputSource implements SplittableInputSource
   {
-    @Override
-    public Firehose connect(ByteBufferInputRowParser parser, @Nullable File temporaryDirectory)
+    private final InputRowParser parser;
+
+    public SeekableStreamSamplerInputSource(InputRowParser parser)
     {
-      throw new UnsupportedOperationException();
+      this.parser = parser;
     }
 
-    @Override
-    public Firehose connectForSampler(ByteBufferInputRowParser parser, @Nullable File temporaryDirectory)
+    public InputRowParser getParser()
     {
-      return new SeekableStreamSamplerFirehose(parser);
+      return parser;
     }
 
     @Override
@@ -141,30 +139,42 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     }
 
     @Override
-    public Stream<InputSplit<Object>> getSplits(@Nullable SplitHintSpec splitHintSpec)
+    public Stream<InputSplit> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public int getNumSplits(@Nullable SplitHintSpec splitHintSpec)
+    public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public FiniteFirehoseFactory withSplit(InputSplit split)
+    public SplittableInputSource withSplit(InputSplit split)
     {
       throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean needsFormat()
+    {
+      return false;
+    }
+
+    @Override
+    protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
+    {
+      return new SeekableStreamSamplerInputSourceReader(parser);
     }
   }
 
-  private class SeekableStreamSamplerFirehose implements Firehose
+  private class SeekableStreamSamplerInputSourceReader implements InputSourceReader
   {
     private final InputRowParser parser;
     private final CloseableIterator<InputEntity> entityIterator;
 
-    protected SeekableStreamSamplerFirehose(InputRowParser parser)
+    public SeekableStreamSamplerInputSourceReader(InputRowParser parser)
     {
       this.parser = parser;
       if (parser instanceof StringInputRowParser) {
@@ -181,47 +191,81 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     }
 
     @Override
-    public boolean hasMore()
+    public CloseableIterator<InputRow> read()
     {
-      return entityIterator.hasNext();
-    }
+      return new CloseableIterator<InputRow>()
+      {
 
-    @Override
-    public InputRow nextRow()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public InputRowListPlusRawValues nextRowWithRaw()
-    {
-      final ByteBuffer bb = ((ByteEntity) entityIterator.next()).getBuffer();
-
-      final Map<String, Object> rawColumns;
-      try {
-        if (parser instanceof StringInputRowParser) {
-          rawColumns = ((StringInputRowParser) parser).buildStringKeyMap(bb);
-        } else {
-          rawColumns = null;
+        @Override
+        public boolean hasNext()
+        {
+          return entityIterator.hasNext();
         }
-      }
-      catch (ParseException e) {
-        return InputRowListPlusRawValues.of(null, e);
-      }
 
-      try {
-        final List<InputRow> rows = parser.parseBatch(bb);
-        return InputRowListPlusRawValues.of(rows.isEmpty() ? null : rows, rawColumns);
-      }
-      catch (ParseException e) {
-        return InputRowListPlusRawValues.of(rawColumns, e);
-      }
+        @Override
+        public InputRow next()
+        {
+          throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+          entityIterator.close();
+        }
+      };
     }
 
     @Override
-    public void close() throws IOException
+    public CloseableIterator<InputRow> read(InputStats inputStats)
     {
-      entityIterator.close();
+      return null;
+    }
+
+    @Override
+    public CloseableIterator<InputRowListPlusRawValues> sample()
+    {
+      return new CloseableIterator<InputRowListPlusRawValues>()
+      {
+        @Override
+        public boolean hasNext()
+        {
+          return entityIterator.hasNext();
+        }
+
+        @Override
+        public InputRowListPlusRawValues next()
+        {
+          final ByteBuffer bb = ((ByteEntity) entityIterator.next()).getBuffer();
+
+          final Map<String, Object> rawColumns;
+          try {
+            if (parser instanceof StringInputRowParser) {
+              rawColumns = ((StringInputRowParser) parser).buildStringKeyMap(bb);
+            } else {
+              rawColumns = null;
+            }
+          }
+          catch (ParseException e) {
+            return InputRowListPlusRawValues.of(null, e);
+          }
+
+          try {
+            bb.position(0);
+            final List<InputRow> rows = parser.parseBatch(bb);
+            return InputRowListPlusRawValues.of(rows.isEmpty() ? null : rows, rawColumns);
+          }
+          catch (ParseException e) {
+            return InputRowListPlusRawValues.of(rawColumns, e);
+          }
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+          entityIterator.close();
+        }
+      };
     }
   }
 }

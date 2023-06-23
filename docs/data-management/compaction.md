@@ -136,7 +136,7 @@ To control the number of result segments per time chunk, you can set [`maxRowsPe
 
 > You can run multiple compaction tasks in parallel. For example, if you want to compact the data for a year, you are not limited to running a single task for the entire year. You can run 12 compaction tasks with month-long intervals.
 
-A compaction task internally generates an `index` or `index_parallel` task spec for performing compaction work with some fixed parameters. For example, its `inputSource` is always the [`druid` input source](../ingestion/native-batch-input-source.md), and `dimensionsSpec` and `metricsSpec` include all dimensions and metrics of the input segments by default.
+A compaction task internally generates an `index` or `index_parallel` task spec for performing compaction work with some fixed parameters. For example, its `inputSource` is always the [`druid` input source](../ingestion/input-sources.md), and `dimensionsSpec` and `metricsSpec` include all dimensions and metrics of the input segments by default.
 
 Compaction tasks fetch all [relevant segments](#compaction-io-configuration) prior to launching any subtasks, _unless_ the following items are all set. It is strongly recommended to set all of these items to maximize performance and minimize disk usage of the `compact` task:
 
@@ -184,11 +184,11 @@ The compaction `ioConfig` requires specifying `inputSpec` as follows:
 |Field|Description|Default|Required|
 |-----|-----------|-------|--------|
 |`type`|Task type. Set the value to `compact`.|none|Yes|
-|`inputSpec`|Specification of the target [intervals](#interval-inputspec) or [segments](#segments-inputspec).|none|Yes|
+|`inputSpec`|Specification of the target [interval](#interval-inputspec) or [segments](#segments-inputspec).|none|Yes|
 |`dropExisting`|If `true`, the task replaces all existing segments fully contained by either of the following:<br />- the `interval` in the `interval` type `inputSpec`.<br />- the umbrella interval of the `segments` in the `segment` type `inputSpec`.<br />If compaction fails, Druid does not change any of the existing segments.<br />**WARNING**: `dropExisting` in `ioConfig` is a beta feature. |false|No|
+|`allowNonAlignedInterval`|If `true`, the task allows an explicit [`segmentGranularity`](#compaction-granularity-spec) that is not aligned with the provided [interval](#interval-inputspec) or [segments](#segments-inputspec). This parameter is only used if [`segmentGranularity`](#compaction-granularity-spec) is explicitly provided.<br /><br />This parameter is provided for backwards compatibility. In most scenarios it should not be set, as it can lead to data being accidentally overshadowed. This parameter may be removed in a future release.|false|No|
 
-
-Druid supports two supported `inputSpec` formats:
+The compaction task has two kinds of `inputSpec`:
 
 #### Interval `inputSpec`
 

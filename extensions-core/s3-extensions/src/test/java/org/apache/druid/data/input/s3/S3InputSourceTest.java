@@ -26,9 +26,11 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -332,6 +334,25 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     serdeWithPrefixes.createEntity(new CloudObjectLocation("bucket", "path"));
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
     EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+  }
+
+  @Test
+  public void testGetTypes()
+  {
+    final S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        EXPECTED_URIS,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+    Assert.assertEquals(Collections.singleton(S3InputSource.TYPE_KEY), inputSource.getTypes());
   }
 
   @Test
@@ -647,6 +668,11 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   @Test
   public void testWithUrisSplit()
   {
+    EasyMock.reset(S3_CLIENT);
+    expectGetMetadata(EXPECTED_URIS.get(0), CONTENT);
+    expectGetMetadata(EXPECTED_URIS.get(1), CONTENT);
+    EasyMock.replay(S3_CLIENT);
+
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
@@ -663,15 +689,21 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-        null
+        new MaxSizeSplitHintSpec(5, null)
     );
 
     Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    EasyMock.verify(S3_CLIENT);
   }
 
   @Test
   public void testWithUrisObjectGlob()
   {
+    EasyMock.reset(S3_CLIENT);
+    expectGetMetadata(EXPECTED_URIS.get(0), CONTENT);
+    expectGetMetadata(EXPECTED_URIS.get(1), CONTENT);
+    EasyMock.replay(S3_CLIENT);
+
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
@@ -688,15 +720,21 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-        null
+        new MaxSizeSplitHintSpec(5, null)
     );
 
     Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    EasyMock.verify(S3_CLIENT);
   }
 
   @Test
   public void testWithObjectsGlob()
   {
+    EasyMock.reset(S3_CLIENT);
+    expectGetMetadata(EXPECTED_URIS.get(0), CONTENT);
+    expectGetMetadata(EXPECTED_URIS.get(1), CONTENT);
+    EasyMock.replay(S3_CLIENT);
+
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
@@ -713,15 +751,21 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-        null
+        new MaxSizeSplitHintSpec(5, null)
     );
 
     Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    EasyMock.verify(S3_CLIENT);
   }
 
   @Test
   public void testWithoutObjectsGlob()
   {
+    EasyMock.reset(S3_CLIENT);
+    expectGetMetadata(EXPECTED_URIS.get(0), CONTENT);
+    expectGetMetadata(EXPECTED_URIS.get(1), CONTENT);
+    EasyMock.replay(S3_CLIENT);
+
     S3InputSource inputSource = new S3InputSource(
         SERVICE,
         SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
@@ -738,10 +782,11 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
         new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-        null
+        new MaxSizeSplitHintSpec(5, null)
     );
 
     Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    EasyMock.verify(S3_CLIENT);
   }
 
   @Test
@@ -1068,6 +1113,17 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     ).andReturn(result).once();
   }
 
+  private static void expectGetMetadata(URI uri, byte[] content)
+  {
+    final CloudObjectLocation location = new CloudObjectLocation(uri);
+    final ObjectMetadata result = new ObjectMetadata();
+    result.setContentLength(content.length);
+
+    EasyMock.expect(
+        S3_CLIENT.getObjectMetadata(matchGetMetadataRequest(location.getBucket(), location.getPath()))
+    ).andReturn(result).once();
+  }
+
   private static void expectListObjectsAndThrowAccessDenied(final URI prefix)
   {
     AmazonS3Exception boom = new AmazonS3Exception("oh dang, you can't list that bucket friend");
@@ -1150,6 +1206,34 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
           public void appendTo(StringBuffer buffer)
           {
             buffer.append("<request for prefix [").append(prefixUri).append("]>");
+          }
+        }
+    );
+
+    return null;
+  }
+
+  private static GetObjectMetadataRequest matchGetMetadataRequest(final String bucket, final String key)
+  {
+    // Use an IArgumentMatcher to verify that the request has the correct bucket and key.
+    EasyMock.reportMatcher(
+        new IArgumentMatcher()
+        {
+          @Override
+          public boolean matches(Object argument)
+          {
+            if (!(argument instanceof GetObjectMetadataRequest)) {
+              return false;
+            }
+
+            final GetObjectMetadataRequest request = (GetObjectMetadataRequest) argument;
+            return request.getBucketName().equals(bucket) && request.getKey().equals(key);
+          }
+
+          @Override
+          public void appendTo(StringBuffer buffer)
+          {
+            buffer.append("<request for bucket[").append(buffer).append("] key[").append(key).append("]>");
           }
         }
     );

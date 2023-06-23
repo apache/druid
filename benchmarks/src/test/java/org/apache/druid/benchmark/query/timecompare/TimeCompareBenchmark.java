@@ -285,7 +285,7 @@ public class TimeCompareBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
 
     executorService = Execs.multiThreaded(numSegments, "TopNThreadPool");
 
@@ -336,7 +336,7 @@ public class TimeCompareBenchmark
       File indexFile = INDEX_MERGER_V9.persist(
           incIndexes.get(i),
           tmpDir,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           null
       );
 

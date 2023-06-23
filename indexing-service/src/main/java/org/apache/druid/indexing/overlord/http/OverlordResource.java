@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.http;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
@@ -35,6 +36,7 @@ import org.apache.druid.client.indexing.IndexingWorker;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.common.exception.DruidException;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
@@ -61,8 +63,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
@@ -73,6 +75,7 @@ import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -106,6 +109,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -130,6 +134,8 @@ public class OverlordResource
   private final AuthorizerMapper authorizerMapper;
   private final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
   private final ProvisioningStrategy provisioningStrategy;
+
+  private final AuthConfig authConfig;
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
   private static final List API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
@@ -162,7 +168,8 @@ public class OverlordResource
       AuditManager auditManager,
       AuthorizerMapper authorizerMapper,
       WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter,
-      ProvisioningStrategy provisioningStrategy
+      ProvisioningStrategy provisioningStrategy,
+      AuthConfig authConfig
   )
   {
     this.taskMaster = taskMaster;
@@ -174,6 +181,7 @@ public class OverlordResource
     this.authorizerMapper = authorizerMapper;
     this.workerTaskRunnerQueryAdapter = workerTaskRunnerQueryAdapter;
     this.provisioningStrategy = provisioningStrategy;
+    this.authConfig = authConfig;
   }
 
   /**
@@ -187,15 +195,24 @@ public class OverlordResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response taskPost(final Task task, @Context final HttpServletRequest req)
   {
-    final String dataSource = task.getDataSource();
-    final ResourceAction resourceAction = new ResourceAction(
-        new Resource(dataSource, ResourceType.DATASOURCE),
-        Action.WRITE
-    );
+    final Set<ResourceAction> resourceActions;
+    try {
+      resourceActions = getNeededResourceActionsForTask(task);
+    }
+    catch (UOE e) {
+      return Response.status(Response.Status.BAD_REQUEST)
+          .entity(
+              ImmutableMap.of(
+                  "error",
+                  e.getMessage()
+              )
+          )
+          .build();
+    }
 
-    Access authResult = AuthorizationUtils.authorizeResourceAction(
+    Access authResult = AuthorizationUtils.authorizeAllResourceActions(
         req,
-        resourceAction,
+        resourceActions,
         authorizerMapper
     );
 
@@ -205,25 +222,15 @@ public class OverlordResource
 
     return asLeaderWith(
         taskMaster.getTaskQueue(),
-        new Function<TaskQueue, Response>()
-        {
-          @Override
-          public Response apply(TaskQueue taskQueue)
-          {
-            try {
-              taskQueue.add(task);
-              return Response.ok(ImmutableMap.of("task", task.getId())).build();
-            }
-            catch (EntryExistsException e) {
-              return Response.status(Response.Status.BAD_REQUEST)
-                             .entity(
-                                 ImmutableMap.of(
-                                     "error",
-                                     StringUtils.format("Task[%s] already exists!", task.getId())
-                                 )
-                             )
-                             .build();
-            }
+        taskQueue -> {
+          try {
+            taskQueue.add(task);
+            return Response.ok(ImmutableMap.of("task", task.getId())).build();
+          }
+          catch (DruidException e) {
+            return Response.status(e.getResponseCode())
+                           .entity(ImmutableMap.of("error", e.getMessage()))
+                           .build();
           }
         }
     );
@@ -1084,6 +1091,18 @@ public class OverlordResource
       // Encourage client to try again soon, when we'll likely have a redirect set up
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
     }
+  }
+
+  @VisibleForTesting
+  Set<ResourceAction> getNeededResourceActionsForTask(Task task) throws UOE
+  {
+    final String dataSource = task.getDataSource();
+    final Set<ResourceAction> resourceActions = new HashSet<>();
+    resourceActions.add(new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE));
+    if (authConfig.isEnableInputSourceSecurity()) {
+      resourceActions.addAll(task.getInputSourceResources());
+    }
+    return resourceActions;
   }
 
   private List<TaskStatusPlus> securedTaskStatusPlus(

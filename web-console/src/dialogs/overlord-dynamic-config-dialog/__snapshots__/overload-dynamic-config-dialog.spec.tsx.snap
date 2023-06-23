@@ -5,6 +5,7 @@ exports[`OverlordDynamicConfigDialog matches snapshot 1`] = `
   className="overlord-dynamic-config-dialog"
   onClose={[Function]}
   onSave={[Function]}
+  saveDisabled={false}
   title="Overlord dynamic config"
 >
   <Memo(Loader) />

@@ -68,8 +68,10 @@ import org.apache.druid.sql.calcite.expression.builtin.ArrayOverlapOperatorConve
 import org.apache.druid.sql.calcite.expression.builtin.ArrayPrependOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayQuantileOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArraySliceOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayToMultiValueStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayToStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.BTrimOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.CaseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CastOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CeilOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ComplexDecodeBase64OperatorConversion;
@@ -243,6 +245,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new ArraySliceOperatorConversion())
                    .add(new ArrayToStringOperatorConversion())
                    .add(new StringToArrayOperatorConversion())
+                   .add(new ArrayToMultiValueStringOperatorConversion())
                    .build();
 
   private static final List<SqlOperatorConversion> MULTIVALUE_STRING_OPERATOR_CONVERSIONS =
@@ -321,6 +324,9 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new NestedDataOperatorConversions.JsonValueBigintOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonValueDoubleOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonValueVarcharOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueReturningArrayBigIntOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueReturningArrayDoubleOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueReturningArrayVarcharOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonObjectOperatorConversion())
                    .add(new NestedDataOperatorConversions.ToJsonStringOperatorConversion())
                    .add(new NestedDataOperatorConversions.ParseJsonOperatorConversion())
@@ -330,7 +336,7 @@ public class DruidOperatorTable implements SqlOperatorTable
   private static final List<SqlOperatorConversion> STANDARD_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.ABS, "abs"))
-                   .add(new DirectOperatorConversion(SqlStdOperatorTable.CASE, "case_searched"))
+                   .add(new CaseOperatorConversion())
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.CHAR_LENGTH, "strlen"))
                    .add(CHARACTER_LENGTH_CONVERSION)
                    .add(new AliasedOperatorConversion(CHARACTER_LENGTH_CONVERSION, "LENGTH"))
@@ -486,11 +492,7 @@ public class DruidOperatorTable implements SqlOperatorTable
       final SqlNameMatcher nameMatcher
   )
   {
-    if (opName == null) {
-      return;
-    }
-
-    if (opName.names.size() != 1) {
+    if (opName == null || opName.names.size() != 1) {
       return;
     }
 
@@ -526,10 +528,21 @@ public class DruidOperatorTable implements SqlOperatorTable
     return retVal;
   }
 
+  /**
+   * Checks if a given SqlSyntax value represents a valid function syntax. Treats anything other
+   * than prefix/suffix/binary syntax as function syntax.
+   *
+   * @param syntax The SqlSyntax value to be checked.
+   * @return {@code true} if the syntax is valid for a function, {@code false} otherwise.
+   */
+  public static boolean isFunctionSyntax(final SqlSyntax syntax)
+  {
+    return syntax != SqlSyntax.PREFIX && syntax != SqlSyntax.BINARY && syntax != SqlSyntax.POSTFIX;
+  }
+
   private static SqlSyntax normalizeSyntax(final SqlSyntax syntax)
   {
-    // Treat anything other than prefix/suffix/binary syntax as function syntax.
-    if (syntax == SqlSyntax.PREFIX || syntax == SqlSyntax.BINARY || syntax == SqlSyntax.POSTFIX) {
+    if (!DruidOperatorTable.isFunctionSyntax(syntax)) {
       return syntax;
     } else {
       return SqlSyntax.FUNCTION;

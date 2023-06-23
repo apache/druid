@@ -78,6 +78,11 @@ public class FixedIndexedWriter<T> implements Serializer
     this.valuesOut = segmentWriteOutMedium.makeWriteOutBytes();
   }
 
+  public int getCardinality()
+  {
+    return hasNulls ? numWritten + 1 : numWritten;
+  }
+
   @Override
   public long getSerializedSize()
   {

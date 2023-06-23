@@ -38,6 +38,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -240,7 +241,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertFalse(
         ColumnCapabilitiesImpl.snapshot(
             caps,
-            IndexMergerV9.DIMENSION_CAPABILITY_MERGE_LOGIC
+            CapabilitiesBasedFormat.DIMENSION_CAPABILITY_MERGE_LOGIC
         ).hasMultipleValues().isMaybeTrue()
     );
     Assert.assertFalse(caps.hasSpatialIndexes());
@@ -274,7 +275,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertFalse(
         ColumnCapabilitiesImpl.snapshot(
             caps,
-            IndexMergerV9.DIMENSION_CAPABILITY_MERGE_LOGIC
+            CapabilitiesBasedFormat.DIMENSION_CAPABILITY_MERGE_LOGIC
         ).hasMultipleValues().isMaybeTrue()
     );
     Assert.assertFalse(caps.hasSpatialIndexes());

@@ -144,7 +144,7 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
             maxRowsInMemory,
             maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
             skipBytesInMemoryOverheadCheck,
-            new IndexSpec(),
+            IndexSpec.DEFAULT,
             0,
             false,
             0L,

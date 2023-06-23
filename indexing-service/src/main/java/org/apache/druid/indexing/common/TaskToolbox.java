@@ -129,7 +129,6 @@ public class TaskToolbox
   private final TaskLogPusher taskLogPusher;
   private final String attemptId;
 
-
   public TaskToolbox(
       TaskConfig config,
       DruidNode taskExecutorNode,

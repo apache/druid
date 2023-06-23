@@ -59,7 +59,7 @@ public class ProtobufReader extends IntermediateRowParsingReader<DynamicMessage>
     this.inputRowSchema = inputRowSchema;
     this.recordFlattener = ObjectFlatteners.create(
         flattenSpec,
-        new ProtobufFlattenerMaker(inputRowSchema.getDimensionsSpec().useNestedColumnIndexerForSchemaDiscovery())
+        new ProtobufFlattenerMaker(inputRowSchema.getDimensionsSpec().useSchemaDiscovery())
     );
     this.source = source;
     this.protobufBytesDecoder = protobufBytesDecoder;

@@ -29,6 +29,6 @@ Apache Druid distribution is also available as [Docker](https://www.docker.com/)
 $ docker pull apache/druid
 ```
 
-[druid-operator](https://github.com/druid-io/druid-operator) can be used to manage a Druid cluster on [Kubernetes](https://kubernetes.io/) .
+[druid-operator](https://github.com/datainfrahq/druid-operator) can be used to manage a Druid cluster on [Kubernetes](https://kubernetes.io/) .
 
 Druid clusters deployed on Kubernetes can function without Zookeeper using [druid–kubernetes-extensions](../development/extensions-core/kubernetes.md) .

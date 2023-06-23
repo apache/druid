@@ -69,7 +69,7 @@ public class ExtractionDimFilterTest extends InitializedNullHandlingTest
   {
     return ImmutableList.of(
         new Object[]{new ConciseBitmapFactory(), new ConciseBitmapSerdeFactory()},
-        new Object[]{new RoaringBitmapFactory(), new RoaringBitmapSerdeFactory(null)}
+        new Object[]{new RoaringBitmapFactory(), RoaringBitmapSerdeFactory.getInstance()}
     );
   }
 

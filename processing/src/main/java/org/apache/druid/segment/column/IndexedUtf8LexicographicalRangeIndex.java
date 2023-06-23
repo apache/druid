@@ -44,6 +44,9 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
   private final Indexed<ImmutableBitmap> bitmaps;
   private final boolean hasNull;
 
+  private final ColumnConfig columnConfig;
+  private final int numRows;
+
   public IndexedUtf8LexicographicalRangeIndex(
       BitmapFactory bitmapFactory,
       TDictionary dictionary,
@@ -51,14 +54,36 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
       boolean hasNull
   )
   {
+    this(
+        bitmapFactory,
+        dictionary,
+        bitmaps,
+        hasNull,
+        IndexedStringDruidPredicateIndex.ALWAYS_USE_INDEXES,
+        Integer.MAX_VALUE
+    );
+  }
+
+  public IndexedUtf8LexicographicalRangeIndex(
+      BitmapFactory bitmapFactory,
+      TDictionary dictionary,
+      Indexed<ImmutableBitmap> bitmaps,
+      boolean hasNull,
+      @Nullable ColumnConfig columnConfig,
+      int numRows
+  )
+  {
     Preconditions.checkArgument(dictionary.isSorted(), "Dictionary must be sorted");
     this.bitmapFactory = bitmapFactory;
     this.dictionary = dictionary;
     this.bitmaps = bitmaps;
     this.hasNull = hasNull;
+    this.columnConfig = columnConfig;
+    this.numRows = numRows;
   }
 
   @Override
+  @Nullable
   public BitmapColumnIndex forRange(
       @Nullable String startValue,
       boolean startStrict,
@@ -66,6 +91,11 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
       boolean endStrict
   )
   {
+    final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
+    final int start = range.leftInt(), end = range.rightInt();
+    if (ColumnIndexSupplier.skipComputingRangeIndexes(columnConfig, numRows, end - start)) {
+      return null;
+    }
     return new SimpleImmutableBitmapIterableIndex()
     {
       @Override
@@ -94,6 +124,7 @@ public final class IndexedUtf8LexicographicalRangeIndex<TDictionary extends Inde
   }
 
   @Override
+  @Nullable
   public BitmapColumnIndex forRange(
       @Nullable String startValue,
       boolean startStrict,

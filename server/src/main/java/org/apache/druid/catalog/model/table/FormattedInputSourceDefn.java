@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -95,7 +96,10 @@ public abstract class FormattedInputSourceDefn extends BaseInputSourceDefn
   )
   {
     final List<ParameterDefn> toAdd = new ArrayList<>();
-    final ParameterDefn formatProp = new Parameter(FORMAT_PARAMETER, ParameterType.VARCHAR, false);
+    // While the format parameter is required, we mark it as optional. Else
+    // if the source defines optional parameters, they will still be ignored
+    // as Calcite treats (optional, optional, required) as (required, required, required)
+    final ParameterDefn formatProp = new Parameter(FORMAT_PARAMETER, ParameterType.VARCHAR, true);
     toAdd.add(formatProp);
     final Map<String, ParameterDefn> formatProps = new HashMap<>();
     for (InputFormatDefn format : formats.values()) {
@@ -122,7 +126,7 @@ public abstract class FormattedInputSourceDefn extends BaseInputSourceDefn
   {
     final String formatTag = CatalogUtils.getString(table.inputFormatMap, InputFormat.TYPE_PROPERTY);
     if (formatTag == null) {
-      throw new IAE("%s property must be set", InputFormat.TYPE_PROPERTY);
+      throw new IAE("[%s] property must be provided", InputFormat.TYPE_PROPERTY);
     }
     final InputFormatDefn formatDefn = formats.get(formatTag);
     if (formatDefn == null) {
@@ -140,12 +144,12 @@ public abstract class FormattedInputSourceDefn extends BaseInputSourceDefn
   {
     final String formatTag = CatalogUtils.getString(args, FORMAT_PARAMETER);
     if (formatTag == null) {
-      throw new IAE("%s parameter must be set", FORMAT_PARAMETER);
+      throw new IAE("Must provide a value for the [%s] parameter", FORMAT_PARAMETER);
     }
     final InputFormatDefn formatDefn = formats.get(formatTag);
     if (formatDefn == null) {
       throw new IAE(
-          "Format type [%s] for property %s is not valid",
+          "Format type [%s] for property [%s] is not valid",
           formatTag,
           FORMAT_PARAMETER
       );
@@ -190,7 +194,8 @@ public abstract class FormattedInputSourceDefn extends BaseInputSourceDefn
     return new ExternalTableSpec(
         convertSource(sourceMap, jsonMapper),
         inputFormat,
-        Columns.convertSignature(completedCols)
+        Columns.convertSignature(completedCols),
+        () -> Collections.singleton(typeValue())
     );
   }
 }

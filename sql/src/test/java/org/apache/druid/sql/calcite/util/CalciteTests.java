@@ -42,7 +42,6 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -77,7 +76,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.util.Collection;
 import java.util.HashMap;
@@ -184,7 +182,6 @@ public class CalciteTests
   public static final Injector INJECTOR = new CalciteTestInjectorBuilder()
       .withDefaultMacroTable()
       .build();
-  public static final GlobalTableDataSource CUSTOM_TABLE = TestDataBuilder.CUSTOM_TABLE;
 
   private CalciteTests()
   {

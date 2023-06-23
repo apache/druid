@@ -12,6 +12,7 @@ exports[`ActionCell matches snapshot 1`] = `
     <svg
       data-icon="search-template"
       height="16"
+      role="img"
       viewBox="0 0 16 16"
       width="16"
     >

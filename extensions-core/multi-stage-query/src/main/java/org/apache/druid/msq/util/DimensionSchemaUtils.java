@@ -25,10 +25,12 @@ import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 
@@ -38,33 +40,49 @@ import javax.annotation.Nullable;
  */
 public class DimensionSchemaUtils
 {
-  public static DimensionSchema createDimensionSchema(final String column, @Nullable final ColumnType type)
+  public static DimensionSchema createDimensionSchema(
+      final String column,
+      @Nullable final ColumnType type,
+      boolean useAutoType
+  )
   {
-    // if schema information not available, create a string dimension
-    if (type == null) {
-      return new StringDimensionSchema(column);
-    }
-
-    switch (type.getType()) {
-      case STRING:
-        return new StringDimensionSchema(column);
-      case LONG:
-        return new LongDimensionSchema(column);
-      case FLOAT:
-        return new FloatDimensionSchema(column);
-      case DOUBLE:
-        return new DoubleDimensionSchema(column);
-      case ARRAY:
-        switch (type.getElementType().getType()) {
-          case STRING:
-            return new StringDimensionSchema(column, DimensionSchema.MultiValueHandling.ARRAY, null);
-          default:
-            throw new ISE("Cannot create dimension for type [%s]", type.toString());
-        }
-      default:
+    if (useAutoType) {
+      // for complex types that are not COMPLEX<json>, we still want to use the handler since 'auto' typing
+      // only works for the 'standard' built-in typesg
+      if (type != null && type.is(ValueType.COMPLEX) && !ColumnType.NESTED_DATA.equals(type)) {
         final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(type);
         return DimensionHandlerUtils.getHandlerFromCapabilities(column, capabilities, null)
                                     .getDimensionSchema(capabilities);
+      }
+
+      return new AutoTypeColumnSchema(column);
+    } else {
+      // if schema information not available, create a string dimension
+      if (type == null) {
+        return new StringDimensionSchema(column);
+      }
+
+      switch (type.getType()) {
+        case STRING:
+          return new StringDimensionSchema(column);
+        case LONG:
+          return new LongDimensionSchema(column);
+        case FLOAT:
+          return new FloatDimensionSchema(column);
+        case DOUBLE:
+          return new DoubleDimensionSchema(column);
+        case ARRAY:
+          switch (type.getElementType().getType()) {
+            case STRING:
+              return new StringDimensionSchema(column, DimensionSchema.MultiValueHandling.ARRAY, null);
+            default:
+              throw new ISE("Cannot create dimension for type [%s]", type.toString());
+          }
+        default:
+          final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(type);
+          return DimensionHandlerUtils.getHandlerFromCapabilities(column, capabilities, null)
+                                      .getDimensionSchema(capabilities);
+      }
     }
   }
 }

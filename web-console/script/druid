@@ -64,6 +64,7 @@ function _build_distribution() {
     && cp "$(_get_code_root)/extensions-core/testing-tools/target/druid-testing-tools-$(_get_druid_version).jar" extensions/druid-testing-tools/ \
     && echo -e "\n\ndruid.extensions.loadList=[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-datasketches\", \"druid-multi-stage-query\", \"druid-testing-tools\"]" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
     && echo -e "\n\ndruid.server.http.allowedHttpMethods=[\"HEAD\"]" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
+    && echo -e "\n\ndruid.generic.useDefaultValueForNull=false" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
   )
 }
 

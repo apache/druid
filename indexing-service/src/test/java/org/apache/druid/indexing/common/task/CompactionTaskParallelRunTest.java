@@ -62,6 +62,10 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -87,6 +91,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -920,6 +925,15 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
             tuningConfig
         ),
         null
+    );
+
+    Assert.assertEquals(
+        Collections.singleton(
+            new ResourceAction(new Resource(
+                LocalInputSource.TYPE_KEY,
+                ResourceType.EXTERNAL
+            ), Action.READ)),
+        indexTask.getInputSourceResources()
     );
 
     runTask(indexTask);

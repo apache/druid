@@ -99,6 +99,7 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
   >
     <Blueprint4.Tabs
       animate={true}
+      fill={false}
       large={false}
       renderActiveTabPanelOnly={true}
       vertical={true}

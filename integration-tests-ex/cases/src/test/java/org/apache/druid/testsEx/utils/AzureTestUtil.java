@@ -25,6 +25,7 @@ import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 import com.microsoft.azure.storage.blob.CloudBlockBlob;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.testing.utils.ITRetryUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -83,9 +84,26 @@ public class AzureTestUtil
 
   public void createStorageContainer() throws URISyntaxException, StorageException
   {
+    LOG.info("Creating azure container " + AZURE_CONTAINER);
     CloudBlobContainer container = azureStorageClient.getContainerReference(AZURE_CONTAINER);
     // Create the container if it does not exist.
-    container.createIfNotExists();
+
+    // From the azure documentation -
+    // When a container is deleted, a container with the same name can't be created for at least 30 seconds.
+    // The container might not be available for more than 30 seconds if the service is still processing the request.
+    // While the container is being deleted, attempts to create a container of the same name fail with status
+    // code 409 (Conflict). The service indicates that the container is being deleted.
+    // All other operations, including operations on any blobs under the container,
+    // fail with status code 404 (Not Found) while the container is being deleted.
+    ITRetryUtil.retryUntil(
+        () -> container.createIfNotExists(),
+        true,
+        10000,
+        13,
+        "Create Azure container : " + AZURE_CONTAINER + " "
+    );
+
+    LOG.info("Azure container " + AZURE_CONTAINER + " created");
   }
 
   public void deleteStorageContainer() throws URISyntaxException, StorageException
@@ -109,6 +127,7 @@ public class AzureTestUtil
     // Create or overwrite the "myimage.jpg" blob with contents from a local file.
     File source = new File(filePath);
     CloudBlockBlob blob = container.getBlockBlobReference(DRUID_CLOUD_PATH + '/' + source.getName());
+    LOG.info("Uploading file " + DRUID_CLOUD_PATH + '/' + source.getName() + " in azure container " + AZURE_CONTAINER);
     blob.upload(Files.newInputStream(source.toPath()), source.length());
   }
 }

@@ -149,6 +149,11 @@ public class AggregatorUtil
   public static final byte KLL_FLOATS_SKETCH_BUILD_CACHE_TYPE_ID = 0x4A;
   public static final byte KLL_FLOATS_SKETCH_MERGE_CACHE_TYPE_ID = 0x4B;
 
+
+  public static final byte ARRAY_OF_DOUBLES_SKETCH_TO_BASE64_STRING_CACHE_TYPE_ID = 0x4C;
+  public static final byte ARRAY_OF_DOUBLES_SKETCH_CONSTANT_SKETCH_CACHE_TYPE_ID = 0x4D;
+  public static final byte ARRAY_OF_DOUBLES_SKETCH_TO_METRICS_SUM_ESTIMATE_CACHE_TYPE_ID = 0x4E;
+
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
    *
@@ -206,7 +211,7 @@ public class AggregatorUtil
    * Only one of fieldName and fieldExpression should be non-null
    */
   static ColumnValueSelector makeColumnValueSelectorWithFloatDefault(
-      final ColumnSelectorFactory metricFactory,
+      final ColumnSelectorFactory columnSelectorFactory,
       @Nullable final String fieldName,
       @Nullable final Expr fieldExpression,
       final float nullValue
@@ -216,9 +221,12 @@ public class AggregatorUtil
       throw new IllegalArgumentException("Only one of fieldName or expression should be non-null");
     }
     if (fieldName != null) {
-      return metricFactory.makeColumnValueSelector(fieldName);
+      return columnSelectorFactory.makeColumnValueSelector(fieldName);
     } else {
-      final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(metricFactory, fieldExpression);
+      final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(
+          columnSelectorFactory,
+          fieldExpression
+      );
       class ExpressionFloatColumnSelector implements FloatColumnSelector
       {
         @Override
@@ -226,21 +234,21 @@ public class AggregatorUtil
         {
           // Although baseSelector.getObject is nullable
           // exprEval returned from Expression selectors is never null.
-          final ExprEval exprEval = baseSelector.getObject();
+          final ExprEval<?> exprEval = baseSelector.getObject();
           return exprEval.isNumericNull() ? nullValue : (float) exprEval.asDouble();
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          final ExprEval<?> exprEval = baseSelector.getObject();
+          return exprEval == null || exprEval.isNumericNull();
         }
 
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("baseSelector", baseSelector);
-        }
-
-        @Override
-        public boolean isNull()
-        {
-          final ExprEval exprEval = baseSelector.getObject();
-          return exprEval == null || exprEval.isNumericNull();
         }
       }
       return new ExpressionFloatColumnSelector();
@@ -250,8 +258,8 @@ public class AggregatorUtil
   /**
    * Only one of fieldName and fieldExpression should be non-null
    */
-  static ColumnValueSelector makeColumnValueSelectorWithLongDefault(
-      final ColumnSelectorFactory metricFactory,
+  static ColumnValueSelector<?> makeColumnValueSelectorWithLongDefault(
+      final ColumnSelectorFactory columnSelectorFactory,
       @Nullable final String fieldName,
       @Nullable final Expr fieldExpression,
       final long nullValue
@@ -261,29 +269,32 @@ public class AggregatorUtil
       throw new IllegalArgumentException("Only one of fieldName and fieldExpression should be non-null");
     }
     if (fieldName != null) {
-      return metricFactory.makeColumnValueSelector(fieldName);
+      return columnSelectorFactory.makeColumnValueSelector(fieldName);
     } else {
-      final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(metricFactory, fieldExpression);
+      final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(
+          columnSelectorFactory,
+          fieldExpression
+      );
       class ExpressionLongColumnSelector implements LongColumnSelector
       {
         @Override
         public long getLong()
         {
-          final ExprEval exprEval = baseSelector.getObject();
+          final ExprEval<?> exprEval = baseSelector.getObject();
           return exprEval.isNumericNull() ? nullValue : exprEval.asLong();
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          final ExprEval<?> exprEval = baseSelector.getObject();
+          return exprEval == null || exprEval.isNumericNull();
         }
 
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("baseSelector", baseSelector);
-        }
-
-        @Override
-        public boolean isNull()
-        {
-          final ExprEval exprEval = baseSelector.getObject();
-          return exprEval == null || exprEval.isNumericNull();
         }
       }
       return new ExpressionLongColumnSelector();
@@ -293,8 +304,8 @@ public class AggregatorUtil
   /**
    * Only one of fieldName and fieldExpression should be non-null
    */
-  static ColumnValueSelector makeColumnValueSelectorWithDoubleDefault(
-      final ColumnSelectorFactory metricFactory,
+  static ColumnValueSelector<?> makeColumnValueSelectorWithDoubleDefault(
+      final ColumnSelectorFactory columnSelectorFactory,
       @Nullable final String fieldName,
       @Nullable final Expr fieldExpression,
       final double nullValue
@@ -304,29 +315,32 @@ public class AggregatorUtil
       throw new IllegalArgumentException("Only one of fieldName and fieldExpression should be non-null");
     }
     if (fieldName != null) {
-      return metricFactory.makeColumnValueSelector(fieldName);
+      return columnSelectorFactory.makeColumnValueSelector(fieldName);
     } else {
-      final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(metricFactory, fieldExpression);
+      final ColumnValueSelector<ExprEval> baseSelector = ExpressionSelectors.makeExprEvalSelector(
+          columnSelectorFactory,
+          fieldExpression
+      );
       class ExpressionDoubleColumnSelector implements DoubleColumnSelector
       {
         @Override
         public double getDouble()
         {
-          final ExprEval exprEval = baseSelector.getObject();
+          final ExprEval<?> exprEval = baseSelector.getObject();
           return exprEval.isNumericNull() ? nullValue : exprEval.asDouble();
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          final ExprEval<?> exprEval = baseSelector.getObject();
+          return exprEval == null || exprEval.isNumericNull();
         }
 
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
           inspector.visit("baseSelector", baseSelector);
-        }
-
-        @Override
-        public boolean isNull()
-        {
-          final ExprEval exprEval = baseSelector.getObject();
-          return exprEval == null || exprEval.isNumericNull();
         }
       }
       return new ExpressionDoubleColumnSelector();

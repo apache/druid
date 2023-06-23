@@ -102,6 +102,7 @@ export interface StageWorkerCounter {
   output?: ChannelCounter;
   shuffle?: ChannelCounter;
   sortProgress?: SortProgressCounter;
+  segmentGenerationProgress?: SegmentGenerationProgressCounter;
   warnings?: WarningCounter;
 }
 
@@ -146,6 +147,20 @@ export interface SortProgressCounter {
   triviallyComplete?: boolean;
 }
 
+export interface SegmentGenerationProgressCounter {
+  type: 'segmentGenerationProgress';
+  rowsProcessed: number;
+  rowsPersisted: number;
+  rowsMerged: number;
+  rowsPushed: number;
+}
+
+export type SegmentGenerationProgressFields =
+  | 'rowsProcessed'
+  | 'rowsPersisted'
+  | 'rowsMerged'
+  | 'rowsPushed';
+
 export interface WarningCounter {
   type: 'warning';
   CannotParseExternalData?: number;
@@ -157,6 +172,7 @@ export interface SimpleWideCounter {
   [k: `input${number}`]: Record<ChannelFields, number> | undefined;
   output?: Record<ChannelFields, number>;
   shuffle?: Record<ChannelFields, number>;
+  segmentGenerationProgress?: SegmentGenerationProgressCounter;
 }
 
 function zeroChannelFields(): Record<ChannelFields, number> {
@@ -173,8 +189,12 @@ export class Stages {
   static readonly QUERY_START_FACTOR = 0.05;
   static readonly QUERY_END_FACTOR = 0.05;
 
+  static stageType(stage: StageDefinition): string {
+    return stage.definition.processor.type;
+  }
+
   static stageWeight(stage: StageDefinition): number {
-    return stage.definition.processor.type === 'limit' ? 0.1 : 1;
+    return Stages.stageType(stage) === 'limit' ? 0.1 : 1;
   }
 
   public readonly stages: StageDefinition[];
@@ -214,6 +234,9 @@ export class Stages {
       case 'shuffle':
         return 'Shuffle output';
 
+      case 'segmentGenerationProgress':
+        return 'Segment generation';
+
       default:
         if (counterName.startsWith('input')) {
           const inputIndex = Number(counterName.replace('input', ''));
@@ -230,7 +253,7 @@ export class Stages {
   }
 
   stageHasOutput(stage: StageDefinition): boolean {
-    return stage.definition.processor.type !== 'segmentGenerator';
+    return Stages.stageType(stage) !== 'segmentGenerator';
   }
 
   stageHasSort(stage: StageDefinition): boolean {
@@ -287,13 +310,16 @@ export class Stages {
         ) / inputFileCount
       );
     } else {
-      // Otherwise, base it on the stage input divided by the output of all non-broadcast input stages
+      // Otherwise, base it on the stage input divided by the output of all non-broadcast input stages,
+      // use the segment generation counter in the special case of a segmentGenerator stage
       return zeroDivide(
-        sum(input, (inputSource, i) =>
-          inputSource.type === 'stage' && !broadcast?.includes(i)
-            ? this.getTotalCounterForStage(stage, `input${i}`, 'rows')
-            : 0,
-        ),
+        Stages.stageType(stage) === 'segmentGenerator'
+          ? this.getTotalSegmentGenerationProgressForStage(stage, 'rowsPushed')
+          : sum(input, (inputSource, i) =>
+              inputSource.type === 'stage' && !broadcast?.includes(i)
+                ? this.getTotalCounterForStage(stage, `input${i}`, 'rows')
+                : 0,
+            ),
         sum(input, (inputSource, i) =>
           inputSource.type === 'stage' && !broadcast?.includes(i)
             ? this.getTotalOutputForStage(stages[inputSource.stage], 'rows')
@@ -400,6 +426,15 @@ export class Stages {
     );
   }
 
+  getTotalSegmentGenerationProgressForStage(
+    stage: StageDefinition,
+    field: SegmentGenerationProgressFields,
+  ): number {
+    const { counters } = this;
+    if (!counters) return 0;
+    return sum(this.getCountersForStage(stage), c => c.segmentGenerationProgress?.[field] || 0);
+  }
+
   getChannelCounterNamesForStage(stage: StageDefinition): ChannelCounterName[] {
     const { definition } = stage;
 
@@ -416,8 +451,7 @@ export class Stages {
     const channelCounters = this.getChannelCounterNamesForStage(stage);
 
     const forStageCounters = counters?.[stageNumber] || {};
-    return Object.keys(forStageCounters).map(key => {
-      const stageCounters = forStageCounters[key];
+    return Object.entries(forStageCounters).map(([key, stageCounters]) => {
       const newWideCounter: SimpleWideCounter = {
         index: Number(key),
       };
@@ -433,6 +467,7 @@ export class Stages {
             }
           : zeroChannelFields();
       }
+      newWideCounter.segmentGenerationProgress = stageCounters.segmentGenerationProgress;
       return newWideCounter;
     });
   }

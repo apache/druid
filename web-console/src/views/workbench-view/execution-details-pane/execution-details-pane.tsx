@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 import { IconNames } from '@blueprintjs/icons';
-import { RefName } from 'druid-query-toolkit';
+import { T } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
@@ -35,13 +35,13 @@ export type ExecutionDetailsTab = 'general' | 'sql' | 'native' | 'result' | 'err
 interface ExecutionDetailsPaneProps {
   execution: Execution;
   initTab?: ExecutionDetailsTab;
-  goToIngestion(taskId: string): void;
+  goToTask(taskId: string): void;
 }
 
 export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
   props: ExecutionDetailsPaneProps,
 ) {
-  const { execution, initTab, goToIngestion } = props;
+  const { execution, initTab, goToTask } = props;
   const [activeTab, setActiveTab] = useState<ExecutionDetailsTab>(initTab || 'general');
 
   function renderContent() {
@@ -51,7 +51,7 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
         return (
           <div>
             <p>{`General info for ${execution.id}${
-              ingestDatasource ? ` ingesting into ${RefName.create(ingestDatasource, true)}` : ''
+              ingestDatasource ? ` ingesting into ${T(ingestDatasource)}` : ''
             }`}</p>
             {execution.error && <ExecutionErrorPane execution={execution} />}
             {execution.stages ? (
@@ -59,7 +59,7 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
                 execution={execution}
                 onErrorClick={() => setActiveTab('error')}
                 onWarningClick={() => setActiveTab('warnings')}
-                goToIngestion={goToIngestion}
+                goToTask={goToTask}
               />
             ) : (
               <p>No stage info was reported.</p>

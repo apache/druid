@@ -91,6 +91,10 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.server.metrics.ExceptionCapturingServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.NewPartitions;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -432,6 +436,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(
             Long.MAX_VALUE,
             (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(2)
+    );
+    Assert.assertEquals(
+        Collections.singleton(new ResourceAction(
+            new Resource(KafkaSupervisorSpec.TASK_TYPE, ResourceType.EXTERNAL),
+            Action.READ
+        )),
+        testableSupervisorSpec.getInputSourceResources()
     );
 
     autoscaler.reset();

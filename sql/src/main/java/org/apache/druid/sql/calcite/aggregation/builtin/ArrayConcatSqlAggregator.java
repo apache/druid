@@ -80,7 +80,7 @@ public class ArrayConcatSqlAggregator implements SqlAggregator
     final List<RexNode> arguments = aggregateCall
         .getArgList()
         .stream()
-        .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
+        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
         .collect(Collectors.toList());
 
     Integer maxSizeBytes = null;
@@ -163,7 +163,7 @@ public class ArrayConcatSqlAggregator implements SqlAggregator
           OperandTypes.or(
               OperandTypes.ARRAY,
               OperandTypes.sequence(
-                  StringUtils.format("'%s'(expr, maxSizeBytes)", NAME),
+                  StringUtils.format("'%s(expr, maxSizeBytes)'", NAME),
                   OperandTypes.ARRAY,
                   OperandTypes.POSITIVE_INTEGER_LITERAL
               )

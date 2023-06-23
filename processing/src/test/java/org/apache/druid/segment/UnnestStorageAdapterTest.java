@@ -22,27 +22,38 @@ package org.apache.druid.segment;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.join.PostJoinCursor;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.utils.CloseableUtils;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
+import org.joda.time.Interval;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.List;
 
 public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
@@ -52,13 +63,10 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   private static IncrementalIndexStorageAdapter INCREMENTAL_INDEX_STORAGE_ADAPTER;
   private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER;
   private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER1;
-  private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER2;
-  private static UnnestStorageAdapter UNNEST_STORAGE_ADAPTER3;
   private static List<StorageAdapter> ADAPTERS;
   private static String COLUMNNAME = "multi-string1";
   private static String OUTPUT_COLUMN_NAME = "unnested-multi-string1";
   private static String OUTPUT_COLUMN_NAME1 = "unnested-multi-string1-again";
-  private static LinkedHashSet<String> IGNORE_SET = new LinkedHashSet<>(Arrays.asList("1", "3", "5"));
 
   @BeforeClass
   public static void setup()
@@ -82,33 +90,19 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     INCREMENTAL_INDEX_STORAGE_ADAPTER = new IncrementalIndexStorageAdapter(INCREMENTAL_INDEX);
     UNNEST_STORAGE_ADAPTER = new UnnestStorageAdapter(
         INCREMENTAL_INDEX_STORAGE_ADAPTER,
-        COLUMNNAME,
-        OUTPUT_COLUMN_NAME,
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
         null
     );
+
     UNNEST_STORAGE_ADAPTER1 = new UnnestStorageAdapter(
-        INCREMENTAL_INDEX_STORAGE_ADAPTER,
-        COLUMNNAME,
-        OUTPUT_COLUMN_NAME,
-        IGNORE_SET
-    );
-    UNNEST_STORAGE_ADAPTER2 = new UnnestStorageAdapter(
         UNNEST_STORAGE_ADAPTER,
-        COLUMNNAME,
-        OUTPUT_COLUMN_NAME1,
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME1, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
         null
     );
-    UNNEST_STORAGE_ADAPTER3 = new UnnestStorageAdapter(
-        UNNEST_STORAGE_ADAPTER1,
-        COLUMNNAME,
-        OUTPUT_COLUMN_NAME1,
-        IGNORE_SET
-    );
+
     ADAPTERS = ImmutableList.of(
         UNNEST_STORAGE_ADAPTER,
-        UNNEST_STORAGE_ADAPTER1,
-        UNNEST_STORAGE_ADAPTER2,
-        UNNEST_STORAGE_ADAPTER3
+        UNNEST_STORAGE_ADAPTER1
     );
   }
 
@@ -143,7 +137,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
           adapter.getColumnCapabilities(colName).toColumnType(),
           INCREMENTAL_INDEX_STORAGE_ADAPTER.getColumnCapabilities(colName).toColumnType()
       );
-      Assert.assertEquals(((UnnestStorageAdapter) adapter).getDimensionToUnnest(), colName);
+
+      assertColumnReadsIdentifier(((UnnestStorageAdapter) adapter).getUnnestColumn(), colName);
     }
   }
 
@@ -173,7 +168,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       ColumnCapabilities capabilities = adapter.getColumnCapabilities(columnsInTable.get(i));
       Assert.assertEquals(capabilities.getType(), valueTypes.get(i));
     }
-    Assert.assertEquals(adapter.getDimensionToUnnest(), colName);
+    assertColumnReadsIdentifier(adapter.getUnnestColumn(), colName);
 
   }
 
@@ -216,9 +211,9 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   @Test
   public void test_two_levels_of_unnest_adapters()
   {
-    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER2.makeCursors(
+    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER1.makeCursors(
         null,
-        UNNEST_STORAGE_ADAPTER2.getInterval(),
+        UNNEST_STORAGE_ADAPTER1.getInterval(),
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
@@ -255,145 +250,182 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     });
   }
 
-  @Test
-  public void test_unnest_adapters_with_allowList()
+  private static void assertColumnReadsIdentifier(final VirtualColumn column, final String identifier)
   {
-    final String columnName = "multi-string1";
+    MatcherAssert.assertThat(column, CoreMatchers.instanceOf(ExpressionVirtualColumn.class));
+    Assert.assertEquals("\"" + identifier + "\"", ((ExpressionVirtualColumn) column).getExpression());
+  }
 
-    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER1.makeCursors(
-        null,
-        UNNEST_STORAGE_ADAPTER1.getInterval(),
+  @Test
+  public void test_pushdown_or_filters_unnested_and_original_dimension_with_unnest_adapters()
+  {
+    final UnnestStorageAdapter unnestStorageAdapter = new UnnestStorageAdapter(
+        new TestStorageAdapter(INCREMENTAL_INDEX),
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
+        null
+    );
+
+    final VirtualColumn vc = unnestStorageAdapter.getUnnestColumn();
+
+    final String inputColumn = unnestStorageAdapter.getUnnestInputIfDirectAccess(vc);
+
+    final OrFilter baseFilter = new OrFilter(ImmutableList.of(
+        new SelectorDimFilter(OUTPUT_COLUMN_NAME, "1", null).toFilter(),
+        new SelectorDimFilter(inputColumn, "2", null).toFilter()
+    ));
+
+    final OrFilter expectedPushDownFilter = new OrFilter(ImmutableList.of(
+        new SelectorDimFilter(inputColumn, "1", null).toFilter(),
+        new SelectorDimFilter(inputColumn, "2", null).toFilter()
+    ));
+
+    final Sequence<Cursor> cursorSequence = unnestStorageAdapter.makeCursors(
+        baseFilter,
+        unnestStorageAdapter.getInterval(),
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
         null
     );
 
+    final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
+    final Filter pushDownFilter = base.getPushDownFilter();
+
+    Assert.assertEquals(expectedPushDownFilter, pushDownFilter);
     cursorSequence.accumulate(null, (accumulated, cursor) -> {
-      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
-
-      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
-      ColumnValueSelector valueSelector = factory.makeColumnValueSelector(OUTPUT_COLUMN_NAME);
-
-      int count = 0;
-      while (!cursor.isDone()) {
-        Object dimSelectorVal = dimSelector.getObject();
-        Object valueSelectorVal = valueSelector.getObject();
-        if (dimSelectorVal == null) {
-          Assert.assertNull(dimSelectorVal);
-        } else if (valueSelectorVal == null) {
-          Assert.assertNull(valueSelectorVal);
-        }
-        cursor.advance();
-        count++;
-      }
-      /*
-      each row has 8 distinct entries.
-      allowlist has 3 entries also the value cardinality
-      unnest will have 3 distinct entries
-       */
-      Assert.assertEquals(count, 3);
-      Assert.assertEquals(dimSelector.getValueCardinality(), 3);
+      Assert.assertEquals(cursor.getClass(), PostJoinCursor.class);
+      final Filter postFilter = ((PostJoinCursor) cursor).getPostJoinFilter();
+      // OR-case so base filter should match the postJoinFilter
+      Assert.assertEquals(baseFilter, postFilter);
       return null;
     });
   }
 
   @Test
-  public void test_two_levels_of_unnest_adapters_with_allowList()
+  public void test_pushdown_filters_unnested_dimension_with_unnest_adapters()
   {
-    final String columnName = "multi-string1";
+    final UnnestStorageAdapter unnestStorageAdapter = new UnnestStorageAdapter(
+        new TestStorageAdapter(INCREMENTAL_INDEX),
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
+        new SelectorDimFilter(OUTPUT_COLUMN_NAME, "1", null)
+    );
 
-    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER3.makeCursors(
+    final VirtualColumn vc = unnestStorageAdapter.getUnnestColumn();
+
+    final String inputColumn = unnestStorageAdapter.getUnnestInputIfDirectAccess(vc);
+
+    final Filter expectedPushDownFilter =
+        new SelectorDimFilter(inputColumn, "1", null).toFilter();
+
+
+    final Sequence<Cursor> cursorSequence = unnestStorageAdapter.makeCursors(
         null,
-        UNNEST_STORAGE_ADAPTER3.getInterval(),
+        unnestStorageAdapter.getInterval(),
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
         null
     );
-    UnnestStorageAdapter adapter = UNNEST_STORAGE_ADAPTER3;
-    Assert.assertEquals(adapter.getDimensionToUnnest(), columnName);
-    Assert.assertEquals(
-        adapter.getColumnCapabilities(OUTPUT_COLUMN_NAME).isDictionaryEncoded(),
-        ColumnCapabilities.Capable.TRUE
-    );
-    Assert.assertEquals(adapter.getMaxValue(columnName), adapter.getMaxValue(OUTPUT_COLUMN_NAME));
-    Assert.assertEquals(adapter.getMinValue(columnName), adapter.getMinValue(OUTPUT_COLUMN_NAME));
 
+    final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
+    final Filter pushDownFilter = base.getPushDownFilter();
+
+    Assert.assertEquals(expectedPushDownFilter, pushDownFilter);
     cursorSequence.accumulate(null, (accumulated, cursor) -> {
-      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
-
-      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME1));
-      ColumnValueSelector valueSelector = factory.makeColumnValueSelector(OUTPUT_COLUMN_NAME1);
+      Assert.assertEquals(cursor.getClass(), PostJoinCursor.class);
+      final Filter postFilter = ((PostJoinCursor) cursor).getPostJoinFilter();
+      Assert.assertEquals(unnestStorageAdapter.getUnnestFilter(), postFilter);
 
       int count = 0;
       while (!cursor.isDone()) {
-        Object dimSelectorVal = dimSelector.getObject();
-        Object valueSelectorVal = valueSelector.getObject();
-        if (dimSelectorVal == null) {
-          Assert.assertNull(dimSelectorVal);
-        } else if (valueSelectorVal == null) {
-          Assert.assertNull(valueSelectorVal);
-        }
         cursor.advance();
         count++;
       }
-      /*
-      each row has 8 distinct entries.
-      allowlist has 3 entries also the value cardinality
-      unnest will have 3 distinct entries
-      unnest of that unnest will have 3*3 = 9 entries
-       */
-      Assert.assertEquals(count, 9);
-      Assert.assertEquals(dimSelector.getValueCardinality(), 3);
+      Assert.assertEquals(1, count);
       return null;
     });
   }
 
-  @Test
-  public void test_unnest_adapters_methods_with_allowList()
-  {
-    final String columnName = "multi-string1";
 
-    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER1.makeCursors(
-        null,
-        UNNEST_STORAGE_ADAPTER1.getInterval(),
+  @Test
+  public void test_pushdown_filters_unnested_dimension_outside()
+  {
+    final UnnestStorageAdapter unnestStorageAdapter = new UnnestStorageAdapter(
+        new TestStorageAdapter(INCREMENTAL_INDEX),
+        new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + COLUMNNAME + "\"", null, ExprMacroTable.nil()),
+        null
+    );
+
+    final VirtualColumn vc = unnestStorageAdapter.getUnnestColumn();
+
+    final String inputColumn = unnestStorageAdapter.getUnnestInputIfDirectAccess(vc);
+
+    final Filter expectedPushDownFilter =
+        new SelectorDimFilter(inputColumn, "1", null).toFilter();
+
+
+    final Filter queryFilter = new SelectorDimFilter(OUTPUT_COLUMN_NAME, "1", null).toFilter();
+    final Sequence<Cursor> cursorSequence = unnestStorageAdapter.makeCursors(
+        queryFilter,
+        unnestStorageAdapter.getInterval(),
         VirtualColumns.EMPTY,
         Granularities.ALL,
         false,
         null
     );
-    UnnestStorageAdapter adapter = UNNEST_STORAGE_ADAPTER1;
-    Assert.assertEquals(adapter.getDimensionToUnnest(), columnName);
-    Assert.assertEquals(
-        adapter.getColumnCapabilities(OUTPUT_COLUMN_NAME).isDictionaryEncoded(),
-        ColumnCapabilities.Capable.TRUE
-    );
-    Assert.assertEquals(adapter.getMaxValue(columnName), adapter.getMaxValue(OUTPUT_COLUMN_NAME));
-    Assert.assertEquals(adapter.getMinValue(columnName), adapter.getMinValue(OUTPUT_COLUMN_NAME));
 
+    final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
+    final Filter pushDownFilter = base.getPushDownFilter();
+
+    Assert.assertEquals(expectedPushDownFilter, pushDownFilter);
     cursorSequence.accumulate(null, (accumulated, cursor) -> {
-      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+      Assert.assertEquals(cursor.getClass(), PostJoinCursor.class);
+      final Filter postFilter = ((PostJoinCursor) cursor).getPostJoinFilter();
+      Assert.assertEquals(queryFilter, postFilter);
 
-      DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
-      IdLookup idlookUp = dimSelector.idLookup();
-      Assert.assertFalse(dimSelector.isNull());
-      int[] indices = new int[]{1, 3, 5};
       int count = 0;
       while (!cursor.isDone()) {
-        Object dimSelectorVal = dimSelector.getObject();
-        Assert.assertEquals(idlookUp.lookupId((String) dimSelectorVal), indices[count]);
-        // after unnest first entry in get row should equal the object
-        // and the row size will always be 1
-        Assert.assertEquals(dimSelector.getRow().get(0), indices[count]);
-        Assert.assertEquals(dimSelector.getRow().size(), 1);
-        Assert.assertNotNull(dimSelector.makeValueMatcher(OUTPUT_COLUMN_NAME));
         cursor.advance();
         count++;
       }
-      Assert.assertEquals(dimSelector.getValueCardinality(), 3);
-      Assert.assertEquals(count, 3);
+      Assert.assertEquals(1, count);
       return null;
     });
+  }
+}
+
+/**
+ * Class to test the flow of pushing down filters into the base cursor
+ * while using the UnnestStorageAdapter. This class keeps a reference of the filter
+ * which is pushed down to the cursor which serves as a checkpoint to validate
+ * if the right filter is being pushed down
+ */
+class TestStorageAdapter extends IncrementalIndexStorageAdapter
+{
+
+  private Filter pushDownFilter;
+
+  public TestStorageAdapter(IncrementalIndex index)
+  {
+    super(index);
+  }
+
+  public Filter getPushDownFilter()
+  {
+    return pushDownFilter;
+  }
+
+  @Override
+  public Sequence<Cursor> makeCursors(
+      @Nullable final Filter filter,
+      final Interval interval,
+      final VirtualColumns virtualColumns,
+      final Granularity gran,
+      final boolean descending,
+      @Nullable QueryMetrics<?> queryMetrics
+  )
+  {
+    this.pushDownFilter = filter;
+    return super.makeCursors(filter, interval, virtualColumns, gran, descending, queryMetrics);
   }
 }

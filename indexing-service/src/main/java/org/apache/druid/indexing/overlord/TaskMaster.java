@@ -34,7 +34,7 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
-import org.apache.druid.indexing.overlord.helpers.OverlordHelperManager;
+import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -91,7 +91,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
       final ServiceEmitter emitter,
       final SupervisorManager supervisorManager,
-      final OverlordHelperManager overlordHelperManager,
+      final OverlordDutyExecutor overlordDutyExecutor,
       @IndexingService final DruidLeaderSelector overlordLeaderSelector,
       final SegmentAllocationQueue segmentAllocationQueue
   )
@@ -137,7 +137,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
           leaderLifecycle.addManagedInstance(taskRunner);
           leaderLifecycle.addManagedInstance(taskQueue);
           leaderLifecycle.addManagedInstance(supervisorManager);
-          leaderLifecycle.addManagedInstance(overlordHelperManager);
+          leaderLifecycle.addManagedInstance(overlordDutyExecutor);
           leaderLifecycle.addHandler(
               new Lifecycle.Handler()
               {

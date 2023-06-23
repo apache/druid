@@ -89,7 +89,7 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
     final List<RexNode> rexNodes = aggregateCall
         .getArgList()
         .stream()
-        .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
+        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
         .collect(Collectors.toList());
 
     final List<DruidExpression> args = Expressions.toDruidExpressions(plannerContext, rowSignature, rexNodes);
@@ -168,12 +168,12 @@ public class EarliestLatestBySqlAggregator implements SqlAggregator
           InferTypes.RETURN_TYPE,
           OperandTypes.or(
               OperandTypes.sequence(
-                  "'" + aggregatorType.name() + "(expr, timeColumn)'\n",
+                  "'" + StringUtils.format("%s_BY", aggregatorType.name()) + "(expr, timeColumn)'",
                   OperandTypes.ANY,
                   OperandTypes.family(SqlTypeFamily.TIMESTAMP)
               ),
               OperandTypes.sequence(
-                  "'" + aggregatorType.name() + "(expr, timeColumn, maxBytesPerString)'\n",
+                  "'" + StringUtils.format("%s_BY", aggregatorType.name()) + "(expr, timeColumn, maxBytesPerString)'",
                   OperandTypes.ANY,
                   OperandTypes.family(SqlTypeFamily.TIMESTAMP),
                   OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL)

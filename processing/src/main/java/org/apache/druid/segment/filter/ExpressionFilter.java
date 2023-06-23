@@ -123,6 +123,12 @@ public class ExpressionFilter implements Filter
             ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr)
         ).makeMatcher(predicateFactory);
       default:
+        if (ExpressionType.NESTED_DATA.equals(outputType)) {
+          return VectorValueMatcherColumnProcessorFactory.instance().makeObjectProcessor(
+              ColumnCapabilitiesImpl.createDefault().setType(ExpressionType.toColumnType(outputType)).setHasNulls(true),
+              ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr)
+          ).makeMatcher(predicateFactory);
+        }
         throw new UOE("Vectorized expression matchers not implemented for type: [%s]", outputType);
     }
   }
@@ -303,6 +309,12 @@ public class ExpressionFilter implements Filter
         return Evals::asBoolean;
       }
 
+      @Override
+      public Predicate<Object> makeObjectPredicate()
+      {
+        return Evals::objectAsBoolean;
+      }
+
       // The hashcode and equals are to make SubclassesMustOverrideEqualsAndHashCodeTest stop complaining..
       // DruidPredicateFactory currently doesn't really need equals or hashcode since 'toString' method that is actually
       // called when testing equality of DimensionPredicateFilter, so it's the truly required method, but that seems
@@ -334,7 +346,10 @@ public class ExpressionFilter implements Filter
       public Predicate<String> makeStringPredicate()
       {
         return value -> expr.get().eval(
-            InputBindings.forFunction(identifierName -> NullHandling.nullToEmptyIfNeeded(value))
+            InputBindings.forInputSupplier(
+                ExpressionType.STRING,
+                () -> NullHandling.nullToEmptyIfNeeded(value)
+            )
         ).asBoolean();
       }
 
@@ -346,7 +361,7 @@ public class ExpressionFilter implements Filter
           @Override
           public boolean applyLong(long input)
           {
-            return expr.get().eval(InputBindings.forFunction(identifierName -> input)).asBoolean();
+            return expr.get().eval(InputBindings.forInputSupplier(ExpressionType.LONG, () -> input)).asBoolean();
           }
 
           @Override
@@ -365,7 +380,9 @@ public class ExpressionFilter implements Filter
           @Override
           public boolean applyFloat(float input)
           {
-            return expr.get().eval(InputBindings.forFunction(identifierName -> input)).asBoolean();
+            return expr.get().eval(
+                InputBindings.forInputSupplier(ExpressionType.DOUBLE, () -> input)
+            ).asBoolean();
           }
 
           @Override
@@ -384,7 +401,9 @@ public class ExpressionFilter implements Filter
           @Override
           public boolean applyDouble(double input)
           {
-            return expr.get().eval(InputBindings.forFunction(identifierName -> input)).asBoolean();
+            return expr.get().eval(
+                InputBindings.forInputSupplier(ExpressionType.DOUBLE, () -> input)
+            ).asBoolean();
           }
 
           @Override

@@ -36,7 +36,6 @@ import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
@@ -51,14 +50,14 @@ public class KeyStatisticsCollectionProcessor implements FrameProcessor<ClusterB
 {
   /**
    * Constant chosen such that a column full of "standard" values, with row count
-   * {@link MSQTaskQueryMaker#DEFAULT_ROWS_PER_SEGMENT}, and *some* redundancy between
+   * {@link org.apache.druid.msq.util.MultiStageQueryContext#DEFAULT_ROWS_PER_SEGMENT}, and *some* redundancy between
    * rows (therefore: some "reasonable" compression) will not have any columns greater than 2GB in size.
    */
   private static final int STANDARD_VALUE_SIZE = 1000;
 
   /**
    * Constant chosen such that a segment full of "standard" rows, with row count
-   * {@link MSQTaskQueryMaker#DEFAULT_ROWS_PER_SEGMENT}, and *some* redundancy between
+   * {@link org.apache.druid.msq.util.MultiStageQueryContext#DEFAULT_ROWS_PER_SEGMENT}, and *some* redundancy between
    * rows (therefore: some "reasonable" compression) will not be larger than 5GB in size.
    */
   private static final int STANDARD_ROW_SIZE = 2000;

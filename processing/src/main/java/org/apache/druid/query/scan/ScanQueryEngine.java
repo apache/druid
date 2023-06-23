@@ -66,9 +66,6 @@ public class ScanQueryEngine
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-    if (segment.asQueryableIndex() != null && segment.asQueryableIndex().isFromTombstone()) {
-      return Sequences.empty();
-    }
 
     // "legacy" should be non-null due to toolChest.mergeResults
     final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "Expected non-null 'legacy' parameter");
@@ -85,6 +82,10 @@ public class ScanQueryEngine
       throw new ISE(
           "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
       );
+    }
+
+    if (adapter.isFromTombstone()) {
+      return Sequences.empty();
     }
 
     final List<String> allColumns = new ArrayList<>();

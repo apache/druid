@@ -21,13 +21,17 @@ package org.apache.druid.discovery;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.ListenableFutureTask;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
+import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -38,6 +42,7 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.BaseJettyTest;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -50,6 +55,8 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -59,6 +66,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -198,6 +206,41 @@ public class DruidLeaderClientTest extends BaseJettyTest
     Request request = druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/redirect");
     request.setContent("hello".getBytes(StandardCharsets.UTF_8));
     Assert.assertEquals("hello", druidLeaderClient.go(request).getContent());
+  }
+
+  @Test
+  public void test503ResponseFromServerAndCacheRefresh() throws Exception
+  {
+    DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    // Should be called twice. Second time is when we refresh the cache since we get 503 in the first request
+    EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(discoveryDruidNode)).times(2);
+
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.PEON)).andReturn(druidNodeDiscovery).anyTimes();
+
+    ListenableFutureTask task = EasyMock.createMock(ListenableFutureTask.class);
+    EasyMock.expect(task.get()).andReturn(new StringFullResponseHolder(new DefaultHttpResponse(
+        HttpVersion.HTTP_1_1,
+        HttpResponseStatus.SERVICE_UNAVAILABLE
+    ), Charset.defaultCharset()));
+    EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider, task);
+
+    HttpClient spyHttpClient = Mockito.spy(this.httpClient);
+    // Override behavior for the first call only
+    Mockito.doReturn(task).doCallRealMethod().when(spyHttpClient).go(ArgumentMatchers.any(), ArgumentMatchers.any());
+
+    DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
+        spyHttpClient,
+        druidNodeDiscoveryProvider,
+        NodeRole.PEON,
+        "/simple/leader"
+    );
+    druidLeaderClient.start();
+
+    Request request = druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/direct");
+    request.setContent("hello".getBytes(StandardCharsets.UTF_8));
+    Assert.assertEquals("hello", druidLeaderClient.go(request).getContent());
+    EasyMock.verify(druidNodeDiscovery);
   }
 
   @Test

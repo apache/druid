@@ -291,7 +291,8 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
       swappers.add(swapper);
     }
 
-    Arrays.quickSort(
+    // Use stable sort, so peer rows retain original order.
+    Arrays.mergeSort(
         0,
         rows.size(),
         (lhs, rhs) -> {

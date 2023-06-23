@@ -128,7 +128,7 @@ public class ExpressionFilterTest extends BaseFilterTest
   @After
   public void teardown()
   {
-    ExpressionProcessing.initializeForTests(null);
+    ExpressionProcessing.initializeForTests();
   }
 
   @AfterClass
@@ -162,6 +162,10 @@ public class ExpressionFilterTest extends BaseFilterTest
   @Test
   public void testOneMultiValuedStringColumn()
   {
+    // auto type columns don't support mvds, bail out
+    if (testName.contains("AutoTypes")) {
+      return;
+    }
     if (NullHandling.replaceWithDefault()) {
       assertFilterMatchesSkipVectorize(edf("dim4 == ''"), ImmutableList.of("1", "2", "6", "7", "8"));
     } else {
@@ -248,6 +252,10 @@ public class ExpressionFilterTest extends BaseFilterTest
       assertFilterMatches(edf("dim2 == dim3"), ImmutableList.of("2", "5", "8"));
     }
 
+    // auto type columns don't support mvds, bail out
+    if (testName.contains("AutoTypes")) {
+      return;
+    }
     // String vs. multi-value string
     assertFilterMatchesSkipVectorize(edf("dim0 == dim4"), ImmutableList.of("3", "4", "5"));
   }

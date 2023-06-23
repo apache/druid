@@ -47,7 +47,7 @@ public class ITS3ToS3ParallelIndexTest extends AbstractS3InputSourceParallelInde
 {
   @Test
   @Parameters(method = "resources")
-  public void testS3IndexData(Pair<String, List> s3InputSource) throws Exception
+  public void testS3IndexData(Pair<String, List<?>> s3InputSource) throws Exception
   {
     doTest(s3InputSource, new Pair<>(false, false), "s3");
   }

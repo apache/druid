@@ -22,9 +22,13 @@
   &.#{$bp-ns}-dialog {
     top: 5%;
     width: 750px;
+    height: 80vh;
   }
 
   .#{$bp-ns}-dialog-body {
+    display: flex;
+    flex-direction: column;
+
     .rule-editor {
       margin-bottom: 15px;
     }

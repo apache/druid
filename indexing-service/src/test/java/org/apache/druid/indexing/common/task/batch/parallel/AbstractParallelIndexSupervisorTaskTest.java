@@ -55,6 +55,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
@@ -246,26 +247,11 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     taskRunner = new SimpleThreadingTaskRunner(testName.getMethodName());
     objectMapper = getObjectMapper();
     indexingServiceClient = new LocalOverlordClient(objectMapper, taskRunner);
-    intermediaryDataManager = new LocalIntermediaryDataManager(
-        new WorkerConfig(),
-        new TaskConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null,
-            ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)),
-            false,
-            false,
-            TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-            null,
-            false
-        ),
-        null
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)))
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
+    intermediaryDataManager = new LocalIntermediaryDataManager(new WorkerConfig(), taskConfig, null);
     remoteApiExecutor = Execs.singleThreaded("coordinator-api-executor");
     coordinatorClient = new LocalCoordinatorClient(remoteApiExecutor);
     prepareObjectMapper(objectMapper, getIndexIO());
@@ -648,22 +634,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   public void prepareObjectMapper(ObjectMapper objectMapper, IndexIO indexIO)
   {
-    final TaskConfig taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
 
     objectMapper.setInjectableValues(
         new InjectableValues.Std()
@@ -697,25 +670,11 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   protected TaskToolbox createTaskToolbox(Task task, TaskActionClient actionClient) throws IOException
   {
+    TaskConfig config = new TaskConfigBuilder()
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
     return new TaskToolbox.Builder()
-        .config(
-            new TaskConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                null,
-                null,
-                null,
-                false,
-                false,
-                TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-                null,
-                false
-            )
-        )
+        .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
         .taskActionClient(actionClient)
         .segmentPusher(
@@ -897,8 +856,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     Map<String, Object> expectedPayload = (Map<String, Object>) expectedReports.get("payload");
     Map<String, Object> actualPayload = (Map<String, Object>) actualReports.get("payload");
     Assert.assertEquals(expectedPayload.get("ingestionState"), actualPayload.get("ingestionState"));
-    Assert.assertEquals(expectedPayload.get("rowStats"), actualPayload.get("rowStats"));
-    Assert.assertEquals(expectedPayload.get("ingestionState"), actualPayload.get("ingestionState"));
+
+    Map<String, Object> expectedTotals = (Map<String, Object>) expectedPayload.get("totals");
+    Map<String, Object> actualTotals = (Map<String, Object>) actualReports.get("totals");
+    Assert.assertEquals(expectedTotals, actualTotals);
 
     List<ParseExceptionReport> expectedParseExceptionReports =
         (List<ParseExceptionReport>) ((Map<String, Object>)

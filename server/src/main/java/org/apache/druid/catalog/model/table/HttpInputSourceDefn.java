@@ -104,9 +104,9 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
   );
 
   // Field names in the HttpInputSource
-  private static final String URIS_FIELD = "uris";
-  private static final String PASSWORD_FIELD = "httpAuthenticationPassword";
-  private static final String USERNAME_FIELD = "httpAuthenticationUsername";
+  protected static final String URIS_FIELD = "uris";
+  protected static final String PASSWORD_FIELD = "httpAuthenticationPassword";
+  protected static final String USERNAME_FIELD = "httpAuthenticationUsername";
 
   @Override
   public String typeValue()
@@ -170,6 +170,18 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
       }
     }
     super.validate(table);
+  }
+
+  @Override
+  protected void auditInputSource(Map<String, Object> jsonMap)
+  {
+    // A partial table may not include the URI parameter. For example, we might
+    // define an HTTP input source "with URIs to be named later." Even though the
+    // input source is partial, we still want to validate the other parameters.
+    // The HttpInputSource will fail if the URIs is not set. So, we have to make
+    // up a fake one just so we can validate the other fields by asking the
+    // input source to deserialize itself from the jsonMap.
+    jsonMap.putIfAbsent(URIS_PARAMETER, "http://bogus.com");
   }
 
   private Matcher templateMatcher(String uriTemplate)

@@ -3,7 +3,7 @@
 exports[`TasksCard matches snapshot 1`] = `
 <a
   class="home-view-card tasks-card"
-  href="#ingestion"
+  href="#tasks"
 >
   <div
     class="bp4-card bp4-interactive bp4-elevation-1"
@@ -20,6 +20,7 @@ exports[`TasksCard matches snapshot 1`] = `
           data-icon="gantt-chart"
           fill="#bfccd5"
           height="16"
+          role="img"
           viewBox="0 0 16 16"
           width="16"
         >

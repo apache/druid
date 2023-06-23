@@ -82,7 +82,7 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
         data,
         Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z"),
         segment,
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
 
@@ -101,13 +101,7 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
         data,
         Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z"),
         segment,
-        new IndexSpec(
-            null,
-            null,
-            null,
-            null,
-            new CustomSegmentizerFactory()
-        ),
+        IndexSpec.builder().withSegmentLoader(new CustomSegmentizerFactory()).build(),
         null
     );
 

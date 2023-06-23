@@ -33,12 +33,13 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.IndexingServiceCondition;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
-import org.apache.druid.indexing.common.TestRealtimeTask;
+import org.apache.druid.indexing.common.TestIndexTask;
 import org.apache.druid.indexing.common.TestTasks;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
@@ -145,7 +146,7 @@ public class WorkerTaskMonitorTest
     // Start a task monitor
     workerTaskMonitor = createTaskMonitor();
     TestTasks.registerSubtypes(jsonMapper);
-    jsonMapper.registerSubtypes(new NamedType(TestRealtimeTask.class, "test_realtime"));
+    jsonMapper.registerSubtypes(new NamedType(TestIndexTask.class, "test_index"));
     workerTaskMonitor.start();
 
     task = TestTasks.immediateSuccess("test");
@@ -153,22 +154,12 @@ public class WorkerTaskMonitorTest
 
   private WorkerTaskMonitor createTaskMonitor()
   {
-    final TaskConfig taskConfig = new TaskConfig(
-        FileUtils.createTempDir().toString(),
-        null,
-        null,
-        0,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setBaseDir(FileUtils.createTempDir().toString())
+        .setDefaultRowFlushBoundary(0)
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
+
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
     EasyMock.expect(taskActionClientFactory.create(EasyMock.anyObject())).andReturn(taskActionClient).anyTimes();

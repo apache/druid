@@ -1,7 +1,7 @@
 ---
 id: security-overview
 title: "Security overview"
-description: Overiew of Apache Druid security. Includes best practices, configuration instructions, and a description of the security model.
+description: Overiew of Apache Druid security. Includes best practices, configuration instructions, a description of the security model and documentation on how to report security issues.
 ---
 
 <!--
@@ -24,11 +24,9 @@ description: Overiew of Apache Druid security. Includes best practices, configur
   -->
 
 
-
 This document provides an overview of Apache Druid security features, configuration instructions, and some best practices to secure Druid.
 
 By default, security features in Druid are disabled, which simplifies the initial deployment experience. However, security features must be configured in a production deployment. These features include TLS, authentication, and authorization.
-
 
 ## Best practices
 
@@ -55,7 +53,6 @@ The following recommendation applies to Druid's authorization and authentication
 * Only grant `STATE READ`, `STATE WRITE`, `CONFIG WRITE`, and `DATASOURCE WRITE` permissions to highly-trusted users. These permissions allow users to access resources on behalf of the Druid server process regardless of the datasource.
 * If your Druid client application allows less-trusted users to control the input source or firehose of an ingestion task, validate the URLs from the users. It is possible to point unchecked URLs to other locations and resources within your network or local file system.
 
-
 ## Enable TLS
 
 Enabling TLS encrypts the traffic between external clients and the Druid cluster and traffic between services within the cluster.
@@ -70,30 +67,27 @@ The server uses a KeyStore that contains private keys and certificate chain used
 The following example demonstrates how to use Java keytool to generate the KeyStore for the server and then create a trustStore to trust the key for the client:
 
 1. Generate the KeyStore with the Java `keytool` command:
-```
-$> keytool -keystore keystore.jks -alias druid -genkey -keyalg RSA
+```bash
+keytool -keystore keystore.jks -alias druid -genkey -keyalg RSA
 ```
 2. Export a public certificate:
-```
-$> keytool -export -alias druid -keystore keystore.jks -rfc -file public.cert
+```bash
+keytool -export -alias druid -keystore keystore.jks -rfc -file public.cert
 ```
 3. Create the trustStore:
-```
-$> keytool -import -file public.cert -alias druid -keystore truststore.jks
+```bash
+keytool -import -file public.cert -alias druid -keystore truststore.jks
 ```
 
 Druid uses Jetty as its embedded web server. See [Configuring SSL/TLS KeyStores
 ](https://www.eclipse.org/jetty/documentation/jetty-11/operations-guide/index.html#og-keystore) from the Jetty documentation.
 
-
-   > WARNING: Do not use use self-signed certificates for production environments. Instead, rely on your current public key infrastructure to generate and distribute trusted keys.
-   
-
+   > WARNING: Do not use self-signed certificates for production environments. Instead, rely on your current public key infrastructure to generate and distribute trusted keys.
 
 ### Update Druid TLS configurations
 Edit `common.runtime.properties` for all Druid services on all nodes. Add or update the following TLS options. Restart the cluster when you are finished.
 
-```
+```properties
 # Turn on TLS globally
 druid.enableTlsPort=true
 
@@ -115,11 +109,9 @@ druid.client.https.trustStorePassword=secret123  # replace with your own passwor
 druid.server.https.keyStoreType=jks
 druid.server.https.keyStorePath=my-keystore.jks # replace with correct keyStore file
 druid.server.https.keyStorePassword=secret123 # replace with your own password
-druid.server.https.certAlias=druid 
-
+druid.server.https.certAlias=druid
 ```
-For more information, see [TLS support](tls-support.md) and [Simple SSLContext Provider Module](../development/extensions-core/simple-client-sslcontext.md). 
-
+For more information, see [TLS support](tls-support.md) and [Simple SSLContext Provider Module](../development/extensions-core/simple-client-sslcontext.md).
 
 ## Authentication and authorization
 
@@ -129,24 +121,23 @@ Within Druid's operating context, authenticators control the way user identities
 
 The following graphic depicts the course of request through the authentication process:
 
-
-![Druid security check flow](../assets/security-model-1.png "Druid security check flow") 
-
+![Druid security check flow](../assets/security-model-1.png "Druid security check flow")
 
 ## Enable an authenticator
 
-To authenticate requests in Druid, you configure an Authenticator. Authenticator extensions exist for HTTP basic authentication, LDAP, and Kerberos.  
+To authenticate requests in Druid, you configure an Authenticator. Authenticator extensions exist for HTTP basic authentication, LDAP, and Kerberos.
 
-The following takes you through sample configuration steps for enabling basic auth:  
+The following takes you through sample configuration steps for enabling basic auth:
 
 1. Add the `druid-basic-security` extension to `druid.extensions.loadList` in `common.runtime.properties`. For the quickstart installation, for example, the properties file is at `conf/druid/cluster/_common`:
-   ```
+   ```properties
    druid.extensions.loadList=["druid-basic-security", "druid-histogram", "druid-datasketches", "druid-kafka-indexing-service"]
    ```
-2. Configure the basic Authenticator, Authorizer, and Escalator settings in the same common.runtime.properties file. The Escalator defines how Druid processes authenticate with one another. 
+2. Configure the basic Authenticator, Authorizer, and Escalator settings in the same common.runtime.properties file. The Escalator defines how Druid processes authenticate with one another.
 
-An example configuration:
-   ```
+   An example configuration:
+
+   ```properties
    # Druid basic security
    druid.auth.authenticatorChain=["MyBasicMetadataAuthenticator"]
    druid.auth.authenticator.MyBasicMetadataAuthenticator.type=basic
@@ -157,10 +148,12 @@ An example configuration:
    # Default password for internal 'druid_system' user, should be changed for production.
    druid.auth.authenticator.MyBasicMetadataAuthenticator.initialInternalClientPassword=password2
 
-   # Uses the metadata store for storing users, you can use authentication API to create new users and grant permissions
+   # Uses the metadata store for storing users.
+   # You can use the authentication API to create new users and grant permissions
    druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type=metadata
 
-   # If true and the request credential doesn't exists in this credentials store, the request will proceed to next Authenticator in the chain.
+   # If true and if the request credential doesn't exist in this credentials store,
+   # the request will proceed to next Authenticator in the chain.
    druid.auth.authenticator.MyBasicMetadataAuthenticator.skipOnFailure=false
 
    druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName=MyBasicMetadataAuthorizer
@@ -176,70 +169,82 @@ An example configuration:
    druid.auth.authorizer.MyBasicMetadataAuthorizer.type=basic
    ```
 
-3. Restart the cluster. 
+3. Restart the cluster.
 
-See [Authentication and Authorization](../design/auth.md) for more information about the Authenticator, Escalator, and Authorizer concepts. See [Basic Security](../development/extensions-core/druid-basic-security.md) for more information about the extension used in the examples above, and [Kerberos](../development/extensions-core/druid-kerberos.md) for Kerberos authentication.
+See the following topics for more information:
 
+* [Authentication and Authorization](../operations/auth.md) for more information about the Authenticator,
+Escalator, and Authorizer.
+* [Basic Security](../development/extensions-core/druid-basic-security.md) for more information about
+the extension used in the examples above.
+* [Kerberos](../development/extensions-core/druid-kerberos.md) for Kerberos authentication.
+* [User authentication and authorization](security-user-auth.md) for details about permissions.
+* [SQL permissions](security-user-auth.md#sql-permissions) for permissions on SQL system tables.
+* [The `druidapi` Python library](../tutorials/tutorial-jupyter-index.md),
+  provided as part of the Druid tutorials, to set up users and roles for learning how security works.
 
 ## Enable authorizers
 
-After enabling the basic auth extension, you can add users, roles, and permissions via the Druid Coordinator `user` endpoint. Note that you cannot assign permissions directly to individual users. They must be assigned through roles. 
+After enabling the basic auth extension, you can add users, roles, and permissions via the Druid Coordinator `user` endpoint. Note that you cannot assign permissions directly to individual users. They must be assigned through roles.
 
 The following diagram depicts the authorization model, and the relationship between users, roles, permissions, and resources.
- 
-![Druid Security model](../assets/security-model-2.png "Druid security model") 
+
+![Druid Security model](../assets/security-model-2.png "Druid security model")
 
 
-The following steps walk through a sample setup procedure:  
+The following steps walk through a sample setup procedure:
 
 > The default Coordinator API port is 8081 for non-TLS connections and 8281 for secured connections.
 
-1. Create a user by issuing a POST request to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>`, replacing USERNAME with the *new* username you are trying to create. For example: 
-  ```
+1. Create a user by issuing a POST request to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>`.
+   Replace `<USERNAME>` with the *new* username you are trying to create. For example:
+   ```bash
    curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/myname
-  ```
-  >  If you have TLS enabled, be sure to adjust the curl command accordingly. For example, if your Druid servers use self-signed certificates, you may choose to include the `insecure` curl option to forgo certificate checking for the curl command. 
-2. Add a credential for the user by issuing a POST to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>/credentials`. For example:
-    ```
-    curl -u admin:password1 -H'Content-Type: application/json' -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/myname/credentials --data-raw '{"password": "my_password"}'
-    ```
-2. For each authenticator user you create, create a corresponding authorizer user by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/<USERNAME>`. For example: 
-	```
-	curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/myname
-	```
-3. Create authorizer roles to control permissions by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/<ROLENAME>`. For example: 
-	```
+   ```
+   > If you have TLS enabled, be sure to adjust the curl command accordingly. For example, if your Druid servers use self-signed certificates,
+   you may choose to include the `insecure` curl option to forgo certificate checking for the curl command.
+
+2. Add a credential for the user by issuing a POST request to `druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/<USERNAME>/credentials`. For example:
+   ```bash
+   curl -u admin:password1 -H'Content-Type: application/json' -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authentication/db/MyBasicMetadataAuthenticator/users/myname/credentials --data-raw '{"password": "my_password"}'
+   ```
+3. For each authenticator user you create, create a corresponding authorizer user by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/<USERNAME>`. For example:
+   ```bash
+   curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/myname
+   ```
+4. Create authorizer roles to control permissions by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/<ROLENAME>`. For example:
+   ```bash
    curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/myrole
    ```
-4. Assign roles to users by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/<USERNAME>/roles/<ROLENAME>`. For example: 
-	```
-	curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/myname/roles/myrole | jq
-	```
-5. Finally, attach permissions to the roles to control how they can interact with Druid at `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/<ROLENAME>/permissions`. 
-	For example: 
-	```
-	curl -u admin:password1 -H'Content-Type: application/json' -XPOST --data-binary @perms.json https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/myrole/permissions
-	```
-	The payload of `perms.json` should be in the form:
-   	```
-    [
-    {
-      "resource": {
-        "name": "<PATTERN>",
-        "type": "DATASOURCE"
+5. Assign roles to users by issuing a POST request to `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/<USERNAME>/roles/<ROLENAME>`. For example:
+   ```bash
+   curl -u admin:password1 -XPOST https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/users/myname/roles/myrole | jq
+   ```
+
+6. Finally, attach permissions to the roles to control how they can interact with Druid at `druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/<ROLENAME>/permissions`. For example:
+   ```bash
+   curl -u admin:password1 -H'Content-Type: application/json' -XPOST --data-binary @perms.json https://my-coordinator-ip:8281/druid-ext/basic-security/authorization/db/MyBasicMetadataAuthorizer/roles/myrole/permissions
+   ```
+   The payload of `perms.json` should be in the following form:
+   ```json
+   [
+      {
+        "resource": {
+          "type": "DATASOURCE",
+          "name": "<PATTERN>"
+        },
+        "action": "READ"
       },
-      "action": "READ"
-    },
-    {
-      "resource": {
-      "name": "STATE",
-      "type": "STATE"
-    },
-    "action": "READ"
-    }
-    ]
-    ```
-    > Note: Druid treats the resource name as a regular expression (regex). You can use a specific datasource name or regex to grant permissions for multiple datasources at a time.
+      {
+        "resource": {
+          "type": "STATE",
+          "name": "STATE"
+        },
+        "action": "READ"
+      }
+   ]
+   ```
+  > Note: Druid treats the resource name as a regular expression (regex). You can use a specific datasource name or regex to grant permissions for multiple datasources at a time.
 
 
 ## Configuring an LDAP authenticator
@@ -254,7 +259,7 @@ Within Druid's trust model there users can have different authorization levels:
 
 Additionally, Druid operates according to the following principles:
 
-From the inner most layer:
+From the innermost layer:
 1. Druid processes have the same access to the local files granted to the specified system user running the process.
 2. The Druid ingestion system can create new processes to execute tasks. Those tasks inherit the user of their parent process. This means that any user authorized to submit an ingestion task can use the ingestion task permissions to read or write any local files or external resources that the Druid process has access to.
 
@@ -263,7 +268,7 @@ From the inner most layer:
 Within the cluster:
 1. Druid assumes it operates on an isolated, protected network where no reachable IP within the network is under adversary control. When you implement Druid, take care to setup firewalls and other security measures to secure both inbound and outbound connections.
 Druid assumes network traffic within the cluster is encrypted, including API calls and data transfers. The default encryption implementation uses TLS.
-3. Druid assumes auxiliary services such as the metadata store and ZooKeeper nodes are not under adversary control.
+2. Druid assumes auxiliary services such as the metadata store and ZooKeeper nodes are not under adversary control.
 
 Cluster to deep storage:
 1. Druid does not make assumptions about the security for deep storage. It follows the system's native security policies to authenticate and authorize with deep storage.
@@ -272,3 +277,19 @@ Cluster to deep storage:
 Cluster to client:
 1. Druid authenticates with the client based on the configured authenticator.
 2. Druid only performs actions when an authorizer grants permission. The default configuration is `allowAll authorizer`.
+
+## Reporting security issues
+
+The Apache Druid team takes security very seriously. If you find a potential security issue in Druid, such as a way to bypass the security mechanisms described earlier, please report this problem to [security@apache.org](mailto:security@apache.org). This is a private mailing list. Please send one plain text email for each vulnerability you are reporting.
+
+### Vulnerability handling
+
+The following list summarizes the vulnerability handling process:
+
+* The reporter reports the vulnerability privately to [security@apache.org](mailto:security@apache.org)
+* The reporter receives a response that the Druid team has received the report and will investigate the issue.
+* The Druid project security team works privately with the reporter to resolve the vulnerability.
+* The Druid team delivers the fix by creating a new release of the package that the vulnerability affects.
+* The Druid team publicly announces the vulnerability and describes how to apply the fix.
+
+Committers should read a [more detailed description of the process](https://www.apache.org/security/committers.html). Reporters of security vulnerabilities may also find it useful.

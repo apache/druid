@@ -49,7 +49,7 @@ public class CoordinatorRuleManagerTest
   private static final String DATASOURCE1 = "datasource1";
   private static final String DATASOURCE2 = "datasource2";
   private static final List<Rule> DEFAULT_RULES = ImmutableList.of(
-      new ForeverLoadRule(ImmutableMap.of("__default", 2))
+      new ForeverLoadRule(ImmutableMap.of("__default", 2), null)
   );
 
   @org.junit.Rule
@@ -109,7 +109,7 @@ public class CoordinatorRuleManagerTest
     manager.poll();
     final List<Rule> rules = manager.getRulesWithDefault(DATASOURCE2);
     final List<Rule> expectedRules = new ArrayList<>();
-    expectedRules.add(new ForeverLoadRule(null));
+    expectedRules.add(new ForeverLoadRule(null, null));
     expectedRules.add(new IntervalDropRule(Intervals.of("2020-01-01/2020-01-02")));
     expectedRules.addAll(DEFAULT_RULES);
     Assert.assertEquals(expectedRules, rules);
@@ -119,16 +119,16 @@ public class CoordinatorRuleManagerTest
   {
     final Map<String, List<Rule>> rules = ImmutableMap.of(
         DATASOURCE1,
-        ImmutableList.of(new ForeverLoadRule(null)),
+        ImmutableList.of(new ForeverLoadRule(null, null)),
         DATASOURCE2,
-        ImmutableList.of(new ForeverLoadRule(null), new IntervalDropRule(Intervals.of("2020-01-01/2020-01-02"))),
+        ImmutableList.of(new ForeverLoadRule(null, null), new IntervalDropRule(Intervals.of("2020-01-01/2020-01-02"))),
         "datasource3",
         ImmutableList.of(
-            new PeriodLoadRule(new Period("P1M"), true, null),
+            new PeriodLoadRule(new Period("P1M"), true, null, null),
             new ForeverDropRule()
         ),
         TieredBrokerConfig.DEFAULT_RULE_NAME,
-        ImmutableList.of(new ForeverLoadRule(ImmutableMap.of("__default", 2)))
+        ImmutableList.of(new ForeverLoadRule(ImmutableMap.of("__default", 2), null))
     );
     final StringFullResponseHolder holder = EasyMock.niceMock(StringFullResponseHolder.class);
     EasyMock.expect(holder.getStatus())

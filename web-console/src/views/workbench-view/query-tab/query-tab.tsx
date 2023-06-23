@@ -81,7 +81,7 @@ export interface QueryTabProps {
   queryEngines: DruidEngine[];
   runMoreMenu: JSX.Element;
   clusterCapacity: number | undefined;
-  goToIngestion(taskId: string): void;
+  goToTask(taskId: string): void;
 }
 
 export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
@@ -95,7 +95,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     queryEngines,
     runMoreMenu,
     clusterCapacity,
-    goToIngestion,
+    goToTask,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
 
@@ -274,7 +274,24 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   }
 
   const handleRun = usePermanentCallback(async (preview: boolean) => {
-    if (!query.isValid()) return;
+    const queryIssue = query.getIssue();
+    if (queryIssue) {
+      const position = WorkbenchQuery.getRowColumnFromIssue(queryIssue);
+
+      AppToaster.show({
+        icon: IconNames.ERROR,
+        intent: Intent.DANGER,
+        timeout: 90000,
+        message: queryIssue,
+        action: position
+          ? {
+              text: 'Go to issue',
+              onClick: () => moveToPosition(position),
+            }
+          : undefined,
+      });
+      return;
+    }
 
     if (query.getEffectiveEngine() !== 'sql-msq-task') {
       WorkbenchHistory.addQueryToHistory(query);
@@ -345,7 +362,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                 onDetails={onDetails}
                 queryEngines={queryEngines}
                 clusterCapacity={clusterCapacity}
-                goToIngestion={goToIngestion}
+                goToTask={goToTask}
               />
             ))}
             <div className={classNames('main-query', queryPrefixes.length ? 'multi' : 'single')}>
@@ -462,7 +479,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                     execution={execution}
                     onErrorClick={() => onDetails(statsTaskId!, 'error')}
                     onWarningClick={() => onDetails(statsTaskId!, 'warnings')}
-                    goToIngestion={goToIngestion}
+                    goToTask={goToTask}
                   />
                 )}
               </div>
@@ -484,7 +501,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               <ExecutionProgressPane
                 execution={executionState.intermediate}
                 intermediateError={executionState.intermediateError}
-                goToIngestion={goToIngestion}
+                goToTask={goToTask}
                 onCancel={onUserCancel}
                 allowLiveReportsPane
               />

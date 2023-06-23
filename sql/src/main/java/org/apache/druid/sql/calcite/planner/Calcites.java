@@ -160,7 +160,7 @@ public class Calcites
       return ColumnType.DOUBLE;
     } else if (isLongType(sqlTypeName)) {
       return ColumnType.LONG;
-    } else if (SqlTypeName.CHAR_TYPES.contains(sqlTypeName)) {
+    } else if (isStringType(sqlTypeName)) {
       return ColumnType.STRING;
     } else if (SqlTypeName.OTHER == sqlTypeName) {
       if (type instanceof RowSignatures.ComplexSqlType) {
@@ -176,6 +176,12 @@ public class Calcites
     } else {
       return null;
     }
+  }
+
+  public static boolean isStringType(SqlTypeName sqlTypeName)
+  {
+    return SqlTypeName.CHAR_TYPES.contains(sqlTypeName) ||
+           SqlTypeName.INTERVAL_TYPES.contains(sqlTypeName);
   }
 
   public static boolean isDoubleType(SqlTypeName sqlTypeName)

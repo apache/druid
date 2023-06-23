@@ -32,6 +32,7 @@ import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -123,7 +124,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       testBuilder()
           .skipVectorize(true)
           .sql(input.sql)
-          .queryContext(ImmutableMap.of("windowsAreForClosers", true))
+          .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
           .addCustomVerification(QueryVerification.ofResults(results -> {
             if (results.exception != null) {
               throw new RE(results.exception, "Failed to execute because of exception.");

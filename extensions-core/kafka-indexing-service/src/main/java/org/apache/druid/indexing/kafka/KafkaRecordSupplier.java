@@ -262,7 +262,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
 
     Map<String, Object> configs = new HashMap<>();
     for (String key : properties.stringPropertyNames()) {
-      configs.put(key, properties.get(key));
+      configs.put(key, properties.getProperty(key));
     }
 
     deserializerObject.configure(configs, isKey);

@@ -69,6 +69,20 @@ public class LongFieldReaderTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void test_isNull_defaultOrNull()
+  {
+    writeToMemory(NullHandling.defaultLongValue());
+    Assert.assertEquals(NullHandling.sqlCompatible(), new LongFieldReader().isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
+  public void test_isNull_aValue()
+  {
+    writeToMemory(5L);
+    Assert.assertFalse(new LongFieldReader().isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
   public void test_makeColumnValueSelector_defaultOrNull()
   {
     writeToMemory(NullHandling.defaultLongValue());

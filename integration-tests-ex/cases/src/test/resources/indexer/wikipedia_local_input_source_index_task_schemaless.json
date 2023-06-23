@@ -8,7 +8,7 @@
       },
       "dimensionsSpec": {
         "dimensions": [],
-        "useNestedColumnIndexerForSchemaDiscovery": %%USE_NESTED_COLUMN_INDEXER%%
+        "useSchemaDiscovery": %%USE_NESTED_COLUMN_INDEXER%%
       },
       "metricsSpec": [],
       "granularitySpec": {

@@ -33,7 +33,6 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,7 +43,6 @@ public class BroadcastJoinHelper
   private final Int2IntMap inputNumberToProcessorChannelMap;
   private final List<ReadableFrameChannel> channels;
   private final List<FrameReader> channelReaders;
-  private final JoinableFactoryWrapper joinableFactory;
   private final List<List<Object[]>> channelData;
   private final IntSet sideChannelNumbers;
   private final long memoryReservedForBroadcastJoin;
@@ -59,7 +57,6 @@ public class BroadcastJoinHelper
    * @param inputNumberToProcessorChannelMap map of input slice number -> channel position in the "channels" list
    * @param channels                         list of input channels
    * @param channelReaders                   list of input channel readers; corresponds one-to-one with "channels"
-   * @param joinableFactory                  joinable factory for this server
    * @param memoryReservedForBroadcastJoin   total bytes of frames we are permitted to use; derived from
    *                                         {@link org.apache.druid.msq.exec.WorkerMemoryParameters#broadcastJoinMemory}
    */
@@ -67,14 +64,12 @@ public class BroadcastJoinHelper
       final Int2IntMap inputNumberToProcessorChannelMap,
       final List<ReadableFrameChannel> channels,
       final List<FrameReader> channelReaders,
-      final JoinableFactoryWrapper joinableFactory,
       final long memoryReservedForBroadcastJoin
   )
   {
     this.inputNumberToProcessorChannelMap = inputNumberToProcessorChannelMap;
     this.channels = channels;
     this.channelReaders = channelReaders;
-    this.joinableFactory = joinableFactory;
     this.channelData = new ArrayList<>();
     this.sideChannelNumbers = new IntOpenHashSet();
     this.sideChannelNumbers.addAll(inputNumberToProcessorChannelMap.values());

@@ -257,10 +257,10 @@ public interface VirtualColumn extends Cacheable
 
   /**
    * Return the {@link ColumnCapabilities} which best describe the optimal selector to read from this virtual column.
-   *
+   * <p>
    * The {@link ColumnInspector} (most likely corresponding to an underlying {@link ColumnSelectorFactory} of a query)
    * allows the virtual column to consider this information if necessary to compute its output type details.
-   *
+   * <p>
    * Examples of this include the {@link ExpressionVirtualColumn}, which takes input from other columns and uses the
    * {@link ColumnInspector} to infer the output type of expressions based on the types of the inputs.
    *
@@ -268,6 +268,7 @@ public interface VirtualColumn extends Cacheable
    * @param columnName the name this virtual column was referenced with
    * @return capabilities, must not be null
    */
+  @Nullable
   default ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {
     return capabilities(columnName);

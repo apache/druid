@@ -55,8 +55,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
 
   public ArrayOfDoublesSketchAggregationTest(final GroupByQueryConfig config)
   {
+    ArrayOfDoublesSketchModule.registerSerde();
     DruidModule module = new ArrayOfDoublesSketchModule();
-    module.configure(null);
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(), config, tempFolder);
     tsHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(module.getJacksonModules(), tempFolder);
@@ -168,8 +168,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(1.0, ds.getMinValue(), 0);
-    Assert.assertEquals(1.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(1.0, ds.getMinItem(), 0);
+    Assert.assertEquals(1.0, ds.getMaxItem(), 0);
 
     final String expectedSummary = "### HeapArrayOfDoublesCompactSketch SUMMARY: \n"
                                    + "   Estimate                : 40.0\n"
@@ -283,8 +283,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(quantilesObj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) quantilesObj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(1.0, ds.getMinValue(), 0);
-    Assert.assertEquals(1.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(1.0, ds.getMinItem(), 0);
+    Assert.assertEquals(1.0, ds.getMaxItem(), 0);
   }
 
   @Test
@@ -369,8 +369,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(1.0, ds.getMinValue(), 0);
-    Assert.assertEquals(1.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(1.0, ds.getMinItem(), 0);
+    Assert.assertEquals(1.0, ds.getMaxItem(), 0);
   }
 
   @Test
@@ -471,8 +471,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(2.0, ds.getMinValue(), 0);
-    Assert.assertEquals(2.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(2.0, ds.getMinItem(), 0);
+    Assert.assertEquals(2.0, ds.getMaxItem(), 0);
   }
 
   @Test
@@ -574,8 +574,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(2.0, ds.getMinValue(), 0);
-    Assert.assertEquals(2.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(2.0, ds.getMinItem(), 0);
+    Assert.assertEquals(2.0, ds.getMaxItem(), 0);
   }
 
   @Test
@@ -681,15 +681,15 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(NullHandling.replaceWithDefault() ? 40 : 30, ds.getN());
-    Assert.assertEquals(2.0, ds.getMinValue(), 0);
-    Assert.assertEquals(2.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(2.0, ds.getMinItem(), 0);
+    Assert.assertEquals(2.0, ds.getMaxItem(), 0);
 
     Object objSketch2 = row.get(7); // quantiles-sketch-with-nulls
     Assert.assertTrue(objSketch2 instanceof DoublesSketch);
     DoublesSketch ds2 = (DoublesSketch) objSketch2;
     Assert.assertEquals(NullHandling.replaceWithDefault() ? 40 : 30, ds2.getN());
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0 : 3.0, ds2.getMinValue(), 0);
-    Assert.assertEquals(3.0, ds2.getMaxValue(), 0);
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0 : 3.0, ds2.getMinItem(), 0);
+    Assert.assertEquals(3.0, ds2.getMaxItem(), 0);
   }
 
   @Test
@@ -776,8 +776,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(1.0, ds.getMinValue(), 0);
-    Assert.assertEquals(1.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(1.0, ds.getMinItem(), 0);
+    Assert.assertEquals(1.0, ds.getMaxItem(), 0);
   }
 
   @Test
@@ -864,8 +864,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(1.0, ds.getMinValue(), 0);
-    Assert.assertEquals(1.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(1.0, ds.getMinItem(), 0);
+    Assert.assertEquals(1.0, ds.getMaxItem(), 0);
   }
 
   @Test
@@ -951,8 +951,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(1.0, ds.getMinValue(), 0);
-    Assert.assertEquals(1.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(1.0, ds.getMinItem(), 0);
+    Assert.assertEquals(1.0, ds.getMaxItem(), 0);
   }
 
   @Test
@@ -1038,8 +1038,8 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(40, ds.getN());
-    Assert.assertEquals(1.0, ds.getMinValue(), 0);
-    Assert.assertEquals(1.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(1.0, ds.getMinItem(), 0);
+    Assert.assertEquals(1.0, ds.getMaxItem(), 0);
   }
 
   // Two buckets with statistically significant difference.
@@ -1227,21 +1227,114 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
     Assert.assertTrue(obj instanceof DoublesSketch);
     DoublesSketch ds = (DoublesSketch) obj;
     Assert.assertEquals(NullHandling.replaceWithDefault() ? 40 : 30, ds.getN());
-    Assert.assertEquals(2.0, ds.getMinValue(), 0);
-    Assert.assertEquals(2.0, ds.getMaxValue(), 0);
+    Assert.assertEquals(2.0, ds.getMinItem(), 0);
+    Assert.assertEquals(2.0, ds.getMaxItem(), 0);
 
     Object objSketch2 = row.get(9); // quantiles-sketch-with-nulls
     Assert.assertTrue(objSketch2 instanceof DoublesSketch);
     DoublesSketch ds2 = (DoublesSketch) objSketch2;
     Assert.assertEquals(NullHandling.replaceWithDefault() ? 40 : 30, ds2.getN());
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0 : 3.0, ds2.getMinValue(), 0);
-    Assert.assertEquals(3.0, ds2.getMaxValue(), 0);
+    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0 : 3.0, ds2.getMinItem(), 0);
+    Assert.assertEquals(3.0, ds2.getMaxItem(), 0);
 
     Object objSketch3 = row.get(10); // quantiles-sketch-no-nulls
     Assert.assertTrue(objSketch3 instanceof DoublesSketch);
     DoublesSketch ds3 = (DoublesSketch) objSketch3;
     Assert.assertEquals(40, ds3.getN());
-    Assert.assertEquals(0.0, ds3.getMinValue(), 0);
-    Assert.assertEquals(3.0, ds3.getMaxValue(), 0);
+    Assert.assertEquals(0.0, ds3.getMinItem(), 0);
+    Assert.assertEquals(3.0, ds3.getMaxItem(), 0);
+  }
+
+
+  //Test ConstantTupleSketchPost-Agg and Base64 Encoding
+
+  @Test
+  public void testConstantAndBase64WithEstimateSumPostAgg() throws Exception
+  {
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("tuple/array_of_doubles_sketch_data_two_values.tsv")
+            .getFile()),
+        String.join(
+            "\n",
+            "{",
+            "  \"type\": \"string\",",
+            "  \"parseSpec\": {",
+            "    \"format\": \"tsv\",",
+            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
+            "    \"dimensionsSpec\": {",
+            "      \"dimensions\": [\"product\"],",
+            "      \"dimensionExclusions\": [],",
+            "      \"spatialDimensions\": []",
+            "    },",
+            "    \"columns\": [\"timestamp\", \"product\", \"sketch\"]",
+            "  }",
+            "}"
+        ),
+        String.join(
+            "\n",
+            "[",
+            "  {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"nominalEntries\": 1024, \"numberOfValues\": 2}",
+            "]"
+        ),
+        0, // minTimestamp
+        Granularities.NONE,
+        10, // maxRowCount
+        String.join(
+            "\n",
+            "{",
+            "  \"queryType\": \"groupBy\",",
+            "  \"dataSource\": \"test_datasource\",",
+            "  \"granularity\": \"ALL\",",
+            "  \"dimensions\": [],",
+            "  \"aggregations\": [",
+            "    {\"type\": \"arrayOfDoublesSketch\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"nominalEntries\": 1024, \"numberOfValues\": 2}",
+            "  ],",
+            "  \"postAggregations\": [",
+            "    {\"type\": \"arrayOfDoublesSketchToMetricsSumEstimate\", \"name\": \"estimateSum\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+            "    {\"type\": \"arrayOfDoublesSketchToMetricsSumEstimate\", \"name\": \"intersection\", \"field\": {",
+            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
+            "      \"name\": \"intersection\",",
+            "      \"operation\": \"INTERSECT\",",
+            "      \"nominalEntries\": 1024,",
+            "      \"numberOfValues\": 2,",
+            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"arrayOfDoublesSketchConstant\", \"name\": \"external_sketch\", \"value\": \"AQEJAwgCzJP/////////fwIAAAAAAAAAbakWvEpmYR4+utyjb2+2IAAAAAAAAPA/AAAAAAAAAEAAAAAAAADwPwAAAAAAAABA\"}]",
+            "    }},",
+            "    {\"type\": \"arrayOfDoublesSketchToBase64String\", \"name\": \"intersectionString\", \"field\": {",
+            "      \"type\": \"arrayOfDoublesSketchSetOp\",",
+            "      \"name\": \"intersection\",",
+            "      \"operation\": \"INTERSECT\",",
+            "      \"nominalEntries\": 1024,",
+            "      \"numberOfValues\": 2,",
+            "      \"fields\": [{\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}, {\"type\": \"arrayOfDoublesSketchConstant\", \"name\": \"external_sketch\", \"value\": \"AQEJAwgCzJP/////////fwIAAAAAAAAAbakWvEpmYR4+utyjb2+2IAAAAAAAAPA/AAAAAAAAAEAAAAAAAADwPwAAAAAAAABA\"}]",
+            "    }}",
+            "  ],",
+            "  \"intervals\": [\"2015-01-01T00:00:00.000Z/2015-01-31T00:00:00.000Z\"]",
+            "}"
+        )
+    );
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    ResultRow row = results.get(0);
+    Assert.assertEquals("sketch", 40.0, (double) row.get(0), 0);
+    //Assert.assertEquals("estimateSum", 40.0, (double) row.get(1), 0);
+
+    Object estimateSumObj = row.get(1); // estimateSum
+    Assert.assertTrue(estimateSumObj instanceof double[]);
+    double[] estimateSum = (double[]) estimateSumObj;
+    Assert.assertEquals(2, estimateSum.length);
+    Assert.assertEquals(40.0, estimateSum[0], 0);
+    Assert.assertEquals(80.0, estimateSum[1], 0);
+
+    Object intersectEstimateSumObj = row.get(2); // intersectEstimateSum
+    Assert.assertTrue(intersectEstimateSumObj instanceof double[]);
+    double[] intersectEstimateSum = (double[]) intersectEstimateSumObj;
+    Assert.assertEquals(2, intersectEstimateSum.length);
+    Assert.assertEquals(4.0, intersectEstimateSum[0], 0);
+    Assert.assertEquals(8.0, intersectEstimateSum[1], 0);
+
+    //convert intersected to base64 string
+    Assert.assertEquals("intersectionString", "AQEJAwgCzJP/////////fwIAAAAAAAAAbakWvEpmYR4+utyjb2+2IAAAAAAAAABAAAAAAAAAEEAAAAAAAAAAQAAAAAAAABBA", (String) row.get(3));
+
+
   }
 }

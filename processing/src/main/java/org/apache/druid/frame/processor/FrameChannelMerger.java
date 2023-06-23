@@ -27,20 +27,17 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.key.FrameComparisonWidget;
+import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.segment.row.FrameColumnSelectorFactory;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -57,7 +54,7 @@ import java.util.function.Supplier;
  * Frames from input channels must be {@link org.apache.druid.frame.FrameType#ROW_BASED}. Output frames will
  * be row-based as well.
  *
- * For unsorted output, use {@link FrameChannelMuxer} instead.
+ * For unsorted output, use {@link FrameChannelMixer} instead.
  */
 public class FrameChannelMerger implements FrameProcessor<Long>
 {
@@ -66,7 +63,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
   private final List<ReadableFrameChannel> inputChannels;
   private final WritableFrameChannel outputChannel;
   private final FrameReader frameReader;
-  private final ClusterBy clusterBy;
+  private final List<KeyColumn> sortKey;
   private final ClusterByPartitions partitions;
   private final IntPriorityQueue priorityQueue;
   private final FrameWriterFactory frameWriterFactory;
@@ -83,7 +80,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
       final FrameReader frameReader,
       final WritableFrameChannel outputChannel,
       final FrameWriterFactory frameWriterFactory,
-      final ClusterBy clusterBy,
+      final List<KeyColumn> sortKey,
       @Nullable final ClusterByPartitions partitions,
       final long rowLimit
   )
@@ -102,11 +99,15 @@ public class FrameChannelMerger implements FrameProcessor<Long>
       throw new IAE("Partitions must all abut each other");
     }
 
+    if (!sortKey.stream().allMatch(keyColumn -> keyColumn.order().sortable())) {
+      throw new IAE("Key is not sortable");
+    }
+
     this.inputChannels = inputChannels;
     this.outputChannel = outputChannel;
     this.frameReader = frameReader;
     this.frameWriterFactory = frameWriterFactory;
-    this.clusterBy = clusterBy;
+    this.sortKey = sortKey;
     this.partitions = partitionsToUse;
     this.rowLimit = rowLimit;
     this.currentFrames = new FramePlus[inputChannels.size()];
@@ -127,18 +128,10 @@ public class FrameChannelMerger implements FrameProcessor<Long>
       frameColumnSelectorFactorySuppliers.add(() -> currentFrames[frameNumber].cursor.getColumnSelectorFactory());
     }
 
-    this.mergedColumnSelectorFactory =
-        new MultiColumnSelectorFactory(
-            frameColumnSelectorFactorySuppliers,
-
-            // Include ROW_SIGNATURE_COLUMN, ROW_MEMORY_COLUMN to potentially enable direct row memory copying.
-            // If these columns don't actually exist in the underlying column selector factories, they'll be ignored.
-            RowSignature.builder()
-                        .addAll(frameReader.signature())
-                        .add(FrameColumnSelectorFactory.ROW_SIGNATURE_COLUMN, ColumnType.UNKNOWN_COMPLEX)
-                        .add(FrameColumnSelectorFactory.ROW_MEMORY_COLUMN, ColumnType.UNKNOWN_COMPLEX)
-                        .build()
-        );
+    this.mergedColumnSelectorFactory = new MultiColumnSelectorFactory(
+        frameColumnSelectorFactorySuppliers,
+        frameReader.signature()
+    ).withRowMemoryAndSignatureColumns();
   }
 
   @Override
@@ -244,7 +237,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
             if (channel.canRead()) {
               // Read next frame from this channel.
               final Frame frame = channel.read();
-              currentFrames[currentChannel] = new FramePlus(frame, frameReader, clusterBy);
+              currentFrames[currentChannel] = new FramePlus(frame, frameReader, sortKey);
               priorityQueue.enqueue(currentChannel);
             } else if (channel.isFinished()) {
               // Done reading this channel. Fall through and continue with other channels.
@@ -281,7 +274,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
 
         if (channel.canRead()) {
           final Frame frame = channel.read();
-          currentFrames[i] = new FramePlus(frame, frameReader, clusterBy);
+          currentFrames[i] = new FramePlus(frame, frameReader, sortKey);
           priorityQueue.enqueue(i);
         } else if (!channel.isFinished()) {
           await.add(i);
@@ -301,10 +294,10 @@ public class FrameChannelMerger implements FrameProcessor<Long>
     private final FrameComparisonWidget comparisonWidget;
     private int rowNumber;
 
-    private FramePlus(Frame frame, FrameReader frameReader, ClusterBy clusterBy)
+    private FramePlus(Frame frame, FrameReader frameReader, List<KeyColumn> sortKey)
     {
       this.cursor = FrameProcessors.makeCursor(frame, frameReader);
-      this.comparisonWidget = frameReader.makeComparisonWidget(frame, clusterBy.getColumns());
+      this.comparisonWidget = frameReader.makeComparisonWidget(frame, sortKey);
       this.rowNumber = 0;
     }
 

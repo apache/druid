@@ -22,7 +22,7 @@ package org.apache.druid.testsEx.msq;
 import junitparams.Parameters;
 import junitparams.naming.TestCaseName;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.testsEx.categories.S3DeepStorage;
+import org.apache.druid.testsEx.categories.AzureDeepStorage;
 import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.apache.druid.testsEx.indexer.AbstractAzureInputSourceParallelIndexTest;
 import org.junit.Test;
@@ -41,7 +41,7 @@ import java.util.List;
  */
 
 @RunWith(DruidTestRunner.class)
-@Category(S3DeepStorage.class)
+@Category(AzureDeepStorage.class)
 public class ITAzureSQLBasedIngestionTest extends AbstractAzureInputSourceParallelIndexTest
 {
   private static final String CLOUD_INGEST_SQL = "/multi-stage-query/wikipedia_cloud_index_msq.sql";
@@ -50,7 +50,7 @@ public class ITAzureSQLBasedIngestionTest extends AbstractAzureInputSourceParall
   @Test
   @Parameters(method = "resources")
   @TestCaseName("Test_{index} ({0})")
-  public void testSQLBasedBatchIngestion(Pair<String, List> s3InputSource)
+  public void testSQLBasedBatchIngestion(Pair<String, List<?>> s3InputSource)
   {
     doMSQTest(s3InputSource, CLOUD_INGEST_SQL, INDEX_QUERIES_FILE, "azure");
   }

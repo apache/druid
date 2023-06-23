@@ -27,7 +27,6 @@ import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.NestedDataDimensionHandler;
-import org.apache.druid.segment.NestedDataDimensionSchema;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.StructuredDataJsonSerializer;
@@ -70,7 +69,6 @@ public class NestedDataModule implements DruidModule
     return Collections.singletonList(
         new SimpleModule("NestedDataModule")
             .registerSubtypes(
-                new NamedType(NestedDataDimensionSchema.class, NestedDataComplexTypeSerde.TYPE_NAME),
                 new NamedType(NestedFieldVirtualColumn.class, "nested-field")
             )
             .addSerializer(StructuredData.class, new StructuredDataJsonSerializer())

@@ -70,6 +70,7 @@ import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.AbstractFixedIntervalTask;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -414,7 +415,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     // initialize variables
     announcedSinks = 0;
     pushedSegments = 0;
-    indexSpec = new IndexSpec();
+    indexSpec = IndexSpec.DEFAULT;
     emitter = newMockEmitter();
     EmittingLogger.registerEmitter(emitter);
     mapper = TEST_UTILS.getTestObjectMapper();
@@ -606,23 +607,12 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         ),
         new TaskAuditLogConfig(true)
     );
-    File tmpDir = temporaryFolder.newFolder();
-    taskConfig = new TaskConfig(
-        tmpDir.toString(),
-        null,
-        null,
-        50000,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null,
-        false
-    );
+    taskConfig = new TaskConfigBuilder()
+        .setBaseDir(temporaryFolder.newFolder().toString())
+        .setDefaultRowFlushBoundary(50000)
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .setTmpStorageBytesPerTask(-1L)
+        .build();
 
     return new TaskToolboxFactory(
         taskConfig,

@@ -26,8 +26,10 @@ import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.CollectionUtils;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +42,8 @@ import java.util.Map;
  */
 public abstract class BaseInputSourceDefn implements InputSourceDefn
 {
+  private static final Logger LOG = new Logger(BaseInputSourceDefn.class);
+
   /**
    * The "from-scratch" table function for this input source. The parameters
    * are those defined by the subclass, and the apply simply turns around and
@@ -148,7 +152,8 @@ public abstract class BaseInputSourceDefn implements InputSourceDefn
     return new ExternalTableSpec(
         convertArgsToSource(args, jsonMapper),
         convertArgsToFormat(args, columns, jsonMapper),
-        Columns.convertSignature(columns)
+        Columns.convertSignature(columns),
+        () -> Collections.singleton(typeValue())
     );
   }
 
@@ -204,7 +209,8 @@ public abstract class BaseInputSourceDefn implements InputSourceDefn
     return new ExternalTableSpec(
         convertTableToSource(table),
         convertTableToFormat(table),
-        Columns.convertSignature(table.resolvedTable().spec().columns())
+        Columns.convertSignature(table.resolvedTable().spec().columns()),
+        () -> Collections.singleton(typeValue())
     );
   }
 
@@ -238,6 +244,7 @@ public abstract class BaseInputSourceDefn implements InputSourceDefn
       return jsonMapper.convertValue(jsonMap, inputSourceClass());
     }
     catch (Exception e) {
+      LOG.debug(e, "Invalid input source specification");
       throw new IAE(e, "Invalid input source specification");
     }
   }

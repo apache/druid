@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kinesis;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -34,9 +35,16 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.utils.RuntimeInfo;
 
+import javax.annotation.Nonnull;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, ByteEntity>
 {
@@ -145,6 +153,17 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
   public String getType()
   {
     return TYPE;
+  }
+
+  @Nonnull
+  @JsonIgnore
+  @Override
+  public Set<ResourceAction> getInputSourceResources()
+  {
+    return Collections.singleton(new ResourceAction(
+        new Resource(KinesisIndexingServiceModule.SCHEME, ResourceType.EXTERNAL),
+        Action.READ
+    ));
   }
 
   @Override

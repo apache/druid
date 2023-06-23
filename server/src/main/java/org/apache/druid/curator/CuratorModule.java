@@ -49,7 +49,6 @@ public class CuratorModule implements Module
 
   static final int BASE_SLEEP_TIME_MS = 1000;
   static final int MAX_SLEEP_TIME_MS = 45000;
-  private static final int MAX_RETRIES = 29;
 
   private final boolean haltOnFailedStart;
 
@@ -89,7 +88,7 @@ public class CuratorModule implements Module
       );
     }
 
-    RetryPolicy retryPolicy = new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES);
+    RetryPolicy retryPolicy = new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, config.getMaxZkRetries());
 
     return builder
         .ensembleProvider(new FixedEnsembleProvider(config.getZkHosts()))

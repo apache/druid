@@ -247,10 +247,8 @@ public class LeastExpressionTest extends ExpressionTestBase
   }
 
   @Test
-  public void testInvalidType()
+  public void testIntervalYearMonth()
   {
-    expectException(IllegalArgumentException.class, "Argument 0 has invalid type: INTERVAL_YEAR_MONTH");
-
     testExpression(
         Collections.singletonList(
             testHelper.makeLiteral(
@@ -258,8 +256,8 @@ public class LeastExpressionTest extends ExpressionTestBase
                 new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO)
             )
         ),
-        null,
-        null
+        buildExpectedExpression(13),
+        13L
     );
   }
 

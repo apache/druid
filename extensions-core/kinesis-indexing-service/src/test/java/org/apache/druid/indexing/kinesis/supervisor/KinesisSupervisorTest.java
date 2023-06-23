@@ -88,6 +88,10 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.server.metrics.ExceptionCapturingServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
@@ -3461,7 +3465,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testSuspendedNoRunningTasks() throws Exception
+  public void testSuspendedNoRunningTasks()
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true);
 
@@ -4078,6 +4082,59 @@ public class KinesisSupervisorTest extends EasyMockSupport
     List<Task> phaseTwoTasks = testShardSplitPhaseTwo(phaseOneTasks);
 
     testShardSplitPhaseThree(phaseTwoTasks);
+  }
+
+  @Test
+  public void testCorrectInputSources()
+  {
+    KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(
+        null,
+        dataSchema,
+        null,
+        new KinesisSupervisorIOConfig(
+            STREAM,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false
+        ),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    Assert.assertEquals(
+        Collections.singleton(
+            new ResourceAction(
+                new Resource(KinesisSupervisorSpec.SUPERVISOR_TYPE, ResourceType.EXTERNAL),
+                Action.READ
+            )),
+        supervisorSpec.getInputSourceResources()
+    );
   }
 
   private List<Task> testShardSplitPhaseOne() throws Exception

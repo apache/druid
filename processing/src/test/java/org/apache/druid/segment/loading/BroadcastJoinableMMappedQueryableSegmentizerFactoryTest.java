@@ -91,13 +91,7 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactoryTest extends Ini
         data,
         testInterval,
         segment,
-        new IndexSpec(
-            null,
-            null,
-            null,
-            null,
-            expectedFactory
-        ),
+        IndexSpec.builder().withSegmentLoader(expectedFactory).build(),
         null
     );
 

@@ -166,7 +166,23 @@ export function groupBy<T, Q>(
     buckets[key] = buckets[key] || [];
     buckets[key].push(value);
   }
-  return Object.keys(buckets).map(key => aggregateFn(buckets[key], key));
+  return Object.entries(buckets).map(([key, xs]) => aggregateFn(xs, key));
+}
+
+export function groupByAsMap<T, Q>(
+  array: readonly T[],
+  keyFn: (x: T, index: number) => string,
+  aggregateFn: (xs: readonly T[], key: string) => Q,
+): Record<string, Q> {
+  const buckets: Record<string, T[]> = {};
+  const n = array.length;
+  for (let i = 0; i < n; i++) {
+    const value = array[i];
+    const key = keyFn(value, i);
+    buckets[key] = buckets[key] || [];
+    buckets[key].push(value);
+  }
+  return mapRecord(buckets, aggregateFn);
 }
 
 export function uniq(array: readonly string[]): string[] {
@@ -218,11 +234,11 @@ export function formatMillions(n: NumberLike): string {
 }
 
 function pad2(str: string | number): string {
-  return ('00' + str).substr(-2);
+  return ('00' + str).slice(-2);
 }
 
 function pad3(str: string | number): string {
-  return ('000' + str).substr(-3);
+  return ('000' + str).slice(-3);
 }
 
 export function formatDuration(ms: NumberLike): string {
@@ -252,7 +268,7 @@ export function formatDurationHybrid(ms: NumberLike): string {
     const timeInMs = Math.floor(n) % 1000;
     return `${timeInMin ? `${timeInMin}:` : ''}${timeInMin ? pad2(timeInSec) : timeInSec}.${pad3(
       timeInMs,
-    ).substring(0, 2)}s`;
+    ).slice(0, 2)}s`;
   } else {
     return formatDuration(n);
   }
@@ -278,12 +294,26 @@ export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | un
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }
 
+export function findMap<T, Q>(
+  xs: readonly T[],
+  f: (x: T, i: number) => Q | undefined,
+): Q | undefined {
+  return filterMap(xs, f)[0];
+}
+
 export function compact<T>(xs: (T | undefined | false | null | '')[]): T[] {
   return xs.filter(Boolean) as T[];
 }
 
 export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
   return xs.filter(Boolean) as T[];
+}
+
+export function moveToEnd<T>(
+  xs: T[],
+  predicate: (value: T, index: number, array: T[]) => unknown,
+): T[] {
+  return xs.filter((x, i, a) => !predicate(x, i, a)).concat(xs.filter(predicate));
 }
 
 export function alphanumericCompare(a: string, b: string): number {
@@ -413,7 +443,7 @@ export function parseCsvLine(line: string): string[] {
   let m: RegExpExecArray | null;
   while ((m = /^,(?:"([^"]*(?:""[^"]*)*)"|([^,\r\n]*))/m.exec(line))) {
     parts.push(typeof m[1] === 'string' ? m[1].replace(/""/g, '"') : m[2]);
-    line = line.substr(m[0].length);
+    line = line.slice(m[0].length);
   }
   return parts;
 }
@@ -456,5 +486,28 @@ export function tickIcon(checked: boolean): IconName {
 }
 
 export function generate8HexId(): string {
-  return (Math.random() * 1e10).toString(16).replace('.', '').substr(0, 8);
+  return (Math.random() * 1e10).toString(16).replace('.', '').slice(0, 8);
+}
+
+export function offsetToRowColumn(
+  str: string,
+  offset: number,
+): { row: number; column: number } | undefined {
+  // Ensure offset is within the string length
+  if (offset < 0 || offset > str.length) return;
+
+  const lines = str.split('\n');
+  for (let row = 0; row < lines.length; row++) {
+    const line = lines[row];
+    if (offset < line.length) {
+      return {
+        row,
+        column: offset,
+      };
+    }
+
+    offset -= line.length + 1;
+  }
+
+  return;
 }

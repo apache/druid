@@ -181,10 +181,11 @@ public class LocalInputSourceDefn extends FormattedInputSourceDefn
   public TableFunction partialTableFn(ResolvedExternalTable table)
   {
     final Map<String, Object> sourceMap = new HashMap<>(table.inputSourceMap);
+    final boolean hasBaseDir = !Strings.isNullOrEmpty(CatalogUtils.getString(sourceMap, BASE_DIR_FIELD));
     final boolean hasFiles = !CollectionUtils.isNullOrEmpty(CatalogUtils.safeGet(sourceMap, FILES_FIELD, List.class));
     final boolean hasFilter = !Strings.isNullOrEmpty(CatalogUtils.getString(sourceMap, FILTER_FIELD));
     List<ParameterDefn> params = new ArrayList<>();
-    if (!hasFiles && !hasFilter) {
+    if (hasBaseDir && !hasFiles && !hasFilter) {
       params.add(FILES_PARAM_DEFN);
       params.add(FILTER_PARAM_DEFN);
     }
@@ -219,8 +220,8 @@ public class LocalInputSourceDefn extends FormattedInputSourceDefn
       }
       final boolean hasFilter = !Strings.isNullOrEmpty(CatalogUtils.getString(sourceMap, FILTER_FIELD));
       final List<String> filesParam = CatalogUtils.getStringArray(args, FILES_PARAMETER);
-      final String filterParam = CatalogUtils.getString(args, FILTER_PARAMETER);
       final boolean hasFilesParam = !CollectionUtils.isNullOrEmpty(filesParam);
+      final String filterParam = CatalogUtils.getString(args, FILTER_PARAMETER);
       final boolean hasFilterParam = !Strings.isNullOrEmpty(filterParam);
       if (!hasFilter && !hasFilesParam && !hasFilterParam) {
         throw new IAE(

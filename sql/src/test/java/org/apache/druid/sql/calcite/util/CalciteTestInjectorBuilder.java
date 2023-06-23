@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.google.inject.Injector;
+import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -38,7 +39,8 @@ public class CalciteTestInjectorBuilder extends CoreInjectorBuilder
         .withEmptyProperties()
         .build());
     add(
-        new BasicTestModule(),
+        new SegmentWranglerModule(),
+        new LookylooModule(),
         new SqlAggregationModule()
     );
   }

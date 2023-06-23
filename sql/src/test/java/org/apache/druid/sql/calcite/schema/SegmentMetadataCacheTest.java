@@ -32,10 +32,15 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.GlobalTableDataSource;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -63,10 +68,12 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.NoopEscalator;
+import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
@@ -136,6 +143,78 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
                                               )
                                               .rows(ROWS2)
                                               .buildMMappedIndex();
+
+    final InputRowSchema rowSchema = new InputRowSchema(
+        new TimestampSpec("t", null, null),
+        DimensionsSpec.builder().useSchemaDiscovery(true).build(),
+        null
+    );
+    final List<InputRow> autoRows1 = ImmutableList.of(
+        TestDataBuilder.createRow(
+            ImmutableMap.<String, Object>builder()
+                        .put("t", "2023-01-01T00:00Z")
+                        .put("numbery", 1.1f)
+                        .put("numberyArrays", ImmutableList.of(1L, 2L, 3L))
+                        .put("stringy", ImmutableList.of("a", "b", "c"))
+                        .put("array", ImmutableList.of(1.1, 2.2, 3.3))
+                        .put("nested", ImmutableMap.of("x", 1L, "y", 2L))
+                        .build(),
+            rowSchema
+        )
+    );
+    final List<InputRow> autoRows2 = ImmutableList.of(
+        TestDataBuilder.createRow(
+            ImmutableMap.<String, Object>builder()
+                        .put("t", "2023-01-02T00:00Z")
+                        .put("numbery", 1L)
+                        .put("numberyArrays", ImmutableList.of(3.3, 2.2, 3.1))
+                        .put("stringy", "a")
+                        .put("array", ImmutableList.of(1L, 2L, 3L))
+                        .put("nested", "hello")
+                        .build(),
+            rowSchema
+        )
+    );
+    final QueryableIndex indexAuto1 = IndexBuilder.create()
+                                              .tmpDir(new File(tmpDir, "1"))
+                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                                              .schema(
+                                                  new IncrementalIndexSchema.Builder()
+                                                      .withTimestampSpec(rowSchema.getTimestampSpec())
+                                                      .withDimensionsSpec(rowSchema.getDimensionsSpec())
+                                                      .withMetrics(
+                                                          new CountAggregatorFactory("cnt"),
+                                                          new DoubleSumAggregatorFactory("m1", "m1"),
+                                                          new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+                                                      )
+                                                      .withRollup(false)
+                                                      .build()
+                                              )
+                                              .rows(autoRows1)
+                                              .buildMMappedIndex();
+
+    final QueryableIndex indexAuto2 = IndexBuilder.create()
+                                                  .tmpDir(new File(tmpDir, "1"))
+                                                  .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                                                  .schema(
+                                                      new IncrementalIndexSchema.Builder()
+                                                          .withTimestampSpec(
+                                                              new TimestampSpec("t", null, null)
+                                                          )
+                                                          .withDimensionsSpec(
+                                                              DimensionsSpec.builder().useSchemaDiscovery(true).build()
+                                                          )
+                                                          .withMetrics(
+                                                              new CountAggregatorFactory("cnt"),
+                                                              new DoubleSumAggregatorFactory("m1", "m1"),
+                                                              new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+                                                          )
+                                                          .withRollup(false)
+                                                          .build()
+                                                  )
+                                                  .rows(autoRows2)
+                                                  .buildMMappedIndex();
+
     walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
@@ -163,6 +242,24 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
                    .size(0)
                    .build(),
         index2
+    ).add(
+        DataSegment.builder()
+                   .dataSource(CalciteTests.SOME_DATASOURCE)
+                   .interval(Intervals.of("2023-01-01T00Z/P1D"))
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        indexAuto1
+    ).add(
+        DataSegment.builder()
+                   .dataSource(CalciteTests.SOME_DATASOURCE)
+                   .interval(Intervals.of("2023-01-02T00Z/P1D"))
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        indexAuto2
     );
     final DataSegment segment1 = new DataSegment(
         "foo3",
@@ -182,7 +279,12 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     druidServers = serverView.getDruidServers();
   }
 
-  public SegmentMetadataCache buildSchema1() throws InterruptedException
+  public SegmentMetadataCache buildSchemaMarkAndTableLatch() throws InterruptedException
+  {
+    return buildSchemaMarkAndTableLatch(SEGMENT_CACHE_CONFIG_DEFAULT);
+  }
+
+  public SegmentMetadataCache buildSchemaMarkAndTableLatch(SegmentMetadataCacheConfig config) throws InterruptedException
   {
     Preconditions.checkState(runningSchema == null);
     runningSchema = new SegmentMetadataCache(
@@ -193,7 +295,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
             ImmutableSet.of(globalTableJoinable),
             ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)
         ),
-        SEGMENT_CACHE_CONFIG_DEFAULT,
+        config,
         new NoopEscalator(),
         new BrokerInternalQueryConfig(),
         new NoopServiceEmitter()
@@ -220,58 +322,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     return runningSchema;
   }
 
-  public SegmentMetadataCache buildSchema2() throws InterruptedException
-  {
-    Preconditions.checkState(runningSchema == null);
-    runningSchema = new SegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-        serverView,
-        segmentManager,
-        new MapJoinableFactory(
-            ImmutableSet.of(globalTableJoinable),
-            ImmutableMap.of(globalTableJoinable.getClass(), GlobalTableDataSource.class)
-        ),
-        SEGMENT_CACHE_CONFIG_DEFAULT,
-        new NoopEscalator(),
-        new BrokerInternalQueryConfig(),
-        new NoopServiceEmitter()
-    )
-    {
-      boolean throwException = true;
-
-      @Override
-      protected DatasourceTable.PhysicalDatasourceMetadata buildDruidTable(String dataSource)
-      {
-        DatasourceTable.PhysicalDatasourceMetadata table = super.buildDruidTable(dataSource);
-        buildTableLatch.countDown();
-        return table;
-      }
-
-      @Override
-      protected Set<SegmentId> refreshSegments(final Set<SegmentId> segments) throws IOException
-      {
-        if (throwException) {
-          throwException = false;
-          throw new RuntimeException("Query[xxxx] url[http://xxxx:8083/druid/v2/] timed out.");
-        } else {
-          return super.refreshSegments(segments);
-        }
-      }
-
-      @Override
-      void markDataSourceAsNeedRebuild(String datasource)
-      {
-        super.markDataSourceAsNeedRebuild(datasource);
-        markDataSourceLatch.countDown();
-      }
-    };
-
-    runningSchema.start();
-    runningSchema.awaitInitialization();
-    return runningSchema;
-  }
-
-  public SegmentMetadataCache buildSchema3() throws InterruptedException
+  public SegmentMetadataCache buildSchemaMarkAndRefreshLatch() throws InterruptedException
   {
     Preconditions.checkState(runningSchema == null);
     runningSchema = new SegmentMetadataCache(
@@ -321,24 +372,24 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testGetTableMap() throws InterruptedException
   {
-    SegmentMetadataCache schema = buildSchema1();
-    Assert.assertEquals(ImmutableSet.of("foo", "foo2"), schema.getDatasourceNames());
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
+    Assert.assertEquals(ImmutableSet.of(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE2, CalciteTests.SOME_DATASOURCE), schema.getDatasourceNames());
 
     final Set<String> tableNames = schema.getDatasourceNames();
-    Assert.assertEquals(ImmutableSet.of("foo", "foo2"), tableNames);
+    Assert.assertEquals(ImmutableSet.of(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE2, CalciteTests.SOME_DATASOURCE), tableNames);
   }
 
   @Test
   public void testSchemaInit() throws InterruptedException
   {
-    SegmentMetadataCache schema2 = buildSchema1();
-    Assert.assertEquals(ImmutableSet.of("foo", "foo2"), schema2.getDatasourceNames());
+    SegmentMetadataCache schema2 = buildSchemaMarkAndTableLatch();
+    Assert.assertEquals(ImmutableSet.of(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE2, CalciteTests.SOME_DATASOURCE), schema2.getDatasourceNames());
   }
 
   @Test
   public void testGetTableMapFoo() throws InterruptedException
   {
-    SegmentMetadataCache schema = buildSchema1();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource("foo");
     final DruidTable fooTable = new DatasourceTable(fooDs);
     final RelDataType rowType = fooTable.getRowType(new JavaTypeFactoryImpl());
@@ -353,7 +404,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(1).getType().getSqlTypeName());
 
     Assert.assertEquals("m1", fields.get(2).getName());
-    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(2).getType().getSqlTypeName());
+    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(2).getType().getSqlTypeName());
 
     Assert.assertEquals("dim1", fields.get(3).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(3).getType().getSqlTypeName());
@@ -368,7 +419,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testGetTableMapFoo2() throws InterruptedException
   {
-    SegmentMetadataCache schema = buildSchema1();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource("foo2");
     final DruidTable fooTable = new DatasourceTable(fooDs);
     final RelDataType rowType = fooTable.getRowType(new JavaTypeFactoryImpl());
@@ -386,6 +437,103 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     Assert.assertEquals(SqlTypeName.BIGINT, fields.get(2).getType().getSqlTypeName());
   }
 
+  @Test
+  public void testGetTableMapSomeTable() throws InterruptedException
+  {
+    // using 'newest first' column type merge strategy, the types are expected to be the types defined in the newer
+    // segment, except for json, which is special handled
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch(
+        new SegmentMetadataCacheConfig() {
+          @Override
+          public SegmentMetadataCache.ColumnTypeMergePolicy getMetadataColumnTypeMergePolicy()
+          {
+            return new SegmentMetadataCache.FirstTypeMergePolicy();
+          }
+        }
+    );
+    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource(CalciteTests.SOME_DATASOURCE);
+    final DruidTable table = new DatasourceTable(fooDs);
+    final RelDataType rowType = table.getRowType(new JavaTypeFactoryImpl());
+    final List<RelDataTypeField> fields = rowType.getFieldList();
+
+    Assert.assertEquals(9, fields.size());
+
+    Assert.assertEquals("__time", fields.get(0).getName());
+    Assert.assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
+
+    Assert.assertEquals("numbery", fields.get(1).getName());
+    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(1).getType().getSqlTypeName());
+
+    Assert.assertEquals("numberyArrays", fields.get(2).getName());
+    Assert.assertEquals(SqlTypeName.ARRAY, fields.get(2).getType().getSqlTypeName());
+    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(2).getType().getComponentType().getSqlTypeName());
+
+    Assert.assertEquals("stringy", fields.get(3).getName());
+    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(3).getType().getSqlTypeName());
+
+    Assert.assertEquals("array", fields.get(4).getName());
+    Assert.assertEquals(SqlTypeName.ARRAY, fields.get(4).getType().getSqlTypeName());
+    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(4).getType().getComponentType().getSqlTypeName());
+
+    Assert.assertEquals("nested", fields.get(5).getName());
+    Assert.assertEquals(SqlTypeName.OTHER, fields.get(5).getType().getSqlTypeName());
+
+    Assert.assertEquals("cnt", fields.get(6).getName());
+    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(6).getType().getSqlTypeName());
+
+    Assert.assertEquals("m1", fields.get(7).getName());
+    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(7).getType().getSqlTypeName());
+
+    Assert.assertEquals("unique_dim1", fields.get(8).getName());
+    Assert.assertEquals(SqlTypeName.OTHER, fields.get(8).getType().getSqlTypeName());
+  }
+
+  @Test
+  public void testGetTableMapSomeTableLeastRestrictiveTypeMerge() throws InterruptedException
+  {
+    // using 'least restrictive' column type merge strategy, the types are expected to be the types defined as the
+    // least restrictive blend across all segments
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
+    final DatasourceTable.PhysicalDatasourceMetadata fooDs = schema.getDatasource(CalciteTests.SOME_DATASOURCE);
+    final DruidTable table = new DatasourceTable(fooDs);
+    final RelDataType rowType = table.getRowType(new JavaTypeFactoryImpl());
+    final List<RelDataTypeField> fields = rowType.getFieldList();
+
+    Assert.assertEquals(9, fields.size());
+
+    Assert.assertEquals("__time", fields.get(0).getName());
+    Assert.assertEquals(SqlTypeName.TIMESTAMP, fields.get(0).getType().getSqlTypeName());
+
+    Assert.assertEquals("numbery", fields.get(1).getName());
+    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(1).getType().getSqlTypeName());
+
+    Assert.assertEquals("numberyArrays", fields.get(2).getName());
+    Assert.assertEquals(SqlTypeName.ARRAY, fields.get(2).getType().getSqlTypeName());
+    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(2).getType().getComponentType().getSqlTypeName());
+
+    Assert.assertEquals("stringy", fields.get(3).getName());
+    Assert.assertEquals(SqlTypeName.ARRAY, fields.get(3).getType().getSqlTypeName());
+    Assert.assertEquals(SqlTypeName.VARCHAR, fields.get(3).getType().getComponentType().getSqlTypeName());
+
+    Assert.assertEquals("array", fields.get(4).getName());
+    Assert.assertEquals(SqlTypeName.ARRAY, fields.get(4).getType().getSqlTypeName());
+    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(4).getType().getComponentType().getSqlTypeName());
+
+    Assert.assertEquals("nested", fields.get(5).getName());
+    Assert.assertEquals(SqlTypeName.OTHER, fields.get(5).getType().getSqlTypeName());
+
+    Assert.assertEquals("cnt", fields.get(6).getName());
+    Assert.assertEquals(SqlTypeName.BIGINT, fields.get(6).getType().getSqlTypeName());
+
+    Assert.assertEquals("m1", fields.get(7).getName());
+    Assert.assertEquals(SqlTypeName.DOUBLE, fields.get(7).getType().getSqlTypeName());
+
+    Assert.assertEquals("unique_dim1", fields.get(8).getName());
+    Assert.assertEquals(SqlTypeName.OTHER, fields.get(8).getType().getSqlTypeName());
+  }
+
+
+
   /**
    * This tests that {@link AvailableSegmentMetadata#getNumRows()} is correct in case
    * of multiple replicas i.e. when {@link SegmentMetadataCache#addSegment(DruidServerMetadata, DataSegment)}
@@ -395,13 +543,13 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testAvailableSegmentMetadataNumRows() throws InterruptedException
   {
-    SegmentMetadataCache schema = buildSchema1();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
     final List<DataSegment> segments = segmentsMetadata.values()
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    Assert.assertEquals(4, segments.size());
+    Assert.assertEquals(6, segments.size());
     // find the only segment with datasource "foo2"
     final DataSegment existingSegment = segments.stream()
                                                 .filter(segment -> segment.getDataSource().equals("foo2"))
@@ -445,13 +593,13 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testNullDatasource() throws IOException, InterruptedException
   {
-    SegmentMetadataCache schema = buildSchema1();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final Map<SegmentId, AvailableSegmentMetadata> segmentMetadatas = schema.getSegmentMetadataSnapshot();
     final List<DataSegment> segments = segmentMetadatas.values()
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    Assert.assertEquals(4, segments.size());
+    Assert.assertEquals(6, segments.size());
     // segments contains two segments with datasource "foo" and one with datasource "foo2"
     // let's remove the only segment with datasource "foo2"
     final DataSegment segmentToRemove = segments.stream()
@@ -464,19 +612,19 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     // The following line can cause NPE without segmentMetadata null check in
     // SegmentMetadataCache#refreshSegmentsForDataSource
     schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
-    Assert.assertEquals(3, schema.getSegmentMetadataSnapshot().size());
+    Assert.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
   }
 
   @Test
   public void testNullAvailableSegmentMetadata() throws IOException, InterruptedException
   {
-    SegmentMetadataCache schema = buildSchema1();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     final Map<SegmentId, AvailableSegmentMetadata> segmentMetadatas = schema.getSegmentMetadataSnapshot();
     final List<DataSegment> segments = segmentMetadatas.values()
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    Assert.assertEquals(4, segments.size());
+    Assert.assertEquals(6, segments.size());
     // remove one of the segments with datasource "foo"
     final DataSegment segmentToRemove = segments.stream()
                                                 .filter(segment -> segment.getDataSource().equals("foo"))
@@ -488,13 +636,13 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     // The following line can cause NPE without segmentMetadata null check in
     // SegmentMetadataCache#refreshSegmentsForDataSource
     schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
-    Assert.assertEquals(3, schema.getSegmentMetadataSnapshot().size());
+    Assert.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
   }
 
   @Test
   public void testAvailableSegmentMetadataIsRealtime() throws InterruptedException
   {
-    SegmentMetadataCache schema = buildSchema1();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = schema.getSegmentMetadataSnapshot();
     final List<DataSegment> segments = segmentsMetadata.values()
                                                        .stream()
@@ -575,7 +723,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     serverView.addSegment(newSegment(datasource, 1), ServerType.HISTORICAL);
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(5, schema.getTotalSegments());
+    Assert.assertEquals(7, schema.getTotalSegments());
     List<AvailableSegmentMetadata> metadatas = schema
         .getSegmentMetadataSnapshot()
         .values()
@@ -620,7 +768,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     serverView.addSegment(segment, ServerType.HISTORICAL);
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(5, schema.getTotalSegments());
+    Assert.assertEquals(7, schema.getTotalSegments());
     List<AvailableSegmentMetadata> metadatas = schema
         .getSegmentMetadataSnapshot()
         .values()
@@ -665,7 +813,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     serverView.addSegment(newSegment(datasource, 1), ServerType.REALTIME);
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(5, schema.getTotalSegments());
+    Assert.assertEquals(7, schema.getTotalSegments());
     List<AvailableSegmentMetadata> metadatas = schema
         .getSegmentMetadataSnapshot()
         .values()
@@ -709,7 +857,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     serverView.addSegment(newSegment(datasource, 1), ServerType.BROKER);
     Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(4, schema.getTotalSegments());
+    Assert.assertEquals(6, schema.getTotalSegments());
     List<AvailableSegmentMetadata> metadatas = schema
         .getSegmentMetadataSnapshot()
         .values()
@@ -764,7 +912,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     serverView.removeSegment(segment, ServerType.REALTIME);
     Assert.assertTrue(removeSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(4, schema.getTotalSegments());
+    Assert.assertEquals(6, schema.getTotalSegments());
     List<AvailableSegmentMetadata> metadatas = schema
         .getSegmentMetadataSnapshot()
         .values()
@@ -826,7 +974,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     serverView.removeSegment(segments.get(0), ServerType.REALTIME);
     Assert.assertTrue(removeSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(5, schema.getTotalSegments());
+    Assert.assertEquals(7, schema.getTotalSegments());
     List<AvailableSegmentMetadata> metadatas = schema
         .getSegmentMetadataSnapshot()
         .values()
@@ -871,7 +1019,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     serverView.removeSegment(newSegment(datasource, 1), ServerType.HISTORICAL);
     Assert.assertTrue(removeServerSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(4, schema.getTotalSegments());
+    Assert.assertEquals(6, schema.getTotalSegments());
   }
 
   @Test
@@ -918,7 +1066,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     serverView.removeSegment(segment, ServerType.BROKER);
     Assert.assertTrue(removeServerSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(5, schema.getTotalSegments());
+    Assert.assertEquals(7, schema.getTotalSegments());
     Assert.assertTrue(schema.getDataSourcesNeedingRebuild().contains(datasource));
   }
 
@@ -966,7 +1114,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     serverView.removeSegment(segment, ServerType.HISTORICAL);
     Assert.assertTrue(removeServerSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(5, schema.getTotalSegments());
+    Assert.assertEquals(7, schema.getTotalSegments());
     List<AvailableSegmentMetadata> metadatas = schema
         .getSegmentMetadataSnapshot()
         .values()
@@ -994,7 +1142,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testLocalSegmentCacheSetsDataSourceAsGlobalAndJoinable() throws InterruptedException
   {
-    SegmentMetadataCache schema3 = buildSchema3();
+    SegmentMetadataCache schema3 = buildSchemaMarkAndRefreshLatch();
     Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     DatasourceTable.PhysicalDatasourceMetadata fooTable = schema3.getDatasource("foo");
     Assert.assertNotNull(fooTable);
@@ -1060,7 +1208,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testLocalSegmentCacheSetsDataSourceAsBroadcastButNotJoinable() throws InterruptedException
   {
-    SegmentMetadataCache schema = buildSchema3();
+    SegmentMetadataCache schema = buildSchemaMarkAndRefreshLatch();
     Assert.assertTrue(refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS));
     DatasourceTable.PhysicalDatasourceMetadata fooTable = schema.getDatasource("foo");
     Assert.assertNotNull(fooTable);
@@ -1130,7 +1278,10 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testRunSegmentMetadataQueryWithContext() throws Exception
   {
-    Map<String, Object> queryContext = ImmutableMap.of("priority", 5);
+    Map<String, Object> queryContext = ImmutableMap.of(
+        QueryContexts.PRIORITY_KEY, 5,
+        QueryContexts.BROKER_PARALLEL_MERGE_KEY, false
+    );
 
     String brokerInternalQueryConfigJson = "{\"context\": { \"priority\": 5} }";
 
@@ -1287,7 +1438,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
   @Test
   public void testStaleDatasourceRefresh() throws IOException, InterruptedException
   {
-    SegmentMetadataCache schema = buildSchema1();
+    SegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
     Set<SegmentId> segments = new HashSet<>();
     Set<String> datasources = new HashSet<>();
     datasources.add("wat");

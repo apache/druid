@@ -437,6 +437,22 @@ public class DruidExpression
     );
   }
 
+  public DruidExpression map(
+      final Function<SimpleExtraction, SimpleExtraction> extractionMap,
+      final Function<String, String> expressionMap,
+      final ColumnType newType
+  )
+  {
+    return new DruidExpression(
+        nodeType,
+        newType,
+        simpleExtraction == null ? null : extractionMap.apply(simpleExtraction),
+        (args) -> expressionMap.apply(expressionGenerator.compile(args)),
+        arguments,
+        virtualColumnCreator
+    );
+  }
+
   public DruidExpression withArguments(List<DruidExpression> newArgs)
   {
     return new DruidExpression(

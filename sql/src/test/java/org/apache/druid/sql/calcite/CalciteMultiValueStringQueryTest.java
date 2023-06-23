@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExpressionProcessing;
@@ -29,8 +30,10 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.AndDimFilter;
+import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
+import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -39,8 +42,8 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
@@ -742,7 +745,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
       );
     }
     finally {
-      ExpressionProcessing.initializeForTests(null);
+      ExpressionProcessing.initializeForTests();
     }
   }
 
@@ -798,7 +801,11 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(expressionVirtualColumn("v0", "array_ordinal(\"dim3\",2)", ColumnType.STRING))
+                        .setVirtualColumns(expressionVirtualColumn(
+                            "v0",
+                            "array_ordinal(\"dim3\",2)",
+                            ColumnType.STRING
+                        ))
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
@@ -1213,7 +1220,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"v1\"),\"v1\",'no b')",
+                                "nvl(\"v1\",'no b')",
                                 ColumnType.STRING
                             ),
                             new ListFilteredVirtualColumn(
@@ -1280,7 +1287,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"v1\"),\"v1\",\"dim1\")",
+                                "nvl(\"v1\",\"dim1\")",
                                 ColumnType.STRING
                             ),
                             new ListFilteredVirtualColumn(
@@ -1338,7 +1345,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"v1\"),\"v1\",'no b')",
+                                "nvl(\"v1\",'no b')",
                                 ColumnType.STRING
                             ),
                             new ListFilteredVirtualColumn(
@@ -1794,7 +1801,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT MV_TO_ARRAY(dim3,dim3) FROM druid.numfoo",
         exception -> {
-          exception.expect(SqlPlanningException.class);
+          exception.expect(DruidException.class);
           exception.expectMessage("Invalid number of arguments to function");
         }
     );
@@ -1806,7 +1813,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT MV_TO_ARRAY() FROM druid.numfoo",
         exception -> {
-          exception.expect(SqlPlanningException.class);
+          exception.expect(DruidException.class);
           exception.expectMessage("Invalid number of arguments to function");
         }
     );
@@ -1845,6 +1852,169 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT MV_TO_ARRAY(Array[1,2]) FROM druid.numfoo",
         exception -> exception.expect(RuntimeException.class)
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOverlapFilterCoalesceNvl()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT COALESCE(dim3, 'other') FROM druid.numfoo "
+        + "WHERE MV_OVERLAP(COALESCE(MV_TO_ARRAY(dim3), ARRAY['other']), ARRAY['a', 'b', 'other']) OR "
+        + "MV_OVERLAP(NVL(MV_TO_ARRAY(dim3), ARRAY['other']), ARRAY['a', 'b', 'other']) LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .eternityInterval()
+                .virtualColumns(
+                    new ExpressionVirtualColumn(
+                        "v0",
+                        "nvl(\"dim3\",'other')",
+                        ColumnType.STRING,
+                        queryFramework().macroTable()
+                    )
+                )
+                .filters(
+                    new OrDimFilter(
+                        new ExpressionDimFilter(
+                            "case_searched(notnull(mv_to_array(\"dim3\")),array_overlap(mv_to_array(\"dim3\"),array('a','b','other')),1)",
+                            null,
+                            queryFramework().macroTable()
+                        ),
+                        new ExpressionDimFilter(
+                            "case_searched(notnull(mv_to_array(\"dim3\")),array_overlap(mv_to_array(\"dim3\"),array('a','b','other')),1)",
+                            null,
+                            queryFramework().macroTable()
+                        )
+                    )
+                )
+                .columns("v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"},
+            new Object[]{"other"},
+            new Object[]{"other"},
+            new Object[]{"other"}
+        )
+        : ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"},
+            new Object[]{"other"},
+            new Object[]{"other"}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOverlapFilterCoalesceSingleValue()
+  {
+    testQuery(
+        "SELECT COALESCE(dim3, 'other') FROM druid.numfoo "
+        + "WHERE MV_OVERLAP(COALESCE(dim3, 'other'), ARRAY['a', 'b', 'other']) LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .eternityInterval()
+                .virtualColumns(
+                    new ExpressionVirtualColumn(
+                        "v0",
+                        "nvl(\"dim3\",'other')",
+                        ColumnType.STRING,
+                        queryFramework().macroTable()
+                    )
+                )
+                .filters(
+                    new OrDimFilter(
+                        new InDimFilter("dim3", ImmutableSet.of("a", "b", "other")),
+                        new SelectorDimFilter("dim3", null, null)
+                    )
+                )
+                .columns("v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"},
+            new Object[]{"other"},
+            new Object[]{"other"},
+            new Object[]{"other"}
+        )
+        : ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"},
+            new Object[]{"other"},
+            new Object[]{"other"}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOverlapFilterCoalesceSingleValueOtherColumn()
+  {
+    testQuery(
+        "SELECT COALESCE(dim3, dim2) FROM druid.numfoo "
+        + "WHERE MV_OVERLAP(COALESCE(dim3, dim2), ARRAY['a', 'b', 'other']) LIMIT 5",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .eternityInterval()
+                .virtualColumns(
+                    new ExpressionVirtualColumn(
+                        "v0",
+                        "nvl(\"dim3\",\"dim2\")",
+                        ColumnType.STRING,
+                        queryFramework().macroTable()
+                    )
+                )
+                .filters(
+                    new OrDimFilter(
+                        new InDimFilter("dim3", ImmutableSet.of("a", "b", "other")),
+                        new AndDimFilter(
+                            new InDimFilter("dim2", ImmutableSet.of("a", "b", "other")),
+                            new SelectorDimFilter("dim3", null, null)
+                        )
+                    )
+                )
+                .columns("v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(5)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"},
+            new Object[]{"a"}
+        )
+        : ImmutableList.of(
+            new Object[]{"[\"a\",\"b\"]"},
+            new Object[]{"[\"b\",\"c\"]"}
+        )
+    );
+  }
+
+  @Test
+  public void testMultiValueStringOverlapFilterInconsistentUsage()
+  {
+    testQueryThrows(
+        "SELECT COALESCE(dim3, 'other') FROM druid.numfoo "
+        + "WHERE MV_OVERLAP(COALESCE(dim3, ARRAY['other']), ARRAY['a', 'b', 'other']) LIMIT 5",
+        e -> {
+          e.expect(invalidSqlContains("Illegal mixing of types in CASE or COALESCE statement"));
+        }
+
     );
   }
 }

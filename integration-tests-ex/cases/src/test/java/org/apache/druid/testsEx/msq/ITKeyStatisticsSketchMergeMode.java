@@ -19,7 +19,6 @@
 
 package org.apache.druid.testsEx.msq;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
@@ -27,9 +26,7 @@ import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.sql.SqlTaskStatus;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
-import org.apache.druid.testing.clients.SqlResourceTestClient;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testsEx.categories.MultiStageQuery;
@@ -47,22 +44,12 @@ public class ITKeyStatisticsSketchMergeMode
   private MsqTestQueryHelper msqHelper;
 
   @Inject
-  private SqlResourceTestClient msqClient;
-
-  @Inject
-  private IntegrationTestingConfig config;
-
-  @Inject
-  private ObjectMapper jsonMapper;
-
-  @Inject
   private DataLoaderHelper dataLoaderHelper;
 
   @Inject
   private CoordinatorResourceTestClient coordinatorClient;
 
   private static final String QUERY_FILE = "/multi-stage-query/wikipedia_msq_select_query1.json";
-
 
   @Test
   public void testMsqIngestionParallelMerging() throws Exception

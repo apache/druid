@@ -50,7 +50,7 @@ export function findEmptyLiteralPosition(query: SqlQuery): RowColumn | undefined
   const crazyIndex = subQueryString.indexOf(CRAZY_STRING);
   if (crazyIndex < 0) return;
 
-  const prefix = subQueryString.substr(0, crazyIndex);
+  const prefix = subQueryString.slice(0, crazyIndex);
   const lines = prefix.split(/\n/g);
   const row = lines.length - 1;
   const lastLine = lines[row];

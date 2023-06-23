@@ -52,10 +52,9 @@ FROM TABLE(
     '{"type":"local","filter":"wikiticker-2015-09-12-sampled.json.gz","baseDir":${JSON.stringify(
       DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
     )}}',
-    '{"type":"json"}',
-    '[{"name":"channel","type":"string"}]'
+    '{"type":"json"}'
   )
-))
+) EXTEND (channel VARCHAR))
 SELECT
   channel,
   CAST(COUNT(*) AS VARCHAR) AS "CountString"

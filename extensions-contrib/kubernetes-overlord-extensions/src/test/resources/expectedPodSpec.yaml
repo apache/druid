@@ -2,29 +2,50 @@ apiVersion: "batch/v1"
 kind: "Job"
 metadata:
   annotations:
-    task.id: "task_id"
+    task.id: "id"
     tls.enabled: "false"
   labels:
     druid.k8s.peons: "true"
-  name: "taskid"
+  name: "id"
 spec:
-  activeDeadlineSeconds: 3600
+  activeDeadlineSeconds: 14400
   backoffLimit: 0
   template:
     metadata:
       annotations:
-        task.id: "task_id"
+        task.id: "id"
         tls.enabled: "false"
       labels:
         druid.k8s.peons: "true"
     spec:
       containers:
         - args:
-            - "trap 'touch /usr/share/pod/done' EXIT; mkdir -p ${TASK_DIR}; echo ${TASK_JSON}\
-          \ | base64 -d | gzip -d > ${TASK_DIR}/task.json; "
+            - "/kubexit/kubexit /bin/sh -c \"/peon.sh /druid/data/baseTaskDir/noop_2022-09-26T22:08:00.582Z_352988d2-5ff7-4b70-977c-3de96f9bfca6\
+          \ 1\""
           command:
-            - "sh"
+            - "/bin/sh"
             - "-c"
+          env:
+            - name: "druid_monitoring_monitors"
+              value: '["org.apache.druid.java.util.metrics.JvmMonitor"]'
+            - name: "TASK_DIR"
+              value: "/tmp"
+            - name: "TASK_JSON"
+              value: "H4sIAAAAAAAAAEVOOw7CMAy9i+cOBYmlK0KItWVhNI0BSyEOToKoqt4doxZYLPv9/EbIQyRoIIhEqICd7TYquKqUePidDjN2UrSfxYEM0xKOfDdgvalr86aW0A0z9L9bSsVnc512nZkurHSTZJJQvK+gl5DpZfwIUVmU8wDNarJ0Ssu/EfCJ7PHM3tj9p9i3ltKjWKDbYsR+sU5vP86oMNUAAAA="
+            - name: "JAVA_OPTS"
+              value: ""
+            - name: "druid_host"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "status.podIP"
+            - name: "HOSTNAME"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "metadata.name"
+            - name: "KUBEXIT_NAME"
+              value: "main"
+            - name: "KUBEXIT_GRAVEYARD"
+              value: "/graveyard"
           image: "one"
           name: "main"
           ports:
@@ -37,30 +58,50 @@ spec:
           resources:
             limits:
               cpu: "1000m"
-              memory: "1000000000"
+              memory: "2400000000"
             requests:
               cpu: "1000m"
-              memory: "1000000000"
+              memory: "2400000000"
           volumeMounts:
-            - mountPath: "/usr/share/pod"
-              name: "peon-share"
-        - command:
-            - "tail -f /dev/null"
+            - mountPath: "/graveyard"
+              name: "graveyard"
+            - mountPath: "/kubexit"
+              name: "kubexit"
+        - args:
+            - "/kubexit/kubexit /bin/sh -c \"tail -f /dev/null\" || true"
+          command:
+            - "/bin/sh"
+            - "-c"
+          env:
+            - name: "KUBEXIT_NAME"
+              value: "sidecar"
+            - name: "KUBEXIT_GRAVEYARD"
+              value: "/graveyard"
+            - name: "KUBEXIT_DEATH_DEPS"
+              value: "main"
           image: "two"
-          lifecycle:
-            postStart:
-              exec:
-                command:
-                  - "while ! test -f /usr/share/pod/done; do echo 'Waiting for the main\
-                \ pod to finish...'; sleep 5; done; echo 'Agent pod finished, exiting';\
-                \ exit 0"
           name: "sidecar"
           volumeMounts:
-            - mountPath: "/usr/share/pod"
-              name: "peon-share"
-              readOnly: true
+            - mountPath: "/graveyard"
+              name: "graveyard"
+            - mountPath: "/kubexit"
+              name: "kubexit"
+      hostname: "id"
+      initContainers:
+        - command:
+            - "cp"
+            - "/bin/kubexit"
+            - "/kubexit/kubexit"
+          image: "karlkfi/kubexit:v0.3.2"
+          name: "kubexit"
+          volumeMounts:
+            - mountPath: "/kubexit"
+              name: "kubexit"
       restartPolicy: "Never"
       volumes:
+        - emptyDir:
+            medium: "Memory"
+          name: "graveyard"
         - emptyDir: {}
-          name: "peon-share"
-  ttlSecondsAfterFinished: 7200
+          name: "kubexit"
+  ttlSecondsAfterFinished: 172800

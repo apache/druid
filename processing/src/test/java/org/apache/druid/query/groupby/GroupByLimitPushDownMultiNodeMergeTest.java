@@ -206,7 +206,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     final File fileA = INDEX_MERGER_V9.persist(
         indexA,
         new File(tmpDir, "A"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     QueryableIndex qindexA = INDEX_IO.loadIndex(fileA);
@@ -242,7 +242,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     final File fileB = INDEX_MERGER_V9.persist(
         indexB,
         new File(tmpDir, "B"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     QueryableIndex qindexB = INDEX_IO.loadIndex(fileB);
@@ -277,7 +277,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     final File fileC = INDEX_MERGER_V9.persist(
         indexC,
         new File(tmpDir, "C"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     QueryableIndex qindexC = INDEX_IO.loadIndex(fileC);
@@ -313,7 +313,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     final File fileD = INDEX_MERGER_V9.persist(
         indexD,
         new File(tmpDir, "D"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     QueryableIndex qindexD = INDEX_IO.loadIndex(fileD);
@@ -428,7 +428,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     final File fileE = INDEX_MERGER_V9.persist(
         indexE,
         new File(tmpDir, "E"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     QueryableIndex qindexE = INDEX_IO.loadIndex(fileE);
@@ -523,7 +523,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     final File fileF = INDEX_MERGER_V9.persist(
         indexF,
         new File(tmpDir, "F"),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         null
     );
     QueryableIndex qindexF = INDEX_IO.loadIndex(fileF);

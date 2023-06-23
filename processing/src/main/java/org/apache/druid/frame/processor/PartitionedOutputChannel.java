@@ -21,6 +21,7 @@ package org.apache.druid.frame.processor;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.channel.PartitionedReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -37,10 +38,15 @@ import java.util.function.Supplier;
  */
 public class PartitionedOutputChannel
 {
+
+  @GuardedBy("this")
   @Nullable
-  private final WritableFrameChannel writableChannel;
+  private WritableFrameChannel writableChannel;
+
+  @GuardedBy("this")
   @Nullable
-  private final MemoryAllocator frameMemoryAllocator;
+  private MemoryAllocator frameMemoryAllocator;
+
   private final Supplier<PartitionedReadableFrameChannel> readableChannelSupplier;
 
   private PartitionedOutputChannel(
@@ -76,12 +82,14 @@ public class PartitionedOutputChannel
   }
 
   /**
-   * Returns the writable channel of this pair. The producer writes to this channel.
+   * Returns the writable channel of this pair. The producer writes to this channel. Throws ISE if the output channel is
+   * read only.
    */
-  public WritableFrameChannel getWritableChannel()
+  public synchronized WritableFrameChannel getWritableChannel()
   {
     if (writableChannel == null) {
-      throw new ISE("Writable channel is not available");
+      throw new ISE("Writable channel is not available. The output channel might be marked as read-only,"
+                    + " hence no writes are allowed.");
     } else {
       return writableChannel;
     }
@@ -89,11 +97,13 @@ public class PartitionedOutputChannel
 
   /**
    * Returns the memory allocator for the writable channel. The producer uses this to generate frames for the channel.
+   * Throws ISE if the output channel is read only.
    */
-  public MemoryAllocator getFrameMemoryAllocator()
+  public synchronized MemoryAllocator getFrameMemoryAllocator()
   {
     if (frameMemoryAllocator == null) {
-      throw new ISE("Writable channel is not available");
+      throw new ISE("Frame allocator is not available. The output channel might be marked as read-only,"
+                    + " hence memory allocator is not required.");
     } else {
       return frameMemoryAllocator;
     }
@@ -102,12 +112,12 @@ public class PartitionedOutputChannel
   /**
    * Returns the partitioned readable channel supplier of this pair. The consumer reads from this channel.
    */
-  public Supplier<PartitionedReadableFrameChannel> getReadableChannelSupplier()
+  public synchronized Supplier<PartitionedReadableFrameChannel> getReadableChannelSupplier()
   {
     return readableChannelSupplier;
   }
 
-  public PartitionedOutputChannel mapWritableChannel(final Function<WritableFrameChannel, WritableFrameChannel> mapFn)
+  public synchronized PartitionedOutputChannel mapWritableChannel(final Function<WritableFrameChannel, WritableFrameChannel> mapFn)
   {
     if (writableChannel == null) {
       return this;
@@ -118,5 +128,25 @@ public class PartitionedOutputChannel
           readableChannelSupplier
       );
     }
+  }
+
+
+  /**
+   * Returns a read-only version of this instance. Read-only versions have neither {@link #getWritableChannel()} nor
+   * {@link #getFrameMemoryAllocator()}, and therefore require substantially less memory.
+   */
+  public PartitionedOutputChannel readOnly()
+  {
+    return new PartitionedOutputChannel(null, null, readableChannelSupplier);
+  }
+
+  /**
+   * Removes the reference to the {@link #writableChannel} and {@link #frameMemoryAllocator} from the object, making
+   * it more efficient
+   */
+  public synchronized void convertToReadOnly()
+  {
+    this.writableChannel = null;
+    this.frameMemoryAllocator = null;
   }
 }

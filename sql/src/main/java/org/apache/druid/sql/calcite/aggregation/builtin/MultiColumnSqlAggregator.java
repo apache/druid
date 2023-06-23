@@ -90,6 +90,7 @@ public abstract class MultiColumnSqlAggregator implements SqlAggregator
     }
 
     final List<DruidExpression> arguments = Aggregations.getArgumentsForSimpleAggregator(
+        rexBuilder,
         plannerContext,
         rowSignature,
         aggregateCall,

@@ -39,6 +39,7 @@ import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../r
 import type { Pagination, QueryAction } from '../../../utils';
 import {
   columnToIcon,
+  columnToSummary,
   columnToWidth,
   convertToGroupByExpression,
   copyAndAlert,
@@ -165,10 +166,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
       // Casts
       if (selectExpression) {
         const underlyingExpression = selectExpression.getUnderlyingExpression();
-        if (
-          underlyingExpression instanceof SqlFunction &&
-          underlyingExpression.getEffectiveFunctionName() === 'CAST'
-        ) {
+        if (underlyingExpression instanceof SqlFunction && underlyingExpression.getCastType()) {
           menuItems.push(
             <MenuItem
               key="uncast"
@@ -590,7 +588,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                 return (
                   <Popover2 content={<Deferred content={() => getHeaderMenu(column, i)} />}>
                     <div className="clickable-cell">
-                      <div className="output-name">
+                      <div className="output-name" title={columnToSummary(column)}>
                         {icon && <Icon className="type-icon" icon={icon} size={12} />}
                         {h}
                         {hasFilterOnHeader(h, i) && (

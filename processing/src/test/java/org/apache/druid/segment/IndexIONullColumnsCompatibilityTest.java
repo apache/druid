@@ -100,7 +100,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
     segmentDir = indexMerger.persist(
         incrementalIndex,
         temporaryFolder.newFolder(),
-        new IndexSpec(),
+        IndexSpec.DEFAULT,
         OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
   }
@@ -118,7 +118,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
   @Test
   public void testV9LoaderThatIgnoresmptyColumns() throws IOException
   {
-    QueryableIndex queryableIndex = new V9IndexLoaderExceptEmptyColumns(TestHelper.NO_CACHE_COLUMN_CONFIG).load(
+    QueryableIndex queryableIndex = new V9IndexLoaderExceptEmptyColumns(TestHelper.NO_CACHE_ALWAYS_USE_INDEXES_COLUMN_CONFIG).load(
         segmentDir,
         TestHelper.makeJsonMapper(),
         false,

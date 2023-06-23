@@ -35,6 +35,8 @@ public class DruidTypeSystem implements RelDataTypeSystem
    */
   public static final int DEFAULT_TIMESTAMP_PRECISION = 3;
 
+  public static final String VARIANT_TYPE_NAME = "VARIANT";
+
   private DruidTypeSystem()
   {
     // Singleton.

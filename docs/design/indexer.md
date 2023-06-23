@@ -35,7 +35,7 @@ For Apache Druid Indexer Process Configuration, see [Indexer Configuration](../c
 
 ### HTTP endpoints
 
-The Indexer process shares the same HTTP endpoints as the [MiddleManager](../operations/api-reference.md#middlemanager).
+The Indexer process shares the same HTTP endpoints as the [MiddleManager](../api-reference/api-reference.md#middlemanager).
 
 ### Running
 

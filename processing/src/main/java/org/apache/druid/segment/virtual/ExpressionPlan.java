@@ -133,6 +133,7 @@ public class ExpressionPlan
    */
   public Expr getExpression()
   {
+    Parser.validateExpr(expression, analysis);
     return expression;
   }
 
@@ -145,9 +146,11 @@ public class ExpressionPlan
   public Expr getAppliedExpression()
   {
     if (is(Trait.NEEDS_APPLIED)) {
-      return Parser.applyUnappliedBindings(expression, analysis, unappliedInputs);
+      final Expr applied = Parser.applyUnappliedBindings(expression, analysis, unappliedInputs);
+      Parser.validateExpr(applied, applied.analyzeInputs());
+      return applied;
     }
-    return expression;
+    return getExpression();
   }
 
   /**
@@ -165,9 +168,11 @@ public class ExpressionPlan
           "Accumulator cannot be implicitly transformed, if it is an ARRAY or multi-valued type it must"
           + " be used explicitly as such"
       );
-      return Parser.foldUnappliedBindings(expression, analysis, unappliedInputs, accumulatorId);
+      final Expr folded = Parser.foldUnappliedBindings(expression, analysis, unappliedInputs, accumulatorId);
+      Parser.validateExpr(folded, folded.analyzeInputs());
+      return folded;
     }
-    return expression;
+    return getExpression();
   }
 
   /**

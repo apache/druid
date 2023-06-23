@@ -91,7 +91,7 @@ public class DictionaryEncodedStringIndexSupplierBenchmark
     public void setup()
     {
       final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
-      final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory(null);
+      final BitmapSerdeFactory serdeFactory = RoaringBitmapSerdeFactory.getInstance();
       final Iterable<Integer> ints = intGenerator();
       final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
           FluentIterable.from(ints)

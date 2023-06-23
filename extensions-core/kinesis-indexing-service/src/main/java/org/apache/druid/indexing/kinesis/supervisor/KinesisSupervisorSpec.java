@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kinesis.supervisor;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.name.Named;
@@ -38,13 +39,20 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
 {
-  private static final String SUPERVISOR_TYPE = "kinesis";
+  static final String SUPERVISOR_TYPE = "kinesis";
   private final AWSCredentialsConfig awsCredentialsConfig;
 
   @JsonCreator
@@ -112,6 +120,17 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
   public String getType()
   {
     return SUPERVISOR_TYPE;
+  }
+
+  @Nonnull
+  @JsonIgnore
+  @Override
+  public Set<ResourceAction> getInputSourceResources()
+  {
+    return Collections.singleton(new ResourceAction(
+        new Resource(SUPERVISOR_TYPE, ResourceType.EXTERNAL),
+        Action.READ
+    ));
   }
 
   @Override

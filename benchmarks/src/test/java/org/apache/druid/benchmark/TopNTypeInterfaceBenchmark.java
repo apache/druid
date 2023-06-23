@@ -238,7 +238,7 @@ public class TopNTypeInterfaceBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
 
     setupQueries();
 
@@ -287,7 +287,7 @@ public class TopNTypeInterfaceBenchmark
       File indexFile = INDEX_MERGER_V9.persist(
           incIndexes.get(i),
           tmpFile,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           null
       );
 

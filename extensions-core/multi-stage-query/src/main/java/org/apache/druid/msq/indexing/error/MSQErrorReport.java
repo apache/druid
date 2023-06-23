@@ -26,8 +26,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.msq.statistics.TooManyBucketsException;
+import org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -47,7 +49,7 @@ public class MSQErrorReport
   MSQErrorReport(
       @JsonProperty("taskId") final String taskId,
       @JsonProperty("host") @Nullable final String host,
-      @JsonProperty("stageNumber") final Integer stageNumber,
+      @JsonProperty("stageNumber") @Nullable final Integer stageNumber,
       @JsonProperty("error") final MSQFault fault,
       @JsonProperty("exceptionStackTrace") @Nullable final String exceptionStackTrace
   )
@@ -190,6 +192,14 @@ public class MSQErrorReport
         return new TooManyBucketsFault(((TooManyBucketsException) cause).getMaxBuckets());
       } else if (cause instanceof FrameRowTooLargeException) {
         return new RowTooLargeFault(((FrameRowTooLargeException) cause).getMaxFrameSize());
+      } else if (cause instanceof UnexpectedMultiValueDimensionException) {
+        return new QueryRuntimeFault(StringUtils.format(
+            "Column [%s] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.",
+            ((UnexpectedMultiValueDimensionException) cause).getDimensionName()
+        ), cause.getMessage());
+      } else if (cause.getClass().getPackage().getName().startsWith("org.apache.druid.query")) {
+        // catch all for all query runtime exception faults.
+        return new QueryRuntimeFault(e.getMessage(), null);
       } else {
         cause = cause.getCause();
       }

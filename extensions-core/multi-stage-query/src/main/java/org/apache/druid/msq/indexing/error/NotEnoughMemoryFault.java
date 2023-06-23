@@ -30,6 +30,7 @@ public class NotEnoughMemoryFault extends BaseMSQFault
 {
   static final String CODE = "NotEnoughMemory";
 
+  private final long suggestedServerMemory;
   private final long serverMemory;
   private final long usableMemory;
   private final int serverWorkers;
@@ -37,6 +38,7 @@ public class NotEnoughMemoryFault extends BaseMSQFault
 
   @JsonCreator
   public NotEnoughMemoryFault(
+      @JsonProperty("suggestedServerMemory") final long suggestedServerMemory,
       @JsonProperty("serverMemory") final long serverMemory,
       @JsonProperty("usableMemory") final long usableMemory,
       @JsonProperty("serverWorkers") final int serverWorkers,
@@ -45,17 +47,26 @@ public class NotEnoughMemoryFault extends BaseMSQFault
   {
     super(
         CODE,
-        "Not enough memory (total = %,d; usable = %,d; server workers = %,d; server threads = %,d)",
+        "Not enough memory. Required at least %,d bytes. (total = %,d bytes; usable = %,d bytes; server workers = %,d; server threads = %,d). Increase JVM memory with the -xmx option"
+        + (serverWorkers > 1 ? " or reduce number of server workers" : ""),
+        suggestedServerMemory,
         serverMemory,
         usableMemory,
         serverWorkers,
         serverThreads
     );
 
+    this.suggestedServerMemory = suggestedServerMemory;
     this.serverMemory = serverMemory;
     this.usableMemory = usableMemory;
     this.serverWorkers = serverWorkers;
     this.serverThreads = serverThreads;
+  }
+
+  @JsonProperty
+  public long getSuggestedServerMemory()
+  {
+    return suggestedServerMemory;
   }
 
   @JsonProperty
@@ -95,25 +106,35 @@ public class NotEnoughMemoryFault extends BaseMSQFault
       return false;
     }
     NotEnoughMemoryFault that = (NotEnoughMemoryFault) o;
-    return serverMemory == that.serverMemory
-           && usableMemory == that.usableMemory
-           && serverWorkers == that.serverWorkers
-           && serverThreads == that.serverThreads;
+    return
+        suggestedServerMemory == that.suggestedServerMemory
+        && serverMemory == that.serverMemory
+        && usableMemory == that.usableMemory
+        && serverWorkers == that.serverWorkers
+        && serverThreads == that.serverThreads;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), serverMemory, usableMemory, serverWorkers, serverThreads);
+    return Objects.hash(
+        super.hashCode(),
+        suggestedServerMemory,
+        serverMemory,
+        usableMemory,
+        serverWorkers,
+        serverThreads
+    );
   }
 
   @Override
   public String toString()
   {
     return "NotEnoughMemoryFault{" +
-           "serverMemory=" + serverMemory +
-           ", usableMemory=" + usableMemory +
-           ", serverWorkers=" + serverWorkers +
+           "suggestedServerMemory=" + suggestedServerMemory +
+           " bytes, serverMemory=" + serverMemory +
+           " bytes, usableMemory=" + usableMemory +
+           " bytes, serverWorkers=" + serverWorkers +
            ", serverThreads=" + serverThreads +
            '}';
   }

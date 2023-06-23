@@ -64,6 +64,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
 
 import java.io.File;
+import java.util.function.Function;
 
 /**
  * Stuff that may be needed by a Task in order to conduct its business.
@@ -194,6 +195,16 @@ public class TaskToolboxFactory
   }
 
   public TaskToolbox build(Task task)
+  {
+    return build(config, task);
+  }
+
+  public TaskToolbox build(Function<TaskConfig, TaskConfig> decoratorFn, Task task)
+  {
+    return build(decoratorFn.apply(config), task);
+  }
+
+  public TaskToolbox build(TaskConfig config, Task task)
   {
     final File taskWorkDir = config.getTaskWorkDir(task.getId());
     return new TaskToolbox.Builder()

@@ -120,7 +120,7 @@ public class DimensionPredicateFilterBenchmark
   public void setup()
   {
     final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
-    final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory(null);
+    final BitmapSerdeFactory serdeFactory = RoaringBitmapSerdeFactory.getInstance();
     final List<Integer> ints = generateInts();
     final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
         FluentIterable.from(ints)

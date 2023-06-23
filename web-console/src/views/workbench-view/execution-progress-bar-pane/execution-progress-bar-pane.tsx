@@ -57,7 +57,7 @@ export const ExecutionProgressBarPane = React.memo(function ExecutionProgressBar
           <>
             {' '}
             <span className="cancel" onClick={cancelMaybeConfirm}>
-              {stages && !execution.isWaitingForQuery() ? '(stop waiting)' : '(cancel)'}
+              {stages && !execution.isWaitingForQuery() ? '(skip waiting)' : '(cancel)'}
             </span>
           </>
         )}

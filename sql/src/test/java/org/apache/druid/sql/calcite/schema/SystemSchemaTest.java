@@ -54,6 +54,7 @@ import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -103,9 +104,10 @@ import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
+import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -380,40 +382,48 @@ public class SystemSchemaTest extends CalciteTestBase
 
   final List<DataSegment> realtimeSegments = ImmutableList.of(segment2, segment4, segment5);
 
+  private final DateTime startTime = DateTimes.nowUtc();
+
   private final DiscoveryDruidNode coordinator = new DiscoveryDruidNode(
       new DruidNode("s1", "localhost", false, 8081, null, true, false),
       NodeRole.COORDINATOR,
-      ImmutableMap.of()
+      ImmutableMap.of(),
+      startTime
   );
 
   private final DiscoveryDruidNode coordinator2 = new DiscoveryDruidNode(
       new DruidNode("s1", "localhost", false, 8181, null, true, false),
       NodeRole.COORDINATOR,
-      ImmutableMap.of()
+      ImmutableMap.of(),
+      startTime
   );
 
   private final DiscoveryDruidNode overlord = new DiscoveryDruidNode(
       new DruidNode("s2", "localhost", false, 8090, null, true, false),
       NodeRole.OVERLORD,
-      ImmutableMap.of()
+      ImmutableMap.of(),
+      startTime
   );
 
   private final DiscoveryDruidNode overlord2 = new DiscoveryDruidNode(
       new DruidNode("s2", "localhost", false, 8190, null, true, false),
       NodeRole.OVERLORD,
-      ImmutableMap.of()
+      ImmutableMap.of(),
+      startTime
   );
 
   private final DiscoveryDruidNode broker1 = new DiscoveryDruidNode(
       new DruidNode("s3", "localhost", false, 8082, null, true, false),
       NodeRole.BROKER,
-      ImmutableMap.of()
+      ImmutableMap.of(),
+      startTime
   );
 
   private final DiscoveryDruidNode broker2 = new DiscoveryDruidNode(
       new DruidNode("s3", "brokerHost", false, 8082, null, true, false),
       NodeRole.BROKER,
-      ImmutableMap.of()
+      ImmutableMap.of(),
+      startTime
   );
 
   private final DiscoveryDruidNode brokerWithBroadcastSegments = new DiscoveryDruidNode(
@@ -421,13 +431,15 @@ public class SystemSchemaTest extends CalciteTestBase
       NodeRole.BROKER,
       ImmutableMap.of(
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.BROKER, 0)
-      )
+      ),
+      startTime
   );
 
   private final DiscoveryDruidNode router = new DiscoveryDruidNode(
       new DruidNode("s4", "localhost", false, 8888, null, true, false),
       NodeRole.ROUTER,
-      ImmutableMap.of()
+      ImmutableMap.of(),
+      startTime
   );
 
   private final DiscoveryDruidNode historical1 = new DiscoveryDruidNode(
@@ -435,7 +447,8 @@ public class SystemSchemaTest extends CalciteTestBase
       NodeRole.HISTORICAL,
       ImmutableMap.of(
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
-      )
+      ),
+      startTime
   );
 
   private final DiscoveryDruidNode historical2 = new DiscoveryDruidNode(
@@ -443,7 +456,8 @@ public class SystemSchemaTest extends CalciteTestBase
       NodeRole.HISTORICAL,
       ImmutableMap.of(
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
-      )
+      ),
+      startTime
   );
 
   private final DiscoveryDruidNode lameHistorical = new DiscoveryDruidNode(
@@ -451,13 +465,15 @@ public class SystemSchemaTest extends CalciteTestBase
       NodeRole.HISTORICAL,
       ImmutableMap.of(
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
-      )
+      ),
+      startTime
   );
 
   private final DiscoveryDruidNode middleManager = new DiscoveryDruidNode(
       new DruidNode("s6", "mmHost", false, 8091, null, true, false),
       NodeRole.MIDDLE_MANAGER,
-      ImmutableMap.of()
+      ImmutableMap.of(),
+      startTime
   );
 
   private final DiscoveryDruidNode peon1 = new DiscoveryDruidNode(
@@ -465,7 +481,8 @@ public class SystemSchemaTest extends CalciteTestBase
       NodeRole.PEON,
       ImmutableMap.of(
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
-      )
+      ),
+      startTime
   );
 
   private final DiscoveryDruidNode peon2 = new DiscoveryDruidNode(
@@ -473,7 +490,8 @@ public class SystemSchemaTest extends CalciteTestBase
       NodeRole.PEON,
       ImmutableMap.of(
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
-      )
+      ),
+      startTime
   );
 
   private final DiscoveryDruidNode indexer = new DiscoveryDruidNode(
@@ -481,7 +499,8 @@ public class SystemSchemaTest extends CalciteTestBase
       NodeRole.INDEXER,
       ImmutableMap.of(
           DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0)
-      )
+      ),
+      startTime
   );
 
   private final ImmutableDruidServer druidServer1 = new ImmutableDruidServer(
@@ -523,7 +542,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    Assert.assertEquals(18, fields.size());
+    Assert.assertEquals(19, fields.size());
 
     final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
     final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
@@ -536,7 +555,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final SystemSchema.ServersTable serversTable = (SystemSchema.ServersTable) schema.getTableMap().get("servers");
     final RelDataType serverRowType = serversTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> serverFields = serverRowType.getFieldList();
-    Assert.assertEquals(9, serverFields.size());
+    Assert.assertEquals(10, serverFields.size());
     Assert.assertEquals("server", serverFields.get(0).getName());
     Assert.assertEquals(SqlTypeName.VARCHAR, serverFields.get(0).getType().getSqlTypeName());
   }
@@ -545,12 +564,12 @@ public class SystemSchemaTest extends CalciteTestBase
   public void testSegmentsTable() throws Exception
   {
     final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
-    final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentWithOvershadowedStatus(publishedCompactedSegment1, true),
-        new SegmentWithOvershadowedStatus(publishedCompactedSegment2, false),
-        new SegmentWithOvershadowedStatus(publishedUncompactedSegment3, false),
-        new SegmentWithOvershadowedStatus(segment1, true),
-        new SegmentWithOvershadowedStatus(segment2, false)
+    final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
+        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2),
+        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0),
+        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2),
+        new SegmentStatusInCluster(segment1, true, 2),
+        new SegmentStatusInCluster(segment2, false, 0)
     ));
 
     EasyMock.expect(metadataView.getPublishedSegments()).andReturn(publishedSegments.iterator()).once();
@@ -579,7 +598,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_available
         0L, //is_realtime
         1L, //is_overshadowed
-        null //is_compacted
+        null, //is_compacted
+        2L  // replication_factor
     );
 
     verifyRow(
@@ -593,7 +613,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_available
         0L, //is_realtime
         0L, //is_overshadowed,
-        null //is_compacted
+        null, //is_compacted
+        0L  // replication_factor
     );
 
     //segment test3 is unpublished and has a NumberedShardSpec with partitionNum = 2
@@ -608,7 +629,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_available
         0L, //is_realtime
         0L, //is_overshadowed
-        null //is_compacted
+        null, //is_compacted
+        -1L   // replication_factor
     );
 
     verifyRow(
@@ -622,7 +644,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_available
         1L, //is_realtime
         0L, //is_overshadowed
-        null //is_compacted
+        null, //is_compacted
+        -1L  // replication_factor
     );
 
     verifyRow(
@@ -636,7 +659,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_available
         1L, //is_realtime
         0L, //is_overshadowed
-        null //is_compacted
+        null, //is_compacted
+        -1L  // replication_factor
     );
 
     // wikipedia segments are published and unavailable, num_replicas is 0
@@ -652,7 +676,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_available
         0L, //is_realtime
         1L, //is_overshadowed
-        expectedCompactionState //is_compacted
+        expectedCompactionState, //is_compacted
+        2L  // replication_factor
     );
 
     verifyRow(
@@ -666,7 +691,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_available
         0L, //is_realtime
         0L, //is_overshadowed
-        expectedCompactionState //is_compacted
+        expectedCompactionState, //is_compacted
+        0L  // replication_factor
     );
 
     verifyRow(
@@ -680,7 +706,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_available
         0L, //is_realtime
         0L, //is_overshadowed
-        null //is_compacted
+        null, //is_compacted
+        2L  // replication_factor
     );
 
     // Verify value types.
@@ -698,7 +725,8 @@ public class SystemSchemaTest extends CalciteTestBase
       long isAvailable,
       long isRealtime,
       long isOvershadowed,
-      CompactionState compactionState
+      CompactionState compactionState,
+      long replicationFactor
   ) throws Exception
   {
     Assert.assertEquals(segmentId, row[0].toString());
@@ -721,6 +749,7 @@ public class SystemSchemaTest extends CalciteTestBase
     } else {
       Assert.assertEquals(mapper.writeValueAsString(compactionState), row[17]);
     }
+    Assert.assertEquals(replicationFactor, row[18]);
   }
 
   @Test
@@ -814,6 +843,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     final List<Object[]> expectedRows = new ArrayList<>();
     final Long nonLeader = NullHandling.defaultLongValue();
+    final String startTimeStr = startTime.toString();
     expectedRows.add(
         createExpectedRow(
             "brokerHost:8082",
@@ -824,7 +854,8 @@ public class SystemSchemaTest extends CalciteTestBase
             null,
             0L,
             0L,
-            nonLeader
+            nonLeader,
+            startTimeStr
         )
     );
     expectedRows.add(
@@ -837,7 +868,8 @@ public class SystemSchemaTest extends CalciteTestBase
             "tier",
             0L,
             1000L,
-            nonLeader
+            nonLeader,
+            startTimeStr
         )
     );
     expectedRows.add(
@@ -850,7 +882,8 @@ public class SystemSchemaTest extends CalciteTestBase
             "tier",
             400L,
             1000L,
-            nonLeader
+            nonLeader,
+            startTimeStr
         )
     );
     expectedRows.add(
@@ -863,7 +896,8 @@ public class SystemSchemaTest extends CalciteTestBase
             "tier",
             0L,
             1000L,
-            nonLeader
+            nonLeader,
+            startTimeStr
         )
     );
     expectedRows.add(
@@ -876,7 +910,8 @@ public class SystemSchemaTest extends CalciteTestBase
             "tier",
             0L,
             1000L,
-            nonLeader
+            nonLeader,
+            startTimeStr
         )
     );
     expectedRows.add(createExpectedRow(
@@ -888,7 +923,8 @@ public class SystemSchemaTest extends CalciteTestBase
         "tier",
         0L,
         1000L,
-        nonLeader
+        nonLeader,
+        startTimeStr
     ));
     expectedRows.add(
         createExpectedRow(
@@ -900,7 +936,8 @@ public class SystemSchemaTest extends CalciteTestBase
             null,
             0L,
             0L,
-            1L
+            1L,
+            startTimeStr
         )
     );
     expectedRows.add(
@@ -913,7 +950,8 @@ public class SystemSchemaTest extends CalciteTestBase
             null,
             0L,
             0L,
-            nonLeader
+            nonLeader,
+            startTimeStr
         )
     );
     expectedRows.add(
@@ -926,7 +964,8 @@ public class SystemSchemaTest extends CalciteTestBase
             "tier",
             200L,
             1000L,
-            nonLeader
+            nonLeader,
+            startTimeStr
         )
     );
     expectedRows.add(
@@ -939,7 +978,8 @@ public class SystemSchemaTest extends CalciteTestBase
             null,
             0L,
             0L,
-            1L
+            1L,
+            startTimeStr
         )
     );
     expectedRows.add(
@@ -952,7 +992,8 @@ public class SystemSchemaTest extends CalciteTestBase
             null,
             0L,
             0L,
-            0L
+            0L,
+            startTimeStr
         )
     );
     expectedRows.add(
@@ -965,7 +1006,8 @@ public class SystemSchemaTest extends CalciteTestBase
             null,
             0L,
             0L,
-            0L
+            0L,
+            startTimeStr
         )
     );
     expectedRows.add(
@@ -978,7 +1020,8 @@ public class SystemSchemaTest extends CalciteTestBase
             null,
             0L,
             0L,
-            nonLeader
+            nonLeader,
+            startTimeStr
         )
     );
     expectedRows.add(
@@ -991,7 +1034,8 @@ public class SystemSchemaTest extends CalciteTestBase
             null,
             0L,
             0L,
-            nonLeader
+            nonLeader,
+            startTimeStr
         )
     );
     expectedRows.add(createExpectedRow(
@@ -1003,7 +1047,8 @@ public class SystemSchemaTest extends CalciteTestBase
         "tier",
         0L,
         1000L,
-        nonLeader
+        nonLeader,
+        startTimeStr
     ));
     Assert.assertEquals(expectedRows.size(), rows.size());
     for (int i = 0; i < rows.size(); i++) {
@@ -1035,7 +1080,8 @@ public class SystemSchemaTest extends CalciteTestBase
       @Nullable String tier,
       @Nullable Long currSize,
       @Nullable Long maxSize,
-      @Nullable Long isLeader
+      @Nullable Long isLeader,
+      String startTime
   )
   {
     return new Object[]{
@@ -1047,7 +1093,8 @@ public class SystemSchemaTest extends CalciteTestBase
         tier,
         currSize,
         maxSize,
-        isLeader
+        isLeader,
+        startTime
     };
   }
 

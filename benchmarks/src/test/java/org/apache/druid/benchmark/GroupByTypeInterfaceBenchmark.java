@@ -273,7 +273,7 @@ public class GroupByTypeInterfaceBenchmark
   {
     log.info("SETUP CALLED AT %d", System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
 
     setupQueries();
 
@@ -324,7 +324,7 @@ public class GroupByTypeInterfaceBenchmark
       final File file = INDEX_MERGER_V9.persist(
           index,
           new File(tmpDir, String.valueOf(i)),
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           null
       );
 

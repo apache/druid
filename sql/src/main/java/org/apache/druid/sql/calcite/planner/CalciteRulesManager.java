@@ -26,6 +26,7 @@ import org.apache.calcite.plan.RelOptLattice;
 import org.apache.calcite.plan.RelOptMaterialization;
 import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptRule;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
@@ -46,13 +47,18 @@ import org.apache.calcite.rel.rules.AggregateValuesRule;
 import org.apache.calcite.rel.rules.CalcRemoveRule;
 import org.apache.calcite.rel.rules.ExchangeRemoveConstantKeysRule;
 import org.apache.calcite.rel.rules.FilterAggregateTransposeRule;
+import org.apache.calcite.rel.rules.FilterJoinRule;
 import org.apache.calcite.rel.rules.FilterMergeRule;
 import org.apache.calcite.rel.rules.FilterProjectTransposeRule;
 import org.apache.calcite.rel.rules.FilterTableScanRule;
 import org.apache.calcite.rel.rules.IntersectToDistinctRule;
+import org.apache.calcite.rel.rules.JoinCommuteRule;
 import org.apache.calcite.rel.rules.JoinPushExpressionsRule;
+import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
 import org.apache.calcite.rel.rules.MatchRule;
 import org.apache.calcite.rel.rules.ProjectFilterTransposeRule;
+import org.apache.calcite.rel.rules.ProjectJoinRemoveRule;
+import org.apache.calcite.rel.rules.ProjectJoinTransposeRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.ProjectRemoveRule;
 import org.apache.calcite.rel.rules.ProjectTableScanRule;
@@ -69,11 +75,14 @@ import org.apache.calcite.rel.rules.TableScanRule;
 import org.apache.calcite.rel.rules.UnionPullUpConstantsRule;
 import org.apache.calcite.rel.rules.UnionToDistinctRule;
 import org.apache.calcite.rel.rules.ValuesReduceRule;
+import org.apache.calcite.sql.SqlExplainFormat;
+import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql2rel.RelDecorrelator;
 import org.apache.calcite.sql2rel.RelFieldTrimmer;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
@@ -83,14 +92,20 @@ import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.rule.FilterJoinExcludePushToChildRule;
 import org.apache.druid.sql.calcite.rule.ProjectAggregatePruneUnusedCallRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
+import org.apache.druid.sql.calcite.rule.logical.DruidAggregateCaseToFilterRule;
+import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 
 import java.util.List;
 import java.util.Set;
 
 public class CalciteRulesManager
 {
+  private static final Logger log = new Logger(CalciteRulesManager.class);
+
   public static final int DRUID_CONVENTION_RULES = 0;
   public static final int BINDABLE_CONVENTION_RULES = 1;
+  public static final int DRUID_DAG_CONVENTION_RULES = 2;
 
   // Due to Calcite bug (CALCITE-3845), ReduceExpressionsRule can considered expression which is the same as the
   // previous input expression as reduced. Basically, the expression is actually not reduced but is still considered as
@@ -98,7 +113,7 @@ public class CalciteRulesManager
   // Calcite 1.23.0 fixes this issue by not consider expression as reduced if this case happens. However, while
   // we are still using Calcite 1.21.0, a workaround is to limit the number of pattern matches to avoid infinite loop.
   private static final String HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING = "druid.sql.planner.hepMatchLimit";
-  private final int HEP_DEFAULT_MATCH_LIMIT = Integer.valueOf(
+  private static final int HEP_DEFAULT_MATCH_LIMIT = Integer.parseInt(
       System.getProperty(HEP_DEFAULT_MATCH_LIMIT_CONFIG_STRING, "1200")
   );
 
@@ -108,9 +123,10 @@ public class CalciteRulesManager
   // 2) AggregateReduceFunctionsRule (it'll be added back for the Bindable rule set, but we don't want it for Druid
   //    rules since it expands AVG, STDDEV, VAR, etc, and we have aggregators specifically designed for those
   //    functions).
-  // 3) JoinCommuteRule (we don't support reordering joins yet).
-  // 4) JoinPushThroughJoinRule (we don't support reordering joins yet).
-  private final List<RelOptRule> BASE_RULES =
+  // 3) FilterJoinRule.FILTER_ON_JOIN, which is part of FANCY_JOIN_RULES.
+  // 3) JoinCommuteRule, which is part of FANCY_JOIN_RULES.
+  // 4) JoinPushThroughJoinRule, which is part of FANCY_JOIN_RULES.
+  private static final List<RelOptRule> BASE_RULES =
       ImmutableList.of(
           AggregateStarTableRule.INSTANCE,
           AggregateStarTableRule.INSTANCE2,
@@ -133,7 +149,7 @@ public class CalciteRulesManager
       );
 
   // Rules for scanning via Bindable, embedded directly in RelOptUtil's registerDefaultRules.
-  private final List<RelOptRule> DEFAULT_BINDABLE_RULES =
+  private static final List<RelOptRule> DEFAULT_BINDABLE_RULES =
       ImmutableList.of(
           Bindables.BINDABLE_TABLE_SCAN_RULE,
           ProjectTableScanRule.INSTANCE,
@@ -145,7 +161,7 @@ public class CalciteRulesManager
   // 1) ReduceExpressionsRule.JOIN_INSTANCE
   //    Removed by https://github.com/apache/druid/pull/9941 due to issue in https://github.com/apache/druid/issues/9942
   //    TODO: Re-enable when https://github.com/apache/druid/issues/9942 is fixed
-  private final List<RelOptRule> REDUCTION_RULES =
+  private static final List<RelOptRule> REDUCTION_RULES =
       ImmutableList.of(
           ReduceExpressionsRule.PROJECT_INSTANCE,
           ReduceExpressionsRule.FILTER_INSTANCE,
@@ -161,7 +177,7 @@ public class CalciteRulesManager
   // Omit DateRangeRules due to https://issues.apache.org/jira/browse/CALCITE-1601
   // Omit UnionMergeRule since it isn't very effective given how Druid unions currently operate and is potentially
   // expensive in terms of planning time.
-  private final List<RelOptRule> ABSTRACT_RULES =
+  private static final List<RelOptRule> ABSTRACT_RULES =
       ImmutableList.of(
           AggregateProjectPullUpConstantsRule.INSTANCE2,
           UnionPullUpConstantsRule.INSTANCE,
@@ -185,11 +201,9 @@ public class CalciteRulesManager
   // 1) AggregateMergeRule (it causes testDoubleNestedGroupBy2 to fail)
   // 2) SemiJoinRule.PROJECT and SemiJoinRule.JOIN (we don't need to detect semi-joins, because they are handled
   //    fine as-is by DruidJoinRule).
-  // 3) JoinCommuteRule (we don't support reordering joins yet).
-  // 4) FilterJoinRule.FILTER_ON_JOIN and FilterJoinRule.JOIN
-  //    Removed by https://github.com/apache/druid/pull/9773 due to issue in https://github.com/apache/druid/issues/9843
-  //    TODO: Re-enable when https://github.com/apache/druid/issues/9843 is fixed
-  private final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
+  // 3) JoinCommuteRule, which is part of FANCY_JOIN_RULES instead.
+  // 4) FilterJoinRule.FILTER_ON_JOIN and FilterJoinRule.JOIN, which are part of FANCY_JOIN_RULES instead.
+  private static final List<RelOptRule> ABSTRACT_RELATIONAL_RULES =
       ImmutableList.of(
           AbstractConverter.ExpandConversionRule.INSTANCE,
           AggregateRemoveRule.INSTANCE,
@@ -199,6 +213,25 @@ public class CalciteRulesManager
           AggregateProjectMergeRule.INSTANCE,
           CalcRemoveRule.INSTANCE,
           SortRemoveRule.INSTANCE
+      );
+
+  // Rules that are enabled when we consider join algorithms that require subqueries for all inputs.
+  //
+  // Native queries only support broadcast hash joins, and they do not require a subquery for the "base" (leftmost)
+  // input. In fact, we really strongly *don't* want to do a subquery for the base input, as that forces materialization
+  // of the base input on the Broker. The way we structure native queries causes challenges for the planner when it
+  // comes to avoiding subqueries, such as those described in https://github.com/apache/druid/issues/9843. To work
+  // around this, we omit the join-related rules in this list when planning queries that use broadcast joins.
+  private static final List<RelOptRule> FANCY_JOIN_RULES =
+      ImmutableList.of(
+          ProjectJoinTransposeRule.INSTANCE,
+          ProjectJoinRemoveRule.INSTANCE,
+          FilterJoinRule.FILTER_ON_JOIN,
+          JoinPushExpressionsRule.INSTANCE,
+          SortJoinTransposeRule.INSTANCE,
+          JoinPushThroughJoinRule.LEFT,
+          JoinCommuteRule.INSTANCE,
+          FilterJoinRule.FILTER_ON_JOIN
       );
 
   private final Set<ExtensionCalciteRuleProvider> extensionCalciteRuleProviderSet;
@@ -225,10 +258,54 @@ public class CalciteRulesManager
             buildHepProgram(REDUCTION_RULES, true, DefaultRelMetadataProvider.INSTANCE, HEP_DEFAULT_MATCH_LIMIT)
         );
 
+    boolean isDebug = plannerContext.queryContext().isDebug();
     return ImmutableList.of(
         Programs.sequence(preProgram, Programs.ofRules(druidConventionRuleSet(plannerContext))),
-        Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext)))
+        Programs.sequence(preProgram, Programs.ofRules(bindableConventionRuleSet(plannerContext))),
+        Programs.sequence(
+            // currently, adding logging program after every stage for easier debugging
+            new LoggingProgram("Start", isDebug),
+            Programs.subQuery(DefaultRelMetadataProvider.INSTANCE),
+            new LoggingProgram("After subquery program", isDebug),
+            DecorrelateAndTrimFieldsProgram.INSTANCE,
+            new LoggingProgram("After trim fields and decorelate program", isDebug),
+            buildHepProgram(REDUCTION_RULES, true, DefaultRelMetadataProvider.INSTANCE, HEP_DEFAULT_MATCH_LIMIT),
+            new LoggingProgram("After hep planner program", isDebug),
+            Programs.ofRules(logicalConventionRuleSet(plannerContext)),
+            new LoggingProgram("After volcano planner program", isDebug)
+        )
     );
+  }
+
+  private static class LoggingProgram implements Program
+  {
+    private final String stage;
+    private final boolean isDebug;
+
+    public LoggingProgram(String stage, boolean isDebug)
+    {
+      this.stage = stage;
+      this.isDebug = isDebug;
+    }
+
+    @Override
+    public RelNode run(
+        RelOptPlanner planner,
+        RelNode rel,
+        RelTraitSet requiredOutputTraits,
+        List<RelOptMaterialization> materializations,
+        List<RelOptLattice> lattices
+    )
+    {
+      if (isDebug) {
+        log.info(
+            "%s%n%s",
+            stage,
+            RelOptUtil.dumpPlan("", rel, SqlExplainFormat.TEXT, SqlExplainLevel.ALL_ATTRIBUTES)
+        );
+      }
+      return rel;
+    }
   }
 
   public Program buildHepProgram(
@@ -263,6 +340,16 @@ public class CalciteRulesManager
     return retVal.build();
   }
 
+  public List<RelOptRule> logicalConventionRuleSet(final PlannerContext plannerContext)
+  {
+    final ImmutableList.Builder<RelOptRule> retVal = ImmutableList
+        .<RelOptRule>builder()
+        .addAll(baseRuleSet(plannerContext))
+        .add(DruidAggregateCaseToFilterRule.INSTANCE)
+        .add(new DruidLogicalRules(plannerContext).rules().toArray(new RelOptRule[0]));
+    return retVal.build();
+  }
+
   public List<RelOptRule> bindableConventionRuleSet(final PlannerContext plannerContext)
   {
     return ImmutableList.<RelOptRule>builder()
@@ -283,8 +370,13 @@ public class CalciteRulesManager
     rules.addAll(ABSTRACT_RULES);
     rules.addAll(ABSTRACT_RELATIONAL_RULES);
 
+    if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
+      rules.addAll(FANCY_JOIN_RULES);
+    }
+
     if (!plannerConfig.isUseApproximateCountDistinct()) {
-      if (plannerConfig.isUseGroupingSetForExactDistinct()) {
+      if (plannerConfig.isUseGroupingSetForExactDistinct()
+          && plannerContext.featureAvailable(EngineFeature.GROUPING_SETS)) {
         rules.add(AggregateExpandDistinctAggregatesRule.INSTANCE);
       } else {
         rules.add(AggregateExpandDistinctAggregatesRule.JOIN);

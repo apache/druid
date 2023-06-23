@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
@@ -43,6 +44,7 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory<ForkingTaskRu
   private final TaskLogPusher persistentTaskLogs;
   private final DruidNode node;
   private final StartupLoggingConfig startupLoggingConfig;
+  private final TaskStorageDirTracker dirTracker;
   private ForkingTaskRunner runner;
 
   @Inject
@@ -54,7 +56,8 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory<ForkingTaskRu
       final ObjectMapper jsonMapper,
       final TaskLogPusher persistentTaskLogs,
       @Self DruidNode node,
-      final StartupLoggingConfig startupLoggingConfig
+      final StartupLoggingConfig startupLoggingConfig,
+      final TaskStorageDirTracker dirTracker
   )
   {
     this.config = config;
@@ -65,12 +68,23 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory<ForkingTaskRu
     this.persistentTaskLogs = persistentTaskLogs;
     this.node = node;
     this.startupLoggingConfig = startupLoggingConfig;
+    this.dirTracker = dirTracker;
   }
 
   @Override
   public ForkingTaskRunner build()
   {
-    runner = new ForkingTaskRunner(config, taskConfig, workerConfig, props, persistentTaskLogs, jsonMapper, node, startupLoggingConfig);
+    runner = new ForkingTaskRunner(
+        config,
+        taskConfig,
+        workerConfig,
+        props,
+        persistentTaskLogs,
+        jsonMapper,
+        node,
+        startupLoggingConfig,
+        dirTracker
+    );
     return runner;
   }
 

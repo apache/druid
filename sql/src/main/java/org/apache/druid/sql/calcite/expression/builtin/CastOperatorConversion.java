@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.expression.builtin;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
@@ -30,6 +29,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -39,46 +39,10 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.Period;
 
-import java.util.Map;
 import java.util.function.Function;
 
 public class CastOperatorConversion implements SqlOperatorConversion
 {
-  private static final Map<SqlTypeName, ExprType> EXPRESSION_TYPES;
-
-  static {
-    final ImmutableMap.Builder<SqlTypeName, ExprType> builder = ImmutableMap.builder();
-
-    for (SqlTypeName type : SqlTypeName.FRACTIONAL_TYPES) {
-      builder.put(type, ExprType.DOUBLE);
-    }
-
-    for (SqlTypeName type : SqlTypeName.INT_TYPES) {
-      builder.put(type, ExprType.LONG);
-    }
-
-    for (SqlTypeName type : SqlTypeName.STRING_TYPES) {
-      builder.put(type, ExprType.STRING);
-    }
-
-    // Booleans are treated as longs in Druid expressions, using two-value logic (positive = true, nonpositive = false).
-    builder.put(SqlTypeName.BOOLEAN, ExprType.LONG);
-
-    // Timestamps are treated as longs (millis since the epoch) in Druid expressions.
-    builder.put(SqlTypeName.TIMESTAMP, ExprType.LONG);
-    builder.put(SqlTypeName.DATE, ExprType.LONG);
-
-    for (SqlTypeName type : SqlTypeName.DAY_INTERVAL_TYPES) {
-      builder.put(type, ExprType.LONG);
-    }
-
-    for (SqlTypeName type : SqlTypeName.YEAR_INTERVAL_TYPES) {
-      builder.put(type, ExprType.LONG);
-    }
-
-    EXPRESSION_TYPES = builder.build();
-  }
-
   @Override
   public SqlOperator calciteOperator()
   {
@@ -118,28 +82,35 @@ public class CastOperatorConversion implements SqlOperatorConversion
     } else {
       // Handle other casts. If either type is ANY, use the other type instead. If both are ANY, this means nulls
       // downstream, Druid will try its best
-      final ExprType fromExprType = SqlTypeName.ANY.equals(fromType)
-                                    ? EXPRESSION_TYPES.get(toType)
-                                    : EXPRESSION_TYPES.get(fromType);
-      final ExprType toExprType = SqlTypeName.ANY.equals(toType)
-                                  ? EXPRESSION_TYPES.get(fromType)
-                                  : EXPRESSION_TYPES.get(toType);
+      final ColumnType fromDruidType = Calcites.getColumnTypeForRelDataType(operand.getType());
+      final ColumnType toDruidType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
 
-      if (fromExprType == null || toExprType == null) {
+      final ExpressionType fromExpressionType = SqlTypeName.ANY.equals(fromType)
+                                                ? ExpressionType.fromColumnType(toDruidType)
+                                                : ExpressionType.fromColumnType(fromDruidType);
+      final ExpressionType toExpressionType = SqlTypeName.ANY.equals(toType)
+                                              ? ExpressionType.fromColumnType(fromDruidType)
+                                              : ExpressionType.fromColumnType(toDruidType);
+
+      if (fromExpressionType == null || toExpressionType == null) {
         // We have no runtime type for these SQL types.
         return null;
       }
 
       final DruidExpression typeCastExpression;
 
-      if (fromExprType != toExprType) {
+      if (fromExpressionType.equals(toExpressionType)) {
+        typeCastExpression = operandExpression;
+      } else if (SqlTypeName.INTERVAL_TYPES.contains(fromType) && toExpressionType.is(ExprType.LONG)) {
+        // intervals can be longs without an explicit cast
+        typeCastExpression = operandExpression;
+      } else {
         // Ignore casts for simple extractions (use Function.identity) since it is ok in many cases.
         typeCastExpression = operandExpression.map(
             Function.identity(),
-            expression -> StringUtils.format("CAST(%s, '%s')", expression, toExprType.toString())
+            expression -> StringUtils.format("CAST(%s, '%s')", expression, toExpressionType.asTypeString()),
+            toDruidType
         );
-      } else {
-        typeCastExpression = operandExpression;
       }
 
       if (toType == SqlTypeName.DATE) {

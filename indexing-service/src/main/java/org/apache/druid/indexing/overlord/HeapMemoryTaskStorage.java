@@ -90,7 +90,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
     TaskStuff newTaskStuff = new TaskStuff(task, status, DateTimes.nowUtc(), task.getDataSource());
     TaskStuff alreadyExisted = tasks.putIfAbsent(task.getId(), newTaskStuff);
     if (alreadyExisted != null) {
-      throw new EntryExistsException(task.getId());
+      throw new EntryExistsException("Task", task.getId());
     }
 
     log.info("Inserted task %s with status: %s", task.getId(), status);

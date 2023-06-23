@@ -77,6 +77,13 @@ public class S3TaskLogs implements TaskLogs
     return streamTaskFile(0, taskKey);
   }
 
+  @Override
+  public Optional<InputStream> streamTaskStatus(String taskid) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "status.json");
+    return streamTaskFile(0, taskKey);
+  }
+
   private Optional<InputStream> streamTaskFile(final long offset, String taskKey) throws IOException
   {
     try {
@@ -141,6 +148,14 @@ public class S3TaskLogs implements TaskLogs
     pushTaskFile(reportFile, taskKey);
   }
 
+  @Override
+  public void pushTaskStatus(String taskid, File statusFile) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "status.json");
+    log.info("Pushing task status %s to: %s", statusFile, taskKey);
+    pushTaskFile(statusFile, taskKey);
+  }
+
   private void pushTaskFile(final File logFile, String taskKey) throws IOException
   {
     try {
@@ -187,7 +202,7 @@ public class S3TaskLogs implements TaskLogs
     try {
       S3Utils.deleteObjectsInPath(
           service,
-          inputDataConfig,
+          inputDataConfig.getMaxListingLength(),
           config.getS3Bucket(),
           config.getS3Prefix(),
           (object) -> object.getLastModified().getTime() < timestamp

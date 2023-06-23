@@ -22,12 +22,18 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.testutil.FrameTestUtil;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -36,17 +42,22 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 
 /**
  * Helps tests make segments.
@@ -56,18 +67,27 @@ public class IndexBuilder
   private static final int ROWS_PER_INDEX_FOR_MERGING = 1;
   private static final int DEFAULT_MAX_ROWS = Integer.MAX_VALUE;
 
-  private IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-      .withMetrics(new CountAggregatorFactory("count"))
-      .build();
-  private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory = OffHeapMemorySegmentWriteOutMediumFactory.instance();
-  private IndexMerger indexMerger;
-  private File tmpDir;
-  private IndexSpec indexSpec = new IndexSpec();
-  private int maxRows = DEFAULT_MAX_ROWS;
-
   private final ObjectMapper jsonMapper;
   private final IndexIO indexIO;
   private final List<InputRow> rows = new ArrayList<>();
+
+  private SegmentWriteOutMediumFactory segmentWriteOutMediumFactory = OffHeapMemorySegmentWriteOutMediumFactory.instance();
+  private IndexMerger indexMerger;
+  private File tmpDir;
+  private IndexSpec indexSpec = IndexSpec.DEFAULT;
+  private int maxRows = DEFAULT_MAX_ROWS;
+  private int intermediatePersistSize = ROWS_PER_INDEX_FOR_MERGING;
+  private IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
+      .withMetrics(new CountAggregatorFactory("count"))
+      .build();
+  @Nullable
+  private InputSource inputSource = null;
+  @Nullable
+  private InputFormat inputFormat = null;
+  @Nullable
+  private TransformSpec transformSpec = null;
+  @Nullable
+  private File inputSourceTmpDir = null;
 
   private IndexBuilder(ObjectMapper jsonMapper, ColumnConfig columnConfig)
   {
@@ -78,7 +98,7 @@ public class IndexBuilder
 
   public static IndexBuilder create()
   {
-    return new IndexBuilder(TestHelper.JSON_MAPPER, TestHelper.NO_CACHE_COLUMN_CONFIG);
+    return new IndexBuilder(TestHelper.JSON_MAPPER, TestHelper.NO_CACHE_ALWAYS_USE_INDEXES_COLUMN_CONFIG);
   }
 
   public static IndexBuilder create(ColumnConfig columnConfig)
@@ -88,7 +108,7 @@ public class IndexBuilder
 
   public static IndexBuilder create(ObjectMapper jsonMapper)
   {
-    return new IndexBuilder(jsonMapper, TestHelper.NO_CACHE_COLUMN_CONFIG);
+    return new IndexBuilder(jsonMapper, TestHelper.NO_CACHE_ALWAYS_USE_INDEXES_COLUMN_CONFIG);
   }
 
   public static IndexBuilder create(ObjectMapper jsonMapper, ColumnConfig columnConfig)
@@ -109,6 +129,12 @@ public class IndexBuilder
     return this;
   }
 
+  public IndexBuilder writeNullColumns(boolean shouldWriteNullColumns)
+  {
+    this.indexMerger = new IndexMergerV9(jsonMapper, indexIO, segmentWriteOutMediumFactory, shouldWriteNullColumns);
+    return this;
+  }
+
   public IndexBuilder indexSpec(IndexSpec indexSpec)
   {
     this.indexSpec = indexSpec;
@@ -121,6 +147,50 @@ public class IndexBuilder
     return this;
   }
 
+  public IndexBuilder inputSource(InputSource inputSource)
+  {
+    this.inputSource = inputSource;
+    return this;
+  }
+
+  public IndexBuilder inputFormat(InputFormat inputFormat)
+  {
+    this.inputFormat = inputFormat;
+    return this;
+  }
+
+  public IndexBuilder transform(TransformSpec transformSpec)
+  {
+    this.transformSpec = transformSpec;
+    return this;
+  }
+
+  public IndexBuilder inputTmpDir(File inputSourceTmpDir)
+  {
+    this.inputSourceTmpDir = inputSourceTmpDir;
+    return this;
+  }
+
+  public IndexBuilder rows(
+      InputSource inputSource,
+      InputFormat inputFormat,
+      InputRowSchema rowSchema,
+      TransformSpec transformSpec,
+      File tmp
+  )
+      throws IOException
+  {
+    rows.clear();
+    InputSourceReader reader = inputSource.reader(rowSchema, inputFormat, tmp);
+    InputSourceReader transformingReader = transformSpec.decorate(reader);
+    try (CloseableIterator<InputRow> rowIterator = transformingReader.read()) {
+      while (rowIterator.hasNext()) {
+        rows.add(rowIterator.next());
+      }
+    }
+    return this;
+  }
+
   public IndexBuilder rows(Iterable<InputRow> rows)
   {
     this.rows.clear();
@@ -128,8 +198,36 @@ public class IndexBuilder
     return this;
   }
 
+  public IndexBuilder maxRows(int maxRows)
+  {
+    this.maxRows = maxRows;
+    return this;
+  }
+
+  public IndexBuilder intermediaryPersistSize(int rows)
+  {
+    this.intermediatePersistSize = rows;
+    return this;
+  }
+
+  public IndexBuilder mapSchema(Function<IncrementalIndexSchema, IncrementalIndexSchema> f)
+  {
+    this.schema = f.apply(this.schema);
+    return this;
+  }
+
   public IncrementalIndex buildIncrementalIndex()
   {
+    if (inputSource != null) {
+      return buildIncrementalIndexWithInputSource(
+          schema,
+          inputSource,
+          inputFormat,
+          transformSpec,
+          inputSourceTmpDir,
+          maxRows
+      );
+    }
     return buildIncrementalIndexWithRows(schema, maxRows, rows);
   }
 
@@ -138,15 +236,34 @@ public class IndexBuilder
     Preconditions.checkNotNull(indexMerger, "indexMerger");
     Preconditions.checkNotNull(tmpDir, "tmpDir");
     try (final IncrementalIndex incrementalIndex = buildIncrementalIndex()) {
+      List<IndexableAdapter> adapters = Collections.singletonList(
+          new QueryableIndexIndexableAdapter(
+              indexIO.loadIndex(
+                  indexMerger.persist(
+                      incrementalIndex,
+                      new File(
+                          tmpDir,
+                          StringUtils.format("testIndex-%s", ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE))
+                      ),
+                      indexSpec,
+                      null
+                  )
+              )
+          )
+      );
+      // Do a 'merge' of the persisted segment even though there is only one; this time it will be reading from the
+      // queryable index instead of the incremental index, which also mimics the behavior of real ingestion tasks
+      // which persist incremental indexes as intermediate segments and then merges all the intermediate segments to
+      // publish
       return indexIO.loadIndex(
-          indexMerger.persist(
-              incrementalIndex,
-              new File(
-                  tmpDir,
-                  StringUtils.format("testIndex-%s", ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE))
-              ),
+          indexMerger.merge(
+              adapters,
+              schema.isRollup(),
+              schema.getMetrics(),
+              tmpDir,
+              schema.getDimensionsSpec(),
               indexSpec,
-              null
+              Integer.MAX_VALUE
           )
       );
     }
@@ -155,22 +272,66 @@ public class IndexBuilder
     }
   }
 
+
   public QueryableIndex buildMMappedMergedIndex()
   {
-    IndexMerger indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
     Preconditions.checkNotNull(tmpDir, "tmpDir");
-
     final List<QueryableIndex> persisted = new ArrayList<>();
-    try {
-      for (int i = 0; i < rows.size(); i += ROWS_PER_INDEX_FOR_MERGING) {
+    if (inputSource != null) {
+      Preconditions.checkNotNull(inputSource, "inputSource");
+      Preconditions.checkNotNull(inputFormat, "inputFormat");
+      Preconditions.checkNotNull(inputSourceTmpDir, "inputSourceTmpDir");
+
+      TransformSpec transformer = transformSpec != null ? transformSpec : TransformSpec.NONE;
+      InputRowSchema rowSchema = new InputRowSchema(schema.getTimestampSpec(), schema.getDimensionsSpec(), null);
+      InputSourceReader reader = inputSource.reader(rowSchema, inputFormat, inputSourceTmpDir);
+      InputSourceReader transformingReader = transformer.decorate(reader);
+      return mergeIndexes(indexMerger, persisted, transformingReader::read);
+    }
+
+    return mergeIndexes(indexMerger, persisted, () -> CloseableIterators.withEmptyBaggage(rows.iterator()));
+  }
+
+  @Nonnull
+  private QueryableIndex mergeIndexes(
+      IndexMerger indexMerger,
+      List<QueryableIndex> persisted,
+      IteratorSupplier iteratorSupplier
+  )
+  {
+    try (CloseableIterator<InputRow> rowIterator = iteratorSupplier.get()) {
+      int i = 0;
+      IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
+          .setIndexSchema(schema)
+          .setMaxRowCount(maxRows)
+          .build();
+      while (rowIterator.hasNext()) {
+        if (i < intermediatePersistSize) {
+          incrementalIndex.add(rowIterator.next());
+          i++;
+        } else {
+          persisted.add(
+              TestHelper.getTestIndexIO().loadIndex(
+                  indexMerger.persist(
+                      incrementalIndex,
+                      new File(tmpDir, StringUtils.format("testIndex-%s", UUID.randomUUID().toString())),
+                      indexSpec,
+                      null
+                  )
+              )
+          );
+          incrementalIndex = new OnheapIncrementalIndex.Builder()
+              .setIndexSchema(schema)
+              .setMaxRowCount(maxRows)
+              .build();
+          i = 0;
+        }
+      }
+      if (i != 0) {
         persisted.add(
             TestHelper.getTestIndexIO().loadIndex(
                 indexMerger.persist(
-                    buildIncrementalIndexWithRows(
-                        schema,
-                        maxRows,
-                        rows.subList(i, Math.min(rows.size(), i + ROWS_PER_INDEX_FOR_MERGING))
-                    ),
+                    incrementalIndex,
                     new File(tmpDir, StringUtils.format("testIndex-%s", UUID.randomUUID().toString())),
                     indexSpec,
                     null
@@ -178,6 +339,7 @@ public class IndexBuilder
             )
         );
       }
+
       final QueryableIndex merged = TestHelper.getTestIndexIO().loadIndex(
           indexMerger.mergeQueryableIndex(
               persisted,
@@ -266,5 +428,45 @@ public class IndexBuilder
       }
     }
     return incrementalIndex;
+  }
+
+  private static IncrementalIndex buildIncrementalIndexWithInputSource(
+      IncrementalIndexSchema schema,
+      InputSource inputSource,
+      InputFormat inputFormat,
+      @Nullable TransformSpec transformSpec,
+      File inputSourceTmpDir,
+      int maxRows
+  )
+  {
+    Preconditions.checkNotNull(schema, "schema");
+    Preconditions.checkNotNull(inputSource, "inputSource");
+    Preconditions.checkNotNull(inputFormat, "inputFormat");
+    Preconditions.checkNotNull(inputSourceTmpDir, "inputSourceTmpDir");
+
+    final IncrementalIndex incrementalIndex = new OnheapIncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(maxRows)
+        .build();
+    TransformSpec tranformer = transformSpec != null ? transformSpec : TransformSpec.NONE;
+    InputRowSchema rowSchema = new InputRowSchema(schema.getTimestampSpec(), schema.getDimensionsSpec(), null);
+    InputSourceReader reader = inputSource.reader(rowSchema, inputFormat, inputSourceTmpDir);
+    InputSourceReader transformingReader = tranformer.decorate(reader);
+    try (CloseableIterator<InputRow> rowIterator = transformingReader.read()) {
+      while (rowIterator.hasNext()) {
+        incrementalIndex.add(rowIterator.next());
+      }
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return incrementalIndex;
+  }
+
+
+  @FunctionalInterface
+  interface IteratorSupplier
+  {
+    CloseableIterator<InputRow> get() throws IOException;
   }
 }

@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.druid.data.input.FirehoseFactory;
-import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.SplittableInputSource;
@@ -118,9 +117,7 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
         context
     );
     this.ingestionSchema = ingestionSchema;
-    this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource(
-        ingestionSchema.getDataSchema().getParser()
-    );
+    this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource();
   }
 
   @VisibleForTesting
@@ -171,13 +168,9 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
   {
     final FirehoseFactory firehoseFactory;
     final InputSource inputSource;
-    if (baseInputSource instanceof FirehoseFactoryToInputSourceAdaptor) {
-      firehoseFactory = ((FirehoseFactoryToInputSourceAdaptor) baseInputSource).getFirehoseFactory().withSplit(split);
-      inputSource = null;
-    } else {
-      firehoseFactory = null;
-      inputSource = baseInputSource.withSplit(split);
-    }
+    firehoseFactory = null;
+    inputSource = baseInputSource.withSplit(split);
+
     final Map<String, Object> subtaskContext = new HashMap<>(getContext());
     return new SinglePhaseSubTaskSpec(
         getBaseSubtaskSpecName() + "_" + getAndIncrementNextSpecId(),

@@ -70,7 +70,7 @@ export interface Field<M> {
   hide?: Functor<M, boolean>;
   hideInMore?: Functor<M, boolean>;
   valueAdjustment?: (value: any) => any;
-  adjustment?: (model: Partial<M>) => Partial<M>;
+  adjustment?: (model: Partial<M>, oldModel: Partial<M>) => Partial<M>;
   issueWithValue?: (value: any) => string | undefined;
 
   customSummary?: (v: any) => string;
@@ -217,7 +217,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     }
 
     if (field.adjustment) {
-      newModel = field.adjustment(newModel);
+      newModel = field.adjustment(newModel, model);
     }
 
     this.modelChange(newModel);

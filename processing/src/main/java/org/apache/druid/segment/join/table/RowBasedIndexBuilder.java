@@ -20,8 +20,9 @@
 package org.apache.druid.segment.join.table;
 
 import com.google.common.primitives.Ints;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
@@ -51,7 +52,7 @@ public class RowBasedIndexBuilder
   private int currentRow = 0;
   private int nullKeys = 0;
   private final ColumnType keyType;
-  private final Map<Object, IntList> index;
+  private final Map<Object, IntSortedSet> index;
 
   private long minLongKey = Long.MAX_VALUE;
   private long maxLongKey = Long.MIN_VALUE;
@@ -81,7 +82,7 @@ public class RowBasedIndexBuilder
     final Object castKey = DimensionHandlerUtils.convertObjectToType(key, keyType);
 
     if (castKey != null) {
-      final IntList rowNums = index.computeIfAbsent(castKey, k -> new IntArrayList());
+      final IntSortedSet rowNums = index.computeIfAbsent(castKey, k -> new IntAVLTreeSet());
       rowNums.add(currentRow);
 
       // Track min, max long value so we can decide later on if it's appropriate to use an array-backed implementation.
@@ -132,18 +133,18 @@ public class RowBasedIndexBuilder
         Arrays.fill(indexAsArray, IndexedTable.Index.NOT_FOUND);
 
         // Safe to cast to Long2ObjectMap because the constructor always uses one for long-typed keys.
-        final ObjectIterator<Long2ObjectMap.Entry<IntList>> entries =
-            ((Long2ObjectMap<IntList>) ((Map) index)).long2ObjectEntrySet().iterator();
+        final ObjectIterator<Long2ObjectMap.Entry<IntSortedSet>> entries =
+            ((Long2ObjectMap<IntSortedSet>) ((Map) index)).long2ObjectEntrySet().iterator();
 
         while (entries.hasNext()) {
-          final Long2ObjectMap.Entry<IntList> entry = entries.next();
-          final IntList rowNums = entry.getValue();
+          final Long2ObjectMap.Entry<IntSortedSet> entry = entries.next();
+          final IntSortedSet rowNums = entry.getValue();
 
           if (rowNums.size() != 1) {
             throw new ISE("Expected single element");
           }
 
-          indexAsArray[Ints.checkedCast(entry.getLongKey() - minLongKey)] = rowNums.getInt(0);
+          indexAsArray[Ints.checkedCast(entry.getLongKey() - minLongKey)] = rowNums.firstInt();
           entries.remove();
         }
 

@@ -22,7 +22,8 @@ package org.apache.druid.query.aggregation.datasketches.tuple;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.datasketches.Util;
+import org.apache.datasketches.common.Util;
+import org.apache.datasketches.thetacommon.ThetaUtil;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSetOperationBuilder;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesUnion;
@@ -74,8 +75,8 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
   {
     this.name = Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     this.fieldName = Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
-    this.nominalEntries = nominalEntries == null ? Util.DEFAULT_NOMINAL_ENTRIES : nominalEntries;
-    Util.checkIfPowerOf2(this.nominalEntries, "nominalEntries");
+    this.nominalEntries = nominalEntries == null ? ThetaUtil.DEFAULT_NOMINAL_ENTRIES : nominalEntries;
+    Util.checkIfIntPowerOf2(this.nominalEntries, "nominalEntries");
     this.metricColumns = metricColumns;
     this.numberOfValues = numberOfValues == null ? (metricColumns == null ? 1 : metricColumns.size()) : numberOfValues;
     if (metricColumns != null && metricColumns.size() != this.numberOfValues) {

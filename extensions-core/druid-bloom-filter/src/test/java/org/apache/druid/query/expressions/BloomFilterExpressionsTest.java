@@ -19,11 +19,9 @@
 
 package org.apache.druid.query.expressions;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -52,15 +50,15 @@ public class BloomFilterExpressionsTest extends InitializedNullHandlingTest
   BloomFilterExpressions.TestExprMacro testMacro = new BloomFilterExpressions.TestExprMacro();
   ExprMacroTable macroTable = new ExprMacroTable(ImmutableList.of(createMacro, addMacro, testMacro));
 
-  Expr.ObjectBinding inputBindings = InputBindings.withTypedSuppliers(
-      new ImmutableMap.Builder<String, Pair<ExpressionType, Supplier<Object>>>()
-          .put("bloomy", new Pair<>(BloomFilterExpressions.BLOOM_FILTER_TYPE, () -> new BloomKFilter(100)))
-          .put("string", new Pair<>(ExpressionType.STRING, () -> SOME_STRING))
-          .put("long", new Pair<>(ExpressionType.LONG, () -> SOME_LONG))
-          .put("double", new Pair<>(ExpressionType.DOUBLE, () -> SOME_DOUBLE))
-          .put("string_array", new Pair<>(ExpressionType.STRING_ARRAY, () -> SOME_STRING_ARRAY))
-          .put("long_array", new Pair<>(ExpressionType.LONG_ARRAY, () -> SOME_LONG_ARRAY))
-          .put("double_array", new Pair<>(ExpressionType.DOUBLE_ARRAY, () -> SOME_DOUBLE_ARRAY))
+  Expr.ObjectBinding inputBindings = InputBindings.forInputSuppliers(
+      new ImmutableMap.Builder<String, InputBindings.InputSupplier>()
+          .put("bloomy", InputBindings.inputSupplier(BloomFilterExpressions.BLOOM_FILTER_TYPE, () -> new BloomKFilter(100)))
+          .put("string", InputBindings.inputSupplier(ExpressionType.STRING, () -> SOME_STRING))
+          .put("long", InputBindings.inputSupplier(ExpressionType.LONG, () -> SOME_LONG))
+          .put("double", InputBindings.inputSupplier(ExpressionType.DOUBLE, () -> SOME_DOUBLE))
+          .put("string_array", InputBindings.inputSupplier(ExpressionType.STRING_ARRAY, () -> SOME_STRING_ARRAY))
+          .put("long_array", InputBindings.inputSupplier(ExpressionType.LONG_ARRAY, () -> SOME_LONG_ARRAY))
+          .put("double_array", InputBindings.inputSupplier(ExpressionType.DOUBLE_ARRAY, () -> SOME_DOUBLE_ARRAY))
           .build()
   );
 

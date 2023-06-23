@@ -86,8 +86,14 @@ public interface DataSource
   boolean isGlobal();
 
   /**
-   * Returns true if this datasource represents concrete data that can be scanned via a
-   * {@link org.apache.druid.segment.Segment} adapter of some kind. True for e.g. 'table' but not for 'query' or 'join'.
+   * Returns true if this datasource can be the base datasource of query processing.
+   *
+   * Base datasources drive query processing. If the base datasource is {@link TableDataSource}, for example, queries
+   * are processed in parallel on data servers. If the base datasource is {@link InlineDataSource}, queries are
+   * processed on the Broker. See {@link DataSourceAnalysis#getBaseDataSource()} for further discussion.
+   *
+   * Datasources that are *not* concrete must be pre-processed in some way before they can be processed by the main
+   * query stack. For example, {@link QueryDataSource} must be executed first and substituted with its results.
    *
    * @see DataSourceAnalysis#isConcreteBased() which uses this
    * @see DataSourceAnalysis#isConcreteTableBased() which uses this

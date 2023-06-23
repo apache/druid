@@ -64,8 +64,17 @@ appreciated.
 
 The [EXPLAIN PLAN](sql.md#explain-plan) functionality can help you understand how a given SQL query will
 be translated to native.
-EXPLAIN PLAN statements return a `RESOURCES` column that describes the resource being queried as well as a `PLAN` column that contains a JSON array of native queries that Druid will run.
-For example, consider the following query:
+EXPLAIN PLAN statements return:
+- a `PLAN` column that contains a JSON array of native queries that Druid will run
+- a `RESOURCES` column that describes the resources used in the query
+- an `ATTRIBUTES` column that describes the attributes of the query, including:
+  - `statementType`: the SQL statement type
+  - `targetDataSource`: the target datasource in an INSERT or REPLACE statement
+  - `partitionedBy`: the time-based partitioning granularity in an INSERT or REPLACE statement
+  - `clusteredBy`: the clustering columns in an INSERT or REPLACE statement
+  - `replaceTimeChunks`: the time chunks in a REPLACE statement
+
+Example 1: EXPLAIN PLAN for a `SELECT` query on the `wikipedia` datasource:
 
 ```sql
 EXPLAIN PLAN FOR
@@ -77,120 +86,360 @@ WHERE channel IN (SELECT page FROM wikipedia GROUP BY page ORDER BY COUNT(*) DES
 GROUP BY channel
 ```
 
-The EXPLAIN PLAN statement returns the following plan:
+The above EXPLAIN PLAN query returns the following result:
 
 ```json
 [
-  {
-    "query": {
-      "queryType": "topN",
-      "dataSource": {
-        "type": "join",
-        "left": {
-          "type": "table",
-          "name": "wikipedia"
-        },
-        "right": {
-          "type": "query",
-          "query": {
-            "queryType": "groupBy",
-            "dataSource": {
-              "type": "table",
-              "name": "wikipedia"
-            },
-            "intervals": {
-              "type": "intervals",
-              "intervals": [
-                "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-              ]
-            },
-            "granularity": {
-              "type": "all"
-            },
-            "dimensions": [
-              {
-                "type": "default",
-                "dimension": "page",
-                "outputName": "d0",
-                "outputType": "STRING"
-              }
-            ],
-            "aggregations": [
-              {
-                "type": "count",
-                "name": "a0"
-              }
-            ],
-            "limitSpec": {
-              "type": "default",
-              "columns": [
+  [
+    {
+      "query": {
+        "queryType": "topN",
+        "dataSource": {
+          "type": "join",
+          "left": {
+            "type": "table",
+            "name": "wikipedia"
+          },
+          "right": {
+            "type": "query",
+            "query": {
+              "queryType": "groupBy",
+              "dataSource": {
+                "type": "table",
+                "name": "wikipedia"
+              },
+              "intervals": {
+                "type": "intervals",
+                "intervals": [
+                  "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+                ]
+              },
+              "granularity": {
+                "type": "all"
+              },
+              "dimensions": [
                 {
-                  "dimension": "a0",
-                  "direction": "descending",
-                  "dimensionOrder": {
-                    "type": "numeric"
-                  }
+                  "type": "default",
+                  "dimension": "page",
+                  "outputName": "d0",
+                  "outputType": "STRING"
                 }
               ],
-              "limit": 10
-            },
-            "context": {
-              "sqlOuterLimit": 101,
-              "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
-              "useApproximateCountDistinct": false,
-              "useApproximateTopN": false
+              "aggregations": [
+                {
+                  "type": "count",
+                  "name": "a0"
+                }
+              ],
+              "limitSpec": {
+                "type": "default",
+                "columns": [
+                  {
+                    "dimension": "a0",
+                    "direction": "descending",
+                    "dimensionOrder": {
+                      "type": "numeric"
+                    }
+                  }
+                ],
+                "limit": 10
+              },
+              "context": {
+                "sqlOuterLimit": 101,
+                "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
+                "useApproximateCountDistinct": false,
+                "useApproximateTopN": false
+              }
             }
+          },
+          "rightPrefix": "j0.",
+          "condition": "(\"channel\" == \"j0.d0\")",
+          "joinType": "INNER"
+        },
+        "dimension": {
+          "type": "default",
+          "dimension": "channel",
+          "outputName": "d0",
+          "outputType": "STRING"
+        },
+        "metric": {
+          "type": "dimension",
+          "ordering": {
+            "type": "lexicographic"
           }
         },
-        "rightPrefix": "j0.",
-        "condition": "(\"channel\" == \"j0.d0\")",
-        "joinType": "INNER"
-      },
-      "dimension": {
-        "type": "default",
-        "dimension": "channel",
-        "outputName": "d0",
-        "outputType": "STRING"
-      },
-      "metric": {
-        "type": "dimension",
-        "ordering": {
-          "type": "lexicographic"
+        "threshold": 101,
+        "intervals": {
+          "type": "intervals",
+          "intervals": [
+            "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+          ]
+        },
+        "granularity": {
+          "type": "all"
+        },
+        "aggregations": [
+          {
+            "type": "count",
+            "name": "a0"
+          }
+        ],
+        "context": {
+          "sqlOuterLimit": 101,
+          "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
+          "useApproximateCountDistinct": false,
+          "useApproximateTopN": false
         }
       },
-      "threshold": 101,
-      "intervals": {
-        "type": "intervals",
-        "intervals": [
-          "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
-        ]
-      },
-      "granularity": {
-        "type": "all"
-      },
-      "aggregations": [
+      "signature": [
         {
-          "type": "count",
-          "name": "a0"
+          "name": "d0",
+          "type": "STRING"
+        },
+        {
+          "name": "a0",
+          "type": "LONG"
         }
       ],
-      "context": {
-        "sqlOuterLimit": 101,
-        "sqlQueryId": "ee616a36-c30c-4eae-af00-245127956e42",
-        "useApproximateCountDistinct": false,
-        "useApproximateTopN": false
-      }
-    },
-    "signature": [
-      {
-        "name": "d0",
-        "type": "STRING"
+      "columnMappings": [
+        {
+          "queryColumn": "d0",
+          "outputColumn": "channel"
+        },
+        {
+          "queryColumn": "a0",
+          "outputColumn": "EXPR$1"
+        }
+      ]
+    }
+  ],
+  [
+    {
+      "name": "wikipedia",
+      "type": "DATASOURCE"
+    }
+  ],
+  {
+    "statementType": "SELECT"
+  }
+]
+```
+
+Example 2: EXPLAIN PLAN for a `REPLACE` query that replaces all the data in the `wikipedia` datasource:
+
+```sql
+EXPLAIN PLAN FOR
+REPLACE INTO wikipedia
+OVERWRITE ALL
+SELECT
+  TIME_PARSE("timestamp") AS __time,
+  namespace,
+  cityName,
+  countryName,
+  regionIsoCode,
+  metroCode,
+  countryIsoCode,
+  regionName
+FROM TABLE(
+    EXTERN(
+      '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+      '{"type":"json"}',
+      '[{"name":"timestamp","type":"string"},{"name":"namespace","type":"string"},{"name":"cityName","type":"string"},{"name":"countryName","type":"string"},{"name":"regionIsoCode","type":"string"},{"name":"metroCode","type":"long"},{"name":"countryIsoCode","type":"string"},{"name":"regionName","type":"string"}]'
+    )
+  )
+PARTITIONED BY HOUR
+CLUSTERED BY cityName
+```
+
+The above EXPLAIN PLAN query returns the following result:
+
+```json
+[
+  [
+    {
+      "query": {
+        "queryType": "scan",
+        "dataSource": {
+          "type": "external",
+          "inputSource": {
+            "type": "http",
+            "uris": [
+              "https://druid.apache.org/data/wikipedia.json.gz"
+            ]
+          },
+          "inputFormat": {
+            "type": "json",
+            "keepNullColumns": false,
+            "assumeNewlineDelimited": false,
+            "useJsonNodeReader": false
+          },
+          "signature": [
+            {
+              "name": "timestamp",
+              "type": "STRING"
+            },
+            {
+              "name": "namespace",
+              "type": "STRING"
+            },
+            {
+              "name": "cityName",
+              "type": "STRING"
+            },
+            {
+              "name": "countryName",
+              "type": "STRING"
+            },
+            {
+              "name": "regionIsoCode",
+              "type": "STRING"
+            },
+            {
+              "name": "metroCode",
+              "type": "LONG"
+            },
+            {
+              "name": "countryIsoCode",
+              "type": "STRING"
+            },
+            {
+              "name": "regionName",
+              "type": "STRING"
+            }
+          ]
+        },
+        "intervals": {
+          "type": "intervals",
+          "intervals": [
+            "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+          ]
+        },
+        "virtualColumns": [
+          {
+            "type": "expression",
+            "name": "v0",
+            "expression": "timestamp_parse(\"timestamp\",null,'UTC')",
+            "outputType": "LONG"
+          }
+        ],
+        "resultFormat": "compactedList",
+        "orderBy": [
+          {
+            "columnName": "cityName",
+            "order": "ascending"
+          }
+        ],
+        "columns": [
+          "cityName",
+          "countryIsoCode",
+          "countryName",
+          "metroCode",
+          "namespace",
+          "regionIsoCode",
+          "regionName",
+          "v0"
+        ],
+        "legacy": false,
+        "context": {
+          "finalizeAggregations": false,
+          "groupByEnableMultiValueUnnesting": false,
+          "maxNumTasks": 5,
+          "queryId": "b474c0d5-a5ce-432d-be94-535ccdb7addc",
+          "scanSignature": "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"},{\"name\":\"metroCode\",\"type\":\"LONG\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"regionIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"},{\"name\":\"v0\",\"type\":\"LONG\"}]",
+          "sqlInsertSegmentGranularity": "\"HOUR\"",
+          "sqlQueryId": "b474c0d5-a5ce-432d-be94-535ccdb7addc",
+          "sqlReplaceTimeChunks": "all"
+        },
+        "granularity": {
+          "type": "all"
+        }
       },
-      {
-        "name": "a0",
-        "type": "LONG"
-      }
-    ]
+      "signature": [
+        {
+          "name": "v0",
+          "type": "LONG"
+        },
+        {
+          "name": "namespace",
+          "type": "STRING"
+        },
+        {
+          "name": "cityName",
+          "type": "STRING"
+        },
+        {
+          "name": "countryName",
+          "type": "STRING"
+        },
+        {
+          "name": "regionIsoCode",
+          "type": "STRING"
+        },
+        {
+          "name": "metroCode",
+          "type": "LONG"
+        },
+        {
+          "name": "countryIsoCode",
+          "type": "STRING"
+        },
+        {
+          "name": "regionName",
+          "type": "STRING"
+        }
+      ],
+      "columnMappings": [
+        {
+          "queryColumn": "v0",
+          "outputColumn": "__time"
+        },
+        {
+          "queryColumn": "namespace",
+          "outputColumn": "namespace"
+        },
+        {
+          "queryColumn": "cityName",
+          "outputColumn": "cityName"
+        },
+        {
+          "queryColumn": "countryName",
+          "outputColumn": "countryName"
+        },
+        {
+          "queryColumn": "regionIsoCode",
+          "outputColumn": "regionIsoCode"
+        },
+        {
+          "queryColumn": "metroCode",
+          "outputColumn": "metroCode"
+        },
+        {
+          "queryColumn": "countryIsoCode",
+          "outputColumn": "countryIsoCode"
+        },
+        {
+          "queryColumn": "regionName",
+          "outputColumn": "regionName"
+        }
+      ]
+    }
+  ],
+  [
+    {
+      "name": "EXTERNAL",
+      "type": "EXTERNAL"
+    },
+    {
+      "name": "wikipedia",
+      "type": "DATASOURCE"
+    }
+  ],
+  {
+    "statementType": "REPLACE",
+    "targetDataSource": "wikipedia",
+    "partitionedBy": "HOUR",
+    "clusteredBy": "`cityName`",
+    "replaceTimeChunks": "'ALL'"
   }
 ]
 ```
@@ -349,7 +598,7 @@ Additionally, some Druid native query features are not supported by the SQL lang
 include:
 
 - [Inline datasources](datasource.md#inline).
-- [Spatial filters](../development/geo.md).
+- [Spatial filters](geo.md).
 - [Multi-value dimensions](sql-data-types.md#multi-value-strings) are only partially implemented in Druid SQL. There are known
 inconsistencies between their behavior in SQL queries and in native queries due to how they are currently treated by
 the SQL planner.

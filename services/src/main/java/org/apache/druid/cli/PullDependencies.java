@@ -64,7 +64,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-
 @Command(
     name = "pull-deps",
     description = "Pull down dependencies to the local repository specified by druid.extensions.localRepository, extensions directory specified by druid.extensions.extensionsDir and hadoop dependencies directory specified by druid.extensions.hadoopDependenciesDir"
@@ -88,39 +87,38 @@ public class PullDependencies implements Runnable
                   .put("com.fasterxml.jackson.core", "jackson-annotations")
                   .build();
    /*
+      It is possible that extensions will pull down a lot of jars that are either
+      duplicates OR conflict with druid jars. In that case, there are two problems that arise
 
-      // It is possible that extensions will pull down a lot of jars that are either
-      // duplicates OR conflict with druid jars. In that case, there are two problems that arise
-      //
-      // 1. Large quantity of jars are passed around to things like hadoop when they are not needed (and should not be included)
-      // 2. Classpath priority becomes "mostly correct" and attempted to enforced correctly, but not fully tested
-      //
-      // These jar groups should be included by druid and *not* pulled down in extensions
-      // Note to future developers: This list is hand-crafted and will probably be out of date in the future
-      // A good way to know where to look for errant dependencies is to compare the lib/ directory in the distribution
-      // tarball with the jars included in the extension directories.
-      //
-      // This list is best-effort, and might still pull down more than desired.
-      //
-      // A simple example is that if an extension's dependency uses some-library-123.jar,
-      // druid uses some-library-456.jar, and hadoop uses some-library-666.jar, then we probably want to use some-library-456.jar,
-      // so don't pull down some-library-123.jar, and ask hadoop to load some-library-456.jar.
-      //
-      // In the case where some-library is NOT on this list, both some-library-456.jar and some-library-123.jar will be
-      // on the class path and propagated around the system. Most places TRY to make sure some-library-456.jar has
-      // precedence, but it is easy for this assumption to be violated and for the precedence of some-library-456.jar,
-      // some-library-123.jar and some-library-456.jar to not be properly defined.
-      //
-      // As of this writing there are no special unit tests for classloader issues and library version conflicts.
-      //
-      // Different tasks which are classloader sensitive attempt to maintain a sane order for loading libraries in the
-      // classloader, but it is always possible that something didn't load in the right order. Also we don't want to be
-      // throwing around a ton of jars we don't need to.
-      //
-      // Here is a list of dependencies extensions should probably exclude.
-      //
-      // Conflicts can be discovered using the following command on the distribution tarball:
-      //    `find lib -iname "*.jar" | cut -d / -f 2 | sed -e 's/-[0-9]\.[0-9]/@/' | cut -f 1 -d @ | sort | uniq | xargs -I {} find extensions -name "*{}*.jar" | sort`
+      1. Large quantity of jars are passed around to things like hadoop when they are not needed (and should not be included)
+      2. Classpath priority becomes "mostly correct" and attempted to enforced correctly, but not fully tested
+
+      These jar groups should be included by druid and *not* pulled down in extensions
+      Note to future developers: This list is hand-crafted and will probably be out of date in the future
+      A good way to know where to look for errant dependencies is to compare the lib/ directory in the distribution
+      tarball with the jars included in the extension directories.
+
+      This list is best-effort, and might still pull down more than desired.
+
+      A simple example is that if an extension's dependency uses some-library-123.jar,
+      druid uses some-library-456.jar, and hadoop uses some-library-666.jar, then we probably want to use some-library-456.jar,
+      so don't pull down some-library-123.jar, and ask hadoop to load some-library-456.jar.
+
+      In the case where some-library is NOT on this list, both some-library-456.jar and some-library-123.jar will be
+      on the class path and propagated around the system. Most places TRY to make sure some-library-456.jar has
+      precedence, but it is easy for this assumption to be violated and for the precedence of some-library-456.jar,
+      some-library-123.jar and some-library-456.jar to not be properly defined.
+
+      As of this writing there are no special unit tests for classloader issues and library version conflicts.
+
+      Different tasks which are classloader sensitive attempt to maintain a sane order for loading libraries in the
+      classloader, but it is always possible that something didn't load in the right order. Also we don't want to be
+      throwing around a ton of jars we don't need to.
+
+      Here is a list of dependencies extensions should probably exclude.
+
+      Conflicts can be discovered using the following command on the distribution tarball:
+         `find lib -iname "*.jar" | cut -d / -f 2 | sed -e 's/-[0-9]\.[0-9]/@/' | cut -f 1 -d @ | sort | uniq | xargs -I {} find extensions -name "*{}*.jar" | sort`
 
       "org.apache.druid",
       "com.metamx.druid",

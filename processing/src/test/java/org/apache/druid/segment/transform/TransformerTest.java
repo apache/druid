@@ -321,4 +321,126 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertEquals("val1", actual.getInputRows().get(0).getRaw("dim"));
     Assert.assertEquals("val1", actual.getRawValuesList().get(0).get("dim"));
   }
+
+  @Test
+  public void testTransformWithArrayStringInputsExpr()
+  {
+    final Transformer transformer = new Transformer(
+        new TransformSpec(
+            null,
+            ImmutableList.of(new ExpressionTransform("dimlen", "array_length(dim)", TestExprMacroTable.INSTANCE))
+        )
+    );
+    final InputRow row = new MapBasedInputRow(
+        DateTimes.nowUtc(),
+        ImmutableList.of("dim"),
+        ImmutableMap.of("dim", ImmutableList.of("a", "b", "c"))
+    );
+    final InputRow actual = transformer.transform(row);
+    Assert.assertNotNull(actual);
+    Assert.assertEquals(ImmutableList.of("dim"), actual.getDimensions());
+    Assert.assertEquals(3L, actual.getRaw("dimlen"));
+    Assert.assertEquals(ImmutableList.of("3"), actual.getDimension("dimlen"));
+    Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
+  }
+
+  @Test
+  public void testTransformWithArrayStringInputs()
+  {
+    final Transformer transformer = new Transformer(
+        new TransformSpec(
+            null,
+            ImmutableList.of(new ExpressionTransform("dim", "dim", TestExprMacroTable.INSTANCE))
+        )
+    );
+    final InputRow row = new MapBasedInputRow(
+        DateTimes.nowUtc(),
+        ImmutableList.of("dim"),
+        ImmutableMap.of("dim", ImmutableList.of("a", "b", "c"))
+    );
+    final InputRow actual = transformer.transform(row);
+    Assert.assertNotNull(actual);
+    Assert.assertEquals(ImmutableList.of("dim"), actual.getDimensions());
+    Assert.assertArrayEquals(new Object[]{"a", "b", "c"}, (Object[]) actual.getRaw("dim"));
+    Assert.assertEquals(ImmutableList.of("a", "b", "c"), actual.getDimension("dim"));
+    Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
+  }
+
+  @Test
+  public void testTransformWithArrayLongInputs()
+  {
+    final Transformer transformer = new Transformer(
+        new TransformSpec(
+            null,
+            ImmutableList.of(new ExpressionTransform("dim", "dim", TestExprMacroTable.INSTANCE))
+        )
+    );
+    final InputRow row = new MapBasedInputRow(
+        DateTimes.nowUtc(),
+        ImmutableList.of("dim"),
+        ImmutableMap.of("dim", Arrays.asList(1, 2, null, 3))
+    );
+    final InputRow actual = transformer.transform(row);
+    Assert.assertNotNull(actual);
+    Assert.assertEquals(ImmutableList.of("dim"), actual.getDimensions());
+    Assert.assertArrayEquals(new Object[]{1L, 2L, null, 3L}, (Object[]) actual.getRaw("dim"));
+    Assert.assertEquals(Arrays.asList("1", "2", "null", "3"), actual.getDimension("dim"));
+    Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
+  }
+
+  @Test
+  public void testTransformWithArrayFloatInputs()
+  {
+    final Transformer transformer = new Transformer(
+        new TransformSpec(
+            null,
+            ImmutableList.of(new ExpressionTransform("dim", "dim", TestExprMacroTable.INSTANCE))
+        )
+    );
+    final InputRow row = new MapBasedInputRow(
+        DateTimes.nowUtc(),
+        ImmutableList.of("dim"),
+        ImmutableMap.of("dim", Arrays.asList(1.2f, 2.3f, null, 3.4f))
+    );
+    final InputRow actual = transformer.transform(row);
+    Assert.assertNotNull(actual);
+    Assert.assertEquals(ImmutableList.of("dim"), actual.getDimensions());
+    Object[] raw = (Object[]) actual.getRaw("dim");
+    // floats are converted to doubles since expressions have no doubles
+    Assert.assertEquals(1.2, (Double) raw[0], 0.00001);
+    Assert.assertEquals(2.3, (Double) raw[1], 0.00001);
+    Assert.assertNull(raw[2]);
+    Assert.assertEquals(3.4, (Double) raw[3], 0.00001);
+    Assert.assertEquals(
+        Arrays.asList("1.2000000476837158", "2.299999952316284", "null", "3.4000000953674316"),
+        actual.getDimension("dim")
+    );
+    Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
+  }
+
+  @Test
+  public void testTransformWithArrayDoubleInputs()
+  {
+    final Transformer transformer = new Transformer(
+        new TransformSpec(
+            null,
+            ImmutableList.of(new ExpressionTransform("dim", "dim", TestExprMacroTable.INSTANCE))
+        )
+    );
+    final InputRow row = new MapBasedInputRow(
+        DateTimes.nowUtc(),
+        ImmutableList.of("dim"),
+        ImmutableMap.of("dim", Arrays.asList(1.2, 2.3, null, 3.4))
+    );
+    final InputRow actual = transformer.transform(row);
+    Assert.assertNotNull(actual);
+    Assert.assertEquals(ImmutableList.of("dim"), actual.getDimensions());
+    Object[] raw = (Object[]) actual.getRaw("dim");
+    Assert.assertEquals(1.2, (Double) raw[0], 0.0);
+    Assert.assertEquals(2.3, (Double) raw[1], 0.0);
+    Assert.assertNull(raw[2]);
+    Assert.assertEquals(3.4, (Double) raw[3], 0.0);
+    Assert.assertEquals(Arrays.asList("1.2", "2.3", "null", "3.4"), actual.getDimension("dim"));
+    Assert.assertEquals(row.getTimestamp(), actual.getTimestamp());
+  }
 }
