@@ -34,6 +34,10 @@ import java.util.Map;
  */
 public class AlertBuilder extends ServiceEventBuilder<AlertEvent>
 {
+  public static final String EXCEPTION_TYPE_KEY = "exceptionType";
+  public static final String EXCEPTION_MESSAGE_KEY = "exceptionMessage";
+  public static final String EXCEPTION_STACK_TRACE_KEY = "exceptionStackTrace";
+
   protected final Map<String, Object> dataMap = Maps.newLinkedHashMap();
   protected final String description;
   protected final ServiceEmitter emitter;
@@ -77,9 +81,9 @@ public class AlertBuilder extends ServiceEventBuilder<AlertEvent>
       final StringWriter trace = new StringWriter();
       final PrintWriter pw = new PrintWriter(trace);
       t.printStackTrace(pw);
-      addData("exceptionType", t.getClass().getName());
-      addData("exceptionMessage", t.getMessage());
-      addData("exceptionStackTrace", trace.toString());
+      addData(EXCEPTION_TYPE_KEY, t.getClass().getName());
+      addData(EXCEPTION_MESSAGE_KEY, t.getMessage());
+      addData(EXCEPTION_STACK_TRACE_KEY, trace.toString());
     }
 
     return this;

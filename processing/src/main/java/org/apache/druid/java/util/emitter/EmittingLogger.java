@@ -34,10 +34,6 @@ import javax.annotation.Nullable;
  */
 public class EmittingLogger extends Logger
 {
-  public static final String EXCEPTION_TYPE_KEY = "exceptionType";
-  public static final String EXCEPTION_MESSAGE_KEY = "exceptionMessage";
-  public static final String EXCEPTION_STACK_TRACE_KEY = "exceptionStackTrace";
-
   private static volatile ServiceEmitter emitter = null;
 
   private final String className;
