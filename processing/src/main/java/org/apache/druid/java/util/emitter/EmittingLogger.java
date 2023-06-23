@@ -92,8 +92,7 @@ public class EmittingLogger extends Logger
     }
 
     return new EmittingAlertBuilder(t, StringUtils.format(message, objects), emitter)
-        .addData("class", className)
-        .addThrowable(t);
+        .addData("class", className);
   }
 
   public class EmittingAlertBuilder extends AlertBuilder
@@ -106,6 +105,7 @@ public class EmittingLogger extends Logger
     {
       super(description, emitter);
       this.t = t;
+      addThrowable(t);
     }
 
     @Override
