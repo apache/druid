@@ -150,12 +150,10 @@ public class ExternalInputSliceReader implements InputSliceReader
           final SegmentId segmentId = SegmentId.dummy(SEGMENT_ID);
           final Segment segment = new ExternalSegment(
               inputSource,
-              segmentId,
               reader,
               inputStats,
               warningCounters,
               warningPublisher,
-              incrementCounters,
               channelCounters,
               signature
           );
@@ -167,7 +165,7 @@ public class ExternalInputSliceReader implements InputSliceReader
     );
   }
 
-  static boolean isFileBasedInputSource(final InputSource inputSource)
+  public static boolean isFileBasedInputSource(final InputSource inputSource)
   {
     return !(inputSource instanceof NilInputSource) && !(inputSource instanceof InlineInputSource);
   }

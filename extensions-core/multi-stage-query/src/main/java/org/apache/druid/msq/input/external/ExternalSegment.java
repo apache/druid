@@ -29,17 +29,11 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.WarningCounters;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
-import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedSegment;
-import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
-import org.joda.time.Interval;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
@@ -47,39 +41,33 @@ import java.util.function.Consumer;
 /**
  * Segment representing the rows read from an external source. This is currently returned when using EXTERN with MSQ
  */
-public class ExternalSegment implements Segment
+public class ExternalSegment extends RowBasedSegment<InputRow>
 {
 
-  private final Segment delegate;
   private final InputSource inputSource;
+  public static final String SEGMENT_ID = "__external";
 
   /**
    * @param inputSource       {@link InputSource} that the segment is a representation of
-   * @param segmentId         segment id to assign to the segment. This is usually a dummy id which doesn't serve a
-   *                          real purpose further down the line
    * @param reader            reader to read the external input source
    * @param inputStats        input stats
    * @param warningCounters   warning counters tracking the warnings generated while reading the external source
    * @param warningPublisher  publisher to report the warnings generated
-   * @param incrementCounters whether to increment the channel counters
    * @param channelCounters   channel counters to increment as we read through the files/units of the external source
    * @param signature         signature of the external source
    */
   public ExternalSegment(
       final InputSource inputSource,
-      final SegmentId segmentId,
       final InputSourceReader reader,
       final InputStats inputStats,
       final WarningCounters warningCounters,
       final Consumer<Throwable> warningPublisher,
-      final boolean incrementCounters,
       final ChannelCounters channelCounters,
       final RowSignature signature
   )
   {
-    this.inputSource = inputSource;
-    delegate = new RowBasedSegment<>(
-        segmentId,
+    super(
+        SegmentId.dummy(SEGMENT_ID),
         new BaseSequence<>(
             new BaseSequence.IteratorMaker<InputRow, CloseableIterator<InputRow>>()
             {
@@ -142,7 +130,7 @@ public class ExternalSegment implements Segment
                   // if the callers are not careful.
                   // This logic only works because we are using FilePerSplitHintSpec. Each input source only
                   // has one file.
-                  if (incrementCounters) {
+                  if (ExternalInputSliceReader.isFileBasedInputSource(inputSource)) {
                     channelCounters.incrementFileCount();
                     channelCounters.incrementBytes(inputStats.getProcessedBytes());
                   }
@@ -156,45 +144,7 @@ public class ExternalSegment implements Segment
         RowAdapters.standardRow(),
         signature
     );
-
-  }
-
-  @Override
-  public SegmentId getId()
-  {
-    return delegate.getId();
-  }
-
-  @Override
-  public Interval getDataInterval()
-  {
-    return delegate.getDataInterval();
-  }
-
-  @Nullable
-  @Override
-  public QueryableIndex asQueryableIndex()
-  {
-    return delegate.asQueryableIndex();
-  }
-
-  @Override
-  public StorageAdapter asStorageAdapter()
-  {
-    return delegate.asStorageAdapter();
-  }
-
-  @Nullable
-  @Override
-  public <T> T as(@Nonnull Class<T> clazz)
-  {
-    return delegate.as(clazz);
-  }
-
-  @Override
-  public void close() throws IOException
-  {
-    delegate.close();
+    this.inputSource = inputSource;
   }
 
   /**
