@@ -92,12 +92,12 @@ WHERE is_active = 1`,
       error={segmentCountState.error}
     >
       <p>{pluralIfNeeded(segmentCount.active, 'active segment')}</p>
-      <p>{pluralIfNeeded(segmentCount.cached_on_historical, 'segment')} cached on historicals</p>
       {Boolean(segmentCount.unavailable) && (
         <p>
           {pluralIfNeeded(segmentCount.unavailable, 'segment')} waiting to be cached on historicals
         </p>
       )}
+      <p>{pluralIfNeeded(segmentCount.cached_on_historical, 'segment')} cached on historicals</p>
       {Boolean(segmentCount.realtime) && (
         <p>{pluralIfNeeded(segmentCount.realtime, 'realtime segment')}</p>
       )}
