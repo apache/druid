@@ -51,7 +51,7 @@ Druid supports the following granularity strings:
   - `six_hour`
   - `eight_hour`
   - `day`
-  - `week`
+  - `week`*
   - `month`
   - `quarter` 
   - `year`
@@ -60,6 +60,8 @@ The minimum and maximum granularities are `none` and `all`, described as follows
 * `all` buckets everything into a single bucket.
 * `none` does not mean zero bucketing. It buckets data to millisecond granularity—the granularity of the internal index. You can think of `none` as equivalent to `millisecond`.
   > Do not use `none` in a [timeseries query](../querying/timeseriesquery.md); Druid fills empty interior time buckets with zeroes, meaning the output will contain results for every single millisecond in the requested interval.
+
+*Avoid using the `week` granularity for partitioning at ingestion time, because weeks don't align neatly with months and years, making it difficult to partition by coarser granularities later.
 
 #### Example:
 

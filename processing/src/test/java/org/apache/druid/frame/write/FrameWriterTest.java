@@ -126,7 +126,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   @BeforeClass
   public static void setUpClass()
   {
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
   }
 
   @Test

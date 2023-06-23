@@ -280,8 +280,11 @@ public class S3StorageConnector implements StorageConnector
   public void deleteFile(String path) throws IOException
   {
     try {
+      final String fullPath = objectPath(path);
+      log.debug("Deleting file at bucket: [%s], path: [%s]", config.getBucket(), fullPath);
+
       S3Utils.retryS3Operation(() -> {
-        s3Client.deleteObject(config.getBucket(), objectPath(path));
+        s3Client.deleteObject(config.getBucket(), fullPath);
         return null;
       }, config.getMaxRetry());
     }
@@ -320,6 +323,7 @@ public class S3StorageConnector implements StorageConnector
       S3Utils.deleteBucketKeys(s3Client, config.getBucket(), versions, config.getMaxRetry());
     }
     catch (Exception e) {
+      log.error("Error occurred while deleting files from S3. Error: [%s]", e.getMessage());
       throw new IOException(e);
     }
   }

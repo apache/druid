@@ -28,6 +28,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.data.BitmapValues;
@@ -192,7 +193,10 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
               column.getArrayDictionary(),
               column
           ),
-          column.getFieldTypeInfo()
+          column.getFieldTypeInfo(),
+          ColumnType.NESTED_DATA.equals(column.getLogicalType()),
+          false,
+          null
       );
     }
 
