@@ -36,6 +36,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
@@ -199,6 +200,42 @@ public class DruidSqlParserUtilsTest
           DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(clusteredByArgs, sqlSelect)
       );
     }
+
+    @Test
+    public void testClusteredByOrdinalInvalidThrowsException()
+    {
+      final SqlNodeList selectArgs = new SqlNodeList(SqlParserPos.ZERO);
+      selectArgs.add(new SqlIdentifier("__time", new SqlParserPos(0, 1)));
+      selectArgs.add(new SqlIdentifier("FOO", new SqlParserPos(0, 2)));
+      selectArgs.add(new SqlIdentifier("BOO", new SqlParserPos(0, 3)));
+
+      final SqlSelect sqlSelect = new SqlSelect(
+          SqlParserPos.ZERO,
+          null,
+          selectArgs,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
+
+      final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);
+      clusteredByArgs.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
+      clusteredByArgs.add(new SqlIdentifier("FOO", SqlParserPos.ZERO));
+      clusteredByArgs.add(SqlLiteral.createExactNumeric("4", SqlParserPos.ZERO));
+
+      MatcherAssert.assertThat(
+          Assert.assertThrows(DruidException.class, () -> DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(clusteredByArgs, sqlSelect)),
+          DruidExceptionMatcher.invalidSqlInput().expectMessageIs(
+              "Ordinal[4] specified in the CLUSTERED BY clause is invalid. It must be between 1 and 3."
+          )
+      );
+    }
+
 
     @Test
     public void testClusteredByOrdinalsAndAliases()

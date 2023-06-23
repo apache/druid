@@ -351,6 +351,13 @@ public class DruidSqlParserUtils
       if (SqlUtil.isLiteral(clusteredByNode)) {
         // An ordinal is specified in CLUSTERED BY clause, so lookup the ordinal in the SELECT clause
         int ordinal = ((SqlNumericLiteral) clusteredByNode).getValueAs(Integer.class);
+        if (ordinal < 1 || ordinal > selectList.size()) {
+          throw InvalidSqlInput.exception(
+              "Ordinal[%d] specified in the CLUSTERED BY clause is invalid. It must be between 1 and %d.",
+              ordinal,
+              selectList.size()
+          );
+        }
         SqlNode node = selectList.get(ordinal - 1);
 
         if (node instanceof SqlBasicCall) {
