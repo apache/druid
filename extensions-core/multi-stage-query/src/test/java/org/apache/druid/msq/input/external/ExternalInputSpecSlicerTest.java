@@ -188,6 +188,19 @@ public class ExternalInputSpecSlicerTest
   }
 
   @Test
+  public void test_sliceDynamic_splittableFilesWithCompression_needThreeDueToBytes()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(
+            splittableSlice("foo.gz"),
+            splittableSlice("bar.gz"),
+            splittableSlice("baz.gz")
+        ),
+        slicer.sliceDynamic(splittableSpec("foo.gz", "bar.gz", "baz.gz"), 100, 5, 7)
+    );
+  }
+
+  @Test
   public void test_sliceDynamic_splittableThatIgnoresSplitHints_oneHundredMax()
   {
     Assert.assertEquals(
@@ -367,7 +380,7 @@ public class ExternalInputSpecSlicerTest
       if (useSplitHintSpec) {
         splits = splitHintSpec.split(
             strings.iterator(),
-            s -> new InputFileAttribute(s.length())
+            s -> new InputFileAttribute(s.length(), INPUT_FORMAT.getWeightedSize(s, s.length()))
         );
       } else {
         // Ignore splitHintSpec, return one element per split. Similar to HttpInputSource, for example.

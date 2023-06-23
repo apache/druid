@@ -65,7 +65,7 @@ Each Apache Druid query can accept a list of virtual columns as a parameter. The
 
 ### Expression virtual column
 
-Expression virtual columns use Druid's native [expression](../misc/math-expr.md) system to allow defining query time
+Expression virtual columns use Druid's native [expression](math-expr.md) system to allow defining query time
 transforms of inputs from one or more columns.
 
 The expression virtual column has the following syntax:
@@ -83,7 +83,7 @@ The expression virtual column has the following syntax:
 |--------|-----------|---------|
 |type|Must be `"expression"` to indicate that this is an expression virtual column.|yes|
 |name|The name of the virtual column.|yes|
-|expression|An [expression](../misc/math-expr.md) that takes a row as input and outputs a value for the virtual column.|yes|
+|expression|An [expression](math-expr.md) that takes a row as input and outputs a value for the virtual column.|yes|
 |outputType|The expression's output will be coerced to this type. Can be LONG, FLOAT, DOUBLE, STRING, ARRAY types, or COMPLEX types.|no, default is FLOAT|
 
 ### Nested field virtual column

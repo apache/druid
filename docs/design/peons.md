@@ -31,7 +31,7 @@ For basic tuning guidance for MiddleManager tasks, see [Basic cluster tuning](..
 
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Peon, please see the [Peon API reference](../operations/api-reference.md#peon).
+For a list of API endpoints supported by the Peon, please see the [Peon API reference](../api-reference/api-reference.md#peon).
 
 Peons run a single task in a single JVM. MiddleManager is responsible for creating Peons for running tasks.
 Peons should rarely (if ever for testing purposes) be run on their own.

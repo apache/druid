@@ -31,7 +31,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.util.Optionality;
-import org.apache.datasketches.Util;
+import org.apache.datasketches.thetacommon.ThetaUtil;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.tuple.ArrayOfDoublesSketchAggregatorFactory;
@@ -99,7 +99,7 @@ public class ArrayOfDoublesSketchSqlAggregator implements SqlAggregator
       nominalEntries = ((Number) RexLiteral.value(potentialNominalEntriesArg)).intValue();
       metricExpressionEndIndex = lastArgIndex - 1;
     } else {
-      nominalEntries = Util.DEFAULT_NOMINAL_ENTRIES;
+      nominalEntries = ThetaUtil.DEFAULT_NOMINAL_ENTRIES;
       metricExpressionEndIndex = lastArgIndex;
     }
 

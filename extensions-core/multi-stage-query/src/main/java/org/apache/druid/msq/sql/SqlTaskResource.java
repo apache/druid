@@ -23,21 +23,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
-import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.druid.common.exception.SanitizableException;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.error.QueryExceptionCompat;
 import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.BadQueryException;
-import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryException;
-import org.apache.druid.query.QueryInterruptedException;
-import org.apache.druid.query.QueryTimeoutException;
-import org.apache.druid.query.QueryUnsupportedException;
-import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
@@ -46,7 +41,6 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.HttpStatement;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.SqlRowTransformer;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.http.ResultFormat;
@@ -62,22 +56,21 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.util.Collections;
 
 /**
  * Endpoint for SQL execution using MSQ tasks.
- *
+ * <p>
  * Unlike the SQL endpoint in {@link SqlResource}, this endpoint returns task IDs instead of inline results. Queries
  * are executed asynchronously using MSQ tasks via the indexing service (Overlord + MM or Indexer). This endpoint
  * does not provide a way for users to get the status or results of a query. That must be done using Overlord APIs
  * for status and reports.
- *
+ * <p>
  * One exception: EXPLAIN query results are returned inline by this endpoint, in the same way as {@link SqlResource}
  * would return them.
- *
+ * <p>
  * This endpoint does not support system tables or INFORMATION_SCHEMA. Queries on those tables result in errors.
  */
 @Path("/druid/v2/sql/task/")
@@ -129,7 +122,7 @@ public class SqlTaskResource
 
   /**
    * Post a query task.
-   *
+   * <p>
    * Execution uses {@link MSQTaskSqlEngine} to ship the query off to the Overlord as an indexing task using
    * {@link org.apache.druid.msq.indexing.MSQControllerTask}. The task ID is returned immediately to the caller,
    * and execution proceeds asynchronously.
@@ -159,46 +152,34 @@ public class SqlTaskResource
         return buildStandardResponse(sequence, sqlQuery, sqlQueryId, rowTransformer);
       }
     }
-    // Kitchen-sinking the errors since they are all unchecked.
-    // Just copied from SqlResource.
-    catch (QueryCapacityExceededException cap) {
-      stmt.reporter().failed(cap);
-      return buildNonOkResponse(QueryCapacityExceededException.STATUS_CODE, cap, sqlQueryId);
-    }
-    catch (QueryUnsupportedException unsupported) {
-      stmt.reporter().failed(unsupported);
-      return buildNonOkResponse(QueryUnsupportedException.STATUS_CODE, unsupported, sqlQueryId);
-    }
-    catch (QueryTimeoutException timeout) {
-      stmt.reporter().failed(timeout);
-      return buildNonOkResponse(QueryTimeoutException.STATUS_CODE, timeout, sqlQueryId);
-    }
-    catch (SqlPlanningException | ResourceLimitExceededException e) {
+    catch (DruidException e) {
       stmt.reporter().failed(e);
-      return buildNonOkResponse(BadQueryException.STATUS_CODE, e, sqlQueryId);
+      return buildNonOkResponse(sqlQueryId, e);
+    }
+    catch (QueryException queryException) {
+      stmt.reporter().failed(queryException);
+      final DruidException underlyingException = DruidException.fromFailure(new QueryExceptionCompat(queryException));
+      return buildNonOkResponse(sqlQueryId, underlyingException);
     }
     catch (ForbiddenException e) {
-      // No request logs for forbidden queries; same as SqlResource
-      throw (ForbiddenException) serverConfig.getErrorResponseTransformStrategy()
-                                             .transformIfNeeded(e); // let ForbiddenExceptionMapper handle this
-    }
-    catch (RelOptPlanner.CannotPlanException e) {
-      stmt.reporter().failed(e);
-      SqlPlanningException spe = new SqlPlanningException(
-          SqlPlanningException.PlanningError.UNSUPPORTED_SQL_ERROR,
-          e.getMessage()
+      log.debug("Got forbidden request for reason [%s]", e.getErrorMessage());
+      return buildNonOkResponse(
+          "forbidden",
+          DruidException.forPersona(DruidException.Persona.USER)
+                        .ofCategory(DruidException.Category.FORBIDDEN)
+                        .build(Access.DEFAULT_ERROR_MESSAGE)
       );
-      return buildNonOkResponse(BadQueryException.STATUS_CODE, spe, sqlQueryId);
     }
-    // Calcite throws a java.lang.AssertionError which is type Error not Exception. Using Throwable catches both.
-    catch (Throwable e) {
+    // Calcite throws java.lang.AssertionError at various points in planning/validation.
+    catch (AssertionError | Exception e) {
       stmt.reporter().failed(e);
       log.noStackTrace().warn(e, "Failed to handle query: %s", sqlQueryId);
 
       return buildNonOkResponse(
-          Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-          QueryInterruptedException.wrapIfNeeded(e),
-          sqlQueryId
+          sqlQueryId,
+          DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                        .ofCategory(DruidException.Category.UNCATEGORIZED)
+                        .build(e.getMessage())
       );
     }
     finally {
@@ -237,12 +218,16 @@ public class SqlTaskResource
     yielder.close();
 
     if (taskId == null) {
-      // Note: no ID to include in error: that is the problem we're reporting.
-      return genericError(
-          Response.Status.INTERNAL_SERVER_ERROR,
-          "Internal error",
-          "Failed to issue query task",
-          null
+      // Note: no ID to include in error: that is the problem we're reporting.  It would be really nice to know
+      // why we don't have an ID or more information about why things failed.  Hopefully that gets returned to the
+      // user through a DruidExcpetion that makes it out of this code and this code never actually gets executed.
+      // Using a defensive exception just to report something with the opes that any time this actually happens, the
+      // fix is to make error reporting somewhere that actually understands more about why it failed.
+      return buildNonOkResponse(
+          null,
+          DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                        .ofCategory(DruidException.Category.DEFENSIVE)
+                        .build("Failed to issue query task")
       );
     }
 
@@ -252,6 +237,7 @@ public class SqlTaskResource
         .build();
   }
 
+  @SuppressWarnings("UnstableApiUsage")
   private Response buildStandardResponse(
       Sequence<Object[]> sequence,
       SqlQuery sqlQuery,
@@ -316,22 +302,11 @@ public class SqlTaskResource
     }
   }
 
-  private Response buildNonOkResponse(int status, SanitizableException e, String sqlQueryId)
-  {
-    QueryException cleaned = (QueryException) serverConfig
-        .getErrorResponseTransformStrategy()
-        .transformIfNeeded(e);
-    return Response
-        .status(status)
-        .entity(new SqlTaskStatus(sqlQueryId, TaskState.FAILED, cleaned))
-        .build();
-  }
-
-  private Response genericError(Response.Status status, String code, String msg, String id)
+  private Response buildNonOkResponse(String sqlQueryId, DruidException exception)
   {
     return Response
-        .status(status)
-        .entity(new SqlTaskStatus(id, TaskState.FAILED, new QueryException("FAILED", msg, null, null)))
+        .status(exception.getStatusCode())
+        .entity(new SqlTaskStatus(sqlQueryId, TaskState.FAILED, new ErrorResponse(exception)))
         .build();
   }
 }
