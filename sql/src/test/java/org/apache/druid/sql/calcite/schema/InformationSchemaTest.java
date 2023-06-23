@@ -166,7 +166,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
     final SqlOperator operator1 = OperatorConversions
         .operatorBuilder("FOO")
         .operandTypes(SqlTypeFamily.ANY)
-        .requiredOperands(0)
+        .requiredOperandCount(0)
         .returnTypeInference(
             opBinding -> RowSignatures.makeComplexType(
                 opBinding.getTypeFactory(),
@@ -182,7 +182,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
         .operatorBuilder("BAR")
         .operandTypes(SqlTypeFamily.NUMERIC)
         .operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER)
-        .requiredOperands(2)
+        .requiredOperandCount(2)
         .returnTypeInference(
             opBinding -> RowSignatures.makeComplexType(
                 opBinding.getTypeFactory(),
