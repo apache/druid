@@ -40,7 +40,6 @@ import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
@@ -93,7 +92,6 @@ public class StageDefinition
   private final FrameProcessorFactory processorFactory;
   private final RowSignature signature;
   private final int maxWorkerCount;
-  private final long maxInputBytesPerWorker;
   private final boolean shuffleCheckHasMultipleValues;
 
   @Nullable
@@ -111,8 +109,7 @@ public class StageDefinition
       @JsonProperty("signature") final RowSignature signature,
       @Nullable @JsonProperty("shuffleSpec") final ShuffleSpec shuffleSpec,
       @JsonProperty("maxWorkerCount") final int maxWorkerCount,
-      @JsonProperty("shuffleCheckHasMultipleValues") final boolean shuffleCheckHasMultipleValues,
-      @JsonProperty("maxInputBytesPerWorker") final Long maxInputBytesPerWorker
+      @JsonProperty("shuffleCheckHasMultipleValues") final boolean shuffleCheckHasMultipleValues
   )
   {
     this.id = Preconditions.checkNotNull(id, "id");
@@ -132,8 +129,6 @@ public class StageDefinition
     this.maxWorkerCount = maxWorkerCount;
     this.shuffleCheckHasMultipleValues = shuffleCheckHasMultipleValues;
     this.frameReader = Suppliers.memoize(() -> FrameReader.create(signature))::get;
-    this.maxInputBytesPerWorker = maxInputBytesPerWorker == null ?
-                                  Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER : maxInputBytesPerWorker;
 
     if (mustGatherResultKeyStatistics() && shuffleSpec.clusterBy().getColumns().isEmpty()) {
       throw new IAE("Cannot shuffle with spec [%s] and nil clusterBy", shuffleSpec);
@@ -280,12 +275,6 @@ public class StageDefinition
     return maxWorkerCount;
   }
 
-  @JsonProperty
-  public long getMaxInputBytesPerWorker()
-  {
-    return maxInputBytesPerWorker;
-  }
-
   @JsonProperty("shuffleCheckHasMultipleValues")
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   boolean getShuffleCheckHasMultipleValues()
@@ -412,8 +401,7 @@ public class StageDefinition
            && Objects.equals(broadcastInputNumbers, that.broadcastInputNumbers)
            && Objects.equals(processorFactory, that.processorFactory)
            && Objects.equals(signature, that.signature)
-           && Objects.equals(shuffleSpec, that.shuffleSpec)
-           && Objects.equals(maxInputBytesPerWorker, that.maxInputBytesPerWorker);
+           && Objects.equals(shuffleSpec, that.shuffleSpec);
   }
 
   @Override
@@ -427,8 +415,7 @@ public class StageDefinition
         signature,
         maxWorkerCount,
         shuffleCheckHasMultipleValues,
-        shuffleSpec,
-        maxInputBytesPerWorker
+        shuffleSpec
     );
   }
 
@@ -444,7 +431,6 @@ public class StageDefinition
            ", maxWorkerCount=" + maxWorkerCount +
            ", shuffleSpec=" + shuffleSpec +
            (shuffleCheckHasMultipleValues ? ", shuffleCheckHasMultipleValues=" + shuffleCheckHasMultipleValues : "") +
-           ", maxInputBytesPerWorker=" + maxInputBytesPerWorker +
            '}';
   }
 }

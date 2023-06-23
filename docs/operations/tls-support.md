@@ -83,9 +83,9 @@ be configured with a proper [SSLContext](http://docs.oracle.com/javase/8/docs/ap
 to validate the Server Certificates, otherwise communication will fail.
 
 Since, there are various ways to configure SSLContext, by default, Druid looks for an instance of SSLContext Guice binding
-while creating the HttpClient. This binding can be achieved writing a [Druid extension](../development/extensions.md)
+while creating the HttpClient. This binding can be achieved writing a [Druid extension](../configuration/extensions.md)
 which can provide an instance of SSLContext. Druid comes with a simple extension present [here](../development/extensions-core/simple-client-sslcontext.md)
-which should be useful enough for most simple cases, see [this](../development/extensions.md#loading-extensions) for how to include extensions.
+which should be useful enough for most simple cases, see [this](../configuration/extensions.md#loading-extensions) for how to include extensions.
 If this extension does not satisfy the requirements then please follow the extension [implementation](https://github.com/apache/druid/tree/master/extensions-core/simple-client-sslcontext)
 to create your own extension.
 

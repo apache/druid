@@ -1,6 +1,7 @@
 ---
 id: tutorial-jupyter-index
-title: "Jupyter Notebook tutorials"
+title: Jupyter Notebook tutorials
+sidebar_label: Jupyter Notebook tutorials
 ---
 
 <!--
@@ -32,66 +33,33 @@ the Druid API to complete the tutorial.
 
 ## Prerequisites
 
-Make sure you meet the following requirements before starting the Jupyter-based tutorials:
+The simplest way to get started is to use Docker. In this case, you only need to set up Docker Desktop.
+For more information, see [Docker for Jupyter Notebook tutorials](tutorial-jupyter-docker.md).
 
+Otherwise, you can install the prerequisites on your own. Here's what you need:
+
+- An available Druid instance.
 - Python 3.7 or later
+- JupyterLab (recommended) or Jupyter Notebook running on a non-default port.
+By default, Druid and Jupyter both try to use port `8888`, so start Jupyter on a different port.
+- The `requests` Python package
+- The `druidapi` Python package
 
-- The `requests` package for Python. For example, you can install it with the following command:
+For setup instructions, see [Tutorial setup without using Docker](tutorial-jupyter-docker.md#tutorial-setup-without-using-docker).
+Individual tutorials may require additional Python packages, such as for visualization or streaming ingestion.
 
-   ```bash
-   pip3 install requests
-   ```
+## Python API for Druid
 
-- JupyterLab (recommended) or Jupyter Notebook running on a non-default port. By default, Druid
-  and Jupyter both try to use port `8888`, so start Jupyter on a different port.
-
-
-  - Install JupyterLab or Notebook:
-
-    ```bash
-    # Install JupyterLab
-    pip3 install jupyterlab
-    # Install Jupyter Notebook
-    pip3 install notebook
-    ```
-  - Start Jupyter using either JupyterLab
-    ```bash
-    # Start JupyterLab on port 3001
-    jupyter lab --port 3001
-    ```
-
-    Or using Jupyter Notebook
-    ```bash
-    # Start Jupyter Notebook on port 3001
-    jupyter notebook --port 3001
-    ```
-
-- An available Druid instance. You can use the [Quickstart (local)](./index.md) instance. The tutorials
-  assume that you are using the quickstart, so no authentication or authorization
-  is expected unless explicitly mentioned.
-
-  If you contribute to Druid, and work with Druid integration tests, can use a test cluster.
-  Assume you have an environment variable, `DRUID_DEV`, which identifies your Druid source repo.
-
-  ```bash
-  cd $DRUID_DEV
-  ./it.sh build
-  ./it.sh image
-  ./it.sh up <category>
-  ```
-
-  Replace `<category>` with one of the available integration test categories. See the integration
-  test `README.md` for details.
-
-## Simple Druid API
-
+The `druidapi` Python package is a REST API for Druid.
 One of the notebooks shows how to use the Druid REST API. The others focus on other
 topics and use a simple set of Python wrappers around the underlying REST API. The
 wrappers reside in the `druidapi` package within the notebooks directory. While the package
 can be used in any Python program, the key purpose, at present, is to support these
-notebooks. See the [Introduction to the Druid Python API]
-(https://github.com/apache/druid/tree/master/examples/quickstart/jupyter-notebooks/python-api-tutorial.ipynb)
+notebooks. See
+[Introduction to the Druid Python API](https://github.com/apache/druid/blob/master/examples/quickstart/jupyter-notebooks/Python_API_Tutorial.ipynb)
 for an overview of the Python API.
+
+The `druidapi` package is already installed in the custom Jupyter Docker container for Druid tutorials.
 
 ## Tutorials
 

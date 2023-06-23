@@ -482,7 +482,7 @@ public class TaskQueue
     IdUtils.validateId("Task ID", task.getId());
 
     if (taskStorage.getTask(task.getId()).isPresent()) {
-      throw new EntryExistsException(StringUtils.format("Task %s already exists", task.getId()));
+      throw new EntryExistsException("Task", task.getId());
     }
 
     // Set forceTimeChunkLock before adding task spec to taskStorage, so that we can see always consistent task spec.

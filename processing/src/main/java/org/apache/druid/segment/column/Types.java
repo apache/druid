@@ -20,6 +20,7 @@
 package org.apache.druid.segment.column;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -111,5 +112,13 @@ public class Types
   {
     return (typeSignature1 != null && typeSignature1.is(typeDescriptor)) ||
            (typeSignature2 != null && typeSignature2.is(typeDescriptor));
+  }
+
+  public static class IncompatibleTypeException extends IAE
+  {
+    public IncompatibleTypeException(TypeSignature<?> type, TypeSignature<?> other)
+    {
+      super("Cannot implicitly cast [%s] to [%s]", type, other);
+    }
   }
 }

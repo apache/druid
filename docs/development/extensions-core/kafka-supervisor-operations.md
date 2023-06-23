@@ -25,7 +25,7 @@ description: "Reference topic for running and maintaining Apache Kafka superviso
   -->
 This topic contains operations reference information to run and maintain Apache Kafka supervisors for Apache Druid. It includes descriptions of how some supervisor APIs work within Kafka Indexing Service.
 
-For all supervisor APIs, see [Supervisor APIs](../../operations/api-reference.md#supervisors).
+For all supervisor APIs, see [Supervisor APIs](../../api-reference/api-reference.md#supervisors).
 
 ## Getting Supervisor Status Report
 

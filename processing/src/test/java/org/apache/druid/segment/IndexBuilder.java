@@ -129,6 +129,12 @@ public class IndexBuilder
     return this;
   }
 
+  public IndexBuilder writeNullColumns(boolean shouldWriteNullColumns)
+  {
+    this.indexMerger = new IndexMergerV9(jsonMapper, indexIO, segmentWriteOutMediumFactory, shouldWriteNullColumns);
+    return this;
+  }
+
   public IndexBuilder indexSpec(IndexSpec indexSpec)
   {
     this.indexSpec = indexSpec;

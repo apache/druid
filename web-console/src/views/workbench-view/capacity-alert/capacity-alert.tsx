@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-import { Alert, Code, Intent } from '@blueprintjs/core';
+import { Code, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
+import { AlertDialog } from '../../../dialogs';
 import type { CapacityInfo } from '../../../druid-models';
 import { formatInteger } from '../../../utils';
 
@@ -41,7 +42,7 @@ export function CapacityAlert(props: CapacityAlertProps) {
 
   if (totalTaskSlots < maxNumTasks) {
     return (
-      <Alert
+      <AlertDialog
         cancelButtonText="Cancel"
         confirmButtonText="Run it anyway"
         icon={IconNames.WARNING_SIGN}
@@ -56,11 +57,11 @@ export function CapacityAlert(props: CapacityAlertProps) {
           <Code>{formatInteger(maxNumTasks)}</Code> tasks. Unless more capacity is added this query
           might stall and never run.
         </p>
-      </Alert>
+      </AlertDialog>
     );
   } else {
     return (
-      <Alert
+      <AlertDialog
         cancelButtonText="Cancel"
         confirmButtonText="Run it anyway"
         intent={Intent.PRIMARY}
@@ -75,7 +76,7 @@ export function CapacityAlert(props: CapacityAlertProps) {
           This query might have to wait for task slots to free up before running.
         </p>
         <p>Are you sure you want to run it?</p>
-      </Alert>
+      </AlertDialog>
     );
   }
 }

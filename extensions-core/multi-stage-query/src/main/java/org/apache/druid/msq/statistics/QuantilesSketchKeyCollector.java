@@ -76,6 +76,7 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
   public void addAll(QuantilesSketchKeyCollector other)
   {
     final ItemsUnion<byte[]> union = ItemsUnion.getInstance(
+        byte[].class,
         Math.max(sketch.getK(), other.sketch.getK()),
         comparator
     );
@@ -84,8 +85,8 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
     double otherBytesCount = other.averageKeyLength * other.getSketch().getN();
     averageKeyLength = ((sketchBytesCount + otherBytesCount) / (sketch.getN() + other.sketch.getN()));
 
-    union.update(sketch);
-    union.update(other.sketch);
+    union.union(sketch);
+    union.union(other.sketch);
     sketch = union.getResultAndReset();
   }
 
@@ -110,7 +111,7 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
   @Override
   public int estimatedRetainedKeys()
   {
-    return sketch.getRetainedItems();
+    return sketch.getNumRetained();
   }
 
   @Override
@@ -129,13 +130,10 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
   @Override
   public RowKey minKey()
   {
-    final byte[] minValue = sketch.getMinValue();
-
-    if (minValue != null) {
-      return RowKey.wrap(minValue);
-    } else {
+    if (sketch.isEmpty()) {
       throw new NoSuchElementException();
     }
+    return RowKey.wrap(sketch.getMinItem());
   }
 
   @Override
@@ -151,8 +149,7 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
 
     final int numPartitions = Ints.checkedCast(LongMath.divide(sketch.getN(), targetWeight, RoundingMode.CEILING));
 
-    // numPartitions + 1, because the final quantile is the max, and we won't build a partition based on that.
-    final byte[][] quantiles = sketch.getQuantiles(numPartitions + 1);
+    final byte[][] quantiles = (sketch.getPartitionBoundaries(numPartitions)).boundaries;
     final List<ClusterByPartition> partitions = new ArrayList<>();
 
     for (int i = 0; i < numPartitions; i++) {

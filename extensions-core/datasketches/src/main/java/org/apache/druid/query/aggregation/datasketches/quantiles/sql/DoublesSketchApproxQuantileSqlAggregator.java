@@ -215,8 +215,8 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 
   private static class DoublesSketchApproxQuantileSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE1 = "'" + NAME + "(column, probability)'\n";
-    private static final String SIGNATURE2 = "'" + NAME + "(column, probability, k)'\n";
+    private static final String SIGNATURE1 = "'" + NAME + "(column, probability)'";
+    private static final String SIGNATURE2 = "'" + NAME + "(column, probability, k)'";
 
     DoublesSketchApproxQuantileSqlAggFunction()
     {
