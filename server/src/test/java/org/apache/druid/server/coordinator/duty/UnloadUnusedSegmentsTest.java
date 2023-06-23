@@ -316,7 +316,8 @@ public class UnloadUnusedSegmentsTest
                 ImmutableMap.of(
                     DruidServer.DEFAULT_TIER, 1,
                     "tier2", 1
-                )
+                ),
+                null
             )
         )).anyTimes();
 
@@ -326,7 +327,8 @@ public class UnloadUnusedSegmentsTest
                 ImmutableMap.of(
                     DruidServer.DEFAULT_TIER, 1,
                     "tier2", 1
-                )
+                ),
+                null
             )
         )).anyTimes();
 
