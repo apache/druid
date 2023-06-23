@@ -188,7 +188,7 @@ public class JoinTestHelper
 
   public static IndexBuilder createFactIndexBuilder(final File tmpDir) throws IOException
   {
-    return createFactIndexBuilder(TestHelper.NO_CACHE_COLUMN_CONFIG, tmpDir, -1);
+    return createFactIndexBuilder(TestHelper.NO_CACHE_ALWAYS_USE_INDEXES_COLUMN_CONFIG, tmpDir, -1);
   }
 
   public static IndexBuilder createFactIndexBuilder(

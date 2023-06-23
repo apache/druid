@@ -2154,9 +2154,9 @@ export function issueWithSampleData(
   if (firstData === '{') {
     return (
       <>
-        This data looks like regular JSON object. For Druid to parse a text file it must have one
-        row per event. Maybe look at{' '}
-        <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink> instead.
+        This data looks like multi-line formatted JSON object. For Druid to parse a text file it
+        must have one row per event. Consider reformatting your data as{' '}
+        <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink>.
       </>
     );
   }
@@ -2165,8 +2165,8 @@ export function issueWithSampleData(
     return (
       <>
         This data looks like a multi-line JSON array. For Druid to parse a text file it must have
-        one row per event. Maybe look at{' '}
-        <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink> instead.
+        one row per event. Consider reformatting your data as{' '}
+        <ExternalLink href="http://ndjson.org/">newline delimited JSON</ExternalLink>.
       </>
     );
   }

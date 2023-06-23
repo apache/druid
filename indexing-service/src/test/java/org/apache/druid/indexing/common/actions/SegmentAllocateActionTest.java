@@ -64,7 +64,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -983,9 +982,6 @@ public class SegmentAllocateActionTest
       } else {
         return action.perform(task, taskActionTestKit.getTaskActionToolbox());
       }
-    }
-    catch (ExecutionException e) {
-      return null;
     }
     catch (Exception e) {
       throw new RuntimeException(e);

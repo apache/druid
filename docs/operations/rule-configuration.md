@@ -34,11 +34,11 @@ You can specify the data to retain or drop in the following ways:
 - Period: segment data specified as an offset from the present time.
 - Interval: a fixed time range.
 
-Retention rules are persistent: they remain in effect until you change them. Druid stores retention rules in its [metadata store](../dependencies/metadata-storage.md).
+Retention rules are persistent: they remain in effect until you change them. Druid stores retention rules in its [metadata store](../design/metadata-storage.md).
 
 ## Set retention rules
 
-You can use the Druid [web console](./web-console.md) or the [Coordinator API](./api-reference.md#coordinator) to create and manage retention rules.
+You can use the Druid [web console](./web-console.md) or the [Coordinator API](../api-reference/api-reference.md#coordinator) to create and manage retention rules.
 
 ### Use the web console
 
@@ -109,7 +109,16 @@ In the web console you can use the up and down arrows on the right side of the i
 
 Load rules define how Druid assigns segments to [historical process tiers](./mixed-workloads.md#historical-tiering), and how many replicas of a segment exist in each tier.
 
-If you have a single tier, Druid automatically names the tier `_default` and loads all segments onto it. If you define an additional tier, you must define a load rule to specify which segments to load on that tier. Until you define a load rule, your new tier remains empty.
+If you have a single tier, Druid automatically names the tier `_default`. If you define an additional tier, you must define a load rule to specify which segments to load on that tier. Until you define a load rule, your new tier remains empty.
+
+All load rules can have these properties:
+
+|Property|Description|Required|Default value|
+|---------|-----------|---------|-------------|
+| `tieredReplicants`| Map from tier names to the respective number of segment replicas to be loaded on those tiers. The number of replicas for each tier must be either 0 or a positive integer.| No | When `useDefaultTierForNull` is `true`, the default value is `{"_default_tier": 2}` i.e. 2 replicas to be loaded on the `_default_tier`.<br/><br/>When `useDefaultTierForNull` is `false`, the default value is `{}` i.e. no replicas to be loaded on any tier. |
+|`useDefaultTierForNull`|Determines the default value of `tieredReplicants` if it is not specified or set to `null`.| No | `true`|
+
+Specific types of load rules discussed below may have other properties too.
 
 ### Forever load rule
 
@@ -130,6 +139,7 @@ The following example places one replica of each segment on a custom tier named 
 Set the following property:
 
 - `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
+- `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
 ### Period load rule
 
@@ -151,13 +161,14 @@ Period load rules have type `loadByPeriod`. The following example places one rep
 
 Set the following properties:
 
-- `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the present, or into the future if `includeFuture` is set to `true`.
+- `period`: a JSON object representing [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the present, or into the future if `includeFuture` is set to `true`.
 - `includeFuture`: a boolean flag to instruct Druid to match a segment if:
   - the segment interval overlaps the rule interval, or
   - the segment interval starts any time after the rule interval starts.
 
   You can use this property to load segments with future start and end dates, where "future" is relative to the time when the Coordinator evaluates data against the rule. Defaults to `true`.
 - `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
+- `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
 ### Interval load rule
 
@@ -178,8 +189,9 @@ Interval load rules have type `loadByInterval`. The following example places one
 
 Set the following properties:
 
-- `interval`: the load interval specified as an ISO-8601 [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
+- `interval`: the load interval specified as an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
 - `tieredReplicants`: a map of tier names to the number of segment replicas for that tier.
+- `useDefaultTierForNull`: This parameter determines the default value of `tieredReplicants` and only has an effect if the field is not present. The default value of `useDefaultTierForNull` is true.
 
 ## Drop rules
 
@@ -195,7 +207,7 @@ Forever drop rules have type `dropForever`:
 
 ```json
 {
-  "type": "dropForever",
+  "type": "dropForever"
 }
 ```
 
@@ -209,13 +221,13 @@ Period drop rules have type `dropByPeriod` and the following JSON structure:
 {
   "type": "dropByPeriod",
   "period": "P1M",
-  "includeFuture": true,
+  "includeFuture": true
 }
 ```
 
 Set the following properties:
 
-- `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the future or to the current time, depending on the `includeFuture` flag.
+- `period`: a JSON object representing [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the future or to the current time, depending on the `includeFuture` flag.
 - `includeFuture`: a boolean flag to instruct Druid to match a segment if one of the following conditions apply:
 
   - the segment interval overlaps the rule interval
@@ -240,7 +252,7 @@ Period drop rules have type `dropBeforeByPeriod` and the following JSON structur
 
 Set the following property:
 
-- `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods.
+- `period`: a JSON object representing [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) periods.
 
 ### Interval drop rule
 
@@ -257,7 +269,7 @@ Interval drop rules have type `dropByInterval` and the following JSON structure:
 
 Set the following property:
 
-- `interval`: the drop interval specified as an ISO-8601 [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
+- `interval`: the drop interval specified as an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
 
 ## Broadcast rules
 
@@ -271,7 +283,7 @@ Forever broadcast rules have type `broadcastForever`:
 
 ```json
 {
-  "type": "broadcastForever",
+  "type": "broadcastForever"
 }
 ```
 
@@ -285,13 +297,13 @@ Period broadcast rules have type `broadcastByPeriod` and the following JSON stru
 {
   "type": "broadcastByPeriod",
   "period": "P1M",
-  "includeFuture": true,
+  "includeFuture": true
 }
 ```
 
 Set the following properties:
 
-- `period`: a JSON object representing [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the future or to the current time, depending on the `includeFuture` flag.
+- `period`: a JSON object representing [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) periods. The period is from some time in the past to the future or to the current time, depending on the `includeFuture` flag.
 - `includeFuture`: a boolean flag to instruct Druid to match a segment if one of the following conditions apply:
   - the segment interval overlaps the rule interval
   - the segment interval starts any time after the rule interval starts.
@@ -313,7 +325,7 @@ Interval broadcast rules have type `broadcastByInterval` and the following JSON 
 
 Set the following property:
 
-- `interval`: the broadcast interval specified as an ISO-8601 [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
+- `interval`: the broadcast interval specified as an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) range encoded as a string.
 
 ## Permanently delete data
 

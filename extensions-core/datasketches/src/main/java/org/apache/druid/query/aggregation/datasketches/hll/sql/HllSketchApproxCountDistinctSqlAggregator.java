@@ -69,7 +69,7 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
 
   private static class HllSketchApproxCountDistinctSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE = "'" + NAME + "(column, lgK, tgtHllType)'\n";
+    private static final String SIGNATURE = "'" + NAME + "(column, lgK, tgtHllType)'";
 
     HllSketchApproxCountDistinctSqlAggFunction()
     {

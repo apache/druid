@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.HumanReadableBytes;
@@ -68,7 +69,6 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
@@ -87,6 +87,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   private static final String DATA_SOURCE_MIXED = "nested_mix";
   private static final String DATA_SOURCE_MIXED_2 = "nested_mix_2";
   private static final String DATA_SOURCE_ARRAYS = "arrays";
+  private static final String DATA_SOURCE_ALL = "all_auto";
 
   private static final List<ImmutableMap<String, Object>> RAW_ROWS = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
@@ -109,6 +110,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       ImmutableMap.<String, Object>builder()
                   .put("t", "2000-01-01")
                   .put("string", "ccc")
+                  .put("string_sparse", "10")
                   .put("nest", ImmutableMap.of("x", 200L, "y", 3.03, "z", "abcdef", "mixed", 1.1, "mixed2", 1L))
                   .put("long", 3L)
                   .build(),
@@ -293,6 +295,31 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .inputTmpDir(temporaryFolder.newFolder())
                     .buildMMappedIndex();
 
+    final QueryableIndex indexAllTypesAuto =
+        IndexBuilder.create()
+                    .tmpDir(temporaryFolder.newFolder())
+                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                    .schema(
+                        new IncrementalIndexSchema.Builder()
+                            .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                            .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                            .withMetrics(
+                                new CountAggregatorFactory("cnt")
+                            )
+                            .withRollup(false)
+                            .build()
+                    )
+                    .inputSource(
+                        ResourceInputSource.of(
+                            NestedDataTestUtils.class.getClassLoader(),
+                            NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
+                        )
+                    )
+                    .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+                    .inputTmpDir(temporaryFolder.newFolder())
+                    .buildMMappedIndex();
+
+
     SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(conglomerate);
     walker.add(
         DataSegment.builder()
@@ -348,6 +375,15 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                    .size(0)
                    .build(),
         indexArrays
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATA_SOURCE_ALL)
+                   .version("1")
+                   .interval(indexAllTypesAuto.getDataInterval())
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        indexAllTypesAuto
     );
 
     return walker;
@@ -705,7 +741,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 10L},
+            new Object[]{NullHandling.defaultStringValue(), 8L},
+            new Object[]{"10", 2L},
             new Object[]{"yyy", 2L},
             new Object[]{"zzz", 2L}
         ),
@@ -811,7 +848,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 10L},
+            new Object[]{NullHandling.defaultStringValue(), 8L},
+            new Object[]{"10", 2L},
             new Object[]{"yyy", 2L},
             new Object[]{"zzz", 2L}
         ),
@@ -976,7 +1014,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .run();
   }
-
   @Test
   public void testUnnestRootSingleTypeArrayStringNulls()
   {
@@ -2705,7 +2742,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"100", 2L}
         ),
         RowSignature.builder()
@@ -2967,7 +3003,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
             new Object[]{"2.02", 2L}
         ),
         RowSignature.builder()
@@ -4137,9 +4172,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         + "SUM(cnt) "
         + "FROM druid.nested GROUP BY 1",
         (expected) -> {
-          expected.expect(UnsupportedSQLQueryException.class);
-          expected.expectMessage(
-              "Cannot use [JSON_VALUE_VARCHAR]: [Bad format, '.array.[1]' is not a valid JSONPath path: must start with '$']");
+          expected.expect(
+              DruidExceptionMatcher
+                  .invalidInput()
+                  .expectMessageIs("JSONPath [.array.[1]] is invalid, it must start with '$'")
+          );
         }
     );
   }
@@ -4559,6 +4596,693 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
               "Unsupported JSON_VALUE parameter 'ON EMPTY' defined - please re-issue this query without this argument"
           );
         }
+    );
+  }
+
+  @Test
+  public void testGroupByPathSelectorFilterVariantNull()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nest, '$.x'), "
+        + "JSON_VALUE(nester, '$.n.x' RETURNING BIGINT), "
+        + "SUM(cnt) "
+        + "FROM druid.nested WHERE JSON_VALUE(nester, '$.n.x' RETURNING BIGINT) IS NULL GROUP BY 1, 2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn("nester", "$.n.x", "v0", ColumnType.LONG),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v1", "d0"),
+                                new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                            )
+                        )
+                        .setDimFilter(selector("v0", null, null))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue(), NullHandling.defaultLongValue(), 4L},
+            new Object[]{"100", NullHandling.defaultLongValue(), 1L},
+            new Object[]{"200", NullHandling.defaultLongValue(), 1L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .add("EXPR$2", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testSelectPathSelectorFilterVariantNull()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nest, '$.x'), "
+        + "JSON_VALUE(nester, '$.n.x' RETURNING BIGINT) "
+        + "FROM druid.nested WHERE JSON_VALUE(nester, '$.n.x' RETURNING BIGINT) IS NULL",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      new NestedFieldVirtualColumn("nester", "$.n.x", "v0", ColumnType.LONG),
+                      new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
+                  )
+                  .columns(
+                      "v0", "v1"
+                  )
+                  .filters(selector("v0", null, null))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"100", null},
+            new Object[]{NullHandling.defaultStringValue(), null},
+            new Object[]{"200", null},
+            new Object[]{NullHandling.defaultStringValue(), null},
+            new Object[]{NullHandling.defaultStringValue(), null},
+            new Object[]{NullHandling.defaultStringValue(), null}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByPathSelectorFilterVariantNotNull()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(nest, '$.x'), "
+        + "JSON_VALUE(nester, '$.n.x' RETURNING BIGINT), "
+        + "SUM(cnt) "
+        + "FROM druid.nested WHERE JSON_VALUE(nester, '$.n.x' RETURNING BIGINT) IS NOT NULL GROUP BY 1, 2",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            new NestedFieldVirtualColumn("nester", "$.n.x", "v0", ColumnType.LONG),
+                            new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
+                        )
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v1", "d0"),
+                                new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                            )
+                        )
+                        .setDimFilter(not(selector("v0", null, null)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"100", 1L, 1L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .add("EXPR$2", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRegularLongLongMixed1FilterNotNull()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(long, '$' RETURNING BIGINT), "
+        + "SUM(cnt) "
+        + "FROM druid.nested_mix WHERE JSON_VALUE(long, '$' RETURNING BIGINT) IS NOT NULL GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_MIXED)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setVirtualColumns(new NestedFieldVirtualColumn("long", "$", "v0", ColumnType.LONG))
+                        .setDimFilter(not(selector("v0", null, null)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 2L},
+            new Object[]{2L, 4L},
+            new Object[]{3L, 2L},
+            new Object[]{4L, 2L},
+            new Object[]{5L, 4L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeStringMixed1SparseNotNull()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_VALUE(string_sparse, '$' RETURNING BIGINT), "
+        + "SUM(cnt) "
+        + "FROM druid.nested_mix_2 WHERE JSON_VALUE(string_sparse, '$' RETURNING BIGINT) IS NOT NULL GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_MIXED_2)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setVirtualColumns(new NestedFieldVirtualColumn("string_sparse", "$", "v0", ColumnType.LONG))
+                        .setDimFilter(not(selector("v0", null, null)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{10L, 2L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testScanStringNotNullCast()
+  {
+    skipVectorize();
+    testQuery(
+        "SELECT "
+        + "CAST(string_sparse as BIGINT)"
+        + "FROM druid.nested_mix WHERE CAST(string_sparse as BIGINT) IS NOT NULL",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE_MIXED)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "CAST(\"string_sparse\", 'LONG')", ColumnType.LONG)
+                  )
+                  .filters(not(selector("v0", null, null)))
+                  .columns("v0")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        NullHandling.sqlCompatible() ?
+        ImmutableList.of(
+            new Object[]{10L},
+            new Object[]{10L}
+        ) :
+        ImmutableList.of(
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{10L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{10L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByRootSingleTypeStringMixed1SparseNotNullCast2()
+  {
+    testQuery(
+        "SELECT "
+        + "CAST(string_sparse as BIGINT), "
+        + "SUM(cnt) "
+        + "FROM druid.nested_mix WHERE CAST(string_sparse as BIGINT) IS NOT NULL GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_MIXED)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("string_sparse", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setVirtualColumns(expressionVirtualColumn("v0", "CAST(\"string_sparse\", 'LONG')", ColumnType.LONG))
+                        .setDimFilter(not(selector("v0", null, null)))
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        NullHandling.sqlCompatible() ?
+        ImmutableList.of(
+            new Object[]{10L, 2L}
+        ) :
+        ImmutableList.of(
+            new Object[]{0L, 12L},
+            new Object[]{10L, 2L}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  /**
+   * MVD version of {@link #testGroupByRootSingleTypeArrayLongNullsUnnest()}
+   */
+  @Test
+  public void testGroupByRootSingleTypeArrayLongNullsAsMvd()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "ARRAY_TO_MV(arrayLongNulls), "
+            + "SUM(cnt) "
+            + "FROM druid.arrays GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(TableDataSource.create(DATA_SOURCE_ARRAYS))
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                                )
+                            )
+                            .setVirtualColumns(expressionVirtualColumn("v0", "array_to_mv(\"arrayLongNulls\")", ColumnType.STRING))
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                // implicit mvd unnest treats null and empty as [null] so we get extra null matches than unnest
+                // directly on the ARRAY
+                new Object[]{NullHandling.defaultStringValue(), 9L},
+                new Object[]{"1", 5L},
+                new Object[]{"2", 6L},
+                new Object[]{"3", 6L},
+                new Object[]{"9", 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
+  /**
+   * MVD version of {@link #testGroupByRootSingleTypeArrayLongNullsFiltered()}
+   * - implicit unnest since it is an mvd instead of array grouping
+   * - filters are adjusted to match strings instead of numbers
+   */
+  @Test
+  public void testGroupByRootSingleTypeArrayLongNullsAsMvdFiltered()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "ARRAY_TO_MV(arrayLongNulls), "
+            + "SUM(cnt), "
+            + "SUM(MV_LENGTH(ARRAY_TO_MV(arrayLongNulls))) "
+            + "FROM druid.arrays "
+            + "WHERE MV_CONTAINS(ARRAY_TO_MV(arrayLongNulls), '1') "
+            + "GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                                )
+                            )
+                            .setVirtualColumns(
+                                expressionVirtualColumn("v0", "array_to_mv(\"arrayLongNulls\")", ColumnType.STRING),
+                                expressionVirtualColumn("v1", "array_length(array_to_mv(\"arrayLongNulls\"))", ColumnType.LONG)
+                            )
+                            .setDimFilter(
+                                new ExpressionDimFilter("array_contains(array_to_mv(\"arrayLongNulls\"),'1')", queryFramework().macroTable())
+                            )
+                            .setAggregatorSpecs(
+                                aggregators(
+                                    new LongSumAggregatorFactory("a0", "cnt"),
+                                    new LongSumAggregatorFactory("a1", "v1")
+                                )
+                            )
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{NullHandling.defaultStringValue(), 2L, 6L},
+                new Object[]{"1", 5L, 13L},
+                new Object[]{"2", 2L, 6L},
+                new Object[]{"3", 4L, 12L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .add("EXPR$2", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
+  /**
+   * MVD version of {@link #testGroupByRootSingleTypeArrayLongNullsFilteredMore()}
+   * - implicit unnest since it is an mvd instead of array grouping
+   * - filters are adjusted to match strings instead of numbers
+   */
+  @Test
+  public void testGroupByRootSingleTypeArrayLongNullsAsMvdFilteredMore()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "ARRAY_TO_MV(arrayLongNulls), "
+            + "SUM(cnt) "
+            + "FROM druid.arrays WHERE MV_CONTAINS(ARRAY_TO_MV(arrayLongNulls), '1') OR MV_OVERLAP(ARRAY_TO_MV(arrayLongNulls), ARRAY['2', '3']) GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                                )
+                            )
+                            .setVirtualColumns(
+                                expressionVirtualColumn("v0", "array_to_mv(\"arrayLongNulls\")", ColumnType.STRING)
+                            )
+                            .setDimFilter(
+                                or(
+                                    expressionFilter("array_contains(array_to_mv(\"arrayLongNulls\"),'1')"),
+                                    expressionFilter("array_overlap(array_to_mv(\"arrayLongNulls\"),array('2','3'))")
+                                )
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            // since array is converted to a MVD, implicit unnesting occurs
+            ImmutableList.of(
+                new Object[]{NullHandling.defaultStringValue(), 4L},
+                new Object[]{"1", 5L},
+                new Object[]{"2", 6L},
+                new Object[]{"3", 6L},
+                new Object[]{"9", 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
+  /**
+   * MVD version of {@link #testGroupByRootSingleTypeArrayStringNullsUnnest()}
+   */
+  @Test
+  public void testGroupByRootSingleTypeArrayStringNullsAsMvdUnnest()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "ARRAY_TO_MV(arrayStringNulls), "
+            + "SUM(cnt) "
+            + "FROM druid.arrays GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(
+                                TableDataSource.create(DATA_SOURCE_ARRAYS)
+                            )
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                                )
+                            )
+                            .setVirtualColumns(
+                                expressionVirtualColumn("v0", "array_to_mv(\"arrayStringNulls\")", ColumnType.STRING)
+                            )
+                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                // count is 9 instead of 5 because implicit unnest treats null and empty as [null]
+                new Object[]{NullHandling.defaultStringValue(), 9L},
+                new Object[]{"a", 3L},
+                new Object[]{"b", 11L},
+                new Object[]{"d", 2L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
+  /**
+   * MVD version of {@link #testGroupByRootSingleTypeArrayStringNullsFiltered()}
+   * - implicit unnest since mvd instead of string array
+   */
+  @Test
+  public void testGroupByRootSingleTypeArrayStringNullsFilteredAsMvd()
+  {
+    cannotVectorize();
+    testBuilder()
+        .sql(
+            "SELECT "
+            + "ARRAY_TO_MV(arrayStringNulls), "
+            + "SUM(cnt), "
+            + "SUM(MV_LENGTH(ARRAY_TO_MV(arrayStringNulls))) "
+            + "FROM druid.arrays "
+            + "WHERE MV_CONTAINS(ARRAY_TO_MV(arrayStringNulls), 'b') "
+            + "GROUP BY 1"
+        )
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                            .setDataSource(DATA_SOURCE_ARRAYS)
+                            .setInterval(querySegmentSpec(Filtration.eternity()))
+                            .setGranularity(Granularities.ALL)
+                            .setDimensions(
+                                dimensions(
+                                    new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                                )
+                            )
+                            .setVirtualColumns(
+                                expressionVirtualColumn("v0", "array_to_mv(\"arrayStringNulls\")", ColumnType.STRING),
+                                new ExpressionVirtualColumn("v1", "array_length(array_to_mv(\"arrayStringNulls\"))", ColumnType.LONG, queryFramework().macroTable())
+                            )
+                            .setDimFilter(
+                                new ExpressionDimFilter("array_contains(array_to_mv(\"arrayStringNulls\"),'b')", queryFramework().macroTable())
+                            )
+                            .setAggregatorSpecs(
+                                aggregators(
+                                    new LongSumAggregatorFactory("a0", "cnt"),
+                                    new LongSumAggregatorFactory("a1", "v1")
+                                )
+                            )
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{NullHandling.defaultStringValue(), 4L, 10L},
+                new Object[]{"a", 3L, 6L},
+                new Object[]{"b", 11L, 24L},
+                new Object[]{"d", 2L, 6L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                        .add("EXPR$0", ColumnType.STRING)
+                        .add("EXPR$1", ColumnType.LONG)
+                        .add("EXPR$2", ColumnType.LONG)
+                        .build()
+        )
+        .run();
+  }
+
+  @Test
+  public void testScanAllTypesAuto()
+  {
+    skipVectorize();
+    testQuery(
+        "SELECT * FROM druid.all_auto",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE_ALL)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns(
+                      "__time",
+                      "arrayBool",
+                      "arrayDouble",
+                      "arrayDoubleNulls",
+                      "arrayLong",
+                      "arrayLongNulls",
+                      "arrayNestedLong",
+                      "arrayObject",
+                      "arrayString",
+                      "arrayStringNulls",
+                      "arrayVariant",
+                      "bool",
+                      "cDoubleArray",
+                      "cEmptyArray",
+                      "cEmptyObj",
+                      "cEmptyObjectArray",
+                      "cLongArray",
+                      "cNullArray",
+                      "cObj",
+                      "cObjectArray",
+                      "cdouble",
+                      "clong",
+                      "cnt",
+                      "complexObj",
+                      "cstr",
+                      "cstringArray",
+                      "double",
+                      "long",
+                      "null",
+                      "obj",
+                      "str",
+                      "variant",
+                      "variantEmptyObj",
+                      "variantEmtpyArray"
+                  )
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .legacy(false)
+                  .build()
+        ),
+        useDefault ?
+        ImmutableList.of(
+            new Object[]{1672531200000L, "", 0L, 0.0D, "true", "51", "1", "[]", "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]}}", "{\"x\":400,\"y\":[{\"l\":[null],\"m\":100,\"n\":5},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{}}", null, "[\"a\",\"b\"]", null, "[2,3]", null, "[null]", null, "[\"true\",\"false\",\"true\"]", null, "[{\"x\":1},{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "", 2L, 0.0D, "false", "b", "\"b\"", "2", "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]}}", "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2},[1,2,3]],\"z\":{\"a\":[5.5],\"b\":false}}", "[\"a\",\"b\",\"c\"]", "[null,\"b\"]", "[2,3]", null, "[3.3,4.4,5.5]", "[999.0,null,5.5]", "[null,null,2.2]", "[\"true\",\"true\"]", "[null,[null],[]]", "[{\"x\":3},{\"x\":4}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "a", 1L, 1.0D, "true", "1", "1", "1", "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]}}", "{\"x\":1234,\"y\":[{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"a\",\"b\"]", "[\"a\",\"b\"]", "[1,2,3]", "[1,null,3]", "[1.1,2.2,3.3]", "[1.1,2.2,null]", "[\"a\",\"1\",\"2.2\"]", "[\"true\",\"false\",\"true\"]", "[[1,2,null],[3,4]]", "[{\"x\":1},{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "b", 4L, 3.3D, "true", "4", "{}", "4", "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]}}", "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"d\",\"e\"]", "[\"b\",\"b\"]", "[1,4]", "[1]", "[2.2,3.3,4.0]", null, "[\"a\",\"b\",\"c\"]", "[null,\"false\",\"true\"]", "[[1,2],[3,4],[5,6,7]]", "[{\"x\":null},{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "c", 0L, 4.4D, "true", "hello", "{}", "[]", "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]}}", "{\"x\":11,\"y\":[],\"z\":{\"a\":[null],\"b\":false}}", null, null, "[1,2,3]", "[]", "[1.1,2.2,3.3]", null, null, "[\"false\"]", null, "[{\"x\":1000},{\"y\":2000}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "d", 5L, 5.9D, "false", "", "\"a\"", "6", "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]}}", null, "[\"a\",\"b\"]", null, null, "[null,2,9]", null, "[999.0,5.5,null]", "[\"a\",\"1\",\"2.2\"]", "[]", "[[1],[1,2,null]]", "[{\"a\":1},{\"b\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "null", 3L, 2.0D, "", "3.0", "3.3", "3", "{\"a\":300}", "{\"x\":4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}", "[\"b\",\"c\"]", "[\"d\",null,\"b\"]", "[1,2,3,4]", "[1,2,3]", "[1.1,3.3]", "[null,2.2,null]", "[1,null,1]", "[\"true\",null,\"true\"]", "[[1],null,[1,2,3]]", "[null,{\"x\":2}]", "", "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L}
+        ) :
+        ImmutableList.of(
+            new Object[]{1672531200000L, null, null, null, "true", "51", "1", "[]", "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]}}", "{\"x\":400,\"y\":[{\"l\":[null],\"m\":100,\"n\":5},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{}}", null, "[\"a\",\"b\"]", null, "[2,3]", null, "[null]", null, "[\"true\",\"false\",\"true\"]", null, "[{\"x\":1},{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "", 2L, null, "false", "b", "\"b\"", "2", "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]}}", "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2},[1,2,3]],\"z\":{\"a\":[5.5],\"b\":false}}", "[\"a\",\"b\",\"c\"]", "[null,\"b\"]", "[2,3]", null, "[3.3,4.4,5.5]", "[999.0,null,5.5]", "[null,null,2.2]", "[\"true\",\"true\"]", "[null,[null],[]]", "[{\"x\":3},{\"x\":4}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "a", 1L, 1.0D, "true", "1", "1", "1", "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]}}", "{\"x\":1234,\"y\":[{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"a\",\"b\"]", "[\"a\",\"b\"]", "[1,2,3]", "[1,null,3]", "[1.1,2.2,3.3]", "[1.1,2.2,null]", "[\"a\",\"1\",\"2.2\"]", "[\"true\",\"false\",\"true\"]", "[[1,2,null],[3,4]]", "[{\"x\":1},{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "b", 4L, 3.3D, "true", "4", "{}", "4", "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]}}", "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}", "[\"d\",\"e\"]", "[\"b\",\"b\"]", "[1,4]", "[1]", "[2.2,3.3,4.0]", null, "[\"a\",\"b\",\"c\"]", "[null,\"false\",\"true\"]", "[[1,2],[3,4],[5,6,7]]", "[{\"x\":null},{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "c", null, 4.4D, "true", "hello", "{}", "[]", "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]}}", "{\"x\":11,\"y\":[],\"z\":{\"a\":[null],\"b\":false}}", null, null, "[1,2,3]", "[]", "[1.1,2.2,3.3]", null, null, "[\"false\"]", null, "[{\"x\":1000},{\"y\":2000}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "d", 5L, 5.9D, "false", null, "\"a\"", "6", "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]}}", null, "[\"a\",\"b\"]", null, null, "[null,2,9]", null, "[999.0,5.5,null]", "[\"a\",\"1\",\"2.2\"]", "[]", "[[1],[1,2,null]]", "[{\"a\":1},{\"b\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L},
+            new Object[]{1672531200000L, "null", 3L, 2.0D, null, "3.0", "3.3", "3", "{\"a\":300}", "{\"x\":4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}", "[\"b\",\"c\"]", "[\"d\",null,\"b\"]", "[1,2,3,4]", "[1,2,3]", "[1.1,3.3]", "[null,2.2,null]", "[1,null,1]", "[\"true\",null,\"true\"]", "[[1],null,[1,2,3]]", "[null,{\"x\":2}]", null, "hello", 1234L, 1.234D, "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"]}}", "[\"a\",\"b\",\"c\"]", "[1,2,3]", "[1.1,2.2,3.3]", "[]", "{}", "[null,null]", "[{},{},{}]", "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]", 1L}
+        ),
+        RowSignature.builder()
+                    .add("__time", ColumnType.LONG)
+                    .add("str", ColumnType.STRING)
+                    .add("long", ColumnType.LONG)
+                    .add("double", ColumnType.DOUBLE)
+                    .add("bool", ColumnType.STRING)
+                    .add("variant", ColumnType.STRING)
+                    .add("variantEmptyObj", ColumnType.NESTED_DATA)
+                    .add("variantEmtpyArray", ColumnType.LONG_ARRAY)
+                    .add("obj", ColumnType.NESTED_DATA)
+                    .add("complexObj", ColumnType.NESTED_DATA)
+                    .add("arrayString", ColumnType.STRING_ARRAY)
+                    .add("arrayStringNulls", ColumnType.STRING_ARRAY)
+                    .add("arrayLong", ColumnType.LONG_ARRAY)
+                    .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                    .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
+                    .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
+                    .add("arrayVariant", ColumnType.STRING_ARRAY)
+                    .add("arrayBool", ColumnType.STRING_ARRAY)
+                    .add("arrayNestedLong", ColumnType.NESTED_DATA)
+                    .add("arrayObject", ColumnType.NESTED_DATA)
+                    .add("null", ColumnType.STRING)
+                    .add("cstr", ColumnType.STRING)
+                    .add("clong", ColumnType.LONG)
+                    .add("cdouble", ColumnType.DOUBLE)
+                    .add("cObj", ColumnType.NESTED_DATA)
+                    .add("cstringArray", ColumnType.STRING_ARRAY)
+                    .add("cLongArray", ColumnType.LONG_ARRAY)
+                    .add("cDoubleArray", ColumnType.DOUBLE_ARRAY)
+                    .add("cEmptyArray", ColumnType.NESTED_DATA)
+                    .add("cEmptyObj", ColumnType.NESTED_DATA)
+                    .add("cNullArray", ColumnType.NESTED_DATA)
+                    .add("cEmptyObjectArray", ColumnType.NESTED_DATA)
+                    .add("cObjectArray", ColumnType.NESTED_DATA)
+                    .add("cnt", ColumnType.LONG)
+                    .build()
     );
   }
 }

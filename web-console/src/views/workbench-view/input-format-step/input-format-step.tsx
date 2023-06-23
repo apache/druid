@@ -40,6 +40,7 @@ import {
   deepSet,
   EMPTY_ARRAY,
   filterMap,
+  findMap,
   timeFormatToSql,
 } from '../../../utils';
 import type { SampleResponse, SampleSpec } from '../../../utils/sampler';
@@ -115,7 +116,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
 
   let possibleTimeExpression: PossibleTimeExpression | undefined;
   if (previewSampleResponse) {
-    possibleTimeExpression = filterMap(
+    possibleTimeExpression = findMap(
       getHeaderNamesFromSampleResponse(previewSampleResponse),
       column => {
         const values = filterMap(previewSampleResponse.data, d => d.input?.[column]);
@@ -138,7 +139,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
           timeExpression: formatSql.fillPlaceholders([C(column)]),
         };
       },
-    )[0];
+    );
   }
 
   const headerNames = previewSampleResponse

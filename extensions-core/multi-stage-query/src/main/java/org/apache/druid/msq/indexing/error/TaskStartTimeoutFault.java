@@ -32,13 +32,13 @@ public class TaskStartTimeoutFault extends BaseMSQFault
 {
   static final String CODE = "TaskStartTimeout";
 
-  private final int numTasksNotStarted;
+  private final int pendingTasks;
   private final int totalTasks;
   private final long timeout;
 
   @JsonCreator
   public TaskStartTimeoutFault(
-      @JsonProperty("numTasksNotStarted") int numTasksNotStarted,
+      @JsonProperty("pendingTasks") int pendingTasks,
       @JsonProperty("totalTasks") int totalTasks,
       @JsonProperty("timeout") long timeout
   )
@@ -49,20 +49,20 @@ public class TaskStartTimeoutFault extends BaseMSQFault
         + "There might be insufficient available slots to start all worker tasks simultaneously. "
         + "Try lowering '%s' in your query context to a number that fits within your available task capacity, "
         + "or try increasing capacity.",
-        numTasksNotStarted,
+        pendingTasks,
         totalTasks,
         TimeUnit.MILLISECONDS.toSeconds(timeout),
         MultiStageQueryContext.CTX_MAX_NUM_TASKS
     );
-    this.numTasksNotStarted = numTasksNotStarted;
+    this.pendingTasks = pendingTasks;
     this.totalTasks = totalTasks;
     this.timeout = timeout;
   }
 
   @JsonProperty
-  public int getNumTasksNotStarted()
+  public int getPendingTasks()
   {
-    return numTasksNotStarted;
+    return pendingTasks;
   }
 
   @JsonProperty
@@ -90,13 +90,13 @@ public class TaskStartTimeoutFault extends BaseMSQFault
       return false;
     }
     TaskStartTimeoutFault that = (TaskStartTimeoutFault) o;
-    return numTasksNotStarted == that.numTasksNotStarted && totalTasks == that.totalTasks && timeout == that.timeout;
+    return pendingTasks == that.pendingTasks && totalTasks == that.totalTasks && timeout == that.timeout;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), numTasksNotStarted, totalTasks, timeout);
+    return Objects.hash(super.hashCode(), pendingTasks, totalTasks, timeout);
   }
 
 

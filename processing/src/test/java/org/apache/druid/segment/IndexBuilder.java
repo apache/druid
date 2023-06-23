@@ -57,6 +57,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 
 /**
  * Helps tests make segments.
@@ -97,7 +98,7 @@ public class IndexBuilder
 
   public static IndexBuilder create()
   {
-    return new IndexBuilder(TestHelper.JSON_MAPPER, TestHelper.NO_CACHE_COLUMN_CONFIG);
+    return new IndexBuilder(TestHelper.JSON_MAPPER, TestHelper.NO_CACHE_ALWAYS_USE_INDEXES_COLUMN_CONFIG);
   }
 
   public static IndexBuilder create(ColumnConfig columnConfig)
@@ -107,7 +108,7 @@ public class IndexBuilder
 
   public static IndexBuilder create(ObjectMapper jsonMapper)
   {
-    return new IndexBuilder(jsonMapper, TestHelper.NO_CACHE_COLUMN_CONFIG);
+    return new IndexBuilder(jsonMapper, TestHelper.NO_CACHE_ALWAYS_USE_INDEXES_COLUMN_CONFIG);
   }
 
   public static IndexBuilder create(ObjectMapper jsonMapper, ColumnConfig columnConfig)
@@ -130,6 +131,12 @@ public class IndexBuilder
   {
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
     this.indexMerger = new IndexMergerV9(jsonMapper, indexIO, segmentWriteOutMediumFactory);
+    return this;
+  }
+
+  public IndexBuilder writeNullColumns(boolean shouldWriteNullColumns)
+  {
+    this.indexMerger = new IndexMergerV9(jsonMapper, indexIO, segmentWriteOutMediumFactory, shouldWriteNullColumns);
     return this;
   }
 
@@ -193,6 +200,18 @@ public class IndexBuilder
   {
     this.rows.clear();
     Iterables.addAll(this.rows, rows);
+    return this;
+  }
+
+  public IndexBuilder intermediaryPersistSize(int rows)
+  {
+    this.intermediatePersistSize = rows;
+    return this;
+  }
+
+  public IndexBuilder mapSchema(Function<IncrementalIndexSchema, IncrementalIndexSchema> f)
+  {
+    this.schema = f.apply(this.schema);
     return this;
   }
 

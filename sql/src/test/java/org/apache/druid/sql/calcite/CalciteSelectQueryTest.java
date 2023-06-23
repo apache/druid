@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -43,7 +44,6 @@ import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -311,8 +311,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectConstantExpressionEquivalentToNaN()
   {
-    expectedException.expectMessage(
-        "'(log10(0) - log10(0))' evaluates to 'NaN' that is not supported in SQL. You can either cast the expression as BIGINT ('CAST((log10(0) - log10(0)) as BIGINT)') or VARCHAR ('CAST((log10(0) - log10(0)) as VARCHAR)') or change the expression itself");
+    expectedException.expect(invalidSqlIs(
+        "Expression [(log10(0) - log10(0))] evaluates to an unsupported value [NaN], "
+        + "expected something that can be a Double.  Consider casting with 'CAST(<col> AS BIGINT)'"
+    ));
     testQuery(
         "SELECT log10(0) - log10(0), dim1 FROM foo LIMIT 1",
         ImmutableList.of(),
@@ -323,8 +325,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectConstantExpressionEquivalentToInfinity()
   {
-    expectedException.expectMessage(
-        "'log10(0)' evaluates to '-Infinity' that is not supported in SQL. You can either cast the expression as BIGINT ('CAST(log10(0) as BIGINT)') or VARCHAR ('CAST(log10(0) as VARCHAR)') or change the expression itself");
+    expectedException.expect(invalidSqlIs(
+        "Expression [log10(0)] evaluates to an unsupported value [-Infinity], "
+        + "expected something that can be a Double.  Consider casting with 'CAST(<col> AS BIGINT)'"
+    ));
     testQuery(
         "SELECT log10(0), dim1 FROM foo LIMIT 1",
         ImmutableList.of(),
@@ -539,11 +543,12 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                + "\"legacy\":false,"
                                + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
                                + "\"granularity\":{\"type\":\"all\"}},"
-                               + "\"signature\":[{\"name\":\"EXPR$0\",\"type\":\"LONG\"}]"
+                               + "\"signature\":[{\"name\":\"EXPR$0\",\"type\":\"LONG\"}],"
+                               + "\"columnMappings\":[{\"queryColumn\":\"EXPR$0\",\"outputColumn\":\"EXPR$0\"}]"
                                + "}]";
     final String legacyExplanation = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"inline\",\"columnNames\":[\"EXPR$0\"],\"columnTypes\":[\"LONG\"],\"rows\":[[2]]},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"EXPR$0\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}}], signature=[{EXPR$0:LONG}])\n";
     final String resources = "[]";
-    final String attributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
+    final String attributes = "{\"statementType\":\"SELECT\"}";
 
     testQuery(
         PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
@@ -963,7 +968,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     testQueryThrows(
         "SELECT CURRENT_TIMESTAMP(4)",
         expectedException -> {
-          expectedException.expect(SqlPlanningException.class);
+          expectedException.expect(DruidException.class);
           expectedException.expectMessage(
               "Argument to function 'CURRENT_TIMESTAMP' must be a valid precision between '0' and '3'"
           );
@@ -1286,9 +1291,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                + "\"legacy\":false,"
                                + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
                                + "\"granularity\":{\"type\":\"all\"}},"
-                               + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}]}]";
+                               + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}],"
+                               + "\"columnMappings\":[{\"queryColumn\":\"__time\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"dim1\",\"outputColumn\":\"dim1\"},{\"queryColumn\":\"dim2\",\"outputColumn\":\"dim2\"},{\"queryColumn\":\"dim3\",\"outputColumn\":\"dim3\"},{\"queryColumn\":\"cnt\",\"outputColumn\":\"cnt\"},{\"queryColumn\":\"m1\",\"outputColumn\":\"m1\"},{\"queryColumn\":\"m2\",\"outputColumn\":\"m2\"},{\"queryColumn\":\"unique_dim1\",\"outputColumn\":\"unique_dim1\"}]}]";
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String attributes = "{\"statementType\":\"SELECT\",\"targetDataSource\":null}";
+    final String attributes = "{\"statementType\":\"SELECT\"}";
 
     testQuery(
         PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,

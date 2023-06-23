@@ -34,8 +34,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.exec.MSQTasks;
-import org.apache.druid.msq.indexing.ColumnMapping;
-import org.apache.druid.msq.indexing.ColumnMappings;
 import org.apache.druid.msq.indexing.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQDestination;
@@ -54,7 +52,10 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
+import org.apache.druid.sql.calcite.planner.ColumnMapping;
+import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.QueryUtils;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.Grouping;
 import org.apache.druid.sql.calcite.run.QueryMaker;
@@ -173,11 +174,10 @@ public class MSQTaskQueryMaker implements QueryMaker
         finalizeAggregations ? null /* Not needed */ : buildAggregationIntermediateTypeMap(druidQuery);
 
     final List<SqlTypeName> sqlTypeNames = new ArrayList<>();
-    final List<ColumnMapping> columnMappings = new ArrayList<>();
+    final List<ColumnMapping> columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery);
 
     for (final Pair<Integer, String> entry : fieldMapping) {
       final String queryColumn = druidQuery.getOutputRowSignature().getColumnName(entry.getKey());
-      final String outputColumns = entry.getValue();
 
       final SqlTypeName sqlTypeName;
 
@@ -189,7 +189,6 @@ public class MSQTaskQueryMaker implements QueryMaker
       }
 
       sqlTypeNames.add(sqlTypeName);
-      columnMappings.add(new ColumnMapping(queryColumn, outputColumns));
     }
 
     final MSQDestination destination;

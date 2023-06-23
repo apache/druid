@@ -50,6 +50,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
 
+/**
+ * {@link NestedCommonFormatColumn} specialization for {@link ColumnType#STRING} with a generic buffer based utf8
+ * dictionary. This is used when not using the more specific
+ * {@link org.apache.druid.segment.column.StringFrontCodedDictionaryEncodedColumn}, and only supports single value
+ * strings.
+ */
 public class ScalarStringDictionaryEncodedColumn<TIndexed extends Indexed<ByteBuffer>>
     implements DictionaryEncodedColumn<String>, NestedCommonFormatColumn
 {

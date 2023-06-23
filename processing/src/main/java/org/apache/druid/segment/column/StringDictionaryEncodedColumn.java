@@ -685,7 +685,6 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
     }
 
     @Override
-
     public Object[] getObjectVector()
     {
       if (id == offset.getId()) {

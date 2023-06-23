@@ -40,9 +40,7 @@ public class TestUsedSegmentChecker implements UsedSegmentChecker
   @Override
   public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers)
   {
-    final SegmentTimeline timeline = new SegmentTimeline();
-    timeline.addSegments(pushedSegments.iterator());
-
+    final SegmentTimeline timeline = SegmentTimeline.forSegments(pushedSegments);
     final Set<DataSegment> retVal = new HashSet<>();
     for (SegmentIdWithShardSpec identifier : identifiers) {
       for (TimelineObjectHolder<String, DataSegment> holder : timeline.lookup(identifier.getInterval())) {
