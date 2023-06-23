@@ -21,6 +21,7 @@ import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
 import type { QueryResult } from 'druid-query-toolkit';
 import { SqlExpression, SqlFunction } from 'druid-query-toolkit';
+import type { JSX } from 'react';
 import React, { useState } from 'react';
 
 import { AppToaster } from '../../../singletons';

@@ -30,6 +30,7 @@ import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import type { QueryResult } from 'druid-query-toolkit';
 import { SqlColumnDeclaration } from 'druid-query-toolkit';
+import type { JSX } from 'react';
 import React, { useEffect, useState } from 'react';
 
 import { AutoForm, ExternalLink } from '../../../components';

@@ -1031,7 +1031,7 @@ GROUP BY 1, 2`;
     }
   }
 
-  private renderRetentionDialog(): JSX.Element | undefined {
+  private renderRetentionDialog() {
     const { capabilities } = this.props;
     const { retentionDialogOpenOn, datasourcesAndDefaultRulesState } = this.state;
     const defaultRules = datasourcesAndDefaultRulesState.data?.defaultRules;
@@ -1591,7 +1591,7 @@ GROUP BY 1, 2`;
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const { capabilities } = this.props;
     const {
       showUnused,

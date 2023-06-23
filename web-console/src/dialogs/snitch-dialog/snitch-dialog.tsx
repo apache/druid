@@ -112,7 +112,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
     );
   }
 
-  renderHistoryDialog(): JSX.Element | null {
+  renderHistoryDialog() {
     const { title, historyRecords } = this.props;
     if (!historyRecords) return null;
 
@@ -171,7 +171,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
     );
   }
 
-  render(): JSX.Element | null {
+  render() {
     const { children, saveDisabled } = this.props;
     const { showFinalStep, showHistory } = this.state;
 

@@ -23,6 +23,7 @@ import axios from 'axios';
 import classNames from 'classnames';
 import type { QueryResult } from 'druid-query-toolkit';
 import { QueryRunner, SqlQuery } from 'druid-query-toolkit';
+import type { JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import { useStore } from 'zustand';

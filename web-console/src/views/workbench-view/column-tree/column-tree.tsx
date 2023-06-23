@@ -572,7 +572,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
     this.forceUpdate();
   };
 
-  render(): JSX.Element | null {
+  render() {
     const { columnMetadataLoading } = this.props;
     const { currentSchemaSubtree } = this.state;
 

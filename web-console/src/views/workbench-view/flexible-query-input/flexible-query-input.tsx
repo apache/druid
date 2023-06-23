@@ -359,7 +359,7 @@ export class FlexibleQueryInput extends React.PureComponent<
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const { autoHeight } = this.props;
 
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise

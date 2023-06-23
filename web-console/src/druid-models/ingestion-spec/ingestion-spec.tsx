@@ -18,6 +18,7 @@
 
 import { Code } from '@blueprintjs/core';
 import { range } from 'd3-array';
+import type { JSX } from 'react';
 import React from 'react';
 
 import type { Field } from '../../components';
@@ -1921,7 +1922,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     defined: s =>
       s.type === 'index_parallel' && deepGet(s, 'spec.ioConfig.inputSource.type') !== 'http',
     hideInMore: true,
-    adjustment: s => deepSet(s, 'splitHintSpec.type', 'maxSize'),
+    adjustment: s => deepSet(s, 'spec.tuningConfig.splitHintSpec.type', 'maxSize'),
     info: (
       <>
         Maximum number of bytes of input files to process in a single subtask. If a single file is
@@ -1937,7 +1938,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     min: 1,
     defined: typeIs('index_parallel'),
     hideInMore: true,
-    adjustment: s => deepSet(s, 'splitHintSpec.type', 'maxSize'),
+    adjustment: s => deepSet(s, 'spec.tuningConfig.splitHintSpec.type', 'maxSize'),
     info: (
       <>
         Maximum number of input files to process in a single subtask. This limit is to avoid task

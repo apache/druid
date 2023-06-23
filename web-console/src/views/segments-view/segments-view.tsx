@@ -946,7 +946,7 @@ END AS "time_span"`,
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const {
       segmentTableActionDialogId,
       datasourceTableActionDialogId,

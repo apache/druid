@@ -735,7 +735,7 @@ GROUP BY 1, 2`;
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const {
       supervisorSpecDialogOpen,
       alertErrorMsg,

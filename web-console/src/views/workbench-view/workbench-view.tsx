@@ -756,7 +756,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     });
   };
 
-  render(): JSX.Element {
+  render() {
     const { queryEngines } = this.props;
     const { columnMetadataState, showRecentQueryTaskPanel } = this.state;
     const query = this.getCurrentQuery();

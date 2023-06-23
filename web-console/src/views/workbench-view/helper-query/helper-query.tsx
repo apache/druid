@@ -22,6 +22,7 @@ import { Popover2 } from '@blueprintjs/popover2';
 import axios from 'axios';
 import type { QueryResult } from 'druid-query-toolkit';
 import { QueryRunner, SqlQuery } from 'druid-query-toolkit';
+import type { JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 

@@ -217,14 +217,11 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
     this.trigger();
   }
 
-  public rerunLastQuery(runInBackground = false): void {
+  public rerunLastQuery(onlyRunIfIdle = false): void {
     if (this.terminated) return;
+    if (onlyRunIfIdle && this.currentRunCancelFn) return;
     this.nextQuery = this.lastQuery;
-    if (runInBackground) {
-      void this.runWhenIdle();
-    } else {
-      this.trigger();
-    }
+    this.trigger();
   }
 
   public cancelCurrent(): void {

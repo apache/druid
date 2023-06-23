@@ -228,7 +228,7 @@ export class WorkbenchQuery {
   static getRowColumnFromIssue(issue: string): RowColumn | undefined {
     const m = issue.match(/at line (\d+),(\d+)/);
     if (!m) return;
-    return { match: '', row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
+    return { row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
   }
 
   public readonly queryParts: WorkbenchQueryPart[];

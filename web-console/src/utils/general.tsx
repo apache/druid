@@ -23,6 +23,7 @@ import copy from 'copy-to-clipboard';
 import hasOwnProp from 'has-own-prop';
 import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
+import type { JSX } from 'react';
 import React from 'react';
 
 import { AppToaster } from '../singletons';
@@ -306,7 +307,7 @@ export function compact<T>(xs: (T | undefined | false | null | '')[]): T[] {
 }
 
 export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
-  return xs.filter(Boolean) as T[];
+  return compact(xs);
 }
 
 export function moveToEnd<T>(

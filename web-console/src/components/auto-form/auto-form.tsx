@@ -25,6 +25,7 @@ import {
   NumericInput,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import type { JSX } from 'react';
 import React from 'react';
 
 import { deepDelete, deepGet, deepSet, durationSanitizer } from '../../utils';
@@ -510,7 +511,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     );
   }
 
-  render(): JSX.Element {
+  render() {
     const { fields, model, showCustom } = this.props;
     const { showMore, customDialog } = this.state;
 

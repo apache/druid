@@ -23,6 +23,7 @@ import classNames from 'classnames';
 import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 import { C, F, SqlAlias, SqlFunction, SqlLiteral, SqlStar } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
+import type { JSX } from 'react';
 import React, { useEffect, useState } from 'react';
 import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
