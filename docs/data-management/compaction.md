@@ -138,9 +138,9 @@ To control the number of result segments per time chunk, you can set [`maxRowsPe
 
 A compaction task internally generates an `index` or `index_parallel` task spec for performing compaction work with some fixed parameters. For example, its `inputSource` is always the [`druid` input source](../ingestion/input-sources.md), and `dimensionsSpec` and `metricsSpec` include all dimensions and metrics of the input segments by default.
 
-Compaction tasks fetch all [relevant segments](#compaction-io-configuration) prior to launching any subtasks, _unless_ the following items are all set. It is strongly recommended to set all of these items to non-null values to maximize performance and minimize disk usage of the `compact` task:
+Compaction tasks typically fetch all [relevant segments](#compaction-io-configuration) prior to launching any subtasks, _unless_ the following properties are all set to non-null values. It is strongly recommended to set them to non-null values to maximize performance and minimize disk usage of the `compact` task:
 
-- [`granularitySpec`](#compaction-granularity-spec), including all three of `segmentGranularity`, `queryGranularity`, and `rollup`
+- [`granularitySpec`](#compaction-granularity-spec), with non-null values for each of `segmentGranularity`, `queryGranularity`, and `rollup`
 - [`dimensionsSpec`](#compaction-dimensions-spec)
 - `metricsSpec`
 
