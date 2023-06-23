@@ -316,6 +316,10 @@ public class DruidException extends RuntimeException
      */
     UNAUTHORIZED(401),
     /**
+     * Means that an action that was attempted is forbidden
+     */
+    FORBIDDEN(403),
+    /**
      * Means that some capacity limit was exceeded, this could be due to throttling or due to some system limit
      */
     CAPACITY_EXCEEDED(429),
