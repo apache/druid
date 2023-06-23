@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
@@ -44,30 +45,20 @@ public class MSQResultsReport
   private final List<ColumnAndType> signature;
   @Nullable
   private final List<SqlTypeName> sqlTypeNames;
-  private final List<Object[]> results;
+  private final Yielder<Object[]> resultYielder;
   private final boolean resultsTruncated;
 
   public MSQResultsReport(
       final List<ColumnAndType> signature,
       @Nullable final List<SqlTypeName> sqlTypeNames,
-      Yielder<Object[]> resultYielder,
+      final Yielder<Object[]> resultYielder,
       @Nullable Boolean resultsTruncated
   )
   {
     this.signature = Preconditions.checkNotNull(signature, "signature");
     this.sqlTypeNames = sqlTypeNames;
-    this.results = new ArrayList<>();
-    int rowCount = 0;
-    while (!resultYielder.isDone() && rowCount < Limits.MAX_SELECT_RESULT_ROWS) {
-      results.add(resultYielder.get());
-      resultYielder = resultYielder.next(null);
-      ++rowCount;
-    }
-    if (resultsTruncated != null) {
-      this.resultsTruncated = !resultYielder.isDone() || resultsTruncated;
-    } else {
-      this.resultsTruncated = !resultYielder.isDone();
-    }
+    this.resultYielder = Preconditions.checkNotNull(resultYielder, "resultYielder");
+    this.resultsTruncated = Configs.valueOrDefault(resultsTruncated, false);
   }
 
   /**
@@ -82,6 +73,27 @@ public class MSQResultsReport
   )
   {
     return new MSQResultsReport(signature, sqlTypeNames, Yielders.each(Sequences.simple(results)), resultsTruncated);
+  }
+
+  public static MSQResultsReport createReportAndLimitRowsIfNeeded(
+      final List<ColumnAndType> signature,
+      @Nullable final List<SqlTypeName> sqlTypeNames,
+      Yielder<Object[]> resultYielder,
+      boolean shouldTruncateResults
+  )
+  {
+    if (shouldTruncateResults) {
+      List<Object[]> results = new ArrayList<>();
+      int rowCount = 0;
+      while (!resultYielder.isDone() && rowCount < Limits.MAX_SELECT_RESULT_ROWS) {
+        results.add(resultYielder.get());
+        resultYielder = resultYielder.next(null);
+        ++rowCount;
+      }
+      return new MSQResultsReport(signature, sqlTypeNames, Yielders.each(Sequences.simple(results)), !resultYielder.isDone());
+    } else {
+      return new MSQResultsReport(signature, sqlTypeNames, resultYielder, false);
+    }
   }
 
   @JsonProperty("signature")
@@ -99,9 +111,9 @@ public class MSQResultsReport
   }
 
   @JsonProperty("results")
-  public List<Object[]> getResults()
+  public Yielder<Object[]> getResultYielder()
   {
-    return results;
+    return resultYielder;
   }
 
   @JsonProperty("resultsTruncted")

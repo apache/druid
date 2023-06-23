@@ -64,6 +64,9 @@ import java.util.stream.Collectors;
  * Can be <b>PARALLEL</b>, <b>SEQUENTIAL</b> or <b>AUTO</b>. See {@link ClusterStatisticsMergeMode} for more information on each mode.
  * Default value is <b>PARALLEL</b></li>
  *
+ * <li><b>limitSelectResult</b>: Whether to limit the number of results returned in the query report. If true, limits the number of
+ * rows to {@link Limits#MAX_SELECT_RESULT_ROWS}. If false, all rows are passed on to the report.
+ *
  * <li><b>useAutoColumnSchemas</b>: Temporary flag to allow experimentation using
  * {@link org.apache.druid.segment.AutoTypeColumnSchema} for all 'standard' type columns during segment generation,
  * see {@link DimensionSchemaUtils#createDimensionSchema} for more details.
@@ -87,6 +90,8 @@ public class MultiStageQueryContext
 
   public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
   private static final boolean DEFAULT_DURABLE_SHUFFLE_STORAGE = false;
+  public static final String CTX_LIMIT_SELECT_RESULT = "limitSelectResult";
+  private static final boolean DEFAULT_LIMIT_SELECT_RESULT = false;
 
   public static final String CTX_FAULT_TOLERANCE = "faultTolerance";
   public static final boolean DEFAULT_FAULT_TOLERANCE = false;
@@ -201,6 +206,14 @@ public class MultiStageQueryContext
     return queryContext.getInt(
         CTX_ROWS_PER_SEGMENT,
         DEFAULT_ROWS_PER_SEGMENT
+    );
+  }
+
+  public static boolean limitSelectResults(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(
+        CTX_LIMIT_SELECT_RESULT,
+        DEFAULT_LIMIT_SELECT_RESULT
     );
   }
 

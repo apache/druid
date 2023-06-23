@@ -31,6 +31,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.guice.MSQIndexingModule;
@@ -50,6 +51,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -124,8 +126,13 @@ public class MSQTaskReportTest
     Assert.assertEquals(report.getPayload().getStatus().getPendingTasks(), report2.getPayload().getStatus().getPendingTasks());
     Assert.assertEquals(report.getPayload().getStages(), report2.getPayload().getStages());
 
-    final List<Object[]> results2 = report2.getPayload().getResults().getResults();
+    Yielder<Object[]> yielder = report2.getPayload().getResults().getResultYielder();
+    final List<Object[]> results2 = new ArrayList<>();
 
+    while (!yielder.isDone()) {
+      results2.add(yielder.get());
+      yielder = yielder.next(null);
+    }
     Assert.assertEquals(results.size(), results2.size());
     for (int i = 0; i < results.size(); i++) {
       Assert.assertArrayEquals(results.get(i), results2.get(i));

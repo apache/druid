@@ -42,6 +42,7 @@ import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
@@ -89,6 +90,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -1790,6 +1792,9 @@ public class MSQSelectTest extends MSQTestBase
       result.add(new Object[]{1});
     }
 
+    Map<String, Object> queryContext = new HashMap<>(context);
+    queryContext.put(MultiStageQueryContext.CTX_LIMIT_SELECT_RESULT, true);
+
     testSelectQuery()
         .setSql(StringUtils.format(
             " SELECT 1 as \"timestamp\"\n"
@@ -1816,7 +1821,7 @@ public class MSQSelectTest extends MSQTestBase
                            .columns("v0")
                            .virtualColumns(new ExpressionVirtualColumn("v0", ExprEval.of(1L).toExpr(), ColumnType.LONG))
                            .context(defaultScanQueryContext(
-                               context,
+                               queryContext,
                                RowSignature.builder().add("v0", ColumnType.LONG).build()
                            ))
                            .build()
@@ -1828,7 +1833,7 @@ public class MSQSelectTest extends MSQTestBase
                 ))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
                 .build())
-        .setQueryContext(context)
+        .setQueryContext(queryContext)
         .setExpectedResultRows(result)
         .verifyResults();
   }

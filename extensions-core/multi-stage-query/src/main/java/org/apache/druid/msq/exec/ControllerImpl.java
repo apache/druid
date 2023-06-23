@@ -467,7 +467,8 @@ public class ControllerImpl implements Controller
             queryDef,
             resultsYielder,
             task.getQuerySpec().getColumnMappings(),
-            task.getSqlTypeNames()
+            task.getSqlTypeNames(),
+            MultiStageQueryContext.limitSelectResults(task.getQuerySpec().getQuery().context())
         );
       } else {
         resultsReport = null;
@@ -2017,7 +2018,8 @@ public class ControllerImpl implements Controller
       final QueryDefinition queryDef,
       final Yielder<Object[]> resultsYielder,
       final ColumnMappings columnMappings,
-      @Nullable final List<SqlTypeName> sqlTypeNames
+      @Nullable final List<SqlTypeName> sqlTypeNames,
+      final boolean limitSelectResult
   )
   {
     final RowSignature querySignature = queryDef.getFinalStageDefinition().getSignature();
@@ -2032,7 +2034,7 @@ public class ControllerImpl implements Controller
       );
     }
 
-    return new MSQResultsReport(mappedSignature.build(), sqlTypeNames, resultsYielder, null);
+    return MSQResultsReport.createReportAndLimitRowsIfNeeded(mappedSignature.build(), sqlTypeNames, resultsYielder, limitSelectResult);
   }
 
   private static MSQStatusReport makeStatusReport(
