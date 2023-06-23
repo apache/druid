@@ -54,6 +54,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -78,6 +79,9 @@ public class S3Utils
         // Can happen when connections to S3 are dropped; see https://github.com/apache/druid/pull/11941.
         // SdkClientException can be thrown for many reasons and the only way to distinguish it is to look at
         // the message. This is not ideal, since the message may change, so it may need to be adjusted in the future.
+        return true;
+      } else if (e instanceof SdkClientException && e.getMessage().contains("Unable to execute HTTP request")) {
+        // This is likely due to a temporary DNS issue and can be retried.
         return true;
       } else if (e instanceof AmazonClientException) {
         return AWSClientUtil.isClientExceptionRecoverable((AmazonClientException) e);
@@ -257,6 +261,8 @@ public class S3Utils
   )
       throws Exception
   {
+    log.debug("Deleting directory at bucket: [%s], path: [%s]", bucket, prefix);
+
     final List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>(maxListingLength);
     final ObjectSummaryIterator iterator = new ObjectSummaryIterator(
         s3Client,
@@ -288,6 +294,10 @@ public class S3Utils
   )
       throws Exception
   {
+    if (keysToDelete != null && log.isDebugEnabled()) {
+      List<String> keys = keysToDelete.stream().map(DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.toList());
+      log.debug("Deleting keys from bucket: [%s], keys: [%s]", bucket, keys);
+    }
     DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucket).withKeys(keysToDelete);
     S3Utils.retryS3Operation(() -> {
       s3Client.deleteObjects(deleteRequest);

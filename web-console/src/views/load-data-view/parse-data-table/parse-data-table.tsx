@@ -41,8 +41,7 @@ export interface ParseDataTableProps {
   canFlatten: boolean;
   flattenedColumnsOnly: boolean;
   flattenFields: FlattenField[];
-  onFlattenFieldSelect: (field: FlattenField, index: number) => void;
-  useInput?: boolean;
+  onFlattenFieldSelect?: (field: FlattenField, index: number) => void;
 }
 
 export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDataTableProps) {
@@ -53,10 +52,8 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
     flattenedColumnsOnly,
     flattenFields,
     onFlattenFieldSelect,
-    useInput,
   } = props;
 
-  const key = useInput ? 'input' : 'parsed';
   return (
     <ReactTable
       className={classNames('parse-data-table', DEFAULT_TABLE_CLASS_NAME)}
@@ -66,7 +63,7 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
       pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
       showPagination={sampleResponse.data.length > STANDARD_TABLE_PAGE_SIZE}
       columns={filterMap(
-        getHeaderNamesFromSampleResponse(sampleResponse, true),
+        getHeaderNamesFromSampleResponse(sampleResponse, 'ignoreIfZero'),
         (columnName, i) => {
           if (!caseInsensitiveContains(columnName, columnFilter)) return;
           const flattenFieldIndex = flattenFields.findIndex(f => f.name === columnName);
@@ -78,7 +75,7 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
                 className={classNames({ clickable: flattenField })}
                 onClick={() => {
                   if (!flattenField) return;
-                  onFlattenFieldSelect(flattenField, flattenFieldIndex);
+                  onFlattenFieldSelect?.(flattenField, flattenFieldIndex);
                 }}
               >
                 <div className="column-name">{columnName}</div>
@@ -88,7 +85,7 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
               </div>
             ),
             id: String(i),
-            accessor: (row: SampleEntry) => (row[key] ? row[key]![columnName] : null),
+            accessor: (row: SampleEntry) => row.parsed?.[columnName] ?? null,
             width: 140,
             Cell: function ParseDataTableCell(row: RowRenderProps) {
               if (row.original.unparseable) {

@@ -44,6 +44,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
+/**
+ * Serializer for a string {@link NestedCommonFormatColumn} that can be read with either
+ * {@link ScalarStringDictionaryEncodedColumn} or
+ * {@link org.apache.druid.segment.column.StringFrontCodedDictionaryEncodedColumn} (if written with a front-coded
+ * dictionary).
+ */
 public class ScalarStringColumnSerializer extends NestedCommonFormatColumnSerializer
 {
   private static final Logger log = new Logger(ScalarStringColumnSerializer.class);

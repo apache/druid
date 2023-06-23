@@ -85,7 +85,7 @@ export function getDimensionSpecs(
   guessNumericStringsAsNumbers: boolean,
   hasRollup: boolean,
 ): (string | DimensionSpec)[] {
-  return filterMap(getHeaderNamesFromSampleResponse(sampleResponse, true), h => {
+  return filterMap(getHeaderNamesFromSampleResponse(sampleResponse, 'ignore'), h => {
     const dimensionType =
       typeHints[h] ||
       guessColumnTypeFromSampleResponse(sampleResponse, h, guessNumericStringsAsNumbers);

@@ -322,15 +322,7 @@ public class SqlNestedDataBenchmark
         schemaInfo,
         dimsSpec,
         transformSpec,
-        new IndexSpec(
-            null,
-            null,
-            encodingStrategy,
-            null,
-            null,
-            null,
-            null
-        ),
+        IndexSpec.builder().withStringDictionaryEncoding(encodingStrategy).build(),
         Granularities.NONE,
         rowsPerSegment
     );
@@ -383,7 +375,7 @@ public class SqlNestedDataBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void querySql(Blackhole blackhole) throws Exception
+  public void querySql(Blackhole blackhole)
   {
     final Map<String, Object> context = ImmutableMap.of(
         QueryContexts.VECTORIZE_KEY, vectorize,

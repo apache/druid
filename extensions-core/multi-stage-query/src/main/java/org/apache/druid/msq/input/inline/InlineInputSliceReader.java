@@ -20,15 +20,14 @@
 package org.apache.druid.msq.input.inline;
 
 import com.google.common.collect.Iterables;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.ReadableInputs;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
-import org.apache.druid.msq.querykit.LazyResourceHolder;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.SegmentWrangler;
@@ -72,7 +71,7 @@ public class InlineInputSliceReader implements InputSliceReader
             segmentWrangler.getSegmentsForIntervals(dataSource, Intervals.ONLY_ETERNITY),
             segment -> ReadableInput.segment(
                 new SegmentWithDescriptor(
-                    new LazyResourceHolder<>(() -> Pair.of(segment, segment)),
+                    () -> ResourceHolder.fromCloseable(segment),
                     DUMMY_SEGMENT_DESCRIPTOR
                 )
             )

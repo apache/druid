@@ -158,7 +158,7 @@ public class FilteredAggregatorBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
 
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schema);
 
@@ -282,7 +282,7 @@ public class FilteredAggregatorBenchmark
       File indexFile = INDEX_MERGER_V9.persist(
           incIndex,
           qIndexesDir,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           null
       );
       incIndex.close();

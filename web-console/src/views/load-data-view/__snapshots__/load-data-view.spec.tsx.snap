@@ -159,7 +159,148 @@ exports[`LoadDataView matches snapshot batch 1`] = `
       <div
         className="ingestion-cards"
       >
-        <React.Fragment />
+        <React.Fragment>
+          <Blueprint4.Card
+            className="ingestion-card"
+            elevation={1}
+            interactive={true}
+            onClick={[Function]}
+          >
+            <img
+              alt="Ingestion tile for index_parallel:s3"
+              src="/some/base_url/assets/s3.png"
+            />
+            <p>
+              Amazon S3
+            </p>
+          </Blueprint4.Card>
+          <Blueprint4.Card
+            className="ingestion-card"
+            elevation={1}
+            interactive={true}
+            onClick={[Function]}
+          >
+            <img
+              alt="Ingestion tile for index_parallel:azure"
+              src="/some/base_url/assets/azure.png"
+            />
+            <p>
+              Azure Data Lake
+            </p>
+          </Blueprint4.Card>
+          <Blueprint4.Card
+            className="ingestion-card"
+            elevation={1}
+            interactive={true}
+            onClick={[Function]}
+          >
+            <img
+              alt="Ingestion tile for index_parallel:google"
+              src="/some/base_url/assets/google.png"
+            />
+            <p>
+              Google Cloud Storage
+            </p>
+          </Blueprint4.Card>
+          <Blueprint4.Card
+            className="ingestion-card"
+            elevation={1}
+            interactive={true}
+            onClick={[Function]}
+          >
+            <img
+              alt="Ingestion tile for index_parallel:hdfs"
+              src="/some/base_url/assets/hdfs.png"
+            />
+            <p>
+              HDFS
+            </p>
+          </Blueprint4.Card>
+          <Blueprint4.Card
+            className="ingestion-card"
+            elevation={1}
+            interactive={true}
+            onClick={[Function]}
+          >
+            <img
+              alt="Ingestion tile for index_parallel:druid"
+              src="/some/base_url/assets/druid.png"
+            />
+            <p>
+              Reindex from Druid
+            </p>
+          </Blueprint4.Card>
+          <Blueprint4.Card
+            className="ingestion-card"
+            elevation={1}
+            interactive={true}
+            onClick={[Function]}
+          >
+            <img
+              alt="Ingestion tile for index_parallel:http"
+              src="/some/base_url/assets/http.png"
+            />
+            <p>
+              HTTP(s)
+            </p>
+          </Blueprint4.Card>
+          <Blueprint4.Card
+            className="ingestion-card"
+            elevation={1}
+            interactive={true}
+            onClick={[Function]}
+          >
+            <img
+              alt="Ingestion tile for index_parallel:local"
+              src="/some/base_url/assets/local.png"
+            />
+            <p>
+              Local disk
+            </p>
+          </Blueprint4.Card>
+          <Blueprint4.Card
+            className="ingestion-card"
+            elevation={1}
+            interactive={true}
+            onClick={[Function]}
+          >
+            <img
+              alt="Ingestion tile for index_parallel:inline"
+              src="/some/base_url/assets/inline.png"
+            />
+            <p>
+              Paste data
+            </p>
+          </Blueprint4.Card>
+          <Blueprint4.Card
+            className="ingestion-card"
+            elevation={1}
+            interactive={true}
+            onClick={[Function]}
+          >
+            <img
+              alt="Ingestion tile for example"
+              src="/some/base_url/assets/example.png"
+            />
+            <p>
+              Example data
+            </p>
+          </Blueprint4.Card>
+        </React.Fragment>
+        <Blueprint4.Card
+          className="ingestion-card"
+          elevation={1}
+          interactive={true}
+          onClick={[Function]}
+        >
+          <img
+            alt="Ingestion tile for other"
+            src="/some/base_url/assets/other.png"
+          />
+          <p>
+            Other
+          </p>
+        </Blueprint4.Card>
       </div>
     </div>
     <div
@@ -336,7 +477,64 @@ exports[`LoadDataView matches snapshot streaming 1`] = `
       <div
         className="ingestion-cards"
       >
-        <React.Fragment />
+        <React.Fragment>
+          <Blueprint4.Card
+            className="ingestion-card"
+            elevation={1}
+            interactive={true}
+            onClick={[Function]}
+          >
+            <img
+              alt="Ingestion tile for kafka"
+              src="/some/base_url/assets/kafka.png"
+            />
+            <p>
+              Apache Kafka
+            </p>
+          </Blueprint4.Card>
+          <Blueprint4.Card
+            className="ingestion-card"
+            elevation={1}
+            interactive={true}
+            onClick={[Function]}
+          >
+            <img
+              alt="Ingestion tile for kinesis"
+              src="/some/base_url/assets/kinesis.png"
+            />
+            <p>
+              Amazon Kinesis
+            </p>
+          </Blueprint4.Card>
+          <Blueprint4.Card
+            className="ingestion-card"
+            elevation={1}
+            interactive={true}
+            onClick={[Function]}
+          >
+            <img
+              alt="Ingestion tile for azure-event-hubs"
+              src="/some/base_url/assets/azure-event-hubs.png"
+            />
+            <p>
+              Azure Event Hub
+            </p>
+          </Blueprint4.Card>
+        </React.Fragment>
+        <Blueprint4.Card
+          className="ingestion-card"
+          elevation={1}
+          interactive={true}
+          onClick={[Function]}
+        >
+          <img
+            alt="Ingestion tile for other"
+            src="/some/base_url/assets/other.png"
+          />
+          <p>
+            Other
+          </p>
+        </Blueprint4.Card>
       </div>
     </div>
     <div

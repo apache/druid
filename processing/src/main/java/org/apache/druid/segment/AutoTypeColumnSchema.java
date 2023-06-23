@@ -30,7 +30,7 @@ import org.apache.druid.segment.nested.ScalarDoubleColumnSerializer;
 import org.apache.druid.segment.nested.ScalarLongColumnSerializer;
 import org.apache.druid.segment.nested.ScalarStringColumnSerializer;
 import org.apache.druid.segment.nested.StructuredData;
-import org.apache.druid.segment.nested.VariantArrayColumnSerializer;
+import org.apache.druid.segment.nested.VariantColumnSerializer;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 /**
@@ -50,7 +50,7 @@ import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
  * @see AutoTypeColumnIndexer
  * @see AutoTypeColumnMerger
  * @see NestedCommonFormatColumnSerializer
- * @see VariantArrayColumnSerializer
+ * @see VariantColumnSerializer
  * @see ScalarDoubleColumnSerializer
  * @see ScalarLongColumnSerializer
  * @see NestedDataColumnSerializer

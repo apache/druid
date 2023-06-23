@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang.mutable.MutableBoolean;
-import org.apache.druid.common.config.NullHandlingTest;
 import org.apache.druid.data.input.BytesCountingInputEntity;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntity;
@@ -60,6 +59,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
@@ -80,7 +80,7 @@ import java.util.Map;
 
 import static org.junit.Assert.assertThrows;
 
-public class DruidSegmentReaderTest extends NullHandlingTest
+public class DruidSegmentReaderTest extends InitializedNullHandlingTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -793,7 +793,7 @@ public class DruidSegmentReaderTest extends NullHandlingTest
       ).persist(
           incrementalIndex,
           segmentDirectory,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           null
       );
       segmentSize = FileUtils.getFileSize(segmentDirectory);

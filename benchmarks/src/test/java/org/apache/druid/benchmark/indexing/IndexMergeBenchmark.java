@@ -117,7 +117,7 @@ public class IndexMergeBenchmark
 
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
     indexMergerV9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, getSegmentWriteOutMediumFactory(factoryType));
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
 
     indexesToMerge = new ArrayList<>();
 
@@ -141,7 +141,7 @@ public class IndexMergeBenchmark
       File indexFile = indexMergerV9.persist(
           incIndex,
           tmpDir,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           null
       );
 
@@ -166,7 +166,7 @@ public class IndexMergeBenchmark
           rollup,
           schemaInfo.getAggsArray(),
           tmpFile,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           null,
           -1
       );

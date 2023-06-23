@@ -54,6 +54,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -88,7 +89,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       final ScanQuery query,
       final ReadableInput baseInput,
       final Int2ObjectMap<ReadableInput> sideChannels,
-      final ResourceHolder<WritableFrameChannel> outputChannel,
+      final ResourceHolder<WritableFrameChannel> outputChannelHolder,
       final ResourceHolder<FrameWriterFactory> frameWriterFactoryHolder,
       @Nullable final AtomicLong runningCountForLimit,
       final long memoryReservedForBroadcastJoin,
@@ -99,7 +100,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         query,
         baseInput,
         sideChannels,
-        outputChannel,
+        outputChannelHolder,
         frameWriterFactoryHolder,
         memoryReservedForBroadcastJoin
     );
@@ -149,12 +150,12 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Long> runWithSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (cursor == null) {
-      closer.register(segment);
+      final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
 
       final Yielder<Cursor> cursorYielder = Yielders.each(
           makeCursors(
               query.withQuerySegmentSpec(new SpecificSegmentSpec(segment.getDescriptor())),
-              mapSegment(segment.getOrLoadSegment()).asStorageAdapter()
+              mapSegment(segmentHolder.get()).asStorageAdapter()
           )
       );
 

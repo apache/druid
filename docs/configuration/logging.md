@@ -45,14 +45,14 @@ The following example log4j2.xml is based upon the micro quickstart:
 
   <Appenders>
     <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
     </Console>
 
     <!-- Rolling Files-->
     <RollingRandomAccessFile name="FileAppender"
                              fileName="${sys:druid.log.path}/${sys:druid.node.type}.log"
                              filePattern="${sys:druid.log.path}/${sys:druid.node.type}.%d{yyyyMMdd}.log">
-      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
       <Policies>
         <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
       </Policies>
@@ -157,7 +157,7 @@ The following example shows a `log4j2.xml` that configures some of the more chat
 <Configuration status="WARN">
   <Appenders>
     <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
     </Console>
   </Appenders>
   

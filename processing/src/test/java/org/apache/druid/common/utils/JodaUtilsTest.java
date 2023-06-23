@@ -33,6 +33,8 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  *
@@ -270,6 +272,80 @@ public class JodaUtilsTest
   }
 
   @Test
+  public void testCondenseIntervalsUsingTreeSetWithIncorrectComparator()
+  {
+    final Set<Interval> intervals = new TreeSet<>(Comparators.intervalsByEndThenStart());
+
+    intervals.addAll(
+        Arrays.asList(
+            Intervals.of("2011-01-01/2011-01-02"),
+            Intervals.of("2011-01-02/2011-01-03"),
+            Intervals.of("2011-02-01/2011-02-05"),
+            Intervals.of("2011-02-01/2011-02-02"),
+            Intervals.of("2011-02-03/2011-02-08"),
+            Intervals.of("2011-03-01/2011-03-02"),
+            Intervals.of("2011-03-03/2011-03-04"),
+            Intervals.of("2011-03-05/2011-03-06"),
+            Intervals.of("2011-04-01/2011-04-05"),
+            Intervals.of("2011-04-02/2011-04-03"),
+            Intervals.of("2011-05-01/2011-05-05"),
+            Intervals.of("2011-05-02/2011-05-07")
+        )
+    );
+
+    Assert.assertEquals(
+        Arrays.asList(
+            Intervals.of("2011-01-01/2011-01-03"),
+            Intervals.of("2011-02-01/2011-02-08"),
+            Intervals.of("2011-03-01/2011-03-02"),
+            Intervals.of("2011-03-03/2011-03-04"),
+            Intervals.of("2011-03-05/2011-03-06"),
+            Intervals.of("2011-04-01/2011-04-05"),
+            Intervals.of("2011-05-01/2011-05-07")
+        ),
+        JodaUtils.condenseIntervals(intervals)
+    );
+  }
+
+  @Test
+  public void testCondenseIntervalsMixedUpIncludingZeroLength()
+  {
+    List<Interval> intervals = Arrays.asList(
+        Intervals.of("2011-01-01/2011-01-02"),
+        Intervals.of("2011-01-02/2011-01-03"),
+        Intervals.of("2011-02-01/2011-02-01"),
+        Intervals.of("2011-02-01/2011-02-05"),
+        Intervals.of("2011-02-01/2011-02-02"),
+        Intervals.of("2011-02-03/2011-02-08"),
+        Intervals.of("2011-03-01/2011-03-02"),
+        Intervals.of("2011-03-03/2011-03-04"),
+        Intervals.of("2011-03-05/2011-03-06"),
+        Intervals.of("2011-04-01/2011-04-05"),
+        Intervals.of("2011-04-02/2011-04-03"),
+        Intervals.of("2011-05-01/2011-05-05"),
+        Intervals.of("2011-05-03/2011-05-03"),
+        Intervals.of("2011-05-02/2011-05-07"),
+        Intervals.of("2011-05-08/2011-05-08")
+    );
+
+    for (int i = 0; i < 20; ++i) {
+      Collections.shuffle(intervals);
+      Assert.assertEquals(
+          Arrays.asList(
+              Intervals.of("2011-01-01/2011-01-03"),
+              Intervals.of("2011-02-01/2011-02-08"),
+              Intervals.of("2011-03-01/2011-03-02"),
+              Intervals.of("2011-03-03/2011-03-04"),
+              Intervals.of("2011-03-05/2011-03-06"),
+              Intervals.of("2011-04-01/2011-04-05"),
+              Intervals.of("2011-05-01/2011-05-07")
+          ),
+          JodaUtils.condenseIntervals(intervals)
+      );
+    }
+  }
+
+  @Test
   public void testMinMaxInterval()
   {
     Assert.assertEquals(Long.MAX_VALUE, Intervals.ETERNITY.toDuration().getMillis());
@@ -290,55 +366,4 @@ public class JodaUtilsTest
     final Period period = Intervals.ETERNITY.toDuration().toPeriod();
     Assert.assertEquals(Long.MAX_VALUE, period.getMinutes());
   }
-
-  @Test
-  public void testShouldContainOverlappingIntervals()
-  {
-    List<Interval> intervals = Arrays.asList(
-        Intervals.of("2011-02-01/2011-03-10"),
-        Intervals.of("2011-03-25/2011-04-03"),
-        Intervals.of("2011-04-01/2015-01-19"),
-        Intervals.of("2016-01-15/2016-01-19")
-    );
-    Assert.assertTrue(JodaUtils.containOverlappingIntervals(intervals));
-  }
-
-
-  @Test
-  public void testShouldNotContainOverlappingIntervals()
-  {
-    List<Interval> intervals = Arrays.asList(
-        Intervals.of("2011-02-01/2011-03-10"),
-        Intervals.of("2011-03-10/2011-04-03"),
-        Intervals.of("2011-04-04/2015-01-14"),
-        Intervals.of("2016-01-15/2016-01-19")
-    );
-    Assert.assertFalse(JodaUtils.containOverlappingIntervals(intervals));
-  }
-
-  @Test(expected = IAE.class)
-  public void testOverlappingIntervalsContainsNull()
-  {
-    List<Interval> intervals = Arrays.asList(
-        Intervals.of("2011-02-01/2011-03-10"),
-        null,
-        Intervals.of("2011-04-04/2015-01-14"),
-        Intervals.of("2016-01-15/2016-01-19")
-    );
-    JodaUtils.containOverlappingIntervals(intervals);
-  }
-
-  @Test(expected = IAE.class)
-  public void testOverlappingIntervalsContainsUnsorted()
-  {
-    List<Interval> intervals = Arrays.asList(
-        Intervals.of("2011-02-01/2011-03-10"),
-        Intervals.of("2011-03-10/2011-04-03"),
-        Intervals.of("2016-01-15/2016-01-19"),
-        Intervals.of("2011-04-04/2015-01-14")
-    );
-    JodaUtils.containOverlappingIntervals(intervals);
-  }
-
-
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.segment.nested;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -27,6 +28,10 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
+/**
+ * Nested field writer for array type columns of {@link NestedDataColumnSerializer}. This is currently only used
+ * for single type array columns, but can handle any type of array. {@link VariantFieldColumnWriter} is used for mixed
+ */
 public class VariantArrayFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<int[]>
 {
 
@@ -44,6 +49,7 @@ public class VariantArrayFieldColumnWriter extends GlobalDictionaryEncodedFieldC
   @Override
   int[] processValue(int row, Object value)
   {
+    // replace Object[] with int[] composed of the global ids
     if (value instanceof Object[]) {
       Object[] array = (Object[]) value;
       final int[] globalIds = new int[array.length];
@@ -66,6 +72,10 @@ public class VariantArrayFieldColumnWriter extends GlobalDictionaryEncodedFieldC
         ).add(row);
       }
       return globalIds;
+    }
+    if (value != null) {
+      // this writer is only used for arrays so all values will have been coerced to Object[] at this point
+      throw new ISE("Value is not an array, got [%s] instead", value.getClass());
     }
     return null;
   }

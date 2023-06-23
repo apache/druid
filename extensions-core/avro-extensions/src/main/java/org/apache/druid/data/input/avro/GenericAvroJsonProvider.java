@@ -163,4 +163,14 @@ public class GenericAvroJsonProvider extends FlattenerJsonProvider
     }
     return ImmutableMap.of();
   }
+
+  @Override
+  public Object unwrap(final Object o)
+  {
+    if (o instanceof Utf8) {
+      return o.toString();
+    }
+
+    return o;
+  }
 }

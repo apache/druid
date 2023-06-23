@@ -31,7 +31,6 @@ import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
 import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -255,7 +254,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
   protected abstract FrameProcessor<Long> makeProcessor(
       ReadableInput baseInput,
       Int2ObjectMap<ReadableInput> sideChannels,
-      ResourceHolder<WritableFrameChannel> outputChannelSupplier,
+      ResourceHolder<WritableFrameChannel> outputChannel,
       ResourceHolder<FrameWriterFactory> frameWriterFactory,
       FrameContext providerThingy
   );
@@ -273,21 +272,29 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
             resource = queueRef.get().poll();
           }
 
-          return Pair.of(
-              resource,
-              () -> {
-                synchronized (queueRef) {
-                  final Queue<T> queue = queueRef.get();
-                  if (queue != null) {
-                    queue.add(resource);
-                    return;
-                  }
-                }
+          return new ResourceHolder<T>()
+          {
+            @Override
+            public T get()
+            {
+              return resource;
+            }
 
-                // Queue was null
-                backupCloser.accept(resource);
+            @Override
+            public void close()
+            {
+              synchronized (queueRef) {
+                final Queue<T> queue = queueRef.get();
+                if (queue != null) {
+                  queue.add(resource);
+                  return;
+                }
               }
-          );
+
+              // Queue was null
+              backupCloser.accept(resource);
+            }
+          };
         }
     );
   }

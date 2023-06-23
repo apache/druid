@@ -444,6 +444,52 @@ describe('spec conversion', () => {
     expect(converted.queryString).toMatchSnapshot();
   });
 
+  it('converts with when the __time column is used as the __time column', () => {
+    const converted = convertSpecToSql({
+      type: 'index_parallel',
+      spec: {
+        ioConfig: {
+          type: 'index_parallel',
+          inputSource: {
+            type: 'http',
+            uris: ['https://druid.apache.org/data/wikipedia.json.gz'],
+          },
+          inputFormat: {
+            type: 'json',
+          },
+        },
+        dataSchema: {
+          granularitySpec: {
+            segmentGranularity: 'hour',
+            queryGranularity: 'none',
+            rollup: false,
+          },
+          dataSource: 'wikipedia',
+          timestampSpec: {
+            column: '__time',
+            format: 'millis',
+          },
+          dimensionsSpec: {
+            dimensions: ['isRobot', 'channel', 'flags'],
+          },
+        },
+        tuningConfig: {
+          type: 'index_parallel',
+          partitionsSpec: {
+            type: 'single_dim',
+            partitionDimension: 'isRobot',
+            targetRowsPerSegment: 150000,
+          },
+          forceGuaranteedRollup: true,
+          maxNumConcurrentSubTasks: 4,
+          maxParseExceptions: 3,
+        },
+      },
+    });
+
+    expect(converted.queryString).toMatchSnapshot();
+  });
+
   it('converts with issue when there is a dimension transform and strange filter', () => {
     const converted = convertSpecToSql({
       type: 'index_parallel',

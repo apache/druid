@@ -125,7 +125,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
     try (final FileSmoosher smoosher = new FileSmoosher(tmpFile)) {
       ScalarStringColumnSerializer serializer = new ScalarStringColumnSerializer(
           fileNameBase,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           writeOutMediumFactory.makeSegmentWriteOutMedium(tempFolder.newFolder()),
           closer
       );
@@ -137,7 +137,13 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
       SortedMap<String, FieldTypeInfo.MutableTypeSet> sortedFields = new TreeMap<>();
 
       IndexableAdapter.NestedColumnMergable mergable = closer.register(
-          new IndexableAdapter.NestedColumnMergable(indexer.getSortedValueLookups(), indexer.getFieldTypeInfo())
+          new IndexableAdapter.NestedColumnMergable(
+              indexer.getSortedValueLookups(),
+              indexer.getFieldTypeInfo(),
+              false,
+              false,
+              null
+          )
       );
       SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
       mergable.mergeFieldsInto(sortedFields);

@@ -116,7 +116,7 @@
 
     <profiles>
         <profile>
-            <id>dist</id>
+            <id>dist-hadoop2</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
                 <property>
@@ -190,6 +190,7 @@
                                         <argument>
                                             -Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop-dependencies
                                         </argument>
+                                        <argument>-Dhadoop2.enabled=true</argument>
                                         <argument>org.apache.druid.cli.Main</argument>
                                         <argument>tools</argument>
                                         <argument>pull-deps</argument>
@@ -224,8 +225,6 @@
                                         <argument>org.apache.druid.extensions:druid-lookups-cached-single</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-multi-stage-query</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions:druid-catalog</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-protobuf-extensions</argument>
                                         <argument>-c</argument>
@@ -302,7 +301,7 @@
             </build>
         </profile>
         <profile>
-            <id>dist-hadoop3</id>
+            <id>dist</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
@@ -373,7 +372,6 @@
                                         <argument>
                                             -Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop-dependencies
                                         </argument>
-                                        <argument>-Dhadoop3.enabled=true</argument>
                                         <argument>org.apache.druid.cli.Main</argument>
                                         <argument>tools</argument>
                                         <argument>pull-deps</argument>
@@ -442,6 +440,8 @@
                                         <argument>org.apache.druid.extensions:druid-ranger-security</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kubernetes-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-catalog</argument>
                                         <argument>${druid.distribution.pulldeps.opts}</argument>
                                     </arguments>
                                 </configuration>

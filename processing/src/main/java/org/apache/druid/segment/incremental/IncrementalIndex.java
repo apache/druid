@@ -48,7 +48,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.AbstractIndex;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -66,7 +65,6 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -104,7 +102,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
-public abstract class IncrementalIndex extends AbstractIndex implements Iterable<Row>, Closeable, ColumnInspector
+public abstract class IncrementalIndex implements Iterable<Row>, Closeable, ColumnInspector
 {
   /**
    * Column selector used at ingestion time for inputs to aggregators.
@@ -921,18 +919,11 @@ public abstract class IncrementalIndex extends AbstractIndex implements Iterable
     return ImmutableList.copyOf(metricDescs.keySet());
   }
 
-  @Override
   public List<String> getColumnNames()
   {
     List<String> columnNames = new ArrayList<>(getDimensionNames());
     columnNames.addAll(getMetricNames());
     return columnNames;
-  }
-
-  @Override
-  public StorageAdapter toStorageAdapter()
-  {
-    return new IncrementalIndexStorageAdapter(this);
   }
 
   public Metadata getMetadata()

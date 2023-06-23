@@ -60,7 +60,7 @@ public class MultiValueStringOperatorConversions
         .operatorBuilder("MV_APPEND")
         .operandTypeChecker(
             OperandTypes.sequence(
-                "(array,expr)",
+                "'MV_APPEND(array, expr)'",
                 OperandTypes.or(
                     OperandTypes.family(SqlTypeFamily.ARRAY),
                     OperandTypes.family(SqlTypeFamily.STRING)
@@ -85,7 +85,7 @@ public class MultiValueStringOperatorConversions
         .operatorBuilder("MV_PREPEND")
         .operandTypeChecker(
             OperandTypes.sequence(
-                "(expr,array)",
+                "'MV_PREPEND(expr, array)'",
                 OperandTypes.family(SqlTypeFamily.STRING),
                 OperandTypes.or(
                     OperandTypes.family(SqlTypeFamily.ARRAY),
@@ -110,7 +110,7 @@ public class MultiValueStringOperatorConversions
         .operatorBuilder("MV_CONCAT")
         .operandTypeChecker(
             OperandTypes.sequence(
-                "(array,array)",
+                "'MV_CONCAT(array, array)'",
                 OperandTypes.or(
                     OperandTypes.family(SqlTypeFamily.ARRAY),
                     OperandTypes.family(SqlTypeFamily.STRING)
@@ -138,7 +138,7 @@ public class MultiValueStringOperatorConversions
         .operatorBuilder("MV_CONTAINS")
         .operandTypeChecker(
             OperandTypes.sequence(
-                "(array,array)",
+                "'MV_CONTAINS(array, array)'",
                 OperandTypes.or(
                     OperandTypes.family(SqlTypeFamily.ARRAY),
                     OperandTypes.family(SqlTypeFamily.STRING)
@@ -166,7 +166,7 @@ public class MultiValueStringOperatorConversions
         .operatorBuilder("MV_OFFSET")
         .operandTypeChecker(
             OperandTypes.sequence(
-                "(array,expr)",
+                "'MV_OFFSET(array, expr)'",
                 OperandTypes.or(
                     OperandTypes.family(SqlTypeFamily.ARRAY),
                     OperandTypes.family(SqlTypeFamily.STRING)
@@ -191,7 +191,7 @@ public class MultiValueStringOperatorConversions
         .operatorBuilder("MV_ORDINAL")
         .operandTypeChecker(
             OperandTypes.sequence(
-                "(array,expr)",
+                "'MV_ORDINAL(array, expr)'",
                 OperandTypes.or(
                     OperandTypes.family(SqlTypeFamily.ARRAY),
                     OperandTypes.family(SqlTypeFamily.STRING)
@@ -217,7 +217,7 @@ public class MultiValueStringOperatorConversions
         .operandTypeChecker(
             OperandTypes.or(
                 OperandTypes.sequence(
-                    "(expr,start)",
+                    "'MV_SLICE(expr, start)'",
                     OperandTypes.or(
                         OperandTypes.family(SqlTypeFamily.ARRAY),
                         OperandTypes.family(SqlTypeFamily.STRING)
@@ -225,7 +225,7 @@ public class MultiValueStringOperatorConversions
                     OperandTypes.family(SqlTypeFamily.NUMERIC)
                 ),
                 OperandTypes.sequence(
-                    "(expr,start,end)",
+                    "'MV_SLICE(expr, start, end)'",
                     OperandTypes.or(
                         OperandTypes.family(SqlTypeFamily.ARRAY),
                         OperandTypes.family(SqlTypeFamily.STRING)
@@ -252,7 +252,7 @@ public class MultiValueStringOperatorConversions
         .operatorBuilder("STRING_TO_MV")
         .operandTypeChecker(
             OperandTypes.sequence(
-                "(string,expr)",
+                "'STRING_TO_MV(string, expr)'",
                 OperandTypes.family(SqlTypeFamily.STRING),
                 OperandTypes.family(SqlTypeFamily.STRING)
             )
@@ -397,7 +397,7 @@ public class MultiValueStringOperatorConversions
         .operatorBuilder("MV_FILTER_ONLY")
         .operandTypeChecker(
             OperandTypes.sequence(
-                "(string,array)",
+                "'MV_FILTER_ONLY(string, array)'",
                 OperandTypes.family(SqlTypeFamily.STRING),
                 OperandTypes.family(SqlTypeFamily.ARRAY)
             )
@@ -426,7 +426,7 @@ public class MultiValueStringOperatorConversions
         .operatorBuilder("MV_FILTER_NONE")
         .operandTypeChecker(
             OperandTypes.sequence(
-                "(string,array)",
+                "'MV_FILTER_NONE(string, array)'",
                 OperandTypes.family(SqlTypeFamily.STRING),
                 OperandTypes.family(SqlTypeFamily.ARRAY)
             )

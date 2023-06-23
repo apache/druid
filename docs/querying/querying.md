@@ -108,7 +108,7 @@ curl -X DELETE "http://host:port/druid/v2/abc123"
 
 ### Authentication and authorization failures
 
-For [secured](../design/auth.md) Druid clusters, query requests respond with an HTTP 401 response code in case of an authentication failure. For authorization failures, an HTTP 403 response code is returned. 
+For [secured](../operations/auth.md) Druid clusters, query requests respond with an HTTP 401 response code in case of an authentication failure. For authorization failures, an HTTP 403 response code is returned. 
 
 ### Query execution failures
 

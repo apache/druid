@@ -56,7 +56,6 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new ColumnNameRestrictedFault("the column"));
     assertFaultSerde(new InsertCannotAllocateSegmentFault("the datasource", Intervals.ETERNITY));
     assertFaultSerde(new InsertCannotBeEmptyFault("the datasource"));
-    assertFaultSerde(new InsertCannotOrderByDescendingFault("the column"));
     assertFaultSerde(InsertLockPreemptedFault.INSTANCE);
     assertFaultSerde(InsertTimeNullFault.INSTANCE);
     assertFaultSerde(new InsertTimeOutOfBoundsFault(Intervals.ETERNITY));
@@ -66,7 +65,7 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new QueryRuntimeFault("new error", "base error"));
     assertFaultSerde(new QueryRuntimeFault("new error", null));
     assertFaultSerde(new RowTooLargeFault(1000));
-    assertFaultSerde(new TaskStartTimeoutFault(10, 11));
+    assertFaultSerde(new TaskStartTimeoutFault(1, 10, 11));
     assertFaultSerde(new TooManyBucketsFault(10));
     assertFaultSerde(new TooManyColumnsFault(10, 8));
     assertFaultSerde(new TooManyClusteredByColumnsFault(10, 8, 1));
