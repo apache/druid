@@ -27,9 +27,13 @@ import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.junit.LoggerCaptureRule;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
+import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -121,6 +125,8 @@ public final class CuratorModuleTest
         .add(
             new LifecycleModule(),
             new CuratorModule(false),
+            binder -> binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class),
+            binder -> binder.bind(MonitorScheduler.class).toInstance(EasyMock.mock(MonitorScheduler.class)),
             binder -> binder.bind(Properties.class).toInstance(props)
          )
         .build();
