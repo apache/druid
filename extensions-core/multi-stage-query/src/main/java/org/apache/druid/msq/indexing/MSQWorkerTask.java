@@ -155,6 +155,14 @@ public class MSQWorkerTask extends AbstractTask
   }
 
   @Override
+  public boolean supportsQueries()
+  {
+    // Even though we don't have a QueryResource, we do embed a query stack, and so we need preloaded resources
+    // such as broadcast tables.
+    return true;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

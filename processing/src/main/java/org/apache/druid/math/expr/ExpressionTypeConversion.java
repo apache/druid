@@ -19,6 +19,7 @@
 
 package org.apache.druid.math.expr;
 
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
@@ -151,8 +152,13 @@ public class ExpressionTypeConversion
     return numeric(type, other);
   }
 
+  /**
+   * {@link ColumnType#leastRestrictiveType(ColumnType, ColumnType)} but for expression
+   * types
+   */
   @Nullable
-  public static ExpressionType coerceArrayTypes(@Nullable ExpressionType type, @Nullable ExpressionType other)
+  public static ExpressionType leastRestrictiveType(@Nullable ExpressionType type, @Nullable ExpressionType other)
+      throws Types.IncompatibleTypeException
   {
     if (type == null) {
       return other;
@@ -160,23 +166,66 @@ public class ExpressionTypeConversion
     if (other == null) {
       return type;
     }
-
-    if (Objects.equals(type, other)) {
+    if (type.is(ExprType.COMPLEX) && other.is(ExprType.COMPLEX)) {
+      if (type.getComplexTypeName() == null) {
+        return other;
+      }
+      if (other.getComplexTypeName() == null) {
+        return type;
+      }
+      if (!Objects.equals(type, other)) {
+        throw new Types.IncompatibleTypeException(type, other);
+      }
       return type;
     }
-
-    ExpressionType typeArrayType = type.isArray() ? type : ExpressionTypeFactory.getInstance().ofArray(type);
-    ExpressionType otherArrayType = other.isArray() ? other : ExpressionTypeFactory.getInstance().ofArray(other);
-
-    if (typeArrayType.getElementType().isPrimitive() && otherArrayType.getElementType().isPrimitive()) {
-      ExpressionType newElementType = function(
-          (ExpressionType) typeArrayType.getElementType(),
-          (ExpressionType) otherArrayType.getElementType()
-      );
-      return ExpressionTypeFactory.getInstance().ofArray(newElementType);
+    // if either is nested data, use nested data, otherwise error
+    if (type.is(ExprType.COMPLEX) || other.is(ExprType.COMPLEX)) {
+      if (ExpressionType.NESTED_DATA.equals(type) || ExpressionType.NESTED_DATA.equals(other)) {
+        return ExpressionType.NESTED_DATA;
+      }
+      throw new Types.IncompatibleTypeException(type, other);
     }
 
-    throw new Types.IncompatibleTypeException(type, other);
+    // arrays convert based on least restrictive element type
+    if (type.isArray()) {
+      if (other.equals(type.getElementType())) {
+        return type;
+      }
+      final ExpressionType commonElementType;
+      // commonElementType cannot be null if we got this far, we always return a value unless both args are null
+      if (other.isArray()) {
+        commonElementType = leastRestrictiveType(
+            (ExpressionType) type.getElementType(),
+            (ExpressionType) other.getElementType()
+        );
+
+        return ExpressionTypeFactory.getInstance().ofArray(commonElementType);
+      } else {
+        commonElementType = leastRestrictiveType(
+            (ExpressionType) type.getElementType(),
+            other
+        );
+      }
+      return ExpressionTypeFactory.getInstance().ofArray(commonElementType);
+    }
+    if (other.isArray()) {
+      if (type.equals(type.getElementType())) {
+        return type;
+      }
+      final ExpressionType commonElementType;
+
+      commonElementType = leastRestrictiveType(
+          type,
+          (ExpressionType) other.getElementType()
+      );
+      return ExpressionTypeFactory.getInstance().ofArray(commonElementType);
+    }
+    // if either argument is a string, type becomes a string
+    if (Types.is(type, ExprType.STRING) || Types.is(other, ExprType.STRING)) {
+      return ExpressionType.STRING;
+    }
+
+    return numeric(type, other);
   }
 
 
