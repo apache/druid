@@ -106,7 +106,7 @@ public class LazilyDecoratedRowsAndColumns implements DecoratableRowsAndColumns
   @Override
   public void limitTimeRange(Interval interval)
   {
-    if (interval == null) {
+    if (this.interval == null) {
       this.interval = interval;
     } else {
       this.interval = this.interval.overlap(interval);
@@ -116,7 +116,7 @@ public class LazilyDecoratedRowsAndColumns implements DecoratableRowsAndColumns
   @Override
   public void addFilter(Filter filter)
   {
-    if (filter == null) {
+    if (this.filter == null) {
       this.filter = filter;
     } else {
       LinkedHashSet<Filter> newFilters = new LinkedHashSet<>();
@@ -134,7 +134,7 @@ public class LazilyDecoratedRowsAndColumns implements DecoratableRowsAndColumns
   @Override
   public void addVirtualColumns(VirtualColumns virtualColumns)
   {
-    if (virtualColumns == null) {
+    if (this.virtualColumns == null) {
       this.virtualColumns = virtualColumns;
     } else {
       final VirtualColumn[] existing = this.virtualColumns.getVirtualColumns();
@@ -150,7 +150,7 @@ public class LazilyDecoratedRowsAndColumns implements DecoratableRowsAndColumns
   @Override
   public void setLimit(int numRows)
   {
-    if (limit == -1) {
+    if (this.limit == -1) {
       this.limit = numRows;
     } else {
       this.limit = Math.min(limit, numRows);
@@ -160,7 +160,7 @@ public class LazilyDecoratedRowsAndColumns implements DecoratableRowsAndColumns
   @Override
   public void restrictColumns(List<String> columns)
   {
-    if (viewableColumns == null) {
+    if (this.viewableColumns == null) {
       this.viewableColumns = new LinkedHashSet<>(columns);
     } else {
       LinkedHashSet<String> cols = new LinkedHashSet<>();
