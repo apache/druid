@@ -1327,7 +1327,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
 
       final Object valAtPath = NestedPathFinder.find(data.getValue(), parts);
       final ExprEval eval = ExprEval.bestEffortOf(valAtPath);
-      if (eval.type().isPrimitive() || eval.type().isArrayPrimitive()) {
+      if (eval.type().isPrimitive() || eval.type().isPrimitiveArray()) {
         return eval.valueOrDefault();
       }
       // not a primitive value, return null;

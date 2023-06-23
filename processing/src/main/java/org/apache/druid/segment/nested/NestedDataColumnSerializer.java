@@ -98,7 +98,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
       if (writer != null) {
         try {
           final ExprEval<?> eval = ExprEval.bestEffortOf(fieldValue);
-          if (eval.type().isPrimitive() || eval.type().isArrayPrimitive()) {
+          if (eval.type().isPrimitive() || eval.type().isPrimitiveArray()) {
             writer.addValue(rowCount, eval.value());
           } else {
             // behave consistently with nested column indexer, which defaults to string
@@ -122,7 +122,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
     )
     {
       final ExprEval<?> eval = ExprEval.bestEffortArray(array);
-      if (eval.type().isArrayPrimitive()) {
+      if (eval.type().isPrimitiveArray()) {
         final GlobalDictionaryEncodedFieldColumnWriter<?> writer = fieldWriters.get(
             NestedPathFinder.toNormalizedJsonPath(fieldPath)
         );

@@ -168,7 +168,7 @@ public interface TypeSignature<Type extends TypeDescriptor>
   }
 
   @JsonIgnore
-  default boolean isArrayPrimitive()
+  default boolean isPrimitiveArray()
   {
     return getType().isArray() && getElementType() != null && getElementType().isPrimitive();
   }

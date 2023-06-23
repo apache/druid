@@ -353,7 +353,7 @@ public class NestedDataExpressions
             final ExprEval valAtPath = ExprEval.bestEffortOf(
                 NestedPathFinder.find(unwrap(input), parts)
             );
-            if (valAtPath.type().isPrimitive() || valAtPath.type().isArrayPrimitive()) {
+            if (valAtPath.type().isPrimitive() || valAtPath.type().isPrimitiveArray()) {
               return valAtPath.castTo(castTo);
             }
             return ExprEval.ofType(castTo, null);
@@ -390,7 +390,7 @@ public class NestedDataExpressions
             final ExprEval valAtPath = ExprEval.bestEffortOf(
                 NestedPathFinder.find(unwrap(input), parts)
             );
-            if (valAtPath.type().isPrimitive() || valAtPath.type().isArrayPrimitive()) {
+            if (valAtPath.type().isPrimitive() || valAtPath.type().isPrimitiveArray()) {
               return valAtPath;
             }
             return ExprEval.of(null);
@@ -497,7 +497,7 @@ public class NestedDataExpressions
         {
           // we only want to return a non-null value here if the value is an array of primitive values
           ExprEval<?> eval = ExprEval.bestEffortArray(array);
-          if (eval.type().isArrayPrimitive()) {
+          if (eval.type().isPrimitiveArray()) {
             return ProcessedValue.NULL_LITERAL;
           }
           return null;
