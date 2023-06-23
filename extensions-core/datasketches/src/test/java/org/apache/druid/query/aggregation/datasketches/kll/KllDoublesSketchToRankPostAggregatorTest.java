@@ -120,7 +120,7 @@ public class KllDoublesSketchToRankPostAggregatorTest
     final PostAggregator postAgg = new KllDoublesSketchToRankPostAggregator(
         "rank",
         new FieldAccessPostAggregator("field", "sketch"),
-        4
+        3
     );
 
     final double rank = (double) postAgg.compute(fields);

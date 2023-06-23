@@ -30,7 +30,7 @@ At ingestion time, the Theta sketch aggregator creates Theta sketch objects whic
 
 Note that you can use `thetaSketch` aggregator on columns which were not ingested using the same. It will return estimated cardinality of the column. It is recommended to use it at ingestion time as well to make querying faster.
 
-To use this aggregator, make sure you [include](../../development/extensions.md#loading-extensions) the extension in your config file:
+To use this aggregator, make sure you [include](../../configuration/extensions.md#loading-extensions) the extension in your config file:
 
 ```
 druid.extensions.loadList=["druid-datasketches"]

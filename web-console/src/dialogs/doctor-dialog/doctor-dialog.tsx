@@ -45,8 +45,8 @@ export interface DoctorDialogState {
 export class DoctorDialog extends React.PureComponent<DoctorDialogProps, DoctorDialogState> {
   private mounted = false;
 
-  constructor(props: DoctorDialogProps, context: any) {
-    super(props, context);
+  constructor(props: DoctorDialogProps) {
+    super(props);
     this.state = {};
   }
 

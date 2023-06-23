@@ -55,7 +55,7 @@ public class KllDoublesSketchComplexMetricSerdeTest
         "foo"
     );
     Assert.assertEquals(1, sketch.getNumRetained());
-    Assert.assertEquals(777d, sketch.getMaxValue(), 0.01d);
+    Assert.assertEquals(777d, sketch.getMaxItem(), 0.01d);
   }
 
   @Test
@@ -68,7 +68,7 @@ public class KllDoublesSketchComplexMetricSerdeTest
         "foo"
     );
     Assert.assertEquals(1, sketch.getNumRetained());
-    Assert.assertEquals(-133d, sketch.getMaxValue(), 0.01d);
+    Assert.assertEquals(-133d, sketch.getMaxItem(), 0.01d);
   }
 
   @Test
@@ -81,7 +81,7 @@ public class KllDoublesSketchComplexMetricSerdeTest
         "foo"
     );
     Assert.assertEquals(1, sketch.getNumRetained());
-    Assert.assertEquals(3.1d, sketch.getMaxValue(), 0.01d);
+    Assert.assertEquals(3.1d, sketch.getMaxItem(), 0.01d);
   }
 
   @Test
@@ -94,7 +94,7 @@ public class KllDoublesSketchComplexMetricSerdeTest
         "foo"
     );
     Assert.assertEquals(1, sketch.getNumRetained());
-    Assert.assertEquals(0.1d, sketch.getMaxValue(), 0.01d);
+    Assert.assertEquals(0.1d, sketch.getMaxItem(), 0.01d);
   }
 
   @Test
