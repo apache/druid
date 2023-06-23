@@ -936,7 +936,12 @@ public class ControllerImpl implements Controller
         }
       }
 
-      if (allocation == null) {
+      // Even if allocation isn't null, the overlord makes the best effort job of allocating a segment with the given
+      // segmentGranularity. This is commonly seen in case when there is already a coarser segment in the interval where
+      // the requested segment is present and that segment completely overlaps the request. Throw an error if the interval
+      // doesn't match the granularity requested
+      if (allocation == null
+          || !IntervalUtils.doesIntervalMatchesGranularity(allocation.getInterval(), segmentGranularity)) {
         throw new MSQException(
             new InsertCannotAllocateSegmentFault(
                 task.getDataSource(),
