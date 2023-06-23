@@ -618,7 +618,9 @@ public class QueryTestRunner
   public QueryTestRunner(QueryTestBuilder builder)
   {
     QueryTestConfig config = builder.config;
-    Assume.assumeTrue(!config.isRunningMSQ() || builder.msqCompatible);
+    if (config.isRunningMSQ()) {
+      Assume.assumeTrue(builder.msqCompatible);
+    }
     if (builder.expectedResultsVerifier == null && builder.expectedResults != null) {
       builder.expectedResultsVerifier = config.defaultResultsVerifier(
           builder.expectedResults,

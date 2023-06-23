@@ -1007,14 +1007,16 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testMVToArrayWithValidInputs()
+  public void testMultiValueStringToArrayWithValidInputs()
   {
     assertArrayExpr("mv_to_array(x)", new String[]{"foo"});
     assertArrayExpr("mv_to_array(a)", new String[]{"foo", "bar", "baz", "foobar"});
+    assertArrayExpr("mv_to_array(b)", new String[]{"1", "2", "3", "4", "5"});
+    assertArrayExpr("mv_to_array(c)", new String[]{"3.1", "4.2", "5.3"});
   }
 
   @Test
-  public void testMVToArrayWithConstantLiteral()
+  public void testMultiValueStringToArrayWithInvalidInputs()
   {
     Throwable t = Assert.assertThrows(
         ExpressionValidationException.class,
@@ -1024,12 +1026,8 @@ public class FunctionTest extends InitializedNullHandlingTest
         "Function[mv_to_array] argument 1 should be an identifier expression. Use array() instead",
         t.getMessage()
     );
-  }
 
-  @Test
-  public void testMVToArrayWithFunction()
-  {
-    Throwable t = Assert.assertThrows(
+    t = Assert.assertThrows(
         ExpressionValidationException.class,
         () -> assertArrayExpr("mv_to_array(repeat('hello', 2))", null)
     );
@@ -1037,14 +1035,19 @@ public class FunctionTest extends InitializedNullHandlingTest
         "Function[mv_to_array] argument (repeat [hello, 2]) should be an identifier expression. Use array() instead",
         t.getMessage()
     );
-  }
 
-  @Test
-  public void testMVToArrayWithMoreArgs()
-  {
-    Throwable t = Assert.assertThrows(
+    t = Assert.assertThrows(
         ExpressionValidationException.class,
         () -> assertArrayExpr("mv_to_array(x,y)", null)
+    );
+    Assert.assertEquals(
+        "Function[mv_to_array] requires 1 argument",
+        t.getMessage()
+    );
+
+    t = Assert.assertThrows(
+        ExpressionValidationException.class,
+        () -> assertArrayExpr("mv_to_array()", null)
     );
     Assert.assertEquals(
         "Function[mv_to_array] requires 1 argument",
@@ -1053,9 +1056,42 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testMVToArrayWithNoArgs()
+  public void testArrayToMultiValueStringWithValidInputs()
+  {
+    assertArrayExpr("array_to_mv(x)", new String[]{"foo"});
+    assertArrayExpr("array_to_mv(a)", new String[]{"foo", "bar", "baz", "foobar"});
+    assertArrayExpr("array_to_mv(b)", new String[]{"1", "2", "3", "4", "5"});
+    assertArrayExpr("array_to_mv(c)", new String[]{"3.1", "4.2", "5.3"});
+  }
+
+  @Test
+  public void testArrayToMultiValueStringWithInvalidInputs()
   {
     Throwable t = Assert.assertThrows(
+        ExpressionValidationException.class,
+        () -> assertArrayExpr("mv_to_array('1')", null)
+    );
+    Assert.assertEquals(
+        "Function[mv_to_array] argument 1 should be an identifier expression. Use array() instead",
+        t.getMessage()
+    );
+    t = Assert.assertThrows(
+        ExpressionValidationException.class,
+        () -> assertArrayExpr("mv_to_array(repeat('hello', 2))", null)
+    );
+    Assert.assertEquals(
+        "Function[mv_to_array] argument (repeat [hello, 2]) should be an identifier expression. Use array() instead",
+        t.getMessage()
+    );
+    t = Assert.assertThrows(
+        ExpressionValidationException.class,
+        () -> assertArrayExpr("mv_to_array(x,y)", null)
+    );
+    Assert.assertEquals(
+        "Function[mv_to_array] requires 1 argument",
+        t.getMessage()
+    );
+    t = Assert.assertThrows(
         ExpressionValidationException.class,
         () -> assertArrayExpr("mv_to_array()", null)
     );

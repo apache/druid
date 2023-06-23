@@ -230,8 +230,8 @@ export class FlexibleQueryInput extends React.PureComponent<
     return null;
   }
 
-  constructor(props: FlexibleQueryInputProps, context: any) {
-    super(props, context);
+  constructor(props: FlexibleQueryInputProps) {
+    super(props);
     this.state = {
       editorHeight: 200,
       quotedCompletions: [],

@@ -31,6 +31,8 @@ import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
  */
 public class CalcitePlannerModule implements Module
 {
+  public static final String CONFIG_BASE = "druid.sql.planner";
+
   @Override
   public void configure(Binder binder)
   {
@@ -38,8 +40,8 @@ public class CalcitePlannerModule implements Module
     // so both configs are bound to the same property prefix.
     // It turns out that the order of the arguments above is misleading.
     // We're actually binding the class to the config prefix, not the other way around.
-    JsonConfigProvider.bind(binder, "druid.sql.planner", PlannerConfig.class);
-    JsonConfigProvider.bind(binder, "druid.sql.planner", SegmentMetadataCacheConfig.class);
+    JsonConfigProvider.bind(binder, CONFIG_BASE, PlannerConfig.class);
+    JsonConfigProvider.bind(binder, CONFIG_BASE, SegmentMetadataCacheConfig.class);
     binder.bind(PlannerFactory.class).in(LazySingleton.class);
     binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
     Multibinder.newSetBinder(binder, ExtensionCalciteRuleProvider.class);

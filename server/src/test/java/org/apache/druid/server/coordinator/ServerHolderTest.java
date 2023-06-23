@@ -26,6 +26,7 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
@@ -115,8 +116,8 @@ public class ServerHolderTest
     );
 
     Assert.assertEquals(0, h1.compareTo(h2));
-    Assert.assertEquals(-1, h3.compareTo(h1));
-    Assert.assertEquals(-1, h3.compareTo(h4));
+    Assert.assertEquals(1, h3.compareTo(h1));
+    Assert.assertEquals(1, h3.compareTo(h4));
   }
 
   @Test
@@ -192,7 +193,7 @@ public class ServerHolderTest
     );
     Assert.assertTrue(h1.isServingSegment(SEGMENTS.get(0)));
     Assert.assertFalse(h1.isServingSegment(SEGMENTS.get(1)));
-    Assert.assertTrue(h1.isServingSegment(SEGMENTS.get(0).getId()));
-    Assert.assertFalse(h1.isServingSegment(SEGMENTS.get(1).getId()));
+    Assert.assertTrue(h1.hasSegmentLoaded(SEGMENTS.get(0).getId()));
+    Assert.assertFalse(h1.hasSegmentLoaded(SEGMENTS.get(1).getId()));
   }
 }

@@ -51,6 +51,7 @@ import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 @RunWith(Enclosed.class)
@@ -65,6 +66,7 @@ public class OperatorConversionsTest
     public void testGetOperandCountRange()
     {
       SqlOperandTypeChecker typeChecker = new DefaultOperandTypeChecker(
+          Collections.emptyList(),
           ImmutableList.of(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
           2,
           IntSets.EMPTY_SET,
@@ -79,6 +81,7 @@ public class OperatorConversionsTest
     public void testIsOptional()
     {
       SqlOperandTypeChecker typeChecker = new DefaultOperandTypeChecker(
+          Collections.emptyList(),
           ImmutableList.of(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER),
           2,
           IntSets.EMPTY_SET,
@@ -415,6 +418,41 @@ public class OperatorConversionsTest
               )
           ),
           true
+      );
+    }
+
+    @Test
+    public void testSignatureWithNames()
+    {
+      SqlFunction function = OperatorConversions
+          .operatorBuilder("testSignatureWithNames")
+          .operandNames("x", "y", "z")
+          .operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.DATE, SqlTypeFamily.ANY)
+          .requiredOperandCount(1)
+          .returnTypeNonNull(SqlTypeName.CHAR)
+          .build();
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+
+      Assert.assertEquals(
+          "'testSignatureWithNames(<x>, [<y>, [<z>]])'",
+          typeChecker.getAllowedSignatures(function, function.getName())
+      );
+    }
+
+    @Test
+    public void testSignatureWithoutNames()
+    {
+      SqlFunction function = OperatorConversions
+          .operatorBuilder("testSignatureWithoutNames")
+          .operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.DATE, SqlTypeFamily.ANY)
+          .requiredOperandCount(1)
+          .returnTypeNonNull(SqlTypeName.CHAR)
+          .build();
+      SqlOperandTypeChecker typeChecker = function.getOperandTypeChecker();
+
+      Assert.assertEquals(
+          "'testSignatureWithoutNames(<INTEGER>, [<DATE>, [<ANY>]])'",
+          typeChecker.getAllowedSignatures(function, function.getName())
       );
     }
 

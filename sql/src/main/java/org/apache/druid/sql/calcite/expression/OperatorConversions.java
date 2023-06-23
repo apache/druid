@@ -66,6 +66,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -342,9 +343,10 @@ public class OperatorConversions
 
     // For operand type checking
     private SqlOperandTypeChecker operandTypeChecker;
+    private List<String> operandNames = Collections.emptyList();
     private List<SqlTypeFamily> operandTypes;
-    private Integer requiredOperandCount = null;
-    private int[] literalOperands = null;
+    private Integer requiredOperandCount;
+    private int[] literalOperands;
     private SqlOperandTypeInference operandTypeInference;
 
     private OperatorBuilder(final String name)
@@ -478,6 +480,17 @@ public class OperatorConversions
     }
 
     /**
+     * Signifies that a function accepts operands with the provided names. This is used to implement
+     * {@link SqlOperandTypeChecker#getAllowedSignatures(SqlOperator, String)}. If not provided, the
+     * {@link #operandTypes} are used instead.
+     */
+    public OperatorBuilder<T> operandNames(final String... operandNames)
+    {
+      this.operandNames = Arrays.asList(operandNames);
+      return this;
+    }
+
+    /**
      * Signifies that a function accepts operands of type family given by {@param operandTypes}.
      *
      * May be used in conjunction with {@link #requiredOperandCount(int)} and {@link #literalOperands(int...)} in order
@@ -537,12 +550,6 @@ public class OperatorConversions
       return this;
     }
 
-    public OperatorBuilder<T> sqlKind(SqlKind kind)
-    {
-      this.kind = kind;
-      return this;
-    }
-
     /**
      * Creates a {@link SqlFunction} from this builder.
      */
@@ -574,16 +581,21 @@ public class OperatorConversions
     {
       if (operandTypeChecker == null) {
         return new DefaultOperandTypeChecker(
+            operandNames,
             operandTypes,
             requiredOperandCount == null ? operandTypes.size() : requiredOperandCount,
             nullableOperands,
             literalOperands
         );
-      } else if (operandTypes == null && requiredOperandCount == null && literalOperands == null) {
+      } else if (operandNames.isEmpty()
+                 && operandTypes == null
+                 && requiredOperandCount == null
+                 && literalOperands == null) {
         return operandTypeChecker;
       } else {
         throw new ISE(
-            "Cannot have both 'operandTypeChecker' and 'operandTypes' / 'requiredOperands' / 'literalOperands'"
+            "Cannot have both 'operandTypeChecker' and "
+            + "'operandNames' / 'operandTypes' / 'requiredOperands' / 'literalOperands'"
         );
       }
     }
@@ -732,6 +744,11 @@ public class OperatorConversions
   @VisibleForTesting
   static class DefaultOperandTypeChecker implements SqlOperandTypeChecker
   {
+    /**
+     * Operand names for {@link #getAllowedSignatures(SqlOperator, String)}. May be empty, in which case the
+     * {@link #operandTypes} are used instead.
+     */
+    private final List<String> operandNames;
     private final List<SqlTypeFamily> operandTypes;
     private final int requiredOperands;
     private final IntSet nullableOperands;
@@ -739,6 +756,7 @@ public class OperatorConversions
 
     @VisibleForTesting
     DefaultOperandTypeChecker(
+        final List<String> operandNames,
         final List<SqlTypeFamily> operandTypes,
         final int requiredOperands,
         final IntSet nullableOperands,
@@ -746,9 +764,14 @@ public class OperatorConversions
     )
     {
       Preconditions.checkArgument(requiredOperands <= operandTypes.size() && requiredOperands >= 0);
+      this.operandNames = Preconditions.checkNotNull(operandNames, "operandNames");
       this.operandTypes = Preconditions.checkNotNull(operandTypes, "operandTypes");
       this.requiredOperands = requiredOperands;
       this.nullableOperands = Preconditions.checkNotNull(nullableOperands, "nullableOperands");
+
+      if (!operandNames.isEmpty() && operandNames.size() != operandTypes.size()) {
+        throw new ISE("Operand name count[%s] and type count[%s] must match", operandNames.size(), operandTypes.size());
+      }
 
       if (literalOperands == null) {
         this.literalOperands = IntSets.EMPTY_SET;
@@ -816,7 +839,25 @@ public class OperatorConversions
     @Override
     public String getAllowedSignatures(SqlOperator op, String opName)
     {
-      return SqlUtil.getAliasedSignature(op, opName, operandTypes);
+      final List<?> operands = !operandNames.isEmpty() ? operandNames : operandTypes;
+      final StringBuilder ret = new StringBuilder();
+      ret.append("'");
+      ret.append(opName);
+      ret.append("(");
+      for (int i = 0; i < operands.size(); i++) {
+        if (i > 0) {
+          ret.append(", ");
+        }
+        if (i >= requiredOperands) {
+          ret.append("[");
+        }
+        ret.append("<").append(operands.get(i)).append(">");
+      }
+      for (int i = requiredOperands; i < operands.size(); i++) {
+        ret.append("]");
+      }
+      ret.append(")'");
+      return ret.toString();
     }
 
     @Override

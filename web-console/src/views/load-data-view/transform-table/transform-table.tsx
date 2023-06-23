@@ -23,6 +23,7 @@ import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
 import type { Transform } from '../../../druid-models';
+import { TIME_COLUMN } from '../../../druid-models';
 import {
   DEFAULT_TABLE_CLASS_NAME,
   STANDARD_TABLE_PAGE_SIZE,
@@ -79,7 +80,7 @@ export const TransformTable = React.memo(function TransformTable(props: Transfor
       showPagination={sampleResponse.data.length > STANDARD_TABLE_PAGE_SIZE}
       columns={filterMap(getHeaderNamesFromSampleResponse(sampleResponse), (columnName, i) => {
         if (!caseInsensitiveContains(columnName, columnFilter)) return;
-        const timestamp = columnName === '__time';
+        const isTimestamp = columnName === TIME_COLUMN;
         const transformIndex = transforms.findIndex(f => f.name === columnName);
         if (transformIndex === -1 && transformedColumnsOnly) return;
         const transform = transforms[transformIndex];
@@ -119,7 +120,7 @@ export const TransformTable = React.memo(function TransformTable(props: Transfor
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
           width: 140,
           Cell: function TransformTableCell(row: RowRenderProps) {
-            return <TableCell value={timestamp ? new Date(row.value) : row.value} />;
+            return <TableCell value={isTimestamp ? new Date(Number(row.value)) : row.value} />;
           },
         };
       })}

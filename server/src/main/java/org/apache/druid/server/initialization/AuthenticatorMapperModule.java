@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.initialization;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -103,11 +102,7 @@ public class AuthenticatorMapperModule implements DruidModule
         }
         authenticatorProvider.inject(adjustedProps, configurator);
 
-        Supplier<Authenticator> authenticatorSupplier = authenticatorProvider.get();
-        if (authenticatorSupplier == null) {
-          throw new ISE("Could not create authenticator with name: %s", authenticatorName);
-        }
-        Authenticator authenticator = authenticatorSupplier.get();
+        Authenticator authenticator = authenticatorProvider.get();
         authenticatorMap.put(authenticatorName, authenticator);
       }
 

@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
-import org.apache.druid.msq.indexing.error.InsertCannotOrderByDescendingFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
 import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
@@ -89,23 +88,6 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedMSQFault(new InsertCannotBeEmptyFault("foo1"))
-                     .verifyResults();
-  }
-
-  @Test
-  public void testInsertCannotOrderByDescendingFault()
-  {
-    RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
-
-    // Add an DESC clustered by column, which should not be allowed
-    testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time < TIMESTAMP '2000-01-02 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1 DESC")
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .setExpectedMSQFault(new InsertCannotOrderByDescendingFault("d1"))
                      .verifyResults();
   }
 

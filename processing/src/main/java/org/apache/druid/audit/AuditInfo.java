@@ -22,6 +22,8 @@ package org.apache.druid.audit;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 public class AuditInfo
 {
   private final String author;
@@ -67,29 +69,16 @@ public class AuditInfo
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    AuditInfo that = (AuditInfo) o;
-
-    if (!author.equals(that.author)) {
-      return false;
-    }
-    if (!comment.equals(that.comment)) {
-      return false;
-    }
-    if (!ip.equals(that.ip)) {
-      return false;
-    }
-
-    return true;
+    AuditInfo auditInfo = (AuditInfo) o;
+    return Objects.equals(author, auditInfo.author)
+           && Objects.equals(comment, auditInfo.comment)
+           && Objects.equals(ip, auditInfo.ip);
   }
 
   @Override
   public int hashCode()
   {
-    int result = author.hashCode();
-    result = 31 * result + comment.hashCode();
-    result = 31 * result + ip.hashCode();
-    return result;
+    return Objects.hash(author, comment, ip);
   }
 
   @Override

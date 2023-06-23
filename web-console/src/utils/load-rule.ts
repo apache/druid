@@ -58,7 +58,7 @@ export class RuleUtil {
     if (RuleUtil.hasPeriod(rule))
       params.push(`${rule.period}${rule.includeFuture ? '+future' : ''}`);
     if (RuleUtil.hasInterval(rule)) params.push(rule.interval || '?');
-    if (RuleUtil.hasTieredReplicants(rule)) params.push(`${RuleUtil.totalReplicas(rule)}x`);
+    if (RuleUtil.canHaveTieredReplicants(rule)) params.push(`${RuleUtil.totalReplicas(rule)}x`);
 
     return `${rule.type}(${params.join(', ')})`;
   }
@@ -79,7 +79,7 @@ export class RuleUtil {
       delete newRule.interval;
     }
 
-    if (RuleUtil.hasTieredReplicants(newRule)) {
+    if (RuleUtil.canHaveTieredReplicants(newRule)) {
       if (!newRule.tieredReplicants) newRule.tieredReplicants = { _default_tier: 2 };
     } else {
       delete newRule.tieredReplicants;
@@ -112,7 +112,7 @@ export class RuleUtil {
     return deepSet(rule, 'interval', interval);
   }
 
-  static hasTieredReplicants(rule: Rule): boolean {
+  static canHaveTieredReplicants(rule: Rule): boolean {
     return rule.type.startsWith('load');
   }
 
@@ -135,7 +135,7 @@ export class RuleUtil {
   }
 
   static isColdRule(rule: Rule): boolean {
-    return RuleUtil.hasTieredReplicants(rule) && RuleUtil.totalReplicas(rule) === 0;
+    return RuleUtil.canHaveTieredReplicants(rule) && RuleUtil.totalReplicas(rule) === 0;
   }
 
   static hasColdRule(rules: Rule[] | undefined, defaultRules: Rule[] | undefined): boolean {

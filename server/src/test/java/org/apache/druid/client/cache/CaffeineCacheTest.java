@@ -397,7 +397,7 @@ public class CaffeineCacheTest
         CaffeineCacheConfig.class
     );
     caffeineCacheConfigJsonConfigProvider.inject(properties, configurator);
-    final CaffeineCacheConfig config = caffeineCacheConfigJsonConfigProvider.get().get();
+    final CaffeineCacheConfig config = caffeineCacheConfigJsonConfigProvider.get();
     Assert.assertEquals(10, config.getExpireAfter());
     Assert.assertEquals(100, config.getSizeInBytes());
     Assert.assertNotNull(config.createExecutor());
@@ -428,7 +428,7 @@ public class CaffeineCacheTest
         CaffeineCacheConfig.class
     );
     caffeineCacheConfigJsonConfigProvider.inject(properties, configurator);
-    final CaffeineCacheConfig config = caffeineCacheConfigJsonConfigProvider.get().get();
+    final CaffeineCacheConfig config = caffeineCacheConfigJsonConfigProvider.get();
     Assert.assertEquals(10, config.getExpireAfter());
     Assert.assertEquals(100, config.getSizeInBytes());
     Assert.assertEquals(ForkJoinPool.commonPool(), config.createExecutor());
@@ -456,7 +456,7 @@ public class CaffeineCacheTest
         CaffeineCacheConfig.class
     );
     caffeineCacheConfigJsonConfigProvider.inject(properties, configurator);
-    final CaffeineCacheConfig config = caffeineCacheConfigJsonConfigProvider.get().get();
+    final CaffeineCacheConfig config = caffeineCacheConfigJsonConfigProvider.get();
     Assert.assertEquals(-1, config.getExpireAfter());
     Assert.assertEquals(-1L, config.getSizeInBytes());
     Assert.assertEquals(ForkJoinPool.commonPool(), config.createExecutor());

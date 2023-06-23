@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
@@ -28,10 +29,18 @@ import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.indexing.overlord.sampler.SamplerConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSamplerSpec;
+import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class KafkaSamplerSpec extends SeekableStreamSamplerSpec
 {
@@ -68,5 +77,22 @@ public class KafkaSamplerSpec extends SeekableStreamSamplerSpec
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
     }
+  }
+
+  @Override
+  public String getType()
+  {
+    return KafkaIndexTaskModule.SCHEME;
+  }
+
+  @Override
+  @JsonIgnore
+  @Nonnull
+  public Set<ResourceAction> getInputSourceResources() throws UOE
+  {
+    return Collections.singleton(new ResourceAction(
+        new Resource(KafkaIndexTaskModule.SCHEME, ResourceType.EXTERNAL),
+        Action.READ
+    ));
   }
 }

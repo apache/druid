@@ -36,6 +36,7 @@ public class HllSketchObjectSqlAggregator extends HllSketchBaseSqlAggregator imp
   private static final String NAME = "DS_HLL";
   private static final SqlAggFunction FUNCTION_INSTANCE =
       OperatorConversions.aggregatorBuilder(NAME)
+                         .operandNames("column", "lgK", "tgtHllType")
                          .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING)
                          .operandTypeInference(InferTypes.VARCHAR_1024)
                          .requiredOperandCount(1)

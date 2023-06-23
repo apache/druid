@@ -1120,7 +1120,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
         final Set<ColumnType> types = nestedColumn.getColumnTypes(parts);
         // if the expected output type is numeric but not all of the input types are numeric, we might have additional
         // null values than what the null value bitmap is tracking, wrap it
-        if (expectedType.isNumeric() && types.stream().anyMatch(t -> !t.isNumeric())) {
+        if (expectedType.isNumeric() && (types == null || types.stream().anyMatch(t -> !t.isNumeric()))) {
           return NoIndexesColumnIndexSupplier.getInstance();
         }
       }

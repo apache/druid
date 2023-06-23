@@ -40,8 +40,9 @@ See [SQL multi-value strings](./sql-data-types.md#multi-value-strings) and nativ
 
 All array references in the multi-value string function documentation can refer to multi-value string columns or
 `ARRAY` types. These functions are largely identical to the [array functions](./sql-array-functions.md), but use
-`VARCHAR` types and behavior. Multi-value strings can also be converted to `ARRAY` types using `MV_TO_ARRAY`. For
-additional details about `ARRAY` types, see [`ARRAY` data type documentation](./sql-data-types.md#arrays).
+`VARCHAR` types and behavior. Multi-value strings can also be converted to `ARRAY` types using `MV_TO_ARRAY`, and
+`ARRAY` into multi-value strings via `ARRAY_TO_MV`. For additional details about `ARRAY` types, see
+[`ARRAY` data type documentation](./sql-data-types.md#arrays).
 
 |Function|Description|
 |--------|-----|
@@ -59,5 +60,5 @@ additional details about `ARRAY` types, see [`ARRAY` data type documentation](./
 |`MV_CONCAT(arr1, arr2)`|Concatenates `arr2` to `arr1`. The resulting array type is determined by the type of `arr1`.|
 |`MV_SLICE(arr, start, end)`|Returns the subarray of `arr` from the 0-based index start(inclusive) to end(exclusive), or `null`, if start is less than 0, greater than length of arr or greater than end.|
 |`MV_TO_STRING(arr, str)`|Joins all elements of `arr` by the delimiter specified by `str`.|
-|`STRING_TO_MV(str1, str2)`|Splits `str1` into an array on the delimiter specified by `str2`.|
+|`STRING_TO_MV(str1, str2)`|Splits `str1` into an array on the delimiter specified by `str2`, which is a regular expression.|
 |`MV_TO_ARRAY(str)`|Converts a multi-value string from a `VARCHAR` to a `VARCHAR ARRAY`.|
