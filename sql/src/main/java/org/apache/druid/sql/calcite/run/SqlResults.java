@@ -40,7 +40,6 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -83,13 +82,8 @@ public class SqlResults
                   .map(v -> (String) coerce(jsonMapper, context, v, sqlTypeName))
                   .collect(Collectors.toList());
 
-          try {
-            // Must stringify since the caller is expecting CHAR_TYPES.
-            coercedValue = jsonMapper.writeValueAsString(valueStrings);
-          }
-          catch (IOException e) {
-            throw cannotCoerce(e, value, sqlTypeName);
-          }
+          // Must stringify since the caller is expecting CHAR_TYPES.
+          coercedValue = coerceUsingObjectMapper(jsonMapper, valueStrings, sqlTypeName);
         } else {
           throw cannotCoerce(value, sqlTypeName);
         }
@@ -101,7 +95,9 @@ public class SqlResults
     } else if (sqlTypeName == SqlTypeName.TIMESTAMP) {
       return Calcites.jodaToCalciteTimestamp(coerceDateTime(value, sqlTypeName), context.getTimeZone());
     } else if (sqlTypeName == SqlTypeName.BOOLEAN) {
-      if (value instanceof String) {
+      if (value instanceof Boolean) {
+        coercedValue = value;
+      } else if (value instanceof String) {
         coercedValue = Evals.asBoolean(((String) value));
       } else if (value instanceof Number) {
         coercedValue = Evals.asBoolean(((Number) value).longValue());
@@ -140,12 +136,7 @@ public class SqlResults
     } else if (sqlTypeName == SqlTypeName.OTHER) {
       // Complex type, try to serialize if we should, else print class name
       if (context.isSerializeComplexValues()) {
-        try {
-          coercedValue = jsonMapper.writeValueAsString(value);
-        }
-        catch (JsonProcessingException jex) {
-          throw cannotCoerce(jex, value, sqlTypeName);
-        }
+        coercedValue = coerceUsingObjectMapper(jsonMapper, value, sqlTypeName);
       } else {
         coercedValue = value.getClass().getName();
       }
@@ -156,12 +147,7 @@ public class SqlResults
         } else if (value instanceof NlsString) {
           coercedValue = ((NlsString) value).getValue();
         } else {
-          try {
-            coercedValue = jsonMapper.writeValueAsString(value);
-          }
-          catch (IOException e) {
-            throw cannotCoerce(e, value, sqlTypeName);
-          }
+          coercedValue = coerceUsingObjectMapper(jsonMapper, value, sqlTypeName);
         }
       } else {
         // the protobuf jdbc handler prefers lists (it actually can't handle java arrays as sql arrays, only java lists)
@@ -237,6 +223,20 @@ public class SqlResults
       throw cannotCoerce(value, sqlType);
     }
     return dateTime;
+  }
+
+  private static String coerceUsingObjectMapper(
+      final ObjectMapper jsonMapper,
+      final Object value,
+      final SqlTypeName sqlTypeName
+  )
+  {
+    try {
+      return jsonMapper.writeValueAsString(value);
+    }
+    catch (JsonProcessingException e) {
+      throw cannotCoerce(e, value, sqlTypeName);
+    }
   }
 
   private static IllegalStateException cannotCoerce(
