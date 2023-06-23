@@ -48,7 +48,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   private ObjectMapper jsonMapper;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     jsonMapper = TestHelper.JSON_MAPPER;
   }
