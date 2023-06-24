@@ -55,12 +55,16 @@ import org.apache.druid.jackson.StringObjectPairList;
 import org.apache.druid.jackson.ToStringObjectPairListDeserializer;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.LoggingEmitter;
 import org.apache.druid.java.util.emitter.core.LoggingEmitterConfig;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
+import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.java.util.metrics.MonitorSchedulerConfig;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageProvider;
@@ -77,9 +81,11 @@ import org.apache.druid.testing.IntegrationTestingConfigProvider;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testsEx.cluster.DruidClusterClient;
 import org.apache.druid.testsEx.cluster.MetastoreClient;
+import org.joda.time.Duration;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -168,7 +174,11 @@ public class Initializer
       JsonConfigProvider.bind(binder, MetadataStorageTablesConfig.PROPERTY_BASE, MetadataStorageTablesConfig.class);
 
       // Build from properties provided in the config
-      JsonConfigProvider.bind(binder, MetadataStorageConnectorConfig.PROPERTY_BASE, MetadataStorageConnectorConfig.class);
+      JsonConfigProvider.bind(
+          binder,
+          MetadataStorageConnectorConfig.PROPERTY_BASE,
+          MetadataStorageConnectorConfig.class
+      );
     }
 
     @Provides
@@ -187,6 +197,28 @@ public class Initializer
     public ServiceEmitter getServiceEmitter(ObjectMapper jsonMapper)
     {
       return new ServiceEmitter("", "", new LoggingEmitter(new LoggingEmitterConfig(), jsonMapper));
+    }
+
+    @Provides
+    @ManageLifecycle
+    public MonitorScheduler getMonitorScheduler(ServiceEmitter emitter)
+    {
+      final MonitorSchedulerConfig config =
+          new MonitorSchedulerConfig()
+          {
+            @Override
+            public Duration getEmitterPeriod()
+            {
+              return Duration.standardSeconds(60);
+            }
+          };
+
+      return new BasicMonitorScheduler(
+          config,
+          emitter,
+          Collections.emptyList(),
+          ScheduledExecutors.fixed(1, "MonitorScheduler-%d")
+      );
     }
 
     // From ServerModule to allow deserialization of DiscoveryDruidNode objects from ZK.
@@ -327,7 +359,7 @@ public class Initializer
      * <p>
      * The builder registers {@code DruidNodeDiscoveryProvider} by default: add any
      * test-specific instances as needed.
-      */
+     */
     public Builder eagerInstance(Class<?> theClass)
     {
       this.eagerCreation.add(theClass);
@@ -343,7 +375,7 @@ public class Initializer
       return this;
     }
 
-    public Builder modules(Module...modules)
+    public Builder modules(Module... modules)
     {
       return modules(Arrays.asList(modules));
     }
