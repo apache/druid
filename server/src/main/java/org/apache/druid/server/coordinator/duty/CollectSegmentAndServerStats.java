@@ -86,8 +86,8 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
       stats.add(Stats.SegmentQueue.NUM_TO_DROP, rowKey, queuePeon.getSegmentsToDrop().size());
 
       queuePeon.getAndResetStats().forEachStat(
-          (dimValues, stat, statValue) ->
-              stats.add(stat, createRowKeyForServer(serverName, dimValues), statValue)
+          (stat, key, statValue) ->
+              stats.add(stat, createRowKeyForServer(serverName, key.getValues()), statValue)
       );
     });
 
