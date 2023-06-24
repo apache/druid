@@ -74,7 +74,6 @@ public class WorkerStorageParameters
   )
   {
     long tmpStorageBytesPerTask = injector.getInstance(TaskConfig.class).getTmpStorageBytesPerTask();
-    log.info("Creating WorkerStorageParameters with value of tmpStorageBytesPerTask: [%s]", tmpStorageBytesPerTask);
     return createInstance(tmpStorageBytesPerTask, isIntermediateSuperSorterStorageEnabled);
   }
 
@@ -101,7 +100,7 @@ public class WorkerStorageParameters
     Preconditions.checkArgument(tmpStorageBytesPerTask > 0, "Temporary storage bytes passed: [%s] should be > 0", tmpStorageBytesPerTask);
     long intermediateSuperSorterStorageMaxLocalBytes = computeUsableStorage(tmpStorageBytesPerTask);
 
-    log.info("Useable storage: [%s]", intermediateSuperSorterStorageMaxLocalBytes);
+    log.info("Intermediate super sorter local storage size: %d bytes", intermediateSuperSorterStorageMaxLocalBytes);
 
     if (intermediateSuperSorterStorageMaxLocalBytes < MINIMUM_SUPER_SORTER_TMP_STORAGE_BYTES) {
       throw new MSQException(
