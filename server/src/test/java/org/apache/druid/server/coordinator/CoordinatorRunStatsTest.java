@@ -166,9 +166,9 @@ public class CoordinatorRunStatsTest
 
     final Map<String, Long> actual = new HashMap<>();
     stats.forEachStat(
-        (dimensionValues, stat, value) -> {
+        (stat, rowKey, value) -> {
           if (stat.equals(STAT_1)) {
-            actual.put(dimensionValues.get(Dimension.DUTY), value);
+            actual.put(rowKey.getValues().get(Dimension.DUTY), value);
           }
         }
     );
