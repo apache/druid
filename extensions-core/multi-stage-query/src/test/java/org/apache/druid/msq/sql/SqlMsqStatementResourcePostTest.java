@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
-import org.apache.druid.msq.sql.entity.ColNameAndType;
+import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
 import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.sql.resources.SqlStatementResource;
@@ -98,12 +98,12 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
         new SqlStatementResult(taskId, SqlStatementState.SUCCESS,
                                MSQTestOverlordServiceClient.CREATED_TIME,
                                ImmutableList.of(
-                                   new ColNameAndType(
+                                   new ColumnNameAndTypes(
                                        "cnt",
                                        SqlTypeName.BIGINT.getName(),
                                        ValueType.LONG.name()
                                    ),
-                                   new ColNameAndType(
+                                   new ColumnNameAndTypes(
                                        "dim1",
                                        SqlTypeName.VARCHAR.getName(),
                                        ValueType.STRING.name()

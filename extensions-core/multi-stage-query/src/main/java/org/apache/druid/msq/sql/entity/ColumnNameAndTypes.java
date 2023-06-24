@@ -24,8 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
+/**
+ * The column name and its sql {@link org.apache.calcite.sql.type.SqlTypeName} and its native {@link org.apache.druid.segment.column.ColumnType}
+ */
 
-public class ColNameAndType
+public class ColumnNameAndTypes
 {
 
   private final String colName;
@@ -34,7 +37,7 @@ public class ColNameAndType
   private final String nativeTypeName;
 
   @JsonCreator
-  public ColNameAndType(
+  public ColumnNameAndTypes(
       @JsonProperty("name") String colName,
       @JsonProperty("type") String sqlTypeName,
       @JsonProperty("nativeType") String nativeTypeName
@@ -73,7 +76,7 @@ public class ColNameAndType
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ColNameAndType that = (ColNameAndType) o;
+    ColumnNameAndTypes that = (ColumnNameAndTypes) o;
     return Objects.equals(colName, that.colName)
            && Objects.equals(sqlTypeName, that.sqlTypeName)
            && Objects.equals(nativeTypeName, that.nativeTypeName);
@@ -88,7 +91,7 @@ public class ColNameAndType
   @Override
   public String toString()
   {
-    return "ColNameAndType{" +
+    return "ColumnNameAndTypes{" +
            "colName='" + colName + '\'' +
            ", sqlTypeName='" + sqlTypeName + '\'' +
            ", nativeTypeName='" + nativeTypeName + '\'' +

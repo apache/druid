@@ -40,7 +40,7 @@ public class SqlStatementResult
   private final DateTime createdAt;
 
   @Nullable
-  private final List<ColNameAndType> sqlRowSignature;
+  private final List<ColumnNameAndTypes> sqlRowSignature;
 
   @Nullable
   private final Long durationInMs;
@@ -61,7 +61,7 @@ public class SqlStatementResult
       @JsonProperty("createdAt")
       DateTime createdAt,
       @Nullable @JsonProperty("schema")
-      List<ColNameAndType> sqlRowSignature,
+      List<ColumnNameAndTypes> sqlRowSignature,
       @Nullable @JsonProperty("durationMs")
       Long durationMs,
       @Nullable @JsonProperty("result")
@@ -101,7 +101,7 @@ public class SqlStatementResult
   @JsonProperty("schema")
   @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public List<ColNameAndType> getSqlRowSignature()
+  public List<ColumnNameAndTypes> getSqlRowSignature()
   {
     return sqlRowSignature;
   }

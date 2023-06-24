@@ -48,7 +48,7 @@ import org.apache.druid.msq.indexing.TaskReportMSQDestination;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.sql.SqlStatementState;
-import org.apache.druid.msq.sql.entity.ColNameAndType;
+import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
 import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.query.BadQueryException;
@@ -134,7 +134,7 @@ public class SqlStatementResource
   @GET
   @Path("/enabled")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response doGetEnabled(@Context final HttpServletRequest request)
+  public Response isEnabled(@Context final HttpServletRequest request)
   {
     // All authenticated users are authorized for this API: check an empty resource list.
     final Access authResult = AuthorizationUtils.authorizeAllResourceActions(
@@ -187,6 +187,7 @@ public class SqlStatementResource
       Thread.currentThread().setName(StringUtils.format("statement_sql[%s]", sqlQueryId));
 
       final DirectStatement.ResultSet plan = stmt.plan();
+      // in case the engine is async, the query is not run yet. We just return the taskID in case of non explain queries.
       final QueryResponse<Object[]> response = plan.run();
       final Sequence<Object[]> sequence = response.getResults();
       final SqlRowTransformer rowTransformer = plan.createRowTransformer();
@@ -290,8 +291,6 @@ public class SqlStatementResource
       @PathParam("id") final String queryId,
       @QueryParam("offset") Long offset,
       @QueryParam("numRows") Long numberOfRows,
-      @QueryParam("sizeInBytes") Long size,
-      @QueryParam("timeout") Integer timeout,
       @Context final HttpServletRequest req
   )
   {
@@ -359,7 +358,7 @@ public class SqlStatementResource
         );
       } else {
         MSQControllerTask msqControllerTask = getMSQControllerTaskOrThrow(queryId, authenticationResult.getIdentity());
-        Optional<List<ColNameAndType>> signature = getSignature(msqControllerTask);
+        Optional<List<ColumnNameAndTypes>> signature = getSignature(msqControllerTask);
         if (!signature.isPresent()) {
           return Response.ok().build();
         }
@@ -369,13 +368,16 @@ public class SqlStatementResource
           CountingOutputStream os = new CountingOutputStream(outputStream);
 
           try (final ResultFormat.Writer writer = ResultFormat.OBJECT.createFormatter(os, jsonMapper)) {
-            List<ColNameAndType> rowSignature = signature.get();
+            List<ColumnNameAndTypes> rowSignature = signature.get();
             writer.writeResponseStart();
 
-            for (int k = (int) start; k < Math.min(last, results.get().size()); k++) {
+            for (long k = start; k < Math.min(last, results.get().size()); k++) {
               writer.writeRowStart();
               for (int i = 0; i < rowSignature.size(); i++) {
-                writer.writeRowField(rowSignature.get(i).getColName(), ((List) results.get().get(k)).get(i));
+                writer.writeRowField(
+                    rowSignature.get(i).getColName(),
+                    ((List) results.get().get(Math.toIntExact(k))).get(i)
+                );
               }
               writer.writeRowEnd();
             }
@@ -561,7 +563,7 @@ public class SqlStatementResource
   }
 
 
-  private static Optional<List<ColNameAndType>> getSignature(
+  private static Optional<List<ColumnNameAndTypes>> getSignature(
       MSQControllerTask msqControllerTask
   )
   {
@@ -576,10 +578,10 @@ public class SqlStatementResource
       if (nativeTypeNames == null || nativeTypeNames.size() != columnMappings.size()) {
         return Optional.empty();
       }
-      List<ColNameAndType> signature = new ArrayList<>(columnMappings.size());
+      List<ColumnNameAndTypes> signature = new ArrayList<>(columnMappings.size());
       int index = 0;
       for (String colName : columnMappings.getOutputColumnNames()) {
-        signature.add(new ColNameAndType(
+        signature.add(new ColumnNameAndTypes(
             colName,
             sqlTypeNames.get(index).getName(),
             nativeTypeNames.get(index).asTypeString()
@@ -653,8 +655,8 @@ public class SqlStatementResource
     } else {
       int maxStage = stages.size() - 1; // Last stage output is the total number of rows returned to the end user.
       Map<String, Object> counterMap = getMap(getMap(payload, "counters"), String.valueOf(maxStage));
-      Long rows = -1L;
-      Long sizeInBytes = -1L;
+      long rows = -1L;
+      long sizeInBytes = -1L;
       if (counterMap == null) {
         return Optional.empty();
       }
@@ -738,7 +740,7 @@ public class SqlStatementResource
           new QueryException(null, errorMessage, null, host, stringException)
       ));
     } else {
-      Optional<List<ColNameAndType>> signature = getSignature(msqControllerTask);
+      Optional<List<ColumnNameAndTypes>> signature = getSignature(msqControllerTask);
 
       return Optional.of(new SqlStatementResult(
           queryId,
