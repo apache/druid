@@ -310,9 +310,9 @@ public class DruidSqlParserUtils
   }
 
   /**
-   * Return resolved clustered by columns specified to output columns.
+   * Return resolved clustered by column output names.
    * For example, consider the following SQL:
-   * <p>
+   * <pre>
    * EXPLAIN PLAN FOR
    * INSERT INTO w000
    * SELECT
@@ -324,7 +324,7 @@ public class DruidSqlParserUtils
    * FROM ...
    * PARTITIONED BY DAY
    * CLUSTERED BY 1, 2, 3, cityName
-   * </p>
+   * </pre>
    *
    * <p>
    * The function will return the following clusteredBy columns for the above SQL: ["__time", "page_alias", "FLOOR(\"cost\")", cityName"]
@@ -341,8 +341,10 @@ public class DruidSqlParserUtils
       return null;
     }
 
-    Preconditions.checkArgument(sourceNode instanceof SqlOrderBy || sourceNode instanceof SqlSelect,
-                                "Source node must be either SqlOrderBy or SqlSelect");
+    Preconditions.checkArgument(
+        sourceNode instanceof SqlSelect || sourceNode instanceof SqlOrderBy ,
+        "Source node must be either SqlSelect or SqlOrderBy"
+    );
 
     final SqlSelect selectNode = (sourceNode instanceof SqlSelect) ? (SqlSelect) sourceNode
                                                                    : (SqlSelect) ((SqlOrderBy) sourceNode).query;
@@ -351,9 +353,9 @@ public class DruidSqlParserUtils
 
     for (SqlNode clusteredByNode : clusteredByNodes) {
 
-      // Verify that 'operand' is a literal number.
       if (SqlUtil.isLiteral(clusteredByNode)) {
-        // An ordinal is specified in CLUSTERED BY clause, so lookup the ordinal in the SELECT clause
+        // The node is a literal number -- an ordinal is specified in the CLUSTERED BY clause. Validate and lookup the
+        // ordinal in the select list.
         int ordinal = ((SqlNumericLiteral) clusteredByNode).getValueAs(Integer.class);
         if (ordinal < 1 || ordinal > selectList.size()) {
           throw InvalidSqlInput.exception(
@@ -367,13 +369,19 @@ public class DruidSqlParserUtils
         if (node instanceof SqlBasicCall) {
           retClusteredByNames.add(getColumnNameFromSqlCall(node));
         } else {
-          Preconditions.checkArgument(node instanceof SqlIdentifier, "Argument must be a SqlIdentifier");
+          Preconditions.checkArgument(
+              node instanceof SqlIdentifier,
+              "Argument must be a SqlIdentifier, but found [%s]",
+              node.getKind()
+          );
           SqlIdentifier n = ((SqlIdentifier) node);
           retClusteredByNames.add(n.isSimple() ? n.getSimple() : n.names.get(1));
         }
       } else if (clusteredByNode instanceof SqlBasicCall) {
+        // The node is an expression/operator.
         retClusteredByNames.add(getColumnNameFromSqlCall(clusteredByNode));
       } else {
+        // The node is a simple SqlIdentifier, add the name.
         retClusteredByNames.add(clusteredByNode.toString());
       }
     }
@@ -389,9 +397,11 @@ public class DruidSqlParserUtils
     SqlBasicCall sqlBasicCall = (SqlBasicCall) sqlCallNode;
     SqlOperator operator = (sqlBasicCall).getOperator();
     if (operator instanceof SqlAsOperator) {
-      SqlNode sqlNode = (sqlBasicCall).getOperandList().get(1); // get the output name for this alias operator
+      // Get the output name for the alias operator.
+      SqlNode sqlNode = (sqlBasicCall).getOperandList().get(1);
       return sqlNode.toString();
     } else {
+      // Return the expression as-is.
       return sqlCallNode.toSqlString(CalciteSqlDialect.DEFAULT).toString();
     }
   }

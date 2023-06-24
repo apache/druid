@@ -165,7 +165,7 @@ public class DruidSqlParserUtilsTest
           IllegalArgumentException.class,
           () -> DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(args, null)
       );
-      Assert.assertEquals("Source node must be either SqlOrderBy or SqlSelect", iae.getMessage());
+      Assert.assertEquals("Source node must be either SqlSelect or SqlOrderBy", iae.getMessage());
     }
 
     @Test
