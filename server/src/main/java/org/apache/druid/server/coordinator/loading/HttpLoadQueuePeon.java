@@ -545,9 +545,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private void incrementStat(SegmentHolder holder, RequestStatus status)
   {
-    RowKey rowKey = RowKey.builder()
-                          .add(Dimension.DATASOURCE, holder.getSegment().getDataSource())
-                          .add(Dimension.DESCRIPTION, holder.getAction().name()).build();
+    RowKey rowKey = RowKey.with(Dimension.DATASOURCE, holder.getSegment().getDataSource())
+                          .and(Dimension.DESCRIPTION, holder.getAction().name());
     stats.add(status.datasourceStat, rowKey, 1);
   }
 

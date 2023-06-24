@@ -72,7 +72,7 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
 
     final DruidCluster cluster = params.getDruidCluster();
     cluster.getHistoricals().forEach((tier, historicals) -> {
-      final RowKey rowKey = RowKey.forTier(tier);
+      final RowKey rowKey = RowKey.of(Dimension.TIER, tier);
       stats.add(Stats.Tier.HISTORICAL_COUNT, rowKey, historicals.size());
       long totalCapacity = historicals.stream().map(ServerHolder::getMaxSize).reduce(0L, Long::sum);
       stats.add(Stats.Tier.TOTAL_CAPACITY, rowKey, totalCapacity);
@@ -80,7 +80,7 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
 
     // Collect load queue stats
     coordinator.getLoadManagementPeons().forEach((serverName, queuePeon) -> {
-      final RowKey rowKey = RowKey.builder().add(Dimension.SERVER, serverName).build();
+      final RowKey rowKey = RowKey.of(Dimension.SERVER, serverName);
       stats.add(Stats.SegmentQueue.BYTES_TO_LOAD, rowKey, queuePeon.getSizeOfSegmentsToLoad());
       stats.add(Stats.SegmentQueue.NUM_TO_LOAD, rowKey, queuePeon.getSegmentsToLoad().size());
       stats.add(Stats.SegmentQueue.NUM_TO_DROP, rowKey, queuePeon.getSegmentsToDrop().size());
@@ -92,8 +92,11 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
     });
 
     coordinator.getDatasourceToUnavailableSegmentCount().forEach(
-        (dataSource, numUnavailable) ->
-            stats.addToDatasourceStat(Stats.Segments.UNAVAILABLE, dataSource, numUnavailable)
+        (dataSource, numUnavailable) -> stats.add(
+            Stats.Segments.UNAVAILABLE,
+            RowKey.of(Dimension.DATASOURCE, dataSource),
+            numUnavailable
+        )
     );
 
     coordinator.getTierToDatasourceToUnderReplicatedCount(false).forEach(
@@ -108,17 +111,18 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
         (dataSource, timeline) -> {
           long totalSizeOfUsedSegments = timeline.iterateAllObjects().stream()
                                                  .mapToLong(DataSegment::getSize).sum();
-          stats.addToDatasourceStat(Stats.Segments.USED_BYTES, dataSource, totalSizeOfUsedSegments);
-          stats.addToDatasourceStat(Stats.Segments.USED, dataSource, timeline.getNumObjects());
+
+          RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, dataSource);
+          stats.add(Stats.Segments.USED_BYTES, datasourceKey, totalSizeOfUsedSegments);
+          stats.add(Stats.Segments.USED, datasourceKey, timeline.getNumObjects());
         }
     );
   }
 
   private RowKey createRowKeyForServer(String serverName, Map<Dimension, String> dimensionValues)
   {
-    final RowKey.Builder builder = RowKey.builder();
-    dimensionValues.forEach(builder::add);
-    builder.add(Dimension.SERVER, serverName);
+    final RowKey.Builder builder = RowKey.with(Dimension.SERVER, serverName);
+    dimensionValues.forEach(builder::with);
     return builder.build();
   }
 

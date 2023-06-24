@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.balancer;
 
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -29,7 +30,10 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
-import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.After;
 import org.junit.Assert;
@@ -59,7 +63,7 @@ public class CostBalancerStrategyTest
   @Before
   public void setup()
   {
-    balancerExecutor = new BlockingExecutorService("test-balance-exec-%d");
+    balancerExecutor = Execs.singleThreaded("test-balance-exec-%d");
     strategy = new CostBalancerStrategy(MoreExecutors.listeningDecorator(balancerExecutor));
 
     serviceEmitter = new StubServiceEmitter("test-service", "host");
@@ -310,6 +314,38 @@ public class CostBalancerStrategyTest
     verifyPlacementCost(allGranularitySegment, serverA, 1.1534173737329768e7);
     verifyPlacementCost(allGranularitySegment, serverB, 1.6340633534241956e7);
     verifyPlacementCost(allGranularitySegment, serverC, 1.9026400521582970e7);
+  }
+
+  @Test
+  public void testGetAndResetStats()
+  {
+    final ServerHolder serverA = new ServerHolder(
+        createHistorical().toImmutableDruidServer(),
+        new LoadQueuePeonTester()
+    );
+    final ServerHolder serverB = new ServerHolder(
+        createHistorical().toImmutableDruidServer(),
+        new LoadQueuePeonTester()
+    );
+
+    final DataSegment segment = CreateDataSegments.ofDatasource(DS_WIKI).eachOfSizeInMb(100).get(0);
+
+    // Verify that computation stats have been tracked
+    strategy.findServersToLoadSegment(segment, Arrays.asList(serverA, serverB));
+    CoordinatorRunStats computeStats = strategy.getAndResetStats();
+
+    final RowKey rowKey = RowKey.with(Dimension.DATASOURCE, DS_WIKI)
+                                .with(Dimension.DESCRIPTION, "LOAD")
+                                .and(Dimension.TIER, "hot");
+    Assert.assertEquals(1L, computeStats.get(Stats.Balancer.COMPUTATION_COUNT, rowKey));
+
+    long computeTime = computeStats.get(Stats.Balancer.COMPUTATION_TIME, rowKey);
+    Assert.assertTrue(computeTime >= 0 && computeTime <= 100);
+    Assert.assertFalse(computeStats.hasStat(Stats.Balancer.COMPUTATION_ERRORS));
+
+    // Verify that stats have been reset
+    computeStats = strategy.getAndResetStats();
+    Assert.assertEquals(0, computeStats.rowCount());
   }
 
   @Test

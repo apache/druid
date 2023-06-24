@@ -131,13 +131,6 @@ public class Stats
 
   public static class Balancer
   {
-    public static final CoordinatorStat RAW_COST
-        = new CoordinatorStat("initialCost", "segment/cost/raw");
-    public static final CoordinatorStat NORMALIZATION_COST
-        = new CoordinatorStat("normaliznCost", "segment/cost/normalization");
-    public static final CoordinatorStat NORMALIZED_COST_X_1000
-        = new CoordinatorStat("normalizedCost", "segment/cost/normalized");
-
     public static final CoordinatorStat COMPUTATION_ERRORS
         = new CoordinatorStat("costComputeError", "segment/balancer/compute/error");
     public static final CoordinatorStat COMPUTATION_TIME

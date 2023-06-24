@@ -215,13 +215,9 @@ public class TierSegmentBalancer
 
   private void markUnmoved(String reason, DataSegment segment)
   {
-    final RowKey key
-        = RowKey.builder()
-                .add(Dimension.TIER, tier)
-                .add(Dimension.DATASOURCE, segment.getDataSource())
-                .add(Dimension.DESCRIPTION, reason)
-                .build();
-
+    RowKey key = RowKey.with(Dimension.TIER, tier)
+                       .with(Dimension.DATASOURCE, segment.getDataSource())
+                       .and(Dimension.DESCRIPTION, reason);
     runStats.add(Stats.Segments.MOVE_SKIPPED, key, 1);
   }
 

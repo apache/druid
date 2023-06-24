@@ -297,7 +297,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   private void reportTierCapacityStats(DataSegment segment, int requiredReplicas, String tier)
   {
-    final RowKey rowKey = RowKey.forTier(tier);
+    final RowKey rowKey = RowKey.of(Dimension.TIER, tier);
     stats.updateMax(Stats.Tier.REPLICATION_FACTOR, rowKey, requiredReplicas);
     stats.add(Stats.Tier.REQUIRED_CAPACITY, rowKey, segment.getSize() * requiredReplicas);
   }
@@ -343,7 +343,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   public void deleteSegment(DataSegment segment)
   {
     loadQueueManager.deleteSegment(segment);
-    stats.addToDatasourceStat(Stats.Segments.DELETED, segment.getDataSource(), 1);
+    RowKey rowKey = RowKey.of(Dimension.DATASOURCE, segment.getDataSource());
+    stats.add(Stats.Segments.DELETED, rowKey, 1);
   }
 
   /**
@@ -587,18 +588,17 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   private void incrementSkipStat(CoordinatorStat stat, String reason, DataSegment segment, String tier)
   {
-    final RowKey.Builder keyBuilder
-        = RowKey.builder()
-                .add(Dimension.TIER, tier)
-                .add(Dimension.DATASOURCE, segment.getDataSource())
-                .add(Dimension.DESCRIPTION, reason);
-
-    stats.add(stat, keyBuilder.build(), 1);
+    final RowKey key = RowKey.with(Dimension.TIER, tier)
+                             .with(Dimension.DATASOURCE, segment.getDataSource())
+                             .and(Dimension.DESCRIPTION, reason);
+    stats.add(stat, key, 1);
   }
 
   private void incrementStat(CoordinatorStat stat, DataSegment segment, String tier, long value)
   {
-    stats.addToSegmentStat(stat, tier, segment.getDataSource(), value);
+    RowKey rowKey = RowKey.with(Dimension.TIER, tier)
+                          .and(Dimension.DATASOURCE, segment.getDataSource());
+    stats.add(stat, rowKey, value);
   }
 
 }

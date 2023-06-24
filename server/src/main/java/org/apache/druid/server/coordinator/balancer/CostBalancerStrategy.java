@@ -327,11 +327,9 @@ public class CostBalancerStrategy implements BalancerStrategy
     }
 
     String tier = serverHolders.isEmpty() ? null : serverHolders.get(0).getServer().getTier();
-    final RowKey metricKey = RowKey.builder()
-                                .add(Dimension.TIER, tier)
-                                .add(Dimension.DATASOURCE, segment.getDataSource())
-                                .add(Dimension.DESCRIPTION, action.name())
-                                .build();
+    final RowKey metricKey = RowKey.with(Dimension.TIER, tier)
+                                   .with(Dimension.DATASOURCE, segment.getDataSource())
+                                   .and(Dimension.DESCRIPTION, action.name());
 
     final PriorityQueue<Pair<Double, ServerHolder>> costPrioritizedServers =
         new PriorityQueue<>(CHEAPEST_SERVERS_FIRST);

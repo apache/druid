@@ -161,7 +161,7 @@ public class CoordinatorRunStatsTest
     );
     expected.forEach(
         (duty, count) ->
-            stats.add(STAT_1, RowKey.builder().add(Dimension.DUTY, duty).build(), count)
+            stats.add(STAT_1, RowKey.of(Dimension.DUTY, duty), count)
     );
 
     final Map<String, Long> actual = new HashMap<>();
@@ -192,7 +192,7 @@ public class CoordinatorRunStatsTest
     debugStats.add(DEBUG_STAT_1, Key.TIER_1, 1);
     Assert.assertTrue(debugStats.hasStat(DEBUG_STAT_1));
 
-    debugStats.addToDatasourceStat(DEBUG_STAT_2, "wiki", 1);
+    debugStats.add(DEBUG_STAT_2, RowKey.of(Dimension.DATASOURCE, "wiki"), 1);
     Assert.assertFalse(debugStats.hasStat(DEBUG_STAT_2));
   }
 
@@ -201,11 +201,11 @@ public class CoordinatorRunStatsTest
    */
   private static class Key
   {
-    static final RowKey TIER_1 = RowKey.forTier("tier1");
-    static final RowKey TIER_2 = RowKey.forTier("tier2");
+    static final RowKey TIER_1 = RowKey.of(Dimension.TIER, "tier1");
+    static final RowKey TIER_2 = RowKey.of(Dimension.TIER, "tier2");
 
-    static final RowKey DUTY_1 = RowKey.builder().add(Dimension.DUTY, "duty1").build();
-    static final RowKey DUTY_2 = RowKey.builder().add(Dimension.DUTY, "duty2").build();
+    static final RowKey DUTY_1 = RowKey.of(Dimension.DUTY, "duty1");
+    static final RowKey DUTY_2 = RowKey.of(Dimension.DUTY, "duty2");
   }
 
 }

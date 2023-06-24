@@ -737,7 +737,7 @@ public class DruidCoordinator
               log.info("Stopping run for group [%s] on request of duty [%s].", dutyGroupName, dutyName);
               return;
             } else {
-              final RowKey rowKey = RowKey.builder().add(Dimension.DUTY, dutyName).build();
+              final RowKey rowKey = RowKey.of(Dimension.DUTY, dutyName);
               final long dutyRunMillis = dutyRunTime.elapsed(TimeUnit.MILLISECONDS);
               params.getCoordinatorStats().add(Stats.CoordinatorRun.DUTY_RUN_TIME, rowKey, dutyRunMillis);
             }
@@ -775,10 +775,6 @@ public class DruidCoordinator
 
     private void emitStat(CoordinatorStat stat, Map<Dimension, String> dimensionValues, long value)
     {
-      if (stat.equals(Stats.Balancer.NORMALIZED_COST_X_1000)) {
-        value = value / 1000;
-      }
-
       ServiceMetricEvent.Builder eventBuilder = new ServiceMetricEvent.Builder()
           .setDimension(Dimension.DUTY_GROUP.reportedName(), dutyGroupName);
       dimensionValues.forEach(
