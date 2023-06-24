@@ -311,7 +311,8 @@ public class DruidSqlParserUtils
 
   /**
    * Return resolved clustered by columns specified to output columns.
-   * For example,
+   * For example, consider the following SQL:
+   * <p>
    * EXPLAIN PLAN FOR
    * INSERT INTO w000
    * SELECT
@@ -323,9 +324,12 @@ public class DruidSqlParserUtils
    * FROM ...
    * PARTITIONED BY DAY
    * CLUSTERED BY 1, 2, 3, cityName
+   * </p>
    *
-   * The above SQL will return the following clusteredBy columns: ["__time", "page_alias", "FLOOR(\"cost\")", cityName"]
+   * <p>
+   * The function will return the following clusteredBy columns for the above SQL: ["__time", "page_alias", "FLOOR(\"cost\")", cityName"]
    * Any ordinal and expression specified in the CLUSTERED BY clause will resolve to the final output column name.
+   * </p>
    * @param clusteredByNodes  List of {@link SqlNode}s representing columns to be clustered by.
    * @param sourceNode The select or order by source node.
    */
