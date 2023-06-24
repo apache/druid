@@ -389,7 +389,7 @@ public class CostBalancerStrategy implements BalancerStrategy
       return segmentInterval;
     } else {
       final long maxGap = TimeUnit.DAYS.toMillis(45);
-      return new Interval(
+      return Intervals.utc(
           segmentInterval.getStartMillis() - maxGap,
           segmentInterval.getEndMillis() + maxGap
       );
