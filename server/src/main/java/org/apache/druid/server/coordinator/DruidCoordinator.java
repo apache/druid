@@ -674,7 +674,7 @@ public class DruidCoordinator
     {
       try {
         log.info("Starting coordinator run for group [%s]", dutyGroupName);
-        final Stopwatch groupRunTime = Stopwatch.createUnstarted();
+        final Stopwatch groupRunTime = Stopwatch.createStarted();
 
         synchronized (lock) {
           if (!coordLeaderSelector.isLeader()) {
@@ -764,7 +764,7 @@ public class DruidCoordinator
         }
 
         // Emit the runtime of the full DutiesRunnable
-        final long runMillis = groupRunTime.elapsed(TimeUnit.MILLISECONDS);
+        final long runMillis = groupRunTime.stop().elapsed(TimeUnit.MILLISECONDS);
         emitStat(Stats.CoordinatorRun.GROUP_RUN_TIME, Collections.emptyMap(), runMillis);
         log.info("Finished coordinator run for group [%s] in [%d] ms", dutyGroupName, runMillis);
       }
