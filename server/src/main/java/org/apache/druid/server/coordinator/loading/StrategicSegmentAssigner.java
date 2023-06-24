@@ -33,6 +33,7 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -431,7 +432,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       Iterator<ServerHolder> serverIterator =
           (useRoundRobinAssignment || eligibleLiveServers.size() >= remainingNumToDrop)
           ? eligibleLiveServers.iterator()
-          : strategy.pickServersToDropSegment(segment, eligibleLiveServers);
+          : strategy.findServersToDropSegment(segment, new ArrayList<>(eligibleLiveServers));
       numDropsQueued += dropReplicasFromServers(remainingNumToDrop, segment, serverIterator, tier);
     }
 
@@ -493,7 +494,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
         ? serverSelector.getServersInTierToLoadSegment(tier, segment)
         : strategy.findServersToLoadSegment(segment, eligibleServers);
     if (!serverIterator.hasNext()) {
-      incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "No server chosen by strategy", segment, tier);
+      incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "No strategic server", segment, tier);
       return 0;
     }
 
@@ -589,11 +590,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     final RowKey.Builder keyBuilder
         = RowKey.builder()
                 .add(Dimension.TIER, tier)
-                .add(Dimension.DATASOURCE, segment.getDataSource());
-
-    if (reason != null) {
-      keyBuilder.add(Dimension.DESCRIPTION, reason);
-    }
+                .add(Dimension.DATASOURCE, segment.getDataSource())
+                .add(Dimension.DESCRIPTION, reason);
 
     stats.add(stat, keyBuilder.build(), 1);
   }

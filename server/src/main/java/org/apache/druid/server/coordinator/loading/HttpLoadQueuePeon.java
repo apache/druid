@@ -40,6 +40,8 @@ import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -543,7 +545,10 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private void incrementStat(SegmentHolder holder, RequestStatus status)
   {
-    stats.addToDatasourceStat(status.datasourceStat, holder.getSegment().getDataSource(), 1);
+    RowKey rowKey = RowKey.builder()
+                          .add(Dimension.DATASOURCE, holder.getSegment().getDataSource())
+                          .add(Dimension.DESCRIPTION, holder.getAction().name()).build();
+    stats.add(status.datasourceStat, rowKey, 1);
   }
 
   private void executeCallbacks(SegmentHolder holder, boolean success)

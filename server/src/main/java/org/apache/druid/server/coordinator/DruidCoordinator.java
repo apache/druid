@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
@@ -98,6 +99,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -672,7 +674,7 @@ public class DruidCoordinator
     {
       try {
         log.info("Starting coordinator run for group [%s]", dutyGroupName);
-        final long globalStart = System.currentTimeMillis();
+        final Stopwatch groupRunTime = Stopwatch.createUnstarted();
 
         synchronized (lock) {
           if (!coordLeaderSelector.isLeader()) {
@@ -719,15 +721,16 @@ public class DruidCoordinator
           log.info("Coordination has been paused. Duties will not run until coordination is resumed.");
         }
 
+        final Stopwatch dutyRunTime = Stopwatch.createUnstarted();
         for (CoordinatorDuty duty : duties) {
           // Don't read state and run state in the same duty otherwise racy conditions may exist
           if (!coordinationPaused
               && coordLeaderSelector.isLeader()
               && startingLeaderCounter == coordLeaderSelector.localTerm()) {
 
-            final long start = System.currentTimeMillis();
+            dutyRunTime.reset().start();
             params = duty.run(params);
-            final long end = System.currentTimeMillis();
+            dutyRunTime.stop();
 
             final String dutyName = duty.getClass().getName();
             if (params == null) {
@@ -735,7 +738,8 @@ public class DruidCoordinator
               return;
             } else {
               final RowKey rowKey = RowKey.builder().add(Dimension.DUTY, dutyName).build();
-              params.getCoordinatorStats().add(Stats.CoordinatorRun.DUTY_RUN_TIME, rowKey, end - start);
+              final long dutyRunMillis = dutyRunTime.elapsed(TimeUnit.MILLISECONDS);
+              params.getCoordinatorStats().add(Stats.CoordinatorRun.DUTY_RUN_TIME, rowKey, dutyRunMillis);
             }
           }
         }
@@ -745,9 +749,9 @@ public class DruidCoordinator
         if (allStats.rowCount() > 0) {
           final AtomicInteger emittedCount = new AtomicInteger();
           allStats.forEachStat(
-              (dimensionValues, stat, value) -> {
+              (stat, dimensions, value) -> {
                 if (stat.shouldEmit()) {
-                  emitStat(stat, dimensionValues, value);
+                  emitStat(stat, dimensions.getValues(), value);
                   emittedCount.incrementAndGet();
                 }
               }
@@ -760,7 +764,7 @@ public class DruidCoordinator
         }
 
         // Emit the runtime of the full DutiesRunnable
-        final long runMillis = System.currentTimeMillis() - globalStart;
+        final long runMillis = groupRunTime.elapsed(TimeUnit.MILLISECONDS);
         emitStat(Stats.CoordinatorRun.GROUP_RUN_TIME, Collections.emptyMap(), runMillis);
         log.info("Finished coordinator run for group [%s] in [%d] ms", dutyGroupName, runMillis);
       }

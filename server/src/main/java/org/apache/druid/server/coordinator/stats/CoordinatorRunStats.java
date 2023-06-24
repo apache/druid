@@ -87,7 +87,7 @@ public class CoordinatorRunStats
   {
     allStats.forEach(
         (rowKey, stats) -> stats.object2LongEntrySet().fastForEach(
-            stat -> handler.handle(rowKey.getValues(), stat.getKey(), stat.getLongValue())
+            stat -> handler.handle(stat.getKey(), rowKey, stat.getLongValue())
         )
     );
   }
@@ -267,7 +267,7 @@ public class CoordinatorRunStats
 
   public interface StatHandler
   {
-    void handle(Map<Dimension, String> dimensionValues, CoordinatorStat stat, long statValue);
+    void handle(CoordinatorStat stat, RowKey rowKey, long statValue);
   }
 
 }

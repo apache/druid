@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.balancer;
 
-import com.google.common.collect.Lists;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -56,11 +55,9 @@ public class TierSegmentBalancer
   private final DruidCoordinatorRuntimeParams params;
   private final StrategicSegmentAssigner segmentAssigner;
 
-  private final BalancerStrategy strategy;
   private final SegmentLoadingConfig loadingConfig;
   private final CoordinatorRunStats runStats;
 
-  private final Set<ServerHolder> allServers;
   private final List<ServerHolder> activeServers;
   private final List<ServerHolder> decommissioningServers;
   private final int totalMaxSegmentsToMove;
@@ -77,7 +74,6 @@ public class TierSegmentBalancer
     this.params = params;
     this.segmentAssigner = params.getSegmentAssigner();
 
-    this.strategy = params.getBalancerStrategy();
     this.loadingConfig = params.getSegmentLoadingConfig();
     this.totalMaxSegmentsToMove = loadingConfig.getMaxSegmentsToMove();
     this.runStats = segmentAssigner.getStats();
@@ -86,7 +82,6 @@ public class TierSegmentBalancer
         servers.stream().collect(Collectors.partitioningBy(ServerHolder::isDecommissioning));
     this.decommissioningServers = partitions.get(true);
     this.activeServers = partitions.get(false);
-    this.allServers = servers;
 
     this.movingSegmentCount = activeServers.stream().mapToInt(ServerHolder::getNumMovingSegments).sum();
   }
@@ -128,10 +123,6 @@ public class TierSegmentBalancer
         "Moved [%d] segments out of max [%d] between active servers in tier [%s].",
         movedGeneralSegments, maxGeneralSegmentsToMove, tier
     );
-
-    if (loadingConfig.isEmitBalancingStats()) {
-      strategy.emitStats(tier, runStats, Lists.newArrayList(allServers));
-    }
   }
 
   private int moveSegmentsFromTo(

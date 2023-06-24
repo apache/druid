@@ -32,9 +32,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -43,16 +45,16 @@ import java.util.concurrent.atomic.AtomicInteger;
  * ServerHolders are naturally ordered by available size, servers with more
  * available size first.
  */
-public class ServerHolder implements Comparable<ServerHolder>
+public class ServerHolderDupe implements Comparable<ServerHolderDupe>
 {
-  private static final Comparator<ServerHolder> MORE_AVAILABLE_SIZE_SERVER_FIRST =
-      Comparator.comparing(ServerHolder::getAvailableSize)
+  private static final Comparator<ServerHolderDupe> MORE_AVAILABLE_SIZE_SERVER_FIRST =
+      Comparator.comparing(ServerHolderDupe::getAvailableSize)
                 .thenComparing(holder -> holder.getServer().getHost())
                 .thenComparing(holder -> holder.getServer().getTier())
                 .thenComparing(holder -> holder.getServer().getType())
                 .reversed();
 
-  private static final EmittingLogger log = new EmittingLogger(ServerHolder.class);
+  private static final EmittingLogger log = new EmittingLogger(ServerHolderDupe.class);
 
   private final ImmutableDruidServer server;
   private final LoadQueuePeon peon;
@@ -73,14 +75,19 @@ public class ServerHolder implements Comparable<ServerHolder>
    */
   private final Map<DataSegment, SegmentAction> queuedSegments = new HashMap<>();
 
-  private final ServerSegmentCount projectedSegments = new ServerSegmentCount();
+  /**
+   * Segments that are expected to be loaded on this server once all the
+   * operations in progress have completed.
+   */
+  private final Set<DataSegment> projectedSegments = new HashSet<>();
+  private final ServerSegmentCount segmentCounts = new ServerSegmentCount();
 
-  public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
+  public ServerHolderDupe(ImmutableDruidServer server, LoadQueuePeon peon)
   {
     this(server, peon, false, 0, 1);
   }
 
-  public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon, boolean isDecommissioning)
+  public ServerHolderDupe(ImmutableDruidServer server, LoadQueuePeon peon, boolean isDecommissioning)
   {
     this(server, peon, isDecommissioning, 0, 1);
   }
@@ -97,7 +104,7 @@ public class ServerHolder implements Comparable<ServerHolder>
    * @param maxLifetimeInQueue     Number of coordinator runs after a which a segment
    *                               in load/drop queue is considered to be stuck.
    */
-  public ServerHolder(
+  public ServerHolderDupe(
       ImmutableDruidServer server,
       LoadQueuePeon peon,
       boolean isDecommissioning,
@@ -127,7 +134,10 @@ public class ServerHolder implements Comparable<ServerHolder>
       AtomicInteger loadingReplicaCount
   )
   {
-    server.iterateAllSegments().forEach(projectedSegments::addSegment);
+    server.iterateAllSegments().forEach(segment -> {
+      projectedSegments.add(segment);
+      segmentCounts.addSegment(segment);
+    });
 
     final List<SegmentHolder> expiredSegments = new ArrayList<>();
     peon.getSegmentsInQueue().forEach(
@@ -241,11 +251,16 @@ public class ServerHolder implements Comparable<ServerHolder>
     return new HashMap<>(queuedSegments);
   }
 
+  public ServerSegmentCount getSegmentCounts()
+  {
+    return segmentCounts;
+  }
+
   /**
    * Segments that are expected to be loaded on this server once all the
    * operations in progress have completed.
    */
-  public ServerSegmentCount getProjectedSegments()
+  public Set<DataSegment> getProjectedSegments()
   {
     return projectedSegments;
   }
@@ -366,10 +381,12 @@ public class ServerHolder implements Comparable<ServerHolder>
 
     // Add to projected if load is started, remove from projected if drop has started
     if (action.isLoad()) {
-      projectedSegments.addSegment(segment);
+      projectedSegments.add(segment);
+      segmentCounts.addSegment(segment);
       sizeOfLoadingSegments += segment.getSize();
     } else {
-      projectedSegments.removeSegment(segment);
+      projectedSegments.remove(segment);
+      segmentCounts.removeSegment(segment);
       if (action == SegmentAction.DROP) {
         sizeOfDroppingSegments += segment.getSize();
       }
@@ -383,10 +400,12 @@ public class ServerHolder implements Comparable<ServerHolder>
     queuedSegments.remove(segment);
 
     if (action.isLoad()) {
-      projectedSegments.removeSegment(segment);
+      projectedSegments.remove(segment);
+      segmentCounts.removeSegment(segment);
       sizeOfLoadingSegments -= segment.getSize();
     } else {
-      projectedSegments.addSegment(segment);
+      projectedSegments.add(segment);
+      segmentCounts.addSegment(segment);
       if (action == SegmentAction.DROP) {
         sizeOfDroppingSegments -= segment.getSize();
       }
@@ -394,7 +413,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   }
 
   @Override
-  public int compareTo(ServerHolder serverHolder)
+  public int compareTo(ServerHolderDupe serverHolder)
   {
     return MORE_AVAILABLE_SIZE_SERVER_FIRST.compare(this, serverHolder);
   }
@@ -409,7 +428,7 @@ public class ServerHolder implements Comparable<ServerHolder>
       return false;
     }
 
-    ServerHolder that = (ServerHolder) o;
+    ServerHolderDupe that = (ServerHolderDupe) o;
     return Objects.equals(server.getHost(), that.server.getHost())
            && Objects.equals(server.getTier(), that.server.getTier())
            && Objects.equals(server.getType(), that.server.getType());
