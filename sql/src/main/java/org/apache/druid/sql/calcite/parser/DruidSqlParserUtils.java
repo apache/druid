@@ -342,7 +342,7 @@ public class DruidSqlParserUtils
     }
 
     Preconditions.checkArgument(
-        sourceNode instanceof SqlSelect || sourceNode instanceof SqlOrderBy ,
+        sourceNode instanceof SqlSelect || sourceNode instanceof SqlOrderBy,
         "Source node must be either SqlSelect or SqlOrderBy"
     );
 
