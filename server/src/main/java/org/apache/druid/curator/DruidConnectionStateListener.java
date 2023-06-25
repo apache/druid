@@ -35,7 +35,7 @@ import org.apache.druid.java.util.metrics.AbstractMonitor;
 public class DruidConnectionStateListener extends AbstractMonitor implements ConnectionStateListener
 {
   private static final String METRIC_IS_CONNECTED = "zk/connected";
-  private static final String METRIC_DISCONNECTED_TIME = "zk/disconnected/time";
+  private static final String METRIC_RECONNECT_TIME = "zk/reconnect/time";
   private static final int NIL = -1;
 
   private final ServiceEmitter emitter;
@@ -65,17 +65,17 @@ public class DruidConnectionStateListener extends AbstractMonitor implements Con
 
       synchronized (this) {
         if (lastDisconnectTime != NIL) {
-          disconnectDuration = System.currentTimeMillis() - lastDisconnectTime;
+          disconnectDuration = Math.max(0, System.currentTimeMillis() - lastDisconnectTime);
         } else {
-          disconnectDuration = 0;
+          disconnectDuration = NIL;
         }
 
         currentState = newState;
         lastDisconnectTime = NIL;
       }
 
-      if (disconnectDuration > 0) {
-        emitter.emit(ServiceMetricEvent.builder().build(METRIC_DISCONNECTED_TIME, disconnectDuration));
+      if (disconnectDuration != NIL) {
+        emitter.emit(ServiceMetricEvent.builder().build(METRIC_RECONNECT_TIME, disconnectDuration));
       }
     } else {
       synchronized (this) {
@@ -83,7 +83,7 @@ public class DruidConnectionStateListener extends AbstractMonitor implements Con
         lastDisconnectTime = Math.max(lastDisconnectTime, System.currentTimeMillis());
       }
 
-      emitter.emit(AlertBuilder.create("ZooKeeper connection state[%s]", newState));
+      emitter.emit(AlertBuilder.create("ZooKeeper connection[%s]", newState));
     }
   }
 

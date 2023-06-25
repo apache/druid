@@ -361,14 +361,14 @@ These metrics are only available if the `JVMMonitor` module is included.
 |`jvm/gc/count`|Garbage collection count|`gcName` (cms/g1/parallel/etc.), `gcGen` (old/young)|Varies|
 |`jvm/gc/cpu`|Count of CPU time in Nanoseconds spent on garbage collection. Note: `jvm/gc/cpu` represents the total time over multiple GC cycles; divide by `jvm/gc/count` to get the mean GC time per cycle.|`gcName`, `gcGen`|Sum of `jvm/gc/cpu` should be within 10-30% of sum of `jvm/cpu/total`, depending on the GC algorithm used (reported by [`JvmCpuMonitor`](../configuration/index.md#enabling-metrics)). |
 
-### ZooKeeper, Curator
+### ZooKeeper
 
 These metrics are available unless `druid.zk.service.enabled = false`.
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
 |`zk/connected`|Indicator of connection status. `1` for connected, `0` for disconnected. Emitted once per monitor period.|None|1|
-|`zk/disconnected/time`|Amount of time, in milliseconds, that the server was disconnected from ZooKeeper. Emitted on reconnection. Note that this means the metric is not emitted if connection to ZooKeeper is permanently lost.|None|Not present|
+|`zk/reconnect/time`|Amount of time, in milliseconds, that a server was disconnected from ZooKeeper before reconnecting. Emitted on reconnection. Not emitted if connection to ZooKeeper is permanently lost, because in this case, there is no reconnection.|None|Not present|
 
 ### EventReceiverFirehose
 
