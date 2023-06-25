@@ -444,6 +444,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     try {
       final Map<String, DruidServerHolder> serversCopy = ImmutableMap.copyOf(servers);
       serversCopy.forEach((serverName, serverHolder) -> {
+        final DruidServer server = serverHolder.druidServer;
+        eventBuilder.setDimension("tier", server.getTier());
         eventBuilder.setDimension("server", serverName);
 
         final boolean isSynced = serverHolder.syncer.isSyncingSuccessfully();

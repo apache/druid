@@ -66,6 +66,8 @@ Metrics may have additional dimensions beyond those listed above.
 |`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 |`init/serverview/time`|Time taken to initialize the broker server view. Useful to detect if brokers are taking too long to start.||Depends on the number of segments.|
 |`init/metadatacache/time`|Time taken to initialize the broker segment metadata cache. Useful to detect if brokers are taking too long to start||Depends on the number of segments.|
+|`segment/metadatacache/refresh/count`|Number of segments to refresh in broker segment metadata cache.|`dataSource`|
+|`segment/metadatacache/refresh/time`|Time taken to refresh segments in broker segment metadata cache.|`dataSource`|
 |`cluster/serverview/synced`|Sync status of the broker server view with a process serving segments. Emitted only when using [HTTP-based server view](../configuration/index.md#segment-management).|`server`|1 for fully synced servers, 0 otherwise|
 |`cluster/serverview/unsynced/time`|Milliseconds since the last successful sync of the broker server view with a process serving segments. Emitted only for servers which are not synced when using [HTTP-based server view](../configuration/index.md#segment-management).|`server`|Not emitted for synced servers.|
 

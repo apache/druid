@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Stopwatch;
-import org.apache.commons.lang3.ThreadUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
@@ -131,8 +130,7 @@ public class DateTimesTest
   @Test
   public void testMillisElapsed() throws Exception
   {
-    Stopwatch stopwatch = Stopwatch.createUnstarted();
-    stopwatch.start();
+    Stopwatch stopwatch = Stopwatch.createStarted();
     Thread.sleep(100);
     stopwatch.stop();
 
@@ -145,8 +143,7 @@ public class DateTimesTest
   @Test
   public void testHasElapsed() throws Exception
   {
-    Stopwatch stopwatch = Stopwatch.createUnstarted();
-    stopwatch.start();
+    Stopwatch stopwatch = Stopwatch.createStarted();
     Thread.sleep(100);
     stopwatch.stop();
 
