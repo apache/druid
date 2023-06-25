@@ -27,19 +27,17 @@ import org.apache.druid.java.util.emitter.service.AlertBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
-import org.apache.druid.java.util.metrics.MonitorScheduler;
 
 /**
  * Curator {@link ConnectionStateListener} that uses a {@link ServiceEmitter} to send alerts on ZK connection loss,
  * and emit metrics about ZK connection status.
  */
-public class DruidConnectionStateListener implements ConnectionStateListener
+public class DruidConnectionStateListener extends AbstractMonitor implements ConnectionStateListener
 {
   private static final String METRIC_IS_CONNECTED = "zk/connected";
   private static final String METRIC_DISCONNECTED_TIME = "zk/disconnected/time";
   private static final int NIL = -1;
 
-  private final MonitorScheduler monitorScheduler;
   private final ServiceEmitter emitter;
 
   /**
@@ -54,9 +52,8 @@ public class DruidConnectionStateListener implements ConnectionStateListener
   @GuardedBy("this")
   private long lastDisconnectTime = NIL;
 
-  public DruidConnectionStateListener(final MonitorScheduler monitorScheduler, final ServiceEmitter emitter)
+  public DruidConnectionStateListener(final ServiceEmitter emitter)
   {
-    this.monitorScheduler = monitorScheduler;
     this.emitter = emitter;
   }
 
@@ -64,7 +61,6 @@ public class DruidConnectionStateListener implements ConnectionStateListener
   public void stateChanged(CuratorFramework curatorFramework, ConnectionState newState)
   {
     if (newState.isConnected()) {
-      final boolean isFirst;
       final long disconnectDuration;
 
       synchronized (this) {
@@ -74,13 +70,8 @@ public class DruidConnectionStateListener implements ConnectionStateListener
           disconnectDuration = 0;
         }
 
-        isFirst = currentState == null;
         currentState = newState;
         lastDisconnectTime = NIL;
-      }
-
-      if (isFirst) {
-        monitorScheduler.addMonitor(createMonitor());
       }
 
       if (disconnectDuration > 0) {
@@ -103,18 +94,10 @@ public class DruidConnectionStateListener implements ConnectionStateListener
     }
   }
 
-  public Monitor createMonitor()
+  @Override
+  public boolean doMonitor(ServiceEmitter emitter)
   {
-    return new Monitor();
-  }
-
-  private class Monitor extends AbstractMonitor
-  {
-    @Override
-    public boolean doMonitor(ServiceEmitter emitter)
-    {
-      emitter.emit(ServiceMetricEvent.builder().build(METRIC_IS_CONNECTED, isConnected() ? 1 : 0));
-      return true;
-    }
+    emitter.emit(ServiceMetricEvent.builder().build(METRIC_IS_CONNECTED, isConnected() ? 1 : 0));
+    return true;
   }
 }

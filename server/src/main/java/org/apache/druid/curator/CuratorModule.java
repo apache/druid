@@ -38,7 +38,7 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.AlertBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
 
@@ -74,6 +74,7 @@ public class CuratorModule implements Module
   {
     JsonConfigProvider.bind(binder, CuratorConfig.CONFIG_PREFIX, ZkEnablementConfig.class);
     JsonConfigProvider.bind(binder, CuratorConfig.CONFIG_PREFIX, CuratorConfig.class);
+    MetricsModule.register(binder, DruidConnectionStateListener.class);
   }
 
   /**
@@ -134,12 +135,9 @@ public class CuratorModule implements Module
    */
   @Provides
   @LazySingleton
-  public DruidConnectionStateListener makeConnectionStateListener(
-      final ServiceEmitter emitter,
-      final MonitorScheduler monitorScheduler
-  )
+  public DruidConnectionStateListener makeConnectionStateListener(final ServiceEmitter emitter)
   {
-    return new DruidConnectionStateListener(monitorScheduler, emitter);
+    return new DruidConnectionStateListener(emitter);
   }
 
   /**

@@ -28,12 +28,10 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.junit.LoggerCaptureRule;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
-import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -73,23 +71,25 @@ public final class CuratorModuleTest
     Assert.assertEquals(CuratorModule.MAX_SLEEP_TIME_MS, retryPolicy.getMaxSleepTimeMs());
   }
 
-  @Test
+  @Test(timeout = 60_000L)
   public void exitsJvmWhenMaxRetriesExceeded() throws Exception
   {
     Properties props = new Properties();
     props.setProperty(CURATOR_CONNECTION_TIMEOUT_MS_KEY, "0");
     Injector injector = newInjector(props);
-    CuratorFramework curatorFramework = createCuratorFramework(injector, 0);
-    curatorFramework.start();
 
-    exit.expectSystemExitWithStatus(1);
     logger.clearLogEvents();
+    exit.expectSystemExitWithStatus(1);
 
     // This will result in a curator unhandled error since the connection timeout is 0 and retries are disabled
+    CuratorFramework curatorFramework = createCuratorFramework(injector, 0);
+    curatorFramework.start();
     curatorFramework.create().inBackground().forPath("/foo");
 
     // org.apache.curator.framework.impl.CuratorFrameworkImpl logs "Background retry gave up" unhandled error twice
+    logger.awaitLogEvents();
     List<LogEvent> loggingEvents = logger.getLogEvents();
+
     Assert.assertTrue(
         "Logging events: " + loggingEvents,
         loggingEvents.stream()
@@ -126,9 +126,8 @@ public final class CuratorModuleTest
             new LifecycleModule(),
             new CuratorModule(false),
             binder -> binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class),
-            binder -> binder.bind(MonitorScheduler.class).toInstance(EasyMock.mock(MonitorScheduler.class)),
             binder -> binder.bind(Properties.class).toInstance(props)
-         )
+        )
         .build();
   }
 
