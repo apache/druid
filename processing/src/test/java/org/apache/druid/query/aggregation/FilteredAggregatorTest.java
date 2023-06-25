@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.common.config.NullHandlingTest;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -52,13 +51,14 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.SingleIndexedInt;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
 
-public class FilteredAggregatorTest extends NullHandlingTest
+public class FilteredAggregatorTest extends InitializedNullHandlingTest
 {
   @Test
   public void testAggregate()
@@ -70,7 +70,7 @@ public class FilteredAggregatorTest extends NullHandlingTest
         new SelectorDimFilter("dim", "a", null)
     );
 
-    final Float[] expectedVals = {values[0], values[0]+values[1]};
+    final Float[] expectedVals = {values[0], values[0] + values[1]};
     validateFilteredAggs(factory, selector, expectedVals);
   }
 
@@ -85,7 +85,7 @@ public class FilteredAggregatorTest extends NullHandlingTest
         new SelectorDimFilter("dim", "a", null)
     );
 
-    final Float[] expectedValues = {values[0], values[0], values[0]+values[2]};
+    final Float[] expectedValues = {values[0], values[0], values[0] + values[2]};
     validateFilteredAggs(factory, selector, expectedValues);
   }
 
@@ -114,7 +114,7 @@ public class FilteredAggregatorTest extends NullHandlingTest
         new NotDimFilter(new SelectorDimFilter("dim", "b", null))
     );
 
-    final Float[] expectedValues = {values[0], values[0]+values[1]};
+    final Float[] expectedValues = {values[0], values[0] + values[1]};
     validateFilteredAggs(factory, selector, expectedValues);
   }
 
@@ -126,10 +126,13 @@ public class FilteredAggregatorTest extends NullHandlingTest
 
     final FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new OrDimFilter(Lists.newArrayList(new SelectorDimFilter("dim", "a", null), new SelectorDimFilter("dim", "b", null)))
+        new OrDimFilter(Lists.newArrayList(
+            new SelectorDimFilter("dim", "a", null),
+            new SelectorDimFilter("dim", "b", null)
+        ))
     );
 
-    final Float[] expectedValues = {values[0], values[0]+values[1], values[0]+values[1]+values[2]};
+    final Float[] expectedValues = {values[0], values[0] + values[1], values[0] + values[1] + values[2]};
     validateFilteredAggs(factory, selector, expectedValues);
   }
 
@@ -140,10 +143,13 @@ public class FilteredAggregatorTest extends NullHandlingTest
     final TestNullableFloatColumnSelector selector = new TestNullableFloatColumnSelector(values);
     final FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new AndDimFilter(Lists.newArrayList(new NotDimFilter(new SelectorDimFilter("dim", "b", null)), new SelectorDimFilter("dim", "a", null)))
+        new AndDimFilter(Lists.newArrayList(
+            new NotDimFilter(new SelectorDimFilter("dim", "b", null)),
+            new SelectorDimFilter("dim", "a", null)
+        ))
     );
 
-    final Float[] expectedValues = {values[0], values[0]+values[1]};
+    final Float[] expectedValues = {values[0], values[0] + values[1]};
     validateFilteredAggs(factory, selector, expectedValues);
   }
 
@@ -151,7 +157,7 @@ public class FilteredAggregatorTest extends NullHandlingTest
   public void testAggregateWithPredicateFilters2()
   {
     final Float[] values = {0.15f, 0.27f, null};
-    final Float[] expectedValues = {values[0], values[0]+values[1], values[0]+values[1]};
+    final Float[] expectedValues = {values[0], values[0] + values[1], values[0] + values[1]};
     TestNullableFloatColumnSelector selector;
     FilteredAggregatorFactory factory;
 
@@ -189,13 +195,23 @@ public class FilteredAggregatorTest extends NullHandlingTest
   public void testAggregateWithExtractionFns()
   {
     final Float[] values = {0.15f, null, 0.27f, null, 0.13f};
-    final Float[] expectedValues = {values[0], values[0], values[0]+values[2], values[0]+values[2], values[0]+values[2]+values[4]};
+    final Float[] expectedValues = {
+        values[0],
+        values[0],
+        values[0] + values[2],
+        values[0] + values[2],
+        values[0] + values[2] + values[4]
+    };
 
     TestNullableFloatColumnSelector selector;
     FilteredAggregatorFactory factory;
 
     String extractionJsFn = "function(str) { return str + 'AARDVARK'; }";
-    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getEnabledInstance());
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(
+        extractionJsFn,
+        false,
+        JavaScriptConfig.getEnabledInstance()
+    );
 
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
