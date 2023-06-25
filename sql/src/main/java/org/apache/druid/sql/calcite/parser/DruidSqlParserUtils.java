@@ -371,7 +371,7 @@ public class DruidSqlParserUtils
         } else {
           Preconditions.checkArgument(
               node instanceof SqlIdentifier,
-              "Argument must be a SqlIdentifier, but found [%s]",
+              "Node must be a SqlIdentifier, but found [%s]",
               node.getKind()
           );
           SqlIdentifier n = ((SqlIdentifier) node);
@@ -382,6 +382,11 @@ public class DruidSqlParserUtils
         retClusteredByNames.add(getColumnNameFromSqlCall(clusteredByNode));
       } else {
         // The node is a simple SqlIdentifier, add the name.
+        Preconditions.checkArgument(
+            clusteredByNode instanceof SqlIdentifier,
+            "ClusteredBy node must be a SqlIdentifier, but found [%s]",
+            clusteredByNode.getKind()
+        );
         retClusteredByNames.add(clusteredByNode.toString());
       }
     }
