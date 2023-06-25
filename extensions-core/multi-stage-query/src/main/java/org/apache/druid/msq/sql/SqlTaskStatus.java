@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.msq.sql.resources.SqlTaskResource;
 import org.apache.druid.query.QueryException;
@@ -38,13 +39,13 @@ public class SqlTaskStatus
   private final String taskId;
   private final TaskState state;
   @Nullable
-  private final QueryException error;
+  private final ErrorResponse error;
 
   @JsonCreator
   public SqlTaskStatus(
       @JsonProperty("taskId") final String taskId,
       @JsonProperty("state") final TaskState state,
-      @JsonProperty("error") @Nullable final QueryException error
+      @JsonProperty("error") @Nullable final ErrorResponse error
   )
   {
     this.taskId = Preconditions.checkNotNull(taskId, "taskId");
@@ -67,7 +68,7 @@ public class SqlTaskStatus
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public QueryException getError()
+  public ErrorResponse getError()
   {
     return error;
   }
@@ -99,7 +100,7 @@ public class SqlTaskStatus
     return "SqlTaskStatus{" +
            "taskId='" + taskId + '\'' +
            ", state=" + state +
-           ", error=" + error +
+           ", error=" + (error == null ? "null" : error.getAsMap()) +
            '}';
   }
 }

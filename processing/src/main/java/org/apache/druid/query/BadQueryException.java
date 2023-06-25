@@ -26,8 +26,6 @@ package org.apache.druid.query;
  */
 public abstract class BadQueryException extends QueryException
 {
-  public static final int STATUS_CODE = 400;
-
   protected BadQueryException(String errorCode, String errorMessage, String errorClass)
   {
     this(errorCode, errorMessage, errorClass, null);

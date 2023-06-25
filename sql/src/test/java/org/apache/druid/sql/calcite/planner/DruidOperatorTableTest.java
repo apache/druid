@@ -68,7 +68,7 @@ public class DruidOperatorTableTest
     final SqlOperator operator1 = OperatorConversions
         .operatorBuilder("FOO")
         .operandTypes(SqlTypeFamily.ANY)
-        .requiredOperands(0)
+        .requiredOperandCount(0)
         .returnTypeInference(
             opBinding -> RowSignatures.makeComplexType(
                 opBinding.getTypeFactory(),
