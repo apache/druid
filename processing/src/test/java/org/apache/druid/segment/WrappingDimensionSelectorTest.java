@@ -20,10 +20,11 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.config.NullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class WrappingDimensionSelectorTest
+public class WrappingDimensionSelectorTest extends NullHandlingTest
 {
   @Test
   public void testLongWrappingDimensionSelector()

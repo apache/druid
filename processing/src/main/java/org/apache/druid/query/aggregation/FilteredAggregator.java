@@ -41,15 +41,15 @@ public class FilteredAggregator implements Aggregator
   }
 
   @Override
-  public Object get()
-  {
-    return delegate.get();
-  }
-
-  @Override
   public boolean isNull()
   {
     return delegate.isNull();
+  }
+
+  @Override
+  public Object get()
+  {
+    return delegate.get();
   }
 
   @Override
