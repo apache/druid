@@ -66,7 +66,7 @@ RUN wget -q "https://packages.confluent.io/maven/io/confluent/kafka-protobuf-pro
 # Add sample data
 # touch is needed because OverlayFS's copy-up operation breaks POSIX standards. See https://github.com/docker/for-linux/issues/72.
 RUN find /var/lib/mysql -type f -exec touch {} \; && service mysql start \
-      && java -cp "/usr/local/druid/lib/*" -Ddruid.extensions.directory=/usr/local/druid/extensions -Ddruid.extensions.loadList='["mysql-metadata-storage"]' -Ddruid.metadata.storage.type=mysql -Ddruid.metadata.mysql.driver.driverClassName=$MYSQL_DRIVER_CLASSNAME org.apache.druid.cli.Main tools metadata-init --connectURI="jdbc:mysql://localhost:3306/druid" --user=druid --password=diurd \
+      && /usr/local/druid/bin/run-java -cp "/usr/local/druid/lib/*" -Ddruid.extensions.directory=/usr/local/druid/extensions -Ddruid.extensions.loadList='["mysql-metadata-storage"]' -Ddruid.metadata.storage.type=mysql -Ddruid.metadata.mysql.driver.driverClassName=$MYSQL_DRIVER_CLASSNAME org.apache.druid.cli.Main tools metadata-init --connectURI="jdbc:mysql://localhost:3306/druid" --user=druid --password=diurd \
       && /etc/init.d/mysql stop
 ADD test-data /test-data
 
