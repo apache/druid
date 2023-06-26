@@ -343,7 +343,8 @@ public class DruidSqlParserUtils
 
     Preconditions.checkArgument(
         sourceNode instanceof SqlSelect || sourceNode instanceof SqlOrderBy,
-        "Source node must be either SqlSelect or SqlOrderBy"
+        "Source node must be either SqlSelect or SqlOrderBy, but found [%s]",
+        sourceNode == null ? null : sourceNode.getKind()
     );
 
     final SqlSelect selectNode = (sourceNode instanceof SqlSelect) ? (SqlSelect) sourceNode
