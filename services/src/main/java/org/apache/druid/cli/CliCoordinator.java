@@ -32,7 +32,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
-import com.google.inject.name.Named;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import org.apache.curator.framework.CuratorFramework;
@@ -334,6 +334,10 @@ public class CliCoordinator extends ServerRunnable
               binder.bind(TaskStorage.class).toProvider(Providers.of(null));
               binder.bind(TaskMaster.class).toProvider(Providers.of(null));
               binder.bind(RowIngestionMetersFactory.class).toProvider(Providers.of(null));
+              // Bind HeartbeatSupplier only when the service operates independently of Overlord.
+              binder.bind(new TypeLiteral<Supplier<Map<String, Object>>>() {})
+                  .annotatedWith(Names.named("heartbeat"))
+                  .toProvider(HeartbeatSupplier.class);
             }
 
             binder.bind(CoordinatorCustomDutyGroups.class)
@@ -373,19 +377,6 @@ public class CliCoordinator extends ServerRunnable
                 httpClient,
                 zkPaths
             );
-          }
-
-          @Provides
-          @LazySingleton
-          @Named("heartbeat")
-          public Supplier<Map<String, Object>> getHeartbeatSupplier(DruidCoordinator coordinator)
-          {
-            return () -> {
-              Map<String, Object> heartbeatTags = new HashMap<>();
-              heartbeatTags.put("leader", coordinator.isLeader() ? 1 : 0);
-
-              return heartbeatTags;
-            };
           }
         }
     );
@@ -474,6 +465,28 @@ public class CliCoordinator extends ServerRunnable
       catch (Exception e) {
         throw new RuntimeException(e);
       }
+    }
+  }
+
+  private static class HeartbeatSupplier implements Provider<Supplier<Map<String, Object>>>
+  {
+    private final DruidCoordinator coordinator;
+
+    @Inject
+    public HeartbeatSupplier(DruidCoordinator coordinator)
+    {
+      this.coordinator = coordinator;
+    }
+
+    @Override
+    public Supplier<Map<String, Object>> get()
+    {
+      return () -> {
+        Map<String, Object> heartbeatTags = new HashMap<>();
+        heartbeatTags.put("leader", coordinator.isLeader() ? 1 : 0);
+
+        return heartbeatTags;
+      };
     }
   }
 }
