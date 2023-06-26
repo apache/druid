@@ -70,9 +70,9 @@ public class CombineFirstTwoValuesIndexedInts implements IndexedInts
   {
     delegate.get(out, start, length);
 
-    for (int i = 0 ; i < length ; i++) {
+    for (int i = 0; i < length; i++) {
       if (out[i] != ZERO_ID) {
-        out[i] --;
+        out[i]--;
       }
     }
   }
@@ -82,9 +82,9 @@ public class CombineFirstTwoValuesIndexedInts implements IndexedInts
   {
     delegate.get(out, indexes, length);
 
-    for (int i = 0 ; i < length ; i++) {
+    for (int i = 0; i < length; i++) {
       if (out[i] != ZERO_ID) {
-        out[i] --;
+        out[i]--;
       }
     }
   }

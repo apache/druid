@@ -152,8 +152,10 @@ public abstract class CombineFirstTwoEntriesIndexed<T> implements Indexed<T>
     final Iterator<T> it = delegate.iterator();
 
     // Skip first two values.
+    //CHECKSTYLE.OFF: Regexp
     it.next();
     it.next();
+    //CHECKSTYLE.ON: Regexp
 
     class CoalescingIndexedIterator implements Iterator<T>
     {
