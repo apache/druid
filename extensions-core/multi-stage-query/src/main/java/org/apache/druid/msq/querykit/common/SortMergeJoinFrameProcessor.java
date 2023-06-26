@@ -199,16 +199,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       // If marked keys are equal on both sides ("marksMatch"), at least one side needs to have a complete set of rows
       // for the marked key. Check if this is true, otherwise call nextAwait to read more data.
       if (marksMatch && trackerWithCompleteSetForCurrentKey < 0) {
-        for (int i = 0; i < inputChannels.size(); i++) {
-          final Tracker tracker = trackers.get(i);
-
-          // Fetch up to one frame from each tracker, to check if that tracker has a complete set.
-          // Can't fetch more than one frame, because channels are only guaranteed to have one frame per run.
-          if (tracker.hasCompleteSetForMark() || (pushNextFrame(i) && tracker.hasCompleteSetForMark())) {
-            trackerWithCompleteSetForCurrentKey = i;
-            break;
-          }
-        }
+        updateTrackerWithCompleteSetForCurrentKey();
 
         if (trackerWithCompleteSetForCurrentKey < 0) {
           // Algorithm cannot proceed; fetch more frames on the next run.
@@ -216,108 +207,13 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
         }
       }
 
-      if (marksMatch || (markCmp <= 0 && joinType.isLefty()) || (markCmp >= 0 && joinType.isRighty())) {
-        // Emit row, if there's room in the current frameWriter.
-        joinColumnSelectorFactory.cmp = markCmp;
-        joinColumnSelectorFactory.match = marksMatch;
-
-        if (!frameWriter.addSelection()) {
-          if (frameWriter.getNumRows() > 0) {
-            // Out of space in the current frame. Run again without moving cursors.
-            flushCurrentFrame();
-            return ReturnOrAwait.runAgain();
-          } else {
-            throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
-          }
-        }
+      // Emit row if there was a match.
+      if (!emitRowIfNeeded(markCmp, marksMatch)) {
+        return ReturnOrAwait.runAgain();
       }
 
       // Advance one or both trackers.
-      if (marksMatch) {
-        // Matching keys. First advance the tracker with the complete set.
-        final Tracker completeSetTracker = trackers.get(trackerWithCompleteSetForCurrentKey);
-        final Tracker otherTracker = trackers.get(trackerWithCompleteSetForCurrentKey == LEFT ? RIGHT : LEFT);
-
-        completeSetTracker.advance();
-        if (!completeSetTracker.isCurrentSameKeyAsMark()) {
-          // Reached end of complete set. Advance the other tracker.
-          otherTracker.advance();
-
-          // On next iteration (when we're sure to have data) either rewind the complete-set tracker, or update marks
-          // of both, as appropriate.
-          onNextIteration(() -> {
-            if (otherTracker.isCurrentSameKeyAsMark()) {
-              completeSetTracker.rewindToMark();
-            } else {
-              // Reached end of the other side too. Advance marks on both trackers.
-              completeSetTracker.markCurrent();
-              trackerWithCompleteSetForCurrentKey = -1;
-            }
-
-            // Always update mark of the other tracker, to enable cleanup of old frames. It doesn't ever need to
-            // be rewound.
-            otherTracker.markCurrent();
-          });
-        }
-      } else {
-        // Keys don't match. Advance based on what kind of join this is.
-        final int trackerToAdvance;
-        final boolean skipMarkedKey;
-
-        if (markCmp < 0) {
-          trackerToAdvance = LEFT;
-        } else if (markCmp > 0) {
-          trackerToAdvance = RIGHT;
-        } else {
-          // Key is null on both sides. Note that there is a preference for running through the left side first
-          // on a FULL join. It doesn't really matter which side we run through first, but we do need to be consistent
-          // for the benefit of the logic in "shouldEmitColumnValue".
-          trackerToAdvance = joinType.isLefty() ? LEFT : RIGHT;
-        }
-
-        // Skip marked key entirely if we're on the "off" side of the join. (i.e., right side of a LEFT join.)
-        // Note that for FULL joins, entire keys are never skipped, because they are both lefty and righty.
-        if (trackerToAdvance == LEFT) {
-          skipMarkedKey = !joinType.isLefty();
-        } else {
-          skipMarkedKey = !joinType.isRighty();
-        }
-
-        final Tracker tracker = trackers.get(trackerToAdvance);
-
-        // Advance past marked key, or as far as we can.
-        boolean didKeyChange = false;
-
-        do {
-          // Always advance a single row. If we're in "skipMarkedKey" mode, then we'll loop through later and
-          // potentially skip multiple rows with the same marked key.
-          tracker.advance();
-
-          if (tracker.isAtEndOfPushedData()) {
-            break;
-          }
-
-          didKeyChange = !tracker.isCurrentSameKeyAsMark();
-
-          // Always update mark, even if key hasn't changed, to enable cleanup of old frames.
-          tracker.markCurrent();
-        } while (skipMarkedKey && !didKeyChange);
-
-        if (didKeyChange) {
-          trackerWithCompleteSetForCurrentKey = -1;
-        } else if (tracker.isAtEndOfPushedData()) {
-          // Not clear if we reached a new key or not.
-          // So, on next iteration (when we're sure to have data), check if we've moved on to a new key.
-          onNextIteration(() -> {
-            if (!tracker.isCurrentSameKeyAsMark()) {
-              trackerWithCompleteSetForCurrentKey = -1;
-            }
-
-            // Always update mark, even if key hasn't changed, to enable cleanup of old frames.
-            tracker.markCurrent();
-          });
-        }
-      }
+      advanceTrackersAfterEmittingRow(markCmp, marksMatch);
     }
 
     if (allTrackersAreAtEnd()) {
@@ -333,6 +229,150 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
   public void cleanup() throws IOException
   {
     FrameProcessors.closeAll(inputChannels(), outputChannels(), frameWriter, () -> trackers.forEach(Tracker::clear));
+  }
+
+  /**
+   * Set {@link #trackerWithCompleteSetForCurrentKey} to the lowest-numbered {@link Tracker} that has a complete
+   * set of rows available for its mark.
+   */
+  private void updateTrackerWithCompleteSetForCurrentKey()
+  {
+    for (int i = 0; i < inputChannels.size(); i++) {
+      final Tracker tracker = trackers.get(i);
+
+      // Fetch up to one frame from each tracker, to check if that tracker has a complete set.
+      // Can't fetch more than one frame, because channels are only guaranteed to have one frame per run.
+      if (tracker.hasCompleteSetForMark() || (pushNextFrame(i) && tracker.hasCompleteSetForMark())) {
+        trackerWithCompleteSetForCurrentKey = i;
+        return;
+      }
+    }
+
+    trackerWithCompleteSetForCurrentKey = -1;
+  }
+
+  /**
+   * Emits a joined row based on the current state of all trackers.
+   *
+   * @param markCmp    result of {@link #compareMarks()}
+   * @param marksMatch whether the marks actually matched, taking nulls into account
+   *
+   * @return true if cursors should be advanced, false if we should run again without moving cursors
+   */
+  private boolean emitRowIfNeeded(final int markCmp, final boolean marksMatch) throws IOException
+  {
+    if (marksMatch || (markCmp <= 0 && joinType.isLefty()) || (markCmp >= 0 && joinType.isRighty())) {
+      // Emit row, if there's room in the current frameWriter.
+      joinColumnSelectorFactory.cmp = markCmp;
+      joinColumnSelectorFactory.match = marksMatch;
+
+      if (!frameWriter.addSelection()) {
+        if (frameWriter.getNumRows() > 0) {
+          // Out of space in the current frame. Run again without moving cursors.
+          flushCurrentFrame();
+          return false;
+        } else {
+          throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
+        }
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Advance one or both trackers after emitting a row.
+   *
+   * @param markCmp    result of {@link #compareMarks()}
+   * @param marksMatch whether the marks actually matched, taking nulls into account
+   */
+  private void advanceTrackersAfterEmittingRow(final int markCmp, final boolean marksMatch)
+  {
+    if (marksMatch) {
+      // Matching keys. First advance the tracker with the complete set.
+      final Tracker completeSetTracker = trackers.get(trackerWithCompleteSetForCurrentKey);
+      final Tracker otherTracker = trackers.get(trackerWithCompleteSetForCurrentKey == LEFT ? RIGHT : LEFT);
+
+      completeSetTracker.advance();
+      if (!completeSetTracker.isCurrentSameKeyAsMark()) {
+        // Reached end of complete set. Advance the other tracker.
+        otherTracker.advance();
+
+        // On next iteration (when we're sure to have data) either rewind the complete-set tracker, or update marks
+        // of both, as appropriate.
+        onNextIteration(() -> {
+          if (otherTracker.isCurrentSameKeyAsMark()) {
+            completeSetTracker.rewindToMark();
+          } else {
+            // Reached end of the other side too. Advance marks on both trackers.
+            completeSetTracker.markCurrent();
+            trackerWithCompleteSetForCurrentKey = -1;
+          }
+
+          // Always update mark of the other tracker, to enable cleanup of old frames. It doesn't ever need to
+          // be rewound.
+          otherTracker.markCurrent();
+        });
+      }
+    } else {
+      // Keys don't match. Advance based on what kind of join this is.
+      final int trackerToAdvance;
+      final boolean skipMarkedKey;
+
+      if (markCmp < 0) {
+        trackerToAdvance = LEFT;
+      } else if (markCmp > 0) {
+        trackerToAdvance = RIGHT;
+      } else {
+        // Key is null on both sides. Note that there is a preference for running through the left side first
+        // on a FULL join. It doesn't really matter which side we run through first, but we do need to be consistent
+        // for the benefit of the logic in "shouldEmitColumnValue".
+        trackerToAdvance = joinType.isLefty() ? LEFT : RIGHT;
+      }
+
+      // Skip marked key entirely if we're on the "off" side of the join. (i.e., right side of a LEFT join.)
+      // Note that for FULL joins, entire keys are never skipped, because they are both lefty and righty.
+      if (trackerToAdvance == LEFT) {
+        skipMarkedKey = !joinType.isLefty();
+      } else {
+        skipMarkedKey = !joinType.isRighty();
+      }
+
+      final Tracker tracker = trackers.get(trackerToAdvance);
+
+      // Advance past marked key, or as far as we can.
+      boolean didKeyChange = false;
+
+      do {
+        // Always advance a single row. If we're in "skipMarkedKey" mode, then we'll loop through later and
+        // potentially skip multiple rows with the same marked key.
+        tracker.advance();
+
+        if (tracker.isAtEndOfPushedData()) {
+          break;
+        }
+
+        didKeyChange = !tracker.isCurrentSameKeyAsMark();
+
+        // Always update mark, even if key hasn't changed, to enable cleanup of old frames.
+        tracker.markCurrent();
+      } while (skipMarkedKey && !didKeyChange);
+
+      if (didKeyChange) {
+        trackerWithCompleteSetForCurrentKey = -1;
+      } else if (tracker.isAtEndOfPushedData()) {
+        // Not clear if we reached a new key or not.
+        // So, on next iteration (when we're sure to have data), check if we've moved on to a new key.
+        onNextIteration(() -> {
+          if (!tracker.isCurrentSameKeyAsMark()) {
+            trackerWithCompleteSetForCurrentKey = -1;
+          }
+
+          // Always update mark, even if key hasn't changed, to enable cleanup of old frames.
+          tracker.markCurrent();
+        });
+      }
+    }
   }
 
   /**
@@ -403,7 +443,9 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
   }
 
   /**
-   * Compares the marked rows of the two {@link #trackers}.
+   * Compares the marked rows of the two {@link #trackers}. This method returns 0 if both sides are null, even
+   * though this is not considered a match by join semantics. Therefore, it is important to also check
+   * {@link Tracker#hasCompletelyNonNullMark()}.
    *
    * @throws IllegalStateException if either tracker does not have a marked row and is not completely done
    */
