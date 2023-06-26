@@ -100,7 +100,7 @@ public class PreResponseAuthorizationCheckFilter implements Filter
 
     if (authInfoChecked != null && !authInfoChecked && response.getStatus() != HttpServletResponse.SC_FORBIDDEN) {
       handleAuthorizationCheckError(
-          "Request's authorization check failed but status code was not 403.",
+          "Request's authorization check failed but status code was not 403",
           request,
           response
       );

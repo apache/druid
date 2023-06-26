@@ -56,7 +56,7 @@ public class TimeFloorOperatorConversion implements SqlOperatorConversion
   public static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(SQL_FUNCTION_NAME)
       .operandTypes(SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER, SqlTypeFamily.TIMESTAMP, SqlTypeFamily.CHARACTER)
-      .requiredOperands(2)
+      .requiredOperandCount(2)
       .returnTypeCascadeNullable(SqlTypeName.TIMESTAMP)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();

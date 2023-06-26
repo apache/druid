@@ -124,6 +124,11 @@ public class KubernetesPeonLifecycle
 
       return join(timeout);
     }
+    catch (Exception e) {
+      log.info("Failed to run task: %s", taskId.getOriginalTaskId());
+      shutdown();
+      throw e;
+    }
     finally {
       state.set(State.STOPPED);
     }

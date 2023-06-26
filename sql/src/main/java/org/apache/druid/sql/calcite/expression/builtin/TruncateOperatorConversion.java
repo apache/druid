@@ -37,7 +37,7 @@ public class TruncateOperatorConversion implements SqlOperatorConversion
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("TRUNCATE")
       .operandTypes(SqlTypeFamily.NUMERIC, SqlTypeFamily.INTEGER)
-      .requiredOperands(1)
+      .requiredOperandCount(1)
       .returnTypeInference(ReturnTypes.ARG0)
       .functionCategory(SqlFunctionCategory.NUMERIC)
       .build();

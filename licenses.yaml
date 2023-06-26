@@ -1591,7 +1591,7 @@ name: Java Native Access (JNA)
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.5.1
+version: 5.13.0
 libraries:
   - net.java.dev.jna: jna
 
@@ -2338,6 +2338,17 @@ notices:
       important trademark information and to
       http://java.sun.com/nav/business/index.html for further important licensing
       information for the Java Technology.
+
+---
+
+name: OSHI
+license_category: binary
+module: java-core
+license_name: MIT License
+version: 6.4.2
+libraries:
+  - com.github.oshi: oshi-core
+license_file_path: licenses/bin/oshi.MIT
 
 ---
 
@@ -3634,7 +3645,7 @@ libraries:
 ---
 
 name: Apache Velocity Engine
-version: 2.2
+version: 2.3
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3652,7 +3663,7 @@ name: Apache Avro
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 1.9.2
+version: 1.11.1
 libraries:
   - org.apache.avro: avro
   - org.apache.avro: avro-mapred
@@ -3784,7 +3795,7 @@ name: DataSketches
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.0.0
+version: 4.1.0
 libraries:
   - org.apache.datasketches: datasketches-java
 
@@ -4914,7 +4925,7 @@ libraries:
 
 name: net.java.dev.jna jna-platform
 license_category: binary
-version: 5.2.0
+version: 5.13.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:

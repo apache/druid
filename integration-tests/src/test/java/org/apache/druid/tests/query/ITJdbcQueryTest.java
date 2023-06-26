@@ -213,13 +213,15 @@ public class ITJdbcQueryTest
     }
   }
 
-  @Test(expectedExceptions = AvaticaSqlException.class, expectedExceptionsMessageRegExp = ".* Parameter at position \\[0] is not bound")
+  @Test(expectedExceptions = AvaticaSqlException.class, expectedExceptionsMessageRegExp = ".* No value bound for parameter \\(position \\[1]\\)")
   public void testJdbcPrepareStatementQueryMissingParameters() throws SQLException
   {
     for (String url : connections) {
       try (Connection connection = DriverManager.getConnection(url, connectionProperties);
            PreparedStatement statement = connection.prepareStatement(QUERY_PARAMETERIZED);
            ResultSet resultSet = statement.executeQuery()) {
+        // This won't actually run as we expect the exception to be thrown before it gets here
+        throw new IllegalStateException(resultSet.toString());
       }
     }
   }
