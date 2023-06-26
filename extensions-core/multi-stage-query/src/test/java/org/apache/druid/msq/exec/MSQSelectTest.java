@@ -101,7 +101,7 @@ public class MSQSelectTest extends MSQTestBase
         {DEFAULT, DEFAULT_MSQ_CONTEXT},
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
-        {SEQUENTIAL_MERGE, SEQUENTIAL_MERGE_MSQ_CONTEXT}
+        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT}
     };
     return Arrays.asList(data);
   }
@@ -342,6 +342,69 @@ public class MSQSelectTest extends MSQTestBase
                            )
                            .columns("cnt", "dim1")
                            .context(defaultScanQueryContext(context, resultSignature))
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(ImmutableList.of())
+        .verifyResults();
+  }
+
+  @Test
+  public void testSelectOnFooWhereMatchesNoData()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("cnt", ColumnType.LONG)
+                                               .add("dim1", ColumnType.STRING)
+                                               .build();
+
+    testSelectQuery()
+        .setSql("select cnt,dim1 from foo where dim2 = 'nonexistent'")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(querySegmentSpec(Intervals.ETERNITY))
+                           .columns("cnt", "dim1")
+                           .filters(selector("dim2", "nonexistent", null))
+                           .context(defaultScanQueryContext(context, resultSignature))
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(ImmutableList.of())
+        .verifyResults();
+  }
+
+  @Test
+  public void testSelectAndOrderByOnFooWhereMatchesNoData()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("cnt", ColumnType.LONG)
+                                               .add("dim1", ColumnType.STRING)
+                                               .build();
+
+    testSelectQuery()
+        .setSql("select cnt,dim1 from foo where dim2 = 'nonexistent' order by dim1")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(querySegmentSpec(Intervals.ETERNITY))
+                           .columns("cnt", "dim1")
+                           .filters(selector("dim2", "nonexistent", null))
+                           .context(defaultScanQueryContext(context, resultSignature))
+                           .orderBy(ImmutableList.of(new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)))
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))

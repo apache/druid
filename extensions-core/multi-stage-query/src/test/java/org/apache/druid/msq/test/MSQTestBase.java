@@ -241,12 +241,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(MultiStageQueryContext.CTX_FAULT_TOLERANCE, true)
                   .build();
 
-  public static final Map<String, Object> SEQUENTIAL_MERGE_MSQ_CONTEXT =
+  public static final Map<String, Object> PARALLEL_MERGE_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(
                       MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
-                      ClusterStatisticsMergeMode.SEQUENTIAL.toString()
+                      ClusterStatisticsMergeMode.PARALLEL.toString()
                   )
                   .build();
 
@@ -259,7 +259,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public static final String FAULT_TOLERANCE = "fault_tolerance";
   public static final String DURABLE_STORAGE = "durable_storage";
   public static final String DEFAULT = "default";
-  public static final String SEQUENTIAL_MERGE = "sequential_merge";
+  public static final String PARALLEL_MERGE = "parallel_merge";
 
   public final boolean useDefault = NullHandling.replaceWithDefault();
 
