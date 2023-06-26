@@ -326,7 +326,9 @@ public class HeapMemoryTaskStorage implements TaskStorage
 
     taskIds.forEach(tasks::remove);
     synchronized (taskActions) {
-      taskIds.forEach(taskActions::removeAll);
+      for (String taskId : taskIds) {
+        taskActions.removeAll(taskId);
+      }
     }
   }
 
