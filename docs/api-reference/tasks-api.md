@@ -35,10 +35,10 @@ as in `2016-06-27_2016-06-28`.
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/tasks`
 
-Retrieve list of tasks. 
+This endpoint retrieves an array of all task objects currently running or executed in the current Druid cluster. It provides information about each task such as its task id, task status, associated data source, and other metadata. It supports a set of optional query parameters to filter results. 
 
 #### Query parameters
-|Query Parameter|Datatype|Description|
+|Parameter|Type|Description|
 |---|---|---|
 |`state`|String|Filter list of tasks by task state, valid options are `running`, `complete`, `waiting`, and `pending`.|
 | `datasource`|String| Return tasks filtered by Druid datasource.|
@@ -58,7 +58,7 @@ Retrieve list of tasks.
 *Invalid `state` query parameter value* 
 <!--404 NOT FOUND-->
 <br/>
-*Request sent to incorrect service* 
+*Resource not found* 
 <!--500 SERVER ERROR-->
 <br/>
 *Invalid query parameter* 
@@ -72,15 +72,10 @@ Retrieve list of tasks.
 ```shell
 curl "{domain}/druid/indexer/v1/tasks/?state=complete&datasource=wikipedia_api&createdTimeInterval=2015-09-12T00%3A00%3A00Z%2F2015-09-13T23%3A59%3A59Z&max=10&type=query_worker"
 ```
-<!--Python-->
-```python
-import requests
-
-url = "{domain}/druid/indexer/v1/tasks/?state=complete&datasource=wikipedia_api&createdTimeInterval=2015-09-12T00%3A00%3A00Z%2F2015-09-13T23%3A59%3A59Z&max=10&type=query_worker"
-
-response = requests.get(url)
-
-print(response.text)
+<!--HTTP-->
+```HTTP
+GET /druid/indexer/v1/tasks/?state=complete&datasource=wikipedia_api&createdTimeInterval=2015-09-12T00%3A00%3A00Z%2F2015-09-13T23%3A59%3A59Z&max=10&type=query_worker HTTP/1.1
+Host: {domain}
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -152,7 +147,15 @@ print(response.text)
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/completeTasks`
 
-Retrieve list of complete tasks. Equivalent to `/druid/indexer/v1/tasks?state=complete`.
+This endpoint retrieves an array of completed task objects in the current Druid cluster. This is functionally equivalent to `/druid/indexer/v1/tasks?state=complete`. It supports a set of optional query parameters to filter results. 
+
+#### Query parameters
+|Parameter|Type|Description|
+|---|---|---|
+| `datasource`|String| Return tasks filtered by Druid datasource.|
+| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. |
+| `max`|Integer|Maximum number of `"complete"` tasks to return. Only applies when `state` is set to `"complete"`.|
+| `type`|String|Filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
 #### Responses
 
@@ -175,15 +178,10 @@ Retrieve list of complete tasks. Equivalent to `/druid/indexer/v1/tasks?state=co
 ```shell
 curl "{domain}/druid/indexer/v1/completeTasks"
 ```
-<!--Python-->
-```python
-import requests
-
-url = "{domain}/druid/indexer/v1/completeTasks"
-
-response = requests.get(url)
-
-print(response.text)
+<!--HTTP-->
+```HTTP
+GET /druid/indexer/v1/completeTasks HTTP/1.1
+Host: {domain}
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -236,7 +234,15 @@ print(response.text)
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/runningTasks`
 
-Retrieve a list of running tasks. Equivalent to `/druid/indexer/v1/tasks?state=running`.
+This endpoint retrieves an array of running task objects in the current Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=running`. It supports a set of optional query parameters to filter results. 
+
+#### Query parameters
+|Parameter|Type|Description|
+|---|---|---|
+| `datasource`|String| Return tasks filtered by Druid datasource.|
+| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. |
+| `max`|Integer|Maximum number of `"complete"` tasks to return. Only applies when `state` is set to `"complete"`.|
+| `type`|String|Filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
 #### Responses
 
@@ -256,15 +262,10 @@ Retrieve a list of running tasks. Equivalent to `/druid/indexer/v1/tasks?state=r
 ```shell
 curl "{domain}/druid/indexer/v1/runningTasks"
 ```
-<!--Python-->
-```python
-import requests
-
-url = "{domain}/druid/indexer/v1/runningTasks"
-
-response = requests.get(url)
-
-print(response.text)
+<!--HTTP-->
+```HTTP
+GET /druid/indexer/v1/runningTasks HTTP/1.1
+Host: {domain}
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -299,7 +300,15 @@ print(response.text)
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/waitingTasks`
 
-Retrieve list of waiting tasks. Equivalent to `/druid/indexer/v1/tasks?state=waiting`.
+This endpoint retrieves an array of waiting task objects in the current Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=waiting`. It supports a set of optional query parameters to filter results. 
+
+#### Query parameters
+|Parameter|Type|Description|
+|---|---|---|
+| `datasource`|String| Return tasks filtered by Druid datasource.|
+| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. |
+| `max`|Integer|Maximum number of `"complete"` tasks to return. Only applies when `state` is set to `"complete"`.|
+| `type`|String|Filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
 #### Responses
 
@@ -319,15 +328,10 @@ Retrieve list of waiting tasks. Equivalent to `/druid/indexer/v1/tasks?state=wai
 ```shell
 curl "{domain}/druid/indexer/v1/waitingTasks"
 ```
-<!--Python-->
-```python
-import requests
-
-url = "{domain}/druid/indexer/v1/waitingTasks"
-
-response = requests.get(url)
-
-print(response.text)
+<!--HTTP-->
+```HTTP
+GET /druid/indexer/v1/waitingTasks HTTP/1.1
+Host: {domain}
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -335,7 +339,62 @@ print(response.text)
 
 <details>
   <summary>Toggle to show sample response</summary>
-  <pre><code>[]</code></pre>
+  <pre><code>[
+    {
+        "id": "index_parallel_wikipedia_auto_biahcbmf_2023-06-26T21:08:05.216Z",
+        "groupId": "index_parallel_wikipedia_auto_biahcbmf_2023-06-26T21:08:05.216Z",
+        "type": "index_parallel",
+        "createdTime": "2023-06-26T21:08:05.217Z",
+        "queueInsertionTime": "1970-01-01T00:00:00.000Z",
+        "statusCode": "RUNNING",
+        "status": "RUNNING",
+        "runnerStatusCode": "WAITING",
+        "duration": -1,
+        "location": {
+            "host": null,
+            "port": -1,
+            "tlsPort": -1
+        },
+        "dataSource": "wikipedia_auto",
+        "errorMsg": null
+    },
+    {
+        "id": "index_parallel_wikipedia_auto_afggfiec_2023-06-26T21:08:05.546Z",
+        "groupId": "index_parallel_wikipedia_auto_afggfiec_2023-06-26T21:08:05.546Z",
+        "type": "index_parallel",
+        "createdTime": "2023-06-26T21:08:05.548Z",
+        "queueInsertionTime": "1970-01-01T00:00:00.000Z",
+        "statusCode": "RUNNING",
+        "status": "RUNNING",
+        "runnerStatusCode": "WAITING",
+        "duration": -1,
+        "location": {
+            "host": null,
+            "port": -1,
+            "tlsPort": -1
+        },
+        "dataSource": "wikipedia_auto",
+        "errorMsg": null
+    },
+    {
+        "id": "index_parallel_wikipedia_auto_jmmddihf_2023-06-26T21:08:06.644Z",
+        "groupId": "index_parallel_wikipedia_auto_jmmddihf_2023-06-26T21:08:06.644Z",
+        "type": "index_parallel",
+        "createdTime": "2023-06-26T21:08:06.671Z",
+        "queueInsertionTime": "1970-01-01T00:00:00.000Z",
+        "statusCode": "RUNNING",
+        "status": "RUNNING",
+        "runnerStatusCode": "WAITING",
+        "duration": -1,
+        "location": {
+            "host": null,
+            "port": -1,
+            "tlsPort": -1
+        },
+        "dataSource": "wikipedia_auto",
+        "errorMsg": null
+    }
+]</code></pre>
 </details>
 
 ### Get an array of pending tasks
@@ -344,7 +403,15 @@ print(response.text)
 
 <code class="getAPI">GET</code> `/druid/indexer/v1/pendingTasks`
 
-Retrieve list of pending tasks. Equivalent to `/druid/indexer/v1/tasks?state=pending`.
+This endpoint retrieves an array of pending task objects in the current Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=pending`. It supports a set of optional query parameters to filter results. 
+
+#### Query parameters
+|Parameter|Type|Description|
+|---|---|---|
+| `datasource`|String| Return tasks filtered by Druid datasource.|
+| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. |
+| `max`|Integer|Maximum number of `"complete"` tasks to return. Only applies when `state` is set to `"complete"`.|
+| `type`|String|Filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
 #### Responses
 
@@ -364,15 +431,10 @@ Retrieve list of pending tasks. Equivalent to `/druid/indexer/v1/tasks?state=pen
 ```shell
 curl "{domain}/druid/indexer/v1/pendingTasks"
 ```
-<!--Python-->
-```python
-import requests
-
-url = "{domain}/druid/indexer/v1/pendingTasks"
-
-response = requests.get(url)
-
-print(response.text)
+<!--HTTP-->
+```HTTP
+GET /druid/indexer/v1/pendingTasks HTTP/1.1
+Host: {domain}
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -446,15 +508,10 @@ Retrieve the 'payload' of a task.
 ```shell
 curl "{domain}/druid/indexer/v1/task/query-32663269-ead9-405a-8eb6-0817a952ef47"
 ```
-<!--Python-->
-```python
-import requests
-
-url = "{domain}/druid/indexer/v1/task/query-32663269-ead9-405a-8eb6-0817a952ef47"
-
-response = requests.get(url)
-
-print(response.text)
+<!--HTTP-->
+```HTTP
+GET /druid/indexer/v1/task/query-32663269-ead9-405a-8eb6-0817a952ef47 HTTP/1.1
+Host: {domain}
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -831,17 +888,12 @@ Retrieve the status of a task.
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/task/query-32663269-ead9-405a-8eb6-0817a952ef47/status"
+curl "{domain}/druid/indexer/v1/task/query-223549f8-b993-4483-b028-1b0d54713cad/status"
 ```
-<!--Python-->
-```python
-import requests
-
-url = "{domain}/druid/indexer/v1/task/query-32663269-ead9-405a-8eb6-0817a952ef47/status"
-
-response = requests.get(url)
-
-print(response.text)
+<!--HTTP-->
+```HTTP
+GET /druid/indexer/v1/task/query-223549f8-b993-4483-b028-1b0d54713cad/status HTTP/1.1
+Host: {domain}
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -1946,12 +1998,24 @@ Retrieve list of task status objects for list of task id strings in request body
 
 #### Request body
 
-A JSON object with an array of task id strings.
+A JSON array of task id strings.
 
 <details>
   <summary>Toggle to show sample request body</summary>
   <pre><code>["query-52a8aafe-7265-4427-89fe-dc51275cc470"]</code></pre>
 </details>
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully retrieved status objects* 
+<!--415 UNSUPPORTED MEDIA TYPE-->
+<br/>
+*Missing request body or incorrect request body type* 
+<!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample request
 
