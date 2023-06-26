@@ -1,7 +1,7 @@
 ---
 id: supervisor-api
 title: Supervisor API
-sidebar_label: Supervisor
+sidebar_label: Supervisors
 ---
 
 <!--
