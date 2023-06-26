@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 
@@ -114,6 +115,14 @@ public class KafkaInputReader implements InputEntityReader
             );
           }
           Map<String, Object> event = new HashMap<>(headerKeyList);
+
+          /* pass through the original InputRow timestamp returned by the value InputFormat as the __time field
+             this allows the TimestampSpec to access the original valueRow timestamp if it is not present separately in
+             the map returned by valueRow.getEvent().
+             TODO: figure out if this should be called __time or something else in case the InputFormat defines its own
+             __time field that is different from valueRow.getTimestamp(). */
+          event.put(ColumnHolder.TIME_COLUMN_NAME, valueRow.getTimestampFromEpoch());
+
           /* Currently we prefer payload attributes if there is a collision in names.
               We can change this beahvior in later changes with a config knob. This default
               behavior lets easy porting of existing inputFormats to the new one without any changes.
@@ -121,6 +130,7 @@ public class KafkaInputReader implements InputEntityReader
           event.putAll(valueRow.getEvent());
 
           HashSet<String> newDimensions = new HashSet<String>(valueRow.getDimensions());
+          newDimensions.add(ColumnHolder.TIME_COLUMN_NAME);
           newDimensions.addAll(headerKeyList.keySet());
           // Remove the dummy timestamp added in KafkaInputFormat
           newDimensions.remove(KafkaInputFormat.DEFAULT_AUTO_TIMESTAMP_STRING);

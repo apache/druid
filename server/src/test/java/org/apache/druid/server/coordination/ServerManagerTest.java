@@ -29,6 +29,7 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.LocalCacheProvider;
 import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.common.config.NullHandlingTest;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
@@ -123,7 +124,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  */
-public class ServerManagerTest
+public class ServerManagerTest extends NullHandlingTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();

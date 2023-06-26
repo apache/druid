@@ -21,11 +21,14 @@ package org.apache.druid.data.input.kafkainput;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -39,19 +42,23 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.java.util.common.parsers.TimestampParser;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.header.internals.RecordHeaders;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Optional;
 
 public class KafkaInputFormatTest
 {
@@ -546,10 +553,108 @@ public class KafkaInputFormatTest
     }
   }
 
+  /**
+   * Some InputFormats return InputRow objects with timestamps readable only via InputRow.getTimestamp()
+   * (e.g. when parsing complex formats with native timestamps). In those cases the timestampSpec cannot access
+   * the timestamp for input rows returned by the valueFormat. As a workaround KafkaInputFormat injects the native
+   * row timestamp as a __time field to make it accessible via the timestampSpec.
+   * @throws IOException
+   */
+  @Test
+  public void testValueTimestampPassthrough() throws IOException
+  {
+    format = new KafkaInputFormat(
+        null,
+        null,
+        // Value Format
+        new TimestampExtractingInputFormat(),
+        null,
+        null,
+        null
+    );
+
+    final byte[] payload = StringUtils.toUtf8(
+        "{\n"
+        + "    \"timestamp\": \"2023-06-21\",\n"
+        + "    \"bar\": null,\n"
+        + "    \"foo\": \"x\",\n"
+        + "    \"baz\": 4,\n"
+        + "    \"o\": {\n"
+        + "        \"mg\": 1\n"
+        + "    }\n"
+        + "}");
+
+    inputEntity = new KafkaRecordEntity(new ConsumerRecord<>(
+        "sample", 0, 0, timestamp,
+        null, 0, 0,
+        null, payload, new RecordHeaders(), Optional.empty()));
+
+    final InputEntityReader reader = format.createReader(
+        new InputRowSchema(
+            new TimestampSpec("__time", "millis", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                "bar", "foo"
+            ))),
+            ColumnsFilter.all()
+        ),
+        newSettableByteEntity(inputEntity),
+        null
+    );
+
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      while (iterator.hasNext()) {
+        final InputRow row = iterator.next();
+        // verify the timestamp is the one passed through via InputRow.getTimestamp(), and the __time field is present
+        Assert.assertEquals(DateTimes.of("2023-06-21"), row.getTimestamp());
+        Assert.assertEquals(DateTimes.of("2023-06-21").getMillis(), row.getRaw("__time"));
+      }
+    }
+  }
+
   private SettableByteEntity<KafkaRecordEntity> newSettableByteEntity(KafkaRecordEntity kafkaRecordEntity)
   {
     SettableByteEntity<KafkaRecordEntity> settableByteEntity = new SettableByteEntity<>();
     settableByteEntity.setEntity(kafkaRecordEntity);
     return settableByteEntity;
+  }
+
+  /**
+   * This input format exists solely to test the ability to retrieve an input row's timestamp,
+   * (i.e. the value returned by InputRow.getTimestampFromEpoch() via the KafkaInputFormat)
+   * <p>
+   * It extends a basic JsonInputFormat to parse the "timestamp" field, and use it to set the timestamp on
+   * the input row returned by the input format.
+   */
+  static class TimestampExtractingInputFormat extends JsonInputFormat
+  {
+    public TimestampExtractingInputFormat()
+    {
+      super(null, null, null, false);
+    }
+
+    @Override
+    public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
+    {
+      InputEntityReader reader = super.createReader(inputRowSchema, source, temporaryDirectory);
+      Function<Object, DateTime> timestampParser = TimestampParser.createObjectTimestampParser("auto");
+      return new InputEntityReader()
+      {
+        @Override
+        public CloseableIterator<InputRow> read() throws IOException
+        {
+          return reader.read().map(inputRow -> new MapBasedInputRow(
+              timestampParser.apply(inputRow.getRaw("timestamp")),
+              inputRow.getDimensions(),
+              ((MapBasedInputRow) inputRow).getEvent()
+          ));
+        }
+
+        @Override
+        public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
+        {
+          throw new UnsupportedOperationException();
+        }
+      };
+    }
   }
 }
