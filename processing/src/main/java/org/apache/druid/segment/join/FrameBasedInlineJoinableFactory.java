@@ -21,52 +21,44 @@ package org.apache.druid.segment.join;
 
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.segment.join.table.IndexedTable;
+import org.apache.druid.segment.join.table.FrameBasedIndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
-import org.apache.druid.segment.join.table.RowBasedIndexedTable;
 
 import java.util.Optional;
 import java.util.Set;
 
 /**
- * A {@link JoinableFactory} for {@link InlineDataSource}.
- * It works by building an {@link IndexedTable}.
- *
- * It is not valid to pass any other DataSource type to the "build" method.
+ * Creates a joinable from the {@link FrameBasedInlineDataSource}. This materializes the datasource to an
+ * {@link InlineDataSource}, before creating the joinable on it, which carries the overhead of this conversion.
  */
-public class InlineJoinableFactory implements JoinableFactory
+public class FrameBasedInlineJoinableFactory implements JoinableFactory
 {
   @Override
   public boolean isDirectlyJoinable(DataSource dataSource)
   {
-    // this should always be true if this is access through MapJoinableFactory, but check just in case...
-    // further, this should not ever be legitimately called, because this method is used to avoid subquery joins
-    // which use the InlineJoinableFactory
-    return dataSource instanceof InlineDataSource;
+    return dataSource instanceof FrameBasedInlineDataSource;
   }
 
   @Override
-  public Optional<Joinable> build(final DataSource dataSource, final JoinConditionAnalysis condition)
+  public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
   {
-    InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
+    FrameBasedInlineDataSource frameBasedInlineDataSource = (FrameBasedInlineDataSource) dataSource;
 
     if (condition.canHashJoin()) {
       final Set<String> rightKeyColumns = condition.getRightEquiConditionKeys();
-
       return Optional.of(
           new IndexedTableJoinable(
-              new RowBasedIndexedTable<>(
-                  inlineDataSource.getRowsAsList(),
-                  inlineDataSource.rowAdapter(),
-                  inlineDataSource.getRowSignature(),
+              new FrameBasedIndexedTable(
+                  frameBasedInlineDataSource,
                   rightKeyColumns,
                   DateTimes.nowUtc().toString()
               )
           )
       );
-    } else {
-      return Optional.empty();
     }
+
+    return Optional.empty();
   }
 }
