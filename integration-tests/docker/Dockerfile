@@ -44,7 +44,8 @@ RUN find /var/lib/mysql -type f -exec touch {} \; && /etc/init.d/mysql start \
       && echo "CREATE USER 'druid'@'%' IDENTIFIED BY 'diurd'; GRANT ALL ON druid.* TO 'druid'@'%'; CREATE database druid DEFAULT CHARACTER SET utf8mb4;" | mysql -u root \
       && /etc/init.d/mysql stop
 
-# Add Druid jars
+# Add Druid scripts and jars
+ADD bin/* /usr/local/druid/bin/
 ADD lib/* /usr/local/druid/lib/
 COPY extensions/ /usr/local/druid/extensions/
 
