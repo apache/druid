@@ -32,6 +32,7 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.BrokerInternalQueryConfig;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.SegmentMetadataCacheConfig;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -70,7 +71,6 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -447,9 +447,9 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     SegmentMetadataCache schema = buildSchemaMarkAndTableLatch(
         new SegmentMetadataCacheConfig() {
           @Override
-          public SegmentMetadataCache.ColumnTypeMergePolicy getMetadataColumnTypeMergePolicy()
+          public SegmentMetadataCacheConfig.ColumnTypeMergePolicy getMetadataColumnTypeMergePolicy()
           {
-            return new SegmentMetadataCache.FirstTypeMergePolicy();
+            return new SegmentMetadataCacheConfig.FirstTypeMergePolicy();
           }
         }
     );
