@@ -229,6 +229,26 @@ Returns full segment metadata for a specific segment in the cluster.
 
 Return the tiers that a datasource exists in.
 
+## Intervals
+
+Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/` as in `2016-06-27_2016-06-28`.
+
+`GET /druid/coordinator/v1/intervals`
+
+Returns all intervals for all datasources with total size and count.
+
+`GET /druid/coordinator/v1/intervals/{interval}`
+
+Returns aggregated total size and count for all intervals that intersect given ISO interval.
+
+`GET /druid/coordinator/v1/intervals/{interval}?simple`
+
+Returns total size and count for each interval within given ISO interval.
+
+`GET /druid/coordinator/v1/intervals/{interval}?full`
+
+Returns total size and count for each datasource for each interval within given ISO interval.
+
 ## Server information
 
 `GET /druid/coordinator/v1/servers`
