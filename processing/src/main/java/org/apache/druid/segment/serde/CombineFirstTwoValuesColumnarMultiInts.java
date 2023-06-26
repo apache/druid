@@ -19,22 +19,20 @@
 
 package org.apache.druid.segment.serde;
 
+import com.google.common.collect.Iterators;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
-import org.apache.druid.segment.data.IndexedIterable;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Iterator;
 
 /**
- * A {@link ColumnarMultiInts} that delegates to an underyling instance, but combines the values 0 and 1 into 0.
- *
- * This class combines *values*, not *indexes*. So [[0, 1], [1, 2]] becomes [[0, 0], [0, 2]]. (The ones were replaced
- * with zeroes.)
+ * A {@link ColumnarMultiInts} that delegates to an underyling instance, but applies
+ * {@link CombineFirstTwoValuesIndexedInts} to each row's set of values.
  *
  * Provided to enable compatibility for segments written under {@link NullHandling#sqlCompatible()} mode but
  * read under {@link NullHandling#replaceWithDefault()} mode.
@@ -44,16 +42,19 @@ import java.util.Iterator;
 public class CombineFirstTwoValuesColumnarMultiInts implements ColumnarMultiInts
 {
   private final ColumnarMultiInts delegate;
+  private final CombineFirstTwoValuesIndexedInts rowValues;
 
   public CombineFirstTwoValuesColumnarMultiInts(ColumnarMultiInts delegate)
   {
     this.delegate = delegate;
+    this.rowValues = new CombineFirstTwoValuesIndexedInts(null);
   }
 
   @Override
   public IndexedInts get(int index)
   {
-    return new CombineFirstTwoValuesIndexedInts(delegate.get(index));
+    rowValues.delegate = delegate.get(index);
+    return rowValues;
   }
 
   @Override
@@ -90,7 +91,10 @@ public class CombineFirstTwoValuesColumnarMultiInts implements ColumnarMultiInts
   @Override
   public Iterator<IndexedInts> iterator()
   {
-    return IndexedIterable.create(this).iterator();
+    return Iterators.transform(
+        delegate.iterator(),
+        CombineFirstTwoValuesIndexedInts::new
+    );
   }
 
   @Override

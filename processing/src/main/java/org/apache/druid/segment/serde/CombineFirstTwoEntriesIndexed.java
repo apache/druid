@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.Indexed;
 
@@ -40,6 +41,11 @@ import java.util.Objects;
  * Provided to enable compatibility for segments written under {@link NullHandling#sqlCompatible()} mode but
  * read under {@link NullHandling#replaceWithDefault()} mode.
  *
+ * Important note: {@link #isSorted()} returns the same value as the underlying delegate. In this case, this class
+ * assumes that {@link #newFirstValue()} is the lowest possible value in the universe: including anything in
+ * {@link #delegate} and anything that might be passed to {@link #indexOf(Object)}. Callers must ensure that this
+ * precondition is met.
+ *
  * @see NullHandling#mustCombineNullAndEmptyInDictionary(Indexed)
  */
 public abstract class CombineFirstTwoEntriesIndexed<T> implements Indexed<T>
@@ -51,6 +57,10 @@ public abstract class CombineFirstTwoEntriesIndexed<T> implements Indexed<T>
   protected CombineFirstTwoEntriesIndexed(Indexed<T> delegate)
   {
     this.delegate = delegate;
+
+    if (delegate.size() < 2) {
+      throw new ISE("Size[%s] must be >= 2", delegate.size());
+    }
   }
 
   /**
@@ -115,14 +125,23 @@ public abstract class CombineFirstTwoEntriesIndexed<T> implements Indexed<T>
       return FIRST_ID;
     } else {
       final int index = delegate.indexOf(value);
-      if (index > FIRST_ID) {
+
+      if (index > FIRST_ID + 1) {
         // Item found, index needs adjustment.
         return index - 1;
-      } else if (index < -1) {
-        // Item not found, insertion point is > FIRST_ID.
-        return index + 1;
+      } else if (index >= 0) {
+        // Item found, but shadowed, so really not found.
+        // Insertion point is after FIRST_ID. (See class-level javadoc: newFirstValue is required to be
+        // lower than all elements in the universe.)
+        return -2;
+      } else if (index >= -2) {
+        // Item not found, and insertion point is prior to, or within, the shadowed portion of delegate. Return
+        // insertion point immediately after newFirstValue, since that value is required to be lower than all elements
+        // in the universe.
+        return -2;
       } else {
-        return index;
+        // Item not found, and insertion point is after the shadowed portion of delegate. Adjust and return.
+        return index + 1;
       }
     }
   }

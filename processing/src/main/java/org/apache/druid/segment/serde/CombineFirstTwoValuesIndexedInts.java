@@ -25,9 +25,12 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
 
 /**
- * A {@link IndexedInts} that delegates to an underyling instance, but combines the values 0 and 1 into 0.
+ * A {@link IndexedInts} that delegates to an underyling instance, but combines the values 0 and 1 into 0, and shifts
+ * all other values down by one. For example:
  *
- * This class combines *values*, not *indexes*. So [0, 1, 2] becomes [0, 0, 2]. (The 1 was replaced with a 0.)
+ * - [2, 0, 1] => [1, 0, 0]
+ * - [3, 2, 1] => [2, 1, 0]
+ * - [0, 1, 0] => [0, 0, 0]
  *
  * Provided to enable compatibility for segments written under {@link NullHandling#sqlCompatible()} mode but
  * read under {@link NullHandling#replaceWithDefault()} mode.
@@ -36,9 +39,9 @@ import org.apache.druid.segment.data.IndexedInts;
  */
 public class CombineFirstTwoValuesIndexedInts implements IndexedInts
 {
-  private static final int NULL_ID = 0;
+  private static final int ZERO_ID = 0;
 
-  protected final IndexedInts delegate;
+  IndexedInts delegate;
 
   public CombineFirstTwoValuesIndexedInts(IndexedInts delegate)
   {
@@ -55,7 +58,7 @@ public class CombineFirstTwoValuesIndexedInts implements IndexedInts
   public int get(int index)
   {
     final int i = delegate.get(index);
-    if (i == NULL_ID) {
+    if (i == ZERO_ID) {
       return i;
     } else {
       return i - 1;
@@ -68,7 +71,7 @@ public class CombineFirstTwoValuesIndexedInts implements IndexedInts
     delegate.get(out, start, length);
 
     for (int i = 0 ; i < length ; i++) {
-      if (out[i] != NULL_ID) {
+      if (out[i] != ZERO_ID) {
         out[i] --;
       }
     }
@@ -80,7 +83,7 @@ public class CombineFirstTwoValuesIndexedInts implements IndexedInts
     delegate.get(out, indexes, length);
 
     for (int i = 0 ; i < length ; i++) {
-      if (out[i] != NULL_ID) {
+      if (out[i] != ZERO_ID) {
         out[i] --;
       }
     }

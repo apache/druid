@@ -20,6 +20,7 @@
 package org.apache.druid.segment.serde;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.Indexed;
 
@@ -32,6 +33,10 @@ import java.util.Iterator;
  * Provided to enable compatibility for segments written under {@link NullHandling#sqlCompatible()} mode but
  * read under {@link NullHandling#replaceWithDefault()} mode.
  *
+ * Important note: {@link #isSorted()} returns the same value as the underlying delegate. In this case, this class
+ * assumes that {@code null} is the lowest possible value in the universe: including anything in {@link #delegate} and
+ * anything that might be passed to {@link #indexOf(Object)}. Callers must ensure that this precondition is met.
+ *
  * @see NullHandling#mustReplaceFirstValueWithNullInDictionary(Indexed)
  */
 public class ReplaceFirstValueWithNullIndexed<T> implements Indexed<T>
@@ -41,6 +46,10 @@ public class ReplaceFirstValueWithNullIndexed<T> implements Indexed<T>
   public ReplaceFirstValueWithNullIndexed(Indexed<T> delegate)
   {
     this.delegate = delegate;
+
+    if (delegate.size() < 1) {
+      throw new ISE("Size[%s] must be >= 1", delegate.size());
+    }
   }
 
   @Override
@@ -67,7 +76,7 @@ public class ReplaceFirstValueWithNullIndexed<T> implements Indexed<T>
       return 0;
     } else {
       final int result = delegate.indexOf(value);
-      if (result == 0) {
+      if (result == 0 || result == -1) {
         return -2;
       } else {
         return result;

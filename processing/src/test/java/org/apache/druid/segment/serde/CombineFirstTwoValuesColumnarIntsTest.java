@@ -19,30 +19,29 @@
 
 package org.apache.druid.segment.serde;
 
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.segment.data.ColumnarInts;
-import org.apache.druid.segment.data.Indexed;
-
-import java.io.IOException;
+import org.apache.druid.segment.data.ArrayBasedIndexedInts;
+import org.junit.Test;
 
 /**
- * A {@link ColumnarInts} facade over {@link CombineFirstTwoValuesIndexedInts}.
- *
- * Provided to enable compatibility for segments written under {@link NullHandling#sqlCompatible()} mode but
- * read under {@link NullHandling#replaceWithDefault()} mode.
- *
- * @see NullHandling#mustCombineNullAndEmptyInDictionary(Indexed)
+ * Test for {@link CombineFirstTwoValuesColumnarInts}.
  */
-public class CombineFirstTwoValuesColumnarInts extends CombineFirstTwoValuesIndexedInts implements ColumnarInts
+public class CombineFirstTwoValuesColumnarIntsTest
 {
-  public CombineFirstTwoValuesColumnarInts(ColumnarInts delegate)
+  @Test
+  public void testCombineFirstTwoValues()
   {
-    super(delegate);
+    // (expectedCombined, original)
+    assertCombine(new int[]{0, 1, 2}, new int[]{1, 2, 3});
+    assertCombine(new int[]{0, 0, 1, 2}, new int[]{0, 1, 2, 3});
+    assertCombine(new int[]{2, 0, 1, 0, 4, 0}, new int[]{3, 0, 2, 1, 5, 0});
   }
 
-  @Override
-  public void close() throws IOException
+  private static void assertCombine(final int[] expectedCombined, final int[] original)
   {
-    ((ColumnarInts) delegate).close();
+    CombineFirstTwoValuesIndexedIntsTest.assertCombine(
+        expectedCombined,
+        original,
+        arr -> new CombineFirstTwoValuesIndexedInts(new ArrayBasedIndexedInts(arr))
+    );
   }
 }
