@@ -66,6 +66,13 @@ This endpoint retrieves an array of all task objects currently running or execut
 
 #### Sample request
 
+The following example shows how to retrieve a list of tasks filtered with the following query parameters:
+* State: `complete`
+* Datasource: `wikipedia_api`
+* Time interval: between `2015-09-12` and `2015-09-13`
+* Max entries returned: `10` 
+* Task type: `query_worker`
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
@@ -502,6 +509,8 @@ Retrieve the 'payload' of a task.
 
 #### Sample request
 
+The following examples shows how to retrieve the task payload of a task with the specified id `query-32663269-ead9-405a-8eb6-0817a952ef47`.
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
@@ -884,6 +893,8 @@ Retrieve the status of a task.
 
 #### Sample request
 
+The following examples shows how to retrieve the status of a task with the specified id `query-223549f8-b993-4483-b028-1b0d54713cad`.
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
@@ -936,6 +947,9 @@ Retrieve information about the segments of a task.
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample request
+
+The following examples shows how to retrieve the task segment of the task with the specified id `query-52a8aafe-7265-4427-89fe-dc51275cc470`.
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
@@ -950,11 +964,8 @@ Host: {domain}
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample response
-<details>
-  <summary>Toggle to show sample response</summary>
-  <pre><code>[]</code></pre>
-</details>
 
+A successful request returns a `200 OK` response and an array of the task segments.
 
 ### Get task completion report
 
@@ -965,6 +976,7 @@ Host: {domain}
 Retrieve a [task completion report](../ingestion/tasks.md#task-reports) for a task. Only works for completed tasks.
 
 #### Responses
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--200 SUCCESS-->
@@ -973,6 +985,8 @@ Retrieve a [task completion report](../ingestion/tasks.md#task-reports) for a ta
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample request
+
+The following examples shows how to retrieve the completion report of a task with the specified id `query-52a8aafe-7265-4427-89fe-dc51275cc470`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -1794,6 +1808,8 @@ Endpoint for submitting tasks and supervisor specs to the Overlord. Returns the 
 
 #### Sample request
 
+The following request is an example of submitting a task of type `index_parallel`.
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
@@ -1904,7 +1920,7 @@ Content-Length: 952
 #### URL
 <code class="postAPI">POST</code> `/druid/indexer/v1/task/{taskId}/shutdown`
 
-Shuts down a task. Returns a JSON object with the id of the task that was shutdown successfully.
+Shuts down a task if it not already complete. Returns a JSON object with the id of the task that was shutdown successfully.
 
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
@@ -1919,22 +1935,18 @@ Shuts down a task. Returns a JSON object with the id of the task that was shutdo
 
 #### Sample request
 
+The following request is an example of shutting down task of id `query-52as 8aafe-7265-4427-89fe-dc51275cc470`.
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/task/query-52as 8aafe-7265-4427-89fe-dc51275cc470/shutdown" \
---header "Content-Type: application/json" \
---data "[\"query-52a8aafe-7265-4427-89fe-dc51275cc470\"]"
+curl --request POST "{domain}/druid/indexer/v1/task/query-52as 8aafe-7265-4427-89fe-dc51275cc470/shutdown"
 ```
 <!--HTTP-->
 ```HTTP
 POST /druid/indexer/v1/task/query-52as 8aafe-7265-4427-89fe-dc51275cc470/shutdown HTTP/1.1
-Host: {domain}
-Content-Type: application/json
-Content-Length: 46
-
-["query-52a8aafe-7265-4427-89fe-dc51275cc470"]
+Host: (domain)
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -1965,6 +1977,8 @@ Shuts down all tasks for a dataSource.
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample request
+
+The following request is an example of shutting down all tasks for datasource `wikipedia_auto`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -2019,11 +2033,15 @@ A JSON array of task id strings.
 
 #### Sample request
 
+The following request is an example of retrieving status objects for task id `query-52a8aafe-7265-4427-89fe-dc51275cc470`.
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/taskStatus"
+curl "{domain}/druid/indexer/v1/taskStatus" \
+--header "Content-Type: application/json" \
+--data "[\"query-52a8aafe-7265-4427-89fe-dc51275cc470\"]"
 ```
 <!--HTTP-->
 ```HTTP
@@ -2076,6 +2094,8 @@ which automates this operation to perform periodically.
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample request
+
+The following request is an example of cleaning up pending segments for `wikipedia_api` datasource.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
