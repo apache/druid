@@ -88,6 +88,9 @@ public class InsertAllocatedIncorrectSegmentFault extends BaseMSQFault
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
+    if (!super.equals(o)) {
+      return false;
+    }
     InsertAllocatedIncorrectSegmentFault that = (InsertAllocatedIncorrectSegmentFault) o;
     return Objects.equals(dataSource, that.dataSource)
            && Objects.equals(requestedInterval, that.requestedInterval)
@@ -110,6 +113,6 @@ public class InsertAllocatedIncorrectSegmentFault extends BaseMSQFault
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, requestedInterval, allocatedInterval);
+    return Objects.hash(super.hashCode(), dataSource, requestedInterval, allocatedInterval);
   }
 }
