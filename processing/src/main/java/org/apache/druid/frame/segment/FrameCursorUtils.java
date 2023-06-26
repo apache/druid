@@ -19,10 +19,10 @@
 
 package org.apache.druid.frame.segment;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -120,7 +120,12 @@ public class FrameCursorUtils
               }
 
               if (!firstRowWritten) {
-                throw new ISE("Row size is greater than the frame size.");
+                throw DruidException
+                    .forPersona(DruidException.Persona.DEVELOPER)
+                    .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                    .build("Subquery's row size exceeds the frame size and therefore cannot write the subquery's "
+                           + "row to the frame. This is a non-configurable static limit that can only be modified by the "
+                           + "developer.");
               }
 
               frame = Frame.wrap(frameWriter.toByteArray());
