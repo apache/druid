@@ -4,6 +4,10 @@ metadata:
   name: "id"
   labels:
     druid.k8s.peons: "true"
+    druid.task.id: "id"
+    druid.task.type: "noop"
+    druid.task.group.id: "id"
+    druid.task.datasource: "datasource"
   annotations:
     task.id: "id"
     task.type: "noop"
@@ -17,6 +21,10 @@ spec:
     metadata:
       labels:
         druid.k8s.peons: "true"
+        druid.task.id: "id"
+        druid.task.type: "noop"
+        druid.task.group.id: "id"
+        druid.task.datasource: "datasource"
       annotations:
         task: "H4sIAAAAAAAAAEVOuQ4CIRD9l6kpVhObbY0xtrs2liOMSoKAHEZC+HeHrEczmXfmVUjFE4xgnfMgQCv++Qi4Bpf94QcVJpxdDrKbO4gLEBCyPeo70+vNMHBDnAhVWag/nihmkzh72s0cuuhANxfZYrMxAqSziV6s18aN9CkfK+ATtcGzNjqVfZ/0HRTokblEbdGjZBHGVWtvT9WXlc8AAAA="
         tls.enabled: "false"

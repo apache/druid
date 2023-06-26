@@ -58,6 +58,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
@@ -70,7 +71,7 @@ public class MSQWorkerTaskLauncher
   private static final long HIGH_FREQUENCY_CHECK_MILLIS = 100;
   private static final long LOW_FREQUENCY_CHECK_MILLIS = 2000;
   private static final long SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS = 10000;
-  private static final long SHUTDOWN_TIMEOUT_MS = Duration.ofMinutes(1).toMillis();
+  private static final long SHUTDOWN_TIMEOUT_MILLIS = Duration.ofMinutes(1).toMillis();
   private int currentRelaunchCount = 0;
 
   // States for "state" variable.
@@ -131,6 +132,8 @@ public class MSQWorkerTaskLauncher
 
   private final ConcurrentHashMap<Integer, List<String>> workerToTaskIds = new ConcurrentHashMap<>();
   private final RetryTask retryTask;
+
+  private final AtomicLong recentFullyStartedWorkerTimeInMillis = new AtomicLong(System.currentTimeMillis());
 
   public MSQWorkerTaskLauncher(
       final String controllerTaskId,
@@ -202,12 +205,7 @@ public class MSQWorkerTaskLauncher
     }
 
     // Block until stopped.
-    try {
-      FutureUtils.getUnchecked(stopFuture, false);
-    }
-    catch (Throwable ignored) {
-      // Suppress.
-    }
+    waitForWorkerShutdown();
   }
 
   /**
@@ -306,6 +304,15 @@ public class MSQWorkerTaskLauncher
     }
   }
 
+  public void waitForWorkerShutdown()
+  {
+    try {
+      FutureUtils.getUnchecked(stopFuture, false);
+    }
+    catch (Throwable ignored) {
+      // Suppress.
+    }
+  }
 
   /**
    * Checks if the controller has canceled the input taskId. This method is used in {@link ControllerImpl}
@@ -371,11 +378,11 @@ public class MSQWorkerTaskLauncher
         // Sleep for a bit, maybe.
         final long now = System.currentTimeMillis();
 
-        if (now > stopStartTime + SHUTDOWN_TIMEOUT_MS) {
+        if (now > stopStartTime + SHUTDOWN_TIMEOUT_MILLIS) {
           if (caught != null) {
             throw caught;
           } else {
-            throw new ISE("Task shutdown timed out (limit = %,dms)", SHUTDOWN_TIMEOUT_MS);
+            throw new ISE("Task shutdown timed out (limit = %,dms)", SHUTDOWN_TIMEOUT_MILLIS);
           }
         }
 
@@ -493,7 +500,9 @@ public class MSQWorkerTaskLauncher
 
         if (tracker.status.getStatusCode() == TaskState.RUNNING && !tracker.unknownLocation()) {
           synchronized (taskIds) {
-            fullyStartedTasks.add(tracker.workerNumber);
+            if (fullyStartedTasks.add(tracker.workerNumber)) {
+              recentFullyStartedWorkerTimeInMillis.set(System.currentTimeMillis());
+            }
             taskIds.notifyAll();
           }
         }
@@ -533,7 +542,11 @@ public class MSQWorkerTaskLauncher
 
       } else if (tracker.didRunTimeOut(maxTaskStartDelayMillis) && !canceledWorkerTasks.contains(taskId)) {
         removeWorkerFromFullyStartedWorkers(tracker);
-        throw new MSQException(new TaskStartTimeoutFault(numTasks + 1, maxTaskStartDelayMillis));
+        throw new MSQException(new TaskStartTimeoutFault(
+            this.getWorkerTaskCount().getPendingWorkerCount(),
+            numTasks + 1,
+            maxTaskStartDelayMillis
+        ));
       } else if (tracker.didFail() && !canceledWorkerTasks.contains(taskId)) {
         removeWorkerFromFullyStartedWorkers(tracker);
         log.info("Task[%s] failed because %s. Trying to relaunch the worker", taskId, tracker.status.getErrorMsg());
@@ -674,16 +687,16 @@ public class MSQWorkerTaskLauncher
   /**
    * Used by the main loop to decide how often to check task status.
    */
-  private long computeSleepTime(final long loopDurationMs)
+  private long computeSleepTime(final long loopDurationMillis)
   {
     final OptionalLong maxTaskStartTime =
-        taskTrackers.values().stream().mapToLong(tracker -> tracker.startTimeMs).max();
+        taskTrackers.values().stream().mapToLong(tracker -> tracker.startTimeMillis).max();
 
     if (maxTaskStartTime.isPresent() &&
         System.currentTimeMillis() - maxTaskStartTime.getAsLong() < SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS) {
-      return HIGH_FREQUENCY_CHECK_MILLIS - loopDurationMs;
+      return HIGH_FREQUENCY_CHECK_MILLIS - loopDurationMillis;
     } else {
-      return LOW_FREQUENCY_CHECK_MILLIS - loopDurationMs;
+      return LOW_FREQUENCY_CHECK_MILLIS - loopDurationMillis;
     }
   }
 
@@ -713,10 +726,10 @@ public class MSQWorkerTaskLauncher
   /**
    * Tracker for information about a worker. Mutable.
    */
-  private static class TaskTracker
+  private class TaskTracker
   {
     private final int workerNumber;
-    private final long startTimeMs = System.currentTimeMillis();
+    private final long startTimeMillis = System.currentTimeMillis();
     private final MSQWorkerTask msqWorkerTask;
     private TaskStatus status;
     private TaskLocation initialLocation;
@@ -744,11 +757,21 @@ public class MSQWorkerTaskLauncher
       return status != null && status.getStatusCode().isFailure();
     }
 
+    /**
+     * Checks if the task has timed out if all the following conditions are true:
+     * 1. The task is still running.
+     * 2. The location has never been reported by the task. If this is not the case, the task has started already.
+     * 3. Task has taken more than maxTaskStartDelayMillis to start.
+     * 4. No task has started in maxTaskStartDelayMillis. This is in case the cluster is scaling up and other workers
+     *    are starting.
+     */
     public boolean didRunTimeOut(final long maxTaskStartDelayMillis)
     {
+      long currentTimeMillis = System.currentTimeMillis();
       return (status == null || status.getStatusCode() == TaskState.RUNNING)
              && unknownLocation()
-             && System.currentTimeMillis() - startTimeMs > maxTaskStartDelayMillis;
+             && currentTimeMillis - recentFullyStartedWorkerTimeInMillis.get() > maxTaskStartDelayMillis
+             && currentTimeMillis - startTimeMillis > maxTaskStartDelayMillis;
     }
 
     /**

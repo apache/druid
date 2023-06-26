@@ -21,7 +21,6 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -46,11 +45,8 @@ public class HttpEmitterConfigTest
     Assert.assertEquals("http://example.com/", config.getRecipientBaseUrl());
     Assert.assertNull(config.getBasicAuthentication());
     Assert.assertEquals(BatchingStrategy.ARRAY, config.getBatchingStrategy());
-    Pair<Integer, Integer> batchConfigPair = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(
-        JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes()
-    );
-    Assert.assertEquals(batchConfigPair.lhs.intValue(), config.getMaxBatchSize());
-    Assert.assertEquals(batchConfigPair.rhs.intValue(), config.getBatchQueueSizeLimit());
+    Assert.assertEquals(BaseHttpEmittingConfig.DEFAULT_MAX_BATCH_SIZE, config.getMaxBatchSize());
+    Assert.assertEquals(BaseHttpEmittingConfig.DEFAULT_BATCH_QUEUE_SIZE_LIMIT, config.getBatchQueueSizeLimit());
     Assert.assertEquals(Long.MAX_VALUE, config.getFlushTimeOut());
     Assert.assertEquals(2.0f, config.getHttpTimeoutAllowanceFactor(), 0.0f);
     Assert.assertEquals(0, config.getMinHttpTimeoutMillis());
@@ -70,11 +66,8 @@ public class HttpEmitterConfigTest
     Assert.assertEquals("http://example.com/", config.getRecipientBaseUrl());
     Assert.assertNull(config.getBasicAuthentication());
     Assert.assertEquals(BatchingStrategy.ARRAY, config.getBatchingStrategy());
-    Pair<Integer, Integer> batchConfigPair = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(
-        JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes()
-    );
-    Assert.assertEquals(batchConfigPair.lhs.intValue(), config.getMaxBatchSize());
-    Assert.assertEquals(batchConfigPair.rhs.intValue(), config.getBatchQueueSizeLimit());
+    Assert.assertEquals(BaseHttpEmittingConfig.DEFAULT_MAX_BATCH_SIZE, config.getMaxBatchSize());
+    Assert.assertEquals(BaseHttpEmittingConfig.DEFAULT_BATCH_QUEUE_SIZE_LIMIT, config.getBatchQueueSizeLimit());
     Assert.assertEquals(Long.MAX_VALUE, config.getFlushTimeOut());
     Assert.assertEquals(2.0f, config.getHttpTimeoutAllowanceFactor(), 0.0f);
     Assert.assertEquals(0, config.getMinHttpTimeoutMillis());

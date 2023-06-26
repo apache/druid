@@ -59,6 +59,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 
+/**
+ * Serializer for {@link NestedCommonFormatColumn} which can store nested data. The serializer stores several components
+ * including:
+ * - a field list and associated type info
+ * - value dictionaries for string, long, double, and array values (where the arrays are stored as int[] that point to
+ *   the string, long, and double values)
+ * - raw data is stored with a {@link CompressedVariableSizedBlobColumnSerializer} as blobs of SMILE encoded data
+ * - a null value bitmap to track which 'raw' rows are null
+ *
+ * For each nested field, a {@link GlobalDictionaryEncodedFieldColumnWriter} will write a sub-column to specialize
+ * fast reading and filtering of that path.
+ *
+ * @see ScalarDoubleFieldColumnWriter - single type double field
+ * @see ScalarLongFieldColumnWriter   - single type long field
+ * @see ScalarStringFieldColumnWriter - single type string field
+ * @see VariantArrayFieldColumnWriter - single type array of string, long, and double field
+ * @see VariantFieldColumnWriter      - mixed type field
+ */
 public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializer
 {
   private static final Logger log = new Logger(NestedDataColumnSerializer.class);

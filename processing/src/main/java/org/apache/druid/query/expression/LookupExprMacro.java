@@ -26,7 +26,6 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.math.expr.Exprs;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
@@ -109,11 +108,9 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       }
 
       @Override
-      public byte[] getCacheKey()
+      public void decorateCacheKeyBuilder(CacheKeyBuilder builder)
       {
-        return new CacheKeyBuilder(Exprs.LOOKUP_EXPR_CACHE_KEY).appendString(stringify())
-                                                               .appendCacheable(extractionFn)
-                                                               .build();
+        builder.appendCacheable(extractionFn);
       }
     }
 

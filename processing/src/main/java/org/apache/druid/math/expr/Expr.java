@@ -185,10 +185,30 @@ public interface Expr extends Cacheable
     throw Exprs.cannotVectorize(this);
   }
 
+
+  /**
+   * Decorates the {@link CacheKeyBuilder} for the default implementation of {@link #getCacheKey()}. The default cache
+   * key implementation includes the output of {@link #stringify()} and then uses a {@link Shuttle} to call this method
+   * on all children. The stringified representation is sufficient for most expressions, but for any which rely on
+   * external state that might change, this method allows the cache key to change when the state does, even if the
+   * expression itself is otherwise the same.
+   */
+  default void decorateCacheKeyBuilder(CacheKeyBuilder builder)
+  {
+    // no op
+  }
+
   @Override
   default byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(Exprs.EXPR_CACHE_KEY).appendString(stringify()).build();
+    CacheKeyBuilder builder = new CacheKeyBuilder(Exprs.EXPR_CACHE_KEY).appendString(stringify());
+    // delegate to the child expressions through shuttle
+    Shuttle keyShuttle = expr -> {
+      expr.decorateCacheKeyBuilder(builder);
+      return expr;
+    };
+    this.visit(keyShuttle);
+    return builder.build();
   }
 
   /**
@@ -224,7 +244,7 @@ public interface Expr extends Cacheable
         if (argType == null) {
           continue;
         }
-        numeric &= argType.isNumeric();
+        numeric = numeric && argType.isNumeric();
       }
       return numeric;
     }
@@ -265,7 +285,7 @@ public interface Expr extends Cacheable
         if (currentType == null) {
           currentType = argType;
         }
-        allSame &= Objects.equals(argType, currentType);
+        allSame = allSame && Objects.equals(argType, currentType);
       }
       return allSame;
     }
@@ -302,7 +322,7 @@ public interface Expr extends Cacheable
         if (argType == null) {
           continue;
         }
-        scalar &= argType.isPrimitive();
+        scalar = scalar && argType.isPrimitive();
       }
       return scalar;
     }
@@ -330,7 +350,7 @@ public interface Expr extends Cacheable
     {
       boolean canVectorize = true;
       for (Expr arg : args) {
-        canVectorize &= arg.canVectorize(this);
+        canVectorize = canVectorize && arg.canVectorize(this);
       }
       return canVectorize;
     }

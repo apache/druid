@@ -1,6 +1,6 @@
 ---
 id: tutorial-jdbc
-title: "Tutorial: Using the JDBC driver to query Druid"
+title: Use the JDBC driver to query Druid
 sidebar_label: JDBC connector
 ---
 
@@ -23,9 +23,9 @@ sidebar_label: JDBC connector
   ~ under the License.
   -->
 
-Redirecting you to the JDBC connector examples...
+Redirecting you to the JDBC driver API...
 <head>
-<script>window.location.replace("https://druid.apache.org/docs/latest/querying/sql-jdbc.html#examples")</script>
+<script>window.location.replace("https://druid.apache.org/docs/latest/api-reference/sql-jdbc.html")</script>
 </head>
-<a href="https://druid.apache.org/docs/latest/querying/sql-jdbc.html#examples">Click here if you are not redirected.</a>
+<a href="https://druid.apache.org/docs/latest/api-reference/sql-jdbc.html">Click here if you are not redirected.</a>
 

@@ -178,8 +178,8 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
 
   private static class TDigestSketchQuantileSqlAggFunction extends SqlAggFunction
   {
-    private static final String SIGNATURE1 = "'" + NAME + "(column, quantile)'\n";
-    private static final String SIGNATURE2 = "'" + NAME + "(column, quantile, compression)'\n";
+    private static final String SIGNATURE1 = "'" + NAME + "(column, quantile)'";
+    private static final String SIGNATURE2 = "'" + NAME + "(column, quantile, compression)'";
 
     TDigestSketchQuantileSqlAggFunction()
     {

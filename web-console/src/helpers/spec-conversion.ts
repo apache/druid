@@ -38,7 +38,7 @@ import type {
 import { inflateDimensionSpec, TIME_COLUMN, upgradeSpec } from '../druid-models';
 import { deepGet, filterMap, nonEmptyArray, oneOf } from '../utils';
 
-export function getSpecDatasourceName(spec: IngestionSpec): string {
+export function getSpecDatasourceName(spec: Partial<IngestionSpec>): string {
   return deepGet(spec, 'spec.dataSchema.dataSource') || 'unknown_datasource';
 }
 
@@ -140,7 +140,7 @@ export function convertSpecToSql(spec: any): QueryWithContext {
     switch (format) {
       case 'auto':
         timestampColumnType = SqlType.VARCHAR;
-        timeExpression = `CASE WHEN CAST(${timestampColumn} AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST(${timestampColumn} AS BIGINT)) ELSE TIME_PARSE(${timestampColumn}) END`;
+        timeExpression = `CASE WHEN CAST(${timestampColumn} AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST(${timestampColumn} AS BIGINT)) ELSE TIME_PARSE(TRIM(${timestampColumn})) END`;
         break;
 
       case 'iso':

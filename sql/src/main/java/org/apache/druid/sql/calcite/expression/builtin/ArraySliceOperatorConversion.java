@@ -34,7 +34,7 @@ public class ArraySliceOperatorConversion extends DirectOperatorConversion
       .operandTypeChecker(
           OperandTypes.or(
             OperandTypes.sequence(
-                "(expr,start)",
+                "'ARRAY_SLICE(expr, start)'",
                 OperandTypes.or(
                     OperandTypes.family(SqlTypeFamily.ARRAY),
                     OperandTypes.family(SqlTypeFamily.STRING)
@@ -42,7 +42,7 @@ public class ArraySliceOperatorConversion extends DirectOperatorConversion
                 OperandTypes.family(SqlTypeFamily.NUMERIC)
             ),
             OperandTypes.sequence(
-                "(expr,start,end)",
+                "'ARRAY_SLICE(expr, start, end)'",
                 OperandTypes.or(
                     OperandTypes.family(SqlTypeFamily.ARRAY),
                     OperandTypes.family(SqlTypeFamily.STRING)

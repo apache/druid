@@ -145,6 +145,28 @@ public class ColumnTypeTest
     );
   }
 
+  @Test
+  public void testLeastRestrictiveType()
+  {
+    Assert.assertEquals(ColumnType.STRING, ColumnType.leastRestrictiveType(ColumnType.STRING, ColumnType.DOUBLE));
+    Assert.assertEquals(ColumnType.STRING, ColumnType.leastRestrictiveType(ColumnType.STRING, ColumnType.LONG));
+    Assert.assertEquals(ColumnType.STRING, ColumnType.leastRestrictiveType(ColumnType.STRING, ColumnType.FLOAT));
+    Assert.assertEquals(ColumnType.DOUBLE, ColumnType.leastRestrictiveType(ColumnType.FLOAT, ColumnType.DOUBLE));
+    Assert.assertEquals(ColumnType.DOUBLE, ColumnType.leastRestrictiveType(ColumnType.FLOAT, ColumnType.LONG));
+    Assert.assertEquals(ColumnType.LONG, ColumnType.leastRestrictiveType(ColumnType.LONG, ColumnType.LONG));
+    Assert.assertEquals(ColumnType.LONG_ARRAY, ColumnType.leastRestrictiveType(ColumnType.LONG, ColumnType.LONG_ARRAY));
+    Assert.assertEquals(ColumnType.STRING_ARRAY, ColumnType.leastRestrictiveType(ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY));
+    Assert.assertEquals(ColumnType.STRING_ARRAY, ColumnType.leastRestrictiveType(ColumnType.STRING_ARRAY, ColumnType.DOUBLE_ARRAY));
+    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, ColumnType.leastRestrictiveType(ColumnType.LONG_ARRAY, ColumnType.DOUBLE_ARRAY));
+    Assert.assertEquals(ColumnType.NESTED_DATA, ColumnType.leastRestrictiveType(ColumnType.STRING_ARRAY, ColumnType.NESTED_DATA));
+    Assert.assertEquals(ColumnType.NESTED_DATA, ColumnType.leastRestrictiveType(ColumnType.NESTED_DATA, ColumnType.STRING_ARRAY));
+    Assert.assertEquals(ColumnType.NESTED_DATA, ColumnType.leastRestrictiveType(ColumnType.NESTED_DATA, ColumnType.UNKNOWN_COMPLEX));
+    Assert.assertEquals(SOME_COMPLEX, ColumnType.leastRestrictiveType(SOME_COMPLEX, ColumnType.UNKNOWN_COMPLEX));
+    Assert.assertEquals(SOME_COMPLEX, ColumnType.leastRestrictiveType(ColumnType.UNKNOWN_COMPLEX, SOME_COMPLEX));
+    Assert.assertThrows(Types.IncompatibleTypeException.class, () -> ColumnType.leastRestrictiveType(ColumnType.NESTED_DATA, SOME_COMPLEX));
+    Assert.assertThrows(Types.IncompatibleTypeException.class, () -> ColumnType.leastRestrictiveType(ColumnType.STRING_ARRAY, SOME_COMPLEX));
+  }
+
   static class SomeOtherTypeSignature extends BaseTypeSignature<ValueType>
   {
     public SomeOtherTypeSignature(

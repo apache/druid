@@ -32,6 +32,8 @@ import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.SequenceWrapper;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -185,8 +187,23 @@ public class QueryScheduler implements QueryWatcher
    */
   public <T> Sequence<T> run(Query<?> query, Sequence<T> resultSequence)
   {
-    List<Bulkhead> bulkheads = acquireLanes(query);
-    return resultSequence.withBaggage(() -> finishLanes(bulkheads));
+    return Sequences.wrap(resultSequence, new SequenceWrapper()
+    {
+      private List<Bulkhead> bulkheads = null;
+      @Override
+      public void before()
+      {
+        bulkheads = acquireLanes(query);
+      }
+
+      @Override
+      public void after(boolean isDone, Throwable thrown)
+      {
+        if (bulkheads != null) {
+          finishLanes(bulkheads);
+        }
+      }
+    });
   }
 
   /**

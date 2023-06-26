@@ -126,7 +126,8 @@ public class ExternalInputSliceReader implements InputSliceReader
                 column ->
                     DimensionSchemaUtils.createDimensionSchema(
                         column,
-                        signature.getColumnType(column).orElse(null)
+                        signature.getColumnType(column).orElse(null),
+                        false
                     )
             ).collect(Collectors.toList())
         ),
