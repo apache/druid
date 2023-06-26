@@ -99,6 +99,7 @@ import org.apache.druid.msq.indexing.WorkerCount;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.FaultsExceededChecker;
+import org.apache.druid.msq.indexing.error.InsertAllocatedIncorrectSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
@@ -936,16 +937,25 @@ public class ControllerImpl implements Controller
         }
       }
 
-      // Even if allocation isn't null, the overlord makes the best effort job of allocating a segment with the given
-      // segmentGranularity. This is commonly seen in case when there is already a coarser segment in the interval where
-      // the requested segment is present and that segment completely overlaps the request. Throw an error if the interval
-      // doesn't match the granularity requested
-      if (allocation == null
-          || !IntervalUtils.doesIntervalMatchesGranularity(allocation.getInterval(), segmentGranularity)) {
+      if (allocation == null) {
         throw new MSQException(
             new InsertCannotAllocateSegmentFault(
                 task.getDataSource(),
                 segmentGranularity.bucket(timestamp)
+            )
+        );
+      }
+
+      // Even if allocation isn't null, the overlord makes the best effort job of allocating a segment with the given
+      // segmentGranularity. This is commonly seen in case when there is already a coarser segment in the interval where
+      // the requested segment is present and that segment completely overlaps the request. Throw an error if the interval
+      // doesn't match the granularity requested
+      if (!IntervalUtils.isEternityOrDoesIntervalAlignWithGranularity(allocation.getInterval(), segmentGranularity)) {
+        throw new MSQException(
+            new InsertAllocatedIncorrectSegmentFault(
+                task.getDataSource(),
+                segmentGranularity.bucket(timestamp),
+                allocation.getInterval()
             )
         );
       }

@@ -19,7 +19,7 @@
 
 package org.apache.druid.msq.util;
 
-import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.joda.time.Interval;
@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Things that would make sense in {@link org.apache.druid.java.util.common.Intervals} if this were not an extension.
+ * Things that would make sense in {@link Intervals} if this were not an extension.
  */
 public class IntervalUtils
 {
@@ -66,18 +66,21 @@ public class IntervalUtils
   }
 
   /**
-   * This method checks if the provided interval is aligned by the granularity provided and if it occupies exactly
-   * one "unit" of the granularity
-   * Note: ALL granularity isn't aligned to any interval, however this method is defines that ALL granularity matches
+   * This method checks if the provided interval is aligned by the granularity or is an instance of {@link Intervals#ETERNITY}
+   * ALL granularity isn't aligned to any interval, however this method is defines that ALL granularity matches
    * an interval with boundary ({@code DateTimes.MIN}, {@code DateTimes.MAX})
+   * This is used to check if the granularity allocation made by the overlord is the same as the one requested in the
+   * SQL query
    */
-  public static boolean doesIntervalMatchesGranularity(final Interval interval, final Granularity granularity)
+  public static boolean isEternityOrDoesIntervalAlignWithGranularity(
+      final Interval interval,
+      final Granularity granularity
+  )
   {
     // AllGranularity needs special handling since AllGranularity#bucketStart always returns false
     if (granularity instanceof AllGranularity) {
-      return (interval.getStartMillis() == DateTimes.MIN.getMillis())
-             && (interval.getEndMillis() == DateTimes.MAX.getMillis());
+      return Intervals.isEternity(interval);
     }
-    return granularity.isAligned(interval) && granularity.bucketEnd(interval.getStart()).equals(interval.getEnd());
+    return granularity.isAligned(interval);
   }
 }

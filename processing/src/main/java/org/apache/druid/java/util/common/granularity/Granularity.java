@@ -145,7 +145,8 @@ public abstract class Granularity implements Cacheable
   public abstract DateTime toDate(String filePath, Formatter formatter);
 
   /**
-   * Return true if time chunks populated by this granularity includes the given interval time chunk.
+   * Return true only if the time chunks populated by this granularity includes the given interval time chunk. The
+   * interval must fit exactly into the scheme of the granularity for this to return true
    */
   public abstract boolean isAligned(Interval interval);
 

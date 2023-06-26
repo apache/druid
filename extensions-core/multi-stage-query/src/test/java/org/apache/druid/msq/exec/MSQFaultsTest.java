@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.indexing.error.InsertAllocatedIncorrectSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
@@ -64,7 +65,14 @@ public class MSQFaultsTest extends MSQTestBase
     Mockito.doReturn(null).when(testTaskActionClient).submit(isA(SegmentAllocateAction.class));
 
     testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time >= TIMESTAMP '2000-01-02 00:00:00' and __time < TIMESTAMP '2000-01-03 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1")
+                         "insert into foo1"
+                         + " select  __time, dim1 , count(*) as cnt"
+                         + " from foo"
+                         + " where dim1 is not null and __time >= TIMESTAMP '2000-01-02 00:00:00' and __time < TIMESTAMP '2000-01-03 00:00:00'"
+                         + " group by 1, 2"
+                         + " PARTITIONED by day"
+                         + " clustered by dim1"
+                     )
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedMSQFault(
@@ -93,13 +101,21 @@ public class MSQFaultsTest extends MSQTestBase
     )).when(testTaskActionClient).submit(isA(SegmentAllocateAction.class));
 
     testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time >= TIMESTAMP '2000-01-02 00:00:00' and __time < TIMESTAMP '2000-01-03 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1")
+                         "insert into foo1"
+                         + " select  __time, dim1 , count(*) as cnt"
+                         + " from foo"
+                         + " where dim1 is not null and __time >= TIMESTAMP '2000-01-02 00:00:00' and __time < TIMESTAMP '2000-01-03 00:00:00'"
+                         + " group by 1, 2"
+                         + " PARTITIONED by day"
+                         + " clustered by dim1"
+                     )
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedMSQFault(
-                         new InsertCannotAllocateSegmentFault(
+                         new InsertAllocatedIncorrectSegmentFault(
                              "foo1",
-                             Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")
+                             Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z"),
+                             Intervals.of("2000-01-01T00:00:00.000Z/2000-02-01T00:00:00.000Z")
                          )
                      )
                      .verifyResults();
