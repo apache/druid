@@ -73,7 +73,7 @@ public class ServerHolder implements Comparable<ServerHolder>
    */
   private final Map<DataSegment, SegmentAction> queuedSegments = new HashMap<>();
 
-  private final ServerSegmentCount projectedSegments = new ServerSegmentCount();
+  private final SegmentCount projectedSegments = new SegmentCount();
 
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
   {
@@ -245,7 +245,7 @@ public class ServerHolder implements Comparable<ServerHolder>
    * Segments that are expected to be loaded on this server once all the
    * operations in progress have completed.
    */
-  public ServerSegmentCount getProjectedSegments()
+  public SegmentCount getProjectedSegments()
   {
     return projectedSegments;
   }

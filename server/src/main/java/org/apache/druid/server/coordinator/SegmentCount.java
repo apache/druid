@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.coordinator;
 
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -26,10 +28,14 @@ import org.joda.time.Interval;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ServerSegmentCount
+/**
+ * Keeps a count of segments for each datasource and interval.
+ */
+public class SegmentCount
 {
-  private final Map<String, Object2IntOpenHashMap<Interval>>
+  private final Map<String, Object2IntMap<Interval>>
       datasourceIntervalToSegmentCount = new HashMap<>();
+  private final Object2IntMap<Interval> intervalToTotalSegmentCount = new Object2IntOpenHashMap<>();
 
   public void addSegment(DataSegment segment)
   {
@@ -41,15 +47,21 @@ public class ServerSegmentCount
     updateCountInInterval(segment, -1);
   }
 
-  public Map<String, Object2IntOpenHashMap<Interval>> getDatasourceIntervalToSegmentCount()
+  public Object2IntMap<Interval> getIntervalToSegmentCount(String datasource)
   {
-    return datasourceIntervalToSegmentCount;
+    return datasourceIntervalToSegmentCount.getOrDefault(datasource, Object2IntMaps.emptyMap());
+  }
+
+  public Object2IntMap<Interval> getIntervalToTotalSegmentCount()
+  {
+    return intervalToTotalSegmentCount;
   }
 
   private void updateCountInInterval(DataSegment segment, int delta)
   {
+    intervalToTotalSegmentCount.merge(segment.getInterval(), delta, Integer::sum);
     datasourceIntervalToSegmentCount
         .computeIfAbsent(segment.getDataSource(), ds -> new Object2IntOpenHashMap<>())
-        .addTo(segment.getInterval(), delta);
+        .merge(segment.getInterval(), delta, Integer::sum);
   }
 }

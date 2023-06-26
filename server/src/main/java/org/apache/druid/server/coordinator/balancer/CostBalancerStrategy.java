@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.SegmentCount;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -277,19 +278,22 @@ public class CostBalancerStrategy implements BalancerStrategy
 
     // Compute number of segments in each interval
     final Object2IntOpenHashMap<Interval> intervalToSegmentCount = new Object2IntOpenHashMap<>();
-    server.getProjectedSegments().getDatasourceIntervalToSegmentCount().forEach(
-        (datasource, intervalToCount) -> {
-          // Segments of the same datasource as the proposalSegment count as 2
-          final int multiplier = segmentDatasource.equals(datasource) ? 2 : 1;
 
-          intervalToCount.object2IntEntrySet().fastForEach(entry -> {
-            final Interval interval = entry.getKey();
-            if (costComputeInterval.overlaps(interval)) {
-              intervalToSegmentCount.addTo(interval, multiplier * entry.getIntValue());
-            }
-          });
-        }
-    );
+    final SegmentCount projectedSegments = server.getProjectedSegments();
+    projectedSegments.getIntervalToTotalSegmentCount().object2IntEntrySet().forEach(entry -> {
+      final Interval interval = entry.getKey();
+      if (costComputeInterval.overlaps(interval)) {
+        intervalToSegmentCount.addTo(interval, entry.getIntValue());
+      }
+    });
+
+    // Count the segments for the same datasource twice as they have twice the cost
+    projectedSegments.getIntervalToSegmentCount(segmentDatasource).object2IntEntrySet().forEach(entry -> {
+      final Interval interval = entry.getKey();
+      if (costComputeInterval.overlaps(interval)) {
+        intervalToSegmentCount.addTo(interval, entry.getIntValue());
+      }
+    });
 
     // Compute joint cost for each interval
     double cost = 0;
