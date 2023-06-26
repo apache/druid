@@ -28,8 +28,7 @@ import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.frame.allocation.HeapMemoryAllocator;
-import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
+import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -92,6 +91,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 {
 
   private static final Logger log = new Logger(ClientQuerySegmentWalker.class);
+  private static final int FRAME_SIZE = 8_000_000;
 
   private final ServiceEmitter emitter;
   private final QuerySegmentWalker clusterClient;
@@ -726,7 +726,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       framesOptional = toolChest.resultsAsFrames(
           query,
           results,
-          new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+          new ArenaMemoryAllocatorFactory(FRAME_SIZE),
           useNestedForUnknownTypeInSubquery
       );
     }
