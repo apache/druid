@@ -43,7 +43,7 @@ public class SqlStatementResult
   private final List<ColumnNameAndTypes> sqlRowSignature;
 
   @Nullable
-  private final Long durationInMs;
+  private final Long durationMs;
 
   @Nullable
   private final ResultSetInformation resultSetInformation;
@@ -75,7 +75,7 @@ public class SqlStatementResult
     this.state = state;
     this.createdAt = createdAt;
     this.sqlRowSignature = sqlRowSignature;
-    this.durationInMs = durationMs;
+    this.durationMs = durationMs;
     this.resultSetInformation = resultSetInformation;
     this.queryException = queryException;
   }
@@ -109,9 +109,9 @@ public class SqlStatementResult
   @JsonProperty
   @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Long getDurationInMs()
+  public Long getDurationMs()
   {
-    return durationInMs;
+    return durationMs;
   }
 
   @JsonProperty
@@ -144,8 +144,8 @@ public class SqlStatementResult
         createdAt,
         that.createdAt
     ) && Objects.equals(sqlRowSignature, that.sqlRowSignature) && Objects.equals(
-        durationInMs,
-        that.durationInMs
+        durationMs,
+        that.durationMs
     ) && Objects.equals(resultSetInformation, that.resultSetInformation) && Objects.equals(
         queryException,
         that.queryException
@@ -155,7 +155,7 @@ public class SqlStatementResult
   @Override
   public int hashCode()
   {
-    return Objects.hash(queryId, state, createdAt, sqlRowSignature, durationInMs, resultSetInformation, queryException);
+    return Objects.hash(queryId, state, createdAt, sqlRowSignature, durationMs, resultSetInformation, queryException);
   }
 
   @Override
@@ -166,7 +166,7 @@ public class SqlStatementResult
            ", state=" + state +
            ", createdAt=" + createdAt +
            ", sqlRowSignature=" + sqlRowSignature +
-           ", durationInMs=" + durationInMs +
+           ", durationInMs=" + durationMs +
            ", resultSetInformation=" + resultSetInformation +
            ", queryException=" + queryException +
            '}';

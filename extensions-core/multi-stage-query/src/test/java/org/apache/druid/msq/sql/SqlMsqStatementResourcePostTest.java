@@ -36,7 +36,6 @@ import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlQuery;
 import org.junit.Assert;
@@ -49,7 +48,6 @@ import java.util.List;
 
 public class SqlMsqStatementResourcePostTest extends MSQTestBase
 {
-
   private SqlStatementResource resource;
 
   @Before
@@ -57,7 +55,6 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
   {
     resource = new SqlStatementResource(
         sqlStatementFactory,
-        new ServerConfig(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         objectMapper,
         indexingServiceClient

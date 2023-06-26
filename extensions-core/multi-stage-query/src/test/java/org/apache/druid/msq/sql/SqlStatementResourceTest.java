@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.Futures;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -60,7 +61,6 @@ import org.apache.druid.msq.sql.resources.SqlStatementResource;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -68,7 +68,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -333,7 +332,6 @@ public class SqlStatementResourceTest extends MSQTestBase
     setupMocks(overlordClient);
     resource = new SqlStatementResource(
         sqlStatementFactory,
-        new ServerConfig(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         JSON_MAPPER,
         overlordClient
@@ -614,10 +612,11 @@ public class SqlStatementResourceTest extends MSQTestBase
     assertExceptionMessage(
         resource.doGetResults(ACCEPTED_SELECT_MSQ_QUERY, null, null, makeOkRequest()),
         StringUtils.format(
-            "Query is [%s]. Please wait for it to complete.",
+            "Query[%s] is currently in [%s] state. Please wait for it to complete.",
+            ACCEPTED_SELECT_MSQ_QUERY,
             SqlStatementState.ACCEPTED
         ),
-        Response.Status.NOT_FOUND
+        Response.Status.BAD_REQUEST
     );
     Assert.assertEquals(
         Response.Status.ACCEPTED.getStatusCode(),
@@ -648,10 +647,11 @@ public class SqlStatementResourceTest extends MSQTestBase
     assertExceptionMessage(
         resource.doGetResults(RUNNING_SELECT_MSQ_QUERY, null, null, makeOkRequest()),
         StringUtils.format(
-            "Query is [%s]. Please wait for it to complete.",
+            "Query[%s] is currently in [%s] state. Please wait for it to complete.",
+            RUNNING_SELECT_MSQ_QUERY,
             SqlStatementState.RUNNING
         ),
-        Response.Status.NOT_FOUND
+        Response.Status.BAD_REQUEST
     );
     Assert.assertEquals(
         Response.Status.ACCEPTED.getStatusCode(),
@@ -726,11 +726,11 @@ public class SqlStatementResourceTest extends MSQTestBase
     );
 
     Assert.assertEquals(
-        Response.Status.PRECONDITION_FAILED.getStatusCode(),
+        Response.Status.BAD_REQUEST.getStatusCode(),
         resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, -1L, 3L, makeOkRequest()).getStatus()
     );
     Assert.assertEquals(
-        Response.Status.PRECONDITION_FAILED.getStatusCode(),
+        Response.Status.BAD_REQUEST.getStatusCode(),
         resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, null, -1L, makeOkRequest()).getStatus()
     );
 
@@ -744,8 +744,11 @@ public class SqlStatementResourceTest extends MSQTestBase
       assertExceptionMessage(resource.doGetStatus(queryID, makeOkRequest()), FAILURE_MSG, Response.Status.OK);
       assertExceptionMessage(
           resource.doGetResults(queryID, null, null, makeOkRequest()),
-          FAILURE_MSG,
-          Response.Status.NOT_FOUND
+          StringUtils.format(
+              "Query[%s] failed. Hit status api for more details.",
+              queryID
+          ),
+          Response.Status.BAD_REQUEST
       );
 
       Assert.assertEquals(
@@ -795,11 +798,11 @@ public class SqlStatementResourceTest extends MSQTestBase
     )));
 
     Assert.assertEquals(
-        Response.Status.PRECONDITION_FAILED.getStatusCode(),
+        Response.Status.BAD_REQUEST.getStatusCode(),
         resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, -1L, 3L, makeOkRequest()).getStatus()
     );
     Assert.assertEquals(
-        Response.Status.PRECONDITION_FAILED.getStatusCode(),
+        Response.Status.BAD_REQUEST.getStatusCode(),
         resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, null, -1L, makeOkRequest()).getStatus()
     );
 
@@ -836,10 +839,11 @@ public class SqlStatementResourceTest extends MSQTestBase
     assertExceptionMessage(
         resource.doGetResults(ACCEPTED_INSERT_MSQ_TASK, null, null, makeOkRequest()),
         StringUtils.format(
-            "Query is [%s]. Please wait for it to complete.",
+            "Query[%s] is currently in [%s] state. Please wait for it to complete.",
+            ACCEPTED_INSERT_MSQ_TASK,
             SqlStatementState.ACCEPTED
         ),
-        Response.Status.NOT_FOUND
+        Response.Status.BAD_REQUEST
     );
     Assert.assertEquals(
         Response.Status.ACCEPTED.getStatusCode(),
@@ -868,10 +872,11 @@ public class SqlStatementResourceTest extends MSQTestBase
     assertExceptionMessage(
         resource.doGetResults(RUNNING_INSERT_MSQ_QUERY, null, null, makeOkRequest()),
         StringUtils.format(
-            "Query is [%s]. Please wait for it to complete.",
+            "Query[%s] is currently in [%s] state. Please wait for it to complete.",
+            RUNNING_INSERT_MSQ_QUERY,
             SqlStatementState.RUNNING
         ),
-        Response.Status.NOT_FOUND
+        Response.Status.BAD_REQUEST
     );
     Assert.assertEquals(
         Response.Status.ACCEPTED.getStatusCode(),
@@ -893,7 +898,7 @@ public class SqlStatementResourceTest extends MSQTestBase
   )
   {
     Assert.assertEquals(expectectedStatus.getStatusCode(), response.getStatus());
-    Assert.assertEquals(exceptionMessage, getQueryExceptionFromResponse(response).getMessage());
+    Assert.assertEquals(exceptionMessage, getQueryExceptionFromResponse(response));
   }
 
   public static List getResultRowsFromResponse(Response resultsResponse) throws IOException
@@ -905,12 +910,12 @@ public class SqlStatementResourceTest extends MSQTestBase
     return JSON_MAPPER.readValue(bytes, List.class);
   }
 
-  private static QueryException getQueryExceptionFromResponse(Response response)
+  private static String getQueryExceptionFromResponse(Response response)
   {
     if (response.getEntity() instanceof SqlStatementResult) {
-      return ((SqlStatementResult) response.getEntity()).getQueryException();
+      return ((SqlStatementResult) response.getEntity()).getQueryException().getMessage();
     } else {
-      return (QueryException) response.getEntity();
+      return ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage();
     }
   }
 
