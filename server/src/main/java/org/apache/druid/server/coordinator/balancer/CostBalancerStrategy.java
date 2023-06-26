@@ -29,8 +29,8 @@ import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.coordinator.SegmentCountsPerInterval;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.SegmentCount;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -279,7 +279,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     // Compute number of segments in each interval
     final Object2IntOpenHashMap<Interval> intervalToSegmentCount = new Object2IntOpenHashMap<>();
 
-    final SegmentCount projectedSegments = server.getProjectedSegments();
+    final SegmentCountsPerInterval projectedSegments = server.getProjectedSegments();
     projectedSegments.getIntervalToTotalSegmentCount().object2IntEntrySet().forEach(entry -> {
       final Interval interval = entry.getKey();
       if (costComputeInterval.overlaps(interval)) {

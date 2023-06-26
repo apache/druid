@@ -29,9 +29,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Keeps a count of segments for each datasource and interval.
+ * Maintains a count of segments for each datasource and interval.
  */
-public class SegmentCount
+public class SegmentCountsPerInterval
 {
   private final Map<String, Object2IntMap<Interval>>
       datasourceIntervalToSegmentCount = new HashMap<>();
