@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
+import { Button, ButtonGroup, Code, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import { C, L, SqlComparison, SqlExpression } from 'druid-query-toolkit';
@@ -312,6 +312,17 @@ END AS "time_span"`,
             whereClause = SqlExpression.and(...whereParts).toString();
           }
 
+          let effectiveSorted = sorted;
+          if (!effectiveSorted.find(sort => sort.id === 'version') && effectiveSorted.length) {
+            // Ensure there is a sort on version as a tiebreaker
+            effectiveSorted = effectiveSorted.concat([
+              {
+                id: 'version',
+                desc: effectiveSorted[0].desc, // Take the first direction if it exists
+              },
+            ]);
+          }
+
           if (groupByInterval) {
             const innerQuery = compact([
               `SELECT "start" || '/' || "end" AS "interval"`,
@@ -336,11 +347,11 @@ END AS "time_span"`,
               whereClause ? `  AND ${whereClause}` : '',
             ]);
 
-            if (sorted.length) {
+            if (effectiveSorted.length) {
               queryParts.push(
                 'ORDER BY ' +
-                  sorted
-                    .map((sort: any) => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
+                  effectiveSorted
+                    .map(sort => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
                     .join(', '),
               );
             }
@@ -353,11 +364,11 @@ END AS "time_span"`,
               queryParts.push(`WHERE ${whereClause}`);
             }
 
-            if (sorted.length) {
+            if (effectiveSorted.length) {
               queryParts.push(
                 'ORDER BY ' +
-                  sorted
-                    .map((sort: any) => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
+                  effectiveSorted
+                    .map(sort => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`)
                     .join(', '),
               );
             }
@@ -534,7 +545,11 @@ END AS "time_span"`,
         data={segments}
         pages={10000000} // Dummy, we are hiding the page selector
         loading={segmentsState.loading}
-        noDataText={segmentsState.isEmpty() ? 'No segments' : segmentsState.getErrorMessage() || ''}
+        noDataText={
+          segmentsState.isEmpty()
+            ? `No segments${filters.length ? ' matching filter' : ''}`
+            : segmentsState.getErrorMessage() || ''
+        }
         manual
         filterable
         filtered={filters}
@@ -919,7 +934,9 @@ END AS "time_span"`,
           this.segmentsQueryManager.rerunLastQuery();
         }}
       >
-        <p>{`Are you sure you want to drop segment '${terminateSegmentId}'?`}</p>
+        <p>
+          Are you sure you want to drop segment <Code>{terminateSegmentId}</Code>?
+        </p>
         <p>This action is not reversible.</p>
       </AsyncActionDialog>
     );
