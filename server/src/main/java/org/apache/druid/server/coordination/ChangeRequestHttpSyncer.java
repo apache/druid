@@ -244,7 +244,7 @@ public class ChangeRequestHttpSyncer<T>
 
       BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
 
-      log.debug("Sending sync request to server[%s]", logIdentity);
+      log.info("Sending sync request to server[%s]", logIdentity);
 
       ListenableFuture<InputStream> syncRequestFuture = httpClient.go(
           new Request(HttpMethod.GET, new URL(baseServerURL, req))
@@ -280,9 +280,9 @@ public class ChangeRequestHttpSyncer<T>
                     return;
                   }
 
-                  log.debug("Received response from server[%s]", logIdentity);
+                  log.info("Received response from server[%s]", logIdentity);
                   ChangeRequestsSnapshot<T> changes = smileMapper.readValue(stream, responseTypeReferences);
-                  log.debug("Finished reading response from server[%s]", logIdentity);
+                  log.info("Finished reading response from server[%s]", logIdentity);
 
                   if (changes.isResetCounter()) {
                     log.info(

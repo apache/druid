@@ -25,6 +25,7 @@ import com.google.common.base.Predicates;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 
@@ -54,6 +55,10 @@ public class HttpServerInventoryViewProvider implements ServerInventoryViewProvi
 
   @JacksonInject
   @NotNull
+  private ScheduledExecutorFactory executorFactory;
+
+  @JacksonInject
+  @NotNull
   private ServiceEmitter serviceEmitter = null;
 
   @Override
@@ -66,6 +71,7 @@ public class HttpServerInventoryViewProvider implements ServerInventoryViewProvi
         Predicates.alwaysTrue(),
         config,
         "HttpServerInventoryView",
+        executorFactory,
         serviceEmitter
     );
   }
