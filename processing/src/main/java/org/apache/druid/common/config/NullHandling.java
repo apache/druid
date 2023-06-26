@@ -114,16 +114,6 @@ public class NullHandling
     //CHECKSTYLE.ON: Regexp
   }
 
-  /**
-   * Returns null if passed an empty ByteBuffers ({@link ByteBuffer#remaining()} == 0) in default-value mode.
-   * Otherwise, returns the original ByteBuffer.
-   */
-  @Nullable
-  public static ByteBuffer emptyToNullIfNeeded(@Nullable ByteBuffer buffer)
-  {
-    return replaceWithDefault() && buffer != null && buffer.remaining() == 0 ? null : buffer;
-  }
-
   @Nullable
   public static String defaultStringValue()
   {
