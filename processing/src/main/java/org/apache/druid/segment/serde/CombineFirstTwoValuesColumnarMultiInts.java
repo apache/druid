@@ -25,6 +25,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.data.ZeroIndexedInts;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -47,7 +48,7 @@ public class CombineFirstTwoValuesColumnarMultiInts implements ColumnarMultiInts
   public CombineFirstTwoValuesColumnarMultiInts(ColumnarMultiInts delegate)
   {
     this.delegate = delegate;
-    this.rowValues = new CombineFirstTwoValuesIndexedInts(null);
+    this.rowValues = new CombineFirstTwoValuesIndexedInts(ZeroIndexedInts.instance());
   }
 
   @Override
