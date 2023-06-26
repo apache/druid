@@ -291,4 +291,15 @@ public class FrameWriterUtils
 
     return true;
   }
+
+  public static RowSignature replaceUnknownTypesWithNestedColumns(final RowSignature rowSignature)
+  {
+    RowSignature.Builder retBuilder = RowSignature.builder();
+    for (int i = 0; i < rowSignature.size(); ++i) {
+      String columnName = rowSignature.getColumnName(i);
+      ColumnType columnType = rowSignature.getColumnType(i).orElse(ColumnType.NESTED_DATA);
+      retBuilder.add(columnName, columnType);
+    }
+    return retBuilder.build();
+  }
 }
