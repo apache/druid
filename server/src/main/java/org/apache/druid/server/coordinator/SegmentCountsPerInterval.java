@@ -59,9 +59,9 @@ public class SegmentCountsPerInterval
 
   private void updateCountInInterval(DataSegment segment, int delta)
   {
-    intervalToTotalSegmentCount.merge(segment.getInterval(), delta, Integer::sum);
+    intervalToTotalSegmentCount.mergeInt(segment.getInterval(), delta, Integer::sum);
     datasourceIntervalToSegmentCount
         .computeIfAbsent(segment.getDataSource(), ds -> new Object2IntOpenHashMap<>())
-        .merge(segment.getInterval(), delta, Integer::sum);
+        .mergeInt(segment.getInterval(), delta, Integer::sum);
   }
 }

@@ -127,31 +127,31 @@ public class ServerHolder implements Comparable<ServerHolder>
       AtomicInteger loadingReplicaCount
   )
   {
-    server.iterateAllSegments().forEach(projectedSegments::addSegment);
+    for (DataSegment segment : server.iterateAllSegments()) {
+      projectedSegments.addSegment(segment);
+    }
 
     final List<SegmentHolder> expiredSegments = new ArrayList<>();
-    peon.getSegmentsInQueue().forEach(
-        (holder) -> {
-          int runsInQueue = holder.incrementAndGetRunsInQueue();
-          if (runsInQueue > maxLifetimeInQueue) {
-            expiredSegments.add(holder);
-          }
+    for (SegmentHolder holder : peon.getSegmentsInQueue()) {
+      int runsInQueue = holder.incrementAndGetRunsInQueue();
+      if (runsInQueue > maxLifetimeInQueue) {
+        expiredSegments.add(holder);
+      }
 
-          final SegmentAction action = holder.getAction();
-          addToQueuedSegments(holder.getSegment(), simplify(action));
+      final SegmentAction action = holder.getAction();
+      addToQueuedSegments(holder.getSegment(), simplify(action));
 
-          if (action == SegmentAction.MOVE_TO) {
-            movingSegmentCount.incrementAndGet();
-          }
-          if (action == SegmentAction.REPLICATE) {
-            loadingReplicaCount.incrementAndGet();
-          }
-        }
-    );
+      if (action == SegmentAction.MOVE_TO) {
+        movingSegmentCount.incrementAndGet();
+      }
+      if (action == SegmentAction.REPLICATE) {
+        loadingReplicaCount.incrementAndGet();
+      }
+    }
 
-    peon.getSegmentsMarkedToDrop().forEach(
-        segment -> addToQueuedSegments(segment, SegmentAction.MOVE_FROM)
-    );
+    for (DataSegment segment : peon.getSegmentsMarkedToDrop()) {
+      addToQueuedSegments(segment, SegmentAction.MOVE_FROM);
+    }
 
     if (!expiredSegments.isEmpty()) {
       List<SegmentHolder> expiredSegmentsSubList =

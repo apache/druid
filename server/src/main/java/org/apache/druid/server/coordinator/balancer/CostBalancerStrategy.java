@@ -274,7 +274,6 @@ public class CostBalancerStrategy implements BalancerStrategy
   protected double computePlacementCost(DataSegment proposalSegment, ServerHolder server)
   {
     final Interval costComputeInterval = getCostComputeInterval(proposalSegment);
-    final String segmentDatasource = proposalSegment.getDataSource();
 
     // Compute number of segments in each interval
     final Object2IntOpenHashMap<Interval> intervalToSegmentCount = new Object2IntOpenHashMap<>();
@@ -288,7 +287,8 @@ public class CostBalancerStrategy implements BalancerStrategy
     });
 
     // Count the segments for the same datasource twice as they have twice the cost
-    projectedSegments.getIntervalToSegmentCount(segmentDatasource).object2IntEntrySet().forEach(entry -> {
+    final String datasource = proposalSegment.getDataSource();
+    projectedSegments.getIntervalToSegmentCount(datasource).object2IntEntrySet().forEach(entry -> {
       final Interval interval = entry.getKey();
       if (costComputeInterval.overlaps(interval)) {
         intervalToSegmentCount.addTo(interval, entry.getIntValue());
@@ -305,7 +305,7 @@ public class CostBalancerStrategy implements BalancerStrategy
 
     // Minus the self cost of the segment
     if (server.isProjectedSegment(proposalSegment)) {
-      cost -= computeJointSegmentsCost(proposalSegment, proposalSegment);
+      cost -= intervalCost(segmentInterval, segmentInterval) * 2.0;
     }
 
     return cost;
@@ -370,7 +370,7 @@ public class CostBalancerStrategy implements BalancerStrategy
       reason = "Executor shutdown";
     } else if (e instanceof TimeoutException) {
       reason = "Timed out";
-      suggestion = "Try setting a higher value for 'balancerComputeThreads'.";
+      suggestion = " Try setting a higher value for 'balancerComputeThreads'.";
     } else {
       reason = e.getMessage();
     }

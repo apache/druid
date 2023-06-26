@@ -596,9 +596,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   private void incrementStat(CoordinatorStat stat, DataSegment segment, String tier, long value)
   {
-    RowKey rowKey = RowKey.with(Dimension.TIER, tier)
-                          .and(Dimension.DATASOURCE, segment.getDataSource());
-    stats.add(stat, rowKey, value);
+    stats.addToSegmentStat(stat, tier, segment.getDataSource(), value);
   }
 
 }
