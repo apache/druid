@@ -22,6 +22,8 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
@@ -41,7 +43,7 @@ import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
@@ -89,7 +91,12 @@ public class MetadataSegmentView
    * from other threads.
    */
   @MonotonicNonNull
-  private volatile ImmutableSortedSet<SegmentWithOvershadowedStatus> publishedSegments = null;
+  private volatile ImmutableSortedSet<SegmentStatusInCluster> publishedSegments = null;
+  /**
+   * Caches the replication factor for segment IDs. In case of coordinator restarts or leadership re-elections, the coordinator API returns `null` replication factor until load rules are evaluated.
+   * The cache can be used during these periods to continue serving the previously fetched values.
+   */
+  private final Cache<SegmentId, Integer> segmentIdToReplicationFactor;
   private final ScheduledExecutorService scheduledExec;
   private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
@@ -117,6 +124,9 @@ public class MetadataSegmentView
     this.isCacheEnabled = config.isMetadataSegmentCacheEnable();
     this.pollPeriodInMS = config.getMetadataSegmentPollPeriod();
     this.scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
+    this.segmentIdToReplicationFactor = CacheBuilder.newBuilder()
+                                                    .expireAfterAccess(10, TimeUnit.MINUTES)
+                                                    .build();
     this.isDetectUnavailableSegmentsEnabled = segmentWatcherConfig.isDetectUnavailableSegments();
   }
 
@@ -153,17 +163,17 @@ public class MetadataSegmentView
 
   private void poll()
   {
-    log.debug("polling published segments from coordinator");
-    final JsonParserIterator<SegmentWithOvershadowedStatus> metadataSegments = getMetadataSegments(
+    log.info("polling published segments from coordinator");
+    final JsonParserIterator<SegmentStatusInCluster> metadataSegments = getMetadataSegments(
         coordinatorDruidLeaderClient,
         jsonMapper,
         segmentWatcherConfig.getWatchedDataSources()
     );
 
-    final ImmutableSortedSet.Builder<SegmentWithOvershadowedStatus> builder = ImmutableSortedSet.naturalOrder();
+    final ImmutableSortedSet.Builder<SegmentStatusInCluster> builder = ImmutableSortedSet.naturalOrder();
     while (metadataSegments.hasNext()) {
-      final SegmentWithOvershadowedStatus segmentWithOvershadowedStatus = convert(metadataSegments.next());
-      builder.add(segmentWithOvershadowedStatus);
+      final SegmentStatusInCluster segmentStatusInCluster = convert(metadataSegments.next());
+      builder.add(segmentStatusInCluster);
     }
 
     publishedSegments = builder.build();
@@ -189,7 +199,7 @@ public class MetadataSegmentView
       return;
     }
 
-    Map<SegmentId, SegmentWithOvershadowedStatus> publishedSegmentsCopy = new HashMap<>();
+    Map<SegmentId, SegmentStatusInCluster> publishedSegmentsCopy = new HashMap<>();
 
     final List<DataSegmentChange> dataSegmentChanges =
         changedRequestsSnapshot
@@ -197,7 +207,7 @@ public class MetadataSegmentView
             .stream()
             .map(dataSegmentChange ->
                      new DataSegmentChange(
-                         convert(dataSegmentChange.getSegmentWithOvershadowedStatus()),
+                         convert(dataSegmentChange.getSegmentStatusInCluster()),
                          dataSegmentChange.getChangeType()
                      ))
             .collect(Collectors.toList());
@@ -221,8 +231,8 @@ public class MetadataSegmentView
       if (isCacheEnabled) {
         dataSegmentChanges.forEach(
             dataSegmentChange -> publishedSegmentsCopy.put(
-                dataSegmentChange.getSegmentWithOvershadowedStatus().getDataSegment().getId(),
-                dataSegmentChange.getSegmentWithOvershadowedStatus()
+                dataSegmentChange.getSegmentStatusInCluster().getDataSegment().getId(),
+                dataSegmentChange.getSegmentStatusInCluster()
             ));
       }
     } else {
@@ -236,11 +246,11 @@ public class MetadataSegmentView
         dataSegmentChanges.forEach(dataSegmentChange -> {
           if (dataSegmentChange.isLoad()) {
             publishedSegmentsCopy.put(
-                dataSegmentChange.getSegmentWithOvershadowedStatus().getDataSegment().getId(),
-                dataSegmentChange.getSegmentWithOvershadowedStatus()
+                dataSegmentChange.getSegmentStatusInCluster().getDataSegment().getId(),
+                dataSegmentChange.getSegmentStatusInCluster()
             );
           } else {
-            publishedSegmentsCopy.remove(dataSegmentChange.getSegmentWithOvershadowedStatus().getDataSegment().getId());
+            publishedSegmentsCopy.remove(dataSegmentChange.getSegmentStatusInCluster().getDataSegment().getId());
           }
         });
       }
@@ -253,19 +263,26 @@ public class MetadataSegmentView
     }
 
     if (isCacheEnabled) {
-      ImmutableSortedSet.Builder<SegmentWithOvershadowedStatus> builder = ImmutableSortedSet.naturalOrder();
+      ImmutableSortedSet.Builder<SegmentStatusInCluster> builder = ImmutableSortedSet.naturalOrder();
       builder.addAll(publishedSegmentsCopy.values());
       publishedSegments = builder.build();
       cachePopulated.countDown();
     }
   }
 
-  private SegmentWithOvershadowedStatus convert(SegmentWithOvershadowedStatus segment)
+  private SegmentStatusInCluster convert(SegmentStatusInCluster segment)
   {
-    DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
-    return new SegmentWithOvershadowedStatus(
+    final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
+    Integer replicationFactor = segment.getReplicationFactor();
+    if (replicationFactor == null) {
+      replicationFactor = segmentIdToReplicationFactor.getIfPresent(segment.getDataSegment().getId());
+    } else {
+      segmentIdToReplicationFactor.put(segment.getDataSegment().getId(), segment.getReplicationFactor());
+    }
+    return new SegmentStatusInCluster(
         interned,
         segment.isOvershadowed(),
+        replicationFactor,
         segment.isHandedOff()
     );
   }
@@ -289,7 +306,7 @@ public class MetadataSegmentView
     }
   }
 
-  public Iterator<SegmentWithOvershadowedStatus> getPublishedSegments()
+  public Iterator<SegmentStatusInCluster> getPublishedSegments()
   {
     if (isCacheEnabled) {
       Uninterruptibles.awaitUninterruptibly(cachePopulated);
@@ -304,7 +321,7 @@ public class MetadataSegmentView
   }
 
   // Note that coordinator must be up to get segments
-  private JsonParserIterator<SegmentWithOvershadowedStatus> getMetadataSegments(
+  private JsonParserIterator<SegmentStatusInCluster> getMetadataSegments(
       DruidLeaderClient coordinatorClient,
       ObjectMapper jsonMapper,
       Set<String> watchedDataSources
@@ -324,7 +341,7 @@ public class MetadataSegmentView
 
     return coordinatorClient.getThingsFromLeaderNode(
         query,
-        new TypeReference<SegmentWithOvershadowedStatus>()
+        new TypeReference<SegmentStatusInCluster>()
         {
         },
         jsonMapper

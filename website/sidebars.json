@@ -46,7 +46,8 @@
           "ingestion/input-sources",
           "ingestion/schema-model",
           "ingestion/rollup",
-          "ingestion/partitioning"
+          "ingestion/partitioning",
+          "ingestion/tasks"
         ]
       },
       {
@@ -101,6 +102,7 @@
           "querying/sql-operators",
           "querying/sql-scalar",
           "querying/sql-aggregations",
+          "querying/sql-array-functions",
           "querying/sql-multivalue-string-functions",
           "querying/sql-json-functions",
           "querying/sql-functions",
@@ -233,6 +235,7 @@
       "development/javascript",
       "development/build",
       "development/versioning",
+      "development/contribute-to-docs",
       "development/experimental"
     ],
     "Misc": [

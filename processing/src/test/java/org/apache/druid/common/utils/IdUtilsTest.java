@@ -19,20 +19,16 @@
 
 package org.apache.druid.common.utils;
 
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 public class IdUtilsTest
 {
   private static final String THINGO = "thingToValidate";
   public static final String VALID_ID_CHARS = "alpha123..*~!@#&%^&*()-+ Россия\\ 한국 中国!";
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testValidIdName()
@@ -43,89 +39,89 @@ public class IdUtilsTest
   @Test
   public void testInvalidNull()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("thingToValidate cannot be null or empty. Please provide a thingToValidate.");
-    IdUtils.validateId(THINGO, null);
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [thingToValidate]: must not be null"
+    ).assertThrowsAndMatches(() -> IdUtils.validateId(THINGO, null));
   }
 
   @Test
   public void testInvalidEmpty()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("thingToValidate cannot be null or empty. Please provide a thingToValidate.");
-    IdUtils.validateId(THINGO, "");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [thingToValidate]: must not be null"
+    ).assertThrowsAndMatches(() -> IdUtils.validateId(THINGO, ""));
   }
 
   @Test
   public void testInvalidSlashes()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("thingToValidate cannot contain the '/' character.");
-    IdUtils.validateId(THINGO, "/paths/are/bad/since/we/make/files/from/stuff");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [thingToValidate]: Value [/paths/are/bad/since/we/make/files/from/stuff] cannot contain '/'."
+    ).assertThrowsAndMatches(() -> IdUtils.validateId(THINGO, "/paths/are/bad/since/we/make/files/from/stuff"));
   }
 
   @Test
   public void testInvalidLeadingDot()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("thingToValidate cannot start with the '.' character.");
-    IdUtils.validateId(THINGO, "./nice/try");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [thingToValidate]: Value [./nice/try] cannot start with '.'."
+    ).assertThrowsAndMatches(() -> IdUtils.validateId(THINGO, "./nice/try"));
   }
 
   @Test
   public void testInvalidSpacesRegexTabs()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("thingToValidate cannot contain whitespace character except space.");
-    IdUtils.validateId(THINGO, "spaces\tare\tbetter\tthan\ttabs\twhich\tare\tillegal");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [thingToValidate]: Value [spaces\tare\tbetter\tthan\ttabs\twhich\tare\tillegal] contains illegal whitespace characters.  Only space is allowed."
+    ).assertThrowsAndMatches(() -> IdUtils.validateId(THINGO, "spaces\tare\tbetter\tthan\ttabs\twhich\tare\tillegal"));
   }
 
   @Test
   public void testInvalidSpacesRegexNewline()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("thingToValidate cannot contain whitespace character except space.");
-    IdUtils.validateId(THINGO, "new\nline");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [thingToValidate]: Value [new\nline] contains illegal whitespace characters.  Only space is allowed."
+    ).assertThrowsAndMatches(() -> IdUtils.validateId(THINGO, "new\nline"));
   }
 
   @Test
   public void testInvalidSpacesRegexCarriageReturn()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("thingToValidate cannot contain whitespace character except space.");
-    IdUtils.validateId(THINGO, "does\rexist\rby\ritself");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [thingToValidate]: Value [does\rexist\rby\ritself] contains illegal whitespace characters.  Only space is allowed."
+    ).assertThrowsAndMatches(() -> IdUtils.validateId(THINGO, "does\rexist\rby\ritself"));
   }
 
   @Test
   public void testInvalidSpacesRegexLineTabulation()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("thingToValidate cannot contain whitespace character except space.");
-    IdUtils.validateId(THINGO, "what\u000Bis line tabulation");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [thingToValidate]: Value [what\u000Bis line tabulation] contains illegal whitespace characters.  Only space is allowed."
+    ).assertThrowsAndMatches(() -> IdUtils.validateId(THINGO, "what\u000Bis line tabulation"));
   }
 
   @Test
   public void testInvalidSpacesRegexFormFeed()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("thingToValidate cannot contain whitespace character except space.");
-    IdUtils.validateId(THINGO, "form\u000cfeed?");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [thingToValidate]: Value [form\ffeed?] contains illegal whitespace characters.  Only space is allowed."
+    ).assertThrowsAndMatches(() -> IdUtils.validateId(THINGO, "form\u000cfeed?"));
   }
 
   @Test
   public void testInvalidUnprintableChars()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("thingToValidate cannot contain character #129 (at position 4).");
-    IdUtils.validateId(THINGO, "form\u0081feed?");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [thingToValidate]: Value [form\u0081feed?] contains illegal UTF8 character [#129] at position [4]"
+    ).assertThrowsAndMatches(() -> IdUtils.validateId(THINGO, "form\u0081feed?"));
   }
 
   @Test
   public void testInvalidEmojis()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("thingToValidate cannot contain character #55357 (at position 4).");
-    IdUtils.validateId(THINGO, "form💯feed?");
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Invalid value for field [thingToValidate]: Value [form\uD83D\uDCAFfeed?] contains illegal UTF8 character [#55357] at position [4]"
+    ).assertThrowsAndMatches(() -> IdUtils.validateId(THINGO, "form💯feed?"));
   }
 
   @Test

@@ -631,7 +631,7 @@ public class BrokerServerViewTest extends CuratorTestBase
                 "2011-04-11/2011-04-13",
                 "v3",
                 null,
-                dataSegmentChanges.get(3).getSegmentWithOvershadowedStatus().getDataSegment())
+                dataSegmentChanges.get(3).getSegmentStatusInCluster().getDataSegment())
         ),
         (List<TimelineObjectHolder>) timeline.lookup(
             Intervals.of(
@@ -747,7 +747,7 @@ public class BrokerServerViewTest extends CuratorTestBase
                 "2011-04-11/2011-04-13",
                 "v3",
                 null,
-                dataSegmentChanges.get(4).getSegmentWithOvershadowedStatus().getDataSegment())
+                dataSegmentChanges.get(4).getSegmentStatusInCluster().getDataSegment())
         ),
         (List<TimelineObjectHolder>) timeline.lookup(
             Intervals.of(

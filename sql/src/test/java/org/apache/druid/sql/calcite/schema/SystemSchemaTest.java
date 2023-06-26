@@ -100,7 +100,7 @@ import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -542,7 +542,7 @@ public class SystemSchemaTest extends CalciteTestBase
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
-    Assert.assertEquals(18, fields.size());
+    Assert.assertEquals(19, fields.size());
 
     final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
     final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
@@ -564,12 +564,13 @@ public class SystemSchemaTest extends CalciteTestBase
   public void testSegmentsTable() throws Exception
   {
     final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
-    final Set<SegmentWithOvershadowedStatus> publishedSegments = new HashSet<>(Arrays.asList(
-        new SegmentWithOvershadowedStatus(publishedCompactedSegment1, true, false),
-        new SegmentWithOvershadowedStatus(publishedCompactedSegment2, false, false),
-        new SegmentWithOvershadowedStatus(publishedUncompactedSegment3, false, false),
-        new SegmentWithOvershadowedStatus(segment1, true, false),
-        new SegmentWithOvershadowedStatus(segment2, false, false)
+
+    final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
+        new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, false),
+        new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, false),
+        new SegmentStatusInCluster(publishedUncompactedSegment3, false, 2, false),
+        new SegmentStatusInCluster(segment1, true, 2, false),
+        new SegmentStatusInCluster(segment2, false, 0, false)
     ));
 
     EasyMock.expect(metadataView.getPublishedSegments()).andReturn(publishedSegments.iterator()).once();
@@ -598,7 +599,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_available
         0L, //is_realtime
         1L, //is_overshadowed
-        null //is_compacted
+        null, //is_compacted
+        2L  // replication_factor
     );
 
     verifyRow(
@@ -612,7 +614,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_available
         0L, //is_realtime
         0L, //is_overshadowed,
-        null //is_compacted
+        null, //is_compacted
+        0L  // replication_factor
     );
 
     //segment test3 is unpublished and has a NumberedShardSpec with partitionNum = 2
@@ -627,7 +630,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_available
         0L, //is_realtime
         0L, //is_overshadowed
-        null //is_compacted
+        null, //is_compacted
+        -1L   // replication_factor
     );
 
     verifyRow(
@@ -641,7 +645,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_available
         1L, //is_realtime
         0L, //is_overshadowed
-        null //is_compacted
+        null, //is_compacted
+        -1L  // replication_factor
     );
 
     verifyRow(
@@ -655,7 +660,8 @@ public class SystemSchemaTest extends CalciteTestBase
         1L, //is_available
         1L, //is_realtime
         0L, //is_overshadowed
-        null //is_compacted
+        null, //is_compacted
+        -1L  // replication_factor
     );
 
     // wikipedia segments are published and unavailable, num_replicas is 0
@@ -671,7 +677,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_available
         0L, //is_realtime
         1L, //is_overshadowed
-        expectedCompactionState //is_compacted
+        expectedCompactionState, //is_compacted
+        2L  // replication_factor
     );
 
     verifyRow(
@@ -685,7 +692,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_available
         0L, //is_realtime
         0L, //is_overshadowed
-        expectedCompactionState //is_compacted
+        expectedCompactionState, //is_compacted
+        0L  // replication_factor
     );
 
     verifyRow(
@@ -699,7 +707,8 @@ public class SystemSchemaTest extends CalciteTestBase
         0L, //is_available
         0L, //is_realtime
         0L, //is_overshadowed
-        null //is_compacted
+        null, //is_compacted
+        2L  // replication_factor
     );
 
     // Verify value types.
@@ -717,7 +726,8 @@ public class SystemSchemaTest extends CalciteTestBase
       long isAvailable,
       long isRealtime,
       long isOvershadowed,
-      CompactionState compactionState
+      CompactionState compactionState,
+      long replicationFactor
   ) throws Exception
   {
     Assert.assertEquals(segmentId, row[0].toString());
@@ -740,6 +750,7 @@ public class SystemSchemaTest extends CalciteTestBase
     } else {
       Assert.assertEquals(mapper.writeValueAsString(compactionState), row[17]);
     }
+    Assert.assertEquals(replicationFactor, row[18]);
   }
 
   @Test

@@ -36,6 +36,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
+import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -43,7 +44,7 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -77,18 +78,21 @@ public class MetadataResource
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
+  private final DruidCoordinator coordinator;
 
   @Inject
   public MetadataResource(
       SegmentsMetadataManager segmentsMetadataManager,
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       AuthorizerMapper authorizerMapper,
+      DruidCoordinator coordinator,
       @Json ObjectMapper jsonMapper
   )
   {
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
     this.authorizerMapper = authorizerMapper;
+    this.coordinator = coordinator;
   }
 
   @GET
@@ -148,7 +152,7 @@ public class MetadataResource
   )
   {
     if (includeOvershadowedStatus != null) {
-      return getAllUsedSegmentsWithOvershadowedStatus(req, dataSources);
+      return getAllUsedSegmentsWithAdditionalDetails(req, dataSources);
     }
 
     Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
@@ -238,9 +242,10 @@ public class MetadataResource
                                  || requiredDataSources.contains(segment.getDataSource()))
               .map(segment ->
                        new DataSegmentChange(
-                           new SegmentWithOvershadowedStatus(
+                           new SegmentStatusInCluster(
                                segment,
                                dataSourcesSnapshot.getOvershadowedSegments().contains(segment),
+                               null,
                                getHandedOffStateForSegment(
                                    dataSourcesSnapshot,
                                    segment.getDataSource(),
@@ -259,7 +264,7 @@ public class MetadataResource
       dataSegmentChanges = dataSegmentChanges
           .stream()
           .filter(segment -> requiredDataSources.size() == 0
-                             || requiredDataSources.contains(segment.getSegmentWithOvershadowedStatus()
+                             || requiredDataSources.contains(segment.getSegmentStatusInCluster()
                                                                     .getDataSegment()
                                                                     .getDataSource()))
           .collect(Collectors.toList());
@@ -269,7 +274,7 @@ public class MetadataResource
     }
 
     final Function<DataSegmentChange, Iterable<ResourceAction>> raGenerator = segment -> Collections
-        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getSegmentWithOvershadowedStatus()
+        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getSegmentStatusInCluster()
                                                                                     .getDataSegment()
                                                                                     .getDataSource()));
 
@@ -291,7 +296,7 @@ public class MetadataResource
     return builder.entity(finalChanges).build();
   }
 
-  private Response getAllUsedSegmentsWithOvershadowedStatus(
+  private Response getAllUsedSegmentsWithAdditionalDetails(
       HttpServletRequest req,
       @Nullable Set<String> dataSources
   )
@@ -310,19 +315,21 @@ public class MetadataResource
         .flatMap(t -> t.getSegments().stream());
     final Set<DataSegment> overshadowedSegments = dataSourcesSnapshot.getOvershadowedSegments();
 
-    final Stream<SegmentWithOvershadowedStatus> usedSegmentsWithOvershadowedStatus = usedSegments
-        .map(segment -> new SegmentWithOvershadowedStatus(
-            segment,
-            overshadowedSegments.contains(segment),
-            getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId())
-            ));
+    final Stream<SegmentStatusInCluster> segmentStatus = usedSegments.map(segment -> {
+      // The replication factor for unloaded segments is 0 as they will be unloaded soon
+      boolean isOvershadowed = overshadowedSegments.contains(segment);
+      Integer replicationFactor = isOvershadowed ? (Integer) 0
+                                                 : coordinator.getReplicationFactor(segment.getId());
+      boolean handedOffState = getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId());
+      return new SegmentStatusInCluster(segment, isOvershadowed, replicationFactor, handedOffState);
+    });
 
-    final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections
+    final Function<SegmentStatusInCluster, Iterable<ResourceAction>> raGenerator = segment -> Collections
         .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
 
-    final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+    final Iterable<SegmentStatusInCluster> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
         req,
-        usedSegmentsWithOvershadowedStatus::iterator,
+        segmentStatus::iterator,
         raGenerator,
         authorizerMapper
     );

@@ -22,12 +22,11 @@ package org.apache.druid.client;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.SegmentTimeline;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -35,7 +34,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -238,7 +236,7 @@ public class DataSourcesSnapshot
     return ImmutableSet.copyOf(overshadowedSegments);
   }
 
-  public static Set<SegmentWithOvershadowedStatus> getSegmentsWithOvershadowedStatus(
+  public static Set<SegmentStatusInCluster> getSegmentWithAdditionalDetails(
       Collection<ImmutableDruidDataSource> segments,
       Set<DataSegment> overshadowedSegments,
       Map<String, Set<SegmentId>> handedOffState
@@ -250,9 +248,10 @@ public class DataSourcesSnapshot
         .flatMap(t -> t.getSegments().stream());
 
     return usedSegments
-        .map(segment -> new SegmentWithOvershadowedStatus(
+        .map(segment -> new SegmentStatusInCluster(
                  segment,
                  overshadowedSegments.contains(segment),
+                 null,
                  getHandedOffStateForSegment(handedOffState, segment.getDataSource(), segment.getId())
              )
         )

@@ -426,7 +426,7 @@ public class BrokerServerView implements TimelineServerView
     for (DataSegmentChange dataSegmentChange : dataSegmentChanges) {
       segmentsAdded++;
       SegmentWithOvershadowedStatus segmentWithOvershadowedStatus =
-          dataSegmentChange.getSegmentWithOvershadowedStatus();
+          dataSegmentChange.getSegmentStatusInCluster();
       if (segmentWithOvershadowedStatus.isHandedOff()) {
         segmentsHandedOff++;
         handedOffSegmentsPerDataSource.computeIfAbsent(
@@ -496,14 +496,14 @@ public class BrokerServerView implements TimelineServerView
     for (DataSegmentChange dataSegmentChange : dataSegmentChanges) {
       if (dataSegmentChange.isLoad()) {
         segmentsAdded++;
-        if (dataSegmentChange.getSegmentWithOvershadowedStatus().isHandedOff()) {
+        if (dataSegmentChange.getSegmentStatusInCluster().isHandedOff()) {
           handedOffSegments++;
-          segmentsToAdd.add(dataSegmentChange.getSegmentWithOvershadowedStatus());
+          segmentsToAdd.add(dataSegmentChange.getSegmentStatusInCluster());
         }
       } else {
         segmentsRemoved++;
         if (dataSegmentChange.getChangeType() == DataSegmentChange.ChangeType.SEGMENT_REMOVED) {
-          segmentsToRemove.add(dataSegmentChange.getSegmentWithOvershadowedStatus().getDataSegment());
+          segmentsToRemove.add(dataSegmentChange.getSegmentStatusInCluster().getDataSegment());
         }
       }
     }

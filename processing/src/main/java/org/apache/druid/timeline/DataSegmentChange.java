@@ -27,23 +27,23 @@ import org.apache.druid.java.util.common.StringUtils;
 
 public class DataSegmentChange
 {
-  private final SegmentWithOvershadowedStatus segmentWithOvershadowedStatus;
+  private final SegmentStatusInCluster segmentStatusInCluster;
   private final ChangeType changeType;
 
   @JsonCreator
   public DataSegmentChange(
-      @JsonProperty("segmentWithOvershadowedStatus") SegmentWithOvershadowedStatus segmentWithOvershadowedStatus,
+      @JsonProperty("segmentStatusInCluster") SegmentStatusInCluster segmentStatusInCluster,
       @JsonProperty("changeType") ChangeType changeType
   )
   {
-    this.segmentWithOvershadowedStatus = segmentWithOvershadowedStatus;
+    this.segmentStatusInCluster = segmentStatusInCluster;
     this.changeType = changeType;
   }
 
   @JsonProperty
-  public SegmentWithOvershadowedStatus getSegmentWithOvershadowedStatus()
+  public SegmentStatusInCluster getSegmentStatusInCluster()
   {
-    return segmentWithOvershadowedStatus;
+    return segmentStatusInCluster;
   }
 
   @JsonProperty
@@ -63,7 +63,7 @@ public class DataSegmentChange
   {
     return "DataSegmentChangeRequest{" +
            ", changeReason=" + changeType +
-           ", segmentWithOvershadowedStatus=" + segmentWithOvershadowedStatus +
+           ", segmentStatusInCluster=" + segmentStatusInCluster +
            '}';
   }
 

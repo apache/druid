@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableSet;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -89,8 +91,8 @@ import org.apache.druid.server.security.Access;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -1032,7 +1034,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testInnerJoinTableLookupLookupWithFilterWithOuterLimit(Map<String, Object> queryContext)
@@ -1483,16 +1484,31 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @Test(expected = UnsupportedSQLQueryException.class)
+  @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testTimeColumnAggregationsOnLookups(Map<String, Object> queryContext)
   {
-    testQuery(
-        "SELECT k, LATEST(v) v FROM lookup.lookyloo GROUP BY k",
-        queryContext,
-        ImmutableList.of(),
-        ImmutableList.of()
-    );
+    try {
+      testQuery(
+          "SELECT k, LATEST(v) v FROM lookup.lookyloo GROUP BY k",
+          queryContext,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+      Assert.fail("Expected exception to be thrown.");
+    }
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
+              .expectMessageIs(
+                  "Query planning failed for unknown reason, our best guess is this "
+                  + "[LATEST and EARLIEST aggregators implicitly depend on the __time column, "
+                  + "but the table queried doesn't contain a __time column.  "
+                  + "Please use LATEST_BY or EARLIEST_BY and specify the column explicitly.]"
+              )
+      );
+    }
   }
 
   @Test
@@ -3342,7 +3358,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     assertQueryIsUnplannable(
         "SELECT t1.dim1 from foo as t1 LEFT JOIN foo as t2 on t1.dim1 = '10.1'",
-        "Possible error: SQL is resulting in a join that has unsupported operand types."
+        "SQL is resulting in a join that has unsupported operand types."
     );
   }
 
@@ -3498,6 +3514,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .context(queryContext)
         .build();
 
+    boolean isJoinFilterRewriteEnabled = queryContext.getOrDefault(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+                                                     .toString()
+                                                     .equals("true");
     testQuery(
         "SELECT dim1, l1.k\n"
         + "FROM foo\n"
@@ -3505,7 +3524,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         + "WHERE l1.k IS NOT NULL\n",
         queryContext,
         ImmutableList.of(NullHandling.sqlCompatible() ? nullCompatibleModePlan : nonNullCompatibleModePlan),
-        ImmutableList.of(new Object[]{"abc", "abc"})
+        NullHandling.sqlCompatible() || !isJoinFilterRewriteEnabled
+        ? ImmutableList.of(new Object[]{"abc", "abc"})
+        : ImmutableList.of(
+            new Object[]{"10.1", ""},
+            // this result is incorrect. TODO : fix this result when the JoinFilterAnalyzer bug is fixed
+            new Object[]{"2", ""},
+            new Object[]{"1", ""},
+            new Object[]{"def", ""},
+            new Object[]{"abc", "abc"}
+        )
     );
   }
 

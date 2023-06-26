@@ -528,10 +528,21 @@ public class DruidOperatorTable implements SqlOperatorTable
     return retVal;
   }
 
+  /**
+   * Checks if a given SqlSyntax value represents a valid function syntax. Treats anything other
+   * than prefix/suffix/binary syntax as function syntax.
+   *
+   * @param syntax The SqlSyntax value to be checked.
+   * @return {@code true} if the syntax is valid for a function, {@code false} otherwise.
+   */
+  public static boolean isFunctionSyntax(final SqlSyntax syntax)
+  {
+    return syntax != SqlSyntax.PREFIX && syntax != SqlSyntax.BINARY && syntax != SqlSyntax.POSTFIX;
+  }
+
   private static SqlSyntax normalizeSyntax(final SqlSyntax syntax)
   {
-    // Treat anything other than prefix/suffix/binary syntax as function syntax.
-    if (syntax == SqlSyntax.PREFIX || syntax == SqlSyntax.BINARY || syntax == SqlSyntax.POSTFIX) {
+    if (!DruidOperatorTable.isFunctionSyntax(syntax)) {
       return syntax;
     } else {
       return SqlSyntax.FUNCTION;

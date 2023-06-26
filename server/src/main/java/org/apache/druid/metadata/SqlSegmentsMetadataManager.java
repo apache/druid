@@ -569,8 +569,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private int doMarkAsUsedNonOvershadowedSegments(String dataSourceName, @Nullable Interval interval)
   {
     final List<DataSegment> unusedSegments = new ArrayList<>();
-    final SegmentTimeline timeline =
-        SegmentTimeline.forSegments(Collections.emptyIterator());
+    final SegmentTimeline timeline = new SegmentTimeline();
 
     connector.inReadOnlyTransaction(
         (handle, status) -> {
@@ -979,7 +978,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     }
 
     if (null != dataSourcesSnapshot) {
-      Set<SegmentWithOvershadowedStatus> oldSegments = DataSourcesSnapshot.getSegmentsWithOvershadowedStatus(
+      Set<SegmentWithOvershadowedStatus> oldSegments = DataSourcesSnapshot.getSegmentWithAdditionalDetails(
           dataSourcesSnapshot.getDataSourcesWithAllUsedSegments(),
           dataSourcesSnapshot.getOvershadowedSegments(),
           dataSourcesSnapshot.getHandedOffStatePerDataSource()
@@ -991,7 +990,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           datasourceToHandedOffSegments
       );
 
-      Set<SegmentWithOvershadowedStatus> newSegments = DataSourcesSnapshot.getSegmentsWithOvershadowedStatus(
+      Set<SegmentWithOvershadowedStatus> newSegments = DataSourcesSnapshot.getSegmentWithAdditionalDetails(
           dataSourcesSnapshot.getDataSourcesWithAllUsedSegments(),
           dataSourcesSnapshot.getOvershadowedSegments(),
           dataSourcesSnapshot.getHandedOffStatePerDataSource()

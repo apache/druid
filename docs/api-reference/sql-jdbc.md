@@ -118,7 +118,7 @@ Make sure you meet the following requirements before trying these examples:
 
 ### Get the metadata for a datasource
 
-Metadata, such as column names, is available either through the [`INFORMATION_SCHEMA`](../querying/sql-metadata-tables.md) table or through `connect.getMetaData()`. The following example uses the `INFORMATION_SCHEMA` table to retrieve and print the list of column names for the `wikipedia` datasource that you loaded during a previous tutorial.
+Metadata, such as column names, is available either through the [`INFORMATION_SCHEMA`](../querying/sql-metadata-tables.md) table or through `connection.getMetaData()`. The following example uses the `INFORMATION_SCHEMA` table to retrieve and print the list of column names for the `wikipedia` datasource that you loaded during a previous tutorial.
 
 ```java
 import java.sql.*;
@@ -126,7 +126,7 @@ import java.util.Properties;
 
 public class JdbcListColumns {
 
-    public static void main(String args[]) throws SQLException
+    public static void main(String[] args)
     {
         // Connect to /druid/v2/sql/avatica/ on your Router. 
         // You can connect to a Broker but must configure connection stickiness if you do. 
@@ -157,7 +157,7 @@ public class JdbcListColumns {
 
 ### Query data
 
-Now that you know what columns are available, you can start querying the data. The following example queries the datasource named `wikipedia` for the timestamps and comments from Japan. It also sets the [query context parameter](../querying/sql-query-context.md) `sqlTimeZone` . Optionally,  you can also parameterize queries by using [dynamic parameters](#dynamic-parameters).
+Now that you know what columns are available, you can start querying the data. The following example queries the datasource named `wikipedia` for the timestamps and comments from Japan. It also sets the [query context parameter](../querying/sql-query-context.md) `sqlTimeZone`. Optionally, you can also parameterize queries by using [dynamic parameters](#dynamic-parameters).
 
 ```java
 import java.sql.*;
@@ -165,7 +165,7 @@ import java.util.Properties;
 
 public class JdbcCountryAndTime {
 
-    public static void main(String args[]) throws SQLException
+    public static void main(String[] args)
     {
         // Connect to /druid/v2/sql/avatica/ on your Router. 
         // You can connect to a Broker but must configure connection stickiness if you do. 
@@ -196,6 +196,4 @@ public class JdbcCountryAndTime {
 
     }
 }
-`````
-
-
+```

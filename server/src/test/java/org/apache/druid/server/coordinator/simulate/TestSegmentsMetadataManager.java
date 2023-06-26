@@ -45,16 +45,20 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   private final ConcurrentMap<String, DataSegment> segments = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, DataSegment> usedSegments = new ConcurrentHashMap<>();
 
+  private volatile DataSourcesSnapshot snapshot;
+
   public void addSegment(DataSegment segment)
   {
     segments.put(segment.getId().toString(), segment);
     usedSegments.put(segment.getId().toString(), segment);
+    snapshot = null;
   }
 
   public void removeSegment(DataSegment segment)
   {
     segments.remove(segment.getId().toString());
     usedSegments.remove(segment.getId().toString());
+    snapshot = null;
   }
 
   @Override
@@ -144,7 +148,10 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public ImmutableDruidDataSource getImmutableDataSourceWithUsedSegments(String dataSource)
   {
-    return null;
+    if (snapshot == null) {
+      getSnapshotOfDataSourcesWithAllUsedSegments();
+    }
+    return snapshot.getDataSource(dataSource);
   }
 
   @Override
@@ -156,7 +163,10 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public DataSourcesSnapshot getSnapshotOfDataSourcesWithAllUsedSegments()
   {
-    return DataSourcesSnapshot.fromUsedSegments(usedSegments.values(), ImmutableMap.of());
+    if (snapshot == null) {
+      snapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments.values(), ImmutableMap.of());
+    }
+    return snapshot;
   }
 
   @Override

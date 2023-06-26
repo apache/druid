@@ -77,7 +77,7 @@ export interface HelperQueryProps {
   onDetails(id: string, initTab?: ExecutionDetailsTab): void;
   queryEngines: DruidEngine[];
   clusterCapacity: number | undefined;
-  goToIngestion(taskId: string): void;
+  goToTask(taskId: string): void;
 }
 
 export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryProps) {
@@ -91,7 +91,7 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
     onDetails,
     queryEngines,
     clusterCapacity,
-    goToIngestion,
+    goToTask,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
 
@@ -434,7 +434,7 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
                         execution={execution}
                         onErrorClick={() => onDetails(statsTaskId!, 'error')}
                         onWarningClick={() => onDetails(statsTaskId!, 'warnings')}
-                        goToIngestion={goToIngestion}
+                        goToTask={goToTask}
                       />
                     )}
                   </div>
@@ -456,7 +456,7 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
                   <ExecutionProgressPane
                     execution={executionState.intermediate}
                     intermediateError={executionState.intermediateError}
-                    goToIngestion={goToIngestion}
+                    goToTask={goToTask}
                     onCancel={onUserCancel}
                   />
                 ) : (
