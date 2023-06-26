@@ -332,6 +332,12 @@ If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configurati
 
 ## General Health
 
+### Service Health
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+| `service/heartbeat` | Metric indicating the service is up. `ServiceStatusMonitor` must be enabled. |`leader` on the Overlord and Coordinator.|1|
+
 ### Historical
 
 |Metric|Description|Dimensions|Normal Value|
