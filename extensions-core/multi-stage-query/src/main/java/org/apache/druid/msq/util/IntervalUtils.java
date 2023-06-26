@@ -67,12 +67,10 @@ public class IntervalUtils
 
   /**
    * This method checks if the provided interval is aligned by the granularity or is an instance of {@link Intervals#ETERNITY}
-   * ALL granularity isn't aligned to any interval, however this method is defines that ALL granularity matches
-   * an interval with boundary ({@code DateTimes.MIN}, {@code DateTimes.MAX})
    * This is used to check if the granularity allocation made by the overlord is the same as the one requested in the
    * SQL query
    */
-  public static boolean isEternityOrDoesIntervalAlignWithGranularity(
+  public static boolean isAligned(
       final Interval interval,
       final Granularity granularity
   )

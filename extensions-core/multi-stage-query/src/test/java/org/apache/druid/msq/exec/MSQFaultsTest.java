@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.msq.indexing.error.InsertAllocatedIncorrectSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
@@ -78,7 +77,8 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedMSQFault(
                          new InsertCannotAllocateSegmentFault(
                              "foo1",
-                             Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")
+                             Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z"),
+                             null
                          )
                      )
                      .verifyResults();
@@ -112,7 +112,7 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedMSQFault(
-                         new InsertAllocatedIncorrectSegmentFault(
+                         new InsertCannotAllocateSegmentFault(
                              "foo1",
                              Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z"),
                              Intervals.of("2000-01-01T00:00:00.000Z/2000-02-01T00:00:00.000Z")

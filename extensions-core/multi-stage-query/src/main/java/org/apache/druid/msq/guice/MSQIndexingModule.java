@@ -43,7 +43,6 @@ import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
 import org.apache.druid.msq.indexing.error.ColumnTypeNotSupportedFault;
 import org.apache.druid.msq.indexing.error.DurableStorageConfigurationFault;
-import org.apache.druid.msq.indexing.error.InsertAllocatedIncorrectSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
@@ -112,7 +111,6 @@ public class MSQIndexingModule implements DruidModule
       ColumnNameRestrictedFault.class,
       DurableStorageConfigurationFault.class,
       InsertCannotAllocateSegmentFault.class,
-      InsertAllocatedIncorrectSegmentFault.class,
       InsertCannotBeEmptyFault.class,
       InsertLockPreemptedFault.class,
       InsertTimeNullFault.class,
