@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.InputSlices;
@@ -180,7 +181,8 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
               stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator()),
               rightPrefix,
               keyColumns,
-              joinType
+              joinType,
+              Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN
           );
         }
     );

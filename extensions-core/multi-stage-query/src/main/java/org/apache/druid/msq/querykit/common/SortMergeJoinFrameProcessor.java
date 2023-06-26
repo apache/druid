@@ -41,7 +41,6 @@ import org.apache.druid.frame.segment.FrameCursor;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
 import org.apache.druid.msq.input.ReadableInput;
@@ -122,6 +121,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
   private final String rightPrefix;
   private final JoinType joinType;
   private final JoinColumnSelectorFactory joinColumnSelectorFactory = new JoinColumnSelectorFactory();
+  private final long maxBufferedBytes;
   private FrameWriter frameWriter = null;
 
   // Used by runIncrementally to defer certain logic to the next run.
@@ -137,7 +137,8 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       FrameWriterFactory frameWriterFactory,
       String rightPrefix,
       List<List<KeyColumn>> keyColumns,
-      JoinType joinType
+      JoinType joinType,
+      long maxBufferedBytes
   )
   {
     this.inputChannels = ImmutableList.of(left.getChannel(), right.getChannel());
@@ -146,9 +147,10 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     this.rightPrefix = rightPrefix;
     this.joinType = joinType;
     this.trackers = ImmutableList.of(
-        new Tracker(left, keyColumns.get(LEFT)),
-        new Tracker(right, keyColumns.get(RIGHT))
+        new Tracker(left, keyColumns.get(LEFT), maxBufferedBytes),
+        new Tracker(right, keyColumns.get(RIGHT), maxBufferedBytes)
     );
+    this.maxBufferedBytes = maxBufferedBytes;
   }
 
   @Override
@@ -166,10 +168,10 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
   @Override
   public ReturnOrAwait<Long> runIncrementally(IntSet readableInputs) throws IOException
   {
-    // Fetch enough frames such that each tracker has one readable row.
+    // Fetch enough frames such that each tracker has one readable row (or is done).
     for (int i = 0; i < inputChannels.size(); i++) {
       final Tracker tracker = trackers.get(i);
-      if (tracker.isAtEndOfPushedData() && !pushNextFrame(i)) {
+      if (tracker.needsMoreDataForCurrentCursor() && !pushNextFrame(i)) {
         return nextAwait();
       }
     }
@@ -178,8 +180,8 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     startNewFrameIfNeeded();
 
     while (!allTrackersAreAtEnd()
-           && !trackers.get(LEFT).needsMoreData()
-           && !trackers.get(RIGHT).needsMoreData()) {
+           && !trackers.get(LEFT).needsMoreDataForCurrentCursor()
+           && !trackers.get(RIGHT).needsMoreDataForCurrentCursor()) {
       // Algorithm can proceed: not all trackers are at the end of their streams, and no tracker needs more data to
       // read the current cursor or move it forward.
       if (nextIterationRunnable != null) {
@@ -192,11 +194,11 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
 
       // Two rows match if the keys compare equal _and_ neither key has a null component. (x JOIN y ON x.a = y.a does
       // not match rows where "x.a" is null.)
-      final boolean match = markCmp == 0 && trackers.get(LEFT).hasCompletelyNonNullMark();
+      final boolean marksMatch = markCmp == 0 && trackers.get(LEFT).hasCompletelyNonNullMark();
 
-      // If marked keys are equal on both sides ("match"), at least one side must have a complete set of rows
-      // for the marked key.
-      if (match && trackerWithCompleteSetForCurrentKey < 0) {
+      // If marked keys are equal on both sides ("marksMatch"), at least one side needs to have a complete set of rows
+      // for the marked key. Check if this is true, otherwise call nextAwait to read more data.
+      if (marksMatch && trackerWithCompleteSetForCurrentKey < 0) {
         for (int i = 0; i < inputChannels.size(); i++) {
           final Tracker tracker = trackers.get(i);
 
@@ -214,10 +216,10 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
         }
       }
 
-      if (match || (markCmp <= 0 && joinType.isLefty()) || (markCmp >= 0 && joinType.isRighty())) {
+      if (marksMatch || (markCmp <= 0 && joinType.isLefty()) || (markCmp >= 0 && joinType.isRighty())) {
         // Emit row, if there's room in the current frameWriter.
         joinColumnSelectorFactory.cmp = markCmp;
-        joinColumnSelectorFactory.match = match;
+        joinColumnSelectorFactory.match = marksMatch;
 
         if (!frameWriter.addSelection()) {
           if (frameWriter.getNumRows() > 0) {
@@ -231,7 +233,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       }
 
       // Advance one or both trackers.
-      if (match) {
+      if (marksMatch) {
         // Matching keys. First advance the tracker with the complete set.
         final Tracker completeSetTracker = trackers.get(trackerWithCompleteSetForCurrentKey);
         final Tracker otherTracker = trackers.get(trackerWithCompleteSetForCurrentKey == LEFT ? RIGHT : LEFT);
@@ -258,7 +260,9 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
           });
         }
       } else {
+        // Keys don't match. Advance based on what kind of join this is.
         final int trackerToAdvance;
+        final boolean skipMarkedKey;
 
         if (markCmp < 0) {
           trackerToAdvance = LEFT;
@@ -271,19 +275,48 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
           trackerToAdvance = joinType.isLefty() ? LEFT : RIGHT;
         }
 
+        // Skip marked key entirely if we're on the "off" side of the join. (i.e., right side of a LEFT join.)
+        // Note that for FULL joins, entire keys are never skipped, because they are both lefty and righty.
+        if (trackerToAdvance == LEFT) {
+          skipMarkedKey = !joinType.isLefty();
+        } else {
+          skipMarkedKey = !joinType.isRighty();
+        }
+
         final Tracker tracker = trackers.get(trackerToAdvance);
 
-        tracker.advance();
+        // Advance past marked key, or as far as we can.
+        boolean didKeyChange = false;
 
-        // On next iteration (when we're sure to have data), check if we've moved on to a new key.
-        onNextIteration(() -> {
-          if (!tracker.isCurrentSameKeyAsMark()) {
-            trackerWithCompleteSetForCurrentKey = -1;
+        do {
+          // Always advance a single row. If we're in "skipMarkedKey" mode, then we'll loop through later and
+          // potentially skip multiple rows with the same marked key.
+          tracker.advance();
+
+          if (tracker.isAtEndOfPushedData()) {
+            break;
           }
 
-          // Always update mark, to enable cleanup of old frames. It doesn't ever need to be rewound.
+          didKeyChange = !tracker.isCurrentSameKeyAsMark();
+
+          // Always update mark, even if key hasn't changed, to enable cleanup of old frames.
           tracker.markCurrent();
-        });
+        } while (skipMarkedKey && !didKeyChange);
+
+        if (didKeyChange) {
+          trackerWithCompleteSetForCurrentKey = -1;
+        } else if (tracker.isAtEndOfPushedData()) {
+          // Not clear if we reached a new key or not.
+          // So, on next iteration (when we're sure to have data), check if we've moved on to a new key.
+          onNextIteration(() -> {
+            if (!tracker.isCurrentSameKeyAsMark()) {
+              trackerWithCompleteSetForCurrentKey = -1;
+            }
+
+            // Always update mark, even if key hasn't changed, to enable cleanup of old frames.
+            tracker.markCurrent();
+          });
+        }
       }
     }
 
@@ -303,8 +336,8 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
   }
 
   /**
-   * Returns a {@link ReturnOrAwait#awaitAll} for the channel numbers that need more data and have not yet hit their
-   * buffered-bytes limit, {@link Limits#MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN}.
+   * Returns a {@link ReturnOrAwait#awaitAll} for channels where {@link Tracker#needsMoreDataForCurrentCursor()}
+   * and {@link Tracker#canBufferMoreFrames()}.
    *
    * If all channels have hit their limit, throws {@link MSQException} with {@link TooManyRowsWithSameKeyFault}.
    */
@@ -313,10 +346,11 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     final IntSet awaitSet = new IntOpenHashSet();
     int trackerAtLimit = -1;
 
+    // Add all trackers that "needsMoreData" to awaitSet.
     for (int i = 0; i < inputChannels.size(); i++) {
       final Tracker tracker = trackers.get(i);
-      if (tracker.needsMoreData()) {
-        if (tracker.totalBytesBuffered() < Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN) {
+      if (tracker.needsMoreDataForCurrentCursor()) {
+        if (tracker.canBufferMoreFrames()) {
           awaitSet.add(i);
         } else if (trackerAtLimit < 0) {
           trackerAtLimit = i;
@@ -324,19 +358,31 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       }
     }
 
+    if (awaitSet.isEmpty()) {
+      // No tracker reported that it "needsMoreData" to read the current cursor. However, we may still need to read
+      // more data to have a complete set for the current mark.
+      for (int i = 0; i < inputChannels.size(); i++) {
+        final Tracker tracker = trackers.get(i);
+        if (!tracker.hasCompleteSetForMark()) {
+          if (tracker.canBufferMoreFrames()) {
+            awaitSet.add(i);
+          } else if (trackerAtLimit < 0) {
+            trackerAtLimit = i;
+          }
+        }
+      }
+    }
+
     if (awaitSet.isEmpty() && trackerAtLimit >= 0) {
       // All trackers that need more data are at their max buffered bytes limit. Generate a nice exception.
       final Tracker tracker = trackers.get(trackerAtLimit);
-      if (tracker.totalBytesBuffered() >= Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN) {
-        // Generate a nice exception.
-        throw new MSQException(
-            new TooManyRowsWithSameKeyFault(
-                tracker.readMarkKey(),
-                tracker.totalBytesBuffered(),
-                Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN
-            )
-        );
-      }
+      throw new MSQException(
+          new TooManyRowsWithSameKeyFault(
+              tracker.readMarkKey(),
+              tracker.totalBytesBuffered(),
+              maxBufferedBytes
+          )
+      );
     }
 
     return ReturnOrAwait.awaitAll(awaitSet);
@@ -398,6 +444,8 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     } else if (channel.isFinished()) {
       tracker.push(null);
       return true;
+    } else if (!tracker.canBufferMoreFrames()) {
+      return false;
     } else {
       final Frame frame = channel.read();
 
@@ -454,6 +502,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     private final List<FrameHolder> holders = new ArrayList<>();
     private final ReadableInput input;
     private final List<KeyColumn> keyColumns;
+    private final long maxBytesBuffered;
 
     // markFrame and markRow are the first frame and row with the current key.
     private int markFrame = -1;
@@ -465,10 +514,11 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     // done indicates that no more data is available in the channel.
     private boolean done;
 
-    public Tracker(ReadableInput input, List<KeyColumn> keyColumns)
+    public Tracker(ReadableInput input, List<KeyColumn> keyColumns, long maxBytesBuffered)
     {
       this.input = input;
       this.keyColumns = keyColumns;
+      this.maxBytesBuffered = maxBytesBuffered;
     }
 
     /**
@@ -535,6 +585,11 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
         bytes += holder.frame.numBytes();
       }
       return bytes;
+    }
+
+    public boolean canBufferMoreFrames()
+    {
+      return holders.size() <= 1 || totalBytesBuffered() < maxBytesBuffered;
     }
 
     /**
@@ -659,7 +714,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     /**
      * Whether this tracker needs more data in order to read the current cursor location or move it forward.
      */
-    public boolean needsMoreData()
+    public boolean needsMoreDataForCurrentCursor()
     {
       return !done && isAtEndOfPushedData();
     }
