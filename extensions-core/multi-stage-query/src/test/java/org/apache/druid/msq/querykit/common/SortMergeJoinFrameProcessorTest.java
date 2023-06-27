@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.config.NullHandling;
@@ -1146,7 +1147,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
                     .build();
 
     for (final Map.Entry<String, Long> entry : expectedCounts.entrySet()) {
-      for (int i = 0; i < entry.getValue(); i++) {
+      for (int i = 0; i < Ints.checkedCast(entry.getValue()); i++) {
         expectedRows.add(Collections.singletonList(entry.getKey()));
       }
     }
