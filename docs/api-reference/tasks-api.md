@@ -56,9 +56,6 @@ This endpoint retrieves an array of all task objects currently running or execut
 <!--400 BAD REQUEST-->
 <br/>
 *Invalid `state` query parameter value* 
-<!--404 NOT FOUND-->
-<br/>
-*Resource not found* 
 <!--500 SERVER ERROR-->
 <br/>
 *Invalid query parameter* 
@@ -1085,7 +1082,7 @@ No query parameters.
 
 #### Sample request
 
-The following request is an example of submitting a task of type `index_parallel`.
+The following request is an example of submitting a task to create a datasource named "wikipedia auto".
 
 <!--DOCUSAURUS_CODE_TABS-->
 
