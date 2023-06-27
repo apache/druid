@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NavigableSet;
 import java.util.stream.Collectors;
 
 /**
@@ -39,16 +38,18 @@ import java.util.stream.Collectors;
  */
 public class RandomBalancerStrategy implements BalancerStrategy
 {
+  private static final CoordinatorRunStats EMPTY_STATS = new CoordinatorRunStats();
+
   @Override
   public Iterator<ServerHolder> findServersToLoadSegment(
-      DataSegment proposalSegment,
+      DataSegment segmentToLoad,
       List<ServerHolder> serverHolders
   )
   {
     // Filter out servers which cannot load this segment
     final List<ServerHolder> usableServerHolders =
         serverHolders.stream()
-                     .filter(server -> server.canLoadSegment(proposalSegment))
+                     .filter(server -> server.canLoadSegment(segmentToLoad))
                      .collect(Collectors.toList());
     Collections.shuffle(usableServerHolders);
     return usableServerHolders.iterator();
@@ -56,7 +57,7 @@ public class RandomBalancerStrategy implements BalancerStrategy
 
   @Override
   public ServerHolder findDestinationServerToMoveSegment(
-      DataSegment proposalSegment,
+      DataSegment segmentToMove,
       ServerHolder sourceServer,
       List<ServerHolder> serverHolders
   )
@@ -66,7 +67,7 @@ public class RandomBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public Iterator<ServerHolder> pickServersToDropSegment(DataSegment toDropSegment, NavigableSet<ServerHolder> serverHolders)
+  public Iterator<ServerHolder> findServersToDropSegment(DataSegment segmentToDrop, List<ServerHolder> serverHolders)
   {
     List<ServerHolder> serverList = new ArrayList<>(serverHolders);
     Collections.shuffle(serverList);
@@ -74,7 +75,8 @@ public class RandomBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public void emitStats(String tier, CoordinatorRunStats stats, List<ServerHolder> serverHolderList)
+  public CoordinatorRunStats getAndResetStats()
   {
+    return EMPTY_STATS;
   }
 }

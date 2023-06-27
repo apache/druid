@@ -40,19 +40,16 @@ public class RowKey
     this.hashCode = Objects.hash(values);
   }
 
-  public static Builder builder()
+  public static Builder with(Dimension dimension, String value)
   {
-    return new RowKey.Builder();
+    Builder builder = new Builder();
+    builder.with(dimension, value);
+    return builder;
   }
 
-  public static RowKey forTier(String tier)
+  public static RowKey of(Dimension dimension, String value)
   {
-    return RowKey.builder().add(Dimension.TIER, tier).build();
-  }
-
-  public static RowKey forDatasource(String datasource)
-  {
-    return RowKey.builder().add(Dimension.DATASOURCE, datasource).build();
+    return with(dimension, value).build();
   }
 
   public Map<Dimension, String> getValues()
@@ -83,10 +80,16 @@ public class RowKey
   {
     private final Map<Dimension, String> values = new EnumMap<>(Dimension.class);
 
-    public Builder add(Dimension dimension, String value)
+    public Builder with(Dimension dimension, String value)
     {
       values.put(dimension, value);
       return this;
+    }
+
+    public RowKey and(Dimension dimension, String value)
+    {
+      values.put(dimension, value);
+      return new RowKey(values);
     }
 
     public RowKey build()

@@ -64,12 +64,7 @@ public class CoordinatorRunStats
 
   public long getSegmentStat(CoordinatorStat stat, String tier, String datasource)
   {
-    return get(stat, RowKey.builder().add(Dimension.DATASOURCE, datasource).add(Dimension.TIER, tier).build());
-  }
-
-  public long getDataSourceStat(CoordinatorStat stat, String dataSource)
-  {
-    return get(stat, RowKey.forDatasource(dataSource));
+    return get(stat, RowKey.with(Dimension.DATASOURCE, datasource).and(Dimension.TIER, tier));
   }
 
   public long get(CoordinatorStat stat)
@@ -87,7 +82,7 @@ public class CoordinatorRunStats
   {
     allStats.forEach(
         (rowKey, stats) -> stats.object2LongEntrySet().fastForEach(
-            stat -> handler.handle(rowKey.getValues(), stat.getKey(), stat.getLongValue())
+            stat -> handler.handle(stat.getKey(), rowKey, stat.getLongValue())
         )
     );
   }
@@ -199,16 +194,10 @@ public class CoordinatorRunStats
             .addTo(stat, value);
   }
 
-  public void addToDatasourceStat(CoordinatorStat stat, String dataSource, long value)
-  {
-    add(stat, RowKey.forDatasource(dataSource), value);
-  }
-
   public void addToSegmentStat(CoordinatorStat stat, String tier, String datasource, long value)
   {
-    RowKey rowKey = RowKey.builder()
-                          .add(Dimension.TIER, tier)
-                          .add(Dimension.DATASOURCE, datasource).build();
+    RowKey rowKey = RowKey.with(Dimension.TIER, tier)
+                          .and(Dimension.DATASOURCE, datasource);
     add(stat, rowKey, value);
   }
 
@@ -267,7 +256,7 @@ public class CoordinatorRunStats
 
   public interface StatHandler
   {
-    void handle(Map<Dimension, String> dimensionValues, CoordinatorStat stat, long statValue);
+    void handle(CoordinatorStat stat, RowKey rowKey, long statValue);
   }
 
 }
