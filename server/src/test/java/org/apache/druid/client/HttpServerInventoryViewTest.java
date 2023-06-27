@@ -298,37 +298,6 @@ public class HttpServerInventoryViewTest
     httpServerInventoryView.stop();
   }
 
-  @Test
-  public void testSyncWithFailureOnClientSide()
-  {
-
-  }
-
-  @Test
-  public void testSyncWithFailureOnServerSide()
-  {
-
-  }
-
-  @Test
-  public void testSyncWithFilteredInventoryView()
-  {
-
-  }
-
-  @Test
-  public void testSyncWithMultipleServers()
-  {
-
-  }
-
-  @Test
-  @Ignore
-  public void testRemovedServerDoesNotDelayInitialization()
-  {
-
-  }
-
   @Test(timeout = 60_000L)
   public void testSyncMonitoring()
   {
