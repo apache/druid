@@ -30,8 +30,13 @@ import org.joda.time.Period;
  */
 public class HttpServerInventoryViewConfig
 {
-  private final Duration requestTimeout;
-  private final Duration unstableAlertTimeout;
+  @JsonProperty
+  private final Duration serverTimeout;
+
+  @JsonProperty
+  private final Duration serverUnstabilityTimeout;
+
+  @JsonProperty
   private final int numThreads;
 
   @JsonCreator
@@ -41,13 +46,13 @@ public class HttpServerInventoryViewConfig
       @JsonProperty("numThreads") Integer numThreads
   )
   {
-    this.requestTimeout = Configs.valueOrDefault(serverTimeout, Period.minutes(4))
-                                 .toStandardDuration();
-    this.unstableAlertTimeout = Configs.valueOrDefault(serverUnstabilityTimeout, Period.minutes(1))
-                                       .toStandardDuration();
+    this.serverTimeout = Configs.valueOrDefault(serverTimeout, Period.minutes(4))
+                                .toStandardDuration();
+    this.serverUnstabilityTimeout = Configs.valueOrDefault(serverUnstabilityTimeout, Period.minutes(1))
+                                           .toStandardDuration();
     this.numThreads = Configs.valueOrDefault(numThreads, 5);
 
-    Preconditions.checkArgument(this.requestTimeout.getMillis() > 0, "server timeout must be > 0 ms");
+    Preconditions.checkArgument(this.serverTimeout.getMillis() > 0, "server timeout must be > 0 ms");
     Preconditions.checkArgument(this.numThreads > 1, "numThreads must be > 1");
   }
 
@@ -56,7 +61,7 @@ public class HttpServerInventoryViewConfig
    */
   public Duration getRequestTimeout()
   {
-    return requestTimeout;
+    return serverTimeout;
   }
 
   /**
@@ -64,7 +69,7 @@ public class HttpServerInventoryViewConfig
    */
   public Duration getUnstableAlertTimeout()
   {
-    return unstableAlertTimeout;
+    return serverUnstabilityTimeout;
   }
 
   public int getNumThreads()

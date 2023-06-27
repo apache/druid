@@ -76,41 +76,18 @@ public class CoordinatorServerView implements InventoryView
     ExecutorService exec = Execs.singleThreaded("CoordinatorServerView-%s");
     baseView.registerSegmentCallback(
         exec,
-        new ServerView.SegmentCallback()
-        {
-          @Override
-          public ServerView.CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
-          {
-            serverAddedSegment(server, segment);
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentRemoved(final DruidServerMetadata server, DataSegment segment)
-          {
-            serverRemovedSegment(server, segment);
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentViewInitialized()
-          {
-            initialized.countDown();
-            return ServerView.CallbackAction.CONTINUE;
-          }
-        }
+        ServerView.perpetualSegmentCallback(
+            this::serverAddedSegment,
+            this::serverRemovedSegment,
+            initialized::countDown
+        )
     );
 
     baseView.registerServerRemovedCallback(
         exec,
-        new ServerView.ServerRemovedCallback()
-        {
-          @Override
-          public ServerView.CallbackAction serverRemoved(DruidServer server)
-          {
-            removeServer(server);
-            return ServerView.CallbackAction.CONTINUE;
-          }
+        server -> {
+          removeServer(server);
+          return ServerView.CallbackAction.CONTINUE;
         }
     );
   }

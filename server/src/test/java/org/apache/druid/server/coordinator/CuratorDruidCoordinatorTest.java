@@ -34,6 +34,7 @@ import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.client.ServerView;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.CuratorUtils;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -41,7 +42,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.loading.CuratorLoadQueuePeon;
@@ -375,32 +375,12 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
       {
         super.registerSegmentCallback(
             exec,
-            new SegmentCallback()
-            {
-              @Override
-              public CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
-              {
-                CallbackAction res = callback.segmentAdded(server, segment);
-                segmentAddedLatch.countDown();
-                return res;
-              }
-
-              @Override
-              public CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
-              {
-                CallbackAction res = callback.segmentRemoved(server, segment);
-                segmentRemovedLatch.countDown();
-                return res;
-              }
-
-              @Override
-              public CallbackAction segmentViewInitialized()
-              {
-                CallbackAction res = callback.segmentViewInitialized();
-                segmentViewInitLatch.countDown();
-                return res;
-              }
-            }
+            ServerView.performAfterSegmentCallback(
+                callback,
+                (server, segment) -> segmentAddedLatch.countDown(),
+                (server, segment) -> segmentRemovedLatch.countDown(),
+                segmentViewInitLatch::countDown
+            )
         );
       }
     };

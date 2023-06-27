@@ -40,9 +40,7 @@ public class ChangeRequestHttpSyncerTest
 {
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
   private static final TypeReference<ChangeRequestsSnapshot<String>> TYPE_REF
-      = new TypeReference<ChangeRequestsSnapshot<String>>()
-  {
-  };
+      = new TypeReference<ChangeRequestsSnapshot<String>>() {};
 
   @Test(timeout = 60_000L)
   public void testSimple() throws Exception

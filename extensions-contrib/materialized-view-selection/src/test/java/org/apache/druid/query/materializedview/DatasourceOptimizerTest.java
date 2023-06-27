@@ -50,7 +50,6 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -67,7 +66,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 public class DatasourceOptimizerTest extends CuratorTestBase
@@ -259,37 +257,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
 
   private void setupViews() throws Exception
   {
-    baseView = new BatchServerInventoryView(zkPathsConfig, curator, jsonMapper, Predicates.alwaysTrue(), "test")
-    {
-      @Override
-      public void registerSegmentCallback(Executor exec, final SegmentCallback callback)
-      {
-        super.registerSegmentCallback(
-            exec,
-            new SegmentCallback()
-            {
-              @Override
-              public CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
-              {
-                return callback.segmentAdded(server, segment);
-              }
-
-              @Override
-              public CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
-              {
-                return callback.segmentRemoved(server, segment);
-              }
-
-              @Override
-              public CallbackAction segmentViewInitialized()
-              {
-                return callback.segmentViewInitialized();
-              }
-            }
-        );
-      }
-    };
-
+    baseView = new BatchServerInventoryView(zkPathsConfig, curator, jsonMapper, Predicates.alwaysTrue(), "test");
     brokerServerView = new BrokerServerView(
         EasyMock.createMock(QueryToolChestWarehouse.class),
         EasyMock.createMock(QueryWatcher.class),

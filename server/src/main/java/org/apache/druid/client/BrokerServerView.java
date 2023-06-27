@@ -139,30 +139,14 @@ public class BrokerServerView implements TimelineServerView
     ExecutorService exec = Execs.singleThreaded("BrokerServerView-%s");
     baseView.registerSegmentCallback(
         exec,
-        new ServerView.SegmentCallback()
-        {
-          @Override
-          public ServerView.CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
-          {
-            serverAddedSegment(server, segment);
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentRemoved(final DruidServerMetadata server, DataSegment segment)
-          {
-            serverRemovedSegment(server, segment);
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public CallbackAction segmentViewInitialized()
-          {
-            initialized.countDown();
-            runTimelineCallbacks(TimelineCallback::timelineInitialized);
-            return ServerView.CallbackAction.CONTINUE;
-          }
-        },
+        ServerView.perpetualSegmentCallback(
+            this::serverAddedSegment,
+            this::serverRemovedSegment,
+            () -> {
+              initialized.countDown();
+              runTimelineCallbacks(TimelineCallback::timelineInitialized);
+            }
+        ),
         segmentFilter
     );
 

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -31,10 +30,10 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.TestHelper;
@@ -46,11 +45,11 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -63,9 +62,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  *
@@ -82,6 +84,19 @@ public class HttpServerInventoryViewTest
 
   private TestDruidNodeDiscovery druidNodeDiscovery;
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
+
+  private Map<DruidServerMetadata, Set<DataSegment>> segmentsAddedToView;
+  private Map<DruidServerMetadata, Set<DataSegment>> segmentsRemovedFromView;
+
+  private AtomicBoolean inventoryInitialized;
+
+  /**
+   * TODO:
+   * initialize with proper filter that can be updated later
+   * required items
+   * allow a request to fail on server side
+   * control response code and content
+   */
 
   @BeforeClass
   public static void setupClass()
@@ -112,6 +127,21 @@ public class HttpServerInventoryViewTest
         executorFactory,
         serviceEmitter
     );
+
+    inventoryInitialized = new AtomicBoolean(false);
+    segmentsAddedToView = new HashMap<>();
+    segmentsRemovedFromView = new HashMap<>();
+
+    httpServerInventoryView.registerSegmentCallback(
+        Execs.directExecutor(),
+        ServerView.perpetualSegmentCallback(
+            (server, segment) -> segmentsAddedToView.computeIfAbsent(server, s -> new HashSet<>())
+                                                    .add(segment),
+            (server, segment) -> segmentsRemovedFromView.computeIfAbsent(server, s -> new HashSet<>())
+                                                        .add(segment),
+            () -> inventoryInitialized.set(true)
+        )
+    );
   }
 
   @After
@@ -123,72 +153,6 @@ public class HttpServerInventoryViewTest
   @Test(timeout = 60_000L)
   public void testSimple() throws Exception
   {
-    final DataSegment segment1 = new DataSegment(
-        "test1", Intervals.of("2014/2015"), "v1",
-        null, null, null, null, 0, 0
-    );
-
-    final DataSegment segment2 = new DataSegment(
-        "test2", Intervals.of("2014/2015"), "v1",
-        null, null, null, null, 0, 0
-    );
-
-    final DataSegment segment3 = new DataSegment(
-        "test3", Intervals.of("2014/2015"), "v1",
-        null, null, null, null, 0, 0
-    );
-
-    final DataSegment segment4 = new DataSegment(
-        "test4", Intervals.of("2014/2015"), "v1",
-        null, null, null, null, 0, 0
-    );
-
-    final DataSegment segment5 = new DataSegment(
-        "non-loading-datasource", Intervals.of("2014/2015"), "v1",
-        null, null, null, null, 0, 0
-    );
-
-    CountDownLatch initializeCallback1 = new CountDownLatch(1);
-
-    Map<SegmentId, CountDownLatch> segmentAddLatches = ImmutableMap.of(
-        segment1.getId(), new CountDownLatch(1),
-        segment2.getId(), new CountDownLatch(1),
-        segment3.getId(), new CountDownLatch(1),
-        segment4.getId(), new CountDownLatch(1)
-    );
-
-    Map<SegmentId, CountDownLatch> segmentDropLatches = ImmutableMap.of(
-        segment1.getId(), new CountDownLatch(1),
-        segment2.getId(), new CountDownLatch(1)
-    );
-
-    httpServerInventoryView.registerSegmentCallback(
-        Execs.directExecutor(),
-        new ServerView.SegmentCallback()
-        {
-          @Override
-          public ServerView.CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
-          {
-            segmentAddLatches.get(segment.getId()).countDown();
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
-          {
-            segmentDropLatches.get(segment.getId()).countDown();
-            return ServerView.CallbackAction.CONTINUE;
-          }
-
-          @Override
-          public ServerView.CallbackAction segmentViewInitialized()
-          {
-            initializeCallback1.countDown();
-            return ServerView.CallbackAction.CONTINUE;
-          }
-        }
-    );
-
     final CountDownLatch serverRemovedCalled = new CountDownLatch(1);
     httpServerInventoryView.registerServerRemovedCallback(
         Execs.directExecutor(),
@@ -205,54 +169,71 @@ public class HttpServerInventoryViewTest
     httpServerInventoryView.start();
 
     // Complete and verify initialization
-    final BlockingExecutorService syncExecutor = executorFactory.getSyncExecutor();
-    syncExecutor.finishNextPendingTasks(1);
-    initializeCallback1.await();
+    executorFactory.initializeSync();
+    Assert.assertTrue(inventoryInitialized.get());
 
     // Add a node
-    DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
-        new DruidNode("service", "host", false, 8080, null, true, false),
+    DruidNode druidNode = new DruidNode("service", "host", false, 8080, null, true, false);
+    DataNodeService dataNodeService = new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0);
+    DiscoveryDruidNode discoveryDruidNode = new DiscoveryDruidNode(
+        druidNode,
         NodeRole.HISTORICAL,
-        ImmutableMap.of(
-            DataNodeService.DISCOVERY_SERVICE_KEY,
-            new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
-        )
+        ImmutableMap.of(DataNodeService.DISCOVERY_SERVICE_KEY, dataNodeService)
     );
-    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode));
+    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(discoveryDruidNode));
+
+    final DruidServer server = new DruidServer(
+        druidNode.getHostAndPortToUse(),
+        druidNode.getHostAndPort(),
+        druidNode.getHostAndTlsPort(),
+        dataNodeService.getMaxSize(),
+        dataNodeService.getServerType(),
+        dataNodeService.getTier(),
+        dataNodeService.getPriority()
+    );
 
     // Request 1: Fail while sending to the server
     final TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>> typeRef
         = HttpServerInventoryView.SEGMENT_LIST_RESP_TYPE_REF;
     httpClient.addNextError(new ISE("Could not send request to server"));
-    syncExecutor.finishNextPendingTask();
+    executorFactory.executeSync();
 
     // TODO: Request 2: Fail on the server-side
     httpClient.addNextError(new ISE("failure on server"));
-    syncExecutor.finishNextPendingTask();
+    executorFactory.executeSync();
+
+    // Prepare segments
+    final DataSegment[] segments =
+        CreateDataSegments.ofDatasource("wiki")
+                          .forIntervals(4, Granularities.DAY)
+                          .eachOfSizeInMb(500)
+                          .toArray(new DataSegment[0]);
 
     // Request 3: Load S1
     httpClient.addNextResult(
-        buildChangeSnapshot(new SegmentChangeRequestLoad(segment1)),
+        buildChangeSnapshot(new SegmentChangeRequestLoad(segments[0])),
         typeRef
     );
-    syncExecutor.finishNextPendingTasks(2);
-    segmentAddLatches.get(segment1.getId()).await();
+    executorFactory.executeSyncAndCallback();
+    Assert.assertTrue(isAddedToView(server, segments[0]));
 
     // Request 4: Drop S1, Load S2, S3
+    resetForNextSyncRequest();
     httpClient.addNextResult(
         buildChangeSnapshot(
-            new SegmentChangeRequestDrop(segment1),
-            new SegmentChangeRequestLoad(segment2),
-            new SegmentChangeRequestLoad(segment3)
+            new SegmentChangeRequestDrop(segments[0]),
+            new SegmentChangeRequestLoad(segments[1]),
+            new SegmentChangeRequestLoad(segments[2])
         ),
         typeRef
     );
-    syncExecutor.finishNextPendingTasks(2);
-    segmentDropLatches.get(segment1.getId()).await();
-    segmentAddLatches.get(segment2.getId()).await();
-    segmentAddLatches.get(segment3.getId()).await();
+    executorFactory.executeSyncAndCallback();
+    Assert.assertTrue(isRemovedFromView(server, segments[0]));
+    Assert.assertTrue(isAddedToView(server, segments[1]));
+    Assert.assertTrue(isAddedToView(server, segments[2]));
 
     // Request 5: reset the counter
+    resetForNextSyncRequest();
     httpClient.addNextResult(
         new ChangeRequestsSnapshot<>(
             true,
@@ -262,29 +243,29 @@ public class HttpServerInventoryViewTest
         ),
         typeRef
     );
-    syncExecutor.finishNextPendingTasks(2);
+    executorFactory.executeSyncAndCallback();
+    Assert.assertTrue(segmentsAddedToView.isEmpty());
+    Assert.assertTrue(segmentsRemovedFromView.isEmpty());
 
-    // Request 6: Load S3, S4, S5
+    // Request 6: Load S3, S4
     httpClient.addNextResult(
         buildChangeSnapshot(
-            new SegmentChangeRequestLoad(segment3),
-            new SegmentChangeRequestLoad(segment4),
-            new SegmentChangeRequestLoad(segment5)
+            new SegmentChangeRequestLoad(segments[2]),
+            new SegmentChangeRequestLoad(segments[3])
         ),
         typeRef
     );
-    syncExecutor.finishNextPendingTasks(2);
-    segmentDropLatches.get(segment2.getId()).await();
-    segmentAddLatches.get(segment4.getId()).await();
+    executorFactory.executeSyncAndCallback();
+    Assert.assertTrue(isRemovedFromView(server, segments[1]));
+    Assert.assertTrue(isAddedToView(server, segments[3]));
 
     DruidServer druidServer = httpServerInventoryView.getInventoryValue("host:8080");
-    Assert.assertEquals(
-        ImmutableMap.of(segment3.getId(), segment3, segment4.getId(), segment4),
-        Maps.uniqueIndex(druidServer.iterateAllSegments(), DataSegment::getId)
-    );
+    Assert.assertEquals(2, druidServer.getTotalSegments());
+    Assert.assertNotNull(druidServer.getSegment(segments[2].getId()));
+    Assert.assertNotNull(druidServer.getSegment(segments[3].getId()));
 
     // Verify node removal
-    druidNodeDiscovery.listener.nodesRemoved(ImmutableList.of(druidNode));
+    druidNodeDiscovery.listener.nodesRemoved(ImmutableList.of(discoveryDruidNode));
 
     // test removal event with empty services
     druidNodeDiscovery.listener.nodesRemoved(
@@ -317,6 +298,37 @@ public class HttpServerInventoryViewTest
     httpServerInventoryView.stop();
   }
 
+  @Test
+  public void testSyncWithFailureOnClientSide()
+  {
+
+  }
+
+  @Test
+  public void testSyncWithFailureOnServerSide()
+  {
+
+  }
+
+  @Test
+  public void testSyncWithFilteredInventoryView()
+  {
+
+  }
+
+  @Test
+  public void testSyncWithMultipleServers()
+  {
+
+  }
+
+  @Test
+  @Ignore
+  public void testRemovedServerDoesNotDelayInitialization()
+  {
+
+  }
+
   @Test(timeout = 60_000L)
   public void testSyncMonitoring()
   {
@@ -333,14 +345,7 @@ public class HttpServerInventoryViewTest
   @Ignore
   public void testSyncStatusMetricsAreEmitted()
   {
-
-  }
-
-  @Test
-  @Ignore
-  public void testRemovedServerDoesNotDelayInitialization()
-  {
-
+    // this might just fit into the rest of the tests
   }
 
   private DruidServer makeServer(String host)
@@ -356,7 +361,7 @@ public class HttpServerInventoryViewTest
     );
   }
 
-  private ChangeRequestsSnapshot<DataSegmentChangeRequest> buildChangeSnapshot(
+  private static ChangeRequestsSnapshot<DataSegmentChangeRequest> buildChangeSnapshot(
       DataSegmentChangeRequest... requests
   )
   {
@@ -366,6 +371,24 @@ public class HttpServerInventoryViewTest
         ChangeRequestHistory.Counter.ZERO,
         Arrays.asList(requests)
     );
+  }
+
+  private boolean isAddedToView(DruidServer server, DataSegment segment)
+  {
+    return segmentsAddedToView.getOrDefault(server.getMetadata(), Collections.emptySet())
+                              .contains(segment);
+  }
+
+  private boolean isRemovedFromView(DruidServer server, DataSegment segment)
+  {
+    return segmentsRemovedFromView.getOrDefault(server.getMetadata(), Collections.emptySet())
+                                  .contains(segment);
+  }
+
+  private void resetForNextSyncRequest()
+  {
+    segmentsAddedToView.clear();
+    segmentsRemovedFromView.clear();
   }
 
   private static class TestDruidNodeDiscovery implements DruidNodeDiscovery
@@ -389,24 +412,37 @@ public class HttpServerInventoryViewTest
 
   private static class TestExecutorFactory implements ScheduledExecutorFactory
   {
-    private final Map<String, BlockingExecutorService> executors = new HashMap<>();
+    private BlockingExecutorService syncExecutor;
+    private BlockingExecutorService monitorExecutor;
 
     @Override
     public ScheduledExecutorService create(int corePoolSize, String nameFormat)
     {
       BlockingExecutorService executorService = new BlockingExecutorService(nameFormat);
-      executors.put(nameFormat, executorService);
+      final String syncExecutorPrefix = EXEC_NAME_PREFIX + "-%s";
+      final String monitorExecutorPrefix = EXEC_NAME_PREFIX + "-monitor-%s";
+      if (syncExecutorPrefix.equals(nameFormat)) {
+        syncExecutor = executorService;
+      } else if (monitorExecutorPrefix.equals(nameFormat)) {
+        monitorExecutor = executorService;
+      }
+
       return new WrappingScheduledExecutorService(nameFormat, executorService, false);
     }
 
-    BlockingExecutorService getMonitoringExecutor()
+    void executeSyncAndCallback()
     {
-      return executors.get(EXEC_NAME_PREFIX + "-monitor-%s");
+      syncExecutor.finishNextPendingTasks(2);
     }
 
-    BlockingExecutorService getSyncExecutor()
+    void executeSync()
     {
-      return executors.get(EXEC_NAME_PREFIX + "-%s");
+      syncExecutor.finishNextPendingTask();
+    }
+
+    void initializeSync()
+    {
+      syncExecutor.finishNextPendingTask();
     }
   }
 
