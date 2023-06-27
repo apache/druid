@@ -29,51 +29,54 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.server.DruidNode;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class CacheMonitorTest
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
+class CacheMonitorTest
 {
   @Test
-  public void testOptionalInject()
+  void testOptionalInject()
   {
-    Injector injector = Initialization.makeInjectorWithModules(GuiceInjectors.makeStartupInjector(), ImmutableList.of(
-        new Module() {
-          @Override
-          public void configure(Binder binder)
-          {
-            JsonConfigProvider.bindInstance(
+    Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        ImmutableList.of(
+            binder -> JsonConfigProvider.bindInstance(
                 binder,
                 Key.get(DruidNode.class, Self.class),
                 new DruidNode("test-inject", null, false, null, null, true, false)
-            );
-          }
-        }
-    ));
+            )
+        )
+    );
 
     CacheMonitor monitor = injector.getInstance(CacheMonitor.class);
-    Assert.assertNull(monitor.cache);
+    assertNull(monitor.cache);
   }
 
   @Test
-  public void testInject()
+  void testInject()
   {
-    Injector injector = Initialization.makeInjectorWithModules(GuiceInjectors.makeStartupInjector(), ImmutableList.of(
-        new Module() {
-          @Override
-          public void configure(Binder binder)
-          {
-            JsonConfigProvider.bindInstance(
-                binder,
-                Key.get(DruidNode.class, Self.class),
-                new DruidNode("test-inject", null, false, null, null, true, false)
-            );
-            binder.bind(Cache.class).toInstance(MapCache.create(0));
-          }
-        }
-    ));
+    Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        ImmutableList.of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                JsonConfigProvider.bindInstance(
+                    binder,
+                    Key.get(DruidNode.class, Self.class),
+                    new DruidNode("test-inject", null, false, null, null, true, false)
+                );
+                binder.bind(Cache.class).toInstance(MapCache.create(0));
+              }
+            }
+        )
+    );
 
     CacheMonitor monitor = injector.getInstance(CacheMonitor.class);
-    Assert.assertNotNull(monitor.cache);
+    assertNotNull(monitor.cache);
   }
 }

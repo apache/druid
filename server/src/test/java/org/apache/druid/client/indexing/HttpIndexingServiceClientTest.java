@@ -43,28 +43,27 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-public class HttpIndexingServiceClientTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class HttpIndexingServiceClientTest
 {
   private HttpIndexingServiceClient httpIndexingServiceClient;
   private ObjectMapper jsonMapper;
   private DruidLeaderClient druidLeaderClient;
   private ObjectMapper mockMapper;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  @Before
-  public void setup()
+  @BeforeEach
+  void setup()
   {
     jsonMapper = new DefaultObjectMapper();
     druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
@@ -77,7 +76,7 @@ public class HttpIndexingServiceClientTest
   }
 
   @Test
-  public void testSample() throws Exception
+  void testSample() throws Exception
   {
     final SamplerResponse samplerResponse = new SamplerResponse(
         2,
@@ -130,18 +129,14 @@ public class HttpIndexingServiceClientTest
     EasyMock.replay(druidLeaderClient);
 
     final SamplerResponse actualResponse = httpIndexingServiceClient.sample(samplerSpec);
-    Assert.assertEquals(samplerResponse, actualResponse);
+    assertEquals(samplerResponse, actualResponse);
 
     EasyMock.verify(druidLeaderClient, response);
   }
 
   @Test
-  public void testSampleError() throws Exception
+  void testSampleError() throws Exception
   {
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Failed to sample with sampler spec");
-    expectedException.expectMessage("Please check overlord log");
-
     final SamplerResponse samplerResponse = new SamplerResponse(
         2,
         2,
@@ -164,14 +159,7 @@ public class HttpIndexingServiceClientTest
         )
     );
 
-    final SamplerSpec samplerSpec = new SamplerSpec()
-    {
-      @Override
-      public SamplerResponse sample()
-      {
-        return samplerResponse;
-      }
-    };
+    final SamplerSpec samplerSpec = () -> samplerResponse;
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
     EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.INTERNAL_SERVER_ERROR).anyTimes();
     EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
@@ -192,7 +180,13 @@ public class HttpIndexingServiceClientTest
     EasyMock.replay(druidLeaderClient);
 
 
-    httpIndexingServiceClient.sample(samplerSpec);
+    RuntimeException exception = assertThrows(
+        RuntimeException.class,
+        () -> httpIndexingServiceClient.sample(samplerSpec)
+    );
+
+    assertTrue(exception.getMessage().contains("Failed to sample with sampler spec")
+               && exception.getMessage().contains("Please check overlord log"));
     EasyMock.verify(druidLeaderClient, response);
   }
 
@@ -225,13 +219,13 @@ public class HttpIndexingServiceClientTest
     EasyMock.replay(druidLeaderClient);
 
     final Map<String, Object> actualResponse = httpIndexingServiceClient.getTaskReport(taskId);
-    Assert.assertEquals(dummyResponse, actualResponse);
+    assertEquals(dummyResponse, actualResponse);
 
     EasyMock.verify(druidLeaderClient, response);
   }
 
   @Test
-  public void testGetTaskReportStatusNotFound() throws Exception
+  void testGetTaskReportStatusNotFound() throws Exception
   {
     String taskId = "testTaskId";
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
@@ -262,13 +256,13 @@ public class HttpIndexingServiceClientTest
     EasyMock.replay(druidLeaderClient);
 
     final Map<String, Object> actualResponse = httpIndexingServiceClient.getTaskReport(taskId);
-    Assert.assertNull(actualResponse);
+    assertNull(actualResponse);
 
     EasyMock.verify(druidLeaderClient, response);
   }
 
   @Test
-  public void testGetTaskReportEmpty() throws Exception
+  void testGetTaskReportEmpty() throws Exception
   {
     String taskId = "testTaskId";
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
@@ -294,19 +288,24 @@ public class HttpIndexingServiceClientTest
     EasyMock.replay(druidLeaderClient);
 
     final Map<String, Object> actualResponse = httpIndexingServiceClient.getTaskReport(taskId);
-    Assert.assertNull(actualResponse);
+    assertNull(actualResponse);
 
     EasyMock.verify(druidLeaderClient, response);
   }
 
   @Test
-  public void testCompact() throws Exception
+  void testCompact() throws Exception
   {
     DataSegment segment = new DataSegment(
         "test",
         Intervals.of("2015-04-12/2015-04-13"),
         "1",
-        ImmutableMap.of("bucket", "bucket", "path", "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip"),
+        ImmutableMap.of(
+            "bucket",
+            "bucket",
+            "path",
+            "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip"
+        ),
         null,
         null,
         NoneShardSpec.instance(),
@@ -333,7 +332,10 @@ public class HttpIndexingServiceClientTest
     EasyMock.expect(mockMapper.writeValueAsBytes(EasyMock.capture(captureTask)))
             .andReturn(new byte[]{1, 2, 3})
             .anyTimes();
-    EasyMock.expect(mockMapper.readValue(EasyMock.anyString(), EasyMock.eq(JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)))
+    EasyMock.expect(mockMapper.readValue(
+                EasyMock.anyString(),
+                EasyMock.eq(JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
+            ))
             .andReturn(ImmutableMap.of())
             .anyTimes();
     EasyMock.replay(druidLeaderClient, mockMapper);
@@ -359,12 +361,12 @@ public class HttpIndexingServiceClientTest
     }
     catch (Exception e) {
       // Ignore IllegalStateException as taskId is internally generated and returned task id will failed check
-      Assert.assertEquals(IllegalStateException.class.getName(), e.getCause().getClass().getName());
+      assertEquals(IllegalStateException.class.getName(), e.getCause().getClass().getName());
     }
     ClientCompactionTaskQuery taskQuery = (ClientCompactionTaskQuery) captureTask.getValue();
-    Assert.assertEquals(Intervals.of("2015-04-12/2015-04-13"), taskQuery.getIoConfig().getInputSpec().getInterval());
-    Assert.assertNull(taskQuery.getGranularitySpec());
-    Assert.assertNull(taskQuery.getIoConfig().getInputSpec().getSha256OfSortedSegmentIds());
+    assertEquals(Intervals.of("2015-04-12/2015-04-13"), taskQuery.getIoConfig().getInputSpec().getInterval());
+    assertNull(taskQuery.getGranularitySpec());
+    assertNull(taskQuery.getIoConfig().getInputSpec().getSha256OfSortedSegmentIds());
   }
 
   @Test
@@ -374,14 +376,19 @@ public class HttpIndexingServiceClientTest
         "test",
         Intervals.of("2015-04-12/2015-04-13"),
         "1",
-        ImmutableMap.of("bucket", "bucket", "path", "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip"),
+        ImmutableMap.of(
+            "bucket",
+            "bucket",
+            "path",
+            "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip"
+        ),
         null,
         null,
         NoneShardSpec.instance(),
         0,
         1
     );
-    Capture captureTask = EasyMock.newCapture();
+    Capture<Object> captureTask = EasyMock.newCapture();
     HttpResponse response = EasyMock.createMock(HttpResponse.class);
     EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
@@ -401,7 +408,10 @@ public class HttpIndexingServiceClientTest
     EasyMock.expect(mockMapper.writeValueAsBytes(EasyMock.capture(captureTask)))
             .andReturn(new byte[]{1, 2, 3})
             .anyTimes();
-    EasyMock.expect(mockMapper.readValue(EasyMock.anyString(), EasyMock.eq(JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)))
+    EasyMock.expect(mockMapper.readValue(
+                EasyMock.anyString(),
+                EasyMock.eq(JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
+            ))
             .andReturn(ImmutableMap.of())
             .anyTimes();
     EasyMock.replay(druidLeaderClient, mockMapper);
@@ -427,12 +437,12 @@ public class HttpIndexingServiceClientTest
     }
     catch (Exception e) {
       // Ignore IllegalStateException as taskId is internally generated and returned task id will failed check
-      Assert.assertEquals(IllegalStateException.class.getName(), e.getCause().getClass().getName());
+      assertEquals(IllegalStateException.class.getName(), e.getCause().getClass().getName());
     }
     ClientCompactionTaskQuery taskQuery = (ClientCompactionTaskQuery) captureTask.getValue();
-    Assert.assertEquals(Intervals.of("2015-01-01/2016-01-01"), taskQuery.getIoConfig().getInputSpec().getInterval());
-    Assert.assertEquals(Granularities.YEAR, taskQuery.getGranularitySpec().getSegmentGranularity());
-    Assert.assertNull(taskQuery.getIoConfig().getInputSpec().getSha256OfSortedSegmentIds());
+    assertEquals(Intervals.of("2015-01-01/2016-01-01"), taskQuery.getIoConfig().getInputSpec().getInterval());
+    assertEquals(Granularities.YEAR, taskQuery.getGranularitySpec().getSegmentGranularity());
+    assertNull(taskQuery.getIoConfig().getInputSpec().getSha256OfSortedSegmentIds());
   }
 
   @Test
@@ -445,7 +455,10 @@ public class HttpIndexingServiceClientTest
     EasyMock.expect(totalWorkerCapacityResponse.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(totalWorkerCapacityResponse.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
     EasyMock.replay(totalWorkerCapacityResponse);
-    IndexingTotalWorkerCapacityInfo indexingTotalWorkerCapacityInfo = new IndexingTotalWorkerCapacityInfo(currentClusterCapacity, maximumCapacityWithAutoScale);
+    IndexingTotalWorkerCapacityInfo indexingTotalWorkerCapacityInfo = new IndexingTotalWorkerCapacityInfo(
+        currentClusterCapacity,
+        maximumCapacityWithAutoScale
+    );
     StringFullResponseHolder autoScaleResponseHolder = new StringFullResponseHolder(
         totalWorkerCapacityResponse,
         StandardCharsets.UTF_8
@@ -462,7 +475,7 @@ public class HttpIndexingServiceClientTest
     EasyMock.replay(druidLeaderClient);
 
     final int actualResponse = httpIndexingServiceClient.getTotalWorkerCapacityWithAutoScale();
-    Assert.assertEquals(maximumCapacityWithAutoScale, actualResponse);
+    assertEquals(maximumCapacityWithAutoScale, actualResponse);
     EasyMock.verify(druidLeaderClient);
   }
 }

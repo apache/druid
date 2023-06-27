@@ -23,58 +23,59 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-public class ClientKillUnusedSegmentsTaskQueryTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class ClientKillUnusedSegmentsTaskQueryTest
 {
   private static final String DATA_SOURCE = "data_source";
-  public static final DateTime START = DateTimes.nowUtc();
+  private static final DateTime START = DateTimes.nowUtc();
   private static final Interval INTERVAL = new Interval(START, START.plus(1));
   private static final Boolean MARK_UNUSED = true;
 
   ClientKillUnusedSegmentsTaskQuery clientKillUnusedSegmentsQuery;
 
-  @Before
-  public void setUp()
+  @BeforeEach
+  void setUp()
   {
     clientKillUnusedSegmentsQuery = new ClientKillUnusedSegmentsTaskQuery("killTaskId", DATA_SOURCE, INTERVAL, true);
   }
 
-  @After
-  public void tearDown()
+  @AfterEach
+  void tearDown()
   {
     clientKillUnusedSegmentsQuery = null;
   }
 
   @Test
-  public void testGetType()
+  void testGetType()
   {
-    Assert.assertEquals("kill", clientKillUnusedSegmentsQuery.getType());
+    assertEquals("kill", clientKillUnusedSegmentsQuery.getType());
   }
 
   @Test
-  public void testGetDataSource()
+  void testGetDataSource()
   {
-    Assert.assertEquals(DATA_SOURCE, clientKillUnusedSegmentsQuery.getDataSource());
+    assertEquals(DATA_SOURCE, clientKillUnusedSegmentsQuery.getDataSource());
   }
 
   @Test
-  public void testGetInterval()
+  void testGetInterval()
   {
-    Assert.assertEquals(INTERVAL, clientKillUnusedSegmentsQuery.getInterval());
+    assertEquals(INTERVAL, clientKillUnusedSegmentsQuery.getInterval());
   }
 
   @Test
-  public void testGetMarkUnused()
+  void testGetMarkUnused()
   {
-    Assert.assertEquals(MARK_UNUSED, clientKillUnusedSegmentsQuery.getMarkAsUnused());
+    assertEquals(MARK_UNUSED, clientKillUnusedSegmentsQuery.getMarkAsUnused());
   }
 
   @Test
-  public void testEquals()
+  void testEquals()
   {
     EqualsVerifier.forClass(ClientKillUnusedSegmentsTaskQuery.class)
                   .usingGetClass()

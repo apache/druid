@@ -32,19 +32,24 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ForkJoinPool;
 
-public class CaffeineCacheTest
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
+class CaffeineCacheTest
 {
   private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
   private static final byte[] HO = StringUtils.toUtf8("hooooooooooooooooooo");
@@ -59,14 +64,14 @@ public class CaffeineCacheTest
     }
   };
 
-  @Before
-  public void setUp()
+  @BeforeEach
+  void setUp()
   {
     cache = CaffeineCache.create(cacheConfig);
   }
 
   @Test
-  public void testBasicInjection() throws Exception
+  void testBasicInjection() throws Exception
   {
     final CaffeineCacheConfig config = new CaffeineCacheConfig();
     Injector injector = Initialization.makeInjectorWithModules(
@@ -85,7 +90,7 @@ public class CaffeineCacheTest
     lifecycle.start();
     try {
       Cache cache = injector.getInstance(Cache.class);
-      Assert.assertEquals(CaffeineCache.class, cache.getClass());
+      assertEquals(CaffeineCache.class, cache.getClass());
     }
     finally {
       lifecycle.stop();
@@ -93,7 +98,7 @@ public class CaffeineCacheTest
   }
 
   @Test
-  public void testSimpleInjection()
+  void testSimpleInjection()
   {
     final String uuid = UUID.randomUUID().toString();
     System.setProperty(uuid + ".type", "caffeine");
@@ -110,43 +115,43 @@ public class CaffeineCacheTest
         )
     );
     final CacheProvider cacheProvider = injector.getInstance(CacheProvider.class);
-    Assert.assertNotNull(cacheProvider);
-    Assert.assertEquals(CaffeineCacheProvider.class, cacheProvider.getClass());
+    assertNotNull(cacheProvider);
+    assertEquals(CaffeineCacheProvider.class, cacheProvider.getClass());
   }
 
   @Test
-  public void testBaseOps()
+  void testBaseOps()
   {
     final Cache.NamedKey aKey = new Cache.NamedKey("a", HI);
-    Assert.assertNull(cache.get(aKey));
+    assertNull(cache.get(aKey));
     put(cache, aKey, 1);
-    Assert.assertEquals(1, get(cache, aKey));
+    assertEquals(1, get(cache, aKey));
 
     cache.close("a");
-    Assert.assertNull(cache.get(aKey));
+    assertNull(cache.get(aKey));
 
     final Cache.NamedKey hiKey = new Cache.NamedKey("the", HI);
     final Cache.NamedKey hoKey = new Cache.NamedKey("the", HO);
     put(cache, hiKey, 10);
     put(cache, hoKey, 20);
-    Assert.assertEquals(10, get(cache, hiKey));
-    Assert.assertEquals(20, get(cache, hoKey));
+    assertEquals(10, get(cache, hiKey));
+    assertEquals(20, get(cache, hoKey));
     cache.close("the");
 
-    Assert.assertNull(cache.get(hiKey));
-    Assert.assertNull(cache.get(hoKey));
+    assertNull(cache.get(hiKey));
+    assertNull(cache.get(hoKey));
 
-    Assert.assertNull(cache.get(new Cache.NamedKey("miss", HI)));
+    assertNull(cache.get(new Cache.NamedKey("miss", HI)));
 
     final CacheStats stats = cache.getStats();
-    Assert.assertEquals(3, stats.getNumHits());
-    Assert.assertEquals(5, stats.getNumMisses());
+    assertEquals(3, stats.getNumHits());
+    assertEquals(5, stats.getNumMisses());
   }
 
   @Test
-  public void testGetBulk()
+  void testGetBulk()
   {
-    Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
+    assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
     Cache.NamedKey key1 = new Cache.NamedKey("the", HI);
     put(cache, key1, 2);
@@ -161,19 +166,19 @@ public class CaffeineCacheTest
         )
     );
 
-    Assert.assertEquals(2, Ints.fromByteArray(result.get(key1)));
-    Assert.assertEquals(10, Ints.fromByteArray(result.get(key2)));
+    assertEquals(2, Ints.fromByteArray(result.get(key1)));
+    assertEquals(10, Ints.fromByteArray(result.get(key2)));
 
     Cache.NamedKey missingKey = new Cache.NamedKey("missing", HI);
     result = cache.getBulk(Collections.singletonList(missingKey));
-    Assert.assertEquals(result.size(), 0);
+    assertEquals(result.size(), 0);
 
     result = cache.getBulk(new ArrayList<>());
-    Assert.assertEquals(result.size(), 0);
+    assertEquals(result.size(), 0);
   }
 
   @Test
-  public void testSizeEviction()
+  void testSizeEviction()
   {
     final CaffeineCacheConfig config = new CaffeineCacheConfig()
     {
@@ -192,26 +197,26 @@ public class CaffeineCacheTest
     final Cache.NamedKey key2 = new Cache.NamedKey("the", s2);
     final CaffeineCache cache = CaffeineCache.create(config, Runnable::run);
 
-    Assert.assertNull(cache.get(key1));
-    Assert.assertNull(cache.get(key2));
+    assertNull(cache.get(key1));
+    assertNull(cache.get(key2));
 
     cache.put(key1, val1);
-    Assert.assertArrayEquals(val1, cache.get(key1));
-    Assert.assertNull(cache.get(key2));
+    assertArrayEquals(val1, cache.get(key1));
+    assertNull(cache.get(key2));
 
-    Assert.assertEquals(0, cache.getCache().stats().evictionWeight());
+    assertEquals(0, cache.getCache().stats().evictionWeight());
 
-    Assert.assertArrayEquals(val1, cache.get(key1));
-    Assert.assertNull(cache.get(key2));
+    assertArrayEquals(val1, cache.get(key1));
+    assertNull(cache.get(key2));
 
     cache.put(key2, val2);
-    Assert.assertNull(cache.get(key1));
-    Assert.assertArrayEquals(val2, cache.get(key2));
-    Assert.assertEquals(34, cache.getCache().stats().evictionWeight());
+    assertNull(cache.get(key1));
+    assertArrayEquals(val2, cache.get(key2));
+    assertEquals(34, cache.getCache().stats().evictionWeight());
   }
 
   @Test
-  public void testSizeCalculation()
+  void testSizeCalculation()
   {
     final CaffeineCacheConfig config = new CaffeineCacheConfig()
     {
@@ -231,24 +236,24 @@ public class CaffeineCacheTest
     final Cache cache = CaffeineCache.create(config, Runnable::run);
 
     CacheStats stats = cache.getStats();
-    Assert.assertEquals(0L, stats.getNumEntries());
-    Assert.assertEquals(0L, stats.getSizeInBytes());
+    assertEquals(0L, stats.getNumEntries());
+    assertEquals(0L, stats.getSizeInBytes());
 
     cache.put(key1, val1);
 
     stats = cache.getStats();
-    Assert.assertEquals(1L, stats.getNumEntries());
-    Assert.assertEquals(34L, stats.getSizeInBytes());
+    assertEquals(1L, stats.getNumEntries());
+    assertEquals(34L, stats.getSizeInBytes());
 
     cache.put(key2, val2);
 
     stats = cache.getStats();
-    Assert.assertEquals(1L, stats.getNumEntries());
-    Assert.assertEquals(34L, stats.getSizeInBytes());
+    assertEquals(1L, stats.getNumEntries());
+    assertEquals(34L, stats.getSizeInBytes());
   }
 
   @Test
-  public void testSizeCalculationAfterDelete()
+  void testSizeCalculationAfterDelete()
   {
     final String namespace = "the";
     final CaffeineCacheConfig config = new CaffeineCacheConfig()
@@ -276,30 +281,30 @@ public class CaffeineCacheTest
     final Cache cache = CaffeineCache.create(config, Runnable::run);
 
     CacheStats stats = cache.getStats();
-    Assert.assertEquals(0L, stats.getNumEntries());
-    Assert.assertEquals(0L, stats.getSizeInBytes());
+    assertEquals(0L, stats.getNumEntries());
+    assertEquals(0L, stats.getSizeInBytes());
 
     cache.put(key1, val1);
 
     stats = cache.getStats();
-    Assert.assertEquals(1L, stats.getNumEntries());
-    Assert.assertEquals(34L, stats.getSizeInBytes());
+    assertEquals(1L, stats.getNumEntries());
+    assertEquals(34L, stats.getSizeInBytes());
 
     cache.put(key2, val2);
 
     stats = cache.getStats();
-    Assert.assertEquals(2L, stats.getNumEntries());
-    Assert.assertEquals(68L, stats.getSizeInBytes());
+    assertEquals(2L, stats.getNumEntries());
+    assertEquals(68L, stats.getSizeInBytes());
 
     cache.close(namespace);
     stats = cache.getStats();
-    Assert.assertEquals(0, stats.getNumEntries());
-    Assert.assertEquals(0, stats.getSizeInBytes());
+    assertEquals(0, stats.getNumEntries());
+    assertEquals(0, stats.getSizeInBytes());
   }
 
 
   @Test
-  public void testSizeCalculationMore()
+  void testSizeCalculationMore()
   {
     final CaffeineCacheConfig config = new CaffeineCacheConfig()
     {
@@ -319,24 +324,24 @@ public class CaffeineCacheTest
     final Cache cache = CaffeineCache.create(config, Runnable::run);
 
     CacheStats stats = cache.getStats();
-    Assert.assertEquals(0L, stats.getNumEntries());
-    Assert.assertEquals(0L, stats.getSizeInBytes());
+    assertEquals(0L, stats.getNumEntries());
+    assertEquals(0L, stats.getSizeInBytes());
 
     cache.put(key1, val1);
 
     stats = cache.getStats();
-    Assert.assertEquals(1L, stats.getNumEntries());
-    Assert.assertEquals(34L, stats.getSizeInBytes());
+    assertEquals(1L, stats.getNumEntries());
+    assertEquals(34L, stats.getSizeInBytes());
 
     cache.put(key2, val2);
 
     stats = cache.getStats();
-    Assert.assertEquals(2L, stats.getNumEntries());
-    Assert.assertEquals(68L, stats.getSizeInBytes());
+    assertEquals(2L, stats.getNumEntries());
+    assertEquals(68L, stats.getSizeInBytes());
   }
 
   @Test
-  public void testSizeCalculationNoWeight()
+  void testSizeCalculationNoWeight()
   {
     final CaffeineCacheConfig config = new CaffeineCacheConfig()
     {
@@ -356,24 +361,24 @@ public class CaffeineCacheTest
     final CaffeineCache cache = CaffeineCache.create(config, Runnable::run);
 
     CacheStats stats = cache.getStats();
-    Assert.assertEquals(0L, stats.getNumEntries());
-    Assert.assertEquals(0L, stats.getSizeInBytes());
+    assertEquals(0L, stats.getNumEntries());
+    assertEquals(0L, stats.getSizeInBytes());
 
     cache.put(key1, val1);
 
     stats = cache.getStats();
-    Assert.assertEquals(1L, stats.getNumEntries());
-    Assert.assertEquals(34L, stats.getSizeInBytes());
+    assertEquals(1L, stats.getNumEntries());
+    assertEquals(34L, stats.getSizeInBytes());
 
     cache.put(key2, val2);
 
     stats = cache.getStats();
-    Assert.assertEquals(2L, stats.getNumEntries());
-    Assert.assertEquals(68L, stats.getSizeInBytes());
+    assertEquals(2L, stats.getNumEntries());
+    assertEquals(68L, stats.getSizeInBytes());
   }
 
   @Test
-  public void testFromProperties()
+  void testFromProperties()
   {
     final String keyPrefix = "cache.config.prefix";
     final Properties properties = new Properties();
@@ -398,13 +403,13 @@ public class CaffeineCacheTest
     );
     caffeineCacheConfigJsonConfigProvider.inject(properties, configurator);
     final CaffeineCacheConfig config = caffeineCacheConfigJsonConfigProvider.get();
-    Assert.assertEquals(10, config.getExpireAfter());
-    Assert.assertEquals(100, config.getSizeInBytes());
-    Assert.assertNotNull(config.createExecutor());
+    assertEquals(10, config.getExpireAfter());
+    assertEquals(100, config.getSizeInBytes());
+    assertNotNull(config.createExecutor());
   }
 
   @Test
-  public void testMixedCaseFromProperties()
+  void testMixedCaseFromProperties()
   {
     final String keyPrefix = "cache.config.prefix";
     final Properties properties = new Properties();
@@ -429,13 +434,13 @@ public class CaffeineCacheTest
     );
     caffeineCacheConfigJsonConfigProvider.inject(properties, configurator);
     final CaffeineCacheConfig config = caffeineCacheConfigJsonConfigProvider.get();
-    Assert.assertEquals(10, config.getExpireAfter());
-    Assert.assertEquals(100, config.getSizeInBytes());
-    Assert.assertEquals(ForkJoinPool.commonPool(), config.createExecutor());
+    assertEquals(10, config.getExpireAfter());
+    assertEquals(100, config.getSizeInBytes());
+    assertEquals(ForkJoinPool.commonPool(), config.createExecutor());
   }
 
   @Test
-  public void testDefaultFromProperties()
+  void testDefaultFromProperties()
   {
     final String keyPrefix = "cache.config.prefix";
     final Properties properties = new Properties();
@@ -457,14 +462,14 @@ public class CaffeineCacheTest
     );
     caffeineCacheConfigJsonConfigProvider.inject(properties, configurator);
     final CaffeineCacheConfig config = caffeineCacheConfigJsonConfigProvider.get();
-    Assert.assertEquals(-1, config.getExpireAfter());
-    Assert.assertEquals(-1L, config.getSizeInBytes());
-    Assert.assertEquals(ForkJoinPool.commonPool(), config.createExecutor());
+    assertEquals(-1, config.getExpireAfter());
+    assertEquals(-1L, config.getSizeInBytes());
+    assertEquals(ForkJoinPool.commonPool(), config.createExecutor());
   }
 
   public int get(Cache cache, Cache.NamedKey key)
   {
-    return Ints.fromByteArray(cache.get(key));
+    return Ints.fromByteArray(Objects.requireNonNull(cache.get(key)));
   }
 
   public void put(Cache cache, Cache.NamedKey key, Integer value)

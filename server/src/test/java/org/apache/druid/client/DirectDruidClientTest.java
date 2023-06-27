@@ -54,9 +54,8 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -68,7 +67,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class DirectDruidClientTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class DirectDruidClientTest
 {
   private final String hostName = "localhost:8080";
 
@@ -89,8 +92,8 @@ public class DirectDruidClientTest
   private DirectDruidClient client;
   private QueryableDruidServer queryableDruidServer;
 
-  @Before
-  public void setup()
+  @BeforeEach
+  void setup()
   {
     httpClient = EasyMock.createMock(HttpClient.class);
     serverSelector = new ServerSelector(
@@ -123,7 +126,7 @@ public class DirectDruidClientTest
 
 
   @Test
-  public void testRun() throws Exception
+  void testRun() throws Exception
   {
     final URL url = new URL(StringUtils.format("http://%s/druid/v2/", hostName));
 
@@ -189,23 +192,23 @@ public class DirectDruidClientTest
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
     query = query.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE));
     Sequence s1 = client.run(QueryPlus.wrap(query));
-    Assert.assertTrue(capturedRequest.hasCaptured());
-    Assert.assertEquals(url, capturedRequest.getValue().getUrl());
-    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
-    Assert.assertEquals(1, client.getNumOpenConnections());
+    assertTrue(capturedRequest.hasCaptured());
+    assertEquals(url, capturedRequest.getValue().getUrl());
+    assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+    assertEquals(1, client.getNumOpenConnections());
 
     // simulate read timeout
     client.run(QueryPlus.wrap(query));
-    Assert.assertEquals(2, client.getNumOpenConnections());
+    assertEquals(2, client.getNumOpenConnections());
     futureException.setException(new ReadTimeoutException());
-    Assert.assertEquals(1, client.getNumOpenConnections());
+    assertEquals(1, client.getNumOpenConnections());
 
     // subsequent connections should work
     client.run(QueryPlus.wrap(query));
     client.run(QueryPlus.wrap(query));
     client.run(QueryPlus.wrap(query));
 
-    Assert.assertTrue(client.getNumOpenConnections() == 4);
+    assertTrue(client.getNumOpenConnections() == 4);
 
     // produce result for first connection
     futureResult.set(
@@ -214,16 +217,16 @@ public class DirectDruidClientTest
         )
     );
     List<Result> results = s1.toList();
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(DateTimes.of("2014-01-01T01:02:03Z"), results.get(0).getTimestamp());
-    Assert.assertEquals(3, client.getNumOpenConnections());
+    assertEquals(1, results.size());
+    assertEquals(DateTimes.of("2014-01-01T01:02:03Z"), results.get(0).getTimestamp());
+    assertEquals(3, client.getNumOpenConnections());
 
     client2.run(QueryPlus.wrap(query));
     client2.run(QueryPlus.wrap(query));
 
-    Assert.assertEquals(2, client2.getNumOpenConnections());
+    assertEquals(2, client2.getNumOpenConnections());
 
-    Assert.assertEquals(serverSelector.pick(null), queryableDruidServer2);
+    assertEquals(serverSelector.pick(null), queryableDruidServer2);
 
     EasyMock.verify(httpClient);
   }
@@ -262,8 +265,8 @@ public class DirectDruidClientTest
     query = query.withOverriddenContext(ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE));
     cancellationFuture.set(new StatusResponseHolder(HttpResponseStatus.OK, new StringBuilder("cancelled")));
     Sequence results = client.run(QueryPlus.wrap(query));
-    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
-    Assert.assertEquals(0, client.getNumOpenConnections());
+    assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+    assertEquals(0, client.getNumOpenConnections());
 
 
     QueryInterruptedException exception = null;
@@ -273,7 +276,7 @@ public class DirectDruidClientTest
     catch (QueryInterruptedException e) {
       exception = e;
     }
-    Assert.assertNotNull(exception);
+    assertNotNull(exception);
 
     EasyMock.verify(httpClient);
   }
@@ -314,10 +317,10 @@ public class DirectDruidClientTest
     catch (QueryInterruptedException e) {
       actualException = e;
     }
-    Assert.assertNotNull(actualException);
-    Assert.assertEquals("testing1", actualException.getErrorCode());
-    Assert.assertEquals("testing2", actualException.getMessage());
-    Assert.assertEquals(hostName, actualException.getHost());
+    assertNotNull(actualException);
+    assertEquals("testing1", actualException.getErrorCode());
+    assertEquals("testing2", actualException.getMessage());
+    assertEquals(hostName, actualException.getHost());
     EasyMock.verify(httpClient);
   }
 
@@ -366,10 +369,10 @@ public class DirectDruidClientTest
     catch (QueryTimeoutException e) {
       actualException = e;
     }
-    Assert.assertNotNull(actualException);
-    Assert.assertEquals("Query timeout", actualException.getErrorCode());
-    Assert.assertEquals("url[http://localhost:8080/druid/v2/] timed out", actualException.getMessage());
-    Assert.assertEquals(hostName, actualException.getHost());
+    assertNotNull(actualException);
+    assertEquals("Query timeout", actualException.getErrorCode());
+    assertEquals("url[http://localhost:8080/druid/v2/] timed out", actualException.getMessage());
+    assertEquals(hostName, actualException.getHost());
     EasyMock.verify(httpClient);
   }
 
@@ -407,10 +410,10 @@ public class DirectDruidClientTest
     catch (QueryTimeoutException e) {
       actualException = e;
     }
-    Assert.assertNotNull(actualException);
-    Assert.assertEquals("Query timeout", actualException.getErrorCode());
-    Assert.assertEquals(StringUtils.format("Query [%s] timed out!", queryId), actualException.getMessage());
-    Assert.assertEquals(hostName, actualException.getHost());
+    assertNotNull(actualException);
+    assertEquals("Query timeout", actualException.getErrorCode());
+    assertEquals(StringUtils.format("Query [%s] timed out!", queryId), actualException.getMessage());
+    assertEquals(hostName, actualException.getHost());
     EasyMock.verify(httpClient);
   }
 }

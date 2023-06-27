@@ -20,33 +20,33 @@
 package org.apache.druid.client.cache;
 
 import com.google.common.base.Suppliers;
-import net.spy.memcached.MemcachedClientIF;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class MemcacheClientPoolTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class MemcacheClientPoolTest
 {
 
   @Test
-  public void testSimpleUsage()
+  void testSimpleUsage()
   {
-    MemcacheClientPool pool = new MemcacheClientPool(3, Suppliers.ofInstance((MemcachedClientIF) null));
+    MemcacheClientPool pool = new MemcacheClientPool(3, Suppliers.ofInstance(null));
     // First round
     MemcacheClientPool.IdempotentCloseableHolder first = pool.get();
-    Assert.assertEquals(1, first.count());
+    assertEquals(1, first.count());
     MemcacheClientPool.IdempotentCloseableHolder second = pool.get();
-    Assert.assertEquals(1, second.count());
+    assertEquals(1, second.count());
     MemcacheClientPool.IdempotentCloseableHolder third = pool.get();
-    Assert.assertEquals(1, third.count());
+    assertEquals(1, third.count());
     // Second round
     MemcacheClientPool.IdempotentCloseableHolder firstClientSecondRound = pool.get();
-    Assert.assertEquals(2, firstClientSecondRound.count());
+    assertEquals(2, firstClientSecondRound.count());
     MemcacheClientPool.IdempotentCloseableHolder secondClientSecondRound = pool.get();
-    Assert.assertEquals(2, secondClientSecondRound.count());
+    assertEquals(2, secondClientSecondRound.count());
     first.close();
     firstClientSecondRound.close();
     MemcacheClientPool.IdempotentCloseableHolder firstAgain = pool.get();
-    Assert.assertEquals(1, firstAgain.count());
+    assertEquals(1, firstAgain.count());
     
     firstAgain.close();
     second.close();
@@ -55,7 +55,7 @@ public class MemcacheClientPoolTest
   }
 
   @Test
-  public void testClientLeakDetected() throws InterruptedException
+  void testClientLeakDetected() throws InterruptedException
   {
     long initialLeakedClients = MemcacheClientPool.leakedClients();
     createDanglingClient();
@@ -65,12 +65,12 @@ public class MemcacheClientPoolTest
       byte[] garbage = new byte[10_000_000];
       Thread.sleep(10);
     }
-    Assert.assertEquals(initialLeakedClients + 1, MemcacheClientPool.leakedClients());
+    assertEquals(initialLeakedClients + 1, MemcacheClientPool.leakedClients());
   }
 
   private void createDanglingClient()
   {
-    MemcacheClientPool pool = new MemcacheClientPool(1, Suppliers.ofInstance((MemcachedClientIF) null));
+    MemcacheClientPool pool = new MemcacheClientPool(1, Suppliers.ofInstance(null));
     pool.get();
   }
 }

@@ -26,15 +26,17 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-public class ClientCompactionTaskDimensionsSpecTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+class ClientCompactionTaskDimensionsSpecTest
 {
   @Test
-  public void testEquals()
+  void testEquals()
   {
     EqualsVerifier.forClass(ClientCompactionTaskDimensionsSpec.class)
                   .withPrefabValues(
@@ -47,25 +49,25 @@ public class ClientCompactionTaskDimensionsSpecTest
   }
 
   @Test
-  public void testSerde() throws IOException
+  void testSerde() throws IOException
   {
     final ClientCompactionTaskDimensionsSpec expected = new ClientCompactionTaskDimensionsSpec(
         DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))
     );
     final ObjectMapper mapper = new ObjectMapper();
     final byte[] json = mapper.writeValueAsBytes(expected);
-    final ClientCompactionTaskDimensionsSpec fromJson = (ClientCompactionTaskDimensionsSpec) mapper.readValue(
+    final ClientCompactionTaskDimensionsSpec fromJson = mapper.readValue(
         json,
         ClientCompactionTaskDimensionsSpec.class
     );
-    Assert.assertEquals(expected, fromJson);
+    assertEquals(expected, fromJson);
   }
 
-  @Test(expected = ParseException.class)
-  public void testInvalidDimensionsField()
+  @Test
+  void testInvalidDimensionsField()
   {
-    final ClientCompactionTaskDimensionsSpec expected = new ClientCompactionTaskDimensionsSpec(
+    assertThrows(ParseException.class, () -> new ClientCompactionTaskDimensionsSpec(
         DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim", "dim"))
-    );
+    ));
   }
 }

@@ -32,12 +32,14 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-public class CacheUtilTest
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class CacheUtilTest
 {
   private final TimeseriesQuery timeseriesQuery =
       Druids.newTimeseriesQueryBuilder()
@@ -47,9 +49,9 @@ public class CacheUtilTest
             .build();
 
   @Test
-  public void test_isQueryCacheable_cacheableOnBroker()
+  void test_isQueryCacheable_cacheableOnBroker()
   {
-    Assert.assertTrue(
+    assertTrue(
         CacheUtil.isQueryCacheable(
             timeseriesQuery,
             new DummyCacheStrategy<>(true, true),
@@ -60,9 +62,9 @@ public class CacheUtilTest
   }
 
   @Test
-  public void test_isQueryCacheable_cacheableOnDataServer()
+  void test_isQueryCacheable_cacheableOnDataServer()
   {
-    Assert.assertTrue(
+    assertTrue(
         CacheUtil.isQueryCacheable(
             timeseriesQuery,
             new DummyCacheStrategy<>(true, true),
@@ -75,7 +77,7 @@ public class CacheUtilTest
   @Test
   public void test_isQueryCacheable_unCacheableOnBroker()
   {
-    Assert.assertFalse(
+    assertFalse(
         CacheUtil.isQueryCacheable(
             timeseriesQuery,
             new DummyCacheStrategy<>(false, true),
@@ -88,7 +90,7 @@ public class CacheUtilTest
   @Test
   public void test_isQueryCacheable_unCacheableOnDataServer()
   {
-    Assert.assertFalse(
+    assertFalse(
         CacheUtil.isQueryCacheable(
             timeseriesQuery,
             new DummyCacheStrategy<>(true, false),
@@ -99,9 +101,9 @@ public class CacheUtilTest
   }
 
   @Test
-  public void test_isQueryCacheable_unCacheableType()
+  void test_isQueryCacheable_unCacheableType()
   {
-    Assert.assertFalse(
+    assertFalse(
         CacheUtil.isQueryCacheable(
             timeseriesQuery,
             new DummyCacheStrategy<>(true, false),
@@ -112,9 +114,9 @@ public class CacheUtilTest
   }
 
   @Test
-  public void test_isQueryCacheable_unCacheableDataSourceOnBroker()
+  void test_isQueryCacheable_unCacheableDataSourceOnBroker()
   {
-    Assert.assertFalse(
+    assertFalse(
         CacheUtil.isQueryCacheable(
             timeseriesQuery.withDataSource(new GlobalTableDataSource("global")),
             new DummyCacheStrategy<>(true, true),
@@ -125,9 +127,9 @@ public class CacheUtilTest
   }
 
   @Test
-  public void test_isQueryCacheable_unCacheableDataSourceOnDataServer()
+  void test_isQueryCacheable_unCacheableDataSourceOnDataServer()
   {
-    Assert.assertFalse(
+    assertFalse(
         CacheUtil.isQueryCacheable(
             timeseriesQuery.withDataSource(new LookupDataSource("lookyloo")),
             new DummyCacheStrategy<>(true, true),
@@ -138,9 +140,9 @@ public class CacheUtilTest
   }
 
   @Test
-  public void test_isQueryCacheable_nullCacheStrategy()
+  void test_isQueryCacheable_nullCacheStrategy()
   {
-    Assert.assertFalse(
+    assertFalse(
         CacheUtil.isQueryCacheable(
             timeseriesQuery,
             null,

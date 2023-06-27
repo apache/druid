@@ -30,25 +30,27 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.CleanupMode;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DruidServerConfigTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+class DruidServerConfigTest
 {
   private File testSegmentCacheDir1;
   private File testSegmentCacheDir2;
 
-  @Rule
-  public final TemporaryFolder tmpFolder = new TemporaryFolder();
+  @TempDir(cleanup = CleanupMode.ALWAYS)
+  private File tmpFolder;
 
-  public ObjectMapper mapper = new DefaultObjectMapper();
+  private final ObjectMapper mapper = new DefaultObjectMapper();
 
   private static final Module SERVER_CONFIG_MODULE = (binder) -> {
     binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test");
@@ -56,27 +58,27 @@ public class DruidServerConfigTest
     binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
   };
 
-  @Before
-  public void setUp() throws Exception
+  @BeforeEach
+  void setUp()
   {
-    testSegmentCacheDir1 = tmpFolder.newFolder("segment_cache_folder1");
-    testSegmentCacheDir2 = tmpFolder.newFolder("segment_cache_folder2");
+    testSegmentCacheDir1 = new File(tmpFolder, "segment_cache_folder1");
+    testSegmentCacheDir2 = new File(tmpFolder, "segment_cache_folder2");
   }
 
   @Test
-  public void testBasicInjection()
+  void testBasicInjection()
   {
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(), ImmutableList.of(SERVER_CONFIG_MODULE)
     );
     final DruidServerConfig druidServerConfig = injector.getInstance(DruidServerConfig.class);
 
-    Assert.assertNotNull(druidServerConfig);
-    Assert.assertEquals(DruidServerConfig.class, druidServerConfig.getClass());
+    assertNotNull(druidServerConfig);
+    assertEquals(DruidServerConfig.class, druidServerConfig.getClass());
   }
 
   @Test
-  public void testCombinedSize()
+  void testCombinedSize()
   {
     final List<StorageLocationConfig> locations = new ArrayList<>();
     final StorageLocationConfig locationConfig1 = new StorageLocationConfig(testSegmentCacheDir1, 10000000000L, null);
@@ -84,11 +86,11 @@ public class DruidServerConfigTest
     locations.add(locationConfig1);
     locations.add(locationConfig2);
     DruidServerConfig druidServerConfig = new DruidServerConfig(new SegmentLoaderConfig().withLocations(locations));
-    Assert.assertEquals(30000000000L, druidServerConfig.getMaxSize());
+    assertEquals(30000000000L, druidServerConfig.getMaxSize());
   }
 
   @Test
-  public void testServerMaxSizePrecedence() throws Exception
+  void testServerMaxSizePrecedence() throws Exception
   {
     String serverConfigWithDefaultSizeStr = "{\"maxSize\":0,\"tier\":\"_default_tier\",\"priority\":0,"
                                             + "\"hiddenProperties\":[\"druid.metadata.storage.connector.password\","
@@ -121,8 +123,8 @@ public class DruidServerConfigTest
         DruidServerConfig.class
     );
 
-    Assert.assertEquals(serverConfigWithDefaultSize.getMaxSize(), 10000000000L);
-    Assert.assertEquals(serverConfigWithNonDefaultSize.getMaxSize(), 123456L);
+    assertEquals(serverConfigWithDefaultSize.getMaxSize(), 10000000000L);
+    assertEquals(serverConfigWithNonDefaultSize.getMaxSize(), 123456L);
   }
 }
 

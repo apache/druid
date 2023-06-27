@@ -24,16 +24,18 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Map;
 
-public class ClientCompactionTaskTransformSpecTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+class ClientCompactionTaskTransformSpecTest
 {
   @Test
-  public void testEquals()
+  void testEquals()
   {
     EqualsVerifier.forClass(ClientCompactionTaskTransformSpec.class)
                   .withNonnullFields("filter")
@@ -42,7 +44,7 @@ public class ClientCompactionTaskTransformSpecTest
   }
 
   @Test
-  public void testSerde() throws IOException
+  void testSerde() throws IOException
   {
     NullHandling.initializeForTests();
     final ClientCompactionTaskTransformSpec expected = new ClientCompactionTaskTransformSpec(
@@ -54,24 +56,28 @@ public class ClientCompactionTaskTransformSpecTest
         json,
         ClientCompactionTaskTransformSpec.class
     );
-    Assert.assertEquals(expected, fromJson);
+    assertEquals(expected, fromJson);
   }
 
   @SuppressWarnings("unchecked")
   @Test
-  public void testAsMap()
+  void testAsMap()
   {
     NullHandling.initializeForTests();
     final ObjectMapper objectMapper = new DefaultObjectMapper();
     String dimension = "dim1";
     String value = "foo";
-    final ClientCompactionTaskTransformSpec spec = new ClientCompactionTaskTransformSpec(new SelectorDimFilter(dimension, value, null));
+    final ClientCompactionTaskTransformSpec spec = new ClientCompactionTaskTransformSpec(new SelectorDimFilter(
+        dimension,
+        value,
+        null
+    ));
     final Map<String, Object> map = spec.asMap(objectMapper);
-    Assert.assertNotNull(map);
-    Assert.assertEquals(3, ((Map<String, Object>) map.get("filter")).size());
-    Assert.assertEquals(dimension, ((Map<String, Object>) map.get("filter")).get("dimension"));
-    Assert.assertEquals(value, ((Map<String, Object>) map.get("filter")).get("value"));
+    assertNotNull(map);
+    assertEquals(3, ((Map<String, Object>) map.get("filter")).size());
+    assertEquals(dimension, ((Map<String, Object>) map.get("filter")).get("dimension"));
+    assertEquals(value, ((Map<String, Object>) map.get("filter")).get("value"));
     ClientCompactionTaskTransformSpec actual = objectMapper.convertValue(map, ClientCompactionTaskTransformSpec.class);
-    Assert.assertEquals(spec, actual);
+    assertEquals(spec, actual);
   }
 }

@@ -20,29 +20,24 @@
 package org.apache.druid.client.indexing;
 
 import org.apache.druid.java.util.common.UOE;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class SamplerSpecTest
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+class SamplerSpecTest
 {
-  private static final SamplerSpec SAMPLER_SPEC = new SamplerSpec()
-  {
-    @Override
-    public SamplerResponse sample()
-    {
-      return null;
-    }
-  };
+  private static final SamplerSpec SAMPLER_SPEC = () -> null;
 
   @Test
-  public void testGetType()
+  void testGetType()
   {
-    Assert.assertNull(SAMPLER_SPEC.getType());
+    assertNull(SAMPLER_SPEC.getType());
   }
 
   @Test
-  public void testGetInputSourceResources()
+  void testGetInputSourceResources()
   {
-    Assert.assertThrows(UOE.class, SAMPLER_SPEC::getInputSourceResources);
+    assertThrows(UOE.class, SAMPLER_SPEC::getInputSourceResources);
   }
 }

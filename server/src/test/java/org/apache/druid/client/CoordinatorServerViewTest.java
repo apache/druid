@@ -42,17 +42,22 @@ import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
-public class CoordinatorServerViewTest extends CuratorTestBase
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class CoordinatorServerViewTest extends CuratorTestBase
 {
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPathsConfig;
@@ -72,7 +77,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     inventoryPath = zkPathsConfig.getLiveSegmentsPath();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     setupServerAndCurator();
@@ -105,39 +110,39 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     final int partition = segment.getShardSpec().getPartitionNum();
     final Interval intervals = Intervals.of("2014-10-20T00:00:00Z/P1D");
     announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+    assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
+    assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
     TimelineLookup timeline = overlordServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
     List<TimelineObjectHolder> serverLookupRes = (List<TimelineObjectHolder>) timeline.lookup(
         intervals
     );
-    Assert.assertEquals(1, serverLookupRes.size());
+    assertEquals(1, serverLookupRes.size());
 
     TimelineObjectHolder<String, SegmentLoadInfo> actualTimelineObjectHolder = serverLookupRes.get(0);
-    Assert.assertEquals(intervals, actualTimelineObjectHolder.getInterval());
-    Assert.assertEquals("v1", actualTimelineObjectHolder.getVersion());
+    assertEquals(intervals, actualTimelineObjectHolder.getInterval());
+    assertEquals("v1", actualTimelineObjectHolder.getVersion());
 
     PartitionHolder<SegmentLoadInfo> actualPartitionHolder = actualTimelineObjectHolder.getObject();
-    Assert.assertTrue(actualPartitionHolder.isComplete());
-    Assert.assertEquals(1, Iterables.size(actualPartitionHolder));
+    assertTrue(actualPartitionHolder.isComplete());
+    assertEquals(1, Iterables.size(actualPartitionHolder));
 
     SegmentLoadInfo segmentLoadInfo = actualPartitionHolder.iterator().next().getObject();
-    Assert.assertFalse(segmentLoadInfo.isEmpty());
-    Assert.assertEquals(
+    assertFalse(segmentLoadInfo.isEmpty());
+    assertEquals(
         druidServer.getMetadata(),
         Iterables.getOnlyElement(segmentLoadInfo.toImmutableSegmentLoadInfo().getServers())
     );
-    Assert.assertNotNull(timeline.findChunk(intervals, "v1", partition));
+    assertNotNull(timeline.findChunk(intervals, "v1", partition));
 
     unannounceSegmentForServer(druidServer, segment);
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
+    assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
-    Assert.assertEquals(
+    assertEquals(
         0,
         ((List<TimelineObjectHolder>) timeline.lookup(Intervals.of("2014-10-20T00:00:00Z/P1D"))).size()
     );
-    Assert.assertNull(timeline.findChunk(intervals, "v1", partition));
+    assertNull(timeline.findChunk(intervals, "v1", partition));
   }
 
   @Test
@@ -153,22 +158,15 @@ public class CoordinatorServerViewTest extends CuratorTestBase
 
     final List<DruidServer> druidServers = Lists.transform(
         ImmutableList.of("localhost:0", "localhost:1", "localhost:2", "localhost:3", "localhost:4"),
-        new Function<String, DruidServer>()
-        {
-          @Override
-          public DruidServer apply(String input)
-          {
-            return new DruidServer(
-                input,
-                input,
-                null,
-                10000000L,
-                ServerType.HISTORICAL,
-                "default_tier",
-                0
-            );
-          }
-        }
+        input -> new DruidServer(
+            input,
+            input,
+            null,
+            10000000L,
+            ServerType.HISTORICAL,
+            "default_tier",
+            0
+        )
     );
 
     for (DruidServer druidServer : druidServers) {
@@ -182,21 +180,14 @@ public class CoordinatorServerViewTest extends CuratorTestBase
             Pair.of("2011-04-01/2011-04-09", "v2"),
             Pair.of("2011-04-06/2011-04-09", "v3"),
             Pair.of("2011-04-01/2011-04-02", "v3")
-        ), new Function<Pair<String, String>, DataSegment>()
-        {
-          @Override
-          public DataSegment apply(Pair<String, String> input)
-          {
-            return dataSegmentWithIntervalAndVersion(input.lhs, input.rhs);
-          }
-        }
+        ), input -> dataSegmentWithIntervalAndVersion(input.lhs, input.rhs)
     );
 
     for (int i = 0; i < 5; ++i) {
       announceSegmentForServer(druidServers.get(i), segments.get(i), zkPathsConfig, jsonMapper);
     }
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
+    assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
+    assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
     TimelineLookup timeline = overlordServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
     assertValues(
@@ -214,7 +205,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
 
     // unannounce the segment created by dataSegmentWithIntervalAndVersion("2011-04-01/2011-04-09", "v2")
     unannounceSegmentForServer(druidServers.get(2), segments.get(2));
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
+    assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
     // renew segmentRemovedLatch since we still have 4 segments to unannounce
     segmentRemovedLatch = new CountDownLatch(4);
@@ -237,9 +228,9 @@ public class CoordinatorServerViewTest extends CuratorTestBase
         unannounceSegmentForServer(druidServers.get(i), segments.get(i));
       }
     }
-    Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
+    assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
-    Assert.assertEquals(
+    assertEquals(
         0,
         ((List<TimelineObjectHolder>) timeline.lookup(Intervals.of("2011-04-01/2011-04-09"))).size()
     );
@@ -267,22 +258,22 @@ public class CoordinatorServerViewTest extends CuratorTestBase
       List<Pair<Interval, Pair<String, Pair<DruidServer, DataSegment>>>> expected, List<TimelineObjectHolder> actual
   )
   {
-    Assert.assertEquals(expected.size(), actual.size());
+    assertEquals(expected.size(), actual.size());
 
     for (int i = 0; i < expected.size(); ++i) {
       Pair<Interval, Pair<String, Pair<DruidServer, DataSegment>>> expectedPair = expected.get(i);
       TimelineObjectHolder<String, SegmentLoadInfo> actualTimelineObjectHolder = actual.get(i);
 
-      Assert.assertEquals(expectedPair.lhs, actualTimelineObjectHolder.getInterval());
-      Assert.assertEquals(expectedPair.rhs.lhs, actualTimelineObjectHolder.getVersion());
+      assertEquals(expectedPair.lhs, actualTimelineObjectHolder.getInterval());
+      assertEquals(expectedPair.rhs.lhs, actualTimelineObjectHolder.getVersion());
 
       PartitionHolder<SegmentLoadInfo> actualPartitionHolder = actualTimelineObjectHolder.getObject();
-      Assert.assertTrue(actualPartitionHolder.isComplete());
-      Assert.assertEquals(1, Iterables.size(actualPartitionHolder));
+      assertTrue(actualPartitionHolder.isComplete());
+      assertEquals(1, Iterables.size(actualPartitionHolder));
 
       SegmentLoadInfo segmentLoadInfo = actualPartitionHolder.iterator().next().getObject();
-      Assert.assertFalse(segmentLoadInfo.isEmpty());
-      Assert.assertEquals(expectedPair.rhs.rhs.lhs.getMetadata(),
+      assertFalse(segmentLoadInfo.isEmpty());
+      assertEquals(expectedPair.rhs.rhs.lhs.getMetadata(),
                           Iterables.getOnlyElement(segmentLoadInfo.toImmutableSegmentLoadInfo().getServers()));
     }
   }
@@ -364,8 +355,8 @@ public class CoordinatorServerViewTest extends CuratorTestBase
                       .build();
   }
 
-  @After
-  public void tearDown() throws Exception
+  @AfterEach
+  void tearDown() throws Exception
   {
     baseView.stop();
     tearDownServerAndCurator();

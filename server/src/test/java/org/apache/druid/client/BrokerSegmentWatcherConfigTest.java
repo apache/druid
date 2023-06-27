@@ -22,17 +22,22 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
+ *
  */
-public class BrokerSegmentWatcherConfigTest
+class BrokerSegmentWatcherConfigTest
 {
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
   @Test
-  public void testSerde() throws Exception
+  void testSerde() throws Exception
   {
     //defaults
     String json = "{}";
@@ -44,9 +49,9 @@ public class BrokerSegmentWatcherConfigTest
         BrokerSegmentWatcherConfig.class
     );
 
-    Assert.assertNull(config.getWatchedTiers());
-    Assert.assertTrue(config.isWatchRealtimeTasks());
-    Assert.assertNull(config.getIgnoredTiers());
+    assertNull(config.getWatchedTiers());
+    assertTrue(config.isWatchRealtimeTasks());
+    assertNull(config.getIgnoredTiers());
 
     //non-defaults
     json = "{ \"watchedTiers\": [\"t1\", \"t2\"], \"watchedDataSources\": [\"ds1\", \"ds2\"], \"watchRealtimeTasks\": false }";
@@ -58,10 +63,10 @@ public class BrokerSegmentWatcherConfigTest
         BrokerSegmentWatcherConfig.class
     );
 
-    Assert.assertEquals(ImmutableSet.of("t1", "t2"), config.getWatchedTiers());
-    Assert.assertNull(config.getIgnoredTiers());
-    Assert.assertEquals(ImmutableSet.of("ds1", "ds2"), config.getWatchedDataSources());
-    Assert.assertFalse(config.isWatchRealtimeTasks());
+    assertEquals(ImmutableSet.of("t1", "t2"), config.getWatchedTiers());
+    assertNull(config.getIgnoredTiers());
+    assertEquals(ImmutableSet.of("ds1", "ds2"), config.getWatchedDataSources());
+    assertFalse(config.isWatchRealtimeTasks());
 
     // json with ignoredTiers
     json = "{ \"ignoredTiers\": [\"t3\", \"t4\"], \"watchedDataSources\": [\"ds1\", \"ds2\"] }";
@@ -73,9 +78,9 @@ public class BrokerSegmentWatcherConfigTest
         BrokerSegmentWatcherConfig.class
     );
 
-    Assert.assertNull(config.getWatchedTiers());
-    Assert.assertEquals(ImmutableSet.of("t3", "t4"), config.getIgnoredTiers());
-    Assert.assertEquals(ImmutableSet.of("ds1", "ds2"), config.getWatchedDataSources());
-    Assert.assertTrue(config.isWatchRealtimeTasks());
+    assertNull(config.getWatchedTiers());
+    assertEquals(ImmutableSet.of("t3", "t4"), config.getIgnoredTiers());
+    assertEquals(ImmutableSet.of("ds1", "ds2"), config.getWatchedDataSources());
+    assertTrue(config.isWatchRealtimeTasks());
   }
 }

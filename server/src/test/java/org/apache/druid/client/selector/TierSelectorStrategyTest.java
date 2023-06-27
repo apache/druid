@@ -29,8 +29,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -41,11 +40,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class TierSelectorStrategyTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class TierSelectorStrategyTest
 {
-  
+
   @Test
-  public void testHighestPriorityTierSelectorStrategyRealtime()
+  void testHighestPriorityTierSelectorStrategyRealtime()
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
     QueryableDruidServer lowPriority = new QueryableDruidServer(
@@ -62,9 +63,9 @@ public class TierSelectorStrategyTest
         highPriority, lowPriority
     );
   }
-  
+
   @Test
-  public void testHighestPriorityTierSelectorStrategy()
+  void testHighestPriorityTierSelectorStrategy()
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
     QueryableDruidServer lowPriority = new QueryableDruidServer(
@@ -239,12 +240,12 @@ public class TierSelectorStrategyTest
       serverSelector.addServerAndUpdateSegment(server, serverSelector.getSegment());
     }
 
-    Assert.assertEquals(expectedSelection[0], serverSelector.pick(null));
-    Assert.assertEquals(expectedSelection[0], serverSelector.pick(EasyMock.createMock(Query.class)));
-    Assert.assertEquals(expectedCandidates, serverSelector.getCandidates(-1));
-    Assert.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2));
+    assertEquals(expectedSelection[0], serverSelector.pick(null));
+    assertEquals(expectedSelection[0], serverSelector.pick(EasyMock.createMock(Query.class)));
+    assertEquals(expectedCandidates, serverSelector.getCandidates(-1));
+    assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2));
   }
-  
+
   @Test
   public void testServerSelectorStrategyDefaults()
   {
@@ -256,18 +257,22 @@ public class TierSelectorStrategyTest
     Set<QueryableDruidServer> servers = new HashSet<>();
     servers.add(p0);
     RandomServerSelectorStrategy strategy = new RandomServerSelectorStrategy();
-    Assert.assertEquals(strategy.pick(servers, EasyMock.createMock(DataSegment.class)), p0);
-    Assert.assertEquals(strategy.pick(EasyMock.createMock(Query.class), servers, EasyMock.createMock(DataSegment.class)), p0);
-    ServerSelectorStrategy defaultDeprecatedServerSelectorStrategy = new ServerSelectorStrategy() {
+    assertEquals(strategy.pick(servers, EasyMock.createMock(DataSegment.class)), p0);
+    assertEquals(strategy.pick(EasyMock.createMock(Query.class), servers, EasyMock.createMock(DataSegment.class)), p0);
+    ServerSelectorStrategy defaultDeprecatedServerSelectorStrategy = new ServerSelectorStrategy()
+    {
       @Override
-      public <T> List<QueryableDruidServer> pick(@Nullable Query<T> query, Set<QueryableDruidServer> servers, DataSegment segment,
-          int numServersToPick)
+      public <T> List<QueryableDruidServer> pick(
+          @Nullable Query<T> query, Set<QueryableDruidServer> servers, DataSegment segment,
+          int numServersToPick
+      )
       {
         return strategy.pick(servers, segment, numServersToPick);
       }
     };
-    Assert.assertEquals(defaultDeprecatedServerSelectorStrategy.pick(servers, EasyMock.createMock(DataSegment.class)), p0);
-    Assert.assertEquals(defaultDeprecatedServerSelectorStrategy.pick(servers, EasyMock.createMock(DataSegment.class), 1).get(0), p0);
+    assertEquals(defaultDeprecatedServerSelectorStrategy.pick(servers, EasyMock.createMock(DataSegment.class)), p0);
+    assertEquals(defaultDeprecatedServerSelectorStrategy.pick(servers, EasyMock.createMock(DataSegment.class), 1)
+                                                        .get(0), p0);
   }
 
 }

@@ -129,6 +129,20 @@
         <repoOrgName>Maven Central Repository</repoOrgName>
         <repoOrgUrl>https://repo1.maven.org/maven2/</repoOrgUrl>
 
+        <!-- Unit tests dependencies versions-->
+        <mockito.version>4.3.1</mockito.version>
+        <easymock.version>5.1.0</easymock.version>
+        <junit4.version>4.13.2</junit4.version>
+        <junit5.version>5.9.3</junit5.version>
+        <junit.benchmarks.version>0.7.2</junit.benchmarks.version>
+        <assertj.version>3.19.0</assertj.version>
+        <junit.params.version>1.1.1</junit.params.version>
+        <equalsverifier.version>3.10.1</equalsverifier.version>
+        <system.rules.version>1.19.0</system.rules.version>
+        <testng.version>7.3.0</testng.version>
+        <caliper.version>0.5-rc1</caliper.version>
+
+
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
 
@@ -989,6 +1003,13 @@
                 <artifactId>junit</artifactId>
                 <version>4.13.2</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${junit5.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
             <dependency>
               <groupId>org.mockito</groupId>

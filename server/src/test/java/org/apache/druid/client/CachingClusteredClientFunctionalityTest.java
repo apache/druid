@@ -58,10 +58,9 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -73,10 +72,13 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 /**
  *
  */
-public class CachingClusteredClientFunctionalityTest
+class CachingClusteredClientFunctionalityTest
 {
   private static final ObjectMapper OBJECT_MAPPER = CachingClusteredClientTestUtils.createObjectMapper();
   private static final Pair<QueryToolChestWarehouse, Closer> WAREHOUSE_AND_CLOSER =
@@ -89,14 +91,14 @@ public class CachingClusteredClientFunctionalityTest
   private TimelineServerView serverView;
   private Cache cache;
 
-  @AfterClass
-  public static void tearDownClass() throws IOException
+  @AfterAll
+  static void tearDownClass() throws IOException
   {
     RESOURCE_CLOSER.close();
   }
 
-  @Before
-  public void setUp()
+  @BeforeEach
+  void setUp()
   {
     timeline = new VersionedIntervalTimeline<>(Ordering.natural());
     serverView = EasyMock.createNiceMock(TimelineServerView.class);
@@ -107,7 +109,7 @@ public class CachingClusteredClientFunctionalityTest
   }
 
   @Test
-  public void testUncoveredInterval()
+  void testUncoveredInterval()
   {
     addToTimeline(Intervals.of("2015-01-02/2015-01-03"), "1");
     addToTimeline(Intervals.of("2015-01-04/2015-01-05"), "1");
@@ -127,7 +129,7 @@ public class CachingClusteredClientFunctionalityTest
 
     ResponseContext responseContext = ResponseContext.createEmpty();
     runQuery(client, builder.build(), responseContext);
-    Assert.assertNull(responseContext.getUncoveredIntervals());
+    assertNull(responseContext.getUncoveredIntervals());
 
     builder.intervals("2015-01-01/2015-01-03");
     responseContext = ResponseContext.createEmpty();
@@ -176,8 +178,8 @@ public class CachingClusteredClientFunctionalityTest
     for (String interval : intervals) {
       expectedList.add(Intervals.of(interval));
     }
-    Assert.assertEquals((Object) expectedList, context.getUncoveredIntervals());
-    Assert.assertEquals(uncoveredIntervalsOverflowed, context.get(ResponseContext.Keys.UNCOVERED_INTERVALS_OVERFLOWED));
+    assertEquals((Object) expectedList, context.getUncoveredIntervals());
+    assertEquals(uncoveredIntervalsOverflowed, context.get(ResponseContext.Keys.UNCOVERED_INTERVALS_OVERFLOWED));
   }
 
   private void addToTimeline(Interval interval, String version)

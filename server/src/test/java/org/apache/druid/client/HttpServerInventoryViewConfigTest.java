@@ -20,29 +20,30 @@
 package org.apache.druid.client;
 
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 /**
  */
-public class HttpServerInventoryViewConfigTest
+class HttpServerInventoryViewConfigTest
 {
   @Test
-  public void testDeserializationWithDefaults() throws Exception
+  void testDeserializationWithDefaults() throws Exception
   {
     String json = "{}";
 
     HttpServerInventoryViewConfig config = TestHelper.makeJsonMapper().readValue(json, HttpServerInventoryViewConfig.class);
 
-    Assert.assertEquals(TimeUnit.MINUTES.toMillis(4), config.getServerTimeout());
-    Assert.assertEquals(TimeUnit.MINUTES.toMillis(1), config.getServerUnstabilityTimeout());
-    Assert.assertEquals(5, config.getNumThreads());
+    assertEquals(TimeUnit.MINUTES.toMillis(4), config.getServerTimeout());
+    assertEquals(TimeUnit.MINUTES.toMillis(1), config.getServerUnstabilityTimeout());
+    assertEquals(5, config.getNumThreads());
   }
 
   @Test
-  public void testDeserializationWithNonDefaults() throws Exception
+  void testDeserializationWithNonDefaults() throws Exception
   {
     String json = "{\n"
                   + "  \"serverTimeout\": \"PT2M\",\n"
@@ -52,8 +53,8 @@ public class HttpServerInventoryViewConfigTest
 
     HttpServerInventoryViewConfig config = TestHelper.makeJsonMapper().readValue(json, HttpServerInventoryViewConfig.class);
 
-    Assert.assertEquals(TimeUnit.MINUTES.toMillis(2), config.getServerTimeout());
-    Assert.assertEquals(TimeUnit.MINUTES.toMillis(3), config.getServerUnstabilityTimeout());
-    Assert.assertEquals(7, config.getNumThreads());
+    assertEquals(TimeUnit.MINUTES.toMillis(2), config.getServerTimeout());
+    assertEquals(TimeUnit.MINUTES.toMillis(3), config.getServerUnstabilityTimeout());
+    assertEquals(7, config.getNumThreads());
   }
 }

@@ -24,7 +24,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -57,9 +56,8 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.SocketAddress;
 import java.util.ArrayList;
@@ -67,6 +65,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -75,9 +74,15 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 /**
+ *
  */
-public class MemcachedCacheTest
+class MemcachedCacheTest
 {
   private static final Logger log = new Logger(MemcachedCacheTest.class);
   private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
@@ -118,8 +123,8 @@ public class MemcachedCacheTest
     }
   };
 
-  @Before
-  public void setUp()
+  @BeforeEach
+  void setUp()
   {
     cache = new MemcachedCache(
         Suppliers.ofInstance(
@@ -143,18 +148,13 @@ public class MemcachedCacheTest
     };
     Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(), ImmutableList.of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/memcached");
-                binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+            binder -> {
+              binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/memcached");
+              binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
 
-                binder.bind(MemcachedCacheConfig.class).toInstance(config);
-                binder.bind(Cache.class).toProvider(MemcachedProviderWithConfig.class).in(ManageLifecycle.class);
-              }
+              binder.bind(MemcachedCacheConfig.class).toInstance(config);
+              binder.bind(Cache.class).toProvider(MemcachedProviderWithConfig.class).in(ManageLifecycle.class);
             }
         )
     );
@@ -162,7 +162,7 @@ public class MemcachedCacheTest
     lifecycle.start();
     try {
       Cache cache = injector.getInstance(Cache.class);
-      Assert.assertEquals(MemcachedCache.class, cache.getClass());
+      assertEquals(MemcachedCache.class, cache.getClass());
     }
     finally {
       lifecycle.stop();
@@ -177,28 +177,23 @@ public class MemcachedCacheTest
     System.setProperty(uuid + ".hosts", "localhost");
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/memcached");
-                binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-                binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+            binder -> {
+              binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/memcached");
+              binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
 
-                binder.bind(Cache.class).toProvider(CacheProvider.class);
-                JsonConfigProvider.bind(binder, uuid, CacheProvider.class);
-              }
+              binder.bind(Cache.class).toProvider(CacheProvider.class);
+              JsonConfigProvider.bind(binder, uuid, CacheProvider.class);
             }
         )
     );
     final CacheProvider memcachedCacheProvider = injector.getInstance(CacheProvider.class);
-    Assert.assertNotNull(memcachedCacheProvider);
-    Assert.assertEquals(MemcachedCacheProvider.class, memcachedCacheProvider.getClass());
+    assertNotNull(memcachedCacheProvider);
+    assertEquals(MemcachedCacheProvider.class, memcachedCacheProvider.getClass());
   }
 
   @Test
-  public void testMonitor() throws Exception
+  void testMonitor() throws Exception
   {
     final MemcachedCache cache = MemcachedCache.create(memcachedCacheConfig);
     final Emitter emitter = EasyMock.createNiceMock(Emitter.class);
@@ -217,7 +212,7 @@ public class MemcachedCacheTest
       cache.doMonitor(serviceEmitter);
     }
 
-    Assert.assertFalse(events.isEmpty());
+    assertFalse(events.isEmpty());
     ObjectMapper mapper = new DefaultObjectMapper();
     for (Event event : events) {
       log.debug("Found event `%s`", mapper.writeValueAsString(event.toMap()));
@@ -225,34 +220,34 @@ public class MemcachedCacheTest
   }
 
   @Test
-  public void testSanity()
+  void testSanity()
   {
-    Assert.assertNull(cache.get(new Cache.NamedKey("a", HI)));
+    assertNull(cache.get(new Cache.NamedKey("a", HI)));
     put(cache, "a", HI, 1);
-    Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
+    assertEquals(1, get(cache, "a", HI));
+    assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
     put(cache, "the", HI, 2);
-    Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertEquals(2, get(cache, "the", HI));
+    assertEquals(1, get(cache, "a", HI));
+    assertEquals(2, get(cache, "the", HI));
 
     put(cache, "the", HO, 10);
-    Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
-    Assert.assertEquals(2, get(cache, "the", HI));
-    Assert.assertEquals(10, get(cache, "the", HO));
+    assertEquals(1, get(cache, "a", HI));
+    assertNull(cache.get(new Cache.NamedKey("a", HO)));
+    assertEquals(2, get(cache, "the", HI));
+    assertEquals(10, get(cache, "the", HO));
 
     cache.close("the");
-    Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
+    assertEquals(1, get(cache, "a", HI));
+    assertNull(cache.get(new Cache.NamedKey("a", HO)));
 
     cache.close("a");
   }
 
   @Test
-  public void testGetBulk()
+  void testGetBulk()
   {
-    Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
+    assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
     put(cache, "the", HI, 2);
     put(cache, "the", HO, 10);
@@ -267,8 +262,8 @@ public class MemcachedCacheTest
         )
     );
 
-    Assert.assertEquals(2, Ints.fromByteArray(result.get(key1)));
-    Assert.assertEquals(10, Ints.fromByteArray(result.get(key2)));
+    assertEquals(2, Ints.fromByteArray(result.get(key1)));
+    assertEquals(10, Ints.fromByteArray(result.get(key2)));
   }
 
   public void put(Cache cache, String namespace, byte[] key, Integer value)
@@ -278,7 +273,7 @@ public class MemcachedCacheTest
 
   public int get(Cache cache, String namespace, byte[] key)
   {
-    return Ints.fromByteArray(cache.get(new Cache.NamedKey(namespace, key)));
+    return Ints.fromByteArray(Objects.requireNonNull(cache.get(new Cache.NamedKey(namespace, key))));
   }
 }
 

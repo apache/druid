@@ -58,9 +58,8 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -69,17 +68,23 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Performance tests for {@link CachingClusteredClient}, that do not require a real cluster, can be added here.
  * There is one test for a scenario where a single interval has large number of segments.
  */
-public class CachingClusteredClientPerfTest
+class CachingClusteredClientPerfTest
 {
 
-  @Test(timeout = 10_000)
-  public void testGetQueryRunnerForSegments_singleIntervalLargeSegments()
+  @Test
+  @Timeout(10_000)
+  void testGetQueryRunnerForSegments_singleIntervalLargeSegments()
   {
     final int segmentCount = 30_000;
     final Interval interval = Intervals.of("2021-02-13/2021-02-14");
@@ -119,24 +124,24 @@ public class CachingClusteredClientPerfTest
         })
     );
 
-    TimelineServerView serverView = Mockito.mock(TimelineServerView.class);
-    QueryScheduler queryScheduler = Mockito.mock(QueryScheduler.class);
+    TimelineServerView serverView = mock(TimelineServerView.class);
+    QueryScheduler queryScheduler = mock(QueryScheduler.class);
     // mock scheduler to return same sequence as argument
-    Mockito.when(queryScheduler.run(any(), any())).thenAnswer(i -> i.getArgument(1));
-    Mockito.when(queryScheduler.prioritizeAndLaneQuery(any(), any()))
-           .thenAnswer(i -> ((QueryPlus) i.getArgument(0)).getQuery());
+    when(queryScheduler.run(any(Query.class), any(Sequence.class))).thenAnswer(i -> i.getArgument(1));
+    when(queryScheduler.prioritizeAndLaneQuery(any(QueryPlus.class), anySet()))
+        .thenAnswer(i -> ((QueryPlus) i.getArgument(0)).getQuery());
 
-    Mockito.doReturn(Optional.of(timeline)).when(serverView).getTimeline(any());
-    Mockito.doReturn(new MockQueryRunner()).when(serverView).getQueryRunner(any());
+    doReturn(Optional.of(timeline)).when(serverView).getTimeline(any());
+    doReturn(new MockQueryRunner()).when(serverView).getQueryRunner(any());
     CachingClusteredClient cachingClusteredClient = new CachingClusteredClient(
         new MockQueryToolChestWareHouse(),
         serverView,
         MapCache.create(1024),
         TestHelper.makeJsonMapper(),
-        Mockito.mock(CachePopulator.class),
+        mock(CachePopulator.class),
         new CacheConfig(),
-        Mockito.mock(DruidHttpClientConfig.class),
-        Mockito.mock(DruidProcessingConfig.class),
+        mock(DruidHttpClientConfig.class),
+        mock(DruidProcessingConfig.class),
         ForkJoinPool.commonPool(),
         queryScheduler,
         JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
@@ -149,7 +154,7 @@ public class CachingClusteredClientPerfTest
         segmentDescriptors
     );
     Sequence<SegmentDescriptor> sequence = queryRunner.run(QueryPlus.wrap(fakeQuery));
-    Assert.assertEquals(segmentDescriptors, sequence.toList());
+    assertEquals(segmentDescriptors, sequence.toList());
   }
 
   private Query<SegmentDescriptor> makeFakeQuery(Interval interval)

@@ -28,9 +28,9 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,88 +39,93 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
-public class CachePopulatorTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
+class CachePopulatorTest
 {
   private final ExecutorService exec = Execs.multiThreaded(2, "cache-populator-test-%d");
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final Cache cache = new MapCache(new ByteCountingLRUMap(Long.MAX_VALUE));
   private final CachePopulatorStats stats = new CachePopulatorStats();
 
-  @After
-  public void tearDown()
+  @AfterEach
+  void tearDown()
   {
     exec.shutdownNow();
   }
 
   @Test
-  public void testForegroundPopulator()
+  void testForegroundPopulator()
   {
     final CachePopulator populator = new ForegroundCachePopulator(objectMapper, stats, -1);
     final List<String> strings = ImmutableList.of("foo", "bar");
 
-    Assert.assertEquals(strings, wrapAndReturn(populator, makeKey(1), strings));
-    Assert.assertEquals(strings, readFromCache(makeKey(1)));
-    Assert.assertEquals(1, stats.snapshot().getNumOk());
-    Assert.assertEquals(0, stats.snapshot().getNumError());
-    Assert.assertEquals(0, stats.snapshot().getNumOversized());
+    assertEquals(strings, wrapAndReturn(populator, makeKey(1), strings));
+    assertEquals(strings, readFromCache(makeKey(1)));
+    assertEquals(1, stats.snapshot().getNumOk());
+    assertEquals(0, stats.snapshot().getNumError());
+    assertEquals(0, stats.snapshot().getNumOversized());
   }
 
   @Test
-  public void testForegroundPopulatorMaxEntrySize()
+  void testForegroundPopulatorMaxEntrySize()
   {
     final CachePopulator populator = new ForegroundCachePopulator(objectMapper, stats, 30);
     final List<String> strings = ImmutableList.of("foo", "bar");
     final List<String> strings2 = ImmutableList.of("foo", "baralararararararaarararararaa");
 
-    Assert.assertEquals(strings, wrapAndReturn(populator, makeKey(1), strings));
-    Assert.assertEquals(strings, readFromCache(makeKey(1)));
-    Assert.assertEquals(strings2, wrapAndReturn(populator, makeKey(2), strings2));
-    Assert.assertNull(readFromCache(makeKey(2)));
+    assertEquals(strings, wrapAndReturn(populator, makeKey(1), strings));
+    assertEquals(strings, readFromCache(makeKey(1)));
+    assertEquals(strings2, wrapAndReturn(populator, makeKey(2), strings2));
+    assertNull(readFromCache(makeKey(2)));
 
-    Assert.assertEquals(1, stats.snapshot().getNumOk());
-    Assert.assertEquals(0, stats.snapshot().getNumError());
-    Assert.assertEquals(1, stats.snapshot().getNumOversized());
+    assertEquals(1, stats.snapshot().getNumOk());
+    assertEquals(0, stats.snapshot().getNumError());
+    assertEquals(1, stats.snapshot().getNumOversized());
   }
 
-  @Test(timeout = 60000L)
-  public void testBackgroundPopulator() throws InterruptedException
+  @Test
+  @Timeout(60000L)
+  void testBackgroundPopulator() throws InterruptedException
   {
     final CachePopulator populator = new BackgroundCachePopulator(exec, objectMapper, stats, -1);
     final List<String> strings = ImmutableList.of("foo", "bar");
 
-    Assert.assertEquals(strings, wrapAndReturn(populator, makeKey(1), strings));
+    assertEquals(strings, wrapAndReturn(populator, makeKey(1), strings));
 
     // Wait for background updates to happen.
     while (cache.getStats().getNumEntries() < 1) {
       Thread.sleep(100);
     }
 
-    Assert.assertEquals(strings, readFromCache(makeKey(1)));
-    Assert.assertEquals(1, stats.snapshot().getNumOk());
-    Assert.assertEquals(0, stats.snapshot().getNumError());
-    Assert.assertEquals(0, stats.snapshot().getNumOversized());
+    assertEquals(strings, readFromCache(makeKey(1)));
+    assertEquals(1, stats.snapshot().getNumOk());
+    assertEquals(0, stats.snapshot().getNumError());
+    assertEquals(0, stats.snapshot().getNumOversized());
   }
 
-  @Test(timeout = 60000L)
-  public void testBackgroundPopulatorMaxEntrySize() throws InterruptedException
+  @Test
+  @Timeout(60000L)
+  void testBackgroundPopulatorMaxEntrySize() throws InterruptedException
   {
     final CachePopulator populator = new BackgroundCachePopulator(exec, objectMapper, stats, 30);
     final List<String> strings = ImmutableList.of("foo", "bar");
     final List<String> strings2 = ImmutableList.of("foo", "baralararararararaarararararaa");
 
-    Assert.assertEquals(strings, wrapAndReturn(populator, makeKey(1), strings));
-    Assert.assertEquals(strings2, wrapAndReturn(populator, makeKey(2), strings2));
+    assertEquals(strings, wrapAndReturn(populator, makeKey(1), strings));
+    assertEquals(strings2, wrapAndReturn(populator, makeKey(2), strings2));
 
     // Wait for background updates to happen.
     while (cache.getStats().getNumEntries() < 1 || stats.snapshot().getNumOversized() < 1) {
       Thread.sleep(100);
     }
 
-    Assert.assertEquals(strings, readFromCache(makeKey(1)));
-    Assert.assertNull(readFromCache(makeKey(2)));
-    Assert.assertEquals(1, stats.snapshot().getNumOk());
-    Assert.assertEquals(0, stats.snapshot().getNumError());
-    Assert.assertEquals(1, stats.snapshot().getNumOversized());
+    assertEquals(strings, readFromCache(makeKey(1)));
+    assertNull(readFromCache(makeKey(2)));
+    assertEquals(1, stats.snapshot().getNumOk());
+    assertEquals(0, stats.snapshot().getNumError());
+    assertEquals(1, stats.snapshot().getNumOversized());
   }
 
   private static Cache.NamedKey makeKey(final int n)

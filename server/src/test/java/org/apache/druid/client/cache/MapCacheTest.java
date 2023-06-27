@@ -21,55 +21,59 @@ package org.apache.druid.client.cache;
 
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.util.Objects;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  */
-public class MapCacheTest
+class MapCacheTest
 {
   private static final byte[] HI = StringUtils.toUtf8("hi");
   private static final byte[] HO = StringUtils.toUtf8("ho");
   private ByteCountingLRUMap baseMap;
   private MapCache cache;
 
-  @Before
-  public void setUp()
+  @BeforeEach
+  void setUp()
   {
     baseMap = new ByteCountingLRUMap(1024 * 1024);
     cache = new MapCache(baseMap);
   }
 
   @Test
-  public void testSanity()
+  void testSanity()
   {
-    Assert.assertNull(cache.get(new Cache.NamedKey("a", HI)));
-    Assert.assertEquals(0, baseMap.size());
+    assertNull(cache.get(new Cache.NamedKey("a", HI)));
+    assertEquals(0, baseMap.size());
     put(cache, "a", HI, 1);
-    Assert.assertEquals(1, baseMap.size());
-    Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
+    assertEquals(1, baseMap.size());
+    assertEquals(1, get(cache, "a", HI));
+    assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
     put(cache, "the", HI, 2);
-    Assert.assertEquals(2, baseMap.size());
-    Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertEquals(2, get(cache, "the", HI));
+    assertEquals(2, baseMap.size());
+    assertEquals(1, get(cache, "a", HI));
+    assertEquals(2, get(cache, "the", HI));
 
     put(cache, "the", HO, 10);
-    Assert.assertEquals(3, baseMap.size());
-    Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
-    Assert.assertEquals(2, get(cache, "the", HI));
-    Assert.assertEquals(10, get(cache, "the", HO));
+    assertEquals(3, baseMap.size());
+    assertEquals(1, get(cache, "a", HI));
+    assertNull(cache.get(new Cache.NamedKey("a", HO)));
+    assertEquals(2, get(cache, "the", HI));
+    assertEquals(10, get(cache, "the", HO));
 
     cache.close("the");
-    Assert.assertEquals(1, baseMap.size());
-    Assert.assertEquals(1, get(cache, "a", HI));
-    Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
+    assertEquals(1, baseMap.size());
+    assertEquals(1, get(cache, "a", HI));
+    assertNull(cache.get(new Cache.NamedKey("a", HO)));
 
     cache.close("a");
-    Assert.assertEquals(0, baseMap.size());
+    assertEquals(0, baseMap.size());
   }
 
   public void put(Cache cache, String namespace, byte[] key, Integer value)
@@ -79,6 +83,6 @@ public class MapCacheTest
 
   public int get(Cache cache, String namespace, byte[] key)
   {
-    return Ints.fromByteArray(cache.get(new Cache.NamedKey(namespace, key)));
+    return Ints.fromByteArray(Objects.requireNonNull(cache.get(new Cache.NamedKey(namespace, key))));
   }
 }

@@ -29,21 +29,25 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-public class ServerSelectorTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class ServerSelectorTest
 {
-  @Before
-  public void setUp()
+  @BeforeEach
+  void setUp()
   {
     TierSelectorStrategy tierSelectorStrategy = EasyMock.createMock(TierSelectorStrategy.class);
     EasyMock.expect(tierSelectorStrategy.getComparator()).andReturn(Integer::compare).anyTimes();
   }
 
   @Test
-  public void testSegmentUpdate()
+  void testSegmentUpdate()
   {
     final ServerSelector selector = new ServerSelector(
         DataSegment.builder()
@@ -99,20 +103,20 @@ public class ServerSelectorTest
                    .build()
     );
 
-    Assert.assertEquals(ImmutableList.of("a", "b", "c"), selector.getSegment().getDimensions());
-  }
-
-  @Test(expected = NullPointerException.class)
-  public void testSegmentCannotBeNull()
-  {
-    final ServerSelector selector = new ServerSelector(
-        null,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
-    );
+    assertEquals(ImmutableList.of("a", "b", "c"), selector.getSegment().getDimensions());
   }
 
   @Test
-  public void testSegmentWithNoData()
+  void testSegmentCannotBeNull()
+  {
+    assertThrows(NullPointerException.class, () -> new ServerSelector(
+        null,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+    ));
+  }
+
+  @Test
+  void testSegmentWithNoData()
   {
     final ServerSelector selector = new ServerSelector(
         DataSegment.builder()
@@ -133,7 +137,7 @@ public class ServerSelectorTest
                    .build(),
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
     );
-    Assert.assertFalse(selector.hasData());
+    assertFalse(selector.hasData());
   }
 
   @Test
@@ -160,7 +164,7 @@ public class ServerSelectorTest
                    .build(),
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
     );
-    Assert.assertTrue(selector.hasData());
+    assertTrue(selector.hasData());
   }
 
 }

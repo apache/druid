@@ -29,26 +29,31 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.initialization.DruidModule;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Properties;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 /**
  *
  */
-public class CacheConfigTest
+class CacheConfigTest
 {
   static Injector injector;
   static JsonConfigurator configurator;
-  JsonConfigProvider<CacheConfig> configProvider;
+  private JsonConfigProvider<CacheConfig> configProvider;
   private static final String PROPERTY_PREFIX = "org.apache.druid.collections.test.cache";
 
-  @BeforeClass
-  public static void populateStatics()
+  @BeforeAll
+  static void populateStatics()
   {
     injector = GuiceInjectors.makeStartupInjectorWithModules(ImmutableList.<com.google.inject.Module>of(new CacheConfigTestModule()));
     configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
@@ -70,17 +75,17 @@ public class CacheConfigTest
     }
   }
 
-  private Properties properties = new Properties();
+  private final Properties properties = new Properties();
 
-  @Before
-  public void setupTest()
+  @BeforeEach
+  void setupTest()
   {
     properties.clear();
     configProvider = JsonConfigProvider.of(PROPERTY_PREFIX, CacheConfig.class);
   }
 
   @Test
-  public void testInjection1()
+  void testInjection1()
   {
     properties.put(PROPERTY_PREFIX + ".numBackgroundThreads", "5");
     properties.put(PROPERTY_PREFIX + ".populateCache", "true");
@@ -91,12 +96,13 @@ public class CacheConfigTest
     CacheConfig config = configProvider.get();
 
     injector.injectMembers(config);
-    Assert.assertEquals(5, config.getNumBackgroundThreads());
-    Assert.assertEquals(true, config.isPopulateCache());
-    Assert.assertEquals(true, config.isUseCache());
+    assertEquals(5, config.getNumBackgroundThreads());
+    assertTrue(config.isPopulateCache());
+    assertTrue(config.isUseCache());
   }
+
   @Test
-  public void testInjection2()
+  void testInjection2()
   {
     properties.put(PROPERTY_PREFIX + ".numBackgroundThreads", "99");
     properties.put(PROPERTY_PREFIX + ".populateCache", "false");
@@ -105,58 +111,84 @@ public class CacheConfigTest
     configProvider.inject(properties, configurator);
     CacheConfig config = configProvider.get();
 
-    Assert.assertEquals(99, config.getNumBackgroundThreads());
-    Assert.assertEquals(false, config.isPopulateCache());
-    Assert.assertEquals(false, config.isUseCache());
+    assertEquals(99, config.getNumBackgroundThreads());
+    assertFalse(config.isPopulateCache());
+    assertFalse(config.isUseCache());
   }
 
-  @Test(expected = ProvisionException.class)
-  public void testValidationError()
+  @Test
+  void testValidationError()
   {
     properties.put(PROPERTY_PREFIX + ".numBackgroundThreads", "-1");
 
     configProvider.inject(properties, configurator);
-    CacheConfig config = configProvider.get();
-    Assert.assertNotEquals(-1, config.getNumBackgroundThreads());
+
+    ProvisionException exception = assertThrows(ProvisionException.class, () -> {
+      CacheConfig config = configProvider.get();
+      assertNotEquals(-1, config.getNumBackgroundThreads());
+    });
+
+    assertEquals("Unable to provision, see the following errors:\n"
+                 + "\n"
+                 + "1) org.apache.druid.collections.test.cache.numBackgroundThreads - must be greater than or equal to 0\n"
+                 + "\n"
+                 + "1 error", exception.getMessage());
   }
 
-
-  @Test(expected = ProvisionException.class)
+  @Test
   public void testValidationInsaneError()
   {
     properties.put(PROPERTY_PREFIX + ".numBackgroundThreads", "BABBA YAGA");
     configProvider.inject(properties, configurator);
-    CacheConfig config = configProvider.get();
-    throw new IllegalStateException("Should have already failed");
+    ProvisionException exception = assertThrows(ProvisionException.class, () -> configProvider.get());
+    assertEquals("Unable to provision, see the following errors:\n"
+                 + "\n"
+                 + "1) Problem parsing object at prefix[org.apache.druid.collections.test.cache]: Cannot deserialize value of type `int` from String \"BABBA YAGA\": not a valid Integer value\n"
+                 + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: org.apache.druid.client.cache.CacheConfig[\"numBackgroundThreads\"]).\n"
+                 + "\n"
+                 + "1 error", exception.getMessage());
   }
 
-  @Test(expected = ProvisionException.class)
-  public void testTRUE()
+  @Test
+  void testTRUE()
   {
     properties.put(PROPERTY_PREFIX + ".populateCache", "TRUE");
     configProvider.inject(properties, configurator);
-    CacheConfig config = configProvider.get();
-    throw new IllegalStateException("Should have already failed");
+    ProvisionException exception = assertThrows(ProvisionException.class, () -> configProvider.get());
+    assertEquals("Unable to provision, see the following errors:\n"
+                 + "\n"
+                 + "1) Problem parsing object at prefix[org.apache.druid.collections.test.cache]: Cannot deserialize value of type `boolean` from String \"TRUE\": only \"true\" or \"false\" recognized\n"
+                 + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: org.apache.druid.client.cache.CacheConfig[\"populateCache\"]).\n"
+                 + "\n"
+                 + "1 error", exception.getMessage());
   }
 
-  @Test(expected = ProvisionException.class)
-  public void testFALSE()
+  @Test
+  void testFALSE()
   {
     properties.put(PROPERTY_PREFIX + ".populateCache", "FALSE");
     configProvider.inject(properties, configurator);
-    CacheConfig config = configProvider.get();
-    throw new IllegalStateException("Should have already failed");
+    ProvisionException exception = assertThrows(ProvisionException.class, () -> configProvider.get());
+    assertEquals("Unable to provision, see the following errors:\n"
+                 + "\n"
+                 + "1) Problem parsing object at prefix[org.apache.druid.collections.test.cache]: Cannot deserialize value of type `boolean` from String \"FALSE\": only \"true\" or \"false\" recognized\n"
+                 + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: org.apache.druid.client.cache.CacheConfig[\"populateCache\"]).\n"
+                 + "\n"
+                 + "1 error", exception.getMessage());
   }
 
 
-  @Test(expected = ProvisionException.class)
+  @Test
   public void testFaLse()
   {
     properties.put(PROPERTY_PREFIX + ".populateCache", "FaLse");
     configProvider.inject(properties, configurator);
-    CacheConfig config = configProvider.get();
-    throw new IllegalStateException("Should have already failed");
+    ProvisionException exception = assertThrows(ProvisionException.class, () -> configProvider.get());
+    assertEquals("Unable to provision, see the following errors:\n"
+                 + "\n"
+                 + "1) Problem parsing object at prefix[org.apache.druid.collections.test.cache]: Cannot deserialize value of type `boolean` from String \"FaLse\": only \"true\" or \"false\" recognized\n"
+                 + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: org.apache.druid.client.cache.CacheConfig[\"populateCache\"]).\n"
+                 + "\n"
+                 + "1 error", exception.getMessage());
   }
-
-
 }

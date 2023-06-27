@@ -48,9 +48,9 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,7 +60,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class BackgroundCachePopulatorTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class BackgroundCachePopulatorTest
 {
   private static final ObjectMapper JSON_MAPPER = CachingClusteredClientTestUtils.createObjectMapper();
   private static final Object[] OBJECTS = new Object[]{
@@ -76,14 +81,14 @@ public class BackgroundCachePopulatorTest
       new LongSumAggregatorFactory("impers", "imps")
   );
   private BackgroundCachePopulator backgroundCachePopulator;
-  private QueryToolChest toolchest;
+  private QueryToolChest toolChest;
   private Cache cache;
   private Query query;
   private QueryRunner baseRunner;
   private AssertingClosable closable;
 
-  @Before
-  public void before()
+  @BeforeEach
+  void before()
   {
     this.backgroundCachePopulator = new BackgroundCachePopulator(
         Execs.multiThreaded(2, "CachingQueryRunnerTest-%d"),
@@ -103,7 +108,7 @@ public class BackgroundCachePopulatorTest
         .granularity(Granularities.ALL);
 
     this.query = builder.build();
-    this.toolchest = new TopNQueryQueryToolChest(new TopNQueryConfig());
+    this.toolChest = new TopNQueryQueryToolChest(new TopNQueryConfig());
     List<Result> expectedRes = makeTopNResults(false, OBJECTS);
 
     this.closable = new AssertingClosable();
@@ -114,7 +119,7 @@ public class BackgroundCachePopulatorTest
           @Override
           public void before()
           {
-            Assert.assertFalse(closable.isClosed());
+            assertFalse(closable.isClosed());
           }
 
           @Override
@@ -178,62 +183,71 @@ public class BackgroundCachePopulatorTest
   }
 
   /**
-  *
-  * Method: wrap(final Sequence<T> sequence, final Function<T, CacheType> cacheFn, final Cache cache, final Cache.NamedKey cacheKey)
-  *
-  */
+   * Method: wrap(final Sequence<T> sequence, final Function<T, CacheType> cacheFn, final Cache cache, final Cache.NamedKey cacheKey)
+   */
   @Test
-  public void testWrap()
+  void testWrap()
   {
     String cacheId = "segment";
     SegmentDescriptor segmentDescriptor = new SegmentDescriptor(Intervals.of("2011/2012"), "version", 0);
 
 
-    CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query);
+    CacheStrategy cacheStrategy = toolChest.getCacheStrategy(query);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
         cacheId,
         segmentDescriptor,
         cacheStrategy.computeCacheKey(query)
     );
 
-    Sequence res = this.backgroundCachePopulator.wrap(this.baseRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()),
-        (value) -> cacheStrategy.prepareForSegmentLevelCache().apply(value), cache, cacheKey);
-    Assert.assertFalse("sequence must not be closed", closable.isClosed());
-    Assert.assertNull("cache must be empty", cache.get(cacheKey));
+    Sequence res = this.backgroundCachePopulator.wrap(
+        this.baseRunner.run(
+            QueryPlus.wrap(query),
+            ResponseContext.createEmpty()
+        ),
+        (value) -> cacheStrategy.prepareForSegmentLevelCache()
+                                .apply(value), cache, cacheKey
+    );
+    assertFalse(closable.isClosed(), "sequence must not be closed");
+    assertNull(cache.get(cacheKey), "cache must be empty");
 
     List results = res.toList();
-    Assert.assertTrue(closable.isClosed());
+    assertTrue(closable.isClosed());
     List<Result> expectedRes = makeTopNResults(false, OBJECTS);
-    Assert.assertEquals(expectedRes.toString(), results.toString());
-    Assert.assertEquals(5, results.size());
+    assertEquals(expectedRes.toString(), results.toString());
+    assertEquals(5, results.size());
   }
 
   @Test
-  public void testWrapOnFailure()
+  void testWrapOnFailure()
   {
     String cacheId = "segment";
     SegmentDescriptor segmentDescriptor = new SegmentDescriptor(Intervals.of("2011/2012"), "version", 0);
 
 
-    CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query);
+    CacheStrategy cacheStrategy = toolChest.getCacheStrategy(query);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
         cacheId,
         segmentDescriptor,
         cacheStrategy.computeCacheKey(query)
     );
 
-    Sequence res = this.backgroundCachePopulator.wrap(this.baseRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty()),
+    Sequence res = this.backgroundCachePopulator.wrap(
+        this.baseRunner.run(
+            QueryPlus.wrap(query),
+            ResponseContext.createEmpty()
+        ),
         (value) -> {
-        throw new RuntimeException("Error");
-      }, cache, cacheKey);
-    Assert.assertFalse("sequence must not be closed", closable.isClosed());
-    Assert.assertNull("cache must be empty", cache.get(cacheKey));
+          throw new RuntimeException("Error");
+        }, cache, cacheKey
+    );
+    assertFalse(closable.isClosed(), "sequence must not be closed");
+    assertNull(cache.get(cacheKey), "cache must be empty");
 
     List results = res.toList();
-    Assert.assertTrue(closable.isClosed());
+    assertTrue(closable.isClosed());
     List<Result> expectedRes = makeTopNResults(false, OBJECTS);
-    Assert.assertEquals(expectedRes.toString(), results.toString());
-    Assert.assertEquals(5, results.size());
+    assertEquals(expectedRes.toString(), results.toString());
+    assertEquals(5, results.size());
   }
 
 
@@ -290,11 +304,11 @@ public class BackgroundCachePopulatorTest
     @Override
     public void close()
     {
-      Assert.assertFalse(closed.get());
-      Assert.assertTrue(closed.compareAndSet(false, true));
+      assertFalse(closed.get());
+      assertTrue(closed.compareAndSet(false, true));
     }
 
-    public boolean isClosed()
+    boolean isClosed()
     {
       return closed.get();
     }

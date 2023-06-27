@@ -33,18 +33,20 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class BrokerInternalQueryConfigTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+class BrokerInternalQueryConfigTest
 {
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
   @Test
-  public void testSerde() throws Exception
+  void testSerde() throws Exception
   {
     //defaults
     String json = "{}";
@@ -56,7 +58,7 @@ public class BrokerInternalQueryConfigTest
         BrokerInternalQueryConfig.class
     );
 
-    Assert.assertEquals(ImmutableMap.of(), config.getContext());
+    assertEquals(ImmutableMap.of(), config.getContext());
 
     //non-defaults
     json = "{ \"context\": {\"priority\": 5}}";
@@ -70,31 +72,30 @@ public class BrokerInternalQueryConfigTest
 
     Map<String, Object> expected = new HashMap<>();
     expected.put("priority", 5);
-    Assert.assertEquals(expected, config.getContext());
+    assertEquals(expected, config.getContext());
   }
 
   /**
    * Malformatted configuration will trigger an exception and fail to startup the service
    *
-   * @throws Exception
    */
-  @Test(expected = JsonEOFException.class)
-  public void testMalfomattedContext() throws Exception
+  @Test
+  void testMalfomattedContext()
   {
     String malformedJson = "{\"priority: 5}";
-    MAPPER.readValue(
+    assertThrows(JsonEOFException.class, () -> MAPPER.readValue(
         MAPPER.writeValueAsString(
             MAPPER.readValue(malformedJson, BrokerInternalQueryConfig.class)
         ),
         BrokerInternalQueryConfig.class
-    );
+    ));
   }
 
   /**
    * Test the behavior if the operator does not specify anything for druid.broker.internal.query.config.context in runtime.properties
    */
   @Test
-  public void testDefaultBehavior()
+  void testDefaultBehavior()
   {
     Injector injector = Guice.createInjector(
         new Module()
@@ -116,6 +117,6 @@ public class BrokerInternalQueryConfigTest
         }
     );
     BrokerInternalQueryConfig config = injector.getInstance(BrokerInternalQueryConfig.class);
-    Assert.assertEquals(ImmutableMap.of(), config.getContext());
+    assertEquals(ImmutableMap.of(), config.getContext());
   }
 }
