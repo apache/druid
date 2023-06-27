@@ -25,6 +25,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -35,7 +37,6 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
-import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
@@ -64,7 +65,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -72,7 +72,6 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
@@ -95,7 +94,6 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class MSQSelectTest extends MSQTestBase
 {
-
   @Parameterized.Parameters(name = "{index}:with context {0}")
   public static Collection<Object[]> data()
   {
@@ -103,7 +101,7 @@ public class MSQSelectTest extends MSQTestBase
         {DEFAULT, DEFAULT_MSQ_CONTEXT},
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
-        {SEQUENTIAL_MERGE, SEQUENTIAL_MERGE_MSQ_CONTEXT}
+        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT}
     };
     return Arrays.asList(data);
   }
@@ -344,6 +342,69 @@ public class MSQSelectTest extends MSQTestBase
                            )
                            .columns("cnt", "dim1")
                            .context(defaultScanQueryContext(context, resultSignature))
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(ImmutableList.of())
+        .verifyResults();
+  }
+
+  @Test
+  public void testSelectOnFooWhereMatchesNoData()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("cnt", ColumnType.LONG)
+                                               .add("dim1", ColumnType.STRING)
+                                               .build();
+
+    testSelectQuery()
+        .setSql("select cnt,dim1 from foo where dim2 = 'nonexistent'")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(querySegmentSpec(Intervals.ETERNITY))
+                           .columns("cnt", "dim1")
+                           .filters(selector("dim2", "nonexistent", null))
+                           .context(defaultScanQueryContext(context, resultSignature))
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(ImmutableList.of())
+        .verifyResults();
+  }
+
+  @Test
+  public void testSelectAndOrderByOnFooWhereMatchesNoData()
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("cnt", ColumnType.LONG)
+                                               .add("dim1", ColumnType.STRING)
+                                               .build();
+
+    testSelectQuery()
+        .setSql("select cnt,dim1 from foo where dim2 = 'nonexistent' order by dim1")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(querySegmentSpec(Intervals.ETERNITY))
+                           .columns("cnt", "dim1")
+                           .filters(selector("dim2", "nonexistent", null))
+                           .context(defaultScanQueryContext(context, resultSignature))
+                           .orderBy(ImmutableList.of(new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)))
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
@@ -1186,10 +1247,9 @@ public class MSQSelectTest extends MSQTestBase
   {
     testSelectQuery()
         .setSql("select a from ")
-        .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(SqlPlanningException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Encountered \"from <EOF>\""))
-        ))
+        .setExpectedValidationErrorMatcher(
+            invalidSqlContains("Received an unexpected token [from <EOF>] (line [1], column [10]), acceptable options")
+        )
         .setQueryContext(context)
         .verifyPlanningErrors();
   }
@@ -1201,11 +1261,7 @@ public class MSQSelectTest extends MSQTestBase
         .setSql("SELECT * FROM INFORMATION_SCHEMA.SCHEMATA")
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(SqlPlanningException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table INFORMATION_SCHEMA.SCHEMATA with SQL engine 'msq-task'."))
-            )
+            invalidSqlIs("Cannot query table(s) [INFORMATION_SCHEMA.SCHEMATA] with SQL engine [msq-task]")
         )
         .verifyPlanningErrors();
   }
@@ -1217,11 +1273,7 @@ public class MSQSelectTest extends MSQTestBase
         .setSql("SELECT * FROM sys.segments")
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(SqlPlanningException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table sys.segments with SQL engine 'msq-task'."))
-            )
+            invalidSqlIs("Cannot query table(s) [sys.segments] with SQL engine [msq-task]")
         )
         .verifyPlanningErrors();
   }
@@ -1233,11 +1285,7 @@ public class MSQSelectTest extends MSQTestBase
         .setSql("select s.segment_id, s.num_rows, f.dim1 from sys.segments as s, foo as f")
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(SqlPlanningException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table sys.segments with SQL engine 'msq-task'."))
-            )
+            invalidSqlIs("Cannot query table(s) [sys.segments] with SQL engine [msq-task]")
         )
         .verifyPlanningErrors();
   }
@@ -1250,15 +1298,10 @@ public class MSQSelectTest extends MSQTestBase
                 + "select segment_source.segment_id, segment_source.num_rows from segment_source")
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(SqlPlanningException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                    "Cannot query table sys.segments with SQL engine 'msq-task'."))
-            )
+            invalidSqlIs("Cannot query table(s) [sys.segments] with SQL engine [msq-task]")
         )
         .verifyPlanningErrors();
   }
-
 
   @Test
   public void testSelectOnUserDefinedSourceContainingWith()
@@ -1644,8 +1687,13 @@ public class MSQSelectTest extends MSQTestBase
                 + "FROM kttm_data "
                 + "GROUP BY 1")
         .setExpectedValidationErrorMatcher(
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "LATEST() aggregator depends on __time column"))
+            new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
+                .expectMessageIs(
+                    "Query planning failed for unknown reason, our best guess is this "
+                    + "[LATEST and EARLIEST aggregators implicitly depend on the __time column, "
+                    + "but the table queried doesn't contain a __time column.  "
+                    + "Please use LATEST_BY or EARLIEST_BY and specify the column explicitly.]"
+                )
         )
         .setExpectedRowSignature(rowSignature)
         .verifyPlanningErrors();
@@ -1676,7 +1724,7 @@ public class MSQSelectTest extends MSQTestBase
         .setSql("select unique_dim1 from foo2 group by unique_dim1")
         .setQueryContext(context)
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(UnsupportedSQLQueryException.class),
+            CoreMatchers.instanceOf(DruidException.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                 "SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported"))
         ))
@@ -1844,69 +1892,6 @@ public class MSQSelectTest extends MSQTestBase
                 .build())
         .setQueryContext(context)
         .setExpectedResultRows(result)
-        .verifyResults();
-  }
-
-  @Test
-  public void testMultiValueStringWithIncorrectType() throws IOException
-  {
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(
-        temporaryFolder,
-        this,
-        "/unparseable-mv-string-array.json"
-    );
-    final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
-
-    RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("language", ColumnType.STRING_ARRAY)
-                                            .build();
-
-    final GroupByQuery expectedQuery =
-        GroupByQuery.builder()
-                    .setDataSource(CalciteTests.DATASOURCE1)
-                    .setInterval(querySegmentSpec(Filtration.eternity()))
-                    .setGranularity(Granularities.ALL)
-                    .setDimensions(dimensions(new DefaultDimensionSpec("__time", "d0", ColumnType.LONG)))
-                    .build();
-
-
-    testSelectQuery()
-        .setSql("WITH\n"
-                + "kttm_data AS (\n"
-                + "SELECT * FROM TABLE(\n"
-                + "  EXTERN(\n"
-                + "    '{ \"files\": [" + toReadAsJson + "],\"type\":\"local\"}',\n"
-                + "    '{\"type\":\"json\"}',\n"
-                + "    '[{\"name\":\"timestamp\",\"type\":\"string\"},{\"name\":\"agent_category\",\"type\":\"string\"},{\"name\":\"agent_type\",\"type\":\"string\"},{\"name\":\"browser\",\"type\":\"string\"},{\"name\":\"browser_version\",\"type\":\"string\"},{\"name\":\"city\",\"type\":\"string\"},{\"name\":\"continent\",\"type\":\"string\"},{\"name\":\"country\",\"type\":\"string\"},{\"name\":\"version\",\"type\":\"string\"},{\"name\":\"event_type\",\"type\":\"string\"},{\"name\":\"event_subtype\",\"type\":\"string\"},{\"name\":\"loaded_image\",\"type\":\"string\"},{\"name\":\"adblock_list\",\"type\":\"string\"},{\"name\":\"forwarded_for\",\"type\":\"string\"},{\"name\":\"language\",\"type\":\"string\"},{\"name\":\"number\",\"type\":\"long\"},{\"name\":\"os\",\"type\":\"string\"},{\"name\":\"path\",\"type\":\"string\"},{\"name\":\"platform\",\"type\":\"string\"},{\"name\":\"referrer\",\"type\":\"string\"},{\"name\":\"referrer_host\",\"type\":\"string\"},{\"name\":\"region\",\"type\":\"string\"},{\"name\":\"remote_address\",\"type\":\"string\"},{\"name\":\"screen\",\"type\":\"string\"},{\"name\":\"session\",\"type\":\"string\"},{\"name\":\"session_length\",\"type\":\"long\"},{\"name\":\"timezone\",\"type\":\"string\"},{\"name\":\"timezone_offset\",\"type\":\"long\"},{\"name\":\"window\",\"type\":\"string\"}]'\n"
-                + "  )\n"
-                + "))\n"
-                + "\n"
-                + "SELECT\n"
-                + "  FLOOR(TIME_PARSE(\"timestamp\") TO MINUTE) AS __time,\n"
-                + "  MV_TO_ARRAY(\"language\") AS \"language\"\n"
-                + "FROM kttm_data")
-        .setExpectedRowSignature(rowSignature)
-        .setExpectedResultRows(ImmutableList.of(
-            new Object[]{1566691200000L, ImmutableList.of("en")},
-            new Object[]{1566691200000L, ImmutableList.of("en", "es", "es-419", "es-MX")},
-            new Object[]{1566691200000L, ImmutableList.of("en", "es", "es-419", "es-US")}
-        ))
-        .setExpectedMSQSpec(
-            MSQSpec
-                .builder()
-                .query(expectedQuery)
-                .columnMappings(new ColumnMappings(
-                    ImmutableList.of(
-                        new ColumnMapping("d0", "__time"),
-                        new ColumnMapping("a0", "cnt")
-                    )
-                ))
-                .tuningConfig(MSQTuningConfig.defaultConfig())
-                .build())
-        .setExpectedMSQFault(new CannotParseExternalDataFault(
-            "Unable to add the row to the frame. Type conversion might be required."))
-        .setQueryContext(context)
         .verifyResults();
   }
 

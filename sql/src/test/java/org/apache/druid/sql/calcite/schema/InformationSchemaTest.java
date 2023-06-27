@@ -136,7 +136,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
     Assert.assertNotNull(rows);
     Assert.assertEquals("There should be exactly 2 rows; any non-function syntax operator should get filtered out",
                         2, rows.size());
-    Object[] expectedRow1 = {"druid", "INFORMATION_SCHEMA", "FOO", "FUNCTION", "NO", "'FOO(<ANY>)'"};
+    Object[] expectedRow1 = {"druid", "INFORMATION_SCHEMA", "FOO", "FUNCTION", "NO", "'FOO([<ANY>])'"};
     Assert.assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow1)));
 
     Object[] expectedRow2 = {"druid", "INFORMATION_SCHEMA", "BAR", "FUNCTION", "NO", "'BAR(<INTEGER>, <INTEGER>)'"};
@@ -166,7 +166,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
     final SqlOperator operator1 = OperatorConversions
         .operatorBuilder("FOO")
         .operandTypes(SqlTypeFamily.ANY)
-        .requiredOperands(0)
+        .requiredOperandCount(0)
         .returnTypeInference(
             opBinding -> RowSignatures.makeComplexType(
                 opBinding.getTypeFactory(),
@@ -182,7 +182,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
         .operatorBuilder("BAR")
         .operandTypes(SqlTypeFamily.NUMERIC)
         .operandTypes(SqlTypeFamily.INTEGER, SqlTypeFamily.INTEGER)
-        .requiredOperands(2)
+        .requiredOperandCount(2)
         .returnTypeInference(
             opBinding -> RowSignatures.makeComplexType(
                 opBinding.getTypeFactory(),

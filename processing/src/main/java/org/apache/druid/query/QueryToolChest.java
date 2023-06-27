@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -34,6 +35,7 @@ import org.apache.druid.timeline.LogicalSegment;
 import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.BinaryOperator;
 
 /**
@@ -318,7 +320,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * query, each {@link org.apache.druid.query.topn.TopNResultValue} will generate a separate array for each of its
    * {@code values}.
    *
-   * By convention, the array form should include the __time column, if present,  as a long (milliseconds since epoch).
+   * By convention, the array form should include the __time column, if present, as a long (milliseconds since epoch).
    *
    * @param resultSequence results of the form returned by {@link #mergeResults}
    *
@@ -329,5 +331,33 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   public Sequence<Object[]> resultsAsArrays(QueryType query, Sequence<ResultType> resultSequence)
   {
     throw new UOE("Query type '%s' does not support returning results as arrays", query.getType());
+  }
+
+  /**
+   * Converts a sequence of this query's ResultType into a sequence of {@link FrameSignaturePair}. The array signature
+   * is the one give by {@link #resultArraySignature(Query)}. If the toolchest doesn't support this method, then it can
+   * return an empty optional. It is the duty of the callees to throw an appropriate exception in that case or use an
+   * alternative fallback approach
+   *
+   * Check documentation of {@link #resultsAsArrays(Query, Sequence)} as the behaviour of the rows represented by the
+   * frame sequence is identical.
+   *
+   * Each Frame has a separate {@link RowSignature} because for some query types like the Scan query, every
+   * column in the final result might not be present in the individual ResultType (and subsequently Frame). Therefore,
+   * this is done to preserve the space by not populating the column in that particular Frame and omitting it from its
+   * signature
+   *  @param query Query being executed by the toolchest. Used to determine the rowSignature of the Frames
+   * @param resultSequence results of the form returned by {@link #mergeResults(QueryRunner)}
+   * @param memoryAllocatorFactory
+   * @param useNestedForUnknownTypes true if the unknown types in the results can be serded using complex types
+   */
+  public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
+      QueryType query,
+      Sequence<ResultType> resultSequence,
+      MemoryAllocatorFactory memoryAllocatorFactory,
+      boolean useNestedForUnknownTypes
+  )
+  {
+    return Optional.empty();
   }
 }

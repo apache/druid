@@ -41,7 +41,6 @@ import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.Query;
@@ -457,7 +456,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     @Nonnull
     public Set<String> getTypes()
     {
-      throw new UOE("This inputSource does not support input source based security");
+      throw new CalciteIngestDmlTestException("getTypes()");
     }
 
     @JsonProperty
@@ -507,6 +506,14 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     public int hashCode()
     {
       return Objects.hash(files);
+    }
+  }
+
+  static class CalciteIngestDmlTestException extends RuntimeException
+  {
+    public CalciteIngestDmlTestException(String message)
+    {
+      super(message);
     }
   }
 }
