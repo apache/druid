@@ -367,10 +367,24 @@ public class CostBalancerStrategyTest
     );
   }
 
+  /**
+   * Verifies that the cost of placing the segment on the server is as expected.
+   * Also verifies that this cost is equal to the total joint cost of this segment
+   * with each segment currently on the server.
+   */
   private void verifyPlacementCost(DataSegment segment, ServerHolder server, double expectedCost)
   {
     double observedCost = strategy.computePlacementCost(segment, server);
     Assert.assertEquals(expectedCost, observedCost, DELTA);
+
+    double totalJointSegmentCost = 0;
+    for (DataSegment segmentOnServer : server.getServer().iterateAllSegments()) {
+      totalJointSegmentCost += CostBalancerStrategy.computeJointSegmentsCost(segment, segmentOnServer);
+    }
+    if (server.isServingSegment(segment)) {
+      totalJointSegmentCost -= CostBalancerStrategy.computeJointSegmentsCost(segment, segment);
+    }
+    Assert.assertEquals(totalJointSegmentCost, observedCost, DELTA);
   }
 
   private void verifyJointSegmentsCost(

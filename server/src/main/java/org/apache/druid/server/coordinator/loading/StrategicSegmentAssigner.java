@@ -431,7 +431,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     if (numToDrop > numDropsQueued) {
       remainingNumToDrop = numToDrop - numDropsQueued;
       Iterator<ServerHolder> serverIterator =
-          (useRoundRobinAssignment || eligibleLiveServers.size() >= remainingNumToDrop)
+          (useRoundRobinAssignment || eligibleLiveServers.size() <= remainingNumToDrop)
           ? eligibleLiveServers.iterator()
           : strategy.findServersToDropSegment(segment, new ArrayList<>(eligibleLiveServers));
       numDropsQueued += dropReplicasFromServers(remainingNumToDrop, segment, serverIterator, tier);
