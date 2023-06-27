@@ -30,7 +30,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.math.expr.AnalyzedExpr;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
@@ -71,11 +70,12 @@ public class ExpressionPostAggregator implements PostAggregator
   private final Map<String, Function<Object, Object>> finalizers;
   private final Expr.InputBindingInspector partialTypeInformation;
 
-  private final Supplier<AnalyzedExpr> parsed;
+  private final Supplier<Expr> parsed;
+  private final Supplier<Set<String>> dependentFields;
   private final Supplier<byte[]> cacheKey;
 
   /**
-   * Constructor for serialization.
+   * Constructor for deserialization.
    */
   @JsonCreator
   public ExpressionPostAggregator(
@@ -89,7 +89,7 @@ public class ExpressionPostAggregator implements PostAggregator
         name,
         expression,
         ordering,
-        Parser.lazyParseAndAnalyze(expression, macroTable)
+        Parser.lazyParse(expression, macroTable)
     );
   }
 
@@ -100,7 +100,7 @@ public class ExpressionPostAggregator implements PostAggregator
       final String name,
       final String expression,
       @Nullable final String ordering,
-      final AnalyzedExpr parsed
+      final Expr parsed
   )
   {
     this(
@@ -118,7 +118,7 @@ public class ExpressionPostAggregator implements PostAggregator
       final String name,
       final String expression,
       @Nullable final String ordering,
-      final Supplier<AnalyzedExpr> parsed
+      final Supplier<Expr> parsed
   )
   {
     this(
@@ -127,7 +127,8 @@ public class ExpressionPostAggregator implements PostAggregator
         ordering,
         ImmutableMap.of(),
         InputBindings.nilBindings(),
-        parsed
+        parsed,
+        Suppliers.memoize(() -> parsed.get().analyzeInputs().getRequiredBindings())
     );
   }
 
@@ -137,7 +138,8 @@ public class ExpressionPostAggregator implements PostAggregator
       @Nullable final String ordering,
       final Map<String, Function<Object, Object>> finalizers,
       final Expr.InputBindingInspector partialTypeInformation,
-      final Supplier<AnalyzedExpr> parsed
+      final Supplier<Expr> parsed,
+      final Supplier<Set<String>> dependentFields
   )
   {
     Preconditions.checkArgument(expression != null, "expression cannot be null");
@@ -151,19 +153,19 @@ public class ExpressionPostAggregator implements PostAggregator
     this.partialTypeInformation = partialTypeInformation;
 
     this.parsed = parsed;
+    this.dependentFields = dependentFields;
     this.cacheKey = Suppliers.memoize(() -> {
       return new CacheKeyBuilder(PostAggregatorIds.EXPRESSION)
-          .appendCacheable(parsed.get().expr())
+          .appendCacheable(parsed.get())
           .appendString(ordering)
           .build();
     });
   }
 
-
   @Override
   public Set<String> getDependentFields()
   {
-    return parsed.get().analyzeInputs().getRequiredBindings();
+    return dependentFields.get();
   }
 
   @Override
@@ -186,7 +188,7 @@ public class ExpressionPostAggregator implements PostAggregator
 
     // we use partialTypeInformation to avoid unnecessarily coercing aggregator values for which we do have type info
     // from decoration
-    return parsed.get().expr().eval(InputBindings.forMap(finalizedValues, partialTypeInformation)).valueOrDefault();
+    return parsed.get().eval(InputBindings.forMap(finalizedValues, partialTypeInformation)).valueOrDefault();
   }
 
   @Override
@@ -199,7 +201,7 @@ public class ExpressionPostAggregator implements PostAggregator
   @Override
   public ColumnType getType(ColumnInspector signature)
   {
-    final ExpressionType type = parsed.get().expr().getOutputType(signature);
+    final ExpressionType type = parsed.get().getOutputType(signature);
     if (type == null) {
       return null;
     } else {
@@ -222,7 +224,8 @@ public class ExpressionPostAggregator implements PostAggregator
         ordering,
         finalizers,
         InputBindings.inspectorFromTypeMap(types),
-        parsed
+        parsed,
+        dependentFields
     );
   }
 
@@ -262,7 +265,7 @@ public class ExpressionPostAggregator implements PostAggregator
      * Ensures the following order: numeric > NaN > Infinite.
      *
      * The name may be referenced via Ordering.valueOf(String) in the constructor {@link
-     * ExpressionPostAggregator#ExpressionPostAggregator(String, String, String, Map, Expr.InputBindingInspector, Supplier)}.
+     * ExpressionPostAggregator#ExpressionPostAggregator(String, String, String, Map, Expr.InputBindingInspector, Supplier, Supplier)}.
      */
     @SuppressWarnings("unused")
     numericFirst {

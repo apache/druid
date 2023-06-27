@@ -21,7 +21,6 @@ package org.apache.druid.segment.join;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.math.expr.AnalyzedExpr;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Exprs;
@@ -134,17 +133,11 @@ public class JoinConditionAnalysis
         if (isLeftExprAndRightColumn(lhs, rhs, rightPrefix)) {
           // rhs is a right-hand column; lhs is an expression solely of the left-hand side.
           equiConditions.add(
-              new Equality(
-                  AnalyzedExpr.wrap(lhs),
-                  Objects.requireNonNull(rhs.getBindingIfIdentifier()).substring(rightPrefix.length())
-              )
+              new Equality(lhs, Objects.requireNonNull(rhs.getBindingIfIdentifier()).substring(rightPrefix.length()))
           );
         } else if (isLeftExprAndRightColumn(rhs, lhs, rightPrefix)) {
           equiConditions.add(
-              new Equality(
-                  AnalyzedExpr.wrap(rhs),
-                  Objects.requireNonNull(lhs.getBindingIfIdentifier()).substring(rightPrefix.length())
-              )
+              new Equality(rhs, Objects.requireNonNull(lhs.getBindingIfIdentifier()).substring(rightPrefix.length()))
           );
         } else {
           nonEquiConditions.add(childExpr);
@@ -263,7 +256,7 @@ public class JoinConditionAnalysis
 
     for (Equality equality : equiConditions) {
       requiredColumns.add(rightPrefix + equality.getRightColumn());
-      requiredColumns.addAll(equality.analyzeLeftExprInputs().getRequiredBindings());
+      requiredColumns.addAll(equality.getLeftExpr().analyzeInputs().getRequiredBindings());
     }
 
     for (Expr expr : nonEquiConditions) {

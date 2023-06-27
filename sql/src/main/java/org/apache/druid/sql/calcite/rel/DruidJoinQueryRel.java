@@ -201,7 +201,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
             prefixSignaturePair.lhs,
             JoinConditionAnalysis.forExpression(
                 condition.getExpression(),
-                getPlannerContext().parseAndAnalyze(condition.getExpression()).expr(),
+                getPlannerContext().parse(condition.getExpression()),
                 prefixSignaturePair.lhs
             ),
             toDruidJoinType(joinRel.getJoinType()),

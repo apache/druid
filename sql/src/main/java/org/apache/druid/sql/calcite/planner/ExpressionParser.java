@@ -19,8 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import org.apache.druid.math.expr.AnalyzedExpr;
-import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.Parser;
 
 /**
@@ -29,7 +28,7 @@ import org.apache.druid.math.expr.Parser;
 public interface ExpressionParser
 {
   /**
-   * Equivalent to {@link Parser#parseAndAnalyze(String, ExprMacroTable)}, but without the macro table.
+   * Parse a string into a flattened {@link Expr}. Parsing is eager and the results may be cached.
    */
-  AnalyzedExpr parseAndAnalyze(String expr);
+  Expr parse(String expr);
 }

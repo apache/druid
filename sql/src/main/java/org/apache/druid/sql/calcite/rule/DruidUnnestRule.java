@@ -154,7 +154,7 @@ public class DruidUnnestRule extends RelOptRule
     }
 
     // Evaluate the expression. It's a constant, so no bindings are needed.
-    final Expr parsedExpression = plannerContext.parseAndAnalyze(expression.getExpression()).expr();
+    final Expr parsedExpression = plannerContext.parse(expression.getExpression());
     final ExprEval<?> eval = parsedExpression.eval(InputBindings.nilBindings());
     final List<Object[]> rows = new ArrayList<>();
 

@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.RangeSet;
-import org.apache.druid.math.expr.AnalyzedExpr;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -39,7 +39,7 @@ import java.util.Set;
 public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private final String expression;
-  private final Supplier<AnalyzedExpr> parsed;
+  private final Supplier<Expr> parsed;
   private final Supplier<byte[]> cacheKey;
   @Nullable
   private final FilterTuning filterTuning;
@@ -54,28 +54,28 @@ public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements
       @JacksonInject ExprMacroTable macroTable
   )
   {
-    this(expression, Parser.lazyParseAndAnalyze(expression, macroTable), filterTuning);
+    this(expression, Parser.lazyParse(expression, macroTable), filterTuning);
   }
 
   /**
    * Constructor used in various tests that don't need to provide {@link FilterTuning}.
    */
-  public ExpressionDimFilter(final String expression, final ExprMacroTable macroTable)
+  public ExpressionDimFilter(final String expression, ExprMacroTable macroTable)
   {
-    this(expression, Parser.lazyParseAndAnalyze(expression, macroTable), null);
+    this(expression, Parser.lazyParse(expression, macroTable), null);
   }
 
   /**
    * Constructor for already-parsed-and-analyzed expressions.
    */
-  public ExpressionDimFilter(final String expression, final AnalyzedExpr parsed)
+  public ExpressionDimFilter(final String expression, final Expr parsed, @Nullable final FilterTuning filterTuning)
   {
-    this(expression, () -> parsed, null);
+    this(expression, () -> parsed, filterTuning);
   }
 
   private ExpressionDimFilter(
       String expression,
-      Supplier<AnalyzedExpr> parsed,
+      Supplier<Expr> parsed,
       @Nullable FilterTuning filterTuning
   )
   {
@@ -85,7 +85,7 @@ public class ExpressionDimFilter extends AbstractOptimizableDimFilter implements
     this.cacheKey = Suppliers.memoize(
         () ->
             new CacheKeyBuilder(DimFilterUtils.EXPRESSION_CACHE_ID)
-                .appendCacheable(parsed.get().expr())
+                .appendCacheable(parsed.get())
                 .build()
     );
   }

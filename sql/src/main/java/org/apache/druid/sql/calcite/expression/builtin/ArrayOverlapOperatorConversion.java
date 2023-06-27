@@ -111,7 +111,7 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
       return toExpressionFilter(plannerContext, getDruidFunctionName(), druidExpressions);
     }
 
-    Expr expr = plannerContext.parseAndAnalyze(complexExpr.getExpression()).expr();
+    Expr expr = plannerContext.parse(complexExpr.getExpression());
     if (expr.isLiteral()) {
       // Evaluate the expression to take out the array elements.
       // We can safely pass null if the expression is literal.

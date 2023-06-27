@@ -234,7 +234,7 @@ public class Grouping
 
     for (int i = 0; i < dimensions.size(); i++) {
       final DimensionExpression dimension = dimensions.get(i);
-      if (plannerContext.parseAndAnalyze(dimension.getDruidExpression().getExpression()).expr().isLiteral()
+      if (plannerContext.parse(dimension.getDruidExpression().getExpression()).isLiteral()
           && !aggregateProjectBits.get(i)) {
         droppedDimensions = true;
         newDimIndexes[i] = -1;

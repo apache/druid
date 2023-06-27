@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.math.expr.AnalyzedExpr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -1877,13 +1876,7 @@ public class MSQSelectTest extends MSQTestBase
                            ))
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("v0")
-                           .virtualColumns(
-                               new ExpressionVirtualColumn(
-                                   "v0",
-                                   AnalyzedExpr.wrap(ExprEval.of(1L).toExpr()),
-                                   ColumnType.LONG
-                               )
-                           )
+                           .virtualColumns(new ExpressionVirtualColumn("v0", ExprEval.of(1L).toExpr(), ColumnType.LONG))
                            .context(defaultScanQueryContext(
                                context,
                                RowSignature.builder().add("v0", ColumnType.LONG).build()

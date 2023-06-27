@@ -23,11 +23,11 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.math.expr.AnalyzedExpr;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionProcessing;
@@ -60,7 +60,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   private final String expression;
   @Nullable
   private final ColumnType outputType;
-  private final Supplier<AnalyzedExpr> parsedExpression;
+  private final Supplier<Expr> parsedExpression;
   private final Supplier<byte[]> cacheKey;
 
   /**
@@ -74,7 +74,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
       @JacksonInject ExprMacroTable macroTable
   )
   {
-    this(name, expression, outputType, Parser.lazyParseAndAnalyze(expression, macroTable));
+    this(name, expression, outputType, Parser.lazyParse(expression, macroTable));
   }
 
   /**
@@ -82,10 +82,10 @@ public class ExpressionVirtualColumn implements VirtualColumn
    * expression string is known.
    */
   public ExpressionVirtualColumn(
-      String name,
-      String expression,
-      AnalyzedExpr parsedExpression,
-      @Nullable ColumnType outputType
+      final String name,
+      final String expression,
+      final Expr parsedExpression,
+      @Nullable final ColumnType outputType
   )
   {
     this(name, expression, outputType, () -> parsedExpression);
@@ -100,12 +100,12 @@ public class ExpressionVirtualColumn implements VirtualColumn
    * this will not work.
    *
    * If you know the original expression, use
-   * {@link ExpressionVirtualColumn#ExpressionVirtualColumn(String, String, AnalyzedExpr, ColumnType)} instead.
+   * {@link ExpressionVirtualColumn#ExpressionVirtualColumn(String, String, Expr, ColumnType)} instead.
    */
   public ExpressionVirtualColumn(
-      String name,
-      AnalyzedExpr parsedExpression,
-      @Nullable ColumnType outputType
+      final String name,
+      final Expr parsedExpression,
+      @Nullable final ColumnType outputType
   )
   {
     this(name, parsedExpression.toString(), outputType, () -> parsedExpression);
@@ -118,7 +118,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
       final String name,
       final String expression,
       @Nullable final ColumnType outputType,
-      final Supplier<AnalyzedExpr> parsedExpression
+      final Supplier<Expr> parsedExpression
   )
   {
     this.name = Preconditions.checkNotNull(name, "name");
@@ -149,9 +149,10 @@ public class ExpressionVirtualColumn implements VirtualColumn
   }
 
   @JsonIgnore
-  public Expr getParsedExpression()
+  @VisibleForTesting
+  public Supplier<Expr> getParsedExpression()
   {
-    return parsedExpression.get().expr();
+    return parsedExpression;
   }
 
   @Override
@@ -162,14 +163,14 @@ public class ExpressionVirtualColumn implements VirtualColumn
   {
     if (isDirectAccess(columnSelectorFactory)) {
       return columnSelectorFactory.makeDimensionSelector(
-          dimensionSpec.withDimension(parsedExpression.get().expr().getBindingIfIdentifier())
+          dimensionSpec.withDimension(parsedExpression.get().getBindingIfIdentifier())
       );
     }
 
     return dimensionSpec.decorate(
         ExpressionSelectors.makeDimensionSelector(
             columnSelectorFactory,
-            parsedExpression.get().expr(),
+            parsedExpression.get(),
             dimensionSpec.getExtractionFn()
         )
     );
@@ -179,7 +180,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName, ColumnSelectorFactory factory)
   {
     if (isDirectAccess(factory)) {
-      return factory.makeColumnValueSelector(parsedExpression.get().expr().getBindingIfIdentifier());
+      return factory.makeColumnValueSelector(parsedExpression.get().getBindingIfIdentifier());
     }
 
     final ColumnCapabilities capabilities = capabilities(factory, name);
@@ -187,9 +188,9 @@ public class ExpressionVirtualColumn implements VirtualColumn
     // other single and multi-value STRING selectors, whose getObject is expected to produce a single STRING value
     // or List of STRING values.
     if (capabilities.is(ValueType.STRING)) {
-      return ExpressionSelectors.makeStringColumnValueSelector(factory, parsedExpression.get().expr());
+      return ExpressionSelectors.makeStringColumnValueSelector(factory, parsedExpression.get());
     }
-    return ExpressionSelectors.makeColumnValueSelector(factory, parsedExpression.get().expr());
+    return ExpressionSelectors.makeColumnValueSelector(factory, parsedExpression.get());
   }
 
   @Override
@@ -200,7 +201,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
       return true;
     }
 
-    final ExpressionPlan plan = ExpressionPlanner.plan(inspector, parsedExpression.get().expr());
+    final ExpressionPlan plan = ExpressionPlanner.plan(inspector, parsedExpression.get());
     return plan.is(ExpressionPlan.Trait.VECTORIZABLE);
   }
 
@@ -212,31 +213,31 @@ public class ExpressionVirtualColumn implements VirtualColumn
   {
     if (isDirectAccess(factory)) {
       return factory.makeSingleValueDimensionSelector(
-          dimensionSpec.withDimension(parsedExpression.get().expr().getBindingIfIdentifier())
+          dimensionSpec.withDimension(parsedExpression.get().getBindingIfIdentifier())
       );
     }
 
-    return ExpressionVectorSelectors.makeSingleValueDimensionVectorSelector(factory, parsedExpression.get().expr());
+    return ExpressionVectorSelectors.makeSingleValueDimensionVectorSelector(factory, parsedExpression.get());
   }
 
   @Override
   public VectorValueSelector makeVectorValueSelector(String columnName, VectorColumnSelectorFactory factory)
   {
     if (isDirectAccess(factory)) {
-      return factory.makeValueSelector(parsedExpression.get().expr().getBindingIfIdentifier());
+      return factory.makeValueSelector(parsedExpression.get().getBindingIfIdentifier());
     }
 
-    return ExpressionVectorSelectors.makeVectorValueSelector(factory, parsedExpression.get().expr());
+    return ExpressionVectorSelectors.makeVectorValueSelector(factory, parsedExpression.get());
   }
 
   @Override
   public VectorObjectSelector makeVectorObjectSelector(String columnName, VectorColumnSelectorFactory factory)
   {
     if (isDirectAccess(factory)) {
-      return factory.makeObjectSelector(parsedExpression.get().expr().getBindingIfIdentifier());
+      return factory.makeObjectSelector(parsedExpression.get().getBindingIfIdentifier());
     }
 
-    return ExpressionVectorSelectors.makeVectorObjectSelector(factory, parsedExpression.get().expr());
+    return ExpressionVectorSelectors.makeVectorObjectSelector(factory, parsedExpression.get());
   }
 
   @Override
@@ -259,10 +260,10 @@ public class ExpressionVirtualColumn implements VirtualColumn
   public ColumnCapabilities capabilities(ColumnInspector inspector, String columnName)
   {
     if (isDirectAccess(inspector)) {
-      return inspector.getColumnCapabilities(parsedExpression.get().expr().getBindingIfIdentifier());
+      return inspector.getColumnCapabilities(parsedExpression.get().getBindingIfIdentifier());
     }
 
-    final ExpressionPlan plan = ExpressionPlanner.plan(inspector, parsedExpression.get().expr());
+    final ExpressionPlan plan = ExpressionPlanner.plan(inspector, parsedExpression.get());
     final ColumnCapabilities inferred = plan.inferColumnCapabilities(outputType);
     // if we can infer the column capabilities from the expression plan, then use that
     if (inferred != null) {
@@ -348,9 +349,9 @@ public class ExpressionVirtualColumn implements VirtualColumn
    */
   private boolean isDirectAccess(final ColumnInspector inspector)
   {
-    if (parsedExpression.get().expr().isIdentifier()) {
+    if (parsedExpression.get().isIdentifier()) {
       final ColumnCapabilities baseCapabilities =
-          inspector.getColumnCapabilities(parsedExpression.get().expr().getBindingIfIdentifier());
+          inspector.getColumnCapabilities(parsedExpression.get().getBindingIfIdentifier());
 
       if (outputType == null) {
         // No desired output type. Anything from the source is fine.
@@ -369,7 +370,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     return Suppliers.memoize(() -> {
       CacheKeyBuilder builder = new CacheKeyBuilder(VirtualColumnCacheHelper.CACHE_TYPE_ID_EXPRESSION)
           .appendString(name)
-          .appendCacheable(parsedExpression.get().expr());
+          .appendCacheable(parsedExpression.get());
 
       if (outputType != null) {
         builder.appendString(outputType.toString());

@@ -596,7 +596,7 @@ public class DruidExpression
     @Override
     public VirtualColumn create(String name, ColumnType outputType, String expression, ExpressionParser parser)
     {
-      return new ExpressionVirtualColumn(name, expression, parser.parseAndAnalyze(expression), outputType);
+      return new ExpressionVirtualColumn(name, expression, parser.parse(expression), outputType);
     }
   }
 }

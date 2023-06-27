@@ -32,7 +32,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.AnalyzedExpr;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -237,12 +237,11 @@ public class PlannerContext
   }
 
   /**
-   * Equivalent to {@link ExpressionParser#parseAndAnalyze(String)} on {@link #getExpressionParser()}.
-   * Parsing is eager, input analysis is lazy.
+   * Equivalent to {@link ExpressionParser#parse(String)} on {@link #getExpressionParser()}.
    */
-  public AnalyzedExpr parseAndAnalyze(final String expr)
+  public Expr parse(final String expr)
   {
-    return expressionParser.parseAndAnalyze(expr);
+    return expressionParser.parse(expr);
   }
 
   // Deprecated: prefer using the toolbox

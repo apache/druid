@@ -22,7 +22,6 @@ package org.apache.druid.segment.join.filter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.math.expr.AnalyzedExpr;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -323,7 +322,7 @@ public class JoinFilterAnalyzer
                 String vcName = getCorrelatedBaseExprVirtualColumnName(pushDownVirtualColumnsForLhsExprs.size());
                 return new ExpressionVirtualColumn(
                     vcName,
-                    AnalyzedExpr.wrap(correlatedBaseExpr),
+                    correlatedBaseExpr,
                     ColumnType.STRING
                 );
               }
@@ -487,7 +486,7 @@ public class JoinFilterAnalyzer
                 String vcName = getCorrelatedBaseExprVirtualColumnName(pushDownVirtualColumnsForLhsExprs.size());
                 return new ExpressionVirtualColumn(
                     vcName,
-                    AnalyzedExpr.wrap(correlatedBaseExpr),
+                    correlatedBaseExpr,
                     ColumnType.STRING
                 );
               }

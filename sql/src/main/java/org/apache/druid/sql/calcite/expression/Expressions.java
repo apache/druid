@@ -717,7 +717,8 @@ public class Expressions
     if (druidExpression != null) {
       return new ExpressionDimFilter(
           druidExpression.getExpression(),
-          plannerContext.parseAndAnalyze(druidExpression.getExpression())
+          plannerContext.parse(druidExpression.getExpression()),
+          null
       );
     }
 
@@ -755,7 +756,7 @@ public class Expressions
       final ExpressionParser parser
   )
   {
-    final Expr expr = parser.parseAndAnalyze(expression.getExpression()).expr();
+    final Expr expr = parser.parse(expression.getExpression());
 
     if (expr instanceof TimestampFloorExprMacro.TimestampFloorExpr) {
       return (TimestampFloorExprMacro.TimestampFloorExpr) expr;

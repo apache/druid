@@ -303,7 +303,7 @@ public class OperatorConversions
             postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
             druidExpression.getExpression(),
             null,
-            plannerContext.parseAndAnalyze(druidExpression.getExpression())
+            plannerContext.parse(druidExpression.getExpression())
         );
       }
     }

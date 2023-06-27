@@ -90,7 +90,7 @@ public class DateTruncOperatorConversion implements SqlOperatorConversion
         rexNode,
         inputExpressions -> {
           final DruidExpression arg = inputExpressions.get(1);
-          final Expr truncTypeExpr = plannerContext.parseAndAnalyze(inputExpressions.get(0).getExpression()).expr();
+          final Expr truncTypeExpr = plannerContext.parse(inputExpressions.get(0).getExpression());
 
           if (!truncTypeExpr.isLiteral()) {
             throw new IAE("Operator[%s] truncType must be a literal", calciteOperator().getName());

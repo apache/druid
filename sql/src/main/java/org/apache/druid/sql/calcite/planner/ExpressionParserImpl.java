@@ -22,7 +22,7 @@ package org.apache.druid.sql.calcite.planner;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Weigher;
-import org.apache.druid.math.expr.AnalyzedExpr;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
 
@@ -36,21 +36,21 @@ public class ExpressionParserImpl implements ExpressionParser
    */
   private static final int MAX_EXPRESSION_WEIGHT = 1_000_000;
 
-  private final Cache<String, AnalyzedExpr> cache;
+  private final Cache<String, Expr> cache;
   private final ExprMacroTable macroTable;
 
   public ExpressionParserImpl(final ExprMacroTable macroTable)
   {
     this.cache = Caffeine.newBuilder()
                          .maximumWeight(MAX_EXPRESSION_WEIGHT)
-                         .weigher((Weigher<String, AnalyzedExpr>) (key, value) -> key.length())
+                         .weigher((Weigher<String, Expr>) (key, value) -> key.length())
                          .build();
     this.macroTable = macroTable;
   }
 
   @Override
-  public AnalyzedExpr parseAndAnalyze(final String expression)
+  public Expr parse(final String expression)
   {
-    return cache.get(expression, k -> Parser.parseAndAnalyze(expression, macroTable));
+    return cache.get(expression, k -> Parser.parse(expression, macroTable));
   }
 }

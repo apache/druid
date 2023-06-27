@@ -95,7 +95,7 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
     final DruidExpression rightExpr = druidExpressions.get(1);
 
     if (leftExpr.isSimpleExtraction() && !(leftExpr.isDirectColumnAccess() && leftExpr.getDruidType() != null && leftExpr.getDruidType().isArray())) {
-      Expr expr = plannerContext.parseAndAnalyze(rightExpr.getExpression()).expr();
+      Expr expr = plannerContext.parse(rightExpr.getExpression());
       // To convert this expression filter into an And of Selector filters, we need to extract all array elements.
       // For now, we can optimize only when rightExpr is a literal because there is no way to extract the array elements
       // by traversing the Expr. Note that all implementations of Expr are defined as package-private classes in a

@@ -144,12 +144,14 @@ public class CaseOperatorConversion implements SqlOperatorConversion
         if (thenFilter != null && !(thenFilter instanceof ExpressionDimFilter) && elseFilter == null) {
           elseFilter = new ExpressionDimFilter(
               elseExpression.getExpression(),
-              plannerContext.parseAndAnalyze(elseExpression.getExpression())
+              plannerContext.parse(elseExpression.getExpression()),
+              null
           );
         } else if (thenFilter == null && elseFilter != null && !(elseFilter instanceof ExpressionDimFilter)) {
           thenFilter = new ExpressionDimFilter(
               thenExpression.getExpression(),
-              plannerContext.parseAndAnalyze(thenExpression.getExpression())
+              plannerContext.parse(thenExpression.getExpression()),
+              null
           );
         }
 
