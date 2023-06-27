@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -301,12 +302,32 @@ public class CoordinatorServerViewTest extends CuratorTestBase
       {
         super.registerSegmentCallback(
             exec,
-            ServerView.performAfterSegmentCallback(
-                callback,
-                (server, segment) -> segmentAddedLatch.countDown(),
-                (server, segment) -> segmentRemovedLatch.countDown(),
-                segmentViewInitLatch::countDown
-            )
+            new SegmentCallback()
+            {
+              @Override
+              public CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
+              {
+                CallbackAction res = callback.segmentAdded(server, segment);
+                segmentAddedLatch.countDown();
+                return res;
+              }
+
+              @Override
+              public CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
+              {
+                CallbackAction res = callback.segmentRemoved(server, segment);
+                segmentRemovedLatch.countDown();
+                return res;
+              }
+
+              @Override
+              public CallbackAction segmentViewInitialized()
+              {
+                CallbackAction res = callback.segmentViewInitialized();
+                segmentViewInitLatch.countDown();
+                return res;
+              }
+            }
         );
       }
     };

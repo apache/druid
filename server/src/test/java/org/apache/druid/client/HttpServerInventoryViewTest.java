@@ -134,13 +134,29 @@ public class HttpServerInventoryViewTest
 
     httpServerInventoryView.registerSegmentCallback(
         Execs.directExecutor(),
-        ServerView.perpetualSegmentCallback(
-            (server, segment) -> segmentsAddedToView.computeIfAbsent(server, s -> new HashSet<>())
-                                                    .add(segment),
-            (server, segment) -> segmentsRemovedFromView.computeIfAbsent(server, s -> new HashSet<>())
-                                                        .add(segment),
-            () -> inventoryInitialized.set(true)
-        )
+        new ServerView.SegmentCallback()
+        {
+          @Override
+          public ServerView.CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
+          {
+            segmentsAddedToView.computeIfAbsent(server, s -> new HashSet<>()).add(segment);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
+          {
+            segmentsRemovedFromView.computeIfAbsent(server, s -> new HashSet<>()).add(segment);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentViewInitialized()
+          {
+            inventoryInitialized.set(true);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+        }
     );
   }
 
