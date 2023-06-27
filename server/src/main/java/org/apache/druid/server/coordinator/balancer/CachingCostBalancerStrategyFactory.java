@@ -125,6 +125,10 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
   @Override
   public BalancerStrategy createBalancerStrategy(final ListeningExecutorService exec)
   {
+    LOG.warn(
+        "'cachingCost' balancer strategy has been deprecated as it can lead to"
+        + " unbalanced clusters. Use 'cost' strategy instead."
+    );
     if (!isInitialized() && config.isAwaitInitialization()) {
       try {
         final long startMillis = System.currentTimeMillis();

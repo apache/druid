@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.parser;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.avatica.util.TimeUnit;
+import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlIntervalQualifier;
@@ -28,7 +29,9 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlPostfixOperator;
+import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.druid.error.DruidException;
@@ -42,6 +45,8 @@ import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import java.util.Arrays;
 
 @RunWith(Enclosed.class)
 public class DruidSqlParserUtilsTest
@@ -122,6 +127,214 @@ public class DruidSqlParserUtilsTest
       final SqlNode floorCall = SqlStdOperatorTable.FLOOR.createCall(args);
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(floorCall);
       Assert.assertEquals(expectedGranularity, actualGranularity);
+    }
+  }
+
+  /**
+   * Test class that validates the resolution of "CLUSTERED BY" columns to output columns.
+   */
+  public static class ResolveClusteredByColumnsTest
+  {
+    @Test
+    public void testNullClusteredByAndSource()
+    {
+      Assert.assertNull(DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(null, null));
+    }
+
+    @Test
+    public void testNullClusteredBy()
+    {
+      final SqlNodeList selectArgs = new SqlNodeList(SqlParserPos.ZERO);
+      selectArgs.add(new SqlIdentifier("__time", new SqlParserPos(0, 1)));
+      Assert.assertNull(DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(
+          null,
+          new SqlSelect(SqlParserPos.ZERO, null, selectArgs, null, null, null, null, null, null, null, null)
+        )
+      );
+    }
+
+    @Test
+    public void testNullSource()
+    {
+      final SqlNodeList args = new SqlNodeList(SqlParserPos.ZERO);
+      args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
+      args.add(new SqlIntervalQualifier(TimeUnit.DAY, null, SqlParserPos.ZERO));
+
+      IllegalArgumentException iae = Assert.assertThrows(
+          IllegalArgumentException.class,
+          () -> DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(args, null)
+      );
+      Assert.assertEquals("Source node must be either SqlSelect or SqlOrderBy, but found [null]", iae.getMessage());
+    }
+
+    @Test
+    public void testSimpleClusteredBy()
+    {
+      final SqlNodeList selectArgs = new SqlNodeList(SqlParserPos.ZERO);
+      selectArgs.add(new SqlIdentifier("__time", new SqlParserPos(0, 1)));
+      selectArgs.add(new SqlIdentifier("FOO", new SqlParserPos(0, 2)));
+      selectArgs.add(new SqlIdentifier("BOO", new SqlParserPos(0, 3)));
+
+      final SqlSelect sqlSelect = new SqlSelect(
+          SqlParserPos.ZERO,
+          null,
+          selectArgs,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
+
+      final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);
+      clusteredByArgs.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
+      clusteredByArgs.add(new SqlIdentifier("FOO", SqlParserPos.ZERO));
+      clusteredByArgs.add(SqlLiteral.createExactNumeric("3", SqlParserPos.ZERO));
+
+      Assert.assertEquals(
+          Arrays.asList("__time", "FOO", "BOO"),
+          DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(clusteredByArgs, sqlSelect)
+      );
+    }
+
+    @Test
+    public void testClusteredByOrdinalInvalidThrowsException()
+    {
+      final SqlNodeList selectArgs = new SqlNodeList(SqlParserPos.ZERO);
+      selectArgs.add(new SqlIdentifier("__time", new SqlParserPos(0, 1)));
+      selectArgs.add(new SqlIdentifier("FOO", new SqlParserPos(0, 2)));
+      selectArgs.add(new SqlIdentifier("BOO", new SqlParserPos(0, 3)));
+
+      final SqlSelect sqlSelect = new SqlSelect(
+          SqlParserPos.ZERO,
+          null,
+          selectArgs,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
+
+      final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);
+      clusteredByArgs.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
+      clusteredByArgs.add(new SqlIdentifier("FOO", SqlParserPos.ZERO));
+      clusteredByArgs.add(SqlLiteral.createExactNumeric("4", SqlParserPos.ZERO));
+
+      MatcherAssert.assertThat(
+          Assert.assertThrows(DruidException.class, () -> DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(clusteredByArgs, sqlSelect)),
+          DruidExceptionMatcher.invalidSqlInput().expectMessageIs(
+              "Ordinal[4] specified in the CLUSTERED BY clause is invalid. It must be between 1 and 3."
+          )
+      );
+    }
+
+
+    @Test
+    public void testClusteredByOrdinalsAndAliases()
+    {
+      // Construct the select source args
+      final SqlNodeList selectArgs = new SqlNodeList(SqlParserPos.ZERO);
+      selectArgs.add(new SqlIdentifier("__time", new SqlParserPos(0, 1)));
+      selectArgs.add(new SqlIdentifier("DIM3", new SqlParserPos(0, 2)));
+
+      SqlBasicCall sqlBasicCall1 = new SqlBasicCall(
+          new SqlAsOperator(),
+          new SqlNode[]{
+              new SqlIdentifier("DIM3", SqlParserPos.ZERO),
+              new SqlIdentifier("DIM3_ALIAS", SqlParserPos.ZERO)
+          },
+          new SqlParserPos(0, 3)
+      );
+      selectArgs.add(sqlBasicCall1);
+
+      SqlBasicCall sqlBasicCall2 = new SqlBasicCall(
+          new SqlAsOperator(),
+          new SqlNode[]{
+              new SqlIdentifier("FLOOR(__time)", SqlParserPos.ZERO),
+              new SqlIdentifier("floor_dim4_time", SqlParserPos.ZERO)
+          },
+          new SqlParserPos(0, 4)
+      );
+      selectArgs.add(sqlBasicCall2);
+
+      selectArgs.add(new SqlIdentifier("DIM5", new SqlParserPos(0, 5)));
+      selectArgs.add(new SqlIdentifier("DIM6", new SqlParserPos(0, 6)));
+
+      final SqlNodeList args3 = new SqlNodeList(SqlParserPos.ZERO);
+      args3.add(new SqlIdentifier("timestamps", SqlParserPos.ZERO));
+      args3.add(SqlLiteral.createCharString("PT1H", SqlParserPos.ZERO));
+      selectArgs.add(TimeFloorOperatorConversion.SQL_FUNCTION.createCall(args3));
+
+      final SqlSelect sqlSelect = new SqlSelect(
+          SqlParserPos.ZERO,
+          null,
+          selectArgs,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
+
+      // Construct the clustered by args
+      final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);
+      clusteredByArgs.add(SqlLiteral.createExactNumeric("3", SqlParserPos.ZERO));
+      clusteredByArgs.add(SqlLiteral.createExactNumeric("4", SqlParserPos.ZERO));
+      clusteredByArgs.add(SqlLiteral.createExactNumeric("5", SqlParserPos.ZERO));
+      clusteredByArgs.add(SqlLiteral.createExactNumeric("7", SqlParserPos.ZERO));
+
+      Assert.assertEquals(
+          Arrays.asList("DIM3_ALIAS", "floor_dim4_time", "DIM5", "TIME_FLOOR(\"timestamps\", 'PT1H')"),
+          DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(clusteredByArgs, sqlSelect)
+      );
+    }
+
+    @Test
+    public void testSimpleClusteredByWithOrderBy()
+    {
+      final SqlNodeList selectArgs = new SqlNodeList(SqlParserPos.ZERO);
+      selectArgs.add(new SqlIdentifier("__time", new SqlParserPos(0, 1)));
+      selectArgs.add(new SqlIdentifier("FOO", new SqlParserPos(0, 2)));
+      selectArgs.add(new SqlIdentifier("BOO", new SqlParserPos(0, 3)));
+
+      final SqlSelect sqlSelect = new SqlSelect(
+          SqlParserPos.ZERO,
+          null,
+          selectArgs,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
+
+      SqlNodeList orderList = new SqlNodeList(SqlParserPos.ZERO);
+      orderList.add(sqlSelect);
+
+      SqlNode orderByNode = new SqlOrderBy(SqlParserPos.ZERO, sqlSelect, orderList, null, null);
+
+      final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);
+      clusteredByArgs.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
+      clusteredByArgs.add(new SqlIdentifier("FOO", SqlParserPos.ZERO));
+      clusteredByArgs.add(SqlLiteral.createExactNumeric("3", SqlParserPos.ZERO));
+
+      Assert.assertEquals(
+          Arrays.asList("__time", "FOO", "BOO"),
+          DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(clusteredByArgs, orderByNode)
+      );
     }
   }
 

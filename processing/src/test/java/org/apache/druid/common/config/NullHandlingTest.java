@@ -19,21 +19,15 @@
 
 package org.apache.druid.common.config;
 
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.apache.druid.common.config.NullHandling.replaceWithDefault;
 import static org.junit.Assert.assertEquals;
 
-public class NullHandlingTest
+public final class NullHandlingTest extends InitializedNullHandlingTest
 {
-  @BeforeClass
-  public static void setUpClass()
-  {
-    NullHandling.initializeForTests();
-  }
-
   @Test
   public void test_defaultValueForClass_float()
   {

@@ -123,7 +123,7 @@ print(response.text)
 
 | Field | Description |
 |---|---|
-| `taskId` | Controller task ID. You can use Druid's standard [task APIs](api-reference.md#overlord) to interact with this controller task. |
+| `taskId` | Controller task ID. You can use Druid's standard [Tasks API](./tasks-api.md) to interact with this controller task. |
 | `state` | Initial state for the query, which is "RUNNING". |
 
 ## Get the status for a query task

@@ -96,7 +96,8 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                       ImmutableMap.of(
                           DruidServer.DEFAULT_TIER,
                           DruidServer.DEFAULT_NUM_REPLICANTS
-                      )
+                      ),
+                      null
                   )
               );
               final String version = DateTimes.nowUtc().toString();

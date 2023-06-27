@@ -61,7 +61,7 @@ public class SegmentLoadingConfig
 
       log.info(
           "Smart segment loading is enabled. Recomputed replicationThrottleLimit"
-          + " [%,d] (%d%% of used segments [%,d]) and maxSegmentsToMove [%d].",
+          + " [%,d] (%d%% of used segments [%,d]) and maxSegmentsToMove [%,d].",
           replicationThrottleLimit, throttlePercentage, numUsedSegments, maxSegmentsToMove
       );
 
