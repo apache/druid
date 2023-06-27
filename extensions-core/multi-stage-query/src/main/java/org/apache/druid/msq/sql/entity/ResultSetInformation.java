@@ -36,8 +36,8 @@ public class ResultSetInformation
   @Nullable
   private final Long sizeInBytes;
 
+  @Nullable
   private final ResultFormat resultFormat;
-
 
   @Nullable
   private final List<Object> records;
@@ -47,11 +47,10 @@ public class ResultSetInformation
 
   @JsonCreator
   public ResultSetInformation(
-      @Nullable
-      @JsonProperty ResultFormat resultFormat,
-      @JsonProperty @Nullable Long numRows,
-      @JsonProperty @Nullable Long sizeInBytes,
-      @JsonProperty @Nullable String dataSource,
+      @JsonProperty("resultFormat") @Nullable ResultFormat resultFormat,
+      @JsonProperty("numRows") @Nullable Long numRows,
+      @JsonProperty("sizeInBytes") @Nullable Long sizeInBytes,
+      @JsonProperty("dataSource") @Nullable String dataSource,
       @JsonProperty("sampleRecords") @Nullable
       List<Object> records
   )

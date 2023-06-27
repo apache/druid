@@ -34,7 +34,6 @@ import org.apache.druid.msq.indexing.TaskReportMSQDestination;
 import org.apache.druid.msq.sql.SqlStatementState;
 import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
@@ -199,13 +198,16 @@ public class SqlStatementResourceHelper
           null,
           taskResponse.getStatus().getDuration(),
           null,
-          new QueryException(null, statusPlus.getErrorMsg(), null, null, null)
+          DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                        .ofCategory(DruidException.Category.UNCATEGORIZED)
+                        .build(taskResponse.getStatus().getErrorMsg()).toErrorResponse()
       ));
     }
 
     final String errorMessage = String.valueOf(exception.getOrDefault("errorMessage", statusPlus.getErrorMsg()));
     exception.remove("errorMessage");
-    String host = (String) exceptionDetails.getOrDefault("host", null);
+    String errorCode = String.valueOf(exception.getOrDefault("errorCode", "unknown"));
+    exception.remove("errorCode");
     Map<String, String> stringException = new HashMap<>();
     for (Map.Entry<String, Object> exceptionKeys : exception.entrySet()) {
       stringException.put(exceptionKeys.getKey(), String.valueOf(exceptionKeys.getValue()));
@@ -217,7 +219,18 @@ public class SqlStatementResourceHelper
         null,
         taskResponse.getStatus().getDuration(),
         null,
-        new QueryException(null, errorMessage, null, host, stringException)
+        DruidException.fromFailure(new DruidException.Failure(errorCode)
+        {
+          @Override
+          protected DruidException makeException(DruidException.DruidExceptionBuilder bob)
+          {
+            DruidException ex = bob.forPersona(DruidException.Persona.USER)
+                                   .ofCategory(DruidException.Category.UNCATEGORIZED)
+                                   .build(errorMessage);
+            ex.withContext(stringException);
+            return ex;
+          }
+        }).toErrorResponse()
     ));
   }
 

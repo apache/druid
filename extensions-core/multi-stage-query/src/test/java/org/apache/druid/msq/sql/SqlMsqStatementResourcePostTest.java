@@ -21,11 +21,15 @@ package org.apache.druid.msq.sql;
 
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
+import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
 import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
@@ -34,7 +38,6 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.QueryException;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlQuery;
@@ -49,6 +52,7 @@ import java.util.List;
 public class SqlMsqStatementResourcePostTest extends MSQTestBase
 {
   private SqlStatementResource resource;
+  public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   @Before
   public void init()
@@ -82,7 +86,7 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.ASYNC.name()),
+        defaultAsyncContext(),
         null
     ), SqlStatementResourceTest.makeOkRequest());
 
@@ -136,7 +140,7 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.ASYNC.name()),
+        defaultAsyncContext(),
         null
     ), SqlStatementResourceTest.makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -145,6 +149,8 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
 
     InsertCannotBeEmptyFault insertCannotBeEmptyFault = new InsertCannotBeEmptyFault("foo1");
 
+    MSQException insertCannotBeEmpty = new MSQException(insertCannotBeEmptyFault);
+
     SqlStatementResult expected = new SqlStatementResult(
         actual.getQueryId(),
         SqlStatementState.FAILED,
@@ -152,20 +158,42 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
         null,
         MSQTestOverlordServiceClient.DURATION,
         null,
-        new QueryException(
-            null,
-            insertCannotBeEmptyFault.getErrorMessage(),
-            null,
-            "localhost:8080",
-            ImmutableMap.of(
-                "errorCode",
-                InsertCannotBeEmptyFault.CODE,
-                "dataSource",
-                insertCannotBeEmptyFault.getDataSource()
-            )
-        )
+        DruidException.fromFailure(new DruidException.Failure(InsertCannotBeEmptyFault.CODE)
+        {
+          @Override
+          protected DruidException makeException(DruidException.DruidExceptionBuilder bob)
+          {
+            DruidException e = bob.forPersona(DruidException.Persona.USER)
+                                  .ofCategory(DruidException.Category.UNCATEGORIZED)
+                                  .build(insertCannotBeEmpty.getMessage());
+            e.withContext("dataSource", insertCannotBeEmptyFault.getDataSource());
+            return e;
+          }
+        }).toErrorResponse()
     );
     Assert.assertEquals(expected, actual);
+  }
+
+  private static ImmutableMap<String, Object> defaultAsyncContext()
+  {
+    return ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.ASYNC.name());
+  }
+
+  @Test
+  public void forbiddenTest()
+  {
+    Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), resource.doPost(
+        new SqlQuery(
+            StringUtils.format("select * from %s", CalciteTests.FORBIDDEN_DATASOURCE),
+            null,
+            false,
+            false,
+            false,
+            defaultAsyncContext(),
+            null
+        ),
+        SqlStatementResourceTest.makeOkRequest()
+    ).getStatus());
   }
 
 

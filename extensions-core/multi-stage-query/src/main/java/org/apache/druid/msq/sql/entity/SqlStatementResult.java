@@ -22,8 +22,8 @@ package org.apache.druid.msq.sql.entity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.msq.sql.SqlStatementState;
-import org.apache.druid.query.QueryException;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -49,7 +49,7 @@ public class SqlStatementResult
   private final ResultSetInformation resultSetInformation;
 
   @Nullable
-  private final QueryException queryException;
+  private final ErrorResponse errorResponse;
 
 
   @JsonCreator
@@ -66,8 +66,8 @@ public class SqlStatementResult
       Long durationMs,
       @Nullable @JsonProperty("result")
       ResultSetInformation resultSetInformation,
-      @Nullable @JsonProperty("exception")
-      QueryException queryException
+      @Nullable @JsonProperty("errorDetails")
+      ErrorResponse errorResponse
 
   )
   {
@@ -77,7 +77,7 @@ public class SqlStatementResult
     this.sqlRowSignature = sqlRowSignature;
     this.durationMs = durationMs;
     this.resultSetInformation = resultSetInformation;
-    this.queryException = queryException;
+    this.errorResponse = errorResponse;
   }
 
   @JsonProperty
@@ -114,7 +114,7 @@ public class SqlStatementResult
     return durationMs;
   }
 
-  @JsonProperty
+  @JsonProperty("result")
   @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public ResultSetInformation getResultSetInformation()
@@ -122,13 +122,14 @@ public class SqlStatementResult
     return resultSetInformation;
   }
 
-  @JsonProperty
+  @JsonProperty("errorDetails")
   @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public QueryException getQueryException()
+  public ErrorResponse getErrorResponse()
   {
-    return queryException;
+    return errorResponse;
   }
+
 
   @Override
   public boolean equals(Object o)
@@ -147,15 +148,23 @@ public class SqlStatementResult
         durationMs,
         that.durationMs
     ) && Objects.equals(resultSetInformation, that.resultSetInformation) && Objects.equals(
-        queryException,
-        that.queryException
+        errorResponse == null ? null : errorResponse.getAsMap(),
+        that.errorResponse == null ? null : errorResponse.getAsMap()
     );
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(queryId, state, createdAt, sqlRowSignature, durationMs, resultSetInformation, queryException);
+    return Objects.hash(
+        queryId,
+        state,
+        createdAt,
+        sqlRowSignature,
+        durationMs,
+        resultSetInformation,
+        errorResponse == null ? null : errorResponse.getAsMap()
+    );
   }
 
   @Override
@@ -168,7 +177,9 @@ public class SqlStatementResult
            ", sqlRowSignature=" + sqlRowSignature +
            ", durationInMs=" + durationMs +
            ", resultSetInformation=" + resultSetInformation +
-           ", queryException=" + queryException +
+           ", errorResponse=" + (errorResponse == null
+                                 ? "{}"
+                                 : errorResponse.getAsMap().toString()) +
            '}';
   }
 }

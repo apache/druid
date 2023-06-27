@@ -134,7 +134,6 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.security.AuthConfig;
-import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -494,7 +493,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         qf.operatorTable(),
         qf.macroTable(),
         PLANNER_CONFIG_DEFAULT,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
         objectMapper,
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
@@ -953,10 +952,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
                     worker,
                     channel
                 );
-                Assert.assertTrue(StringUtils.format("Counters not found for stage [%d], worker [%d], channel [%s]",
-                                                     stage,
-                                                     worker,
-                                                     channel), channelToCounters.containsKey(channel));
+                Assert.assertTrue(StringUtils.format(
+                    "Counters not found for stage [%d], worker [%d], channel [%s]",
+                    stage,
+                    worker,
+                    channel
+                ), channelToCounters.containsKey(channel));
                 counter.matchQuerySnapshot(errorMessageFormat, channelToCounters.get(channel));
               }
           );

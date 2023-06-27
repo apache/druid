@@ -22,7 +22,6 @@ package org.apache.druid.msq.sql;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.util.Maps;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
@@ -88,6 +87,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -95,9 +95,8 @@ import java.util.stream.Collectors;
 public class SqlStatementResourceTest extends MSQTestBase
 {
 
+  public static final DateTime CREATED_TIME = DateTimes.of("2023-05-31T12:00Z");
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
-  private static SqlStatementResource resource;
-
   private static final String ACCEPTED_SELECT_MSQ_QUERY = "QUERY_ID_1";
   private static final String RUNNING_SELECT_MSQ_QUERY = "QUERY_ID_2";
   private static final String FINISHED_SELECT_MSQ_QUERY = "QUERY_ID_3";
@@ -158,7 +157,7 @@ public class SqlStatementResourceTest extends MSQTestBase
                  MSQTuningConfig.defaultConfig())
              .build(),
       "select _time,alias,market from test",
-      Maps.newHashMap(),
+      new HashMap<>(),
       null,
       ImmutableList.of(
           SqlTypeName.TIMESTAMP,
@@ -203,7 +202,7 @@ public class SqlStatementResourceTest extends MSQTestBase
                  MSQTuningConfig.defaultConfig())
              .build(),
       "insert into test select _time,alias,market from test",
-      Maps.newHashMap(),
+      new HashMap<>(),
       null,
       ImmutableList.of(
           SqlTypeName.TIMESTAMP,
@@ -294,18 +293,10 @@ public class SqlStatementResourceTest extends MSQTestBase
           null
       )
   );
-
-  @Mock
-  private static OverlordClient overlordClient;
-
-  private static final DateTime CREATED_TIME = DateTimes.of("2023-05-31T12:00Z");
   private static final DateTime QUEUE_INSERTION_TIME = DateTimes.of("2023-05-31T12:01Z");
-
-
   private static final Map<String, Object> ROW1 = ImmutableMap.of("_time", 123, "alias", "foo", "market", "bar");
   private static final Map<String, Object> ROW2 = ImmutableMap.of("_time", 234, "alias", "foo1", "market", "bar1");
-
-  private static final ImmutableList<ColumnNameAndTypes> COL_NAME_AND_TYPES = ImmutableList.of(
+  public static final ImmutableList<ColumnNameAndTypes> COL_NAME_AND_TYPES = ImmutableList.of(
       new ColumnNameAndTypes(
           "_time",
           SqlTypeName.TIMESTAMP.getName(),
@@ -322,21 +313,10 @@ public class SqlStatementResourceTest extends MSQTestBase
           ValueType.STRING.name()
       )
   );
-
   private static final String FAILURE_MSG = "failure msg";
-
-  @Before
-  public void init() throws Exception
-  {
-    overlordClient = Mockito.mock(OverlordClient.class);
-    setupMocks(overlordClient);
-    resource = new SqlStatementResource(
-        sqlStatementFactory,
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
-        JSON_MAPPER,
-        overlordClient
-    );
-  }
+  private static SqlStatementResource resource;
+  @Mock
+  private static OverlordClient overlordClient;
 
   private static void setupMocks(OverlordClient indexingServiceClient) throws JsonProcessingException
   {
@@ -591,6 +571,66 @@ public class SqlStatementResourceTest extends MSQTestBase
 
   }
 
+  public static void assertNullResponse(Response response, Response.Status expectectedStatus)
+  {
+    Assert.assertEquals(expectectedStatus.getStatusCode(), response.getStatus());
+    Assert.assertNull(response.getEntity());
+  }
+
+  public static void assertExceptionMessage(
+      Response response,
+      String exceptionMessage,
+      Response.Status expectectedStatus
+  )
+  {
+    Assert.assertEquals(expectectedStatus.getStatusCode(), response.getStatus());
+    Assert.assertEquals(exceptionMessage, getQueryExceptionFromResponse(response));
+  }
+
+  public static List getResultRowsFromResponse(Response resultsResponse) throws IOException
+  {
+    byte[] bytes = SqlResourceTest.responseToByteArray(resultsResponse);
+    if (bytes == null) {
+      return null;
+    }
+    return JSON_MAPPER.readValue(bytes, List.class);
+  }
+
+  private static String getQueryExceptionFromResponse(Response response)
+  {
+    if (response.getEntity() instanceof SqlStatementResult) {
+      return ((SqlStatementResult) response.getEntity()).getErrorResponse().getUnderlyingException().getMessage();
+    } else {
+      return ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage();
+    }
+  }
+
+  public static MockHttpServletRequest makeOkRequest()
+  {
+    return makeExpectedReq(CalciteTests.REGULAR_USER_AUTH_RESULT);
+  }
+
+  public static MockHttpServletRequest makeExpectedReq(AuthenticationResult authenticationResult)
+  {
+    MockHttpServletRequest req = new MockHttpServletRequest();
+    req.attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
+    req.remoteAddr = "1.2.3.4";
+    return req;
+  }
+
+  @Before
+  public void init() throws Exception
+  {
+    overlordClient = Mockito.mock(OverlordClient.class);
+    setupMocks(overlordClient);
+    resource = new SqlStatementResource(
+        sqlStatementFactory,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        JSON_MAPPER,
+        overlordClient
+    );
+  }
+
   @Test
   public void testMSQSelectAcceptedQuery()
   {
@@ -658,7 +698,6 @@ public class SqlStatementResourceTest extends MSQTestBase
         resource.deleteQuery(RUNNING_SELECT_MSQ_QUERY, makeOkRequest()).getStatus()
     );
   }
-
 
   @Test
   public void testFinishedSelectMSQQuery() throws Exception
@@ -736,7 +775,6 @@ public class SqlStatementResourceTest extends MSQTestBase
 
   }
 
-
   @Test
   public void testFailedMSQQuery()
   {
@@ -757,7 +795,6 @@ public class SqlStatementResourceTest extends MSQTestBase
       );
     }
   }
-
 
   @Test
   public void testFinishedInsertMSQQuery() throws Exception
@@ -884,56 +921,9 @@ public class SqlStatementResourceTest extends MSQTestBase
     );
   }
 
-
-  public static void assertNullResponse(Response response, Response.Status expectectedStatus)
+  @Test
+  public void testIsEnabled()
   {
-    Assert.assertEquals(expectectedStatus.getStatusCode(), response.getStatus());
-    Assert.assertNull(response.getEntity());
-  }
-
-  public static void assertExceptionMessage(
-      Response response,
-      String exceptionMessage,
-      Response.Status expectectedStatus
-  )
-  {
-    Assert.assertEquals(expectectedStatus.getStatusCode(), response.getStatus());
-    Assert.assertEquals(exceptionMessage, getQueryExceptionFromResponse(response));
-  }
-
-  public static List getResultRowsFromResponse(Response resultsResponse) throws IOException
-  {
-    byte[] bytes = SqlResourceTest.responseToByteArray(resultsResponse);
-    if (bytes == null) {
-      return null;
-    }
-    return JSON_MAPPER.readValue(bytes, List.class);
-  }
-
-  private static String getQueryExceptionFromResponse(Response response)
-  {
-    if (response.getEntity() instanceof SqlStatementResult) {
-      return ((SqlStatementResult) response.getEntity()).getQueryException().getMessage();
-    } else {
-      return ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage();
-    }
-  }
-
-  public static MockHttpServletRequest makeOkRequest()
-  {
-    return makeExpectedReq(CalciteTests.REGULAR_USER_AUTH_RESULT);
-  }
-
-  public static MockHttpServletRequest makeOtherUserRequest()
-  {
-    return makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT);
-  }
-
-  public static MockHttpServletRequest makeExpectedReq(AuthenticationResult authenticationResult)
-  {
-    MockHttpServletRequest req = new MockHttpServletRequest();
-    req.attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
-    req.remoteAddr = "1.2.3.4";
-    return req;
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), resource.isEnabled(makeOkRequest()).getStatus());
   }
 }
