@@ -417,51 +417,39 @@ public class NestedPathFinderTest
 
     pathParts = NestedPathFinder.parseJqPath(".");
     Assert.assertEquals(NESTER, NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertNull(NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".z");
     Assert.assertEquals("foo", NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertEquals("foo", NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".x");
     Assert.assertEquals(NESTER.get("x"), NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertNull(NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".x[1]");
     Assert.assertEquals("b", NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertEquals("b", NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".x[-1]");
     Assert.assertEquals("c", NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertEquals("c", NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".x[-2]");
     Assert.assertEquals("b", NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertEquals("b", NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".x[-4]");
     Assert.assertNull(NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertNull(NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     // nonexistent
     pathParts = NestedPathFinder.parseJqPath(".x[1].y.z");
     Assert.assertNull(NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertNull(NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".y.a");
     Assert.assertEquals("hello", NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertEquals("hello", NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".y[1]");
     Assert.assertNull(NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertNull(NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".\"[sneaky]\"");
     Assert.assertEquals("bar", NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertEquals("bar", NestedPathFinder.findStringLiteral(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".\"[also_sneaky]\"[1].c");
     Assert.assertEquals("z", NestedPathFinder.find(NESTER, pathParts));
-    Assert.assertEquals("z", NestedPathFinder.findStringLiteral(NESTER, pathParts));
   }
 }

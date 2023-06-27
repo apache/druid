@@ -153,6 +153,8 @@ public class CliIndexerServerModule implements Module
         oldConfig.getDefaultQueryTimeout(),
         oldConfig.getMaxScatterGatherBytes(),
         oldConfig.getMaxSubqueryRows(),
+        oldConfig.getMaxSubqueryBytes(),
+        oldConfig.isuseNestedForUnknownTypeInSubquery(),
         oldConfig.getMaxQueryTimeout(),
         oldConfig.getMaxRequestHeaderSize(),
         oldConfig.getGracefulShutdownTimeout(),
