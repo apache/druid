@@ -19,16 +19,21 @@
 
 package org.apache.druid.server.coordinator.balancer;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.commons.math3.util.FastMath;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.coordinator.SegmentCountsPerInterval;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -38,11 +43,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NavigableSet;
 import java.util.PriorityQueue;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 public class CostBalancerStrategy implements BalancerStrategy
 {
@@ -62,6 +66,20 @@ public class CostBalancerStrategy implements BalancerStrategy
   private static final Comparator<Pair<Double, ServerHolder>> CHEAPEST_SERVERS_FIRST
       = Comparator.<Pair<Double, ServerHolder>, Double>comparing(pair -> pair.lhs)
       .thenComparing(pair -> pair.rhs);
+
+  private final CoordinatorRunStats stats = new CoordinatorRunStats();
+
+  public static double computeJointSegmentsCost(DataSegment segment, Iterable<DataSegment> segmentSet)
+  {
+    final Interval costComputeInterval = getCostComputeInterval(segment);
+    double totalCost = 0;
+    for (DataSegment s : segmentSet) {
+      if (costComputeInterval.overlaps(s.getInterval())) {
+        totalCost += computeJointSegmentsCost(segment, s);
+      }
+    }
+    return totalCost;
+  }
 
   /**
    * This defines the unnormalized cost function between two segments.
@@ -83,15 +101,20 @@ public class CostBalancerStrategy implements BalancerStrategy
     final Interval intervalA = segmentA.getInterval();
     final Interval intervalB = segmentB.getInterval();
 
+    // constant cost-multiplier for segments of the same datsource
+    final double multiplier = segmentA.getDataSource().equals(segmentB.getDataSource())
+                              ? 2.0 : 1.0;
+    return intervalCost(intervalA, intervalB) * multiplier;
+  }
+
+  public static double intervalCost(Interval intervalA, Interval intervalB)
+  {
     final double t0 = intervalA.getStartMillis();
     final double t1 = (intervalA.getEndMillis() - t0) / MILLIS_FACTOR;
     final double start = (intervalB.getStartMillis() - t0) / MILLIS_FACTOR;
     final double end = (intervalB.getEndMillis() - t0) / MILLIS_FACTOR;
 
-    // constant cost-multiplier for segments of the same datsource
-    final double multiplier = segmentA.getDataSource().equals(segmentB.getDataSource()) ? 2.0 : 1.0;
-
-    return INV_LAMBDA_SQUARE * intervalCost(t1, start, end) * multiplier;
+    return INV_LAMBDA_SQUARE * intervalCost(t1, start, end);
   }
 
   /**
@@ -199,160 +222,118 @@ public class CostBalancerStrategy implements BalancerStrategy
 
   @Override
   public Iterator<ServerHolder> findServersToLoadSegment(
-      DataSegment proposalSegment,
+      DataSegment segmentToLoad,
       List<ServerHolder> serverHolders
   )
   {
-    return getServersByPlacementCost(proposalSegment, serverHolders, false, "findServersToLoadSegment");
+    return orderServersByPlacementCost(segmentToLoad, serverHolders, SegmentAction.LOAD)
+        .stream()
+        .filter(server -> server.canLoadSegment(segmentToLoad))
+        .iterator();
   }
-
 
   @Override
   public ServerHolder findDestinationServerToMoveSegment(
-      DataSegment proposalSegment,
+      DataSegment segmentToMove,
       ServerHolder sourceServer,
       List<ServerHolder> serverHolders
   )
   {
-    Iterator<ServerHolder> servers =
-        getServersByPlacementCost(proposalSegment, serverHolders, true, "findServerToMoveSegment");
-    return servers.hasNext() ? servers.next() : null;
-  }
-
-  public static double computeJointSegmentsCost(DataSegment segment, Iterable<DataSegment> segmentSet)
-  {
-    double totalCost = 0;
-    for (DataSegment s : segmentSet) {
-      totalCost += computeJointSegmentsCost(segment, s);
+    List<ServerHolder> servers =
+        orderServersByPlacementCost(segmentToMove, serverHolders, SegmentAction.MOVE_TO);
+    if (servers.isEmpty()) {
+      return null;
     }
-    return totalCost;
+
+    ServerHolder candidateServer = servers.get(0);
+    return candidateServer.equals(sourceServer) ? null : candidateServer;
   }
 
   @Override
-  public Iterator<ServerHolder> pickServersToDropSegment(
+  public Iterator<ServerHolder> findServersToDropSegment(
       DataSegment segmentToDrop,
-      NavigableSet<ServerHolder> serverHolders
+      List<ServerHolder> serverHolders
   )
   {
-    List<ServerHolder> serversByCost = Lists.newArrayList(
-        getServersByPlacementCost(segmentToDrop, serverHolders, true, "pickServersToDropSegment")
-    );
+    List<ServerHolder> serversByCost =
+        orderServersByPlacementCost(segmentToDrop, serverHolders, SegmentAction.DROP);
 
     // Prioritize drop from highest cost servers
     return Lists.reverse(serversByCost).iterator();
   }
 
-  /**
-   * Calculates the initial cost of the Druid segment configuration.
-   *
-   * @param serverHolders A list of ServerHolders for a particular tier.
-   *
-   * @return The initial cost of the Druid tier.
-   */
-  public double calculateInitialTotalCost(final List<ServerHolder> serverHolders)
-  {
-    double cost = 0;
-    for (ServerHolder server : serverHolders) {
-      // segments are dumped into an array because it's probably better than iterating the iterateAllSegments() result
-      // quadratically in a loop, which can generate garbage in the form of Stream, Spliterator, Iterator, etc. objects
-      // whose total memory volume exceeds the size of the DataSegment array.
-      DataSegment[] segments = server.getServer().iterateAllSegments().toArray(new DataSegment[0]);
-      for (DataSegment s1 : segments) {
-        for (DataSegment s2 : segments) {
-          cost += computeJointSegmentsCost(s1, s2);
-        }
-      }
-    }
-    return cost;
-  }
-
-  /**
-   * Calculates the cost normalization.  This is such that the normalized cost is lower bounded
-   * by 1 (e.g. when each segment gets its own historical node).
-   *
-   * @param serverHolders A list of ServerHolders for a particular tier.
-   *
-   * @return The normalization value (the sum of the diagonal entries in the
-   * pairwise cost matrix).  This is the cost of a cluster if each
-   * segment were to get its own historical node.
-   */
-  public double calculateNormalization(final List<ServerHolder> serverHolders)
-  {
-    double cost = 0;
-    for (ServerHolder server : serverHolders) {
-      for (DataSegment segment : server.getServedSegments()) {
-        cost += computeJointSegmentsCost(segment, segment);
-      }
-    }
-    return cost;
-  }
-
   @Override
-  public void emitStats(String tier, CoordinatorRunStats stats, List<ServerHolder> serverHolderList)
+  public CoordinatorRunStats getAndResetStats()
   {
-    final double initialTotalCost = calculateInitialTotalCost(serverHolderList);
-    final double normalization = calculateNormalization(serverHolderList);
-    final double normalizedInitialCost = initialTotalCost / normalization;
-
-    final RowKey rowKey = RowKey.forTier(tier);
-    stats.add(Stats.Balancer.RAW_COST, rowKey, (long) initialTotalCost);
-    stats.add(Stats.Balancer.NORMALIZATION_COST, rowKey, (long) normalization);
-    stats.add(Stats.Balancer.NORMALIZED_COST_X_1000, rowKey, (long) (normalizedInitialCost * 1000));
-
-    log.info(
-        "[%s]: Initial Total Cost: [%f], Normalization: [%f], Initial Normalized Cost: [%f]",
-        tier, initialTotalCost, normalization, normalizedInitialCost
-    );
+    return stats.getSnapshotAndReset();
   }
 
-  protected double computeCost(
-      final DataSegment proposalSegment,
-      final ServerHolder server,
-      final boolean includeCurrentServer
-  )
+  /**
+   * Computes the cost of placing a segment on this server.
+   */
+  protected double computePlacementCost(DataSegment proposalSegment, ServerHolder server)
   {
-    // (optional) Don't include server if it cannot load the segment
-    if (!includeCurrentServer && !server.canLoadSegment(proposalSegment)) {
-      return Double.POSITIVE_INFINITY;
-    }
+    final Interval costComputeInterval = getCostComputeInterval(proposalSegment);
 
-    // The contribution to the total cost of a given server by proposing to move the segment to that server is...
-    double cost = 0d;
+    // Compute number of segments in each interval
+    final Object2IntOpenHashMap<Interval> intervalToSegmentCount = new Object2IntOpenHashMap<>();
 
-    // the sum of the costs of segments expected to be on the server (loaded + loading - dropping)
-    Set<DataSegment> projectedSegments = server.getProjectedSegments();
-    cost += computeJointSegmentsCost(proposalSegment, projectedSegments);
+    final SegmentCountsPerInterval projectedSegments = server.getProjectedSegments();
+    projectedSegments.getIntervalToTotalSegmentCount().object2IntEntrySet().forEach(entry -> {
+      final Interval interval = entry.getKey();
+      if (costComputeInterval.overlaps(interval)) {
+        intervalToSegmentCount.addTo(interval, entry.getIntValue());
+      }
+    });
 
-    // minus the self cost of the segment
-    if (projectedSegments.contains(proposalSegment)) {
-      cost -= computeJointSegmentsCost(proposalSegment, proposalSegment);
+    // Count the segments for the same datasource twice as they have twice the cost
+    final String datasource = proposalSegment.getDataSource();
+    projectedSegments.getIntervalToSegmentCount(datasource).object2IntEntrySet().forEach(entry -> {
+      final Interval interval = entry.getKey();
+      if (costComputeInterval.overlaps(interval)) {
+        intervalToSegmentCount.addTo(interval, entry.getIntValue());
+      }
+    });
+
+    // Compute joint cost for each interval
+    double cost = 0;
+    final Interval segmentInterval = proposalSegment.getInterval();
+    cost += intervalToSegmentCount.object2IntEntrySet().stream().mapToDouble(
+        entry -> intervalCost(segmentInterval, entry.getKey())
+                 * entry.getIntValue()
+    ).sum();
+
+    // Minus the self cost of the segment
+    if (server.isProjectedSegment(proposalSegment)) {
+      cost -= intervalCost(segmentInterval, segmentInterval) * 2.0;
     }
 
     return cost;
   }
 
   /**
-   * Returns an iterator over the servers, ordered by increasing cost for
-   * placing the given segment on that server.
-   *
-   * @param includeCurrentServer true if the server already serving a replica
-   *                             of this segment should be included in the results
+   * Orders the servers by increasing cost for placing the given segment.
    */
-  private Iterator<ServerHolder> getServersByPlacementCost(
-      DataSegment proposalSegment,
-      Iterable<ServerHolder> serverHolders,
-      boolean includeCurrentServer,
-      String action
+  private List<ServerHolder> orderServersByPlacementCost(
+      DataSegment segment,
+      List<ServerHolder> serverHolders,
+      SegmentAction action
   )
   {
+    final Stopwatch computeTime = Stopwatch.createStarted();
     final List<ListenableFuture<Pair<Double, ServerHolder>>> futures = new ArrayList<>();
     for (ServerHolder server : serverHolders) {
       futures.add(
           exec.submit(
-              () -> Pair.of(computeCost(proposalSegment, server, includeCurrentServer), server)
+              () -> Pair.of(computePlacementCost(segment, server), server)
           )
       );
     }
+
+    String tier = serverHolders.isEmpty() ? null : serverHolders.get(0).getServer().getTier();
+    final RowKey metricKey = RowKey.with(Dimension.TIER, tier)
+                                   .with(Dimension.DATASOURCE, segment.getDataSource())
+                                   .and(Dimension.DESCRIPTION, action.name());
 
     final PriorityQueue<Pair<Double, ServerHolder>> costPrioritizedServers =
         new PriorityQueue<>(CHEAPEST_SERVERS_FIRST);
@@ -364,30 +345,57 @@ public class CostBalancerStrategy implements BalancerStrategy
       );
     }
     catch (Exception e) {
-      alertOnFailure(e, action);
+      stats.add(Stats.Balancer.COMPUTATION_ERRORS, metricKey, 1);
+      handleFailure(e, segment, action);
     }
 
-    // Include current server only if specified
-    return costPrioritizedServers.stream()
-                      .filter(pair -> includeCurrentServer || pair.rhs.canLoadSegment(proposalSegment))
-                      .map(pair -> pair.rhs).iterator();
+    // Report computation stats
+    computeTime.stop();
+    stats.add(Stats.Balancer.COMPUTATION_COUNT, metricKey, 1);
+    stats.add(Stats.Balancer.COMPUTATION_TIME, metricKey, computeTime.elapsed(TimeUnit.MILLISECONDS));
+
+    return costPrioritizedServers.stream().map(pair -> pair.rhs)
+                                 .collect(Collectors.toList());
   }
 
-  private void alertOnFailure(Exception e, String action)
+  private void handleFailure(
+      Exception e,
+      DataSegment segment,
+      SegmentAction action
+  )
   {
-    // Do not alert if the executor has been shutdown
+    final String reason;
+    String suggestion = "";
     if (exec.isShutdown()) {
-      log.noStackTrace().info("Balancer executor was terminated. Failing action [%s].", action);
-      return;
+      reason = "Executor shutdown";
+    } else if (e instanceof TimeoutException) {
+      reason = "Timed out";
+      suggestion = " Try setting a higher value for 'balancerComputeThreads'.";
+    } else {
+      reason = e.getMessage();
     }
 
-    final boolean hasTimedOut = e instanceof TimeoutException;
-    final String message = StringUtils.format(
-        "Cost balancer strategy %s in action [%s].%s",
-        hasTimedOut ? "timed out" : "failed", action,
-        hasTimedOut ? " Try setting a higher value of 'balancerComputeThreads'." : ""
-    );
-    log.makeAlert(e, message).emit();
+    String msgFormat = "Cost strategy computations failed for action[%s] on segment[%s] due to reason[%s].[%s]";
+    log.noStackTrace().warn(e, msgFormat, action, segment.getId(), reason, suggestion);
+  }
+
+  /**
+   * The cost compute interval for a segment is {@code [start-45days, end+45days)}.
+   * This is because the joint cost of any two segments that are 45 days apart is
+   * negligible.
+   */
+  private static Interval getCostComputeInterval(DataSegment segment)
+  {
+    final Interval segmentInterval = segment.getInterval();
+    if (Intervals.isEternity(segmentInterval)) {
+      return segmentInterval;
+    } else {
+      final long maxGap = TimeUnit.DAYS.toMillis(45);
+      return Intervals.utc(
+          segmentInterval.getStartMillis() - maxGap,
+          segmentInterval.getEndMillis() + maxGap
+      );
+    }
   }
 
 }
