@@ -77,7 +77,6 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
 import java.io.IOException;

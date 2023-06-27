@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
@@ -61,20 +60,16 @@ public class CoordinatorServerView implements InventoryView
   private final CountDownLatch initialized = new CountDownLatch(1);
   private final ServiceEmitter emitter;
 
-  private final SegmentsMetadataManager segmentsMetadataManager;
-
   @Inject
   public CoordinatorServerView(
       ServerInventoryView baseView,
       CoordinatorSegmentWatcherConfig segmentWatcherConfig,
-      ServiceEmitter emitter,
-      SegmentsMetadataManager segmentsMetadataManager
+      ServiceEmitter emitter
   )
   {
     this.baseView = baseView;
     this.segmentWatcherConfig = segmentWatcherConfig;
     this.emitter = emitter;
-    this.segmentsMetadataManager = segmentsMetadataManager;
     this.segmentLoadInfos = new HashMap<>();
     this.timelines = new HashMap<>();
 
@@ -168,8 +163,6 @@ public class CoordinatorServerView implements InventoryView
         segmentLoadInfos.put(segmentId, segmentLoadInfo);
       }
       segmentLoadInfo.addServer(server);
-
-      segmentsMetadataManager.markSegmentAsHandedOff(segmentId);
     }
   }
 
