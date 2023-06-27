@@ -38,6 +38,6 @@ public abstract class BadQueryException extends QueryException
 
   protected BadQueryException(Throwable cause, String errorCode, String errorMessage, String errorClass, String host)
   {
-    super(cause, errorCode, errorMessage, errorClass, host, null);
+    super(cause, errorCode, errorMessage, errorClass, host);
   }
 }

@@ -41,7 +41,7 @@ public class ErrorHandlerTest
     Mockito.when(serverConfig.getErrorResponseTransformStrategy())
            .thenReturn(emptyAllowedRegexErrorResponseTransformStrategy);
     ErrorHandler errorHandler = new ErrorHandler(serverConfig);
-    QueryException input = new QueryException("error", "error message", "error class", "host", null);
+    QueryException input = new QueryException("error", "error message", "error class", "host");
 
     RuntimeException output = errorHandler.sanitize(input);
     Assert.assertNull(output.getMessage());

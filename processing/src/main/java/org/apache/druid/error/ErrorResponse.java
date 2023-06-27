@@ -79,8 +79,7 @@ public class ErrorResponse
               nullOrString(map.get("error")),
               nullOrString(map.get("errorMessage")),
               nullOrString(map.get("errorClass")),
-              nullOrString(map.get("host")),
-              null
+              nullOrString(map.get("host"))
           )
       );
     } else {

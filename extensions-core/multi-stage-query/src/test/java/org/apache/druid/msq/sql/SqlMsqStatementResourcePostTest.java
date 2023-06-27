@@ -21,7 +21,6 @@ package org.apache.druid.msq.sql;
 
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -47,12 +46,13 @@ import org.junit.Test;
 
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SqlMsqStatementResourcePostTest extends MSQTestBase
 {
   private SqlStatementResource resource;
-  public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   @Before
   public void init()
@@ -132,6 +132,30 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
 
 
   @Test
+  public void nonSupportedModes()
+  {
+    for (ImmutableMap<?, ?> context : ImmutableList.of(ImmutableMap.of(
+        QueryContexts.CTX_EXECUTION_MODE,
+        ExecutionMode.SYNC.name()
+    ), ImmutableMap.of())) {
+      SqlStatementResourceTest.assertExceptionMessage(
+          resource.doPost(new SqlQuery(
+              "select * from foo",
+              null,
+              false,
+              false,
+              false,
+              (Map<String, Object>) context,
+              null
+          ), SqlStatementResourceTest.makeOkRequest()),
+          "The statement sql api only supports sync mode[ASYNC]. Please set context parameter [executionMode=ASYNC] in the context payload",
+          Response.Status.BAD_REQUEST
+      );
+    }
+  }
+
+
+  @Test
   public void insertCannotBeEmptyFaultTest()
   {
     Response response = resource.doPost(new SqlQuery(
@@ -174,9 +198,34 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
     Assert.assertEquals(expected, actual);
   }
 
-  private static ImmutableMap<String, Object> defaultAsyncContext()
+  @Test
+  public void testExplain() throws IOException
   {
-    return ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.ASYNC.name());
+    Map<String, Object> context = defaultAsyncContext();
+    context.put("sqlQueryId", "queryId");
+    Response response = resource.doPost(new SqlQuery(
+        "explain plan for select * from foo",
+        null,
+        false,
+        false,
+        false,
+        context,
+        null
+    ), SqlStatementResourceTest.makeOkRequest());
+
+    Assert.assertEquals(
+        "{PLAN=[{\"query\":"
+        + "{\"queryType\":\"scan\","
+        + "\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},"
+        + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
+        + "\"resultFormat\":\"compactedList\","
+        + "\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],"
+        + "\"legacy\":false,"
+        + "\"context\":{\"executionMode\":\"ASYNC\",\"scanSignature\":\"[{\\\"name\\\":\\\"__time\\\",\\\"type\\\":\\\"LONG\\\"},{\\\"name\\\":\\\"cnt\\\",\\\"type\\\":\\\"LONG\\\"},{\\\"name\\\":\\\"dim1\\\",\\\"type\\\":\\\"STRING\\\"},{\\\"name\\\":\\\"dim2\\\",\\\"type\\\":\\\"STRING\\\"},{\\\"name\\\":\\\"dim3\\\",\\\"type\\\":\\\"STRING\\\"},{\\\"name\\\":\\\"m1\\\",\\\"type\\\":\\\"FLOAT\\\"},{\\\"name\\\":\\\"m2\\\",\\\"type\\\":\\\"DOUBLE\\\"},{\\\"name\\\":\\\"unique_dim1\\\",\\\"type\\\":\\\"COMPLEX<hyperUnique>\\\"}]\",\"sqlQueryId\":\"queryId\"},\"granularity\":{\"type\":\"all\"}},\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}],\"columnMappings\":[{\"queryColumn\":\"__time\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"dim1\",\"outputColumn\":\"dim1\"},{\"queryColumn\":\"dim2\",\"outputColumn\":\"dim2\"},{\"queryColumn\":\"dim3\",\"outputColumn\":\"dim3\"},{\"queryColumn\":\"cnt\",\"outputColumn\":\"cnt\"},{\"queryColumn\":\"m1\",\"outputColumn\":\"m1\"},{\"queryColumn\":\"m2\",\"outputColumn\":\"m2\"},{\"queryColumn\":\"unique_dim1\",\"outputColumn\":\"unique_dim1\"}]}],"
+        + " RESOURCES=[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}],"
+        + " ATTRIBUTES={\"statementType\":\"SELECT\"}}",
+        String.valueOf(SqlStatementResourceTest.getResultRowsFromResponse(response).get(0))
+    );
   }
 
   @Test
@@ -196,5 +245,12 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
     ).getStatus());
   }
 
+
+  private static Map<String, Object> defaultAsyncContext()
+  {
+    Map<String, Object> context = new HashMap<String, Object>();
+    context.put(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.ASYNC.name());
+    return context;
+  }
 
 }

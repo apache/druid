@@ -238,8 +238,7 @@ public class QueryResource implements QueryCountStatsProvider
                 QueryException.UNKNOWN_EXCEPTION_ERROR_CODE,
                 "Unhandled exception made it to the top",
                 e.getClass().getName(),
-                req.getRemoteHost(),
-                null
+                req.getRemoteHost()
             );
             out.write(jsonMapper.writeValueAsBytes(responseException));
           }

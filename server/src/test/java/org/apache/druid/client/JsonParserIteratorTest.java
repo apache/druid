@@ -78,8 +78,7 @@ public class JsonParserIteratorTest
                   QueryException.QUERY_TIMEOUT_ERROR_CODE,
                   "timeout exception conversion test",
                   null,
-                  HOST,
-                  null
+                  HOST
               )
           ),
           URL,
@@ -206,7 +205,6 @@ public class JsonParserIteratorTest
               null,
               "query exception test",
               null,
-              null,
               null
           ))),
           URL,
@@ -226,7 +224,7 @@ public class JsonParserIteratorTest
       JsonParserIterator<Object> iterator = new JsonParserIterator<>(
           JAVA_TYPE,
           Futures.immediateFuture(
-              mockErrorResponse(new QueryException("test error", "query exception test", null, null, null))
+              mockErrorResponse(new QueryException("test error", "query exception test", null, null))
           ),
           URL,
           null,

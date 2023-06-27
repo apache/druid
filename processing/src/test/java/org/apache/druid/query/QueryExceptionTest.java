@@ -36,7 +36,7 @@ public class QueryExceptionTest
   @Test
   public void testSanitizeWithTransformFunctionReturningNull()
   {
-    QueryException queryException = new QueryException(ERROR_CODE, ERROR_MESSAGE_ORIGINAL, ERROR_CLASS, HOST, null);
+    QueryException queryException = new QueryException(ERROR_CODE, ERROR_MESSAGE_ORIGINAL, ERROR_CLASS, HOST);
 
     AtomicLong callCount = new AtomicLong(0);
     QueryException actual = queryException.sanitize(s -> {
@@ -56,7 +56,7 @@ public class QueryExceptionTest
   @Test
   public void testSanitizeWithTransformFunctionReturningNewString()
   {
-    QueryException queryException = new QueryException(ERROR_CODE, ERROR_MESSAGE_ORIGINAL, ERROR_CLASS, HOST, null);
+    QueryException queryException = new QueryException(ERROR_CODE, ERROR_MESSAGE_ORIGINAL, ERROR_CLASS, HOST);
 
     AtomicLong callCount = new AtomicLong(0);
     QueryException actual = queryException.sanitize(s -> {
@@ -116,7 +116,7 @@ public class QueryExceptionTest
   @Test
   public void testToStringReturnsUsefulInformation()
   {
-    QueryException queryException = new QueryException(ERROR_CODE, ERROR_MESSAGE_ORIGINAL, ERROR_CLASS, HOST, null);
+    QueryException queryException = new QueryException(ERROR_CODE, ERROR_MESSAGE_ORIGINAL, ERROR_CLASS, HOST);
     String exceptionToString = queryException.toString();
     Assert.assertTrue(exceptionToString.startsWith(QueryException.class.getSimpleName()));
     Assert.assertTrue(exceptionToString.contains("msg=" + ERROR_MESSAGE_ORIGINAL));

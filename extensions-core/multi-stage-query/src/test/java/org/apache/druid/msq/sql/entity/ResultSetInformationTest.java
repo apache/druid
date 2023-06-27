@@ -31,7 +31,7 @@ public class ResultSetInformationTest
 {
   public static final ObjectMapper MAPPER = new ObjectMapper();
 
-  public static final ResultSetInformation RESULTS = new ResultSetInformation(ResultFormat.OBJECT, 1l, 1l, "ds",
+  public static final ResultSetInformation RESULTS = new ResultSetInformation(ResultFormat.OBJECT, 1L, 1L, "ds",
                                                                               ImmutableList.of(
                                                                                   ImmutableList.of("1"),
                                                                                   ImmutableList.of("2"),
