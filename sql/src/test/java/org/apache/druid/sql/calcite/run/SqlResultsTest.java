@@ -19,16 +19,39 @@
 
 package org.apache.druid.sql.calcite.run;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSortedSet;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
+import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
+import org.joda.time.DateTimeZone;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
-public class SqlResultsTest
+public class SqlResultsTest extends InitializedNullHandlingTest
 {
+  private static final SqlResults.Context DEFAULT_CONTEXT = new SqlResults.Context(DateTimeZone.UTC, true, false);
+
+  private ObjectMapper jsonMapper;
+
+  @Before
+  public void setUp()
+  {
+    jsonMapper = TestHelper.JSON_MAPPER;
+  }
 
   @Test
   public void testCoerceStringArrays()
@@ -38,10 +61,10 @@ public class SqlResultsTest
     final ComparableStringArray comparableStringArray = ComparableStringArray.of(new String[]{"x", "y", "z", null});
     final String[] stringArray2 = new String[]{"x", "y", "z", null};
 
-    assertCoerced(stringList, stringList, true);
-    assertCoerced(stringList, stringArray, true);
-    assertCoerced(stringList, stringArray2, true);
-    assertCoerced(stringList, comparableStringArray, true);
+    assertCoerceArrayToList(stringList, stringList);
+    assertCoerceArrayToList(stringList, stringArray);
+    assertCoerceArrayToList(stringList, stringArray2);
+    assertCoerceArrayToList(stringList, comparableStringArray);
   }
 
   @Test
@@ -53,11 +76,11 @@ public class SqlResultsTest
     final List<Long> list = Arrays.asList(1L, 2L, 3L);
     final long[] array = new long[]{1L, 2L, 3L};
 
-    assertCoerced(listWithNull, listWithNull, true);
-    assertCoerced(listWithNull, arrayWithNull, true);
-    assertCoerced(listWithNull, comparableList, true);
-    assertCoerced(list, list, true);
-    assertCoerced(list, array, true);
+    assertCoerceArrayToList(listWithNull, listWithNull);
+    assertCoerceArrayToList(listWithNull, arrayWithNull);
+    assertCoerceArrayToList(listWithNull, comparableList);
+    assertCoerceArrayToList(list, list);
+    assertCoerceArrayToList(list, array);
   }
 
   @Test
@@ -69,11 +92,11 @@ public class SqlResultsTest
     final List<Double> list = Arrays.asList(1.1, 2.2, 3.3);
     final double[] array = new double[]{1.1, 2.2, 3.3};
 
-    assertCoerced(listWithNull, listWithNull, true);
-    assertCoerced(listWithNull, arrayWithNull, true);
-    assertCoerced(listWithNull, comparableList, true);
-    assertCoerced(list, list, true);
-    assertCoerced(list, array, true);
+    assertCoerceArrayToList(listWithNull, listWithNull);
+    assertCoerceArrayToList(listWithNull, arrayWithNull);
+    assertCoerceArrayToList(listWithNull, comparableList);
+    assertCoerceArrayToList(list, list);
+    assertCoerceArrayToList(list, array);
   }
 
   @Test
@@ -85,11 +108,11 @@ public class SqlResultsTest
     final List<Float> list = Arrays.asList(1.1f, 2.2f, 3.3f);
     final float[] array = new float[]{1.1f, 2.2f, 3.3f};
 
-    assertCoerced(listWithNull, listWithNull, true);
-    assertCoerced(listWithNull, arrayWithNull, true);
-    assertCoerced(listWithNull, comparableList, true);
-    assertCoerced(list, list, true);
-    assertCoerced(list, array, true);
+    assertCoerceArrayToList(listWithNull, listWithNull);
+    assertCoerceArrayToList(listWithNull, arrayWithNull);
+    assertCoerceArrayToList(listWithNull, comparableList);
+    assertCoerceArrayToList(list, list);
+    assertCoerceArrayToList(list, array);
   }
 
   @Test
@@ -98,8 +121,117 @@ public class SqlResultsTest
     List<?> nestedList = Arrays.asList(Arrays.asList(1L, 2L, 3L), Arrays.asList(4L, 5L, 6L));
     Object[] nestedArray = new Object[]{new Object[]{1L, 2L, 3L}, new Object[]{4L, 5L, 6L}};
 
-    assertCoerced(nestedList, nestedList, true);
-    assertCoerced(nestedList, nestedArray, true);
+    assertCoerceArrayToList(nestedList, nestedList);
+    assertCoerceArrayToList(nestedList, nestedArray);
+  }
+
+  @Test
+  public void testCoerceBoolean()
+  {
+    assertCoerce(false, false, SqlTypeName.BOOLEAN);
+    assertCoerce(false, "xyz", SqlTypeName.BOOLEAN);
+    assertCoerce(false, 0, SqlTypeName.BOOLEAN);
+    assertCoerce(false, "false", SqlTypeName.BOOLEAN);
+    assertCoerce(true, true, SqlTypeName.BOOLEAN);
+    assertCoerce(true, "true", SqlTypeName.BOOLEAN);
+    assertCoerce(true, 1, SqlTypeName.BOOLEAN);
+    assertCoerce(true, 1.0, SqlTypeName.BOOLEAN);
+    assertCoerce(null, null, SqlTypeName.BOOLEAN);
+
+    assertCannotCoerce(Collections.emptyList(), SqlTypeName.BOOLEAN);
+  }
+
+  @Test
+  public void testCoerceInteger()
+  {
+    assertCoerce(0, 0, SqlTypeName.INTEGER);
+    assertCoerce(1, 1L, SqlTypeName.INTEGER);
+    assertCoerce(1, 1f, SqlTypeName.INTEGER);
+    assertCoerce(1, "1", SqlTypeName.INTEGER);
+    assertCoerce(null, "1.1", SqlTypeName.INTEGER);
+    assertCoerce(null, "xyz", SqlTypeName.INTEGER);
+    assertCoerce(null, null, SqlTypeName.INTEGER);
+
+    assertCannotCoerce(Collections.emptyList(), SqlTypeName.INTEGER);
+    assertCannotCoerce(false, SqlTypeName.INTEGER);
+  }
+
+  @Test
+  public void testCoerceBigint()
+  {
+    assertCoerce(0L, 0, SqlTypeName.BIGINT);
+    assertCoerce(1L, 1L, SqlTypeName.BIGINT);
+    assertCoerce(1L, 1f, SqlTypeName.BIGINT);
+    assertCoerce(null, "1.1", SqlTypeName.BIGINT);
+    assertCoerce(null, "xyz", SqlTypeName.BIGINT);
+    assertCoerce(null, null, SqlTypeName.BIGINT);
+
+    // Inconsistency with FLOAT, INTEGER, DOUBLE.
+    assertCoerce(0L, false, SqlTypeName.BIGINT);
+    assertCoerce(1L, true, SqlTypeName.BIGINT);
+
+    assertCannotCoerce(Collections.emptyList(), SqlTypeName.BIGINT);
+  }
+
+  @Test
+  public void testCoerceFloat()
+  {
+    assertCoerce(0f, 0, SqlTypeName.FLOAT);
+    assertCoerce(1f, 1L, SqlTypeName.FLOAT);
+    assertCoerce(1f, 1f, SqlTypeName.FLOAT);
+    assertCoerce(1.1f, "1.1", SqlTypeName.FLOAT);
+    assertCoerce(null, "xyz", SqlTypeName.FLOAT);
+    assertCoerce(null, null, SqlTypeName.FLOAT);
+
+    assertCannotCoerce(Collections.emptyList(), SqlTypeName.FLOAT);
+    assertCannotCoerce(false, SqlTypeName.FLOAT);
+  }
+
+  @Test
+  public void testCoerceDouble()
+  {
+    assertCoerce(0d, 0, SqlTypeName.DOUBLE);
+    assertCoerce(1d, 1L, SqlTypeName.DOUBLE);
+    assertCoerce(1d, 1f, SqlTypeName.DOUBLE);
+    assertCoerce(1.1d, "1.1", SqlTypeName.DOUBLE);
+    assertCoerce(null, "xyz", SqlTypeName.DOUBLE);
+    assertCoerce(null, null, SqlTypeName.DOUBLE);
+
+    assertCannotCoerce(Collections.emptyList(), SqlTypeName.DOUBLE);
+    assertCannotCoerce(false, SqlTypeName.DOUBLE);
+  }
+
+  @Test
+  public void testCoerceString()
+  {
+    assertCoerce(NullHandling.defaultStringValue(), null, SqlTypeName.VARCHAR);
+    assertCoerce("1", 1, SqlTypeName.VARCHAR);
+    assertCoerce("true", true, SqlTypeName.VARCHAR);
+    assertCoerce("abc", "abc", SqlTypeName.VARCHAR);
+
+    assertCoerce("[\"abc\",\"def\"]", ImmutableList.of("abc", "def"), SqlTypeName.VARCHAR);
+    assertCoerce("[\"abc\",\"def\"]", ImmutableSortedSet.of("abc", "def"), SqlTypeName.VARCHAR);
+    assertCoerce("[\"abc\",\"def\"]", new String[]{"abc", "def"}, SqlTypeName.VARCHAR);
+    assertCoerce("[\"abc\",\"def\"]", new Object[]{"abc", "def"}, SqlTypeName.VARCHAR);
+
+    assertCoerce("[\"abc\"]", ImmutableList.of("abc"), SqlTypeName.VARCHAR);
+    assertCoerce("[\"abc\"]", ImmutableSortedSet.of("abc"), SqlTypeName.VARCHAR);
+    assertCoerce("[\"abc\"]", new String[]{"abc"}, SqlTypeName.VARCHAR);
+    assertCoerce("[\"abc\"]", new Object[]{"abc"}, SqlTypeName.VARCHAR);
+
+    assertCannotCoerce(new Object(), SqlTypeName.VARCHAR);
+  }
+
+  @Test
+  public void testCoerceArrayFails()
+  {
+    assertCannotCoerce("xyz", SqlTypeName.ARRAY);
+  }
+
+  @Test
+  public void testCoerceUnsupportedType()
+  {
+    assertCannotCoerce("xyz", SqlTypeName.VARBINARY);
   }
 
   @Test
@@ -108,9 +240,35 @@ public class SqlResultsTest
     Assert.assertNull(SqlResults.maybeCoerceArrayToList("hello", true));
   }
 
-  private static void assertCoerced(Object expected, Object toCoerce, boolean mustCoerce)
+  @Test
+  public void testMayNotCoerce()
   {
-    Object coerced = SqlResults.maybeCoerceArrayToList(toCoerce, mustCoerce);
+    Assert.assertEquals("hello", SqlResults.maybeCoerceArrayToList("hello", false));
+  }
+
+  private void assertCoerce(Object expected, Object toCoerce, SqlTypeName typeName)
+  {
+    Assert.assertEquals(
+        StringUtils.format("Coerce [%s] to [%s]", toCoerce, typeName),
+        expected,
+        SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, typeName)
+    );
+  }
+
+  private void assertCannotCoerce(Object toCoerce, SqlTypeName typeName)
+  {
+    final IllegalStateException e = Assert.assertThrows(
+        StringUtils.format("Coerce [%s] to [%s]", toCoerce, typeName),
+        IllegalStateException.class,
+        () -> SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, typeName)
+    );
+
+    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Cannot coerce")));
+  }
+
+  private static void assertCoerceArrayToList(Object expected, Object toCoerce)
+  {
+    Object coerced = SqlResults.maybeCoerceArrayToList(toCoerce, true);
     Assert.assertEquals(expected, coerced);
   }
 }

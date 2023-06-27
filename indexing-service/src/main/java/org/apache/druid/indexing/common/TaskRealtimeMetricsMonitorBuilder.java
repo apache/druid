@@ -56,7 +56,8 @@ public class TaskRealtimeMetricsMonitorBuilder
         meters,
         ImmutableMap.of(
             DruidMetrics.TASK_ID, new String[]{task.getId()},
-            DruidMetrics.TASK_TYPE, new String[]{task.getType()}
+            DruidMetrics.TASK_TYPE, new String[]{task.getType()},
+            DruidMetrics.GROUP_ID, new String[]{task.getGroupId()}
             ),
         task.getContextValue(DruidMetrics.TAGS)
     );

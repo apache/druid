@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -37,12 +38,12 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.NestedDataTestUtils;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CompressionUtils;
 import org.hamcrest.CoreMatchers;
@@ -80,7 +81,7 @@ public class MSQInsertTest extends MSQTestBase
         {DEFAULT, DEFAULT_MSQ_CONTEXT},
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
-        {SEQUENTIAL_MERGE, SEQUENTIAL_MERGE_MSQ_CONTEXT}
+        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT}
     };
     return Arrays.asList(data);
   }
@@ -90,7 +91,6 @@ public class MSQInsertTest extends MSQTestBase
 
   @Parameterized.Parameter(1)
   public Map<String, Object> context;
-
 
   @Test
   public void testInsertOnFoo1()
@@ -293,6 +293,45 @@ public class MSQInsertTest extends MSQTestBase
 
                      .verifyResults();
 
+  }
+
+  @Test
+  public void testInsertOnFoo1WithTwoCountAggregatorsWithRollupContext()
+  {
+    final List<Object[]> expectedRows = expectedFooRows();
+
+    // Add 1L to each expected row, since we have two count aggregators.
+    for (int i = 0; i < expectedRows.size(); i++) {
+      final Object[] expectedRow = expectedRows.get(i);
+      final Object[] newExpectedRow = new Object[expectedRow.length + 1];
+      System.arraycopy(expectedRow, 0, newExpectedRow, 0, expectedRow.length);
+      newExpectedRow[expectedRow.length] = 1L;
+      expectedRows.set(i, newExpectedRow);
+    }
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG)
+                                            .add("cnt2", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "insert into foo1\n"
+                         + "select  __time, dim1 , count(*) as cnt, count(*) as cnt2\n"
+                         + "from foo\n"
+                         + "where dim1 is not null\n"
+                         + "group by 1, 2\n"
+                         + "PARTITIONED by All")
+                     .setExpectedDataSource("foo1")
+                     .setQueryContext(QueryContexts.override(context, ROLLUP_CONTEXT_PARAMS))
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedResultRows(expectedRows)
+                     .setExpectedRollUp(true)
+                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
+                     .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt2", "cnt2"))
+                     .verifyResults();
   }
 
   @Test
@@ -501,11 +540,9 @@ public class MSQInsertTest extends MSQTestBase
                          "INSERT INTO foo1 SELECT count(dim3) FROM foo WHERE dim3 IS NOT NULL GROUP BY 1 PARTITIONED BY ALL TIME")
                      .setExpectedDataSource("foo1")
                      .setQueryContext(context)
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "Aggregate expression is illegal in GROUP BY clause"))
-                     ))
+                     .setExpectedValidationErrorMatcher(
+                         invalidSqlContains("Aggregate expression is illegal in GROUP BY clause")
+                     )
                      .verifyPlanningErrors();
   }
 
@@ -694,6 +731,23 @@ public class MSQInsertTest extends MSQTestBase
                      )
                      .verifyResults();
 
+  }
+
+  @Test
+  public void testInsertWithClusteredByDescendingThrowsException()
+  {
+    // Add a DESC clustered by column, which should not be allowed
+    testIngestQuery().setSql("INSERT INTO foo1 "
+                             + "SELECT __time, dim1 , count(*) as cnt "
+                             + "FROM foo "
+                             + "GROUP BY 1, 2"
+                             + "PARTITIONED BY DAY "
+                             + "CLUSTERED BY dim1 DESC"
+                     )
+                     .setExpectedValidationErrorMatcher(
+                         invalidSqlIs("Invalid CLUSTERED BY clause [`dim1` DESC]: cannot sort in descending order.")
+                     )
+                     .verifyPlanningErrors();
   }
 
   @Test
@@ -908,7 +962,7 @@ public class MSQInsertTest extends MSQTestBase
         .setExpectedRowSignature(rowSignature)
         .setQueryContext(context)
         .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(SqlPlanningException.class),
+            CoreMatchers.instanceOf(DruidException.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                 "Field \"__time\" must be of type TIMESTAMP"))
         ))
@@ -918,14 +972,14 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testIncorrectInsertQuery()
   {
-    testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo  where dim1 is not null group by 1, 2 clustered by dim1")
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-                             "CLUSTERED BY found before PARTITIONED BY. In Druid, the CLUSTERED BY clause must follow the PARTITIONED BY clause"))
-                     ))
-                     .verifyPlanningErrors();
+    testIngestQuery()
+        .setSql(
+            "insert into foo1 select  __time, dim1 , count(*) as cnt from foo  where dim1 is not null group by 1, 2 clustered by dim1"
+        )
+        .setExpectedValidationErrorMatcher(invalidSqlContains(
+            "CLUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
+        ))
+        .verifyPlanningErrors();
   }
 
 
@@ -973,11 +1027,9 @@ public class MSQInsertTest extends MSQTestBase
                 + "  )\n"
                 + ") PARTITIONED by day")
         .setQueryContext(context)
-        .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(SqlPlanningException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Duplicate field in SELECT: [namespace]"))
-        ))
+        .setExpectedValidationErrorMatcher(
+            invalidSqlIs("Duplicate field in SELECT: [namespace]")
+        )
         .verifyPlanningErrors();
   }
 
@@ -1038,11 +1090,11 @@ public class MSQInsertTest extends MSQTestBase
                              + "FROM foo "
                              + "LIMIT 50 "
                              + "PARTITIONED BY MONTH")
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""))
-                     ))
+                     .setExpectedValidationErrorMatcher(
+                         invalidSqlContains(
+                             "INSERT and REPLACE queries cannot have a LIMIT unless PARTITIONED BY is \"ALL\""
+                         )
+                     )
                      .setQueryContext(context)
                      .verifyPlanningErrors();
   }
@@ -1056,11 +1108,9 @@ public class MSQInsertTest extends MSQTestBase
                              + "LIMIT 50 "
                              + "OFFSET 10"
                              + "PARTITIONED BY ALL TIME")
-                     .setExpectedValidationErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(SqlPlanningException.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "INSERT and REPLACE queries cannot have an OFFSET"))
-                     ))
+                     .setExpectedValidationErrorMatcher(
+                         invalidSqlContains("INSERT and REPLACE queries cannot have an OFFSET")
+                     )
                      .setQueryContext(context)
                      .verifyPlanningErrors();
   }

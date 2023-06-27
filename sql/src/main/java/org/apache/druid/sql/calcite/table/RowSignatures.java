@@ -220,6 +220,11 @@ public class RowSignatures
       sb.append(columnType.asTypeString());
     }
 
+    public ColumnType getColumnType()
+    {
+      return columnType;
+    }
+
     public String getComplexTypeName()
     {
       return columnType.getComplexTypeName();

@@ -46,7 +46,8 @@
           "ingestion/input-sources",
           "ingestion/schema-model",
           "ingestion/rollup",
-          "ingestion/partitioning"
+          "ingestion/partitioning",
+          "ingestion/tasks"
         ]
       },
       {
@@ -101,6 +102,7 @@
           "querying/sql-operators",
           "querying/sql-scalar",
           "querying/sql-aggregations",
+          "querying/sql-array-functions",
           "querying/sql-multivalue-string-functions",
           "querying/sql-json-functions",
           "querying/sql-functions",
@@ -162,10 +164,33 @@
       }
     ],
     "API reference":[
-      "api-reference/sql-api",
-      "api-reference/sql-ingestion-api",
-      "api-reference/sql-jdbc",
-      "api-reference/api-reference"
+      "api-reference/api-reference",
+      {
+        "type": "subcategory",
+        "label": "HTTP APIs",
+        "ids": [
+          "api-reference/sql-api",
+          "api-reference/sql-ingestion-api",
+          "api-reference/json-querying-api",
+          "api-reference/tasks-api",
+          "api-reference/supervisor-api",
+          "api-reference/retention-rules-api",
+          "api-reference/data-management-api",
+          "api-reference/automatic-compaction-api",
+          "api-reference/lookups-api",
+          "api-reference/service-status-api",
+          "api-reference/dynamic-configuration-api",
+          "api-reference/legacy-metadata-api"
+        ]
+      },
+      {
+        "type": "subcategory",
+        "label": "Java APIs",
+        "ids": [
+          "api-reference/sql-jdbc"
+        ]
+      }
+
     ],
     "Configuration": [
       "configuration/index",
@@ -233,6 +258,7 @@
       "development/javascript",
       "development/build",
       "development/versioning",
+      "development/contribute-to-docs",
       "development/experimental"
     ],
     "Misc": [
