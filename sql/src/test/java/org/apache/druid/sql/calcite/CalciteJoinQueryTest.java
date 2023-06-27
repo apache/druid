@@ -3285,9 +3285,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                     .build()
                     )
                 )
+                .setVirtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ColumnType.STRING))
                 .setInterval(querySegmentSpec(Filtration.eternity()))
                 .setDimensions(new DefaultDimensionSpec(
-                    "d0",
+                    "v0",
                     "_d0",
                     ColumnType.STRING
                 ))
@@ -4552,7 +4553,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 selector("dim1", "xxx", null),
                                 and(
                                     not(selector("j0.a0", "0", null)),
-                                    not(selector("_j0.d1", null, null)),
+                                    not(selector("_j0.a0", null, null)),
                                     not(selector("dim2", null, null))
                                 )
                             )

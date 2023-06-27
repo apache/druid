@@ -208,32 +208,55 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
       }
       final Project leftProject = leftPartialQueryToBeUpdated.getSelectProject();
       final String dimensionToUpdate = expressionToUnnest.getDirectColumn();
-      final ProjectUpdateShuttle pus = new ProjectUpdateShuttle(
-          unwrapMvToArray(rexNodeToUnnest),
-          leftProject,
-          dimensionToUpdate
-      );
-      final List<RexNode> out = pus.visitList(leftProject.getProjects());
-      final RelDataType structType = RexUtil.createStructType(getCluster().getTypeFactory(), out, pus.getTypeNames());
-      final LogicalProject newProject = LogicalProject.create(
-          leftProject.getInput(),
-          leftProject.getHints(),
-          out,
-          structType
-      );
-
-      if (leftDruidRel instanceof DruidOuterQueryRel) {
-        newLeftDruidRel = ((DruidRel<?>) leftDruidRel.getInputs().get(0)).withPartialQuery(
-            PartialDruidQuery.create(leftPartialQueryToBeUpdated.getScan())
-                             .withWhereFilter(leftPartialQueryToBeUpdated.getWhereFilter())
-                             .withSelectProject(newProject)
-                             .withSort(leftPartialQueryToBeUpdated.getSort()));
+      final LogicalProject newProject;
+      if (leftProject == null) {
+        newProject = null;
       } else {
-        newLeftDruidRel = leftDruidRel.withPartialQuery(
-            PartialDruidQuery.create(leftPartialQueryToBeUpdated.getScan())
-                             .withWhereFilter(leftPartialQueryToBeUpdated.getWhereFilter())
-                             .withSelectProject(newProject)
-                             .withSort(leftPartialQueryToBeUpdated.getSort()));
+        final ProjectUpdateShuttle pus = new ProjectUpdateShuttle(
+            unwrapMvToArray(rexNodeToUnnest),
+            leftProject,
+            dimensionToUpdate
+        );
+        final List<RexNode> out = pus.visitList(leftProject.getProjects());
+        final RelDataType structType = RexUtil.createStructType(getCluster().getTypeFactory(), out, pus.getTypeNames());
+        newProject = LogicalProject.create(
+            leftProject.getInput(),
+            leftProject.getHints(),
+            out,
+            structType
+        );
+      }
+
+      final DruidRel leftFinalRel;
+      if (leftDruidRel instanceof DruidOuterQueryRel) {
+        leftFinalRel = (DruidRel) leftDruidRel.getInputs().get(0);
+      } else {
+        leftFinalRel = leftDruidRel;
+      }
+      final PartialDruidQuery pq = PartialDruidQuery.create(leftPartialQueryToBeUpdated.getScan())
+                                                    .withWhereFilter(leftPartialQueryToBeUpdated.getWhereFilter())
+                                                    .withSelectProject(newProject)
+                                                    .withSort(leftPartialQueryToBeUpdated.getSort());
+
+
+      if (leftPartialQuery.stage() == PartialDruidQuery.Stage.SORT_PROJECT) {
+        final Project sortProject = leftPartialQueryToBeUpdated.getSortProject();
+        final ProjectUpdateShuttle pus = new ProjectUpdateShuttle(
+            unwrapMvToArray(rexNodeToUnnest),
+            sortProject,
+            dimensionToUpdate
+        );
+        final List<RexNode> out = pus.visitList(sortProject.getProjects());
+        final RelDataType structType = RexUtil.createStructType(getCluster().getTypeFactory(), out, pus.getTypeNames());
+        final Project newSortProject = LogicalProject.create(
+            sortProject.getInput(),
+            sortProject.getHints(),
+            out,
+            structType
+        );
+        newLeftDruidRel = leftFinalRel.withPartialQuery(pq.withSortProject(newSortProject));
+      } else {
+        newLeftDruidRel = leftFinalRel.withPartialQuery(pq);
       }
     } else {
       newLeftDruidRel = leftDruidRel;

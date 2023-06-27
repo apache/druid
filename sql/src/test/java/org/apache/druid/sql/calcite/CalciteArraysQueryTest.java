@@ -33,7 +33,6 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.SelectProjectDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -59,7 +58,6 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
@@ -3148,21 +3146,19 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      SelectProjectDataSource.create(
-                          FilterDataSource.create(
-                              new TableDataSource(CalciteTests.DATASOURCE3),
-                              new SelectorDimFilter("dim2", "a", null)
-                          ),
-                          VirtualColumns.create(ImmutableList.of(expressionVirtualColumn(
-                              "v0",
-                              "timestamp_floor(\"__time\",'PT1H',null,'UTC')",
-                              ColumnType.LONG
-                          )))
+                      FilterDataSource.create(
+                          new TableDataSource(CalciteTests.DATASOURCE3),
+                          new SelectorDimFilter("dim2", "a", null)
                       ),
                       expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
                       null
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(expressionVirtualColumn(
+                      "v0",
+                      "timestamp_floor(\"__time\",'PT1H',null,'UTC')",
+                      ColumnType.LONG
+                  ))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)
                   .context(QUERY_CONTEXT_UNNEST)
@@ -3192,21 +3188,17 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
-                      SelectProjectDataSource.create(
-                          FilterDataSource.create(
-                              new TableDataSource(CalciteTests.DATASOURCE3),
-                              new InDimFilter("dim2", ImmutableList.of("a", "b"), null)
-                          ),
-                          VirtualColumns.create(ImmutableList.of(expressionVirtualColumn(
-                              "v0",
-                              "timestamp_floor(\"__time\",'PT1H',null,'UTC')",
-                              ColumnType.LONG
-                          )))
+                      FilterDataSource.create(
+                          new TableDataSource(CalciteTests.DATASOURCE3),
+                          new InDimFilter("dim2", ImmutableList.of("a", "b"), null)
                       ),
                       expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
                       null
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(expressionVirtualColumn("v0",
+                                                          "timestamp_floor(\"__time\",'PT1H',null,'UTC')",
+                                                          ColumnType.LONG))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .legacy(false)
                   .context(QUERY_CONTEXT_UNNEST)
@@ -3246,7 +3238,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               .legacy(false)
                               .filters(new SelectorDimFilter("dim2", "a", null))
                               .columns(
-                                  "dim2",
                                   "dim3"
                               )
                               .limit(2)
@@ -3310,10 +3301,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .columns(ImmutableList.of("j0.unnest"))
                   .build()
         ),
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            new Object[]{"a"}
-        ) :
         ImmutableList.of(
             new Object[]{"a"},
             new Object[]{"b"}
