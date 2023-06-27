@@ -103,11 +103,11 @@ public class MetadataResourceTest
 
     final List<SegmentStatusInCluster> resultList = extractSegmentStatusList(response);
     Assert.assertEquals(resultList.size(), 4);
-    Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2), resultList.get(0));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null), resultList.get(1));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1), resultList.get(2));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, false), resultList.get(0));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null, false), resultList.get(1));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, false), resultList.get(2));
     // Replication factor should be 0 as the segment is overshadowed
-    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0), resultList.get(3));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, false), resultList.get(3));
   }
 
   private List<SegmentStatusInCluster> extractSegmentStatusList(Response response)

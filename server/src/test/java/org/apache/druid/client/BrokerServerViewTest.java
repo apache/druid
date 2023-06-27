@@ -51,7 +51,7 @@ import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegmentChange;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -546,9 +546,10 @@ public class BrokerServerViewTest extends CuratorTestBase
             Pair.of("2011-04-11/2011-04-13", "v3")
         ),
         input -> new DataSegmentChange(
-            new SegmentWithOvershadowedStatus(
+            new SegmentStatusInCluster(
                 dataSegmentWithIntervalAndVersion(input.lhs, input.rhs),
                 false,
+                null,
                 true
             ),
             DataSegmentChange.ChangeType.SEGMENT_ADDED)
@@ -658,9 +659,10 @@ public class BrokerServerViewTest extends CuratorTestBase
                              DataSegmentChange.ChangeType.SEGMENT_ADDED.toString())
         ),
         input -> new DataSegmentChange(
-            new SegmentWithOvershadowedStatus(
+            new SegmentStatusInCluster(
                 dataSegmentWithIntervalAndVersion(input.get(0), input.get(1)),
                 false,
+                null,
                 true
             ),
             DataSegmentChange.ChangeType.fromString(input.get(3)))

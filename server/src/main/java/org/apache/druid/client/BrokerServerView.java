@@ -48,7 +48,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
@@ -420,19 +420,19 @@ public class BrokerServerView implements TimelineServerView
 
   private void handedOffSegmentsFullSync(final List<DataSegmentChange> dataSegmentChanges)
   {
-    Map<String, Map<SegmentId, SegmentWithOvershadowedStatus>> handedOffSegmentsPerDataSource = new HashMap<>();
+    Map<String, Map<SegmentId, SegmentStatusInCluster>> handedOffSegmentsPerDataSource = new HashMap<>();
 
     int segmentsAdded = 0, segmentsHandedOff = 0;
     for (DataSegmentChange dataSegmentChange : dataSegmentChanges) {
       segmentsAdded++;
-      SegmentWithOvershadowedStatus segmentWithOvershadowedStatus =
+      SegmentStatusInCluster segmentStatusInCluster =
           dataSegmentChange.getSegmentStatusInCluster();
-      if (segmentWithOvershadowedStatus.isHandedOff()) {
+      if (segmentStatusInCluster.isHandedOff()) {
         segmentsHandedOff++;
         handedOffSegmentsPerDataSource.computeIfAbsent(
-            segmentWithOvershadowedStatus.getDataSegment().getDataSource(),
+            segmentStatusInCluster.getDataSegment().getDataSource(),
             value -> new HashMap<>()
-        ).put(segmentWithOvershadowedStatus.getDataSegment().getId(), segmentWithOvershadowedStatus);
+        ).put(segmentStatusInCluster.getDataSegment().getId(), segmentStatusInCluster);
       }
     }
 
@@ -454,10 +454,10 @@ public class BrokerServerView implements TimelineServerView
       // add segments from set1 not in set2 -> add handed off but unavialble segments to the timeline
       // update handed off time for elements of set2 in set1
 
-      for (Map.Entry<String, Map<SegmentId, SegmentWithOvershadowedStatus>> entry :
+      for (Map.Entry<String, Map<SegmentId, SegmentStatusInCluster>> entry :
           handedOffSegmentsPerDataSource.entrySet()) {
         String dataSource = entry.getKey();
-        Map<SegmentId, SegmentWithOvershadowedStatus> segments = entry.getValue();
+        Map<SegmentId, SegmentStatusInCluster> segments = entry.getValue();
 
         VersionedIntervalTimeline<String, ServerSelector> versionedIntervalTimeline = timelines.get(dataSource);
 
@@ -489,7 +489,7 @@ public class BrokerServerView implements TimelineServerView
 
   private void handedOffSegmentsDeltaSync(final List<DataSegmentChange> dataSegmentChanges)
   {
-    List<SegmentWithOvershadowedStatus> segmentsToAdd = new ArrayList<>();
+    List<SegmentStatusInCluster> segmentsToAdd = new ArrayList<>();
     List<DataSegment> segmentsToRemove = new ArrayList<>();
     int segmentsAdded = 0, segmentsRemoved = 0, handedOffSegments = 0;
 
@@ -529,13 +529,13 @@ public class BrokerServerView implements TimelineServerView
     }
   }
 
-  private void addSegmentsToTimeline(List<SegmentWithOvershadowedStatus> segments)
+  private void addSegmentsToTimeline(List<SegmentStatusInCluster> segments)
   {
     Map<String, List<VersionedIntervalTimeline.PartitionChunkEntry<String, ServerSelector>>>
         partitionChunkEntryMap = new HashMap<>();
 
-    for (SegmentWithOvershadowedStatus segmentWithOvershadowedStatus : segments) {
-      DataSegment segment = segmentWithOvershadowedStatus.getDataSegment();
+    for (SegmentStatusInCluster segmentPlus : segments) {
+      DataSegment segment = segmentPlus.getDataSegment();
       SegmentId segmentId = segment.getId();
       ServerSelector selector = selectors.get(segmentId);
       if (selector == null) {

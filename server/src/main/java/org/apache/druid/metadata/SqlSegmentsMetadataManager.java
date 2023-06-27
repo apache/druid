@@ -52,8 +52,8 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.apache.druid.timeline.SegmentTimeline;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -978,7 +978,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     }
 
     if (null != dataSourcesSnapshot) {
-      Set<SegmentWithOvershadowedStatus> oldSegments = DataSourcesSnapshot.getSegmentWithAdditionalDetails(
+      Set<SegmentStatusInCluster> oldSegments = DataSourcesSnapshot.getSegmentWithAdditionalDetails(
           dataSourcesSnapshot.getDataSourcesWithAllUsedSegments(),
           dataSourcesSnapshot.getOvershadowedSegments(),
           dataSourcesSnapshot.getHandedOffStatePerDataSource()
@@ -990,7 +990,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           datasourceToHandedOffSegments
       );
 
-      Set<SegmentWithOvershadowedStatus> newSegments = DataSourcesSnapshot.getSegmentWithAdditionalDetails(
+      Set<SegmentStatusInCluster> newSegments = DataSourcesSnapshot.getSegmentWithAdditionalDetails(
           dataSourcesSnapshot.getDataSourcesWithAllUsedSegments(),
           dataSourcesSnapshot.getOvershadowedSegments(),
           dataSourcesSnapshot.getHandedOffStatePerDataSource()
@@ -1102,8 +1102,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   protected List<DataSegmentChange> computeChanges(
-      Set<SegmentWithOvershadowedStatus> oldSegments,
-      Set<SegmentWithOvershadowedStatus> currentSegments
+      Set<SegmentStatusInCluster> oldSegments,
+      Set<SegmentStatusInCluster> currentSegments
   )
   {
     if (oldSegments.isEmpty()) {
@@ -1115,7 +1115,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     // overshadowed state
     // handed off state
 
-    Map<SegmentId, SegmentWithOvershadowedStatus> oldSegmentsMap =
+    Map<SegmentId, SegmentStatusInCluster> oldSegmentsMap =
         oldSegments
             .stream()
             .collect(Collectors.toMap(
@@ -1123,7 +1123,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 Function.identity()
             ));
 
-    Map<SegmentId, SegmentWithOvershadowedStatus> currentSegmentsMap =
+    Map<SegmentId, SegmentStatusInCluster> currentSegmentsMap =
         currentSegments
             .stream()
             .collect(Collectors.toMap(
@@ -1156,8 +1156,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     );
 
     commonSegmentIds.forEach(segmentId -> {
-      SegmentWithOvershadowedStatus oldSegment = oldSegmentsMap.get(segmentId);
-      SegmentWithOvershadowedStatus newSegment = currentSegmentsMap.get(segmentId);
+      SegmentStatusInCluster oldSegment = oldSegmentsMap.get(segmentId);
+      SegmentStatusInCluster newSegment = currentSegmentsMap.get(segmentId);
       if (null != oldSegment && null != newSegment) {
         final boolean handoffStatusChanged = oldSegment.isHandedOff() != newSegment.isHandedOff();
         final boolean overshadowStatusChanged = oldSegment.isOvershadowed() != newSegment.isOvershadowed();

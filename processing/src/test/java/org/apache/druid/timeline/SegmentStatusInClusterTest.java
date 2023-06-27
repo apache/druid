@@ -80,7 +80,7 @@ public class SegmentStatusInClusterTest
   }
 
   @Test
-  public void testUnwrappedSegmentWithOvershadowedStatusDeserialization() throws Exception
+  public void testUnwrappedSegmentStatusInClusterDeserialization() throws Exception
   {
     final Map<String, Object> objectMap = MAPPER.readValue(
         MAPPER.writeValueAsString(SEGMENT),
