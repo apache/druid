@@ -86,7 +86,9 @@ public class RowSignatures
   {
     Preconditions.checkNotNull(simpleExtraction, "simpleExtraction");
     if (simpleExtraction.getExtractionFn() != null
-        || rowSignature.getColumnType(simpleExtraction.getColumn()).map(type -> type.is(ValueType.STRING)).orElse(false)) {
+        || rowSignature.getColumnType(simpleExtraction.getColumn())
+                       .map(type -> type.is(ValueType.STRING))
+                       .orElse(false)) {
       return StringComparators.LEXICOGRAPHIC;
     } else {
       return StringComparators.NUMERIC;
@@ -171,7 +173,7 @@ public class RowSignatures
    * Creates a {@link ComplexSqlType} using the supplied {@link RelDataTypeFactory} to ensure that the
    * {@link ComplexSqlType} is interned. This is important because Calcite checks that the references are equal
    * instead of the objects being equivalent.
-   *
+   * <p>
    * This method uses {@link RelDataTypeFactory#createTypeWithNullability(RelDataType, boolean) ensures that if the
    * type factory is a {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl} that the type is passed through
    * {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl#canonize(RelDataType)} which interns the type.
@@ -186,15 +188,15 @@ public class RowSignatures
 
   /**
    * Calcite {@link RelDataType} for Druid complex columns, to preserve complex type information.
-   *
+   * <p>
    * If using with other operations of a {@link RelDataTypeFactory}, consider wrapping the creation of this type in
    * {@link RelDataTypeFactory#createTypeWithNullability(RelDataType, boolean) to ensure that if the type factory is a
    * {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl} that the type is passed through
    * {@link org.apache.calcite.rel.type.RelDataTypeFactoryImpl#canonize(RelDataType)} which interns the type.
-   *
+   * <p>
    * If {@link SqlTypeName} is going to be {@link SqlTypeName#OTHER} and a {@link RelDataTypeFactory} is available,
    * consider using {@link #makeComplexType(RelDataTypeFactory, ColumnType, boolean)}.
-   *
+   * <p>
    * This type does not work well with {@link org.apache.calcite.sql.type.ReturnTypes#explicit(RelDataType)}, which
    * will create new {@link RelDataType} using {@link SqlTypeName} during return type inference, so implementors of
    * {@link org.apache.druid.sql.calcite.expression.SqlOperatorConversion} should implement the
@@ -263,7 +265,10 @@ public class RowSignatures
 
     @Override
     public boolean checkSingleOperandType(
-        SqlCallBinding callBinding, SqlNode operand, int iFormalOperand, boolean throwOnFailure
+        SqlCallBinding callBinding,
+        SqlNode operand,
+        int iFormalOperand,
+        boolean throwOnFailure
     )
     {
       return type.equals(callBinding.getValidator().deriveType(callBinding.getScope(), operand));

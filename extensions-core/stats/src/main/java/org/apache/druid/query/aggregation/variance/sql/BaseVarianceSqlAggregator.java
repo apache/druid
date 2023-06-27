@@ -160,8 +160,8 @@ public abstract class BaseVarianceSqlAggregator implements SqlAggregator
   }
 
   /**
-   * Creates a SqlAggFunction that is the same as SqlAvgAggFunction but with an operand type that accepts
-   * variance aggregator objects in addition to numeric inputs.
+   * Creates a {@link SqlAggFunction} that is the same as {@link org.apache.calcite.sql.fun.SqlAvgAggFunction}
+   * but with an operand type that accepts variance aggregator objects in addition to numeric inputs.
    */
   private static SqlAggFunction buildSqlAvgAggFunction(String name)
   {
