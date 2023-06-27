@@ -27,6 +27,7 @@ import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Limits;
+import org.apache.druid.msq.indexing.MSQSelectDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
@@ -64,8 +65,9 @@ import java.util.stream.Collectors;
  * Can be <b>PARALLEL</b>, <b>SEQUENTIAL</b> or <b>AUTO</b>. See {@link ClusterStatisticsMergeMode} for more information on each mode.
  * Default value is <b>PARALLEL</b></li>
  *
- * <li><b>limitSelectResult</b>: Whether to limit the number of results returned in the query report. If true, limits the number of
- * rows to {@link Limits#MAX_SELECT_RESULT_ROWS}. If false, all rows are passed on to the report.
+ * <li><b>selectDestination</b>: If the query is a Select, determines the location to write results to, once the query
+ * is finished. Depending on the location, the results might also be truncated to {@link Limits#MAX_SELECT_RESULT_ROWS}.
+ * Default value is {@link MSQSelectDestination#REPORT}, which writes all the results to the report.
  *
  * <li><b>useAutoColumnSchemas</b>: Temporary flag to allow experimentation using
  * {@link org.apache.druid.segment.AutoTypeColumnSchema} for all 'standard' type columns during segment generation,
@@ -90,8 +92,8 @@ public class MultiStageQueryContext
 
   public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
   private static final boolean DEFAULT_DURABLE_SHUFFLE_STORAGE = false;
-  public static final String CTX_LIMIT_SELECT_RESULT = "limitSelectResult";
-  private static final boolean DEFAULT_LIMIT_SELECT_RESULT = false;
+  public static final String CTX_SELECT_DESTINATION = "selectDestination";
+  private static final String DEFAULT_SELECT_DESTINATION = MSQSelectDestination.REPORT.toString();
 
   public static final String CTX_FAULT_TOLERANCE = "faultTolerance";
   public static final boolean DEFAULT_FAULT_TOLERANCE = false;
@@ -209,11 +211,13 @@ public class MultiStageQueryContext
     );
   }
 
-  public static boolean limitSelectResults(final QueryContext queryContext)
+  public static MSQSelectDestination getSelectDestination(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(
-        CTX_LIMIT_SELECT_RESULT,
-        DEFAULT_LIMIT_SELECT_RESULT
+    return MSQSelectDestination.valueOf(
+        queryContext.getString(
+            CTX_SELECT_DESTINATION,
+            DEFAULT_SELECT_DESTINATION
+        )
     );
   }
 

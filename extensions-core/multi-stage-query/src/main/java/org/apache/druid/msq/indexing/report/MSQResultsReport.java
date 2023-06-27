@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.msq.exec.Limits;
+import org.apache.druid.msq.indexing.MSQSelectDestination;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
@@ -79,10 +80,10 @@ public class MSQResultsReport
       final List<ColumnAndType> signature,
       @Nullable final List<SqlTypeName> sqlTypeNames,
       Yielder<Object[]> resultYielder,
-      boolean shouldTruncateResults
+      MSQSelectDestination selectDestination
   )
   {
-    if (shouldTruncateResults) {
+    if (selectDestination.shouldTruncateResults()) {
       List<Object[]> results = new ArrayList<>();
       int rowCount = 0;
       while (!resultYielder.isDone() && rowCount < Limits.MAX_SELECT_RESULT_ROWS) {

@@ -22,6 +22,7 @@ package org.apache.druid.msq.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.msq.indexing.MSQSelectDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContext;
@@ -266,7 +267,7 @@ public class MultiStageQueryContextTest
   @Test
   public void limitSelectResultReturnsDefaultValue()
   {
-    Assert.assertFalse(MultiStageQueryContext.limitSelectResults(QueryContext.empty()));
+    Assert.assertEquals(MSQSelectDestination.REPORT, MultiStageQueryContext.getSelectDestination(QueryContext.empty()));
   }
 
   @Test

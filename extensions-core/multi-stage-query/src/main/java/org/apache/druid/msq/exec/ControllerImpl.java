@@ -90,6 +90,7 @@ import org.apache.druid.msq.indexing.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelsImpl;
 import org.apache.druid.msq.indexing.MSQControllerTask;
+import org.apache.druid.msq.indexing.MSQSelectDestination;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
@@ -468,7 +469,7 @@ public class ControllerImpl implements Controller
             resultsYielder,
             task.getQuerySpec().getColumnMappings(),
             task.getSqlTypeNames(),
-            MultiStageQueryContext.limitSelectResults(task.getQuerySpec().getQuery().context())
+            MultiStageQueryContext.getSelectDestination(task.getQuerySpec().getQuery().context())
         );
       } else {
         resultsReport = null;
@@ -2019,7 +2020,7 @@ public class ControllerImpl implements Controller
       final Yielder<Object[]> resultsYielder,
       final ColumnMappings columnMappings,
       @Nullable final List<SqlTypeName> sqlTypeNames,
-      final boolean limitSelectResult
+      final MSQSelectDestination selectDestination
   )
   {
     final RowSignature querySignature = queryDef.getFinalStageDefinition().getSignature();
@@ -2034,7 +2035,7 @@ public class ControllerImpl implements Controller
       );
     }
 
-    return MSQResultsReport.createReportAndLimitRowsIfNeeded(mappedSignature.build(), sqlTypeNames, resultsYielder, limitSelectResult);
+    return MSQResultsReport.createReportAndLimitRowsIfNeeded(mappedSignature.build(), sqlTypeNames, resultsYielder, selectDestination);
   }
 
   private static MSQStatusReport makeStatusReport(
