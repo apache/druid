@@ -166,27 +166,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 
   @Override
   @Ignore
-  public void testSelfJoin()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testTwoExactCountDistincts()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testViewAndJoin()
-  {
-
-  }
-
-  @Override
-  @Ignore
   public void testGroupByWithSortOnPostAggregationDefault()
   {
 
@@ -236,34 +215,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 
   @Override
   @Ignore
-  public void testUseTimeFloorInsteadOfGranularityOnJoinResult()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testMinMaxAvgDailyCountWithLimit()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testExactCountDistinctOfSemiJoinResult()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testMaxSubqueryRows()
-  {
-
-  }
-
-  @Override
-  @Ignore
   public void testExactCountDistinctUsingSubqueryWithWherePushDown()
   {
 
@@ -272,27 +223,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
   @Override
   @Ignore
   public void testGroupByTimeFloorAndDimOnGroupByTimeFloorAndDim()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testUsingSubqueryAsFilterOnTwoColumns()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testUsingSubqueryAsFilterWithInnerSort()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testUsingSubqueryWithLimit()
   {
 
   }
@@ -320,20 +250,6 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
 
   @Override
   public void testRequireTimeConditionSemiJoinNegative()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testEmptyGroupWithOffsetDoesntInfiniteLoop()
-  {
-
-  }
-
-  @Override
-  @Ignore
-  public void testJoinWithTimeDimension()
   {
 
   }
