@@ -32,6 +32,7 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlPostfixOperator;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.druid.error.DruidException;
@@ -147,24 +148,50 @@ public class DruidSqlParserUtilsTest
       final SqlNodeList selectArgs = new SqlNodeList(SqlParserPos.ZERO);
       selectArgs.add(new SqlIdentifier("__time", new SqlParserPos(0, 1)));
       Assert.assertNull(DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(
-          null,
-          new SqlSelect(SqlParserPos.ZERO, null, selectArgs, null, null, null, null, null, null, null, null)
-        )
+                            null,
+                            new SqlSelect(SqlParserPos.ZERO, null, selectArgs, null, null, null, null, null, null, null, null)
+                        )
       );
     }
 
     @Test
-    public void testNullSource()
+    public void testSimpledClusteredByWithNullSource()
     {
       final SqlNodeList args = new SqlNodeList(SqlParserPos.ZERO);
       args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
-      args.add(new SqlIntervalQualifier(TimeUnit.DAY, null, SqlParserPos.ZERO));
-
-      IllegalArgumentException iae = Assert.assertThrows(
-          IllegalArgumentException.class,
-          () -> DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(args, null)
+      args.add(new SqlIdentifier("FOO", new SqlParserPos(0, 2)));
+      SqlBasicCall sqlBasicCall1 = new SqlBasicCall(
+          new SqlAsOperator(),
+          new SqlNode[]{
+              new SqlIdentifier("DIM3", SqlParserPos.ZERO),
+              new SqlIdentifier("DIM3_ALIAS", SqlParserPos.ZERO)
+          },
+          new SqlParserPos(0, 3)
       );
-      Assert.assertEquals("Source node must be either SqlSelect or SqlOrderBy, but found [null]", iae.getMessage());
+      args.add(sqlBasicCall1);
+      Assert.assertEquals(
+          Arrays.asList("__time", "FOO", "DIM3_ALIAS"),
+          DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(args, null)
+      );
+    }
+
+    @Test
+    public void testOrdinalClusteredByWithNullSource()
+    {
+      final SqlNodeList args = new SqlNodeList(SqlParserPos.ZERO);
+      args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
+      args.add(new SqlIdentifier("FOO", new SqlParserPos(0, 2)));
+      args.add(SqlLiteral.createExactNumeric("3", SqlParserPos.ZERO));
+
+      MatcherAssert.assertThat(
+          Assert.assertThrows(
+              DruidException.class,
+              () -> DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(args, null)),
+          DruidExceptionMatcher.invalidInput().expectMessageIs(
+              "Unable to resolve CLUSTERED BY ordinal [3] with [null] as the source."
+              + " Use the column identifier name directly."
+          )
+      );
     }
 
     @Test

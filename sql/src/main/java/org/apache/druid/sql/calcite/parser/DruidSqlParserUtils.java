@@ -37,9 +37,11 @@ import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlTimestampLiteral;
 import org.apache.calcite.sql.SqlUtil;
+import org.apache.calcite.sql.SqlWith;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -331,7 +333,8 @@ public class DruidSqlParserUtils
    * Any ordinal and expression specified in the CLUSTERED BY clause will resolve to the final output column name.
    * </p>
    * @param clusteredByNodes  List of {@link SqlNode}s representing columns to be clustered by.
-   * @param sourceNode The select or order by source node.
+   * @param sourceNode The {@link SqlSelect}, {@link SqlOrderBy}, or {@link SqlWith} source node.
+   *                  Required if ordinals are specified in clusteredByNodes.
    */
   @Nullable
   public static List<String> resolveClusteredByColumnsToOutputColumns(SqlNodeList clusteredByNodes, SqlNode sourceNode)
@@ -341,15 +344,6 @@ public class DruidSqlParserUtils
       return null;
     }
 
-    Preconditions.checkArgument(
-        sourceNode instanceof SqlSelect || sourceNode instanceof SqlOrderBy,
-        "Source node must be either SqlSelect or SqlOrderBy, but found [%s]",
-        sourceNode == null ? null : sourceNode.getKind()
-    );
-
-    final SqlSelect selectNode = (sourceNode instanceof SqlSelect) ? (SqlSelect) sourceNode
-                                                                   : (SqlSelect) ((SqlOrderBy) sourceNode).query;
-    final List<SqlNode> selectList = selectNode.getSelectList().getList();
     final List<String> retClusteredByNames = new ArrayList<>();
 
     for (SqlNode clusteredByNode : clusteredByNodes) {
@@ -357,7 +351,25 @@ public class DruidSqlParserUtils
       if (SqlUtil.isLiteral(clusteredByNode)) {
         // The node is a literal number -- an ordinal is specified in the CLUSTERED BY clause. Validate and lookup the
         // ordinal in the select list.
-        int ordinal = ((SqlNumericLiteral) clusteredByNode).getValueAs(Integer.class);
+        final int ordinal = ((SqlNumericLiteral) clusteredByNode).getValueAs(Integer.class);
+
+        final SqlSelect selectNode;
+        if (sourceNode instanceof SqlSelect) {
+          selectNode = (SqlSelect) sourceNode;
+        } else if (sourceNode instanceof SqlOrderBy) {
+          selectNode = (SqlSelect) ((SqlOrderBy) sourceNode).query;
+        } else if (sourceNode instanceof SqlWith) {
+          selectNode = ((SqlSelect) ((SqlWith) sourceNode).body);
+        } else {
+          throw InvalidInput.exception(
+              "Unable to resolve CLUSTERED BY ordinal [%s] with [%s] as the source."
+              + " Use the column identifier name directly.",
+              ordinal,
+              sourceNode == null ? null : sourceNode.getKind()
+          );
+        }
+
+        List<SqlNode> selectList = selectNode.getSelectList().getList();
         if (ordinal < 1 || ordinal > selectList.size()) {
           throw InvalidSqlInput.exception(
               "Ordinal[%d] specified in the CLUSTERED BY clause is invalid. It must be between 1 and %d.",
