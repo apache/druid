@@ -363,6 +363,49 @@ public class DruidSqlParserUtilsTest
           DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(clusteredByArgs, orderByNode)
       );
     }
+
+    @Test
+    public void testOrdinalClusteredByWithAsSubQuery()
+    {
+      final SqlNodeList selectArgs = new SqlNodeList(SqlParserPos.ZERO);
+      selectArgs.add(new SqlIdentifier("__time", new SqlParserPos(0, 1)));
+      selectArgs.add(new SqlIdentifier("FOO", new SqlParserPos(0, 2)));
+      SqlBasicCall sqlBasicCall1 = new SqlBasicCall(
+          new SqlAsOperator(),
+          new SqlNode[]{
+              new SqlIdentifier("DIM3", SqlParserPos.ZERO),
+              new SqlIdentifier("DIM3_ALIAS", SqlParserPos.ZERO)
+          },
+          new SqlParserPos(0, 3)
+      );
+      selectArgs.add(sqlBasicCall1);
+
+      final SqlSelect sqlSelect = new SqlSelect(
+          SqlParserPos.ZERO,
+          null,
+          selectArgs,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
+
+      final SqlWith sqlWith = new SqlWith(SqlParserPos.ZERO, selectArgs, sqlSelect);
+
+      final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);
+      clusteredByArgs.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
+      clusteredByArgs.add(new SqlIdentifier("FOO", SqlParserPos.ZERO));
+      clusteredByArgs.add(SqlLiteral.createExactNumeric("3", SqlParserPos.ZERO));
+
+      Assert.assertEquals(
+          Arrays.asList("__time", "FOO", "DIM3_ALIAS"),
+          DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(clusteredByArgs, sqlWith)
+      );
+    }
   }
 
   public static class ClusteredByColumnsValidationTest
