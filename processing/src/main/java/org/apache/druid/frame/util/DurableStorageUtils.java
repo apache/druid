@@ -131,7 +131,7 @@ public class DurableStorageUtils
   }
 
   /**
-   * Tries to parse out the controller taskID from the input path.
+   * Tries to parse out the most top level directory from the path. Returns null if there is no such directory.
    * <br></br>
    * For eg:
    * <br/>
@@ -160,6 +160,15 @@ public class DurableStorageUtils
    * set of known tasks.
    * Returns true if the set contains the taskId.
    * Returns false if taskId could not be parsed or if the set does not contain the taskId.
+   * <br></br>
+   * For eg:
+   * <br/>
+   * <ul>
+   *   <li>for path <b>controller_query_id/task/123</b> the function will return <b>false</b></li>
+   *   <li>for path <b>query-result/controller_query_id/results.json</b>, the function will return <b>true</b></li> if the controller_query_id is in known tasks
+   *   <li>for path <b>query-result/controller_query_id/results.json</b>, the function will return <b>false</b></li> if the controller_query_id is not in known tasks
+   *   <li>for path <b>null</b>, the function will return <b>false</b></li>
+   * </ul>
    */
   public static boolean isQueryResultFileActive(String path, Set<String> knownTasks)
   {
@@ -169,6 +178,9 @@ public class DurableStorageUtils
     Iterator<String> elementsIterator = SPLITTER.split(path).iterator();
     List<String> elements = ImmutableList.copyOf(elementsIterator);
     if (elements.size() < 2) {
+      return false;
+    }
+    if (!DurableStorageUtils.QUERY_RESULTS_DIR.equals(elements.get(0))) {
       return false;
     }
     return knownTasks.contains(elements.get(1));
