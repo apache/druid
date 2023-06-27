@@ -1795,7 +1795,7 @@ public class MSQSelectTest extends MSQTestBase
     }
 
     Map<String, Object> queryContext = new HashMap<>(context);
-    queryContext.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.S3.toString());
+    queryContext.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLE_STORAGE.toString());
 
     testSelectQuery()
         .setSql(StringUtils.format(

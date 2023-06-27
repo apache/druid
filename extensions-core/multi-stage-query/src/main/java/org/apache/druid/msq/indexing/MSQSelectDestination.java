@@ -27,18 +27,21 @@ public enum MSQSelectDestination
   /**
    * Writes all the results directly to the report.
    */
-  REPORT(false),
-  S3(true);
+  TASK_REPORT(false),
+  /**
+   * Writes the results as frame files to durable storage. Task report can be truncated to a preview.
+   */
+  DURABLE_STORAGE(true);
 
-  private final boolean shouldTruncateResults;
+  private final boolean shouldTruncateResultsInTaskReport;
 
-  public boolean shouldTruncateResults()
+  public boolean shouldTruncateResultsInTaskReport()
   {
-    return shouldTruncateResults;
+    return shouldTruncateResultsInTaskReport;
   }
 
-  MSQSelectDestination(boolean shouldTruncateResults)
+  MSQSelectDestination(boolean shouldTruncateResultsInTaskReport)
   {
-    this.shouldTruncateResults = shouldTruncateResults;
+    this.shouldTruncateResultsInTaskReport = shouldTruncateResultsInTaskReport;
   }
 }

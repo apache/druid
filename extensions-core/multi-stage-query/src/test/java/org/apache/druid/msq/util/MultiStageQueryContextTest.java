@@ -267,7 +267,7 @@ public class MultiStageQueryContextTest
   @Test
   public void limitSelectResultReturnsDefaultValue()
   {
-    Assert.assertEquals(MSQSelectDestination.REPORT, MultiStageQueryContext.getSelectDestination(QueryContext.empty()));
+    Assert.assertEquals(MSQSelectDestination.TASK_REPORT, MultiStageQueryContext.getSelectDestination(QueryContext.empty()));
   }
 
   @Test

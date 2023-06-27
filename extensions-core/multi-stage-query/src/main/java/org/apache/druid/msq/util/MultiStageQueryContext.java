@@ -93,7 +93,7 @@ public class MultiStageQueryContext
   public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
   private static final boolean DEFAULT_DURABLE_SHUFFLE_STORAGE = false;
   public static final String CTX_SELECT_DESTINATION = "selectDestination";
-  private static final String DEFAULT_SELECT_DESTINATION = MSQSelectDestination.REPORT.toString();
+  private static final String DEFAULT_SELECT_DESTINATION = MSQSelectDestination.TASK_REPORT.toString();
 
   public static final String CTX_FAULT_TOLERANCE = "faultTolerance";
   public static final boolean DEFAULT_FAULT_TOLERANCE = false;

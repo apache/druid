@@ -83,7 +83,7 @@ public class MSQResultsReport
       MSQSelectDestination selectDestination
   )
   {
-    if (selectDestination.shouldTruncateResults()) {
+    if (selectDestination.shouldTruncateResultsInTaskReport()) {
       List<Object[]> results = new ArrayList<>();
       int rowCount = 0;
       while (!resultYielder.isDone() && rowCount < Limits.MAX_SELECT_RESULT_ROWS) {
