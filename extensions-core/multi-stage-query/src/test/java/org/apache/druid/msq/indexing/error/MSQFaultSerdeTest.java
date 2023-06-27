@@ -54,7 +54,12 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new ColumnTypeNotSupportedFault("the column", null));
     assertFaultSerde(new ColumnTypeNotSupportedFault("the column", ColumnType.STRING_ARRAY));
     assertFaultSerde(new ColumnNameRestrictedFault("the column"));
-    assertFaultSerde(new InsertCannotAllocateSegmentFault("the datasource", Intervals.ETERNITY));
+    assertFaultSerde(new InsertCannotAllocateSegmentFault("the datasource", Intervals.ETERNITY, null));
+    assertFaultSerde(new InsertCannotAllocateSegmentFault(
+        "the datasource",
+        Intervals.of("2000-01-01/2002-01-01"),
+        Intervals.ETERNITY
+    ));
     assertFaultSerde(new InsertCannotBeEmptyFault("the datasource"));
     assertFaultSerde(InsertLockPreemptedFault.INSTANCE);
     assertFaultSerde(InsertTimeNullFault.INSTANCE);
