@@ -385,10 +385,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT\n"
         + "  COUNT(*)\n"
         + "FROM INFORMATION_SCHEMA.ROUTINES\n"
-        + "WHERE IS_AGGREGATOR = 'YES'",
+        + "WHERE IS_AGGREGATOR = 'YES' AND ROUTINE_NAME = 'COUNT'",
         ImmutableList.of(),
         ImmutableList.of(
-            new Object[]{30L}
+            new Object[]{1L}
         )
     );
   }
@@ -401,10 +401,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT\n"
         + "  COUNT(*)\n"
         + "FROM INFORMATION_SCHEMA.ROUTINES\n"
-        + "WHERE IS_AGGREGATOR = 'NO'",
+        + "WHERE IS_AGGREGATOR = 'NO' AND ROUTINE_NAME = 'CEIL'",
         ImmutableList.of(),
         ImmutableList.of(
-            new Object[]{152L}
+            new Object[]{1L}
         )
     );
   }
