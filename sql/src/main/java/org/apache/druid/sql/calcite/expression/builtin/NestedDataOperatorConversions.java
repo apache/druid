@@ -190,7 +190,7 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = plannerContext.parse(druidExpressions.get(1).getExpression());
+      final Expr pathExpr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
       if (!pathExpr.isLiteral()) {
         return null;
       }
@@ -370,7 +370,7 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = plannerContext.parse(druidExpressions.get(1).getExpression());
+      final Expr pathExpr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
       if (!pathExpr.isLiteral()) {
         return null;
       }
@@ -492,7 +492,7 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = plannerContext.parse(druidExpressions.get(1).getExpression());
+      final Expr pathExpr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
       if (!pathExpr.isLiteral()) {
         return null;
       }
@@ -660,7 +660,7 @@ public class NestedDataOperatorConversions
         return null;
       }
 
-      final Expr pathExpr = plannerContext.parse(druidExpressions.get(1).getExpression());
+      final Expr pathExpr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
       if (!pathExpr.isLiteral()) {
         return null;
       }

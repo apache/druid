@@ -62,7 +62,7 @@ public class TruncateOperatorConversion implements SqlOperatorConversion
         inputExpressions -> {
           final DruidExpression arg = inputExpressions.get(0);
           final Expr digitsExpr = inputExpressions.size() > 1
-                                  ? plannerContext.parse(inputExpressions.get(1).getExpression())
+                                  ? plannerContext.parseExpression(inputExpressions.get(1).getExpression())
                                   : null;
 
           final String factorString;

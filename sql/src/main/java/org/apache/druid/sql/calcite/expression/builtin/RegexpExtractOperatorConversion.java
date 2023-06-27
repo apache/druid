@@ -66,9 +66,9 @@ public class RegexpExtractOperatorConversion implements SqlOperatorConversion
         StringUtils.toLowerCase(calciteOperator().getName()),
         inputExpressions -> {
           final DruidExpression arg = inputExpressions.get(0);
-          final Expr patternExpr = plannerContext.parse(inputExpressions.get(1).getExpression());
+          final Expr patternExpr = plannerContext.parseExpression(inputExpressions.get(1).getExpression());
           final Expr indexExpr = inputExpressions.size() > 2
-                                 ? plannerContext.parse(inputExpressions.get(2).getExpression())
+                                 ? plannerContext.parseExpression(inputExpressions.get(2).getExpression())
                                  : null;
 
           if (arg.isSimpleExtraction() && patternExpr.isLiteral() && (indexExpr == null || indexExpr.isLiteral())) {

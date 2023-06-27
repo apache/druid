@@ -335,7 +335,7 @@ class ExpressionTestHelper
       Assert.assertEquals("Expression for: " + rexNode, expectedExpression.getExpression(), expression.getExpression());
     }
 
-    ExprEval<?> result = PLANNER_CONTEXT.parse(expression.getExpression())
+    ExprEval<?> result = PLANNER_CONTEXT.parseExpression(expression.getExpression())
                                         
                                         .eval(expressionBindings);
 

@@ -717,7 +717,7 @@ public class Expressions
     if (druidExpression != null) {
       return new ExpressionDimFilter(
           druidExpression.getExpression(),
-          plannerContext.parse(druidExpression.getExpression()),
+          plannerContext.parseExpression(druidExpression.getExpression()),
           null
       );
     }

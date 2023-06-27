@@ -332,7 +332,7 @@ public class MultiValueStringOperatorConversions
         return null;
       }
 
-      Expr expr = plannerContext.parse(druidExpressions.get(1).getExpression());
+      Expr expr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
       // the right expression must be a literal array for this to work, since we need the values of the column
       if (!expr.isLiteral()) {
         return null;

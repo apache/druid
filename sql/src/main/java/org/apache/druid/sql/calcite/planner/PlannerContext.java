@@ -239,7 +239,7 @@ public class PlannerContext
   /**
    * Equivalent to {@link ExpressionParser#parse(String)} on {@link #getExpressionParser()}.
    */
-  public Expr parse(final String expr)
+  public Expr parseExpression(final String expr)
   {
     return expressionParser.parse(expr);
   }
