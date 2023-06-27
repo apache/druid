@@ -154,8 +154,15 @@ public class DoubleNumericColumnPartSerdeV2 implements ColumnPartSerde
       buffer.position(initialPos + offset);
       final ImmutableBitmap bitmap;
       final boolean hasNulls;
-      if (buffer.hasRemaining() && NullHandling.sqlCompatible()) {
-        bitmap = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
+      if (buffer.hasRemaining()) {
+        if (NullHandling.sqlCompatible()) {
+          bitmap = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
+        } else {
+          // Read from the buffer (to advance its position) but do not actually retain the bitmaps.
+          bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(buffer);
+          bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
+        }
+
         hasNulls = !bitmap.isEmpty();
       } else {
         bitmap = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();

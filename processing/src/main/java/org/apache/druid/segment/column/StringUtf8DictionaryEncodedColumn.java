@@ -30,7 +30,6 @@ import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
-import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -51,17 +50,15 @@ import java.nio.ByteBuffer;
 import java.util.BitSet;
 
 /**
- * {@link DictionaryEncodedColumn<String>} for a column which uses a {@link FrontCodedIndexed} to store its value
- * dictionary, which 'delta encodes' strings (instead of {@link org.apache.druid.segment.data.GenericIndexed} like
- * {@link StringDictionaryEncodedColumn}).
+ * {@link DictionaryEncodedColumn<String>} for a column which has only a UTF-8 dictionary, no String dictionary.
  * <p>
- * This class is otherwise nearly identical to {@link StringDictionaryEncodedColumn} other than the dictionary
- * difference.
+ * This class is otherwise nearly identical to {@link StringDictionaryEncodedColumn} other than lacking a
+ * String dictionary.
  * <p>
  * Implements {@link NestedCommonFormatColumn} so it can be used as a reader for single value string specializations
  * of {@link org.apache.druid.segment.AutoTypeColumnIndexer}.
  */
-public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncodedColumn<String>,
+public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColumn<String>,
     NestedCommonFormatColumn
 {
   @Nullable
@@ -70,7 +67,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   private final ColumnarMultiInts multiValueColumn;
   private final Indexed<ByteBuffer> utf8Dictionary;
 
-  public StringFrontCodedDictionaryEncodedColumn(
+  public StringUtf8DictionaryEncodedColumn(
       @Nullable ColumnarInts singleValueColumn,
       @Nullable ColumnarMultiInts multiValueColumn,
       Indexed<ByteBuffer> utf8Dictionary
@@ -102,6 +99,9 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
   @Override
   public IndexedInts getMultiValueRow(int rowNum)
   {
+    if (!hasMultipleValues()) {
+      throw new UnsupportedOperationException("Column is not multi-valued");
+    }
     return multiValueColumn.get(rowNum);
   }
 
@@ -154,7 +154,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
       @Override
       public String lookupName(int id)
       {
-        final String value = StringFrontCodedDictionaryEncodedColumn.this.lookupName(id);
+        final String value = StringUtf8DictionaryEncodedColumn.this.lookupName(id);
         return extractionFn == null ? value : extractionFn.apply(value);
       }
 
@@ -190,7 +190,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
         if (extractionFn != null) {
           throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
         }
-        return StringFrontCodedDictionaryEncodedColumn.this.lookupId(name);
+        return StringUtf8DictionaryEncodedColumn.this.lookupId(name);
       }
     }
 
@@ -291,7 +291,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
                 @Override
                 public void inspectRuntimeShape(RuntimeShapeInspector inspector)
                 {
-                  inspector.visit("column", StringFrontCodedDictionaryEncodedColumn.this);
+                  inspector.visit("column", StringUtf8DictionaryEncodedColumn.this);
                 }
               };
             } else {
@@ -332,7 +332,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
             @Override
             public void inspectRuntimeShape(RuntimeShapeInspector inspector)
             {
-              inspector.visit("column", StringFrontCodedDictionaryEncodedColumn.this);
+              inspector.visit("column", StringUtf8DictionaryEncodedColumn.this);
             }
           };
         }
@@ -381,7 +381,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
       @Override
       public String lookupName(final int id)
       {
-        return StringFrontCodedDictionaryEncodedColumn.this.lookupName(id);
+        return StringUtf8DictionaryEncodedColumn.this.lookupName(id);
       }
 
       @Nullable
@@ -394,7 +394,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
       @Override
       public int lookupId(@Nullable String name)
       {
-        return StringFrontCodedDictionaryEncodedColumn.this.lookupId(name);
+        return StringUtf8DictionaryEncodedColumn.this.lookupId(name);
       }
     }
 
@@ -421,7 +421,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
       @Override
       public String lookupName(final int id)
       {
-        return StringFrontCodedDictionaryEncodedColumn.this.lookupName(id);
+        return StringUtf8DictionaryEncodedColumn.this.lookupName(id);
       }
 
       @Nullable
@@ -435,7 +435,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
       @Override
       public int lookupId(@Nullable String name)
       {
-        return StringFrontCodedDictionaryEncodedColumn.this.lookupId(name);
+        return StringUtf8DictionaryEncodedColumn.this.lookupId(name);
       }
     }
 
@@ -457,7 +457,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
         @Override
         public String lookupName(int id)
         {
-          return StringFrontCodedDictionaryEncodedColumn.this.lookupName(id);
+          return StringUtf8DictionaryEncodedColumn.this.lookupName(id);
         }
       }
       return new StringVectorSelector();
@@ -473,7 +473,7 @@ public class StringFrontCodedDictionaryEncodedColumn implements DictionaryEncode
         @Override
         public String lookupName(int id)
         {
-          return StringFrontCodedDictionaryEncodedColumn.this.lookupName(id);
+          return StringUtf8DictionaryEncodedColumn.this.lookupName(id);
         }
       }
       return new MultiStringVectorSelector();

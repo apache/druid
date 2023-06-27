@@ -23,7 +23,7 @@ import com.google.common.base.Supplier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
-import org.apache.druid.segment.column.StringFrontCodedDictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.FrontCodedIndexed;
@@ -31,7 +31,7 @@ import org.apache.druid.segment.data.FrontCodedIndexed;
 import javax.annotation.Nullable;
 
 /**
- * {@link DictionaryEncodedColumnSupplier} but for columns using a {@link StringFrontCodedDictionaryEncodedColumn}
+ * {@link DictionaryEncodedColumnSupplier} but for columns using a {@link StringUtf8DictionaryEncodedColumn}
  * instead of the traditional {@link StringDictionaryEncodedColumn}
  */
 public class StringFrontCodedDictionaryEncodedColumnSupplier implements Supplier<DictionaryEncodedColumn<?>>
@@ -57,19 +57,19 @@ public class StringFrontCodedDictionaryEncodedColumnSupplier implements Supplier
     final FrontCodedIndexed suppliedUtf8Dictionary = utf8Dictionary.get();
 
     if (NullHandling.mustCombineNullAndEmptyInDictionary(suppliedUtf8Dictionary)) {
-      return new StringFrontCodedDictionaryEncodedColumn(
+      return new StringUtf8DictionaryEncodedColumn(
           singleValuedColumn != null ? new CombineFirstTwoValuesColumnarInts(singleValuedColumn.get()) : null,
           multiValuedColumn != null ? new CombineFirstTwoValuesColumnarMultiInts(multiValuedColumn.get()) : null,
           CombineFirstTwoEntriesIndexed.returnNull(suppliedUtf8Dictionary)
       );
     } else if (NullHandling.mustReplaceFirstValueWithNullInDictionary(suppliedUtf8Dictionary)) {
-      return new StringFrontCodedDictionaryEncodedColumn(
+      return new StringUtf8DictionaryEncodedColumn(
           singleValuedColumn != null ? singleValuedColumn.get() : null,
           multiValuedColumn != null ? multiValuedColumn.get() : null,
           new ReplaceFirstValueWithNullIndexed<>(suppliedUtf8Dictionary)
       );
     } else {
-      return new StringFrontCodedDictionaryEncodedColumn(
+      return new StringUtf8DictionaryEncodedColumn(
           singleValuedColumn != null ? singleValuedColumn.get() : null,
           multiValuedColumn != null ? multiValuedColumn.get() : null,
           suppliedUtf8Dictionary
