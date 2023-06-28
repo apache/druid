@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Intent, MenuItem } from '@blueprintjs/core';
+import { Code, Intent, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import type { Filter } from 'react-table';
@@ -127,13 +127,21 @@ function detailedStateToColor(detailedState: string): string {
   switch (detailedState) {
     case 'UNHEALTHY_SUPERVISOR':
     case 'UNHEALTHY_TASKS':
+    case 'UNABLE_TO_CONNECT_TO_STREAM':
+    case 'LOST_CONTACT_WITH_STREAM':
       return '#d5100a';
 
     case 'PENDING':
       return '#00eaff';
 
+    case 'DISCOVERING_INITIAL_TASKS':
+    case 'CREATING_TASKS':
+    case 'CONNECTING_TO_STREAM':
     case 'RUNNING':
       return '#2167d5';
+
+    case 'IDLE':
+      return '#44659d';
 
     case 'STOPPING':
       return '#e75c06';
@@ -371,7 +379,9 @@ GROUP BY 1, 2`;
           this.supervisorQueryManager.rerunLastQuery();
         }}
       >
-        <p>{`Are you sure you want to resume supervisor '${resumeSupervisorId}'?`}</p>
+        <p>
+          Are you sure you want to resume supervisor <Code>{resumeSupervisorId}</Code>?
+        </p>
       </AsyncActionDialog>
     );
   }
@@ -400,7 +410,9 @@ GROUP BY 1, 2`;
           this.supervisorQueryManager.rerunLastQuery();
         }}
       >
-        <p>{`Are you sure you want to suspend supervisor '${suspendSupervisorId}'?`}</p>
+        <p>
+          Are you sure you want to suspend supervisor <Code>{suspendSupervisorId}</Code>?
+        </p>
       </AsyncActionDialog>
     );
   }
@@ -433,7 +445,9 @@ GROUP BY 1, 2`;
           'I understand that this operation cannot be undone.',
         ]}
       >
-        <p>{`Are you sure you want to hard reset supervisor '${resetSupervisorId}'?`}</p>
+        <p>
+          Are you sure you want to hard reset supervisor <Code>{resetSupervisorId}</Code>?
+        </p>
         <p>Hard resetting a supervisor will lead to data loss or data duplication.</p>
         <p>
           The reason for using this operation is to recover from a state in which the supervisor
@@ -467,7 +481,9 @@ GROUP BY 1, 2`;
           this.supervisorQueryManager.rerunLastQuery();
         }}
       >
-        <p>{`Are you sure you want to terminate supervisor '${terminateSupervisorId}'?`}</p>
+        <p>
+          Are you sure you want to terminate supervisor <Code>{terminateSupervisorId}</Code>?
+        </p>
         <p>This action is not reversible.</p>
       </AsyncActionDialog>
     );
