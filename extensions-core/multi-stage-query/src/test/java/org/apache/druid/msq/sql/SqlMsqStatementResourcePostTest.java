@@ -189,7 +189,7 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
           {
             DruidException e = bob.forPersona(DruidException.Persona.USER)
                                   .ofCategory(DruidException.Category.UNCATEGORIZED)
-                                  .build(insertCannotBeEmpty.getMessage());
+                                  .build(insertCannotBeEmpty.getFault().getErrorMessage());
             e.withContext("dataSource", insertCannotBeEmptyFault.getDataSource());
             return e;
           }
