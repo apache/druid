@@ -25,10 +25,10 @@ sidebar_label: Tasks
 
 This document describes the API endpoints for task retrieval, submission, and deletion for Apache Druid.
 
-## Tasks
-
 Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
 as in `2016-06-27_2016-06-28`.
+
+## Task information and retrieval 
 
 ### Get an array of tasks
 
@@ -1051,6 +1051,8 @@ Host: {domain}
 }</code></pre>
 </details>
 
+## Task operations
+
 ### Submit a task
 
 #### URL
@@ -1284,6 +1286,7 @@ Host: {domain}
 }</code></pre>
 </details>
 
+## Task management
 
 ### Retrieve status objects for tasks
 
