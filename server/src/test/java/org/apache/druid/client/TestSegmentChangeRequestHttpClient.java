@@ -49,7 +49,7 @@ public class TestSegmentChangeRequestHttpClient implements HttpClient
   private final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
   private final BlockingQueue<ResultHolder<?>> results = new LinkedBlockingQueue<>();
 
-  private int requestCount;
+  private int requestCount = 0;
 
   public void failNextRequestOnClientWith(RuntimeException clientError)
   {

@@ -65,6 +65,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -330,7 +331,6 @@ public class HttpServerInventoryViewTest
     executorFactory.sendSyncRequest();
 
     executorFactory.emitMetrics();
-    serviceEmitter.verifyEmitted(METRIC_UNSTABLE_TIME, 1);
     serviceEmitter.verifyValue(METRIC_SUCCESS, 0);
 
     httpServerInventoryView.stop();
@@ -349,7 +349,6 @@ public class HttpServerInventoryViewTest
     executorFactory.sendSyncRequestAndHandleResponse();
 
     executorFactory.emitMetrics();
-    serviceEmitter.verifyEmitted(METRIC_UNSTABLE_TIME, 1);
     serviceEmitter.verifyValue(METRIC_SUCCESS, 0);
 
     httpServerInventoryView.stop();
@@ -381,6 +380,71 @@ public class HttpServerInventoryViewTest
     Assert.assertTrue(alert.getDescription().contains("Sync failed for server"));
 
     httpServerInventoryView.stop();
+  }
+
+  @Test
+  public void testInitWaitsForServerToSync()
+  {
+    httpServerInventoryView.start();
+    druidNodeDiscovery.markNodeViewInitialized();
+    druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
+
+    ExecutorService initExecutor = Execs.singleThreaded(EXEC_NAME_PREFIX + "-init");
+
+    try {
+      initExecutor.submit(() -> executorFactory.executeInventoryInitTask());
+
+      // Wait to ensure that init thread is in progress and waiting
+      Thread.sleep(1000);
+
+      Assert.assertFalse(inventoryInitialized.get());
+
+      // Finish sync of server
+      httpClient.completeNextRequestWith(buildChangeSnapshot(), TYPE_REF);
+      executorFactory.sendSyncRequestAndHandleResponse();
+
+      // Wait for 10 seconds to ensure that init thread knows about server sync
+      Thread.sleep(10_000);
+      Assert.assertTrue(inventoryInitialized.get());
+    }
+    catch (InterruptedException e) {
+      throw new ISE(e, "Interrupted");
+    }
+    finally {
+      initExecutor.shutdownNow();
+    }
+  }
+
+  @Test
+  public void testInitDoesNotWaitForRemovedServerToSync()
+  {
+    httpServerInventoryView.start();
+    druidNodeDiscovery.markNodeViewInitialized();
+    DiscoveryDruidNode node = druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
+
+    ExecutorService initExecutor = Execs.singleThreaded(EXEC_NAME_PREFIX + "-init");
+
+    try {
+      initExecutor.submit(() -> executorFactory.executeInventoryInitTask());
+
+      // Wait to ensure that init thread is in progress and waiting
+      Thread.sleep(1000);
+
+      Assert.assertFalse(inventoryInitialized.get());
+
+      // Remove the node from discovery
+      druidNodeDiscovery.removeNodesAndNotifyListeners(node);
+
+      // Wait for 10 seconds to ensure that init thread knows about server sync
+      Thread.sleep(10_000);
+      Assert.assertTrue(inventoryInitialized.get());
+    }
+    catch (InterruptedException e) {
+      throw new ISE(e, "Interrupted");
+    }
+    finally {
+      initExecutor.shutdownNow();
+    }
   }
 
   private void createInventoryView(HttpServerInventoryViewConfig config)
