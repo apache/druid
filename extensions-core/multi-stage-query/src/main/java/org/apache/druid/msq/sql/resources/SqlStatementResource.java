@@ -306,9 +306,6 @@ public class SqlStatementResource
       final long start = offset == null ? 0 : offset;
       final long last = SqlStatementResourceHelper.getLastIndex(numberOfRows, start);
 
-
-      getStatementStatus(queryId, authenticationResult.getIdentity(), false);
-
       TaskStatusResponse taskResponse = contactOverlord(overlordClient.taskStatus(queryId));
       if (taskResponse == null) {
         return Response.status(Response.Status.NOT_FOUND).build();
