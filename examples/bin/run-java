@@ -31,6 +31,8 @@ then
   # Disable strong encapsulation for certain packages on Java 11+.
   # The first 4 parameters below are required to use datasketches-memory as a library.
   # And the last one is required for metric emit, see https://github.com/apache/druid/issues/12312
+  #
+  # When updating this list, also update ForkingTaskRunner#STRONG_ENCAPSULATION_PROPERTIES and docs/operations/java.md.
   exec "$JAVA_BIN" \
     --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
     --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED \

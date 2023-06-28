@@ -33,15 +33,12 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ArrayDoubleGroupByColumnSelectorStrategyTest
 {
-  protected final List<List<Double>> dictionary = ImmutableList.of(
-      ImmutableList.of(1.0, 2.0),
-      ImmutableList.of(2.0, 3.0),
-      ImmutableList.of(1.0)
-  );
+  protected final List<List<Double>> dictionary = new ArrayList<>();
 
   protected final Object2IntOpenHashMap<List<Double>> reverseDictionary = new Object2IntOpenHashMap<>();
 
@@ -53,11 +50,16 @@ public class ArrayDoubleGroupByColumnSelectorStrategyTest
   @Before
   public void setup()
   {
+    dictionary.add(ImmutableList.of(1.0, 2.0));
+    dictionary.add(ImmutableList.of(2.0, 3.0));
+    dictionary.add(ImmutableList.of(1.0));
+
     reverseDictionary.defaultReturnValue(-1);
-    strategy = new ArrayDoubleGroupByColumnSelectorStrategy(dictionary, reverseDictionary);
     reverseDictionary.put(ImmutableList.of(1.0, 2.0), 0);
     reverseDictionary.put(ImmutableList.of(2.0, 3.0), 1);
     reverseDictionary.put(ImmutableList.of(1.0), 2);
+
+    strategy = new ArrayDoubleGroupByColumnSelectorStrategy(dictionary, reverseDictionary);
   }
 
   @Test

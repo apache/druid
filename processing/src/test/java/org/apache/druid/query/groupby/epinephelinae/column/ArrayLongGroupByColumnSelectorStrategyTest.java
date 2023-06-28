@@ -35,16 +35,13 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ArrayLongGroupByColumnSelectorStrategyTest
 {
-  protected final List<List<Long>> dictionary = ImmutableList.of(
-      ImmutableList.of(1L, 2L),
-      ImmutableList.of(2L, 3L),
-      ImmutableList.of(1L)
-  );
+  protected final List<List<Long>> dictionary = new ArrayList<>();
 
   protected final Object2IntOpenHashMap<List<Long>> reverseDictionary = new Object2IntOpenHashMap<>();
 
@@ -56,11 +53,16 @@ public class ArrayLongGroupByColumnSelectorStrategyTest
   @Before
   public void setup()
   {
+    dictionary.add(ImmutableList.of(1L, 2L));
+    dictionary.add(ImmutableList.of(2L, 3L));
+    dictionary.add(ImmutableList.of(1L));
+
     reverseDictionary.defaultReturnValue(-1);
-    strategy = new ArrayLongGroupByColumnSelectorStrategy(dictionary, reverseDictionary);
     reverseDictionary.put(ImmutableList.of(1L, 2L), 0);
     reverseDictionary.put(ImmutableList.of(2L, 3L), 1);
     reverseDictionary.put(ImmutableList.of(1L), 2);
+
+    strategy = new ArrayLongGroupByColumnSelectorStrategy(dictionary, reverseDictionary);
   }
 
   @Test

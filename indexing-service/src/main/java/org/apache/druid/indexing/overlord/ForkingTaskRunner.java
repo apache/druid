@@ -97,6 +97,22 @@ public class ForkingTaskRunner
 {
   private static final EmittingLogger LOGGER = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
+
+  /**
+   * Properties to add on Java 11+. When updating this list, also update the "bin/run-java" script and the
+   * doc page "docs/operations/java.md".
+   */
+  private static final List<String> STRONG_ENCAPSULATION_PROPERTIES = ImmutableList.of(
+      "--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED",
+      "--add-exports=java.base/jdk.internal.ref=ALL-UNNAMED",
+      "--add-opens=java.base/java.nio=ALL-UNNAMED",
+      "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
+      "--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED",
+      "--add-opens=java.base/java.io=ALL-UNNAMED",
+      "--add-opens=java.base/java.lang=ALL-UNNAMED",
+      "--add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED"
+  );
+
   private final ForkingTaskRunnerConfig config;
   private final Properties props;
   private final TaskLogPusher taskLogPusher;
@@ -224,6 +240,11 @@ public class ForkingTaskRunner
                         }
 
                         command.add(config.getJavaCommand());
+
+                        if (JvmUtils.majorVersion() >= 11) {
+                          command.addAll(STRONG_ENCAPSULATION_PROPERTIES);
+                        }
+
                         command.add("-cp");
                         command.add(taskClasspath);
 

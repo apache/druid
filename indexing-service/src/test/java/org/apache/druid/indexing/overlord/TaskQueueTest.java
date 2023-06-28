@@ -69,9 +69,12 @@ import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
@@ -379,7 +382,9 @@ public class TaskQueueTest extends IngestionTestBase
     final HttpRemoteTaskRunner taskRunner = createHttpRemoteTaskRunner(ImmutableList.of("t1"));
     final StubServiceEmitter metricsVerifier = new StubServiceEmitter("druid/overlord", "testHost");
     WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
-    EasyMock.expect(workerHolder.getWorker()).andReturn(new Worker("http", "worker", "127.0.0.1", 1, "v1", WorkerConfig.DEFAULT_CATEGORY)).anyTimes();
+    EasyMock.expect(workerHolder.getWorker())
+            .andReturn(new Worker("http", "worker", "127.0.0.1", 1, "v1", WorkerConfig.DEFAULT_CATEGORY))
+            .anyTimes();
     workerHolder.incrementContinuouslyFailedTasksCount();
     EasyMock.expectLastCall();
     workerHolder.setLastCompletedTaskTime(EasyMock.anyObject());
@@ -412,10 +417,10 @@ public class TaskQueueTest extends IngestionTestBase
         TaskLocation.create("worker", 1, 2)
     ), workerHolder);
     while (!taskRunner.getRunningTasks()
-        .stream()
-        .map(TaskRunnerWorkItem::getTaskId)
-        .collect(Collectors.toList())
-        .contains(task.getId())) {
+                      .stream()
+                      .map(TaskRunnerWorkItem::getTaskId)
+                      .collect(Collectors.toList())
+                      .contains(task.getId())) {
       Thread.sleep(100);
     }
     taskQueue.shutdown(task.getId(), "shutdown");
@@ -428,6 +433,34 @@ public class TaskQueueTest extends IngestionTestBase
 
     metricsVerifier.getEvents();
     metricsVerifier.verifyEmitted("task/run/time", 1);
+    EasyMock.verify(workerHolder);
+  }
+
+  @Test
+  public void testAddBeyondLimit() throws EntryExistsException
+  {
+    final TaskActionClientFactory actionClientFactory = createActionClientFactory();
+    final HttpRemoteTaskRunner taskRunner = createHttpRemoteTaskRunner(ImmutableList.of("t1"));
+    final StubServiceEmitter metricsVerifier = new StubServiceEmitter("druid/overlord", "testHost");
+    final TaskQueue taskQueue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(0, null, null, null),
+        new DefaultTaskConfig(),
+        getTaskStorage(),
+        taskRunner,
+        actionClientFactory,
+        getLockbox(),
+        metricsVerifier
+    );
+    final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
+
+    taskQueue.setActive(true);
+    final IllegalStateException e = Assert.assertThrows(
+        IllegalStateException.class,
+        () -> taskQueue.add(task)
+    );
+
+    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Too many tasks")));
   }
 
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner(List<String> runningTasks)
@@ -435,7 +468,7 @@ public class TaskQueueTest extends IngestionTestBase
     HttpRemoteTaskRunnerTest.TestDruidNodeDiscovery druidNodeDiscovery = new HttpRemoteTaskRunnerTest.TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
-        .andReturn(druidNodeDiscovery);
+            .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
     TaskStorage taskStorageMock = EasyMock.createStrictMock(TaskStorage.class);
     for (String taskId : runningTasks) {
