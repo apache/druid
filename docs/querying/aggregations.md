@@ -394,7 +394,7 @@ For these reasons, we have deprecated this aggregator and recommend using the Da
 
 ### Expression aggregator
 
-Aggregates results using [Druid expressions](./math-expr.md) functions to facilitate building custom aggregator functions.
+Query time only aggregator that can aggregate results using [Druid expressions](./math-expr.md) functions to facilitate building custom functions.
 
 | property | description | required |
 | --- | --- | --- |
