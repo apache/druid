@@ -147,10 +147,11 @@ public class DruidSqlParserUtilsTest
     {
       final SqlNodeList selectArgs = new SqlNodeList(SqlParserPos.ZERO);
       selectArgs.add(new SqlIdentifier("__time", new SqlParserPos(0, 1)));
-      Assert.assertNull(DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(
-                            null,
-                            new SqlSelect(SqlParserPos.ZERO, null, selectArgs, null, null, null, null, null, null, null, null)
-                        )
+      Assert.assertNull(
+          DruidSqlParserUtils.resolveClusteredByColumnsToOutputColumns(
+              null,
+              new SqlSelect(SqlParserPos.ZERO, null, selectArgs, null, null, null, null, null, null, null, null)
+          )
       );
     }
 

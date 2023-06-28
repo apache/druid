@@ -362,7 +362,7 @@ public class DruidSqlParserUtils
           selectNode = ((SqlSelect) ((SqlWith) sourceNode).body);
         } else {
           throw InvalidInput.exception(
-              "Unable to resolve CLUSTERED BY ordinal [%s] with [%s] as the source."
+              "Unable to resolve CLUSTERED BY ordinal [%d] with [%s] as the source."
               + " Use the column identifier name directly.",
               ordinal,
               sourceNode == null ? null : sourceNode.getKind()
