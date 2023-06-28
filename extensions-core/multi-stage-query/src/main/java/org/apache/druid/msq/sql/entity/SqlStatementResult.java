@@ -149,7 +149,7 @@ public class SqlStatementResult
         that.durationMs
     ) && Objects.equals(resultSetInformation, that.resultSetInformation) && Objects.equals(
         errorResponse == null ? null : errorResponse.getAsMap(),
-        that.errorResponse == null ? null : errorResponse.getAsMap()
+        that.errorResponse == null ? null : that.errorResponse.getAsMap()
     );
   }
 
