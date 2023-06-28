@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.net.InetAddress;
-import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -157,13 +156,7 @@ public class QueryException extends RuntimeException implements SanitizableExcep
     this(cause, errorCode, cause == null ? null : cause.getMessage(), errorClass, host);
   }
 
-  protected QueryException(
-      Throwable cause,
-      String errorCode,
-      String errorMessage,
-      String errorClass,
-      String host
-  )
+  protected QueryException(Throwable cause, String errorCode, String errorMessage, String errorClass, String host)
   {
     super(errorMessage, cause);
     this.errorCode = errorCode;
@@ -244,26 +237,5 @@ public class QueryException extends RuntimeException implements SanitizableExcep
         getErrorClass(),
         getHost()
     );
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    QueryException that = (QueryException) o;
-    return Objects.equals(errorCode, that.errorCode)
-           && Objects.equals(errorClass, that.errorClass)
-           && Objects.equals(host, that.host);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(errorCode, errorClass, host);
   }
 }

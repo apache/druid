@@ -222,7 +222,14 @@ public class SqlStatementResource
   )
   {
     try {
-      AuthorizationUtils.authorizeAllResourceActions(req, Collections.emptyList(), authorizerMapper);
+      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+          req,
+          Collections.emptyList(),
+          authorizerMapper
+      );
+      if (!authResult.isAllowed()) {
+        throw new ForbiddenException(authResult.toString());
+      }
       final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       Optional<SqlStatementResult> sqlStatementResult = getStatementStatus(
@@ -230,6 +237,7 @@ public class SqlStatementResource
           authenticationResult.getIdentity(),
           true
       );
+
       if (sqlStatementResult.isPresent()) {
         return Response.ok().entity(sqlStatementResult.get()).build();
       } else {
@@ -265,31 +273,41 @@ public class SqlStatementResource
       @Context final HttpServletRequest req
   )
   {
-    if (offset != null && offset < 0) {
-      return buildNonOkResponse(
-          DruidException.forPersona(DruidException.Persona.USER)
-                        .ofCategory(DruidException.Category.INVALID_INPUT)
-                        .build(
-                            "offset cannot be negative. Please pass a positive number."
-                        )
-      );
-    }
-    if (numberOfRows != null && numberOfRows < 0) {
-      return buildNonOkResponse(
-          DruidException.forPersona(DruidException.Persona.USER)
-                        .ofCategory(DruidException.Category.INVALID_INPUT)
-                        .build(
-                            "numRows cannot be negative. Please pass a positive number."
-                        )
-      );
-    }
-
-    final long start = offset == null ? 0 : offset;
-    final long last = SqlStatementResourceHelper.getLastIndex(numberOfRows, start);
-
     try {
-      AuthorizationUtils.authorizeAllResourceActions(req, Collections.emptyList(), authorizerMapper);
+      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+          req,
+          Collections.emptyList(),
+          authorizerMapper
+      );
+      if (!authResult.isAllowed()) {
+        throw new ForbiddenException(authResult.toString());
+      }
       final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
+
+      if (offset != null && offset < 0) {
+        return buildNonOkResponse(
+            DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "offset cannot be negative. Please pass a positive number."
+                          )
+        );
+      }
+      if (numberOfRows != null && numberOfRows < 0) {
+        return buildNonOkResponse(
+            DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "numRows cannot be negative. Please pass a positive number."
+                          )
+        );
+      }
+
+      final long start = offset == null ? 0 : offset;
+      final long last = SqlStatementResourceHelper.getLastIndex(numberOfRows, start);
+
+
+      getStatementStatus(queryId, authenticationResult.getIdentity(), false);
 
       TaskStatusResponse taskResponse = contactOverlord(overlordClient.taskStatus(queryId));
       if (taskResponse == null) {
@@ -300,6 +318,8 @@ public class SqlStatementResource
       if (statusPlus == null || !MSQControllerTask.TYPE.equals(statusPlus.getType())) {
         return Response.status(Response.Status.NOT_FOUND).build();
       }
+
+      MSQControllerTask msqControllerTask = getMSQControllerTaskOrThrow(queryId, authenticationResult.getIdentity());
       SqlStatementState sqlStatementState = SqlStatementResourceHelper.getSqlStatementState(statusPlus);
 
       if (sqlStatementState == SqlStatementState.RUNNING || sqlStatementState == SqlStatementState.ACCEPTED) {
@@ -322,7 +342,6 @@ public class SqlStatementResource
                           )
         );
       } else {
-        MSQControllerTask msqControllerTask = getMSQControllerTaskOrThrow(queryId, authenticationResult.getIdentity());
         Optional<List<ColumnNameAndTypes>> signature = SqlStatementResourceHelper.getSignature(msqControllerTask);
         if (!signature.isPresent()) {
           return Response.ok().build();
@@ -392,7 +411,14 @@ public class SqlStatementResource
   {
 
     try {
-      AuthorizationUtils.authorizeAllResourceActions(req, Collections.emptyList(), authorizerMapper);
+      Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+          req,
+          Collections.emptyList(),
+          authorizerMapper
+      );
+      if (!authResult.isAllowed()) {
+        throw new ForbiddenException(authResult.toString());
+      }
       final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       Optional<SqlStatementResult> sqlStatementResult = getStatementStatus(
@@ -504,7 +530,14 @@ public class SqlStatementResource
     if (numRows != 1) {
       throw new RE("Expected a single row but got [%d] rows. Please check broker logs for more information.", numRows);
     }
-    String taskId = (String) rows.get(0)[0];
+    Object[] firstRow = rows.get(0);
+    if (firstRow == null || firstRow.length != 1) {
+      throw new RE(
+          "Expected a single column but got [%s] columns. Please check broker logs for more information.",
+          firstRow == null ? 0 : firstRow.length
+      );
+    }
+    String taskId = String.valueOf(firstRow[0]);
 
     Optional<SqlStatementResult> statementResult = getStatementStatus(taskId, user, true);
 
@@ -611,13 +644,17 @@ public class SqlStatementResource
     SqlStatementResourceHelper.isMSQPayload(taskPayloadResponse, queryId);
 
     MSQControllerTask msqControllerTask = (MSQControllerTask) taskPayloadResponse.getPayload();
-    if (currentUser == null || !currentUser.equals(msqControllerTask.getQuerySpec()
-                                                                    .getQuery()
-                                                                    .getContext()
-                                                                    .get(MSQTaskQueryMaker.USER_KEY))) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.FORBIDDEN)
-                          .build(Access.DEFAULT_ERROR_MESSAGE);
+    String queryUser = String.valueOf(msqControllerTask.getQuerySpec()
+                                                       .getQuery()
+                                                       .getContext()
+                                                       .get(MSQTaskQueryMaker.USER_KEY));
+    if (currentUser == null || !currentUser.equals(queryUser)) {
+      throw new ForbiddenException(StringUtils.format(
+          "The current user[%s] cannot view query id[%s] since the query is owned by user[%s]",
+          currentUser,
+          queryId,
+          queryUser
+      ));
     }
     return msqControllerTask;
   }

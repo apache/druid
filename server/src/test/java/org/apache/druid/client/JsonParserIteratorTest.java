@@ -201,12 +201,7 @@ public class JsonParserIteratorTest
     {
       JsonParserIterator<Object> iterator = new JsonParserIterator<>(
           JAVA_TYPE,
-          Futures.immediateFuture(mockErrorResponse(new QueryException(
-              null,
-              "query exception test",
-              null,
-              null
-          ))),
+          Futures.immediateFuture(mockErrorResponse(new QueryException(null, "query exception test", null, null))),
           URL,
           null,
           HOST,

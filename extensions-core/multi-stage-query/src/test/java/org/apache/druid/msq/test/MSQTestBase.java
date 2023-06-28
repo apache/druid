@@ -493,7 +493,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         qf.operatorTable(),
         qf.macroTable(),
         PLANNER_CONFIG_DEFAULT,
-        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.TEST_EXTERNAL_AUTHORIZER_MAPPER,
         objectMapper,
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),

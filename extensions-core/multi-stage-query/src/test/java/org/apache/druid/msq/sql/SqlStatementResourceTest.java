@@ -922,6 +922,24 @@ public class SqlStatementResourceTest extends MSQTestBase
   }
 
   @Test
+  public void forbiddenTests()
+  {
+
+    Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(),
+                        resource.doGetStatus(RUNNING_SELECT_MSQ_QUERY,
+                                             makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT)).getStatus());
+
+    Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(),
+                        resource.doGetResults(RUNNING_SELECT_MSQ_QUERY,
+                                              null,
+                                              null,
+                                              makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT)).getStatus());
+    Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(),
+                        resource.deleteQuery(RUNNING_SELECT_MSQ_QUERY,
+                                             makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT)).getStatus());
+  }
+
+  @Test
   public void testIsEnabled()
   {
     Assert.assertEquals(Response.Status.OK.getStatusCode(), resource.isEnabled(makeOkRequest()).getStatus());
