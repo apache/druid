@@ -19,8 +19,12 @@
 
 package org.apache.druid.msq.util;
 
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -81,6 +85,101 @@ public class IntervalUtilsTest
     Assert.assertEquals(
         intervals("2000-07-14/2000-07-15"),
         IntervalUtils.difference(intervals("2000/2001"), intervals("2000-01-01/2000-07-14", "2000-07-15/2001"))
+    );
+  }
+
+  @Test
+  public void test_doesIntervalMatchesGranularity_withStandardGranularities()
+  {
+
+    Assert.assertTrue(
+        IntervalUtils.isAligned(Intervals.ETERNITY, Granularities.ALL)
+    );
+
+    Assert.assertTrue(
+        IntervalUtils.isAligned(
+            Intervals.of("2000-01-01/2001-01-01"), Granularities.YEAR
+        )
+    );
+
+    Assert.assertTrue(
+        IntervalUtils.isAligned(
+            Intervals.of("2000-01-01/2000-04-01"), Granularities.QUARTER
+        )
+    );
+
+
+    Assert.assertTrue(
+        IntervalUtils.isAligned(
+            Intervals.of("2000-01-01/2000-02-01"), Granularities.MONTH
+        )
+    );
+
+    // With the way WEEK granularities work, this needs to be aligned to an actual week
+    Assert.assertTrue(
+        IntervalUtils.isAligned(
+            Intervals.of("1999-12-27/2000-01-03"), Granularities.WEEK
+        )
+    );
+
+    Assert.assertTrue(
+        IntervalUtils.isAligned(
+            Intervals.of("2000-01-01/2000-01-02"), Granularities.DAY
+        )
+    );
+
+    Assert.assertTrue(
+        IntervalUtils.isAligned(
+            Intervals.of("2000-01-01T00:00:00.000/2000-01-01T08:00:00.000"), Granularities.EIGHT_HOUR
+        )
+    );
+
+    Assert.assertTrue(
+        IntervalUtils.isAligned(
+            Intervals.of("2000-01-01T00:00:00.000/2000-01-01T01:00:00.000"), Granularities.HOUR
+        )
+    );
+
+    Assert.assertTrue(
+        IntervalUtils.isAligned(
+            Intervals.of("2000-01-01T00:00:00.000/2000-01-01T00:01:00.000"), Granularities.MINUTE
+        )
+    );
+
+    Assert.assertTrue(
+        IntervalUtils.isAligned(
+            Intervals.of("2000-01-01T00:00:00.000/2000-01-01T00:00:01.000"), Granularities.SECOND
+        )
+    );
+
+    Assert.assertFalse(
+        IntervalUtils.isAligned(
+            Intervals.of("2000-01-01/2002-01-01"), Granularities.YEAR
+        )
+    );
+
+    Assert.assertFalse(
+        IntervalUtils.isAligned(
+            Intervals.of("2000-01-01/2002-01-08"), Granularities.YEAR
+        )
+    );
+  }
+
+  @Test
+  public void test_doesIntervalMatchesGranularity_withPeriodGranularity()
+  {
+    Assert.assertTrue(
+        IntervalUtils.isAligned(
+            Intervals.of("2000-01-01/2000-01-04"),
+            new PeriodGranularity(new Period("P3D"), DateTimes.of("2000-01-01"), null)
+        )
+    );
+
+    Assert.assertFalse(
+        IntervalUtils.isAligned(
+            Intervals.of("2000-01-01/2000-01-04"),
+            new PeriodGranularity(new Period("P3D"), DateTimes.of("2000-01-02"), null)
+        )
     );
   }
 

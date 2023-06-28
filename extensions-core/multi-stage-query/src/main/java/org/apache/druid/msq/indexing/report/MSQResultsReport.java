@@ -24,12 +24,16 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.msq.exec.Limits;
+import org.apache.druid.msq.indexing.MSQSelectDestination;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -43,16 +47,19 @@ public class MSQResultsReport
   @Nullable
   private final List<SqlTypeName> sqlTypeNames;
   private final Yielder<Object[]> resultYielder;
+  private final boolean resultsTruncated;
 
   public MSQResultsReport(
       final List<ColumnAndType> signature,
       @Nullable final List<SqlTypeName> sqlTypeNames,
-      final Yielder<Object[]> resultYielder
+      final Yielder<Object[]> resultYielder,
+      @Nullable Boolean resultsTruncated
   )
   {
     this.signature = Preconditions.checkNotNull(signature, "signature");
     this.sqlTypeNames = sqlTypeNames;
     this.resultYielder = Preconditions.checkNotNull(resultYielder, "resultYielder");
+    this.resultsTruncated = Configs.valueOrDefault(resultsTruncated, false);
   }
 
   /**
@@ -62,10 +69,32 @@ public class MSQResultsReport
   static MSQResultsReport fromJson(
       @JsonProperty("signature") final List<ColumnAndType> signature,
       @JsonProperty("sqlTypeNames") @Nullable final List<SqlTypeName> sqlTypeNames,
-      @JsonProperty("results") final List<Object[]> results
+      @JsonProperty("results") final List<Object[]> results,
+      @JsonProperty("resultsTruncated") final Boolean resultsTruncated
   )
   {
-    return new MSQResultsReport(signature, sqlTypeNames, Yielders.each(Sequences.simple(results)));
+    return new MSQResultsReport(signature, sqlTypeNames, Yielders.each(Sequences.simple(results)), resultsTruncated);
+  }
+
+  public static MSQResultsReport createReportAndLimitRowsIfNeeded(
+      final List<ColumnAndType> signature,
+      @Nullable final List<SqlTypeName> sqlTypeNames,
+      Yielder<Object[]> resultYielder,
+      MSQSelectDestination selectDestination
+  )
+  {
+    if (selectDestination.shouldTruncateResultsInTaskReport()) {
+      List<Object[]> results = new ArrayList<>();
+      int rowCount = 0;
+      while (!resultYielder.isDone() && rowCount < Limits.MAX_SELECT_RESULT_ROWS) {
+        results.add(resultYielder.get());
+        resultYielder = resultYielder.next(null);
+        ++rowCount;
+      }
+      return new MSQResultsReport(signature, sqlTypeNames, Yielders.each(Sequences.simple(results)), !resultYielder.isDone());
+    } else {
+      return new MSQResultsReport(signature, sqlTypeNames, resultYielder, false);
+    }
   }
 
   @JsonProperty("signature")
@@ -86,6 +115,12 @@ public class MSQResultsReport
   public Yielder<Object[]> getResultYielder()
   {
     return resultYielder;
+  }
+
+  @JsonProperty("resultsTruncted")
+  public boolean isResultsTruncated()
+  {
+    return resultsTruncated;
   }
 
   public static class ColumnAndType

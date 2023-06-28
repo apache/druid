@@ -27,7 +27,6 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractDimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
-import org.apache.druid.segment.data.CachingIndexed;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.Indexed;
@@ -45,6 +44,7 @@ import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -60,19 +60,19 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
   private final ColumnarInts column;
   @Nullable
   private final ColumnarMultiInts multiValueColumn;
-  private final CachingIndexed<String> cachedDictionary;
+  private final Indexed<String> dictionary;
   private final Indexed<ByteBuffer> dictionaryUtf8;
 
   public StringDictionaryEncodedColumn(
       @Nullable ColumnarInts singleValueColumn,
       @Nullable ColumnarMultiInts multiValueColumn,
-      CachingIndexed<String> dictionary,
+      Indexed<String> dictionary,
       Indexed<ByteBuffer> dictionaryUtf8
   )
   {
     this.column = singleValueColumn;
     this.multiValueColumn = multiValueColumn;
-    this.cachedDictionary = dictionary;
+    this.dictionary = dictionary;
     this.dictionaryUtf8 = dictionaryUtf8;
   }
 
@@ -104,7 +104,7 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
   @Nullable
   public String lookupName(int id)
   {
-    return cachedDictionary.get(id);
+    return dictionary.get(id);
   }
 
 
@@ -130,13 +130,13 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
   @Override
   public int lookupId(String name)
   {
-    return cachedDictionary.indexOf(name);
+    return dictionary.indexOf(name);
   }
 
   @Override
   public int getCardinality()
   {
-    return cachedDictionary.size();
+    return dictionary.size();
   }
 
   @Override
@@ -495,7 +495,11 @@ public class StringDictionaryEncodedColumn implements DictionaryEncodedColumn<St
   @Override
   public void close() throws IOException
   {
-    CloseableUtils.closeAll(cachedDictionary, column, multiValueColumn);
+    CloseableUtils.closeAll(
+        dictionary instanceof Closeable ? (Closeable) dictionary : null /* Dictionary may be CachingIndexed */,
+        column,
+        multiValueColumn
+    );
   }
 
   /**

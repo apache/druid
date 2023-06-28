@@ -558,8 +558,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private int doMarkAsUsedNonOvershadowedSegments(String dataSourceName, @Nullable Interval interval)
   {
     final List<DataSegment> unusedSegments = new ArrayList<>();
-    final SegmentTimeline timeline =
-        SegmentTimeline.forSegments(Collections.emptyIterator());
+    final SegmentTimeline timeline = new SegmentTimeline();
 
     connector.inReadOnlyTransaction(
         (handle, status) -> {

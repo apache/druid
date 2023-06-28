@@ -3465,7 +3465,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testSuspendedNoRunningTasks() throws Exception
+  public void testSuspendedNoRunningTasks()
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true);
 

@@ -30,6 +30,7 @@ import org.apache.druid.msq.input.ReadableInputs;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.timeline.SegmentId;
 
@@ -37,11 +38,12 @@ import java.util.function.Consumer;
 
 /**
  * Reads {@link InlineInputSlice} using {@link SegmentWrangler} (which is expected to contain an
- * {@link org.apache.druid.segment.InlineSegmentWrangler}).
+ * {@link InlineSegmentWrangler}).
  */
 public class InlineInputSliceReader implements InputSliceReader
 {
-  private static final SegmentDescriptor DUMMY_SEGMENT_DESCRIPTOR = SegmentId.dummy("inline").toDescriptor();
+  public static final String SEGMENT_ID = "__inline";
+  private static final SegmentDescriptor DUMMY_SEGMENT_DESCRIPTOR = SegmentId.dummy(SEGMENT_ID).toDescriptor();
 
   private final SegmentWrangler segmentWrangler;
 

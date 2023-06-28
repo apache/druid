@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.Module;
@@ -69,6 +70,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
@@ -77,6 +79,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
@@ -448,6 +451,14 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       files = fileList;
     }
 
+    @Override
+    @JsonIgnore
+    @Nonnull
+    public Set<String> getTypes()
+    {
+      throw new CalciteIngestDmlTestException("getTypes()");
+    }
+
     @JsonProperty
     public List<File> getFiles()
     {
@@ -495,6 +506,14 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     public int hashCode()
     {
       return Objects.hash(files);
+    }
+  }
+
+  static class CalciteIngestDmlTestException extends RuntimeException
+  {
+    public CalciteIngestDmlTestException(String message)
+    {
+      super(message);
     }
   }
 }

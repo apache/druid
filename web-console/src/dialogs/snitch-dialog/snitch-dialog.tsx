@@ -27,6 +27,7 @@ import './snitch-dialog.scss';
 
 export interface SnitchDialogProps {
   title: string;
+  children?: React.ReactNode;
   className?: string;
   onSave: (comment: string) => void | Promise<void>;
   saveDisabled?: boolean;

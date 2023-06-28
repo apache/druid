@@ -26,7 +26,7 @@ sidebar_label: Task reference
 Tasks do all [ingestion](index.md)-related work in Druid.
 
 For batch ingestion, you will generally submit tasks directly to Druid using the
-[Task APIs](../api-reference/api-reference.md#tasks). For streaming ingestion, tasks are generally submitted for you by a
+[Tasks APIs](../api-reference/tasks-api.md). For streaming ingestion, tasks are generally submitted for you by a
 supervisor.
 
 ## Task API
@@ -34,7 +34,7 @@ supervisor.
 Task APIs are available in two main places:
 
 - The [Overlord](../design/overlord.md) process offers HTTP APIs to submit tasks, cancel tasks, check their status,
-review logs and reports, and more. Refer to the [Tasks API reference page](../api-reference/api-reference.md#tasks) for a
+review logs and reports, and more. Refer to the [Tasks API reference](../api-reference/tasks-api.md) for a
 full list.
 - Druid SQL includes a [`sys.tasks`](../querying/sql-metadata-tables.md#tasks-table) table that provides information about currently
 running tasks. This table is read-only, and has a limited (but useful!) subset of the full information available through
@@ -387,13 +387,14 @@ The settings get passed into the `context` field of the compaction tasks issued 
 
 The following parameters apply to all task types.
 
-|property|default|description|
+|Property|Description|Default|
 |--------|-------|-----------|
-|`taskLockTimeout`|300000|Task lock timeout in milliseconds. For more details, see [Locking](#locking).<br/><br/>When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result. As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of Overlords.|
-|`forceTimeChunkLock`|true|_Setting this to false is still experimental_<br/> Force to always use time chunk lock. If not set, each task automatically chooses a lock type to use. If set, this parameter overwrites `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.md#overlord-operations). See [Locking](#locking) for more details.|
-|`priority`|Different based on task types. See [Priority](#priority).|Task priority|
-|`useLineageBasedSegmentAllocation`|false in 0.21 or earlier, true in 0.22 or later|Enable the new lineage-based segment allocation protocol for the native Parallel task with dynamic partitioning. This option should be off during the replacing rolling upgrade from one of the Druid versions between 0.19 and 0.21 to Druid 0.22 or higher. Once the upgrade is done, it must be set to true to ensure data correctness.|
-|`storeEmptyColumns`|true|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](ingestion-spec.md#dimensionsspec). <br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest dummy data for empty columns or else not query on empty columns.<br/><br/>When set in the task context, `storeEmptyColumns` overrides the system property [`druid.indexer.task.storeEmptyColumns`](../configuration/index.md#additional-peon-configuration).|
+|`forceTimeChunkLock`|_Setting this to false is still experimental._<br/> Force to use time chunk lock. When `true`, this parameter overrides the overlord runtime property `druid.indexer.tasklock.forceTimeChunkLock` [configuration for the overlord](../configuration/index.md#overlord-operations). If neither this parameter nor the runtime property is `true`, each task automatically chooses a lock type to use. See [Locking](#locking) for more details.|`true`|
+|`priority`|Task priority|Depends on the task type. See [Priority](#priority) for more details.|
+|`storeCompactionState`|Enables the task to store the compaction state of created segments in the metadata store. When `true`, the segments created by the task fill `lastCompactionState` in the segment metadata. This parameter is set automatically on compaction tasks. |`true` for compaction tasks, `false` for other task types|
+|`storeEmptyColumns`|Enables the task to store empty columns during ingestion. When `true`, Druid stores every column specified in the [`dimensionsSpec`](ingestion-spec.md#dimensionsspec). When `false`, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest dummy data for empty columns or else not query on empty columns.<br/><br/>When set in the task context, `storeEmptyColumns` overrides the system property [`druid.indexer.task.storeEmptyColumns`](../configuration/index.md#additional-peon-configuration).|`true`|
+|`taskLockTimeout`|Task lock timeout in milliseconds. For more details, see [Locking](#locking).<br/><br/>When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result. As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of Overlords.|300000|
+|`useLineageBasedSegmentAllocation`|Enables the new lineage-based segment allocation protocol for the native Parallel task with dynamic partitioning. This option should be off during the replacing rolling upgrade from one of the Druid versions between 0.19 and 0.21 to Druid 0.22 or higher. Once the upgrade is done, it must be set to `true` to ensure data correctness.|`false` in 0.21 or earlier, `true` in 0.22 or later|
 
 ## Task logs
 
@@ -405,7 +406,7 @@ The task then starts creating logs in a local directory of the middle manager (o
 
 When the task completes - whether it succeeds or fails - the middle manager (or indexer) will push the task log file into the location specified in [`druid.indexer.logs`](../configuration/index.md#task-logging).
 
-Task logs on the Druid web console are retrieved via an [API](../api-reference/api-reference.md#overlord) on the Overlord. It automatically detects where the log file is, either in the middleManager / indexer or in long-term storage, and passes it back.
+Task logs on the Druid web console are retrieved via an [API](../api-reference/service-status-api.md#overlord) on the Overlord. It automatically detects where the log file is, either in the middleManager / indexer or in long-term storage, and passes it back.
 
 If you don't see the log file in long-term storage, it means either:
 

@@ -53,6 +53,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -72,20 +73,23 @@ public class DruidStatementTest extends CalciteTestBase
   private static String SELECT_STAR_FROM_FOO =
       "SELECT * FROM druid.foo";
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @ClassRule
+  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Rule
   public QueryLogHook queryLogHook = QueryLogHook.create();
 
+  private static SpecificSegmentsQuerySegmentWalker walker;
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
 
   @BeforeClass
-  public static void setUpClass()
+  public static void setUpClass() throws Exception
   {
     resourceCloser = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
+    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
+    resourceCloser.register(walker);
   }
 
   @AfterClass
@@ -94,13 +98,11 @@ public class DruidStatementTest extends CalciteTestBase
     resourceCloser.close();
   }
 
-  private SpecificSegmentsQuerySegmentWalker walker;
   private SqlStatementFactory sqlStatementFactory;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
-    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
@@ -127,10 +129,9 @@ public class DruidStatementTest extends CalciteTestBase
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
-    walker.close();
-    walker = null;
+
   }
 
   //-----------------------------------------------------------------

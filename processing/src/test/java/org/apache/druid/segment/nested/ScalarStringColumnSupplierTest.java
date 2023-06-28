@@ -34,47 +34,22 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
-import org.apache.druid.segment.AutoTypeColumnIndexer;
-import org.apache.druid.segment.AutoTypeColumnMerger;
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.IndexableAdapter;
-import org.apache.druid.segment.SimpleAscendingOffset;
-import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.DruidPredicateIndex;
-import org.apache.druid.segment.column.NullValueIndex;
-import org.apache.druid.segment.column.StringEncodingStrategy;
-import org.apache.druid.segment.column.StringFrontCodedDictionaryEncodedColumn;
-import org.apache.druid.segment.column.StringValueSetIndex;
+import org.apache.druid.segment.*;
+import org.apache.druid.segment.column.*;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -160,7 +135,13 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
       SortedMap<String, FieldTypeInfo.MutableTypeSet> sortedFields = new TreeMap<>();
 
       IndexableAdapter.NestedColumnMergable mergable = closer.register(
-          new IndexableAdapter.NestedColumnMergable(indexer.getSortedValueLookups(), indexer.getFieldTypeInfo())
+          new IndexableAdapter.NestedColumnMergable(
+              indexer.getSortedValueLookups(),
+              indexer.getFieldTypeInfo(),
+              false,
+              false,
+              null
+          )
       );
       SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
       mergable.mergeFieldsInto(sortedFields);
@@ -209,7 +190,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
         bob,
         NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
     );
-    try (StringFrontCodedDictionaryEncodedColumn column = (StringFrontCodedDictionaryEncodedColumn) supplier.get()) {
+    try (StringUtf8DictionaryEncodedColumn column = (StringUtf8DictionaryEncodedColumn) supplier.get()) {
       smokeTest(supplier, column);
     }
   }
@@ -226,7 +207,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
         bob,
         NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
     );
-    try (ScalarStringDictionaryEncodedColumn column = (ScalarStringDictionaryEncodedColumn) supplier.get()) {
+    try (StringUtf8DictionaryEncodedColumn column = (StringUtf8DictionaryEncodedColumn) supplier.get()) {
       smokeTest(supplier, column);
     }
   }
@@ -268,10 +249,10 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
             try {
               threadsStartLatch.await();
               for (int iter = 0; iter < 5000; iter++) {
-                try (StringFrontCodedDictionaryEncodedColumn column = (StringFrontCodedDictionaryEncodedColumn) supplier.get()) {
+                try (StringUtf8DictionaryEncodedColumn column = (StringUtf8DictionaryEncodedColumn) supplier.get()) {
                   smokeTest(supplier, column);
                 }
-                try (ScalarStringDictionaryEncodedColumn column = (ScalarStringDictionaryEncodedColumn) utf8Supplier.get()) {
+                try (StringUtf8DictionaryEncodedColumn column = (StringUtf8DictionaryEncodedColumn) utf8Supplier.get()) {
                   smokeTest(utf8Supplier, column);
                 }
               }
@@ -287,10 +268,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
     Assert.assertEquals(expectedReason, failureReason.get());
   }
 
-  private <TColumn extends DictionaryEncodedColumn<String> & NestedCommonFormatColumn> void smokeTest(
-      ScalarStringColumnAndIndexSupplier supplier,
-      TColumn column
-  )
+  private void smokeTest(ScalarStringColumnAndIndexSupplier supplier, StringUtf8DictionaryEncodedColumn column)
   {
     SimpleAscendingOffset offset = new SimpleAscendingOffset(data.size());
     ColumnValueSelector<?> valueSelector = column.makeColumnValueSelector(offset);

@@ -148,20 +148,28 @@ public class LocalInputSource extends AbstractInputSource implements SplittableI
   @Override
   public Stream<InputSplit<List<File>>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
-    return Streams.sequentialStreamFrom(getSplitFileIterator(getSplitHintSpecOrDefault(splitHintSpec)))
+    return Streams.sequentialStreamFrom(getSplitFileIterator(inputFormat, getSplitHintSpecOrDefault(splitHintSpec)))
                   .map(InputSplit::new);
   }
 
   @Override
   public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
-    return Iterators.size(getSplitFileIterator(getSplitHintSpecOrDefault(splitHintSpec)));
+    return Iterators.size(getSplitFileIterator(inputFormat, getSplitHintSpecOrDefault(splitHintSpec)));
   }
 
-  private Iterator<List<File>> getSplitFileIterator(SplitHintSpec splitHintSpec)
+  private Iterator<List<File>> getSplitFileIterator(final InputFormat inputFormat, SplitHintSpec splitHintSpec)
   {
     final Iterator<File> fileIterator = getFileIterator();
-    return splitHintSpec.split(fileIterator, file -> new InputFileAttribute(file.length()));
+    return splitHintSpec.split(
+        fileIterator,
+        file -> new InputFileAttribute(
+            file.length(),
+            inputFormat != null
+            ? inputFormat.getWeightedSize(file.getName(), file.length())
+            : file.length()
+        )
+    );
   }
 
   @VisibleForTesting
