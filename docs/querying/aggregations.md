@@ -456,7 +456,7 @@ The initial value is an empty array, `fold` adds the elements of `column_a` to t
 ```
 
 #### Example: an "approximate count" aggregator using the built-in hyper-unique
-Similar to the 'cardinality' aggregator, the default value is an empty hyperunique sketch, `fold` adds the value of `column_a` to the sketch, `combine` merges the sketches, and `finalize` gets the estimated count from the accumlated sketch.
+Similar to the 'cardinality' aggregator, the default value is an empty hyper-unique sketch, `fold` adds the value of `column_a` to the sketch, `combine` merges the sketches, and `finalize` gets the estimated count from the accumulated sketch.
 
 ```json
 {
