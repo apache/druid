@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.TestSegmentChangeRequestHttpClient;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.TestHelper;
@@ -46,11 +47,11 @@ public class ChangeRequestHttpSyncerTest
   public void testSimple() throws Exception
   {
     TestSegmentChangeRequestHttpClient httpClient = new TestSegmentChangeRequestHttpClient();
-    httpClient.addNextError(new ISE("Could not send request to server"));
-    httpClient.addNextError(new ISE("Unexpected response from server"));
-    httpClient.addNextResult(buildRequestSnapshot("s1"), TYPE_REF);
-    httpClient.addNextResult(buildRequestSnapshot("s2"), TYPE_REF);
-    httpClient.addNextResult(
+    httpClient.failNextRequestOnClientWith(new ISE("Could not send request to server"));
+    httpClient.failNextRequestOnServerWith(InvalidInput.exception("Invalid input"));
+    httpClient.completeNextRequestWith(buildRequestSnapshot("s1"), TYPE_REF);
+    httpClient.completeNextRequestWith(buildRequestSnapshot("s2"), TYPE_REF);
+    httpClient.completeNextRequestWith(
         new ChangeRequestsSnapshot<>(
             true,
             "reset the counter",
@@ -59,8 +60,8 @@ public class ChangeRequestHttpSyncerTest
         ),
         TYPE_REF
     );
-    httpClient.addNextResult(buildRequestSnapshot("s3"), TYPE_REF);
-    httpClient.addNextResult(buildRequestSnapshot("s4"), TYPE_REF);
+    httpClient.completeNextRequestWith(buildRequestSnapshot("s3"), TYPE_REF);
+    httpClient.completeNextRequestWith(buildRequestSnapshot("s4"), TYPE_REF);
 
     ChangeRequestHttpSyncer.Listener<String> listener = EasyMock.mock(ChangeRequestHttpSyncer.Listener.class);
     listener.fullSync(ImmutableList.of("s1"));

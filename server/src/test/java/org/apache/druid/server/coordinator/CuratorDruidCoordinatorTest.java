@@ -199,6 +199,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   {
     segmentViewInitLatch = new CountDownLatch(1);
     segmentAddedLatch = new CountDownLatch(4);
+
     segmentRemovedLatch = new CountDownLatch(0);
 
     setupView();

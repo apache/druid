@@ -156,7 +156,7 @@ public class BrokerServerView implements TimelineServerView
           }
 
           @Override
-          public ServerView.CallbackAction segmentViewInitialized()
+          public CallbackAction segmentViewInitialized()
           {
             initialized.countDown();
             runTimelineCallbacks(TimelineCallback::timelineInitialized);

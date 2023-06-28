@@ -19,10 +19,14 @@
 
 package org.apache.druid.client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
@@ -45,14 +49,21 @@ public class TestSegmentChangeRequestHttpClient implements HttpClient
   private final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
   private final BlockingQueue<ResultHolder<?>> results = new LinkedBlockingQueue<>();
 
-  public void addNextError(RuntimeException error)
+  private int requestCount;
+
+  public void failNextRequestOnClientWith(RuntimeException clientError)
   {
-    results.add(new ResultHolder<>(null, null, error));
+    results.add(new ResultHolder<>(null, null, clientError, null));
   }
 
-  public <T> void addNextResult(T result, TypeReference<T> typeReference)
+  public void failNextRequestOnServerWith(DruidException serverError)
   {
-    results.add(new ResultHolder<>(() -> result, typeReference, null));
+    results.add(new ResultHolder<>(null, null, null, serverError));
+  }
+
+  public <T> void completeNextRequestWith(T result, TypeReference<T> typeReference)
+  {
+    results.add(new ResultHolder<>(() -> result, typeReference, null, null));
   }
 
   public boolean hasPendingResults()
@@ -76,19 +87,27 @@ public class TestSegmentChangeRequestHttpClient implements HttpClient
       Duration duration
   )
   {
-    HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-    httpResponse.setContent(ChannelBuffers.buffer(0));
-    httpResponseHandler.handleResponse(httpResponse, null);
+    final int currentRequest = requestCount++;
+
+    final ResultHolder<?> nextResult = results.poll();
+    if (nextResult == null) {
+      throw new ISE("No known response for request [%d]", currentRequest);
+    } else if (nextResult.clientError != null) {
+      throw nextResult.clientError;
+    } else if (nextResult.serverError != null) {
+      HttpResponse errorResponse = buildErrorResponse(nextResult.serverError);
+      httpResponseHandler.handleResponse(errorResponse, null);
+      return (ListenableFuture<Final>) Futures.immediateFuture(new ByteArrayInputStream(new byte[0]));
+    } else {
+      HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+      httpResponse.setContent(ChannelBuffers.buffer(0));
+      httpResponseHandler.handleResponse(httpResponse, null);
+    }
 
     try {
-      ResultHolder<?> nextResult = results.take();
-      if (nextResult.error != null) {
-        throw nextResult.error;
-      }
-
       ByteArrayInputStream resultBytes = new ByteArrayInputStream(
           MAPPER.writerFor(nextResult.typeReference)
-                .writeValueAsBytes(nextResult.get())
+                .writeValueAsBytes(nextResult.supplier.get())
       );
       return (ListenableFuture<Final>) Futures.immediateFuture(resultBytes);
     }
@@ -97,22 +116,43 @@ public class TestSegmentChangeRequestHttpClient implements HttpClient
     }
   }
 
+  private HttpResponse buildErrorResponse(DruidException druidException)
+  {
+    HttpResponse httpResponse = new DefaultHttpResponse(
+        HttpVersion.HTTP_1_1,
+        HttpResponseStatus.valueOf(druidException.getStatusCode())
+    );
+    httpResponse.setContent(ChannelBuffers.buffer(0));
+
+    ErrorResponse errorResponse = druidException.toErrorResponse();
+    try {
+      httpResponse.setContent(ChannelBuffers.copiedBuffer(MAPPER.writeValueAsBytes(errorResponse)));
+      return httpResponse;
+    }
+    catch (JsonProcessingException e) {
+      throw new ISE("Error while serializing given response");
+    }
+  }
+
   private static class ResultHolder<R>
   {
-    final Supplier<R> resultSupplier;
+    final Supplier<R> supplier;
     final TypeReference<R> typeReference;
-    final RuntimeException error;
 
-    ResultHolder(Supplier<R> resultSupplier, TypeReference<R> typeReference, RuntimeException error)
+    final RuntimeException clientError;
+    final DruidException serverError;
+
+    ResultHolder(
+        Supplier<R> supplier,
+        TypeReference<R> typeReference,
+        RuntimeException clientError,
+        DruidException serverError
+    )
     {
-      this.resultSupplier = resultSupplier;
+      this.supplier = supplier;
       this.typeReference = typeReference;
-      this.error = error;
-    }
-
-    R get()
-    {
-      return resultSupplier.get();
+      this.clientError = clientError;
+      this.serverError = serverError;
     }
   }
 }

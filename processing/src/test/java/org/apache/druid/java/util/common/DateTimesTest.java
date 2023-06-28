@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.testing.FakeTicker;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
@@ -128,10 +129,11 @@ public class DateTimesTest
   }
 
   @Test
-  public void testMillisElapsed() throws Exception
+  public void testMillisElapsed()
   {
-    Stopwatch stopwatch = Stopwatch.createStarted();
-    Thread.sleep(100);
+    FakeTicker fakeTicker = new FakeTicker();
+    Stopwatch stopwatch = Stopwatch.createStarted(fakeTicker);
+    fakeTicker.advance(100, TimeUnit.MILLISECONDS);
     stopwatch.stop();
 
     Assert.assertEquals(
@@ -141,10 +143,11 @@ public class DateTimesTest
   }
 
   @Test
-  public void testHasElapsed() throws Exception
+  public void testHasElapsed()
   {
-    Stopwatch stopwatch = Stopwatch.createStarted();
-    Thread.sleep(100);
+    FakeTicker fakeTicker = new FakeTicker();
+    Stopwatch stopwatch = Stopwatch.createStarted(fakeTicker);
+    fakeTicker.advance(100, TimeUnit.MILLISECONDS);
     stopwatch.stop();
 
     Assert.assertTrue(DateTimes.hasElapsed(Duration.millis(50), stopwatch));

@@ -94,8 +94,8 @@ public class ChangeRequestHttpSyncer<T>
 
   private final Stopwatch sinceSyncerStart = Stopwatch.createUnstarted();
   private final Stopwatch sinceUnstable = Stopwatch.createUnstarted();
-  private final Stopwatch sinceLastSuccess = Stopwatch.createUnstarted();
-  private final Stopwatch sinceLastSync = Stopwatch.createUnstarted();
+  private final Stopwatch sinceLastSyncSuccess = Stopwatch.createUnstarted();
+  private final Stopwatch sinceLastSyncRequest = Stopwatch.createUnstarted();
 
   @Nullable
   private ChangeRequestHistory.Counter counter = null;
@@ -179,9 +179,9 @@ public class ChangeRequestHttpSyncer<T>
   {
     return ImmutableMap.of(
         "millisSinceLastSync",
-        sinceLastSync.isRunning() ? DateTimes.millisElapsed(sinceLastSync) : "Never synced",
+        sinceLastSyncRequest.isRunning() ? DateTimes.millisElapsed(sinceLastSyncRequest) : "Never synced",
         "millisSinceLastSuccess",
-        sinceLastSuccess.isRunning() ? DateTimes.millisElapsed(sinceLastSuccess) : "Never synced successfully",
+        sinceLastSyncSuccess.isRunning() ? DateTimes.millisElapsed(sinceLastSyncSuccess) : "Never synced successfully",
         "millisUnstableDuration",
         sinceUnstable.isRunning() ? DateTimes.millisElapsed(sinceUnstable) : "Stable",
         "numRecentFailures", numRecentFailures,
@@ -195,26 +195,27 @@ public class ChangeRequestHttpSyncer<T>
   }
 
   /**
-   * Exposed for monitoring use to see if sync is working fine and not stopped due to any coding bugs. If this
-   * ever returns false then caller of this method must create an alert and it should be looked into for any
-   * bugs.
+   * @return true if the last sync request sent to the server was not more than
+   * {@code 120,000 + 3 * serverHttpTimeoutMillis} ago. A value of {@code true}
+   * returned by this method does not guarantee successful sync with the server.
+   * Use {@link #isSyncedSuccessfully()} to check the status of successful syncs.
    */
-  public boolean hasSyncedRecently()
+  public boolean hasRequestedSyncRecently()
   {
-    return DateTimes.hasNotElapsed(syncTimeout, sinceLastSync);
+    return DateTimes.hasNotElapsed(syncTimeout, sinceLastSyncRequest);
   }
 
   /**
-   * @return true if there have been no sync failures recently and the last sync
-   * was not more than {@code 3 * serverHttpTimeoutMillis} ago.
+   * @return true if there have been no sync failures recently and the last
+   * successful sync was not more than {@code 3 * serverHttpTimeoutMillis} ago.
    */
-  public boolean isSyncingSuccessfully()
+  public boolean isSyncedSuccessfully()
   {
     final Duration timeoutDuration = Duration.millis(3 * serverHttpTimeoutMillis);
     if (numRecentFailures > 0) {
       return false;
     } else if (hasSyncedSuccessfullyOnce()) {
-      return DateTimes.hasNotElapsed(timeoutDuration, sinceLastSuccess);
+      return DateTimes.hasNotElapsed(timeoutDuration, sinceLastSyncSuccess);
     } else {
       return DateTimes.hasNotElapsed(timeoutDuration, sinceSyncerStart);
     }
@@ -237,14 +238,14 @@ public class ChangeRequestHttpSyncer<T>
       return;
     }
 
-    sinceLastSync.reset().start();
+    sinceLastSyncRequest.reset().start();
 
     try {
       final String req = getRequestString();
 
       BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
 
-      log.info("Sending sync request to server[%s]", logIdentity);
+      log.debug("Sending sync request to server[%s]", logIdentity);
 
       ListenableFuture<InputStream> syncRequestFuture = httpClient.go(
           new Request(HttpMethod.GET, new URL(baseServerURL, req))
@@ -273,16 +274,16 @@ public class ChangeRequestHttpSyncer<T>
                   final int responseStatus = responseHandler.getStatus();
                   if (responseStatus == HttpServletResponse.SC_NO_CONTENT) {
                     log.info("Received NO CONTENT from server[%s]", logIdentity);
-                    sinceLastSuccess.reset().start();
+                    sinceLastSyncSuccess.reset().start();
                     return;
                   } else if (responseStatus != HttpServletResponse.SC_OK) {
-                    handleFailure(new ISE("Received invalid sync response"));
+                    handleFailure(new ISE("Received sync response [%d]", responseStatus));
                     return;
                   }
 
-                  log.info("Received response from server[%s]", logIdentity);
+                  log.debug("Received response from server[%s]", logIdentity);
                   ChangeRequestsSnapshot<T> changes = smileMapper.readValue(stream, responseTypeReferences);
-                  log.info("Finished reading response from server[%s]", logIdentity);
+                  log.debug("Finished reading response from server[%s]", logIdentity);
 
                   if (changes.isResetCounter()) {
                     log.info(
@@ -312,10 +313,10 @@ public class ChangeRequestHttpSyncer<T>
                     log.info("Server[%s] synced successfully.", logIdentity);
                   }
 
-                  sinceLastSuccess.reset().start();
+                  sinceLastSyncSuccess.reset().start();
                 }
                 catch (Exception ex) {
-                  markServerUnstableAndAlert(ex, "processing sync response");
+                  markServerUnstableAndAlert(ex, "Processing Response");
                 }
                 finally {
                   addNextSyncToWorkQueue();
@@ -356,7 +357,7 @@ public class ChangeRequestHttpSyncer<T>
     }
     catch (Throwable t) {
       try {
-        markServerUnstableAndAlert(t, "sending sync request");
+        markServerUnstableAndAlert(t, "Sending Request");
       }
       finally {
         addNextSyncToWorkQueue();
@@ -411,7 +412,7 @@ public class ChangeRequestHttpSyncer<T>
     }
   }
 
-  private void markServerUnstableAndAlert(Throwable error, String action)
+  private void markServerUnstableAndAlert(Throwable throwable, String action)
   {
     if (numRecentFailures++ == 0) {
       sinceUnstable.reset().start();
@@ -419,19 +420,17 @@ public class ChangeRequestHttpSyncer<T>
 
     final long unstableSeconds = getUnstableTimeMillis() / 1000;
     final String message = StringUtils.format(
-        "Sync failed for server[%s] while [%s]. Already failed [%d] times in the last [%d] seconds.",
+        "Sync failed for server[%s] while [%s]. Failed [%d] times in the last [%d] seconds.",
         baseServerURL, action, numRecentFailures, unstableSeconds
     );
 
     // Alert if unstable alert timeout has been exceeded
     if (DateTimes.hasElapsed(unstableAlertTimeout, sinceUnstable)) {
-      log.makeAlert(error, "Server[%s] has been unstable for [%d] seconds", baseServerURL, unstableSeconds)
-         .addData("message", message)
-         .emit();
+      log.noStackTrace().makeAlert(throwable, message).emit();
     } else if (log.isDebugEnabled()) {
-      log.debug(error, message);
+      log.debug(throwable, message);
     } else {
-      log.noStackTrace().info(error, message);
+      log.noStackTrace().info(throwable, message);
     }
   }
 

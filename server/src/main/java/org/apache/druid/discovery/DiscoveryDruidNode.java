@@ -25,12 +25,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.StringObjectPairList;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.ServerType;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -197,6 +199,35 @@ public class DiscoveryDruidNode
       return (T) o;
     }
     return null;
+  }
+
+  public DruidServer toDruidServer()
+  {
+    final DruidNode druidNode = getDruidNode();
+    final DataNodeService dataNodeService = getService(DataNodeService.DISCOVERY_SERVICE_KEY, DataNodeService.class);
+    if (dataNodeService == null) {
+      // this shouldn't typically happen, but just in case it does, make a dummy server to allow the
+      // callbacks to continue since serverAdded/serverRemoved only need node.getName()
+      return new DruidServer(
+          druidNode.getHostAndPortToUse(),
+          druidNode.getHostAndPort(),
+          druidNode.getHostAndTlsPort(),
+          0L,
+          ServerType.fromNodeRole(getNodeRole()),
+          DruidServer.DEFAULT_TIER,
+          DruidServer.DEFAULT_PRIORITY
+      );
+    } else {
+      return new DruidServer(
+          druidNode.getHostAndPortToUse(),
+          druidNode.getHostAndPort(),
+          druidNode.getHostAndTlsPort(),
+          dataNodeService.getMaxSize(),
+          dataNodeService.getServerType(),
+          dataNodeService.getTier(),
+          dataNodeService.getPriority()
+      );
+    }
   }
 
   @Override
