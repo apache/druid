@@ -2924,7 +2924,7 @@ name: Apache Hadoop
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 3.3.5
+version: 3.3.6
 libraries:
   - org.apache.hadoop: hadoop-auth
   - org.apache.hadoop: hadoop-common
@@ -3826,7 +3826,7 @@ name: Hadoop Client API
 license_category: binary
 module: extensions/druid-hdfs-storage
 license_name: Apache License version 2.0
-version: 3.3.5
+version: 3.3.6
 libraries:
   - org.apache.hadoop: hadoop-client-api
 

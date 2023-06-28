@@ -27,6 +27,7 @@ import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Limits;
+import org.apache.druid.msq.indexing.MSQSelectDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
@@ -64,6 +65,10 @@ import java.util.stream.Collectors;
  * Can be <b>PARALLEL</b>, <b>SEQUENTIAL</b> or <b>AUTO</b>. See {@link ClusterStatisticsMergeMode} for more information on each mode.
  * Default value is <b>SEQUENTIAL</b></li>
  *
+ * <li><b>selectDestination</b>: If the query is a Select, determines the location to write results to, once the query
+ * is finished. Depending on the location, the results might also be truncated to {@link Limits#MAX_SELECT_RESULT_ROWS}.
+ * Default value is {@link MSQSelectDestination#TASK_REPORT}, which writes all the results to the report.
+ *
  * <li><b>useAutoColumnSchemas</b>: Temporary flag to allow experimentation using
  * {@link org.apache.druid.segment.AutoTypeColumnSchema} for all 'standard' type columns during segment generation,
  * see {@link DimensionSchemaUtils#createDimensionSchema} for more details.
@@ -87,6 +92,8 @@ public class MultiStageQueryContext
 
   public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
   private static final boolean DEFAULT_DURABLE_SHUFFLE_STORAGE = false;
+  public static final String CTX_SELECT_DESTINATION = "selectDestination";
+  private static final String DEFAULT_SELECT_DESTINATION = MSQSelectDestination.TASK_REPORT.toString();
 
   public static final String CTX_FAULT_TOLERANCE = "faultTolerance";
   public static final boolean DEFAULT_FAULT_TOLERANCE = false;
@@ -201,6 +208,16 @@ public class MultiStageQueryContext
     return queryContext.getInt(
         CTX_ROWS_PER_SEGMENT,
         DEFAULT_ROWS_PER_SEGMENT
+    );
+  }
+
+  public static MSQSelectDestination getSelectDestination(final QueryContext queryContext)
+  {
+    return MSQSelectDestination.valueOf(
+        queryContext.getString(
+            CTX_SELECT_DESTINATION,
+            DEFAULT_SELECT_DESTINATION
+        )
     );
   }
 
