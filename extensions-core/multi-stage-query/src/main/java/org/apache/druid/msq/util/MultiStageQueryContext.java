@@ -67,7 +67,7 @@ import java.util.stream.Collectors;
  *
  * <li><b>selectDestination</b>: If the query is a Select, determines the location to write results to, once the query
  * is finished. Depending on the location, the results might also be truncated to {@link Limits#MAX_SELECT_RESULT_ROWS}.
- * Default value is {@link MSQSelectDestination#REPORT}, which writes all the results to the report.
+ * Default value is {@link MSQSelectDestination#TASK_REPORT}, which writes all the results to the report.
  *
  * <li><b>useAutoColumnSchemas</b>: Temporary flag to allow experimentation using
  * {@link org.apache.druid.segment.AutoTypeColumnSchema} for all 'standard' type columns during segment generation,
