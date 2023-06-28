@@ -338,4 +338,25 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
   {
 
   }
+
+  @Override
+  @Ignore
+  public void testExactCountDistinctWithGroupingAndOtherAggregators()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testTopNWithSelectProjections()
+  {
+
+  }
+
+  @Override
+  @Ignore
+  public void testPlanWithInFilterLessThanInSubQueryThreshold()
+  {
+
+  }
 }

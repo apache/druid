@@ -191,4 +191,34 @@ public class PlannerFactory extends PlannerToolbox
 
     return frameworkConfigBuilder.build();
   }
+
+  static class DruidCalciteConnectionConfigImpl extends CalciteConnectionConfigImpl
+  {
+
+
+    public DruidCalciteConnectionConfigImpl(Properties properties)
+    {
+      super(properties);
+    }
+
+    @Override
+    public <T> T typeSystem(Class<T> typeSystemClass, T defaultTypeSystem)
+    {
+      return (T) DruidTypeSystem.INSTANCE;
+    }
+
+    @Override
+    public SqlConformance conformance()
+    {
+      return DruidConformance.instance();
+    }
+
+    @Override
+    public CalciteConnectionConfigImpl set(CalciteConnectionProperty property, String value)
+    {
+      final Properties newProperties = (Properties) properties.clone();
+      newProperties.setProperty(property.camelName(), value);
+      return new DruidCalciteConnectionConfigImpl(newProperties);
+    }
+  }
 }

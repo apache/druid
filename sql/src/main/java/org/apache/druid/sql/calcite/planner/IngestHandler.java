@@ -329,11 +329,17 @@ public abstract class IngestHandler extends QueryHandler
         );
       }
 
-      List<String> replaceIntervalsList = DruidSqlParserUtils.validateQueryAndConvertToIntervals(
-          replaceTimeQuery,
-          ingestionGranularity,
-          handlerContext.timeZone()
-      );
+      List<String> replaceIntervalsList;
+      try {
+        replaceIntervalsList = DruidSqlParserUtils.validateQueryAndConvertToIntervals(
+            replaceTimeQuery,
+            ingestionGranularity,
+            handlerContext.timeZone()
+        );
+      }
+      catch (ValidationException e) {
+        throw new RuntimeException(e);
+      }
       super.validate();
       if (replaceIntervalsList != null) {
         replaceIntervals = String.join(",", replaceIntervalsList);
