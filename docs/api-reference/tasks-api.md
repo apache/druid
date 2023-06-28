@@ -87,8 +87,10 @@ Host: {domain}
 #### Sample response
 
 <details>
-  <summary>Toggle to show sample response</summary>
-  <pre><code>[
+  <summary>Click to show sample response</summary>
+  
+  ```json
+  [
     {
         "id": "query-223549f8-b993-4483-b028-1b0d54713cad-worker0_0",
         "groupId": "query-223549f8-b993-4483-b028-1b0d54713cad",
@@ -143,7 +145,9 @@ Host: {domain}
         "dataSource": "wikipedia_api",
         "errorMsg": null
     }
-]</code></pre>
+  ]
+  ```
+
 </details>
 
 ### Get an array of complete tasks
@@ -192,8 +196,10 @@ Host: {domain}
 #### Sample response
 
 <details>
-  <summary>Toggle to show sample response</summary>
-  <pre><code>[
+  <summary>Click to show sample response</summary>
+  
+  ```json
+  [
     {
         "id": "query-223549f8-b993-4483-b028-1b0d54713cad-worker0_0",
         "groupId": "query-223549f8-b993-4483-b028-1b0d54713cad",
@@ -230,7 +236,9 @@ Host: {domain}
         "dataSource": "wikipedia_api",
         "errorMsg": null
     }
-]</code></pre>
+  ]
+  ```
+
 </details>
 
 ### Get an array of running tasks
@@ -276,8 +284,10 @@ Host: {domain}
 #### Sample response
 
 <details>
-  <summary>Toggle to show sample response</summary>
-  <pre><code>[
+  <summary>Click to show sample response</summary>
+  
+  ```json
+  [
     {
         "id": "query-32663269-ead9-405a-8eb6-0817a952ef47",
         "groupId": "query-32663269-ead9-405a-8eb6-0817a952ef47",
@@ -296,7 +306,9 @@ Host: {domain}
         "dataSource": "wikipedia_api",
         "errorMsg": null
     }
-]</code></pre>
+  ]
+  ```
+
 </details>
 
 ### Get an array of waiting tasks
@@ -342,8 +354,10 @@ Host: {domain}
 #### Sample response
 
 <details>
-  <summary>Toggle to show sample response</summary>
-  <pre><code>[
+  <summary>Click to show sample response</summary>
+  
+  ```json
+  [
     {
         "id": "index_parallel_wikipedia_auto_biahcbmf_2023-06-26T21:08:05.216Z",
         "groupId": "index_parallel_wikipedia_auto_biahcbmf_2023-06-26T21:08:05.216Z",
@@ -398,7 +412,9 @@ Host: {domain}
         "dataSource": "wikipedia_auto",
         "errorMsg": null
     }
-]</code></pre>
+  ]
+  ```
+
 </details>
 
 ### Get an array of pending tasks
@@ -445,8 +461,10 @@ Host: {domain}
 #### Sample response
 
 <details>
-  <summary>Toggle to show sample response</summary>
-  <pre><code>[
+  <summary>Click to show sample response</summary>
+  
+  ```json
+  [
     {
         "id": "query-7b37c315-50a0-4b68-aaa8-b1ef1f060e67",
         "groupId": "query-7b37c315-50a0-4b68-aaa8-b1ef1f060e67",
@@ -483,7 +501,9 @@ Host: {domain}
         "dataSource": "wikipedia_api",
         "errorMsg": null
     }
-]</code></pre>
+  ]
+  ```
+
 </details>
 
 ### Get task payload
@@ -530,8 +550,10 @@ Host: {domain}
 #### Sample response
 
 <details>
-  <summary>Toggle to show sample response</summary>
-  <pre><code>{
+  <summary>Click to show sample response</summary>
+  
+  ```json
+  {
     "task": "query-32663269-ead9-405a-8eb6-0817a952ef47",
     "payload": {
         "type": "query_controller",
@@ -872,7 +894,9 @@ Host: {domain}
             "requiredCapacity": 1
         }
     }
-}</code></pre>
+  }
+  ```
+
 </details>
 
 ### Get task status
@@ -917,21 +941,28 @@ Host: {domain}
 
 #### Sample response
 <details>
-  <summary>Toggle to show sample response</summary>
-  <pre><code>{'task': 'query-223549f8-b993-4483-b028-1b0d54713cad',
- 'status': {'id': 'query-223549f8-b993-4483-b028-1b0d54713cad',
-  'groupId': 'query-223549f8-b993-4483-b028-1b0d54713cad',
-  'type': 'query_controller',
-  'createdTime': '2023-06-22T22:11:28.367Z',
-  'queueInsertionTime': '1970-01-01T00:00:00.000Z',
-  'statusCode': 'RUNNING',
-  'status': 'RUNNING',
-  'runnerStatusCode': 'RUNNING',
-  'duration': -1,
-  'location': {'host': 'localhost', 'port': 8100, 'tlsPort': -1},
-  'dataSource': 'wikipedia_api',
-  'errorMsg': None}
-}</code></pre>
+  <summary>Click to show sample response</summary>
+
+  ```json
+  {
+    'task': 'query-223549f8-b993-4483-b028-1b0d54713cad',
+    'status': {
+      'id': 'query-223549f8-b993-4483-b028-1b0d54713cad',
+      'groupId': 'query-223549f8-b993-4483-b028-1b0d54713cad',
+      'type': 'query_controller',
+      'createdTime': '2023-06-22T22:11:28.367Z',
+      'queueInsertionTime': '1970-01-01T00:00:00.000Z',
+      'statusCode': 'RUNNING',
+      'status': 'RUNNING',
+      'runnerStatusCode': 'RUNNING',
+      'duration': -1,
+      'location': {'host': 'localhost', 'port': 8100, 'tlsPort': -1},
+      'dataSource': 'wikipedia_api',
+      'errorMsg': None
+    }
+  }
+  ```
+
 </details>
 
 ### Get task segments
@@ -1019,8 +1050,10 @@ Host: {domain}
 
 #### Sample response
 <details>
-  <summary>Toggle to show sample response</summary>
-  <pre><code>{
+  <summary>Click to show sample response</summary>
+  
+  ```json
+  {
     "ingestionStatsAndErrors": {
         "type": "ingestionStatsAndErrors",
         "taskId": "query-52a8aafe-7265-4427-89fe-dc51275cc470",
@@ -1048,7 +1081,9 @@ Host: {domain}
             "segmentAvailabilityWaitTimeMs": 0
         }
     }
-}</code></pre>
+  }
+  ```
+
 </details>
 
 ## Task operations
@@ -1185,10 +1220,14 @@ Content-Length: 952
 
 #### Sample response
 <details>
-  <summary>Toggle to show sample response</summary>
-  <pre><code>{
-    "task": "index_parallel_wikipedia_odofhkle_2023-06-23T21:07:28.226Z"
-}</code></pre>
+  <summary>Click to show sample response</summary>
+
+  ```json
+  {
+      "task": "index_parallel_wikipedia_odofhkle_2023-06-23T21:07:28.226Z"
+  }
+  ```
+
 </details>
 
 ### Shut down a task
@@ -1233,8 +1272,14 @@ Host: (domain)
 
 #### Sample response
 <details>
-  <summary>Toggle to show sample response</summary>
-  <pre><code>{'task': 'query-577a83dd-a14e-4380-bd01-c942b781236b'}</code></pre>
+  <summary>Click to show sample response</summary>
+
+  ```json
+  {
+    'task': 'query-577a83dd-a14e-4380-bd01-c942b781236b'
+  }
+  ```
+
 </details>
 
 ### Shut down all tasks for a datasource
@@ -1280,10 +1325,14 @@ Host: {domain}
 
 #### Sample response
 <details>
-  <summary>Toggle to show sample response</summary>
-  <pre><code>{
+  <summary>Click to show sample response</summary>
+  
+  ```json
+  {
     "dataSource": "wikipedia_api"
-}</code></pre>
+  }
+  ```
+
 </details>
 
 ## Task management
@@ -1337,8 +1386,10 @@ Content-Length: 134
 
 #### Sample response
 <details>
-  <summary>Toggle to show sample response</summary>
-  <pre><code>{
+  <summary>Click to show sample response</summary>
+  
+  ```json
+  {
     "index_parallel_wikipedia_auto_jbgiianh_2023-06-26T23:17:56.769Z": {
         "id": "index_parallel_wikipedia_auto_jbgiianh_2023-06-26T23:17:56.769Z",
         "status": "SUCCESS",
@@ -1361,7 +1412,9 @@ Content-Length: 134
             "tlsPort": -1
         }
     }
-}</code></pre>
+  }
+  ```
+
 </details>
 
 ### Clean up pending segments for a data source.
@@ -1408,8 +1461,12 @@ Host: {domain}
 
 #### Sample response
 <details>
-  <summary>Toggle to show sample response</summary>
-  <pre><code>{
+  <summary>Click to show sample response</summary>
+  
+  ```json
+  {
     "numDeleted": 2
-}</code></pre>
+  }
+  ```
+
 </details>
