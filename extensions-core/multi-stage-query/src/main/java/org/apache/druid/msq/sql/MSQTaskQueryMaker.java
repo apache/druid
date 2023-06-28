@@ -78,6 +78,8 @@ public class MSQTaskQueryMaker implements QueryMaker
   private static final String DESTINATION_DATASOURCE = "dataSource";
   private static final String DESTINATION_REPORT = "taskReport";
 
+  public static final String USER_KEY = "__user";
+
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
 
   private final String targetDataSource;
@@ -115,6 +117,9 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     // Native query context: sqlQueryContext plus things that we add prior to creating a controller task.
     final Map<String, Object> nativeQueryContext = new HashMap<>(sqlQueryContext.asMap());
+
+    // adding user
+    nativeQueryContext.put(USER_KEY, plannerContext.getAuthenticationResult().getIdentity());
 
     final String msqMode = MultiStageQueryContext.getMSQMode(sqlQueryContext);
     if (msqMode != null) {
@@ -174,6 +179,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         finalizeAggregations ? null /* Not needed */ : buildAggregationIntermediateTypeMap(druidQuery);
 
     final List<SqlTypeName> sqlTypeNames = new ArrayList<>();
+    final List<ColumnType> columnTypeList = new ArrayList<>();
     final List<ColumnMapping> columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery);
 
     for (final Pair<Integer, String> entry : fieldMapping) {
@@ -187,8 +193,8 @@ public class MSQTaskQueryMaker implements QueryMaker
       } else {
         sqlTypeName = druidQuery.getOutputRowType().getFieldList().get(entry.getKey()).getType().getSqlTypeName();
       }
-
       sqlTypeNames.add(sqlTypeName);
+      columnTypeList.add(druidQuery.getOutputRowSignature().getColumnType(queryColumn).orElse(ColumnType.STRING));
     }
 
     final MSQDestination destination;
@@ -248,6 +254,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         plannerContext.queryContextMap(),
         SqlResults.Context.fromPlannerContext(plannerContext),
         sqlTypeNames,
+        columnTypeList,
         null
     );
 
