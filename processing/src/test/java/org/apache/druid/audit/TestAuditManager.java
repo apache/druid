@@ -28,9 +28,7 @@ import java.util.List;
 public class TestAuditManager implements AuditManager
 {
   @Override
-  public <T> void doAudit(
-      String key, String type, AuditInfo auditInfo, T payload, ConfigSerde<T> configSerde
-  )
+  public <T> void doAudit(String key, String type, AuditInfo auditInfo, T payload, ConfigSerde<T> configSerde)
   {
     throw new UnsupportedOperationException();
   }

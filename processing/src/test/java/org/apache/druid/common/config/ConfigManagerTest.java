@@ -62,7 +62,8 @@ public class ConfigManagerTest
   public void setup(TestMetadataStorageConnector dbConnector)
   {
     this.dbConnector = dbConnector;
-    metadataStorageTablesConfig = new TestMetadataStorageTablesConfig(){
+    metadataStorageTablesConfig = new TestMetadataStorageTablesConfig()
+    {
       @Override
       public String getConfigTable()
       {
@@ -108,7 +109,8 @@ public class ConfigManagerTest
   public void testSetOldObjectNullShouldInsertWithoutSwap()
   {
     final AtomicBoolean called = new AtomicBoolean();
-    setup(new TestMetadataStorageConnector(){
+    setup(new TestMetadataStorageConnector()
+    {
 
       @Override
       public Void insertOrUpdate(String tableName, String keyColumn, String valueColumn, String key, byte[] value)
@@ -125,7 +127,8 @@ public class ConfigManagerTest
       ConfigManager.SetResult setResult = configManager.set(CONFIG_KEY, configConfigSerdeFromClass, null, NEW_CONFIG);
       Assert.assertTrue(setResult.isOk());
       Assert.assertTrue(called.get());
-    } finally {
+    }
+    finally {
       configManager.stop();
     }
   }
@@ -134,7 +137,8 @@ public class ConfigManagerTest
   public void testSetOldObjectNotNullShouldSwap()
   {
     final AtomicBoolean called = new AtomicBoolean();
-    setup(new TestMetadataStorageConnector(){
+    setup(new TestMetadataStorageConnector()
+    {
       @Override
       public boolean compareAndSwap(List<MetadataCASUpdate> updates)
       {
@@ -160,7 +164,8 @@ public class ConfigManagerTest
       );
       Assert.assertTrue(setResult.isOk());
       Assert.assertTrue(called.get());
-    } finally {
+    }
+    finally {
       configManager.stop();
     }
   }
@@ -170,7 +175,8 @@ public class ConfigManagerTest
   {
     final AtomicBoolean called = new AtomicBoolean();
 
-    setup(new TestMetadataStorageConnector(){
+    setup(new TestMetadataStorageConnector()
+    {
       @Override
       public Void insertOrUpdate(String tableName, String keyColumn, String valueColumn, String key, byte[] value)
       {
@@ -192,7 +198,8 @@ public class ConfigManagerTest
       );
       Assert.assertTrue(setResult.isOk());
       Assert.assertTrue(called.get());
-    } finally {
+    }
+    finally {
       configManager.stop();
     }
   }
