@@ -880,7 +880,7 @@ Host: {domain}
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/status`
 
-Retrieves the status of a taks given the task id. It returns a JSON object with the task's current status (`running`, `complete`, `waiting`, `pending`), task type, datasource, and other relevant metadata.
+Retrieves the status of a task given the task id. It returns a JSON object with the task's current status (`running`, `complete`, `waiting`, `pending`), task type, datasource, and other relevant metadata.
 
 #### Query parameters
 
