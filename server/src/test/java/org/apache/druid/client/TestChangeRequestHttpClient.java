@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.apache.druid.segment.TestHelper;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -42,28 +41,40 @@ import org.joda.time.Duration;
 import java.io.ByteArrayInputStream;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
-public class TestSegmentChangeRequestHttpClient implements HttpClient
+/**
+ * Test implementation of {@link HttpClient} that can be used to test sync with
+ * {@link org.apache.druid.server.coordination.ChangeRequestHttpSyncer}.
+ */
+public class TestChangeRequestHttpClient<R> implements HttpClient
 {
-  private final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
+  private final ObjectMapper mapper;
+  private final TypeReference<R> typeReference;
   private final BlockingQueue<ResultHolder<?>> results = new LinkedBlockingQueue<>();
 
-  private int requestCount = 0;
+  private final AtomicInteger requestCount = new AtomicInteger(0);
 
-  public void failNextRequestOnClientWith(RuntimeException clientError)
+  public TestChangeRequestHttpClient(TypeReference<R> typeReference, ObjectMapper mapper)
   {
-    results.add(new ResultHolder<>(null, null, clientError, null));
+    this.mapper = mapper;
+    this.typeReference = typeReference;
   }
 
-  public void failNextRequestOnServerWith(DruidException serverError)
+  public void failToSendNextRequestWith(RuntimeException error)
   {
-    results.add(new ResultHolder<>(null, null, null, serverError));
+    results.add(new ResultHolder<>(null, error, null));
   }
 
-  public <T> void completeNextRequestWith(T result, TypeReference<T> typeReference)
+  public void completeNextRequestWith(DruidException druidException)
   {
-    results.add(new ResultHolder<>(() -> result, typeReference, null, null));
+    results.add(new ResultHolder<>(null, null, druidException));
+  }
+
+  public void completeNextRequestWith(R result)
+  {
+    results.add(new ResultHolder<>(() -> result, null, null));
   }
 
   public boolean hasPendingResults()
@@ -87,7 +98,7 @@ public class TestSegmentChangeRequestHttpClient implements HttpClient
       Duration duration
   )
   {
-    final int currentRequest = requestCount++;
+    final int currentRequest = requestCount.getAndIncrement();
 
     final ResultHolder<?> nextResult = results.poll();
     if (nextResult == null) {
@@ -106,8 +117,7 @@ public class TestSegmentChangeRequestHttpClient implements HttpClient
 
     try {
       ByteArrayInputStream resultBytes = new ByteArrayInputStream(
-          MAPPER.writerFor(nextResult.typeReference)
-                .writeValueAsBytes(nextResult.supplier.get())
+          mapper.writerFor(typeReference).writeValueAsBytes(nextResult.supplier.get())
       );
       return (ListenableFuture<Final>) Futures.immediateFuture(resultBytes);
     }
@@ -126,7 +136,7 @@ public class TestSegmentChangeRequestHttpClient implements HttpClient
 
     ErrorResponse errorResponse = druidException.toErrorResponse();
     try {
-      httpResponse.setContent(ChannelBuffers.copiedBuffer(MAPPER.writeValueAsBytes(errorResponse)));
+      httpResponse.setContent(ChannelBuffers.copiedBuffer(mapper.writeValueAsBytes(errorResponse)));
       return httpResponse;
     }
     catch (JsonProcessingException e) {
@@ -137,20 +147,16 @@ public class TestSegmentChangeRequestHttpClient implements HttpClient
   private static class ResultHolder<R>
   {
     final Supplier<R> supplier;
-    final TypeReference<R> typeReference;
-
     final RuntimeException clientError;
     final DruidException serverError;
 
     ResultHolder(
         Supplier<R> supplier,
-        TypeReference<R> typeReference,
         RuntimeException clientError,
         DruidException serverError
     )
     {
       this.supplier = supplier;
-      this.typeReference = typeReference;
       this.clientError = clientError;
       this.serverError = serverError;
     }

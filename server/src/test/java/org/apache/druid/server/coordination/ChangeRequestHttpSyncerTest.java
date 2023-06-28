@@ -22,7 +22,7 @@ package org.apache.druid.server.coordination;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.client.TestSegmentChangeRequestHttpClient;
+import org.apache.druid.client.TestChangeRequestHttpClient;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -46,22 +46,15 @@ public class ChangeRequestHttpSyncerTest
   @Test(timeout = 60_000L)
   public void testSimple() throws Exception
   {
-    TestSegmentChangeRequestHttpClient httpClient = new TestSegmentChangeRequestHttpClient();
-    httpClient.failNextRequestOnClientWith(new ISE("Could not send request to server"));
-    httpClient.failNextRequestOnServerWith(InvalidInput.exception("Invalid input"));
-    httpClient.completeNextRequestWith(buildRequestSnapshot("s1"), TYPE_REF);
-    httpClient.completeNextRequestWith(buildRequestSnapshot("s2"), TYPE_REF);
-    httpClient.completeNextRequestWith(
-        new ChangeRequestsSnapshot<>(
-            true,
-            "reset the counter",
-            ChangeRequestHistory.Counter.ZERO,
-            ImmutableList.of()
-        ),
-        TYPE_REF
-    );
-    httpClient.completeNextRequestWith(buildRequestSnapshot("s3"), TYPE_REF);
-    httpClient.completeNextRequestWith(buildRequestSnapshot("s4"), TYPE_REF);
+    TestChangeRequestHttpClient<ChangeRequestsSnapshot<String>> httpClient
+        = new TestChangeRequestHttpClient<>(TYPE_REF, MAPPER);
+    httpClient.failToSendNextRequestWith(new ISE("Could not send request to server"));
+    httpClient.completeNextRequestWith(InvalidInput.exception("Invalid input"));
+    httpClient.completeNextRequestWith(snapshotOf("s1"));
+    httpClient.completeNextRequestWith(snapshotOf("s2"));
+    httpClient.completeNextRequestWith(ChangeRequestsSnapshot.fail("reset the counter"));
+    httpClient.completeNextRequestWith(snapshotOf("s3"));
+    httpClient.completeNextRequestWith(snapshotOf("s4"));
 
     ChangeRequestHttpSyncer.Listener<String> listener = EasyMock.mock(ChangeRequestHttpSyncer.Listener.class);
     listener.fullSync(ImmutableList.of("s1"));
@@ -93,11 +86,9 @@ public class ChangeRequestHttpSyncerTest
     EasyMock.verify(listener);
   }
 
-  private ChangeRequestsSnapshot<String> buildRequestSnapshot(String... requests)
+  private ChangeRequestsSnapshot<String> snapshotOf(String... requests)
   {
-    return new ChangeRequestsSnapshot<>(
-        false,
-        null,
+    return ChangeRequestsSnapshot.success(
         ChangeRequestHistory.Counter.ZERO,
         Arrays.asList(requests)
     );
