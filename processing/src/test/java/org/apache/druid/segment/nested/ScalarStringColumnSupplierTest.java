@@ -45,6 +45,7 @@ import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DruidPredicateIndex;
 import org.apache.druid.segment.column.NullValueIndex;
+import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
@@ -192,7 +193,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
         bob,
         NestedFieldColumnIndexSupplierTest.ALWAYS_USE_INDEXES
     );
-    try (ScalarStringDictionaryEncodedColumn column = (ScalarStringDictionaryEncodedColumn) supplier.get()) {
+    try (StringUtf8DictionaryEncodedColumn column = (StringUtf8DictionaryEncodedColumn) supplier.get()) {
       smokeTest(supplier, column);
     }
   }
@@ -225,7 +226,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
             try {
               threadsStartLatch.await();
               for (int iter = 0; iter < 5000; iter++) {
-                try (ScalarStringDictionaryEncodedColumn column = (ScalarStringDictionaryEncodedColumn) supplier.get()) {
+                try (StringUtf8DictionaryEncodedColumn column = (StringUtf8DictionaryEncodedColumn) supplier.get()) {
                   smokeTest(supplier, column);
                 }
               }
@@ -241,7 +242,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
     Assert.assertEquals(expectedReason, failureReason.get());
   }
 
-  private void smokeTest(ScalarStringColumnAndIndexSupplier supplier, ScalarStringDictionaryEncodedColumn column)
+  private void smokeTest(ScalarStringColumnAndIndexSupplier supplier, StringUtf8DictionaryEncodedColumn column)
   {
     SimpleAscendingOffset offset = new SimpleAscendingOffset(data.size());
     ColumnValueSelector<?> valueSelector = column.makeColumnValueSelector(offset);
