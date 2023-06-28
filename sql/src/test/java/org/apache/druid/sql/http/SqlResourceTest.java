@@ -2056,7 +2056,7 @@ public class SqlResourceTest extends CalciteTestBase
     return JSON_MAPPER.readValue(responseToByteArray(resp), clazz);
   }
 
-  private byte[] responseToByteArray(Response resp) throws IOException
+  public static byte[] responseToByteArray(Response resp) throws IOException
   {
     if (resp.getEntity() instanceof StreamingOutput) {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();

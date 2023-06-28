@@ -17,58 +17,55 @@
  * under the License.
  */
 
-package org.apache.druid.client.indexing;
+package org.apache.druid.audit;
 
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.common.config.ConfigSerde;
+import org.joda.time.Interval;
+import org.skife.jdbi.v2.Handle;
 
-import java.util.Map;
-import java.util.Set;
+import java.util.List;
 
-public class NoopOverlordClient implements OverlordClient
+public class TestAuditManager implements AuditManager
 {
   @Override
-  public ListenableFuture<Void> runTask(String taskId, Object taskObject)
+  public <T> void doAudit(String key, String type, AuditInfo auditInfo, T payload, ConfigSerde<T> configSerde)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ListenableFuture<Void> cancelTask(String taskId)
+  public void doAudit(AuditEntry auditEntry, Handle handler)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ListenableFuture<Map<String, TaskStatus>> taskStatuses(Set<String> taskIds)
+  public List<AuditEntry> fetchAuditHistory(String key, String type, Interval interval)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ListenableFuture<TaskStatusResponse> taskStatus(String taskId)
+  public List<AuditEntry> fetchAuditHistory(String type, Interval interval)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId)
+  public List<AuditEntry> fetchAuditHistory(String key, String type, int limit)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ListenableFuture<TaskPayloadResponse> taskPayload(String taskId)
+  public List<AuditEntry> fetchAuditHistory(String type, int limit)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public OverlordClient withRetryPolicy(ServiceRetryPolicy retryPolicy)
+  public int removeAuditLogsOlderThan(long timestamp)
   {
-    // Ignore retryPolicy for the test client.
-    return this;
+    throw new UnsupportedOperationException();
   }
 }

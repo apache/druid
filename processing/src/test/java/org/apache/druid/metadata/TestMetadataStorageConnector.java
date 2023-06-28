@@ -17,58 +17,76 @@
  * under the License.
  */
 
-package org.apache.druid.client.indexing;
+package org.apache.druid.metadata;
 
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.rpc.indexing.OverlordClient;
+import javax.annotation.Nullable;
 
-import java.util.Map;
-import java.util.Set;
-
-public class NoopOverlordClient implements OverlordClient
+public class TestMetadataStorageConnector implements MetadataStorageConnector
 {
   @Override
-  public ListenableFuture<Void> runTask(String taskId, Object taskObject)
+  public Void insertOrUpdate(String tableName, String keyColumn, String valueColumn, String key, byte[] value)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Nullable
+  @Override
+  public byte[] lookup(String tableName, String keyColumn, String valueColumn, String key)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ListenableFuture<Void> cancelTask(String taskId)
+  public void createDataSourceTable()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ListenableFuture<Map<String, TaskStatus>> taskStatuses(Set<String> taskIds)
+  public void createPendingSegmentsTable()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ListenableFuture<TaskStatusResponse> taskStatus(String taskId)
+  public void createSegmentTable()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId)
+  public void createRulesTable()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ListenableFuture<TaskPayloadResponse> taskPayload(String taskId)
+  public void createConfigTable()
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public OverlordClient withRetryPolicy(ServiceRetryPolicy retryPolicy)
+  public void createTaskTables()
   {
-    // Ignore retryPolicy for the test client.
-    return this;
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void createAuditTable()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void createSupervisorsTable()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void deleteAllRecords(String tableName)
+  {
+    throw new UnsupportedOperationException();
   }
 }
