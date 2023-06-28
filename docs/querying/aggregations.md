@@ -310,39 +310,6 @@ Returns any value including null. This aggregator can simplify and optimize the 
 }
 ```
 
-### JavaScript aggregator
-
-Computes an arbitrary JavaScript function over a set of columns (both metrics and dimensions are allowed). Your
-JavaScript functions are expected to return floating-point values.
-
-```json
-{ "type": "javascript",
-  "name": "<output_name>",
-  "fieldNames"  : [ <column1>, <column2>, ... ],
-  "fnAggregate" : "function(current, column1, column2, ...) {
-                     <updates partial aggregate (current) based on the current row values>
-                     return <updated partial aggregate>
-                   }",
-  "fnCombine"   : "function(partialA, partialB) { return <combined partial results>; }",
-  "fnReset"     : "function()                   { return <initial value>; }"
-}
-```
-
-**Example**
-
-```json
-{
-  "type": "javascript",
-  "name": "sum(log(x)*y) + 10",
-  "fieldNames": ["x", "y"],
-  "fnAggregate" : "function(current, a, b)      { return current + (Math.log(a) * b); }",
-  "fnCombine"   : "function(partialA, partialB) { return partialA + partialB; }",
-  "fnReset"     : "function()                   { return 10; }"
-}
-```
-
-> JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
-
 <a name="approx"></a>
 
 ## Approximate aggregations
@@ -421,6 +388,121 @@ A [study published by the DataSketches team](https://datasketches.apache.org/doc
 It is not possible to determine a priori how well this aggregator will behave for a given input stream, nor does the aggregator provide any indication that serious distortions are present in the output.
 
 For these reasons, we have deprecated this aggregator and recommend using the DataSketches Quantiles aggregator instead for new and existing use cases, although we will continue to support Approximate Histogram for backwards compatibility.
+
+
+## Expression aggregators
+
+### Expression aggregator
+
+Aggregates results using [Druid expressions](./math-expr.md) functions to facilitate building custom aggregator functions.
+
+| property | description | required |
+| --- | --- | --- |
+| `type` | must be `expression` | true |
+| `name` | aggregator output name | true |
+| `fields` | list of aggregator input columns | true |
+| `accumulatorIdentifier` | variable which identifies the accumulator value in the `fold` and `combine` expressions | false (default `__acc`)|
+| `fold` | expression to accumulate values from `fields`. The result of the expression will be stored in `accumulatorIdentifier` and available to the next computation. | true |
+| `combine` | expression to combine the results of various `fold` expressions of each segment when merging results. If not defined and `fold` has a single input column in `fields`, then the `fold` expression may be used, otherwise the input is available to the expression as the `name`| false (default to `fold` expression if and only if the expression has a single input in `fields`)|
+| `compare` | comparator expression which can only refer to 2 input variables, `o1` and `o2`, where `o1` and `o2` are the output of `fold` or `combine` expressions, and must adhere to the Java comparator contract. If not set, this will try to fall back to an output type appropriate comparator | false |
+| `finalize` | finalize expression which can only refer to a single input variable, `o`, and is used to perform any final transformation of the output of `fold` or `combine` expressions. If not set, then the value is not transformed | false |
+| `initialValue` | initial value of the accumulator for `fold` (and `combine`, if `InitialCombineValue` is null) expression | true |
+| `initialCombineValue` | initial value of the accumulator for `combine` expression | false (default `initialValue`) |
+| `isNullUnlessAggregated` | indicates that the default output value should be `null` if the aggregator does not process any rows. If true, the value is `null`, if false, the result of running the expressions with initial values is used instead. | false (defaults to value of `druid.generic.useDefaultValueForNull`)|
+| `shouldAggregateNullInputs` | indicates if the `fold` expression should operate on any `null` input values | false (default value is `true`) |
+| `shouldCombineAggregateNullInputs` | indicates if the `combine` expression should operate on any `null` input values | false (default value is `shouldAggregateNullInputs`) |
+| `maxSizeBytes` | maximum size in bytes that variably sized aggregator output types such as strings and arrays are allowed to grow before the aggregation will fail. | false (8192 bytes) |
+
+#### Example: a "count" aggregator
+The initial value is `0` and adds `1` for each row processed.
+
+```json
+{
+  "type": "expression",
+  "name": "expression_count",
+  "fields": [],
+  "initialValue": "0",
+  "fold": "__acc + 1",
+  "combine": "__acc + expression_count"
+}
+```
+
+#### Example: a "sum" aggregator
+The initial value is `0`, adds the numeric value `column_a` for each row processed.
+
+```json
+{
+  "type": "expression",
+  "name": "expression_sum",
+  "fields": ["column_a"],
+  "initialValue": "0",
+  "fold": "__acc + column_a"
+}
+```
+
+#### Example: a "distinct array element" aggregator, sorted by array_length
+The initial value is an empty array, `fold` adds the elements of `column_a` to the accumulator using set semantics, `combine` merges the sets, and `compare` orders the values by `array_length`.
+
+```json
+{
+  "type": "expression",
+  "name": "expression_array_agg_distinct",
+  "fields": ["column_a"],
+  "initialValue": "[]",
+  "fold": "array_set_add(__acc, column_a)",
+  "combine": "array_set_add_all(__acc, expression_array_agg_distinct)",
+  "compare": "if(array_length(o1) > array_length(o2), 1, if (array_length(o1) == array_length(o2), 0, -1))"
+}
+```
+
+#### Example: an "approximate count" aggregator using the built-in hyper-unique
+Similar to the 'cardinality' aggregator, the default value is an empty hyperunique sketch, `fold` adds the value of `column_a` to the sketch, `combine` merges the sketches, and `finalize` gets the estimated count from the accumlated sketch.
+
+```json
+{
+  "type": "expression",
+  "name": "expression_cardinality",
+  "fields": ["column_a"],
+  "initialValue": "hyper_unique()",
+  "fold": "hyper_unique_add(column_a, __acc)",
+  "combine": "hyper_unique_add(expression_cardinality, __acc)",
+  "finalize": "hyper_unique_estimate(o)"
+}
+```
+
+### JavaScript aggregator
+
+Computes an arbitrary JavaScript function over a set of columns (both metrics and dimensions are allowed). Your
+JavaScript functions are expected to return floating-point values.
+
+```json
+{ "type": "javascript",
+  "name": "<output_name>",
+  "fieldNames"  : [ <column1>, <column2>, ... ],
+  "fnAggregate" : "function(current, column1, column2, ...) {
+                     <updates partial aggregate (current) based on the current row values>
+                     return <updated partial aggregate>
+                   }",
+  "fnCombine"   : "function(partialA, partialB) { return <combined partial results>; }",
+  "fnReset"     : "function()                   { return <initial value>; }"
+}
+```
+
+**Example**
+
+```json
+{
+  "type": "javascript",
+  "name": "sum(log(x)*y) + 10",
+  "fieldNames": ["x", "y"],
+  "fnAggregate" : "function(current, a, b)      { return current + (Math.log(a) * b); }",
+  "fnCombine"   : "function(partialA, partialB) { return partialA + partialB; }",
+  "fnReset"     : "function()                   { return 10; }"
+}
+```
+
+> JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+
 
 ## Miscellaneous aggregations
 
