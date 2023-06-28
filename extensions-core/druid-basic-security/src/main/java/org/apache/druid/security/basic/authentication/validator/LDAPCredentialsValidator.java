@@ -38,6 +38,7 @@ import org.apache.druid.server.security.AuthenticationResult;
 import javax.annotation.Nullable;
 import javax.naming.AuthenticationException;
 import javax.naming.Context;
+import javax.naming.Name;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.DirContext;
@@ -87,7 +88,9 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         userSearch,
         userAttribute,
         credentialIterations == null ? BasicAuthUtils.DEFAULT_KEY_ITERATIONS : credentialIterations,
-        credentialVerifyDuration == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_VERIFY_DURATION_SECONDS : credentialVerifyDuration,
+        credentialVerifyDuration == null
+        ? BasicAuthUtils.DEFAULT_CREDENTIAL_VERIFY_DURATION_SECONDS
+        : credentialVerifyDuration,
         credentialMaxDuration == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_MAX_DURATION_SECONDS : credentialMaxDuration,
         credentialCacheSize == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_CACHE_SIZE : credentialCacheSize
     );
@@ -211,18 +214,30 @@ public class LDAPCredentialsValidator implements CredentialsValidator
     }
   }
 
+  /**
+   * Retrieves an LDAP user object by using {@link javax.naming.ldap.LdapContext#search(Name, String, SearchControls)}.
+   *
+   * Regarding the "BanJNDI" suppression: Errorprone flags all usage of APIs that may do JNDI lookups because of the
+   * potential for RCE. The risk is that an attacker with ability to set user-level properties on the LDAP server could
+   * cause us to read a serialized Java object (a well-known security risk). We mitigate the risk by avoiding the
+   * "lookup" API, and using the "search" API *without* setting the returningObjFlag.
+   *
+   * See https://errorprone.info/bugpattern/BanJNDI for more details.
+   */
+  @SuppressWarnings("BanJNDI")
   @Nullable
   SearchResult getLdapUserObject(BasicAuthLDAPConfig ldapConfig, DirContext context, String username)
   {
     try {
       SearchControls sc = new SearchControls();
       sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
-      sc.setReturningAttributes(new String[] {ldapConfig.getUserAttribute(), "memberOf" });
+      sc.setReturningAttributes(new String[]{ldapConfig.getUserAttribute(), "memberOf"});
       String encodedUsername = encodeForLDAP(username, true);
       NamingEnumeration<SearchResult> results = context.search(
           ldapConfig.getBaseDn(),
           StringUtils.format(ldapConfig.getUserSearch(), encodedUsername),
-          sc);
+          sc
+      );
       try {
         if (!results.hasMore()) {
           return null;
