@@ -35,10 +35,10 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  *
@@ -46,15 +46,16 @@ import java.util.stream.Stream;
 public class S3DataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(S3DataSegmentKiller.class);
-  private static final String BUCKET = "bucket";
-  private static final String KEY = "key";
+
+  // AWS has max limit of 1000 objects that can be requested to be deleted at a time.
+  private static final int MAX_MULTI_OBJECT_DELETE_SIZE = 1000;
 
   /**
    * Any implementation of DataSegmentKiller is initialized when an ingestion job starts if the extension is loaded,
    * even when the implementation of DataSegmentKiller is not used. As a result, if we have a s3 client instead
    * of a supplier of it, it can cause unnecessary config validation for s3 even when it's not used at all.
    * To perform the config validation only when it is actually used, we use a supplier.
-   *
+   * <p>
    * See OmniDataSegmentKiller for how DataSegmentKillers are initialized.
    */
   private final Supplier<ServerSideEncryptingAmazonS3> s3ClientSupplier;
@@ -76,8 +77,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
   @Override
   public void kill(List<DataSegment> segments) throws SegmentLoadingException
   {
-    int size = segments.size();
-    if (size == 0) {
+    if (segments.isEmpty()) {
       return;
     }
     if (segments.size() == 1) {
@@ -85,45 +85,99 @@ public class S3DataSegmentKiller implements DataSegmentKiller
       return;
     }
 
-    // we can assume that all segments are in the same bucket.
-    String s3Bucket = MapUtils.getString(segments.get(0).getLoadSpec(), BUCKET);
+    // create a map of bucket to keys to delete
+    Map<String, List<DeleteObjectsRequest.KeyVersion>> bucketToKeysToDelete = new HashMap<>();
+    for (DataSegment segment : segments) {
+      String s3Bucket = MapUtils.getString(segment.getLoadSpec(), S3DataSegmentPuller.BUCKET);
+      String path = MapUtils.getString(segment.getLoadSpec(), S3DataSegmentPuller.KEY);
+      List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();
+      keysToDelete.add(new DeleteObjectsRequest.KeyVersion(path));
+      keysToDelete.add(new DeleteObjectsRequest.KeyVersion(DataSegmentKiller.descriptorPath(path)));
+      bucketToKeysToDelete.computeIfAbsent(s3Bucket, k -> new ArrayList<>()).addAll(keysToDelete);
+    }
+
     final ServerSideEncryptingAmazonS3 s3Client = this.s3ClientSupplier.get();
+    boolean shouldThrowException = false;
+    for (Map.Entry<String, List<DeleteObjectsRequest.KeyVersion>> bucketToKeys : bucketToKeysToDelete.entrySet()) {
+      String s3Bucket = bucketToKeys.getKey();
+      List<DeleteObjectsRequest.KeyVersion> keysToDelete = bucketToKeys.getValue();
+      boolean hadException = deleteKeysForBucket(s3Client, s3Bucket, keysToDelete);
+      if (hadException) {
+        shouldThrowException = true;
+      }
+    }
+    if (shouldThrowException) {
+      // exception error message gets cutoff without providing any details. look at the logs for more details.
+      // this was a shortcut to handle the many different ways there could potentially be failures and handle them
+      // reasonably
+      throw new SegmentLoadingException(
+          "Couldn't delete segments from s3 see logs for more details"
+      );
+    }
+  }
 
-    List<DeleteObjectsRequest.KeyVersion> keysToDelete = segments.stream()
-            .map(segment -> MapUtils.getString(segment.getLoadSpec(), KEY))
-            .flatMap(path -> Stream.of(new DeleteObjectsRequest.KeyVersion(path),
-                                     new DeleteObjectsRequest.KeyVersion(DataSegmentKiller.descriptorPath(path))))
-            .collect(Collectors.toList());
-
-    // max delete object request size is 1000 for S3
-    List<List<DeleteObjectsRequest.KeyVersion>> keysChunks = Lists.partition(keysToDelete, 1000);
+  /**
+   * Delete all keys in a bucket from s3
+   *
+   * @param s3Client client used to communicate with s3
+   * @param s3Bucket the bucket where the keys exist
+   * @param keysToDelete the keys to delete
+   * @return a boolean value of true if there was an issue deleting one or many keys, a boolean value of false if
+   * succesful
+   */
+  private boolean deleteKeysForBucket(
+      ServerSideEncryptingAmazonS3 s3Client,
+      String s3Bucket,
+      List<DeleteObjectsRequest.KeyVersion> keysToDelete
+  )
+  {
+    boolean hadException = false;
     DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(s3Bucket);
-    // only return objects failed to delete.
     deleteObjectsRequest.setQuiet(true);
-
-    List<String> keysNotDeleted = new ArrayList<>();
-    for (List<DeleteObjectsRequest.KeyVersion> keysChunk : keysChunks) {
-      List<String> keysToDeleteStrings = keysChunk.stream().map(
-            DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.toList());
+    List<List<DeleteObjectsRequest.KeyVersion>> keysChunks = Lists.partition(
+        keysToDelete,
+        MAX_MULTI_OBJECT_DELETE_SIZE
+    );
+    for (List<DeleteObjectsRequest.KeyVersion> chunkOfKeys : keysChunks) {
+      List<String> keysToDeleteStrings = chunkOfKeys.stream().map(
+          DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.toList());
       try {
-        deleteObjectsRequest.setKeys(keysChunk);
-        log.info("Removing from bucket: [%s] the following index files: [%s] from s3!", s3Bucket, keysToDeleteStrings);
+        deleteObjectsRequest.setKeys(chunkOfKeys);
+        log.info(
+            "Removing from bucket: [%s] the following index files: [%s] from s3!",
+            s3Bucket,
+            keysToDeleteStrings
+        );
         s3Client.deleteObjects(deleteObjectsRequest);
       }
       catch (MultiObjectDeleteException e) {
-        keysNotDeleted.addAll(e.getErrors().stream()
-                               .map(MultiObjectDeleteException.DeleteError::getKey)
-                               .collect(Collectors.toList()));
+        hadException = true;
+        Map<String, List<String>> errorToKeys = new HashMap<>();
+        for (MultiObjectDeleteException.DeleteError error : e.getErrors()) {
+          error.getMessage();
+          error.getKey();
+          errorToKeys.computeIfAbsent(error.getMessage(), k -> new ArrayList<>()).add(error.getKey());
+        }
+        errorToKeys.forEach((key, value) -> log.error(
+            String.format(
+                "Unable to delete from bucket [%s], the following keys [%s], because [%s]",
+                s3Bucket,
+                String.join(", ", value),
+                key
+            )
+        ));
       }
       catch (AmazonServiceException e) {
-        throw new SegmentLoadingException(e,
-                                          "Unable to delete from bucket [%s]",
-                                          s3Bucket);
+        hadException = true;
+        log.error(String.format(
+            "Unable to delete from bucket [%s], the following keys [%s], because [%s]",
+            s3Bucket,
+            chunkOfKeys.stream().map(DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.joining(", ")),
+            e.getMessage()
+        ));
       }
     }
-    if (!keysNotDeleted.isEmpty()) {
-      throw new SegmentLoadingException("Couldn't delete from bucket: [%s] these files [%s]", s3Bucket, keysNotDeleted);
-    }
+    return hadException;
   }
 
   @Override
@@ -131,8 +185,8 @@ public class S3DataSegmentKiller implements DataSegmentKiller
   {
     try {
       Map<String, Object> loadSpec = segment.getLoadSpec();
-      String s3Bucket = MapUtils.getString(loadSpec, BUCKET);
-      String s3Path = MapUtils.getString(loadSpec, KEY);
+      String s3Bucket = MapUtils.getString(loadSpec, S3DataSegmentPuller.BUCKET);
+      String s3Path = MapUtils.getString(loadSpec, S3DataSegmentPuller.KEY);
       String s3DescriptorPath = DataSegmentKiller.descriptorPath(s3Path);
 
       final ServerSideEncryptingAmazonS3 s3Client = this.s3ClientSupplier.get();
