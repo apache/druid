@@ -440,7 +440,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            new NestedFieldVirtualColumn("nest", "$.x", "v0", ColumnType.STRING)
+                            new NestedFieldVirtualColumn("nest", "$.x", "v0", null)
                         )
                         .setDimensions(
                             dimensions(

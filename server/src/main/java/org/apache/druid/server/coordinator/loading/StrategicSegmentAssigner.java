@@ -33,6 +33,7 @@ import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -296,7 +297,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   private void reportTierCapacityStats(DataSegment segment, int requiredReplicas, String tier)
   {
-    final RowKey rowKey = RowKey.forTier(tier);
+    final RowKey rowKey = RowKey.of(Dimension.TIER, tier);
     stats.updateMax(Stats.Tier.REPLICATION_FACTOR, rowKey, requiredReplicas);
     stats.add(Stats.Tier.REQUIRED_CAPACITY, rowKey, segment.getSize() * requiredReplicas);
   }
@@ -342,7 +343,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   public void deleteSegment(DataSegment segment)
   {
     loadQueueManager.deleteSegment(segment);
-    stats.addToDatasourceStat(Stats.Segments.DELETED, segment.getDataSource(), 1);
+    RowKey rowKey = RowKey.of(Dimension.DATASOURCE, segment.getDataSource());
+    stats.add(Stats.Segments.DELETED, rowKey, 1);
   }
 
   /**
@@ -429,9 +431,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     if (numToDrop > numDropsQueued) {
       remainingNumToDrop = numToDrop - numDropsQueued;
       Iterator<ServerHolder> serverIterator =
-          (useRoundRobinAssignment || eligibleLiveServers.size() >= remainingNumToDrop)
+          (useRoundRobinAssignment || eligibleLiveServers.size() <= remainingNumToDrop)
           ? eligibleLiveServers.iterator()
-          : strategy.pickServersToDropSegment(segment, eligibleLiveServers);
+          : strategy.findServersToDropSegment(segment, new ArrayList<>(eligibleLiveServers));
       numDropsQueued += dropReplicasFromServers(remainingNumToDrop, segment, serverIterator, tier);
     }
 
@@ -493,7 +495,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
         ? serverSelector.getServersInTierToLoadSegment(tier, segment)
         : strategy.findServersToLoadSegment(segment, eligibleServers);
     if (!serverIterator.hasNext()) {
-      incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "No server chosen by strategy", segment, tier);
+      incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "No strategic server", segment, tier);
       return 0;
     }
 
@@ -586,16 +588,10 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   private void incrementSkipStat(CoordinatorStat stat, String reason, DataSegment segment, String tier)
   {
-    final RowKey.Builder keyBuilder
-        = RowKey.builder()
-                .add(Dimension.TIER, tier)
-                .add(Dimension.DATASOURCE, segment.getDataSource());
-
-    if (reason != null) {
-      keyBuilder.add(Dimension.DESCRIPTION, reason);
-    }
-
-    stats.add(stat, keyBuilder.build(), 1);
+    final RowKey key = RowKey.with(Dimension.TIER, tier)
+                             .with(Dimension.DATASOURCE, segment.getDataSource())
+                             .and(Dimension.DESCRIPTION, reason);
+    stats.add(stat, key, 1);
   }
 
   private void incrementStat(CoordinatorStat stat, DataSegment segment, String tier, long value)

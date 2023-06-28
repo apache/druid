@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.parser;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -30,8 +31,13 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlNumericLiteral;
+import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlOrderBy;
+import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlTimestampLiteral;
+import org.apache.calcite.sql.SqlUtil;
+import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
@@ -57,6 +63,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.joda.time.base.AbstractInterval;
 
+import javax.annotation.Nullable;
 import java.sql.Timestamp;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -200,7 +207,7 @@ public class DruidSqlParserUtils
   }
 
   /**
-   * This method validates and converts a {@link SqlNode} representing a query into an optmizied list of intervals to
+   * This method validates and converts a {@link SqlNode} representing a query into an optimized list of intervals to
    * be used in creating an ingestion spec. If the sqlNode is an SqlLiteral of {@link #ALL}, returns a singleton list of
    * "ALL". Otherwise, it converts and optimizes the query using {@link MoveTimeFiltersToIntervals} into a list of
    * intervals which contain all valid values of time as per the query.
@@ -300,6 +307,109 @@ public class DruidSqlParserUtils
         offset,
         fetch
     );
+  }
+
+  /**
+   * Return resolved clustered by column output names.
+   * For example, consider the following SQL:
+   * <pre>
+   * EXPLAIN PLAN FOR
+   * INSERT INTO w000
+   * SELECT
+   *  TIME_PARSE("timestamp") AS __time,
+   *  page AS page_alias,
+   *  FLOOR("cost"),
+   *  country,
+   *  citName
+   * FROM ...
+   * PARTITIONED BY DAY
+   * CLUSTERED BY 1, 2, 3, cityName
+   * </pre>
+   *
+   * <p>
+   * The function will return the following clusteredBy columns for the above SQL: ["__time", "page_alias", "FLOOR(\"cost\")", cityName"]
+   * Any ordinal and expression specified in the CLUSTERED BY clause will resolve to the final output column name.
+   * </p>
+   * @param clusteredByNodes  List of {@link SqlNode}s representing columns to be clustered by.
+   * @param sourceNode The select or order by source node.
+   */
+  @Nullable
+  public static List<String> resolveClusteredByColumnsToOutputColumns(SqlNodeList clusteredByNodes, SqlNode sourceNode)
+  {
+    // CLUSTERED BY is an optional clause
+    if (clusteredByNodes == null) {
+      return null;
+    }
+
+    Preconditions.checkArgument(
+        sourceNode instanceof SqlSelect || sourceNode instanceof SqlOrderBy,
+        "Source node must be either SqlSelect or SqlOrderBy, but found [%s]",
+        sourceNode == null ? null : sourceNode.getKind()
+    );
+
+    final SqlSelect selectNode = (sourceNode instanceof SqlSelect) ? (SqlSelect) sourceNode
+                                                                   : (SqlSelect) ((SqlOrderBy) sourceNode).query;
+    final List<SqlNode> selectList = selectNode.getSelectList().getList();
+    final List<String> retClusteredByNames = new ArrayList<>();
+
+    for (SqlNode clusteredByNode : clusteredByNodes) {
+
+      if (SqlUtil.isLiteral(clusteredByNode)) {
+        // The node is a literal number -- an ordinal is specified in the CLUSTERED BY clause. Validate and lookup the
+        // ordinal in the select list.
+        int ordinal = ((SqlNumericLiteral) clusteredByNode).getValueAs(Integer.class);
+        if (ordinal < 1 || ordinal > selectList.size()) {
+          throw InvalidSqlInput.exception(
+              "Ordinal[%d] specified in the CLUSTERED BY clause is invalid. It must be between 1 and %d.",
+              ordinal,
+              selectList.size()
+          );
+        }
+        SqlNode node = selectList.get(ordinal - 1);
+
+        if (node instanceof SqlBasicCall) {
+          retClusteredByNames.add(getColumnNameFromSqlCall(node));
+        } else {
+          Preconditions.checkArgument(
+              node instanceof SqlIdentifier,
+              "Node must be a SqlIdentifier, but found [%s]",
+              node.getKind()
+          );
+          SqlIdentifier n = ((SqlIdentifier) node);
+          retClusteredByNames.add(n.isSimple() ? n.getSimple() : n.names.get(1));
+        }
+      } else if (clusteredByNode instanceof SqlBasicCall) {
+        // The node is an expression/operator.
+        retClusteredByNames.add(getColumnNameFromSqlCall(clusteredByNode));
+      } else {
+        // The node is a simple SqlIdentifier, add the name.
+        Preconditions.checkArgument(
+            clusteredByNode instanceof SqlIdentifier,
+            "ClusteredBy node must be a SqlIdentifier, but found [%s]",
+            clusteredByNode.getKind()
+        );
+        retClusteredByNames.add(clusteredByNode.toString());
+      }
+    }
+
+    return retClusteredByNames;
+  }
+
+  private static String getColumnNameFromSqlCall(final SqlNode sqlCallNode)
+  {
+    Preconditions.checkArgument(sqlCallNode instanceof SqlBasicCall, "Node must be a SqlBasicCall type");
+
+    // The node may be an alias or expression, in which case we'll get the output name
+    SqlBasicCall sqlBasicCall = (SqlBasicCall) sqlCallNode;
+    SqlOperator operator = (sqlBasicCall).getOperator();
+    if (operator instanceof SqlAsOperator) {
+      // Get the output name for the alias operator.
+      SqlNode sqlNode = (sqlBasicCall).getOperandList().get(1);
+      return sqlNode.toString();
+    } else {
+      // Return the expression as-is.
+      return sqlCallNode.toSqlString(CalciteSqlDialect.DEFAULT).toString();
+    }
   }
 
   /**
