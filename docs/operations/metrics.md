@@ -68,8 +68,8 @@ Metrics may have additional dimensions beyond those listed above.
 |`init/metadatacache/time`|Time taken to initialize the broker segment metadata cache. Useful to detect if brokers are taking too long to start||Depends on the number of segments.|
 |`segment/metadatacache/refresh/count`|Number of segments to refresh in broker segment metadata cache.|`dataSource`|
 |`segment/metadatacache/refresh/time`|Time taken to refresh segments in broker segment metadata cache.|`dataSource`|
-|`segment/serverview/sync/success`|Sync status of the broker with a segment-loading server such as historicals and peons. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`|1 for fully synced servers, 0 otherwise|
-|`segment/serverview/sync/unstableTime`|Time in milliseconds for which the broker has been unable to sync with a segment-loading server. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`|Not emitted for synced servers.|
+|`segment/serverview/sync/healthy`|Sync status of the Broker with a segment-loading server such as a Historical or Peon. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`|1 for fully synced servers, 0 otherwise|
+|`segment/serverview/sync/unstableTime`|Time in milliseconds for which the Broker has been failing to sync with a segment-loading server. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`|Not emitted for synced servers.|
 
 ### Historical
 
@@ -325,8 +325,8 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`metadata/kill/rule/count`|Total number of rules that were automatically deleted from metadata store per each Coordinator kill rule duty run. This metric can help adjust `druid.coordinator.kill.rule.durationToRetain` configuration based on whether more or less rules need to be deleted per cycle. Note that this metric is only emitted when `druid.coordinator.kill.rule.on` is set to true.| |Varies|
 |`metadata/kill/datasource/count`|Total number of datasource metadata that were automatically deleted from metadata store per each Coordinator kill datasource duty run (Note: datasource metadata only exists for datasource created from supervisor). This metric can help adjust `druid.coordinator.kill.datasource.durationToRetain` configuration based on whether more or less datasource metadata need to be deleted per cycle. Note that this metric is only emitted when `druid.coordinator.kill.datasource.on` is set to true.| |Varies|
 |`init/serverview/time`|Time taken to initialize the coordinator server view.||Depends on the number of segments|
-|`segment/serverview/sync/success`|Sync status of the coordinator with a segment-loading server such as historicals and peons. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`|1 for fully synced servers, 0 otherwise|
-|`segment/serverview/sync/unstableTime`|Time in milliseconds for which the coordinator has been unable to sync with a segment-loading server. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`|Not emitted for synced servers.|
+|`segment/serverview/sync/healthy`|Sync status of the Coordinator with a segment-loading server such as a Historical or Peon. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`|1 for fully synced servers, 0 otherwise|
+|`segment/serverview/sync/unstableTime`|Time in milliseconds for which the Coordinator has been failing to sync with a segment-loading server. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`|Not emitted for synced servers.|
 
 If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configuration](../configuration/index.md#dynamic-configuration), then [log entries](../configuration/logging.md) for class `org.apache.druid.server.coordinator.duty.EmitClusterStatsAndMetrics` will have extra information on balancing decisions.
 

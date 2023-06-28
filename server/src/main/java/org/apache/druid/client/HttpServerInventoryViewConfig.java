@@ -22,19 +22,23 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.Configs;
-import org.joda.time.Duration;
 import org.joda.time.Period;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  */
 public class HttpServerInventoryViewConfig
 {
+  // HTTP request timeout
   @JsonProperty
-  private final Duration serverTimeout;
+  private final long serverTimeout;
 
+  // Requests to server may fail when it is shutsdown abruptly and there is a lag in coordinator
+  // discovering its disappearance. So, failure would be logged only after the acceptable
+  // unstableTimeout has passed.
   @JsonProperty
-  private final Duration serverUnstabilityTimeout;
+  private final long serverUnstabilityTimeout;
 
   @JsonProperty
   private final int numThreads;
@@ -46,28 +50,26 @@ public class HttpServerInventoryViewConfig
       @JsonProperty("numThreads") Integer numThreads
   )
   {
-    this.serverTimeout = Configs.valueOrDefault(serverTimeout, Period.minutes(4))
-                                .toStandardDuration();
-    this.serverUnstabilityTimeout = Configs.valueOrDefault(serverUnstabilityTimeout, Period.minutes(1))
-                                           .toStandardDuration();
-    this.numThreads = Configs.valueOrDefault(numThreads, 5);
+    this.serverTimeout = serverTimeout != null
+                         ? serverTimeout.toStandardDuration().getMillis()
+                         : TimeUnit.MINUTES.toMillis(4);
 
-    Preconditions.checkArgument(this.serverTimeout.getMillis() > 0, "server timeout must be > 0 ms");
+    this.serverUnstabilityTimeout = serverUnstabilityTimeout != null
+                         ? serverUnstabilityTimeout.toStandardDuration().getMillis()
+                         : TimeUnit.MINUTES.toMillis(1);
+
+    this.numThreads = numThreads != null ? numThreads.intValue() : 5;
+
+    Preconditions.checkArgument(this.serverTimeout > 0, "server timeout must be > 0 ms");
     Preconditions.checkArgument(this.numThreads > 1, "numThreads must be > 1");
   }
 
-  /**
-   * Timeout duration for HTTP requests.
-   */
-  public Duration getRequestTimeout()
+  public long getServerTimeout()
   {
     return serverTimeout;
   }
 
-  /**
-   * Delay after which an alert is raised for an unstable server.
-   */
-  public Duration getUnstableAlertTimeout()
+  public long getServerUnstabilityTimeout()
   {
     return serverUnstabilityTimeout;
   }

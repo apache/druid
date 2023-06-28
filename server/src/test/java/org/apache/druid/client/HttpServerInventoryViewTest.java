@@ -80,14 +80,14 @@ public class HttpServerInventoryViewTest
 
   private static final String EXEC_NAME_PREFIX = "InventoryViewTest";
 
-  private static final String METRIC_SUCCESS = "segment/serverview/sync/success";
+  private static final String METRIC_SUCCESS = "segment/serverview/sync/healthy";
   private static final String METRIC_UNSTABLE_TIME = "segment/serverview/sync/unstableTime";
 
   private StubServiceEmitter serviceEmitter;
 
   private HttpServerInventoryView httpServerInventoryView;
   private TestChangeRequestHttpClient<ChangeRequestsSnapshot<DataSegmentChangeRequest>> httpClient;
-  private TestExecutorFactory executorFactory;
+  private TestExecutorFactory execHelper;
 
   private TestDruidNodeDiscovery druidNodeDiscovery;
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
@@ -111,7 +111,7 @@ public class HttpServerInventoryViewTest
     EasyMock.replay(druidNodeDiscoveryProvider);
 
     httpClient = new TestChangeRequestHttpClient<>(TYPE_REF, MAPPER);
-    executorFactory = new TestExecutorFactory();
+    execHelper = new TestExecutorFactory();
     inventoryInitialized = new AtomicBoolean(false);
 
     segmentsAddedToView = new HashMap<>();
@@ -142,7 +142,7 @@ public class HttpServerInventoryViewTest
     druidNodeDiscovery.markNodeViewInitialized();
     Assert.assertFalse(inventoryInitialized.get());
 
-    executorFactory.finishInventoryInitialization();
+    execHelper.finishInventoryInitialization();
     Assert.assertTrue(inventoryInitialized.get());
 
     httpServerInventoryView.stop();
@@ -152,10 +152,10 @@ public class HttpServerInventoryViewTest
   public void testStopShutsDownExecutors()
   {
     httpServerInventoryView.start();
-    Assert.assertFalse(executorFactory.syncExecutor.isShutdown());
+    Assert.assertFalse(execHelper.syncExecutor.isShutdown());
 
     httpServerInventoryView.stop();
-    Assert.assertTrue(executorFactory.syncExecutor.isShutdown());
+    Assert.assertTrue(execHelper.syncExecutor.isShutdown());
   }
 
   @Test
@@ -163,7 +163,7 @@ public class HttpServerInventoryViewTest
   {
     httpServerInventoryView.start();
     druidNodeDiscovery.markNodeViewInitialized();
-    executorFactory.finishInventoryInitialization();
+    execHelper.finishInventoryInitialization();
 
     final DiscoveryDruidNode druidNode = druidNodeDiscovery
         .addNodeAndNotifyListeners("localhost");
@@ -173,15 +173,15 @@ public class HttpServerInventoryViewTest
     Assert.assertEquals(1, inventory.size());
     Assert.assertTrue(inventory.contains(server));
 
-    executorFactory.emitMetrics();
+    execHelper.emitMetrics();
     serviceEmitter.verifyValue(METRIC_SUCCESS, 1);
     serviceEmitter.verifyNotEmitted(METRIC_UNSTABLE_TIME);
 
     DataSegment segment = CreateDataSegments.ofDatasource("wiki").eachOfSizeInMb(500).get(0);
     httpClient.completeNextRequestWith(
-        buildChangeSnapshot(new SegmentChangeRequestLoad(segment))
+        snapshotOf(new SegmentChangeRequestLoad(segment))
     );
-    executorFactory.sendSyncRequestAndHandleResponse();
+    execHelper.sendSyncRequestAndHandleResponse();
 
     DruidServer inventoryValue = httpServerInventoryView.getInventoryValue(server.getName());
     Assert.assertNotNull(inventoryValue);
@@ -196,7 +196,7 @@ public class HttpServerInventoryViewTest
   {
     httpServerInventoryView.start();
     druidNodeDiscovery.markNodeViewInitialized();
-    executorFactory.finishInventoryInitialization();
+    execHelper.finishInventoryInitialization();
 
     final DiscoveryDruidNode druidNode = druidNodeDiscovery
         .addNodeAndNotifyListeners("localhost");
@@ -206,7 +206,7 @@ public class HttpServerInventoryViewTest
 
     Assert.assertNull(httpServerInventoryView.getInventoryValue(server.getName()));
 
-    executorFactory.emitMetrics();
+    execHelper.emitMetrics();
     serviceEmitter.verifyNotEmitted(METRIC_SUCCESS);
     serviceEmitter.verifyNotEmitted(METRIC_UNSTABLE_TIME);
 
@@ -218,7 +218,7 @@ public class HttpServerInventoryViewTest
   {
     httpServerInventoryView.start();
     druidNodeDiscovery.markNodeViewInitialized();
-    executorFactory.finishInventoryInitialization();
+    execHelper.finishInventoryInitialization();
 
     final DiscoveryDruidNode druidNode = druidNodeDiscovery
         .addNodeAndNotifyListeners("localhost");
@@ -232,21 +232,21 @@ public class HttpServerInventoryViewTest
 
     // Request 1: Load S1
     httpClient.completeNextRequestWith(
-        buildChangeSnapshot(new SegmentChangeRequestLoad(segments[0]))
+        snapshotOf(new SegmentChangeRequestLoad(segments[0]))
     );
-    executorFactory.sendSyncRequestAndHandleResponse();
+    execHelper.sendSyncRequestAndHandleResponse();
     Assert.assertTrue(isAddedToView(server, segments[0]));
 
     // Request 2: Drop S1, Load S2, S3
     resetForNextSyncRequest();
     httpClient.completeNextRequestWith(
-        buildChangeSnapshot(
+        snapshotOf(
             new SegmentChangeRequestDrop(segments[0]),
             new SegmentChangeRequestLoad(segments[1]),
             new SegmentChangeRequestLoad(segments[2])
         )
     );
-    executorFactory.sendSyncRequestAndHandleResponse();
+    execHelper.sendSyncRequestAndHandleResponse();
     Assert.assertTrue(isRemovedFromView(server, segments[0]));
     Assert.assertTrue(isAddedToView(server, segments[1]));
     Assert.assertTrue(isAddedToView(server, segments[2]));
@@ -261,19 +261,19 @@ public class HttpServerInventoryViewTest
             Collections.emptyList()
         )
     );
-    executorFactory.sendSyncRequestAndHandleResponse();
+    execHelper.sendSyncRequestAndHandleResponse();
     Assert.assertTrue(segmentsAddedToView.isEmpty());
     Assert.assertTrue(segmentsRemovedFromView.isEmpty());
 
     // Request 4: Load S3, S4
     resetForNextSyncRequest();
     httpClient.completeNextRequestWith(
-        buildChangeSnapshot(
+        snapshotOf(
             new SegmentChangeRequestLoad(segments[2]),
             new SegmentChangeRequestLoad(segments[3])
         )
     );
-    executorFactory.sendSyncRequestAndHandleResponse();
+    execHelper.sendSyncRequestAndHandleResponse();
     Assert.assertTrue(isRemovedFromView(server, segments[1]));
     Assert.assertTrue(isAddedToView(server, segments[3]));
 
@@ -318,14 +318,14 @@ public class HttpServerInventoryViewTest
   {
     httpServerInventoryView.start();
     druidNodeDiscovery.markNodeViewInitialized();
-    executorFactory.finishInventoryInitialization();
+    execHelper.finishInventoryInitialization();
 
     druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
 
     httpClient.failToSendNextRequestWith(new ISE("Could not send request to server"));
-    executorFactory.sendSyncRequest();
+    execHelper.sendSyncRequest();
 
-    executorFactory.emitMetrics();
+    execHelper.emitMetrics();
     serviceEmitter.verifyValue(METRIC_SUCCESS, 0);
 
     httpServerInventoryView.stop();
@@ -336,14 +336,14 @@ public class HttpServerInventoryViewTest
   {
     httpServerInventoryView.start();
     druidNodeDiscovery.markNodeViewInitialized();
-    executorFactory.finishInventoryInitialization();
+    execHelper.finishInventoryInitialization();
 
     druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
 
     httpClient.completeNextRequestWith(InvalidInput.exception("failure on server"));
-    executorFactory.sendSyncRequestAndHandleResponse();
+    execHelper.sendSyncRequestAndHandleResponse();
 
-    executorFactory.emitMetrics();
+    execHelper.emitMetrics();
     serviceEmitter.verifyValue(METRIC_SUCCESS, 0);
 
     httpServerInventoryView.stop();
@@ -359,14 +359,14 @@ public class HttpServerInventoryViewTest
 
     httpServerInventoryView.start();
     druidNodeDiscovery.markNodeViewInitialized();
-    executorFactory.finishInventoryInitialization();
+    execHelper.finishInventoryInitialization();
 
     druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
 
     httpClient.completeNextRequestWith(InvalidInput.exception("failure on server"));
-    executorFactory.sendSyncRequestAndHandleResponse();
+    execHelper.sendSyncRequestAndHandleResponse();
 
-    executorFactory.emitMetrics();
+    execHelper.emitMetrics();
     serviceEmitter.verifyValue(METRIC_SUCCESS, 0);
 
     List<AlertEvent> alerts = serviceEmitter.getAlerts();
@@ -387,15 +387,15 @@ public class HttpServerInventoryViewTest
     ExecutorService initExecutor = Execs.singleThreaded(EXEC_NAME_PREFIX + "-init");
 
     try {
-      initExecutor.submit(() -> executorFactory.finishInventoryInitialization());
+      initExecutor.submit(() -> execHelper.finishInventoryInitialization());
 
       // Wait to ensure that init thread is in progress and waiting
       Thread.sleep(1000);
       Assert.assertFalse(inventoryInitialized.get());
 
       // Finish sync of server
-      httpClient.completeNextRequestWith(buildChangeSnapshot());
-      executorFactory.sendSyncRequestAndHandleResponse();
+      httpClient.completeNextRequestWith(snapshotOf());
+      execHelper.sendSyncRequestAndHandleResponse();
 
       // Wait for 10 seconds to ensure that init thread knows about server sync
       Thread.sleep(10_000);
@@ -419,7 +419,7 @@ public class HttpServerInventoryViewTest
     ExecutorService initExecutor = Execs.singleThreaded(EXEC_NAME_PREFIX + "-init");
 
     try {
-      initExecutor.submit(() -> executorFactory.finishInventoryInitialization());
+      initExecutor.submit(() -> execHelper.finishInventoryInitialization());
 
       // Wait to ensure that init thread is in progress and waiting
       Thread.sleep(1000);
@@ -449,7 +449,7 @@ public class HttpServerInventoryViewTest
         pair -> !pair.rhs.getDataSource().equals("non-loading-datasource"),
         config,
         EXEC_NAME_PREFIX,
-        executorFactory,
+        execHelper,
         serviceEmitter
     );
 
@@ -489,18 +489,6 @@ public class HttpServerInventoryViewTest
     );
   }
 
-  private static ChangeRequestsSnapshot<DataSegmentChangeRequest> buildChangeSnapshot(
-      DataSegmentChangeRequest... requests
-  )
-  {
-    return new ChangeRequestsSnapshot<>(
-        false,
-        null,
-        ChangeRequestHistory.Counter.ZERO,
-        Arrays.asList(requests)
-    );
-  }
-
   private boolean isAddedToView(DruidServer server, DataSegment segment)
   {
     return segmentsAddedToView.getOrDefault(server.getMetadata(), Collections.emptySet())
@@ -519,15 +507,24 @@ public class HttpServerInventoryViewTest
     segmentsRemovedFromView.clear();
   }
 
+  private static ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshotOf(
+      DataSegmentChangeRequest... requests
+  )
+  {
+    return ChangeRequestsSnapshot.success(
+        ChangeRequestHistory.Counter.ZERO,
+        Arrays.asList(requests)
+    );
+  }
+
   private static class TestDruidNodeDiscovery implements DruidNodeDiscovery
   {
     Listener listener;
-    final Set<DiscoveryDruidNode> nodes = new HashSet<>();
 
     @Override
     public Collection<DiscoveryDruidNode> getAllNodes()
     {
-      return nodes;
+      throw new UnsupportedOperationException("Not Implemented.");
     }
 
     @Override
@@ -556,7 +553,6 @@ public class HttpServerInventoryViewTest
           NodeRole.HISTORICAL,
           ImmutableMap.of(DataNodeService.DISCOVERY_SERVICE_KEY, dataNodeService)
       );
-      nodes.add(discoveryDruidNode);
       listener.nodesAdded(ImmutableList.of(discoveryDruidNode));
 
       return discoveryDruidNode;
@@ -564,12 +560,14 @@ public class HttpServerInventoryViewTest
 
     void removeNodesAndNotifyListeners(DiscoveryDruidNode... nodesToRemove)
     {
-      List<DiscoveryDruidNode> nodeList = Arrays.asList(nodesToRemove);
-      this.nodes.removeAll(nodeList);
-      listener.nodesRemoved(nodeList);
+      listener.nodesRemoved(Arrays.asList(nodesToRemove));
     }
   }
 
+  /**
+   * Creates and retains a handle on the executors used by the
+   * {@code HttpServerInventoryView}.
+   */
   private static class TestExecutorFactory implements ScheduledExecutorFactory
   {
     private BlockingExecutorService syncExecutor;
@@ -607,6 +605,7 @@ public class HttpServerInventoryViewTest
 
     void emitMetrics()
     {
+      // Finish 1 task for metric emission, 1 for checkAndResetUnhealthyServers
       monitorExecutor.finishNextPendingTask();
       monitorExecutor.finishNextPendingTask();
     }

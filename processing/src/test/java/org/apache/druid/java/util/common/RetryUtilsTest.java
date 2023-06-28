@@ -186,4 +186,20 @@ public class RetryUtilsTest
     Assert.assertEquals(result, "hey");
     Assert.assertEquals("count", 2, count.get());
   }
+
+  @Test
+  public void testNextRetrySleepMillis()
+  {
+    long sleepMillis = RetryUtils.nextRetrySleepMillis(0);
+    Assert.assertTrue(sleepMillis >= 0 && sleepMillis <= 1000);
+
+    sleepMillis = RetryUtils.nextRetrySleepMillis(2);
+    Assert.assertTrue(sleepMillis >= 0 && sleepMillis <= 4000);
+
+    sleepMillis = RetryUtils.nextRetrySleepMillis(7);
+    Assert.assertTrue(sleepMillis >= 0 && sleepMillis <= 120_000);
+
+    sleepMillis = RetryUtils.nextRetrySleepMillis(100);
+    Assert.assertTrue(sleepMillis >= 0 && sleepMillis <= 120_000);
+  }
 }

@@ -61,8 +61,7 @@ public class ChangeRequestHttpSyncer<T>
 {
   private static final EmittingLogger log = new EmittingLogger(ChangeRequestHttpSyncer.class);
 
-  public static final long HTTP_TIMEOUT_EXTRA_MILLIS = 5000;
-
+  public static final long MIN_READ_TIMEOUT_MILLIS = 5000;
   private static final long MAX_RETRY_BACKOFF_MILLIS = TimeUnit.MINUTES.toMillis(2);
 
   private final ObjectMapper smileMapper;
@@ -71,15 +70,25 @@ public class ChangeRequestHttpSyncer<T>
   private final URL baseServerURL;
   private final String baseRequestPath;
   private final TypeReference<ChangeRequestsSnapshot<T>> responseTypeReferences;
-  private final long serverHttpTimeoutMillis;
 
-  private final Duration requestTimeout;
-  private final Duration unstableAlertTimeout;
-  private final Duration syncTimeout;
+  private final long requestTimeoutMillis;
+  private final Duration requestReadTimeout;
+
+  private final long maxMillisToWaitForSync;
+
+  /**
+   * Max duration for which sync can be unstable before an alert is raised.
+   */
+  private final Duration maxUnstableDuration;
+
+  /**
+   * <pre>3 * {@link #requestReadTimeout} + {@link #MAX_RETRY_BACKOFF_MILLIS}</pre>
+   */
+  private final Duration maxDelayBetweenSyncRequests;
 
   private final Listener<T> listener;
 
-  private final CountDownLatch successfulSyncLatch = new CountDownLatch(1);
+  private final CountDownLatch initializationLatch = new CountDownLatch(1);
 
   /**
    * This lock is used to ensure proper start-then-stop semantics and making sure after stopping no state update happens
@@ -107,8 +116,8 @@ public class ChangeRequestHttpSyncer<T>
       URL baseServerURL,
       String baseRequestPath,
       TypeReference<ChangeRequestsSnapshot<T>> responseTypeReferences,
-      Duration requestTimeout,
-      Duration unstableAlertTimeout,
+      long requestTimeoutMillis,
+      long maxUnstableMillis,
       Listener<T> listener
   )
   {
@@ -118,13 +127,16 @@ public class ChangeRequestHttpSyncer<T>
     this.baseServerURL = baseServerURL;
     this.baseRequestPath = baseRequestPath;
     this.responseTypeReferences = responseTypeReferences;
-    this.serverHttpTimeoutMillis = requestTimeout.getMillis() + HTTP_TIMEOUT_EXTRA_MILLIS;
     this.listener = listener;
     this.logIdentity = StringUtils.format("%s_%d", baseServerURL, System.currentTimeMillis());
 
-    this.requestTimeout = requestTimeout;
-    this.unstableAlertTimeout = unstableAlertTimeout;
-    this.syncTimeout = Duration.millis(MAX_RETRY_BACKOFF_MILLIS + 3 * serverHttpTimeoutMillis);
+    this.requestTimeoutMillis = requestTimeoutMillis;
+    this.maxUnstableDuration = Duration.millis(maxUnstableMillis);
+
+    final long readTimeoutMillis = requestTimeoutMillis + MIN_READ_TIMEOUT_MILLIS;
+    this.requestReadTimeout = Duration.millis(readTimeoutMillis);
+    this.maxMillisToWaitForSync = 3 * readTimeoutMillis;
+    this.maxDelayBetweenSyncRequests = Duration.millis(3 * readTimeoutMillis + MAX_RETRY_BACKOFF_MILLIS);
   }
 
   public void start()
@@ -165,11 +177,19 @@ public class ChangeRequestHttpSyncer<T>
   }
 
   /**
-   * Waits for the first successful sync with this server.
+   * Waits for the first successful sync with this server up to .
    */
-  public boolean awaitInitialization(long timeout, TimeUnit timeUnit) throws InterruptedException
+  public boolean awaitInitialization() throws InterruptedException
   {
-    return successfulSyncLatch.await(timeout, timeUnit);
+    return initializationLatch.await(maxMillisToWaitForSync, TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Waits upto 1 milliseconds for the first successful sync with this server.
+   */
+  public boolean isInitialized() throws InterruptedException
+  {
+    return initializationLatch.await(1, TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -191,27 +211,28 @@ public class ChangeRequestHttpSyncer<T>
 
   private boolean hasSyncedSuccessfullyOnce()
   {
-    return successfulSyncLatch.getCount() <= 0;
+    return initializationLatch.getCount() <= 0;
   }
 
   /**
-   * @return true if the last sync request sent to the server was not more than
-   * {@code 120,000 + 3 * serverHttpTimeoutMillis} ago. A value of {@code true}
-   * returned by this method does not guarantee successful sync with the server.
-   * Use {@link #isSyncedSuccessfully()} to check the status of successful syncs.
+   * Whether this syncer should be reset. This method returning true typically
+   * indicates a problem with the sync scheduler.
+   *
+   * @return true if the delay since the last sync request sent to the server
+   * has exceeded {@link #maxDelayBetweenSyncRequests}, false otherwise.
    */
-  public boolean hasRequestedSyncRecently()
+  public boolean needsReset()
   {
-    return DateTimes.hasNotElapsed(syncTimeout, sinceLastSyncRequest);
+    return DateTimes.hasElapsed(maxDelayBetweenSyncRequests, sinceLastSyncRequest);
   }
 
   /**
    * @return true if there have been no sync failures recently and the last
-   * successful sync was not more than {@code 3 * serverHttpTimeoutMillis} ago.
+   * successful sync was not more than {@link #maxMillisToWaitForSync} ago.
    */
   public boolean isSyncedSuccessfully()
   {
-    final Duration timeoutDuration = Duration.millis(3 * serverHttpTimeoutMillis);
+    final Duration timeoutDuration = Duration.millis(maxMillisToWaitForSync);
     if (numRecentFailures > 0) {
       return false;
     } else if (hasSyncedSuccessfullyOnce()) {
@@ -224,11 +245,6 @@ public class ChangeRequestHttpSyncer<T>
   public long getUnstableTimeMillis()
   {
     return numRecentFailures <= 0 ? 0 : DateTimes.millisElapsed(sinceUnstable);
-  }
-
-  public long getServerHttpTimeoutMillis()
-  {
-    return serverHttpTimeoutMillis;
   }
 
   private void sync()
@@ -252,7 +268,7 @@ public class ChangeRequestHttpSyncer<T>
               .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
               .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
           responseHandler,
-          Duration.millis(serverHttpTimeoutMillis)
+          requestReadTimeout
       );
 
       log.debug("Sent sync request to server[%s]", logIdentity);
@@ -302,8 +318,8 @@ public class ChangeRequestHttpSyncer<T>
 
                   counter = changes.getCounter();
 
-                  if (successfulSyncLatch.getCount() > 0) {
-                    successfulSyncLatch.countDown();
+                  if (initializationLatch.getCount() > 0) {
+                    initializationLatch.countDown();
                     log.info("Server[%s] synced successfully for the first time.", logIdentity);
                   }
 
@@ -367,9 +383,11 @@ public class ChangeRequestHttpSyncer<T>
 
   private String getRequestString()
   {
-    final long requestTimeoutMillis = requestTimeout.getMillis();
     if (counter == null) {
-      return StringUtils.format("%s?counter=-1&timeout=%s", baseRequestPath, requestTimeoutMillis);
+      return StringUtils.format(
+          "%s?counter=-1&timeout=%s",
+          baseRequestPath, requestTimeoutMillis
+      );
     } else {
       return StringUtils.format(
           "%s?counter=%s&hash=%s&timeout=%s",
@@ -425,7 +443,7 @@ public class ChangeRequestHttpSyncer<T>
     );
 
     // Alert if unstable alert timeout has been exceeded
-    if (DateTimes.hasElapsed(unstableAlertTimeout, sinceUnstable)) {
+    if (DateTimes.hasElapsed(maxUnstableDuration, sinceUnstable)) {
       log.noStackTrace().makeAlert(throwable, message).emit();
     } else if (log.isDebugEnabled()) {
       log.debug(throwable, message);

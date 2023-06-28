@@ -49,12 +49,14 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
+import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Duration;
@@ -163,13 +165,13 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               @Override
               public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
               {
-                nodes.forEach(node -> serverAdded(node.toDruidServer()));
+                nodes.forEach(node -> serverAdded(toDruidServer(node)));
               }
 
               @Override
               public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
               {
-                nodes.forEach(node -> serverRemoved(node.toDruidServer()));
+                nodes.forEach(node -> serverRemoved(toDruidServer(node)));
               }
 
               @Override
@@ -323,8 +325,9 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   private void serverInventoryInitialized()
   {
     final Stopwatch stopwatch = Stopwatch.createUnstarted();
-    final Duration syncWaitTimeout = config.getRequestTimeout()
-                                           .plus(2 * ChangeRequestHttpSyncer.HTTP_TIMEOUT_EXTRA_MILLIS);
+    final Duration syncWaitTimeout = Duration.millis(
+        config.getServerTimeout() + 2 * ChangeRequestHttpSyncer.MIN_READ_TIMEOUT_MILLIS
+    );
 
     final List<DruidServerHolder> uninitializedServers = new ArrayList<>(servers.values());
     while (DateTimes.hasNotElapsed(syncWaitTimeout, stopwatch)) {
@@ -390,6 +393,27 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     }
   }
 
+  private static DruidServer toDruidServer(DiscoveryDruidNode discoveryDruidNode)
+  {
+    DruidServer server = discoveryDruidNode.toDruidServer();
+    if (server != null) {
+      return server;
+    }
+
+    // this shouldn't typically happen, but just in case it does, make a dummy server to allow the
+    // callbacks to continue since serverAdded/serverRemoved only need node.getName()
+    DruidNode druidNode = discoveryDruidNode.getDruidNode();
+    return new DruidServer(
+        druidNode.getHostAndPortToUse(),
+        druidNode.getHostAndPort(),
+        druidNode.getHostAndTlsPort(),
+        0L,
+        ServerType.fromNodeRole(discoveryDruidNode.getNodeRole()),
+        DruidServer.DEFAULT_TIER,
+        DruidServer.DEFAULT_PRIORITY
+    );
+  }
+
   private void updateFinalPredicate()
   {
     finalPredicate = Predicates.or(defaultFilter, Predicates.or(segmentPredicates.values()));
@@ -423,7 +447,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
         final boolean isSynced = serverHolder.syncer.isSyncedSuccessfully();
         serviceEmitter.emit(
-            eventBuilder.build("segment/serverview/sync/success", isSynced ? 1 : 0)
+            eventBuilder.build("segment/serverview/sync/healthy", isSynced ? 1 : 0)
         );
 
         final long unstableTimeMillis = serverHolder.syncer.getUnstableTimeMillis();
@@ -446,7 +470,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     final Map<String, DruidServerHolder> serversCopy = ImmutableMap.copyOf(servers);
     for (Map.Entry<String, DruidServerHolder> e : serversCopy.entrySet()) {
       final DruidServerHolder serverHolder = e.getValue();
-      if (serverHolder.syncer.hasRequestedSyncRecently()) {
+      if (!serverHolder.syncer.needsReset()) {
         continue;
       }
 
@@ -497,8 +521,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
             new URL(druidServer.getScheme(), hostAndPort.getHostText(), hostAndPort.getPort(), "/"),
             "/druid-internal/v1/segments",
             SEGMENT_LIST_RESP_TYPE_REF,
-            config.getRequestTimeout(),
-            config.getUnstableAlertTimeout(),
+            config.getServerTimeout(),
+            config.getServerUnstabilityTimeout(),
             this
         );
       }
@@ -532,7 +556,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     boolean isSyncedSuccessfullyAtleastOnce()
     {
       try {
-        return syncer.awaitInitialization(1, TimeUnit.MILLISECONDS);
+        return syncer.isInitialized();
       }
       catch (InterruptedException ex) {
         throw new RE(

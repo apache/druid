@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.TestHelper;
 import org.easymock.EasyMock;
-import org.joda.time.Duration;
 import org.junit.Test;
 
 import java.net.URL;
@@ -70,8 +69,8 @@ public class ChangeRequestHttpSyncerTest
         new URL("http://localhost:8080/"),
         "/xx",
         TYPE_REF,
-        Duration.standardSeconds(50),
-        Duration.standardSeconds(10),
+        50000,
+        10000,
         listener
     );
 

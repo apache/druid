@@ -206,11 +206,23 @@ public class RetryUtils
     Thread.sleep(sleepMillis);
   }
 
+  /**
+   * Generates a random number of milliseconds to sleep after the {@code nth} attempt.
+   *
+   * The returned value ranges from 0 to 120,000 millis (2 minutes).
+   * <ul>
+   * <li>nTry = 0, returned value ∈ [0, 1000]</li>
+   * <li>nTry = 1, returned value ∈ [0, 2000]</li>
+   * <li>nTry = 2, returned value ∈ [0, 4000]</li>
+   * <li>...</li>
+   * <li>nTry = 7 or higher, returned value ∈ [0, 120_000]</li>
+   * </ul>
+   * and so on
+   */
   public static long nextRetrySleepMillis(final int nTry)
   {
     final double fuzzyMultiplier = Math.min(Math.max(1 + 0.2 * ThreadLocalRandom.current().nextGaussian(), 0), 2);
-    final long sleepMillis = (long) (Math.min(MAX_SLEEP_MILLIS, BASE_SLEEP_MILLIS * Math.pow(2, nTry - 1))
-                                     * fuzzyMultiplier);
-    return sleepMillis;
+    return (long) (Math.min(MAX_SLEEP_MILLIS, BASE_SLEEP_MILLIS * Math.pow(2, nTry - 1))
+                   * fuzzyMultiplier);
   }
 }
