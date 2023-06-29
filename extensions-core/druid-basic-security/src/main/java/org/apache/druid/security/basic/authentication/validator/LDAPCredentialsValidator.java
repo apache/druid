@@ -88,9 +88,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         userSearch,
         userAttribute,
         credentialIterations == null ? BasicAuthUtils.DEFAULT_KEY_ITERATIONS : credentialIterations,
-        credentialVerifyDuration == null
-        ? BasicAuthUtils.DEFAULT_CREDENTIAL_VERIFY_DURATION_SECONDS
-        : credentialVerifyDuration,
+        credentialVerifyDuration == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_VERIFY_DURATION_SECONDS : credentialVerifyDuration,
         credentialMaxDuration == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_MAX_DURATION_SECONDS : credentialMaxDuration,
         credentialCacheSize == null ? BasicAuthUtils.DEFAULT_CREDENTIAL_CACHE_SIZE : credentialCacheSize
     );
@@ -231,13 +229,12 @@ public class LDAPCredentialsValidator implements CredentialsValidator
     try {
       SearchControls sc = new SearchControls();
       sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
-      sc.setReturningAttributes(new String[]{ldapConfig.getUserAttribute(), "memberOf"});
+      sc.setReturningAttributes(new String[] {ldapConfig.getUserAttribute(), "memberOf" });
       String encodedUsername = encodeForLDAP(username, true);
       NamingEnumeration<SearchResult> results = context.search(
           ldapConfig.getBaseDn(),
           StringUtils.format(ldapConfig.getUserSearch(), encodedUsername),
-          sc
-      );
+          sc);
       try {
         if (!results.hasMore()) {
           return null;
