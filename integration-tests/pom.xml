@@ -570,9 +570,7 @@
                 <it.indexer>middleManager</it.indexer>
                 <override.config.path />
                 <resource.file.dir.path />
-
-                <!-- Would like to put emojis in here too, but they throw "Input buffer too short" errors due to https://issues.apache.org/jira/browse/SUREFIRE-1865 -->
-                <extra.datasource.name.suffix>\ %Россия\ 한국\ 中国!?</extra.datasource.name.suffix>
+                <extra.datasource.name.suffix>\ %Россия\ 🚀\ 한국\ 中国!?</extra.datasource.name.suffix>
             </properties>
             <build>
                 <plugins>
