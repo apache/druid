@@ -35,7 +35,7 @@
   </parent>
 
   <properties>
-    <kubernetes.client.version>11.0.1</kubernetes.client.version>
+    <kubernetes.client.version>11.0.4</kubernetes.client.version>
   </properties>
 
   <dependencies>
@@ -84,13 +84,13 @@
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk15on</artifactId>
-      <version>1.69</version>
+      <version>1.70</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-ext-jdk15on</artifactId>
-      <version>1.68</version>
+      <version>1.70</version>
       <scope>runtime</scope>
     </dependency>
 
