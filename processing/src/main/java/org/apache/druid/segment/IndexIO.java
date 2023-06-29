@@ -65,10 +65,10 @@ import org.apache.druid.segment.data.IndexedIterable;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
-import org.apache.druid.segment.serde.DictionaryEncodedColumnSupplier;
-import org.apache.druid.segment.serde.DictionaryEncodedStringIndexSupplier;
 import org.apache.druid.segment.serde.FloatNumericColumnSupplier;
 import org.apache.druid.segment.serde.LongNumericColumnSupplier;
+import org.apache.druid.segment.serde.StringUtf8ColumnIndexSupplier;
+import org.apache.druid.segment.serde.StringUtf8DictionaryEncodedColumnSupplier;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -109,7 +109,7 @@ public class IndexIO
     this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
     Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
     ImmutableMap.Builder<Integer, IndexLoader> indexLoadersBuilder = ImmutableMap.builder();
-    LegacyIndexLoader legacyIndexLoader = new LegacyIndexLoader(new DefaultIndexIOHandler(), columnConfig);
+    LegacyIndexLoader legacyIndexLoader = new LegacyIndexLoader(new DefaultIndexIOHandler());
     for (int i = 0; i <= V8_VERSION; i++) {
       indexLoadersBuilder.put(i, legacyIndexLoader);
     }
@@ -432,12 +432,10 @@ public class IndexIO
   static class LegacyIndexLoader implements IndexLoader
   {
     private final IndexIOHandler legacyHandler;
-    private final ColumnConfig columnConfig;
 
-    LegacyIndexLoader(IndexIOHandler legacyHandler, ColumnConfig columnConfig)
+    LegacyIndexLoader(IndexIOHandler legacyHandler)
     {
       this.legacyHandler = legacyHandler;
-      this.columnConfig = columnConfig;
     }
 
     @Override
@@ -452,21 +450,18 @@ public class IndexIO
             .setType(ValueType.STRING)
             .setHasMultipleValues(true)
             .setDictionaryEncodedColumnSupplier(
-                new DictionaryEncodedColumnSupplier(
-                    index.getDimValueLookup(dimension),
-                    index.getDimValueUtf8Lookup(dimension),
+                new StringUtf8DictionaryEncodedColumnSupplier<>(
+                    index.getDimValueUtf8Lookup(dimension)::singleThreaded,
                     null,
-                    Suppliers.ofInstance(index.getDimColumn(dimension)),
-                    columnConfig.columnCacheSizeBytes()
+                    Suppliers.ofInstance(index.getDimColumn(dimension))
                 )
             );
         GenericIndexed<ImmutableBitmap> bitmaps = index.getBitmapIndexes().get(dimension);
         ImmutableRTree spatialIndex = index.getSpatialIndexes().get(dimension);
         builder.setIndexSupplier(
-            new DictionaryEncodedStringIndexSupplier(
+            new StringUtf8ColumnIndexSupplier<>(
                 new ConciseBitmapFactory(),
-                index.getDimValueLookup(dimension),
-                index.getDimValueUtf8Lookup(dimension),
+                index.getDimValueUtf8Lookup(dimension)::singleThreaded,
                 bitmaps,
                 spatialIndex
             ),

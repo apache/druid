@@ -29,6 +29,7 @@ import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -322,7 +323,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             // this cannot happen naturally right now since generic indexed is written in the 'legacy' format, but
             // this provides backwards compatibility should we switch at some point in the future to always
             // writing dictionaryVersion
-            readGenericIndexedColumn(buffer, builder, columnConfig, rVersion, rFlags, hasMultipleValues);
+            readGenericIndexedColumn(buffer, builder, rVersion, rFlags, hasMultipleValues);
           } else {
             throw new ISE("impossible, unknown encoding strategy id: %s", encodingId);
           }
@@ -331,26 +332,18 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           // as dictionaryVersion is actually also the GenericIndexed version, so we reset start position so the
           // GenericIndexed version can be correctly read
           buffer.position(dictionaryStartPosition);
-          readGenericIndexedColumn(buffer, builder, columnConfig, rVersion, rFlags, hasMultipleValues);
+          readGenericIndexedColumn(buffer, builder, rVersion, rFlags, hasMultipleValues);
         }
       }
 
       private void readGenericIndexedColumn(
           ByteBuffer buffer,
           ColumnBuilder builder,
-          ColumnConfig columnConfig,
           VERSION rVersion,
           int rFlags,
           boolean hasMultipleValues
       )
       {
-        // Duplicate the first buffer since we are reading the dictionary twice.
-        final GenericIndexed<String> rDictionary = GenericIndexed.read(
-            buffer.duplicate(),
-            GenericIndexed.STRING_STRATEGY,
-            builder.getFileMapper()
-        );
-
         final GenericIndexed<ByteBuffer> rDictionaryUtf8 = GenericIndexed.read(
             buffer,
             GenericIndexed.UTF8_STRATEGY,
@@ -368,14 +361,12 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           rMultiValuedColumn = null;
         }
 
-        final String firstDictionaryEntry = rDictionary.get(0);
+        final String firstDictionaryEntry = StringUtils.fromUtf8Nullable(rDictionaryUtf8.get(0));
 
-        DictionaryEncodedColumnSupplier dictionaryEncodedColumnSupplier = new DictionaryEncodedColumnSupplier(
-            rDictionary,
-            rDictionaryUtf8,
+        StringUtf8DictionaryEncodedColumnSupplier<?> dictionaryEncodedColumnSupplier = new StringUtf8DictionaryEncodedColumnSupplier<>(
+            rDictionaryUtf8::singleThreaded,
             rSingleValuedColumn,
-            rMultiValuedColumn,
-            columnConfig.columnCacheSizeBytes()
+            rMultiValuedColumn
         );
 
         builder.setHasMultipleValues(hasMultipleValues)
@@ -400,10 +391,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         if (rBitmaps != null || rSpatialIndex != null) {
           builder.setIndexSupplier(
-              new DictionaryEncodedStringIndexSupplier(
+              new StringUtf8ColumnIndexSupplier(
                   bitmapSerdeFactory.getBitmapFactory(),
-                  rDictionary,
-                  rDictionaryUtf8,
+                  rDictionaryUtf8::singleThreaded,
                   rBitmaps,
                   rSpatialIndex
               ),
@@ -439,8 +429,8 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         final boolean hasNulls = rUtf8Dictionary.get().get(0) == null;
 
-        StringFrontCodedDictionaryEncodedColumnSupplier dictionaryEncodedColumnSupplier =
-            new StringFrontCodedDictionaryEncodedColumnSupplier(
+        StringUtf8DictionaryEncodedColumnSupplier<FrontCodedIndexed> dictionaryEncodedColumnSupplier =
+            new StringUtf8DictionaryEncodedColumnSupplier<>(
                 rUtf8Dictionary,
                 rSingleValuedColumn,
                 rMultiValuedColumn
@@ -467,7 +457,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         if (rBitmaps != null || rSpatialIndex != null) {
           builder.setIndexSupplier(
-              new StringFrontCodedColumnIndexSupplier(
+              new StringUtf8ColumnIndexSupplier(
                   bitmapSerdeFactory.getBitmapFactory(),
                   rUtf8Dictionary,
                   rBitmaps,

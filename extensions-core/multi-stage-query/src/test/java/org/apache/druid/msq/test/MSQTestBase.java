@@ -122,6 +122,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -356,7 +357,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     );
 
     ObjectMapper secondMapper = setupObjectMapper(secondInjector);
-    indexIO = new IndexIO(secondMapper, () -> 0);
+    indexIO = new IndexIO(secondMapper, ColumnConfig.DEFAULT);
 
     try {
       segmentCacheManager = new SegmentCacheManagerFactory(secondMapper).manufacturate(tmpFolder.newFolder("test"));
