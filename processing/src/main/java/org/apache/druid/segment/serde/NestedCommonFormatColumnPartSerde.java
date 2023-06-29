@@ -173,7 +173,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   {
     return bitmapSerdeFactory;
   }
-  
+
   private class StringColumnDeserializer implements Deserializer
   {
     @Override
