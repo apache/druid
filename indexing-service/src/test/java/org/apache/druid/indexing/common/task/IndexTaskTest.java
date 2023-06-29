@@ -38,7 +38,6 @@ import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -74,6 +73,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -87,12 +87,15 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.segment.realtime.plumber.NoopSegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -123,13 +126,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
 public class IndexTaskTest extends IngestionTestBase
@@ -171,7 +172,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
   }
 
-  private static final IndexSpec INDEX_SPEC = new IndexSpec();
+  private static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
   private final ObjectMapper jsonMapper;
   private final IndexIO indexIO;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
@@ -211,6 +212,54 @@ public class IndexTaskTest extends IngestionTestBase
         jsonMapper
     );
     taskRunner = new TestTaskRunner();
+  }
+
+  @Test
+  public void testCorrectInputSourceResources() throws IOException
+  {
+    File tmpDir = temporaryFolder.newFolder();
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        new IndexIngestionSpec(
+            new DataSchema(
+                "test-json",
+                DEFAULT_TIMESTAMP_SPEC,
+                new DimensionsSpec(
+                    ImmutableList.of(
+                        new StringDimensionSchema("ts"),
+                        new StringDimensionSchema("dim"),
+                        new LongDimensionSchema("valDim")
+                    )
+                ),
+                new AggregatorFactory[]{new LongSumAggregatorFactory("valMet", "val")},
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    Granularities.MINUTE,
+                    Collections.singletonList(Intervals.of("2014/P1D"))
+                ),
+                null
+            ),
+            new IndexIOConfig(
+                null,
+                new LocalInputSource(tmpDir, "druid*"),
+                DEFAULT_INPUT_FORMAT,
+                false,
+                false
+            ),
+            createTuningConfigWithMaxRowsPerSegment(10, true)
+        ),
+        null
+    );
+
+    Assert.assertEquals(
+        Collections.singleton(
+            new ResourceAction(new Resource(
+                LocalInputSource.TYPE_KEY,
+                ResourceType.EXTERNAL
+            ), Action.READ)),
+        indexTask.getInputSourceResources()
+    );
   }
 
   @Test
@@ -262,7 +311,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertFalse(indexTask.supportsQueries());
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
     Assert.assertEquals(1, segments.size());
     Assert.assertEquals(ImmutableList.of("ts", "dim", "valDim"), segments.get(0).getDimensions());
     Assert.assertEquals(ImmutableList.of("valMet"), segments.get(0).getMetrics());
@@ -317,7 +366,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertFalse(indexTask.supportsQueries());
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
     Assert.assertEquals(1, segments.size());
     // only empty string dimensions are ignored currently
     Assert.assertEquals(ImmutableList.of("ts", "valDim"), segments.get(0).getDimensions());
@@ -354,7 +403,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertFalse(indexTask.supportsQueries());
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(2, segments.size());
 
@@ -458,7 +507,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertEquals(indexTask.getId(), indexTask.getGroupId());
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
     DataSegment segment = segments.get(0);
@@ -549,7 +598,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
   }
@@ -585,7 +634,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
   }
@@ -617,7 +666,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
 
@@ -660,7 +709,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
 
@@ -701,7 +750,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(2, segments.size());
 
@@ -776,7 +825,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertEquals("index_append_test", indexTask.getGroupId());
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(2, taskRunner.getTaskActionClient().getActionCount(SegmentAllocateAction.class));
     Assert.assertEquals(2, segments.size());
@@ -823,7 +872,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(3, segments.size());
 
@@ -858,7 +907,7 @@ public class IndexTaskTest extends IngestionTestBase
     // Expect exception if reingest with dropExisting and null intervals is attempted
     expectedException.expect(IAE.class);
     expectedException.expectMessage(
-        "GranularitySpec's intervals cannot be empty when setting dropExisting to true."
+        "GranularitySpec's intervals cannot be empty for replace."
     );
     IndexTask indexTask = new IndexTask(
         null,
@@ -929,7 +978,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
 
@@ -958,7 +1007,9 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           jsonMapper,
           tmpDir,
-          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0),
+          timestampSpec,
+          DimensionsSpec.EMPTY,
+          new CsvInputFormat(columns, null, null, true, 0),
           null,
           null,
           tuningConfig,
@@ -969,9 +1020,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           jsonMapper,
           tmpDir,
-          timestampSpec,
-          DimensionsSpec.EMPTY,
-          new CsvInputFormat(columns, null, null, true, 0),
+          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0),
           null,
           null,
           tuningConfig,
@@ -987,7 +1036,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
 
@@ -1033,7 +1082,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(6, segments.size());
 
@@ -1077,7 +1126,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(3, segments.size());
 
@@ -1120,7 +1169,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(5, segments.size());
 
@@ -1447,7 +1496,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(Collections.singletonList("d"), segments.get(0).getDimensions());
     Assert.assertEquals(Collections.singletonList("val"), segments.get(0).getMetrics());
@@ -1486,12 +1535,6 @@ public class IndexTaskTest extends IngestionTestBase
           false,
           false
       );
-      expectedMessages = ImmutableList.of(
-          StringUtils.format(
-              "Timestamp[unparseable] is unparseable! Event: {time=unparseable, d=a, val=1} (Path: %s, Record: 1, Line: 2)",
-              tmpFile.toURI()
-          )
-      );
     } else {
       indexIngestionSpec = createIngestionSpec(
           jsonMapper,
@@ -1503,11 +1546,14 @@ public class IndexTaskTest extends IngestionTestBase
           false,
           false
       );
-      expectedMessages = ImmutableList.of(
-          "Timestamp[unparseable] is unparseable! Event: {time=unparseable, d=a, val=1}"
-      );
     }
 
+    expectedMessages = ImmutableList.of(
+        StringUtils.format(
+            "Timestamp[unparseable] is unparseable! Event: {time=unparseable, d=a, val=1} (Path: %s, Record: 1, Line: 2)",
+            tmpFile.toURI()
+        )
+    );
     IndexTask indexTask = new IndexTask(
         null,
         null,
@@ -1521,22 +1567,12 @@ public class IndexTaskTest extends IngestionTestBase
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.BUILD_SEGMENTS);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
-
-    List<String> expectedInputs = ImmutableList.of(
-        "{time=unparseable, d=a, val=1}"
-    );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    List<String> expectedInputs = ImmutableList.of("{time=unparseable, d=a, val=1}");
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test
@@ -1604,7 +1640,7 @@ public class IndexTaskTest extends IngestionTestBase
           tmpDir,
           timestampSpec,
           dimensionsSpec,
-          new JsonInputFormat(null, null, null),
+          new JsonInputFormat(null, null, null, null, null),
           null,
           null,
           tuningConfig,
@@ -1633,7 +1669,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     TaskStatus status = runTask(indexTask).lhs;
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
-    Assert.assertEquals(null, status.getErrorMsg());
+    Assert.assertNull(status.getErrorMsg());
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
@@ -1642,60 +1678,45 @@ public class IndexTaskTest extends IngestionTestBase
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 4,
+            RowIngestionMeters.PROCESSED_BYTES, 657,
             RowIngestionMeters.UNPARSEABLE, 4,
             RowIngestionMeters.THROWN_AWAY, 1
         ),
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
-
             RowIngestionMeters.PROCESSED_WITH_ERROR, 3,
             RowIngestionMeters.PROCESSED, 1,
+            RowIngestionMeters.PROCESSED_BYTES, 657,
             RowIngestionMeters.UNPARSEABLE, 4,
             RowIngestionMeters.THROWN_AWAY, 1
         )
     );
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.BUILD_SEGMENTS);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
 
     List<String> expectedMessages;
-    if (useInputFormatApi) {
-      expectedMessages = Arrays.asList(
-          StringUtils.format("Unable to parse row [this is not JSON] (Path: %s, Record: 6, Line: 9)", tmpFile.toURI()),
-          StringUtils.format(
-              "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 6, Line: 8)",
-              tmpFile.toURI()
-          ),
-          StringUtils.format(
-              "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}] (Path: %s, Record: 5, Line: 6)",
-              tmpFile.toURI()
-          ),
-          "Unable to parse value[notnumber] for field[val]",
-          "could not convert value [notnumber] to float",
-          "could not convert value [notnumber] to long",
-          StringUtils.format(
-              "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 1, Line: 1)",
-              tmpFile.toURI()
-          )
-      );
-    } else {
-      expectedMessages = Arrays.asList(
-          "Unable to parse row [this is not JSON]",
-          "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
-          "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}]",
-          "Unable to parse value[notnumber] for field[val]",
-          "could not convert value [notnumber] to float",
-          "could not convert value [notnumber] to long",
-          "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
-      );
-    }
+    expectedMessages = Arrays.asList(
+        StringUtils.format("Unable to parse row [this is not JSON] (Path: %s, Record: 6, Line: 9)", tmpFile.toURI()),
+        StringUtils.format(
+            "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 6, Line: 8)",
+            tmpFile.toURI()
+        ),
+        StringUtils.format(
+            "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}] (Path: %s, Record: 5, Line: 6)",
+            tmpFile.toURI()
+        ),
+        "Unable to parse value[notnumber] for field[val]",
+        "could not convert value [notnumber] to float",
+        "could not convert value [notnumber] to long",
+        StringUtils.format(
+            "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 1, Line: 1)",
+            tmpFile.toURI()
+        )
+    );
 
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "this is not JSON",
@@ -1706,44 +1727,28 @@ public class IndexTaskTest extends IngestionTestBase
         "{time=2014-01-01T00:00:10Z, dim=b, dimLong=notnumber, dimFloat=3.0, val=1}",
         "{time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
     );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
 
-    parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.DETERMINE_PARTITIONS);
+    parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.DETERMINE_PARTITIONS);
 
-    if (useInputFormatApi) {
-      expectedMessages = Arrays.asList(
-          StringUtils.format("Unable to parse row [this is not JSON] (Path: %s, Record: 6, Line: 9)", tmpFile.toURI()),
-          StringUtils.format(
-              "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 6, Line: 8)",
-              tmpFile.toURI()
-          ),
-          StringUtils.format(
-              "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}] (Path: %s, Record: 5, Line: 6)",
-              tmpFile.toURI()
-          ),
-          StringUtils.format(
-              "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 1, Line: 1)",
-              tmpFile.toURI()
-          )
-      );
-    } else {
-      expectedMessages = Arrays.asList(
-          "Unable to parse row [this is not JSON]",
-          "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
-          "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}]",
-          "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
-      );
-    }
+    expectedMessages = Arrays.asList(
+        StringUtils.format("Unable to parse row [this is not JSON] (Path: %s, Record: 6, Line: 9)", tmpFile.toURI()),
+        StringUtils.format(
+            "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 6, Line: 8)",
+            tmpFile.toURI()
+        ),
+        StringUtils.format(
+            "Unable to parse row [{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}] (Path: %s, Record: 5, Line: 6)",
+            tmpFile.toURI()
+        ),
+        StringUtils.format(
+            "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 1, Line: 1)",
+            tmpFile.toURI()
+        )
+    );
 
-    actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     expectedInputs = Arrays.asList(
         "this is not JSON",
@@ -1751,11 +1756,7 @@ public class IndexTaskTest extends IngestionTestBase
         "{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}",
         "{time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
     );
-    actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
-
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test
@@ -1827,20 +1828,6 @@ public class IndexTaskTest extends IngestionTestBase
           false,
           false
       );
-      expectedMessages = Arrays.asList(
-          StringUtils.format(
-              "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 3, Line: 6)",
-              tmpFile.toURI()
-          ),
-          StringUtils.format(
-              "Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 2, Line: 4)",
-              tmpFile.toURI()
-          ),
-          StringUtils.format(
-              "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 1, Line: 2)",
-              tmpFile.toURI()
-          )
-      );
     } else {
       ingestionSpec = createIngestionSpec(
           jsonMapper,
@@ -1852,13 +1839,22 @@ public class IndexTaskTest extends IngestionTestBase
           false,
           false
       );
-      expectedMessages = Arrays.asList(
-          "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
-          "Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
-          "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
-      );
     }
 
+    expectedMessages = Arrays.asList(
+        StringUtils.format(
+            "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 3, Line: 6)",
+            tmpFile.toURI()
+        ),
+        StringUtils.format(
+            "Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 2, Line: 4)",
+            tmpFile.toURI()
+        ),
+        StringUtils.format(
+            "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 1, Line: 2)",
+            tmpFile.toURI()
+        )
+    );
     IndexTask indexTask = new IndexTask(
         null,
         null,
@@ -1877,6 +1873,7 @@ public class IndexTaskTest extends IngestionTestBase
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 0,
+            RowIngestionMeters.PROCESSED_BYTES, 0,
             RowIngestionMeters.UNPARSEABLE, 0,
             RowIngestionMeters.THROWN_AWAY, 0
         ),
@@ -1884,31 +1881,24 @@ public class IndexTaskTest extends IngestionTestBase
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 1,
+            RowIngestionMeters.PROCESSED_BYTES, 182,
             RowIngestionMeters.UNPARSEABLE, 3,
-            RowIngestionMeters.THROWN_AWAY, useInputFormatApi ? 1 : 2
+            RowIngestionMeters.THROWN_AWAY, 1
         )
     );
 
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.BUILD_SEGMENTS);
-
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "{time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
         "{time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
         "{time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
     );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test
@@ -1980,11 +1970,6 @@ public class IndexTaskTest extends IngestionTestBase
           false,
           false
       );
-      expectedMessages = Arrays.asList(
-          StringUtils.format("Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 3, Line: 6)", tmpFile.toURI()),
-          StringUtils.format("Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 2, Line: 4)", tmpFile.toURI()),
-          StringUtils.format("Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 1, Line: 2)", tmpFile.toURI())
-      );
     } else {
       ingestionSpec = createIngestionSpec(
           jsonMapper,
@@ -1996,13 +1981,13 @@ public class IndexTaskTest extends IngestionTestBase
           false,
           false
       );
-      expectedMessages = Arrays.asList(
-          "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
-          "Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
-          "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
-      );
     }
 
+    expectedMessages = Arrays.asList(
+        StringUtils.format("Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 3, Line: 6)", tmpFile.toURI()),
+        StringUtils.format("Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 2, Line: 4)", tmpFile.toURI()),
+        StringUtils.format("Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 1, Line: 2)", tmpFile.toURI())
+    );
     IndexTask indexTask = new IndexTask(
         null,
         null,
@@ -2021,13 +2006,15 @@ public class IndexTaskTest extends IngestionTestBase
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 1,
+            RowIngestionMeters.PROCESSED_BYTES, 182,
             RowIngestionMeters.UNPARSEABLE, 3,
-            RowIngestionMeters.THROWN_AWAY, useInputFormatApi ? 1 : 2
+            RowIngestionMeters.THROWN_AWAY, 1
         ),
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
             RowIngestionMeters.PROCESSED_WITH_ERROR, 0,
             RowIngestionMeters.PROCESSED, 0,
+            RowIngestionMeters.PROCESSED_BYTES, 0,
             RowIngestionMeters.UNPARSEABLE, 0,
             RowIngestionMeters.THROWN_AWAY, 0
         )
@@ -2035,24 +2022,16 @@ public class IndexTaskTest extends IngestionTestBase
 
     Assert.assertEquals(expectedMetrics, reportData.getRowStats());
 
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.DETERMINE_PARTITIONS);
-
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.DETERMINE_PARTITIONS);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "{time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
         "{time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
         "{time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
     );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test
@@ -2117,7 +2096,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<DataSegment> segments = runSuccessfulTask(indexTask);
     // the order of result segments can be changed because hash shardSpec is used.
     // the below loop is to make this test deterministic.
     Assert.assertEquals(2, segments.size());
@@ -2172,12 +2151,6 @@ public class IndexTaskTest extends IngestionTestBase
           false,
           false
       );
-      expectedMessages = ImmutableList.of(
-          StringUtils.format(
-              "Timestamp[null] is unparseable! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1} (Path: %s, Record: 1, Line: 2)",
-              tmpFile.toURI()
-          )
-      );
     } else {
       ingestionSpec = createIngestionSpec(
           jsonMapper,
@@ -2189,11 +2162,14 @@ public class IndexTaskTest extends IngestionTestBase
           false,
           false
       );
-      expectedMessages = ImmutableList.of(
-          "Timestamp[null] is unparseable! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}"
-      );
     }
 
+    expectedMessages = ImmutableList.of(
+        StringUtils.format(
+            "Timestamp[null] is unparseable! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1} (Path: %s, Record: 1, Line: 2)",
+            tmpFile.toURI()
+        )
+    );
     IndexTask indexTask = new IndexTask(
         null,
         null,
@@ -2208,22 +2184,14 @@ public class IndexTaskTest extends IngestionTestBase
 
     IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
 
-    List<LinkedHashMap> parseExceptionReports = (List<LinkedHashMap>) reportData
-        .getUnparseableEvents()
-        .get(RowIngestionMeters.BUILD_SEGMENTS);
-
-    List<String> actualMessages = parseExceptionReports.stream().map((r) -> {
-      return ((List<String>) r.get("details")).get(0);
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    ParseExceptionReport parseExceptionReport =
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
+    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = ImmutableList.of(
         "{column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}"
     );
-    List<String> actualInputs = parseExceptionReports.stream().map((r) -> {
-      return (String) r.get("input");
-    }).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test
@@ -2255,7 +2223,7 @@ public class IndexTaskTest extends IngestionTestBase
           null
       );
 
-      final List<DataSegment> segments = runTask(indexTask).rhs;
+      final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
       Assert.assertEquals(5, segments.size());
 
@@ -2320,7 +2288,7 @@ public class IndexTaskTest extends IngestionTestBase
           null
       );
 
-      final List<DataSegment> segments = runTask(indexTask).rhs;
+      final List<DataSegment> segments = runSuccessfulTask(indexTask);
 
       Assert.assertEquals(5, segments.size());
 
@@ -2395,7 +2363,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with YEAR segment granularity
-    List<DataSegment> segments = runTask(indexTask).rhs;
+    List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2424,7 +2392,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with overwrite and MINUTE segment granularity
-    segments = runTask(indexTask).rhs;
+    segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(3, segments.size());
     Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2479,7 +2447,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with DAY segment granularity
-    List<DataSegment> segments = runTask(indexTask).rhs;
+    List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2508,7 +2476,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with overwrite and HOUR segment granularity
-    segments = runTask(indexTask).rhs;
+    segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2571,7 +2539,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with DAY segment granularity
-    List<DataSegment> segments = runTask(indexTask).rhs;
+    List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2600,7 +2568,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with overwrite and HOUR segment granularity
-    segments = runTask(indexTask).rhs;
+    segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(24, segments.size());
     Set<DataSegment> usedSegmentsBeforeAfterOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2649,7 +2617,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with DAY segment granularity
-    List<DataSegment> segments = runTask(indexTask).rhs;
+    List<DataSegment> segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = Sets.newHashSet(getSegmentsMetadataManager().iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(DATASOURCE, Intervals.ETERNITY, true).get());
@@ -2688,7 +2656,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     // Ingest data with overwrite and same segment granularity
-    segments = runTask(indexTask).rhs;
+    segments = runSuccessfulTask(indexTask);
 
     Assert.assertEquals(1, segments.size()); // one tombstone
     Assert.assertTrue(segments.get(0).isTombstone());
@@ -2700,7 +2668,7 @@ public class IndexTaskTest extends IngestionTestBase
   {
     expectedException.expect(IAE.class);
     expectedException.expectMessage(
-        "Cannot both drop existing segments and append to existing segments. Either dropExisting or appendToExisting should be set to false"
+        "Cannot simultaneously replace and append to existing segments. Either dropExisting or appendToExisting should be set to false"
     );
     new IndexTask(
         null,
@@ -2729,6 +2697,13 @@ public class IndexTaskTest extends IngestionTestBase
         status.getErrorMsg(),
         CoreMatchers.containsString("Max parse exceptions")
     );
+  }
+
+  private List<DataSegment> runSuccessfulTask(IndexTask task) throws Exception
+  {
+    Pair<TaskStatus, List<DataSegment>> pair = runTask(task);
+    Assert.assertEquals(pair.lhs.toString(), TaskState.SUCCESS, pair.lhs.getStatusCode());
+    return pair.rhs;
   }
 
   private Pair<TaskStatus, List<DataSegment>> runTask(IndexTask task) throws Exception
@@ -2954,16 +2929,12 @@ public class IndexTaskTest extends IngestionTestBase
           tuningConfig
       );
     } else {
+      parseSpec = parseSpec != null ? parseSpec : DEFAULT_PARSE_SPEC;
       return new IndexIngestionSpec(
           new DataSchema(
               DATASOURCE,
-              objectMapper.convertValue(
-                  new StringInputRowParser(
-                      parseSpec != null ? parseSpec : DEFAULT_PARSE_SPEC,
-                      null
-                  ),
-                  Map.class
-              ),
+              parseSpec.getTimestampSpec(),
+              parseSpec.getDimensionsSpec(),
               new AggregatorFactory[]{
                   new LongSumAggregatorFactory("val", "val")
               },
@@ -2973,14 +2944,13 @@ public class IndexTaskTest extends IngestionTestBase
                   Collections.singletonList(Intervals.of("2014/2015"))
               ),
               transformSpec,
+              null,
               objectMapper
           ),
           new IndexIOConfig(
-              new LocalFirehoseFactory(
-                  baseDir,
-                  "druid*",
-                  null
-              ),
+              null,
+              new LocalInputSource(baseDir, "druid*"),
+              createInputFormatFromParseSpec(parseSpec),
               appendToExisting,
               dropExisting
           ),
@@ -3014,7 +2984,12 @@ public class IndexTaskTest extends IngestionTestBase
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.forClass(IndexTuningConfig.class)
-        .usingGetClass()
-        .verify();
+                  .withPrefabValues(
+                      IndexSpec.class,
+                      IndexSpec.DEFAULT,
+                      IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
+                  )
+                  .usingGetClass()
+                  .verify();
   }
 }

@@ -25,7 +25,7 @@ title: "DataSketches extension"
 
 Apache Druid aggregators based on [Apache DataSketches](https://datasketches.apache.org/) library. Sketches are data structures implementing approximate streaming mergeable algorithms. Sketches can be ingested from the outside of Druid or built from raw data at ingestion time. Sketches can be stored in Druid segments as additive metrics.
 
-To use the datasketches aggregators, make sure you [include](../../development/extensions.md#loading-extensions) the extension in your config file:
+To use the datasketches aggregators, make sure you [include](../../configuration/extensions.md#loading-extensions) the extension in your config file:
 
 ```
 druid.extensions.loadList=["druid-datasketches"]
@@ -36,4 +36,5 @@ The following modules are available:
 * [Theta sketch](datasketches-theta.md) - approximate distinct counting with set operations (union, intersection and set difference).
 * [Tuple sketch](datasketches-tuple.md) - extension of Theta sketch to support values associated with distinct keys (arrays of numeric values in this specialized implementation).
 * [Quantiles sketch](datasketches-quantiles.md) - approximate distribution of comparable values to obtain ranks, quantiles and histograms. This is a specialized implementation for numeric values.
+* [KLL Quantiles sketch](datasketches-kll.md) - approximate distribution of comparable values to obtain ranks, quantiles and histograms. This is a specialized implementation for numeric values. This is a more advanced algorithm compared to the classic quantiles above, sketches are more compact for the same accuracy, or more accurate for the same size.
 * [HLL sketch](datasketches-hll.md) - approximate distinct counting using very compact HLL sketch.

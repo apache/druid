@@ -21,6 +21,7 @@ package org.apache.druid.client.indexing;
 
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -28,8 +29,12 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
+/**
+ * High-level IndexingServiceClient client.
+ *
+ * New use cases should prefer {@link OverlordClient}.
+ */
 public interface IndexingServiceClient
 {
   void killUnusedSegments(String idPrefix, String dataSource, Interval interval);
@@ -71,8 +76,6 @@ public interface IndexingServiceClient
 
   TaskStatusResponse getTaskStatus(String taskId);
 
-  Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds) throws InterruptedException;
-
   @Nullable
   TaskStatusPlus getLastCompleteTask();
 
@@ -89,6 +92,7 @@ public interface IndexingServiceClient
    *                        Intervals that are locked by Tasks higher than this
    *                        priority are returned. Tasks for datasources that
    *                        are not present in this Map are not returned.
+   *
    * @return Map from Datasource to List of Intervals locked by Tasks that have
    * priority strictly greater than the {@code minTaskPriority} for that datasource.
    */

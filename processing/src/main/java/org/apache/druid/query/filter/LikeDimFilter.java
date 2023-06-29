@@ -294,9 +294,8 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
     }
 
     /**
-     * Checks if the suffix of strings.get(i) matches the suffix of this matcher. The first prefix.length characters
-     * of s are ignored. This method is useful if you've already independently verified the prefix. This method
-     * evalutes strings.get(i) lazily to save time when it isn't necessary to actually look at the string.
+     * Checks if the suffix of "value" matches the suffix of this matcher. The first prefix.length() characters
+     * of "value" are ignored. This method is useful if you've already independently verified the prefix.
      */
     public boolean matchesSuffixOnly(@Nullable String value)
     {

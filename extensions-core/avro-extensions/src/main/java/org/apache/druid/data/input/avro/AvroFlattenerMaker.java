@@ -36,8 +36,9 @@ import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -90,14 +91,27 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   private final boolean fromPigAvroStorage;
   private final boolean binaryAsString;
 
+  private final boolean discoverNestedFields;
+
   /**
-   * @param fromPigAvroStorage boolean to specify the data file is stored using AvroStorage
-   * @param binaryAsString boolean to encode the byte[] as a string.
+   * @param fromPigAvroStorage    boolean to specify the data file is stored using AvroStorage
+   * @param binaryAsString        if true, treat byte[] as utf8 encoded values and coerce to strings, else leave as byte[]
+   * @param extractUnionsByType   if true, unions will be extracted to separate nested fields for each type. See
+   *                              {@link GenericAvroJsonProvider#extractUnionTypes(Object)} for more details
+   * @param discoverNestedFields  if true, {@link #discoverRootFields(GenericRecord)} will return the full set of
+   *                              fields, else this list will be filtered to contain only simple literals and arrays
+   *                              of simple literals
    */
-  public AvroFlattenerMaker(final boolean fromPigAvroStorage, final boolean binaryAsString, final boolean extractUnionsByType)
+  public AvroFlattenerMaker(
+      final boolean fromPigAvroStorage,
+      final boolean binaryAsString,
+      final boolean extractUnionsByType,
+      final boolean discoverNestedFields
+  )
   {
     this.fromPigAvroStorage = fromPigAvroStorage;
     this.binaryAsString = binaryAsString;
+    this.discoverNestedFields = discoverNestedFields;
 
     this.avroJsonProvider = new GenericAvroJsonProvider(extractUnionsByType);
     this.jsonPathConfiguration =
@@ -111,6 +125,11 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   @Override
   public Set<String> discoverRootFields(final GenericRecord obj)
   {
+    // if discovering nested fields, just return all root fields since we want everything
+    // else, we filter for literals and arrays of literals
+    if (discoverNestedFields) {
+      return obj.getSchema().getFields().stream().map(Schema.Field::name).collect(Collectors.toSet());
+    }
     return obj.getSchema()
               .getFields()
               .stream()
@@ -122,7 +141,11 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   @Override
   public Object getRootField(final GenericRecord record, final String key)
   {
-    return transformValue(record.get(key));
+    if (record.getSchema().getField(key) != null) {
+      return transformValue(record.get(key));
+    } else {
+      return null;
+    }
   }
 
   @Override
@@ -136,6 +159,16 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
   public Function<GenericRecord, Object> makeJsonQueryExtractor(final String expr)
   {
     throw new UnsupportedOperationException("Avro + JQ not supported");
+  }
+
+  @Override
+  public Function<GenericRecord, Object> makeJsonTreeExtractor(List<String> nodes)
+  {
+    if (nodes.size() == 1) {
+      return (GenericRecord record) -> getRootField(record, nodes.get(0));
+    }
+
+    throw new UnsupportedOperationException("Avro + nested tree extraction not supported");
   }
 
   @Override
@@ -164,7 +197,7 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
     } else if (field instanceof Utf8) {
       return field.toString();
     } else if (field instanceof List) {
-      return ((List<?>) field).stream().filter(Objects::nonNull).collect(Collectors.toList());
+      return ((List<?>) field).stream().map(this::transformValue).collect(Collectors.toList());
     } else if (field instanceof GenericEnumSymbol) {
       return field.toString();
     } else if (field instanceof GenericFixed) {
@@ -173,6 +206,20 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
       } else {
         return ((GenericFixed) field).bytes();
       }
+    } else if (field instanceof Map) {
+      LinkedHashMap<String, Object> retVal = new LinkedHashMap<>();
+      Map<?, ?> fieldMap = (Map<?, ?>) field;
+      for (Map.Entry<?, ?> entry : fieldMap.entrySet()) {
+        retVal.put(String.valueOf(entry.getKey()), transformValue(entry.getValue()));
+      }
+      return retVal;
+    } else if (field instanceof GenericRecord) {
+      LinkedHashMap<String, Object> retVal = new LinkedHashMap<>();
+      GenericRecord record = (GenericRecord) field;
+      for (Schema.Field key : record.getSchema().getFields()) {
+        retVal.put(key.name(), transformValue(record.get(key.pos())));
+      }
+      return retVal;
     }
     return field;
   }

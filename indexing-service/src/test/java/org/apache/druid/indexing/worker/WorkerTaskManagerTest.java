@@ -22,7 +22,7 @@ package org.apache.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
@@ -55,12 +56,18 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 
 /**
+ *
  */
+@RunWith(Parameterized.class)
 public class WorkerTaskManagerTest
 {
   private final TaskLocation location = TaskLocation.create("localhost", 1, 2);
@@ -69,34 +76,37 @@ public class WorkerTaskManagerTest
   private final IndexMergerV9Factory indexMergerV9Factory;
   private final IndexIO indexIO;
 
+  private final boolean restoreTasksOnRestart;
+
   private WorkerTaskManager workerTaskManager;
 
-  public WorkerTaskManagerTest()
+  public WorkerTaskManagerTest(boolean restoreTasksOnRestart)
   {
     testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
     TestTasks.registerSubtypes(jsonMapper);
     indexMergerV9Factory = testUtils.getIndexMergerV9Factory();
     indexIO = testUtils.getTestIndexIO();
+    this.restoreTasksOnRestart = restoreTasksOnRestart;
+  }
+
+  @Parameterized.Parameters(name = "restoreTasksOnRestart = {0}, useMultipleBaseTaskDirPaths = {1}")
+  public static Collection<Object[]> getParameters()
+  {
+    Object[][] parameters = new Object[][]{{false}, {true}};
+
+    return Arrays.asList(parameters);
   }
 
   private WorkerTaskManager createWorkerTaskManager()
   {
-    TaskConfig taskConfig = new TaskConfig(
-        FileUtils.createTempDir().toString(),
-        null,
-        null,
-        0,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
-    );
+    TaskConfig taskConfig = new TaskConfigBuilder()
+        .setBaseDir(FileUtils.createTempDir().toString())
+        .setDefaultRowFlushBoundary(0)
+        .setRestoreTasksOnRestart(restoreTasksOnRestart)
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
+
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
     EasyMock.expect(taskActionClientFactory.create(EasyMock.anyObject())).andReturn(taskActionClient).anyTimes();
@@ -139,10 +149,12 @@ public class WorkerTaskManagerTest
                 new NoopChatHandlerProvider(),
                 testUtils.getRowIngestionMetersFactory(),
                 new TestAppenderatorsManager(),
-                new NoopIndexingServiceClient(),
+                new NoopOverlordClient(),
                 null,
                 null,
-                null
+                null,
+                null,
+                "1"
             ),
             taskConfig,
             location
@@ -197,7 +209,6 @@ public class WorkerTaskManagerTest
             location
         )
     );
-
     workerTaskManager.start();
 
     Assert.assertTrue(workerTaskManager.getCompletedTasks().get(task2.getId()).getTaskStatus().isSuccess());
@@ -274,7 +285,7 @@ public class WorkerTaskManagerTest
     Task task = new NoopTask("id", null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
     {
       @Override
-      public TaskStatus run(TaskToolbox toolbox)
+      public TaskStatus runTask(TaskToolbox toolbox)
       {
         throw new Error("task failure test");
       }

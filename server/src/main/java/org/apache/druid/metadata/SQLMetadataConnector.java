@@ -44,6 +44,8 @@ import org.skife.jdbi.v2.util.IntegerMapper;
 
 import javax.annotation.Nullable;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientException;
@@ -129,6 +131,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public abstract boolean tableExists(Handle handle, String tableName);
 
+  public abstract String limitClause(int limit);
+
   public <T> T retryWithHandle(
       final HandleCallback<T> callback,
       final Predicate<Throwable> myShouldRetry
@@ -165,7 +169,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                          || e instanceof SQLTransientException
                          || e instanceof SQLRecoverableException
                          || e instanceof UnableToObtainConnectionException
-                         || e instanceof UnableToExecuteStatementException
+                         || (e instanceof UnableToExecuteStatementException && isTransientException(e.getCause()))
                          || connectorIsTransientException(e)
                          || (e instanceof SQLException && isTransientException(e.getCause()))
                          || (e instanceof DBIException && isTransientException(e.getCause())));
@@ -175,6 +179,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    * Vendor specific errors that are not covered by {@link #isTransientException(Throwable)}
    */
   protected boolean connectorIsTransientException(Throwable e)
+  {
+    return false;
+  }
+
+  /**
+   * Checks if the root cause of the given exception is a PacketTooBigException.
+   *
+   * @return false by default. Specific implementations should override this method
+   * to correctly classify their packet exceptions.
+   */
+  protected boolean isRootCausePacketTooBigException(Throwable t)
   {
     return false;
   }
@@ -189,14 +204,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             public Void withHandle(Handle handle)
             {
               if (!tableExists(handle, tableName)) {
-                log.info("Creating table[%s]", tableName);
+                log.info("Creating table [%s]", tableName);
                 final Batch batch = handle.createBatch();
                 for (String s : sql) {
                   batch.add(s);
                 }
                 batch.execute();
               } else {
-                log.info("Table[%s] already exists", tableName);
+                log.info("Table [%s] already exists", tableName);
               }
               return null;
             }
@@ -327,6 +342,24 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         )
     );
   }
+  
+  public boolean tableContainsColumn(Handle handle, String table, String column)
+  {
+    try {
+      DatabaseMetaData databaseMetaData = handle.getConnection().getMetaData();
+      ResultSet columns = databaseMetaData.getColumns(null, null, table, column);
+      return columns.next();
+    }
+    catch (SQLException e) {
+      return false;
+    }
+  }
+  
+  public void prepareTaskEntryTable(final String tableName)
+  {
+    createEntryTable(tableName);
+    alterEntryTable(tableName);
+  }
 
   public void createEntryTable(final String tableName)
   {
@@ -348,6 +381,35 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             StringUtils.format("CREATE INDEX idx_%1$s_active_created_date ON %1$s(active, created_date)", tableName)
         )
     );
+  }
+
+  private void alterEntryTable(final String tableName)
+  {
+    try {
+      retryWithHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle)
+            {
+              final Batch batch = handle.createBatch();
+              if (!tableContainsColumn(handle, tableName, "type")) {
+                log.info("Adding column: type to table[%s]", tableName);
+                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN type VARCHAR(255)", tableName));
+              }
+              if (!tableContainsColumn(handle, tableName, "group_id")) {
+                log.info("Adding column: group_id to table[%s]", tableName);
+                batch.add(StringUtils.format("ALTER TABLE %1$s ADD COLUMN group_id VARCHAR(255)", tableName));
+              }
+              batch.execute();
+              return null;
+            }
+          }
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Exception altering table");
+    }
   }
 
   public void createLogTable(final String tableName, final String entryTypeName)
@@ -578,7 +640,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     if (config.get().isCreateTables()) {
       final MetadataStorageTablesConfig tablesConfig = tablesConfigSupplier.get();
       final String entryType = tablesConfig.getTaskEntryType();
-      createEntryTable(tablesConfig.getEntryTable(entryType));
+      prepareTaskEntryTable(tablesConfig.getEntryTable(entryType));
       createLogTable(tablesConfig.getLogTable(entryType), entryType);
       createLockTable(tablesConfig.getLockTable(entryType), entryType);
     }
@@ -646,10 +708,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return config.get();
   }
 
-  protected BasicDataSource getDatasource()
+  protected static BasicDataSource makeDatasource(MetadataStorageConnectorConfig connectorConfig, String validationQuery)
   {
-    MetadataStorageConnectorConfig connectorConfig = getConfig();
-
     BasicDataSource dataSource;
 
     try {
@@ -669,10 +729,15 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     String uri = connectorConfig.getConnectURI();
     dataSource.setUrl(uri);
 
-    dataSource.setValidationQuery(getValidationQuery());
+    dataSource.setValidationQuery(validationQuery);
     dataSource.setTestOnBorrow(true);
 
     return dataSource;
+  }
+
+  protected BasicDataSource getDatasource()
+  {
+    return makeDatasource(getConfig(), getValidationQuery());
   }
 
   protected final <T> T inReadOnlyTransaction(

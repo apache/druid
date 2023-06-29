@@ -28,7 +28,6 @@ import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.IdMapping;
-import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -90,7 +89,7 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
       Set<String> values,
       int cardinality,
       @Nullable IdLookup idLookup,
-      Indexed.IndexedGetter<String> fn
+      IndexedGetter<String> fn
   )
   {
     final IdMapping.Builder builder = IdMapping.Builder.ofCardinality(values.size());
@@ -114,7 +113,7 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
   public static IdMapping buildDenyListIdMapping(
       Set<String> values,
       int cardinality,
-      Indexed.IndexedGetter<String> fn
+      IndexedGetter<String> fn
   )
   {
     final IdMapping.Builder builder = IdMapping.Builder.ofCardinality(cardinality);
@@ -216,5 +215,12 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
            "values=" + values +
            ", isWhitelist=" + isWhitelist +
            '}';
+  }
+
+  @FunctionalInterface
+  public interface IndexedGetter<T>
+  {
+    @Nullable
+    T get(int id);
   }
 }

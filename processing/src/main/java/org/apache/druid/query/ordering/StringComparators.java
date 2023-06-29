@@ -47,9 +47,15 @@ public class StringComparators
   public static final int STRLEN_CACHE_ID = 0x04;
   public static final int VERSION_CACHE_ID = 0x05;
 
+  /**
+   * Comparison using the natural comparator of {@link String}.
+   *
+   * Note that this is not equivalent to comparing UTF-8 byte arrays; see javadocs for
+   * {@link org.apache.druid.java.util.common.StringUtils#compareUnicode(String, String)} and
+   * {@link org.apache.druid.java.util.common.StringUtils#compareUtf8UsingJavaStringOrdering(byte[], byte[])}.
+   */
   public static class LexicographicComparator extends StringComparator
   {
-    // Equivalent to comparing UTF-8 encoded strings as byte arrays.
     private static final Ordering<String> ORDERING = Ordering.from(String::compareTo).nullsFirst();
 
     @Override

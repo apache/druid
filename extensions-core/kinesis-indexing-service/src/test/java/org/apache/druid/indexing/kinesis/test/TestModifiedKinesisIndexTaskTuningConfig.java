@@ -29,7 +29,6 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-import java.io.File;
 
 @JsonTypeName("KinesisTuningConfig")
 public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTuningConfig
@@ -45,7 +44,6 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
-      @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
@@ -56,7 +54,6 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
       @JsonProperty("recordBufferSize") Integer recordBufferSize,
       @JsonProperty("recordBufferOfferTimeout") Integer recordBufferOfferTimeout,
       @JsonProperty("recordBufferFullWait") Integer recordBufferFullWait,
-      @JsonProperty("fetchSequenceNumberTimeout") Integer fetchSequenceNumberTimeout,
       @JsonProperty("fetchThreads") Integer fetchThreads,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
@@ -75,7 +72,7 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         maxRowsPerSegment,
         maxTotalRows,
         intermediatePersistPeriod,
-        basePersistDirectory,
+        null,
         maxPendingPersists,
         indexSpec,
         indexSpecForIntermediatePersists,
@@ -86,7 +83,6 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         recordBufferSize,
         recordBufferOfferTimeout,
         recordBufferFullWait,
-        fetchSequenceNumberTimeout,
         fetchThreads,
         segmentWriteOutMediumFactory,
         logParseExceptions,
@@ -116,16 +112,15 @@ public class TestModifiedKinesisIndexTaskTuningConfig extends KinesisIndexTaskTu
         base.getHandoffConditionTimeout(),
         base.isResetOffsetAutomatically(),
         base.isSkipSequenceNumberAvailabilityCheck(),
-        base.getRecordBufferSize(),
+        base.getRecordBufferSizeConfigured(),
         base.getRecordBufferOfferTimeout(),
         base.getRecordBufferFullWait(),
-        base.getFetchSequenceNumberTimeout(),
         base.getFetchThreads(),
         base.getSegmentWriteOutMediumFactory(),
         base.isLogParseExceptions(),
         base.getMaxParseExceptions(),
         base.getMaxSavedParseExceptions(),
-        base.getMaxRecordsPerPoll(),
+        base.getMaxRecordsPerPollConfigured(),
         base.getIntermediateHandoffPeriod()
     );
     this.extra = extra;

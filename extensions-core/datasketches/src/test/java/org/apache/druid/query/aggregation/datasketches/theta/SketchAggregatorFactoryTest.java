@@ -160,4 +160,11 @@ public class SketchAggregatorFactoryTest
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
   }
+
+  @Test
+  public void testWithName()
+  {
+    Assert.assertEquals(AGGREGATOR_16384, AGGREGATOR_16384.withName("x"));
+    Assert.assertEquals("newTest", AGGREGATOR_16384.withName("newTest").getName());
+  }
 }

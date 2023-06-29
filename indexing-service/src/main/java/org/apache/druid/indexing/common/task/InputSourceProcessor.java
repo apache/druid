@@ -39,6 +39,7 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResul
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -101,7 +102,7 @@ public class InputSourceProcessor
         // IndexTaskInputRowIteratorBuilder.absentBucketIntervalConsumer() ensures the interval will be present here
         Optional<Interval> optInterval = granularitySpec.bucketInterval(inputRow.getTimestamp());
         @SuppressWarnings("OptionalGetWithoutIsPresent")
-        final Interval interval = optInterval.get();
+        final Interval interval = optInterval.get().withChronology(ISOChronology.getInstanceUTC());
 
         final String sequenceName = sequenceNameFunction.getSequenceName(interval, inputRow);
         final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);

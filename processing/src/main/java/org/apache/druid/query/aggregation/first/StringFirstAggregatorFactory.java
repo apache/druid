@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
+import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -87,42 +88,11 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
       ((SerializablePairLongString) o2).lhs
   );
 
-  public static final Comparator<SerializablePairLongString> VALUE_COMPARATOR = (o1, o2) -> {
-    int comparation;
-
-    // First we check if the objects are null
-    if (o1 == null && o2 == null) {
-      comparation = 0;
-    } else if (o1 == null) {
-      comparation = -1;
-    } else if (o2 == null) {
-      comparation = 1;
-    } else {
-
-      // If the objects are not null, we will try to compare using timestamp
-      comparation = o1.lhs.compareTo(o2.lhs);
-
-      // If both timestamp are the same, we try to compare the Strings
-      if (comparation == 0) {
-
-        // First we check if the strings are null
-        if (o1.rhs == null && o2.rhs == null) {
-          comparation = 0;
-        } else if (o1.rhs == null) {
-          comparation = -1;
-        } else if (o2.rhs == null) {
-          comparation = 1;
-        } else {
-
-          // If the strings are not null, we will compare them
-          // Note: This comparation maybe doesn't make sense to first/last aggregators
-          comparation = o1.rhs.compareTo(o2.rhs);
-        }
-      }
-    }
-
-    return comparation;
-  };
+  // used in comparing aggregation results amongst distinct groups. hence the comparison is done on the finalized
+  // result which is string/value part of the result pair. Null SerializablePairLongString values are put first.
+  public static final Comparator<SerializablePairLongString> VALUE_COMPARATOR = Comparator.nullsFirst(
+      Comparator.comparing(SerializablePair::getRhs, Comparator.nullsFirst(Comparator.naturalOrder()))
+  );
 
   private final String fieldName;
   private final String name;
@@ -288,6 +258,12 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return Long.BYTES + Integer.BYTES + maxStringBytes;
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new StringFirstAggregatorFactory(newName, getFieldName(), getTimeColumn(), getMaxStringBytes());
   }
 
   @Override

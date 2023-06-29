@@ -19,8 +19,6 @@
 
 package org.apache.druid.server.initialization;
 
-import com.fasterxml.jackson.databind.Module;
-import com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -39,7 +37,6 @@ import org.apache.druid.server.security.AuthValidator;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -60,12 +57,6 @@ public class AuthorizerMapperModule implements DruidModule
     binder.bind(AuthValidator.class)
           .in(LazySingleton.class);
     LifecycleModule.register(binder, AuthorizerMapper.class);
-  }
-
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Collections.emptyList();
   }
 
   private static class AuthorizerMapperProvider implements Provider<AuthorizerMapper>
@@ -130,11 +121,7 @@ public class AuthorizerMapperModule implements DruidModule
 
         authorizerProvider.inject(adjustedProps, configurator);
 
-        Supplier<Authorizer> authorizerSupplier = authorizerProvider.get();
-        if (authorizerSupplier == null) {
-          throw new ISE("Could not create authorizer with name: %s", authorizerName);
-        }
-        Authorizer authorizer = authorizerSupplier.get();
+        Authorizer authorizer = authorizerProvider.get();
         authorizerMap.put(authorizerName, authorizer);
       }
 

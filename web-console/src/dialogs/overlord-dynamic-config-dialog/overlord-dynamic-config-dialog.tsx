@@ -20,8 +20,10 @@ import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { AutoForm, ExternalLink } from '../../components';
-import { OVERLORD_DYNAMIC_CONFIG_FIELDS, OverlordDynamicConfig } from '../../druid-models';
+import type { FormJsonTabs } from '../../components';
+import { AutoForm, ExternalLink, FormJsonSelector, JsonInput, Loader } from '../../components';
+import type { OverlordDynamicConfig } from '../../druid-models';
+import { OVERLORD_DYNAMIC_CONFIG_FIELDS } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
@@ -31,24 +33,27 @@ import { SnitchDialog } from '..';
 import './overlord-dynamic-config-dialog.scss';
 
 export interface OverlordDynamicConfigDialogProps {
-  onClose: () => void;
+  onClose(): void;
 }
 
 export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicConfigDialog(
   props: OverlordDynamicConfigDialogProps,
 ) {
   const { onClose } = props;
-  const [dynamicConfig, setDynamicConfig] = useState<OverlordDynamicConfig>({});
+  const [currentTab, setCurrentTab] = useState<FormJsonTabs>('form');
+  const [dynamicConfig, setDynamicConfig] = useState<OverlordDynamicConfig | undefined>();
+  const [jsonError, setJsonError] = useState<Error | undefined>();
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
+    initQuery: null,
     processQuery: async () => {
       const historyResp = await Api.instance.get(`/druid/indexer/v1/worker/history?count=100`);
       return historyResp.data;
     },
-    initQuery: null,
   });
 
   useQueryManager<null, Record<string, any>>({
+    initQuery: null,
     processQuery: async () => {
       try {
         const configResp = await Api.instance.get(`/druid/indexer/v1/worker`);
@@ -59,12 +64,10 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
           intent: Intent.DANGER,
           message: `Could not load overlord dynamic config: ${getDruidErrorMessage(e)}`,
         });
-        setDynamicConfig({});
         onClose();
       }
       return {};
     },
-    initQuery: null,
   });
 
   async function saveConfig(comment: string) {
@@ -93,25 +96,46 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
   return (
     <SnitchDialog
       className="overlord-dynamic-config-dialog"
-      onSave={saveConfig}
+      saveDisabled={Boolean(jsonError)}
+      onSave={comment => void saveConfig(comment)}
       onClose={onClose}
       title="Overlord dynamic config"
       historyRecords={historyRecordsState.data}
     >
-      <p>
-        Edit the overlord dynamic configuration on the fly. For more information please refer to the{' '}
-        <ExternalLink
-          href={`${getLink('DOCS')}/configuration/index.html#overlord-dynamic-configuration`}
-        >
-          documentation
-        </ExternalLink>
-        .
-      </p>
-      <AutoForm
-        fields={OVERLORD_DYNAMIC_CONFIG_FIELDS}
-        model={dynamicConfig}
-        onChange={setDynamicConfig}
-      />
+      {dynamicConfig ? (
+        <>
+          <p>
+            Edit the overlord dynamic configuration at runtime. For more information please refer to
+            the{' '}
+            <ExternalLink
+              href={`${getLink('DOCS')}/configuration/index.html#overlord-dynamic-configuration`}
+            >
+              documentation
+            </ExternalLink>
+            .
+          </p>
+          <FormJsonSelector tab={currentTab} onChange={setCurrentTab} />
+          {currentTab === 'form' ? (
+            <AutoForm
+              fields={OVERLORD_DYNAMIC_CONFIG_FIELDS}
+              model={dynamicConfig}
+              onChange={setDynamicConfig}
+            />
+          ) : (
+            <JsonInput
+              value={dynamicConfig}
+              height="50vh"
+              onChange={v => {
+                setDynamicConfig(v);
+                setJsonError(undefined);
+              }}
+              onError={setJsonError}
+            />
+          )}
+        </>
+      ) : (
+        <Loader />
+      )}
     </SnitchDialog>
   );
 });

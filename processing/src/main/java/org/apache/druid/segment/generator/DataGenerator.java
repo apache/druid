@@ -99,8 +99,7 @@ public class DataGenerator
     for (ColumnValueGenerator generator : columnGenerators) {
       event.put(generator.getSchema().getName(), generator.generateRowValue());
     }
-    MapBasedInputRow row = new MapBasedInputRow(nextTimestamp(), dimensionNames, event);
-    return row;
+    return new MapBasedInputRow(nextTimestamp(), dimensionNames, event);
   }
 
   /**

@@ -43,6 +43,10 @@
                 "name": "dim3"
               },
               {
+                "type": "root",
+                "name": "metric1"
+              },
+              {
                 "type": "path",
                 "name": "list",
                 "expr": "$.listDim"

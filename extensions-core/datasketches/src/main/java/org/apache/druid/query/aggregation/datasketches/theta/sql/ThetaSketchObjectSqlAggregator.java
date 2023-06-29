@@ -21,22 +21,33 @@ package org.apache.druid.query.aggregation.datasketches.theta.sql;
 
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.InferTypes;
-import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
+import org.apache.druid.sql.calcite.expression.OperatorConversions;
 
 import java.util.Collections;
 
 public class ThetaSketchObjectSqlAggregator extends ThetaSketchBaseSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new ThetaSketchObjectSqlAggFunction();
   private static final String NAME = "DS_THETA";
+  private static final SqlAggFunction FUNCTION_INSTANCE =
+      OperatorConversions.aggregatorBuilder(NAME)
+                         .operandNames("column", "size")
+                         .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
+                         .operandTypeInference(InferTypes.VARCHAR_1024)
+                         .requiredOperandCount(1)
+                         .literalOperands(1)
+                         .returnTypeInference(ThetaSketchSqlOperators.RETURN_TYPE_INFERENCE)
+                         .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
+                         .build();
+
+  public ThetaSketchObjectSqlAggregator()
+  {
+    super(false);
+  }
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -55,31 +66,5 @@ public class ThetaSketchObjectSqlAggregator extends ThetaSketchBaseSqlAggregator
         Collections.singletonList(aggregatorFactory),
         null
     );
-  }
-
-  private static class ThetaSketchObjectSqlAggFunction extends SqlAggFunction
-  {
-    private static final String SIGNATURE = "'" + NAME + "(column, size)'\n";
-
-    ThetaSketchObjectSqlAggFunction()
-    {
-      super(
-          NAME,
-          null,
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.OTHER),
-          InferTypes.VARCHAR_1024,
-          OperandTypes.or(
-              OperandTypes.ANY,
-              OperandTypes.and(
-                  OperandTypes.sequence(SIGNATURE, OperandTypes.ANY, OperandTypes.LITERAL),
-                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
-              )
-          ),
-          SqlFunctionCategory.USER_DEFINED_FUNCTION,
-          false,
-          false
-      );
-    }
   }
 }

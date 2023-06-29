@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.http;
 
+import com.google.common.base.Optional;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -66,19 +67,9 @@ public class OverlordRedirectInfoTest
   }
 
   @Test
-  public void testGetRedirectURLNull()
+  public void testGetRedirectURLWithEmptyLocation()
   {
-    EasyMock.expect(taskMaster.getCurrentLeader()).andReturn(null).anyTimes();
-    EasyMock.replay(taskMaster);
-    URL url = redirectInfo.getRedirectURL("query", "/request");
-    Assert.assertNull(url);
-    EasyMock.verify(taskMaster);
-  }
-
-  @Test
-  public void testGetRedirectURLEmpty()
-  {
-    EasyMock.expect(taskMaster.getCurrentLeader()).andReturn("").anyTimes();
+    EasyMock.expect(taskMaster.getRedirectLocation()).andReturn(Optional.absent()).anyTimes();
     EasyMock.replay(taskMaster);
     URL url = redirectInfo.getRedirectURL("query", "/request");
     Assert.assertNull(url);
@@ -91,7 +82,7 @@ public class OverlordRedirectInfoTest
     String host = "http://localhost";
     String query = "foo=bar&x=y";
     String request = "/request";
-    EasyMock.expect(taskMaster.getCurrentLeader()).andReturn(host).anyTimes();
+    EasyMock.expect(taskMaster.getRedirectLocation()).andReturn(Optional.of(host)).anyTimes();
     EasyMock.replay(taskMaster);
     URL url = redirectInfo.getRedirectURL(query, request);
     Assert.assertEquals("http://localhost/request?foo=bar&x=y", url.toString());
@@ -107,7 +98,7 @@ public class OverlordRedirectInfoTest
         "UTF-8"
     ) + "/status";
 
-    EasyMock.expect(taskMaster.getCurrentLeader()).andReturn(host).anyTimes();
+    EasyMock.expect(taskMaster.getRedirectLocation()).andReturn(Optional.of(host)).anyTimes();
     EasyMock.replay(taskMaster);
     URL url = redirectInfo.getRedirectURL(null, request);
     Assert.assertEquals(

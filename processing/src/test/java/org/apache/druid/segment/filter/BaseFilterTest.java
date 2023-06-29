@@ -38,6 +38,9 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.segment.FrameSegment;
+import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -61,6 +64,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -78,8 +82,10 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
@@ -98,6 +104,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -105,6 +112,8 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -114,6 +123,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public abstract class BaseFilterTest extends InitializedNullHandlingTest
 {
@@ -139,11 +149,17 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   static final TimestampSpec DEFAULT_TIMESTAMP_SPEC = new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000"));
   static final DimensionsSpec DEFAULT_DIM_SPEC = new DimensionsSpec(
       ImmutableList.<DimensionSchema>builder()
-          .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3", "timeDim")))
-          .add(new DoubleDimensionSchema("d0"))
-          .add(new FloatDimensionSchema("f0"))
-          .add(new LongDimensionSchema("l0"))
-          .build()
+                   .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                       "dim0",
+                       "dim1",
+                       "dim2",
+                       "dim3",
+                       "timeDim"
+                   )))
+                   .add(new DoubleDimensionSchema("d0"))
+                   .add(new FloatDimensionSchema("f0"))
+                   .add(new LongDimensionSchema("l0"))
+                   .build()
   );
 
   static final InputRowParser<Map<String, Object>> DEFAULT_PARSER = new MapInputRowParser(
@@ -295,7 +311,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
     final Map<String, BitmapSerdeFactory> bitmapSerdeFactories = ImmutableMap.of(
         "concise", new ConciseBitmapSerdeFactory(),
-        "roaring", new RoaringBitmapSerdeFactory(true)
+        "roaring", RoaringBitmapSerdeFactory.getInstance()
     );
 
     final Map<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactories = ImmutableMap.of(
@@ -305,37 +321,138 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
     final Map<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finishers =
         ImmutableMap.<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>>builder()
-            .put(
-                "incremental",
-                input -> {
-                  final IncrementalIndex index = input.buildIncrementalIndex();
-                  return Pair.of(new IncrementalIndexStorageAdapter(index), index);
-                }
-            )
-            .put(
-                "mmapped",
-                input -> {
-                  final QueryableIndex index = input.buildMMappedIndex();
-                  return Pair.of(new QueryableIndexStorageAdapter(index), index);
-                }
-            )
-            .put(
-                "mmappedMerged",
-                input -> {
-                  final QueryableIndex index = input.buildMMappedMergedIndex();
-                  return Pair.of(new QueryableIndexStorageAdapter(index), index);
-                }
-            )
-            .put(
-                "rowBasedWithoutTypeSignature",
-                input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asStorageAdapter(), () -> {})
-            )
-            .put(
-                "rowBasedWithTypeSignature",
-                input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asStorageAdapter(), () -> {})
-            )
-            .build();
+                    .put(
+                        "incremental",
+                        input -> {
+                          final IncrementalIndex index = input.buildIncrementalIndex();
+                          return Pair.of(new IncrementalIndexStorageAdapter(index), index);
+                        }
+                    )
+                    .put(
+                        "mmappedAutoTypes",
+                        input -> {
+                          input.indexSpec(IndexSpec.builder().build());
+                          input.mapSchema(
+                              schema ->
+                                  new IncrementalIndexSchema(
+                                      schema.getMinTimestamp(),
+                                      schema.getTimestampSpec(),
+                                      schema.getGran(),
+                                      schema.getVirtualColumns(),
+                                      schema.getDimensionsSpec().withDimensions(
+                                          schema.getDimensionsSpec()
+                                                .getDimensions()
+                                                .stream()
+                                                .map(
+                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                                )
+                                                .collect(Collectors.toList())
+                                      ),
+                                      schema.getMetrics(),
+                                      schema.isRollup()
+                                  )
+                          );
+                          final QueryableIndex index = input.buildMMappedIndex();
+                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                        }
+                    )
+                    .put(
+                        "mmappedAutoTypesMerged",
+                        input -> {
+                          final QueryableIndex index =
+                              input
+                                  .mapSchema(
+                                      schema ->
+                                          new IncrementalIndexSchema(
+                                              schema.getMinTimestamp(),
+                                              schema.getTimestampSpec(),
+                                              schema.getGran(),
+                                              schema.getVirtualColumns(),
+                                              schema.getDimensionsSpec().withDimensions(
+                                                  schema.getDimensionsSpec()
+                                                        .getDimensions()
+                                                        .stream()
+                                                        .map(
+                                                            dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                                        )
+                                                        .collect(Collectors.toList())
+                                              ),
+                                              schema.getMetrics(),
+                                              schema.isRollup()
+                                          )
+                                  )
+                                  // if 1 row per segment some of the columns have null values for the row which causes 'auto'
+                                  // typing default value coercion to be lost in default value mode, so make sure there is at
+                                  // least one number in each segment for these tests to pass correctly because the column
+                                  // is typeless and so doesn't write out zeros like regular numbers do
+                                  .intermediaryPersistSize(3)
+                                  .buildMMappedIndex();
 
+                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                        }
+                    )
+                    .put(
+                        "mmapped",
+                        input -> {
+                          final QueryableIndex index = input.buildMMappedIndex();
+                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                        }
+                    )
+                    .put(
+                        "mmappedMerged",
+                        input -> {
+                          final QueryableIndex index = input.buildMMappedMergedIndex();
+                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                        }
+                    )
+                    .put(
+                        "mmappedWithSqlCompatibleNulls",
+                        input -> {
+                          // Build mmapped index in SQL-compatible null handling mode; read it in default-value mode.
+                          Assume.assumeTrue(NullHandling.replaceWithDefault());
+                          final File file;
+                          try {
+                            NullHandling.initializeForTestsWithValues(false, null);
+                            Assert.assertTrue(NullHandling.sqlCompatible());
+                            file = input.buildMMappedIndexFile();
+                          }
+                          finally {
+                            NullHandling.initializeForTests();
+                          }
+
+                          Assert.assertTrue(NullHandling.replaceWithDefault());
+                          try {
+                            final QueryableIndex index = input.getIndexIO().loadIndex(file);
+                            return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                          }
+                          catch (IOException e) {
+                            throw new RuntimeException(e);
+                          }
+                        }
+                    )
+                    .put(
+                        "rowBasedWithoutTypeSignature",
+                        input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asStorageAdapter(), () -> {})
+                    )
+                    .put(
+                        "rowBasedWithTypeSignature",
+                        input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asStorageAdapter(), () -> {})
+                    )
+                    .put("frame (row-based)", input -> {
+                      final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
+                      return Pair.of(segment.asStorageAdapter(), segment);
+                    })
+                    .put("frame (columnar)", input -> {
+                      final FrameSegment segment = input.buildFrameSegment(FrameType.COLUMNAR);
+                      return Pair.of(segment.asStorageAdapter(), segment);
+                    })
+                    .build();
+
+    StringEncodingStrategy[] stringEncoding = new StringEncodingStrategy[]{
+        new StringEncodingStrategy.Utf8(),
+        new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V0),
+        new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1)
+    };
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
       for (Map.Entry<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactoryEntry :
           segmentWriteOutMediumFactories.entrySet()) {
@@ -343,20 +460,28 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
             finishers.entrySet()) {
           for (boolean cnf : ImmutableList.of(false, true)) {
             for (boolean optimize : ImmutableList.of(false, true)) {
-              final String testName = StringUtils.format(
-                  "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s]",
-                  bitmapSerdeFactoryEntry.getKey(),
-                  segmentWriteOutMediumFactoryEntry.getKey(),
-                  finisherEntry.getKey(),
-                  cnf,
-                  optimize
-              );
-              final IndexBuilder indexBuilder = IndexBuilder
-                  .create()
-                  .schema(DEFAULT_INDEX_SCHEMA)
-                  .indexSpec(new IndexSpec(bitmapSerdeFactoryEntry.getValue(), null, null, null))
-                  .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
-              constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
+              for (StringEncodingStrategy encodingStrategy : stringEncoding) {
+                final String testName = StringUtils.format(
+                    "bitmaps[%s], indexMerger[%s], finisher[%s], cnf[%s], optimize[%s], stringDictionaryEncoding[%s]",
+                    bitmapSerdeFactoryEntry.getKey(),
+                    segmentWriteOutMediumFactoryEntry.getKey(),
+                    finisherEntry.getKey(),
+                    cnf,
+                    optimize,
+                    encodingStrategy.getType()
+                );
+                final IndexBuilder indexBuilder = IndexBuilder
+                    .create()
+                    .schema(DEFAULT_INDEX_SCHEMA)
+                    .indexSpec(
+                        IndexSpec.builder()
+                                 .withBitmapSerdeFactory(bitmapSerdeFactoryEntry.getValue())
+                                 .withStringDictionaryEncoding(encodingStrategy)
+                                 .build()
+                    )
+                    .segmentWriteOutMediumFactory(segmentWriteOutMediumFactoryEntry.getValue());
+                constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), cnf, optimize});
+              }
             }
           }
         }
@@ -721,7 +846,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
 
 
-
       return values;
     }
   }
@@ -745,6 +869,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                 RowAdapters.standardRow(),
                 rowSupplier::get,
                 rowSignatureBuilder.build(),
+                false,
                 false
             )
         )
@@ -764,9 +889,14 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final List<String> expectedRows
   )
   {
-    // IncrementalIndex and RowBasedSegment cannot ever vectorize.
+    // IncrementalIndex, RowBasedSegment cannot vectorize.
+    // Columnar FrameStorageAdapter *can* vectorize, but the tests won't pass, because the vectorizable cases
+    // differ from QueryableIndexStorageAdapter due to frames not having indexes. So, skip these too.
     final boolean testVectorized =
-        !(adapter instanceof IncrementalIndexStorageAdapter) && !(adapter instanceof RowBasedStorageAdapter);
+        !(adapter instanceof IncrementalIndexStorageAdapter)
+        && !(adapter instanceof RowBasedStorageAdapter)
+        && !(adapter instanceof FrameStorageAdapter);
+
     assertFilterMatches(filter, expectedRows, testVectorized);
   }
 
@@ -784,58 +914,66 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final boolean testVectorized
   )
   {
-    Assert.assertEquals(
-        "Cursor: " + filter,
-        expectedRows,
-        selectColumnValuesMatchingFilter(filter, "dim0")
-    );
-
-    if (testVectorized) {
+    try {
       Assert.assertEquals(
-          "Cursor (vectorized): " + filter,
+          "Cursor: " + filter,
           expectedRows,
-          selectColumnValuesMatchingFilterUsingVectorCursor(filter, "dim0")
+          selectColumnValuesMatchingFilter(filter, "dim0")
       );
 
+      if (testVectorized) {
+        Assert.assertEquals(
+            "Cursor (vectorized): " + filter,
+            expectedRows,
+            selectColumnValuesMatchingFilterUsingVectorCursor(filter, "dim0")
+        );
+
+        Assert.assertEquals(
+            "Cursor Virtual Column (vectorized): " + filter,
+            expectedRows,
+            selectColumnValuesMatchingFilterUsingVectorVirtualColumnCursor(filter, "vdim0", "dim0")
+        );
+      }
+
       Assert.assertEquals(
-          "Cursor Virtual Column (vectorized): " + filter,
+          "Cursor with postFiltering: " + filter,
           expectedRows,
-          selectColumnValuesMatchingFilterUsingVectorVirtualColumnCursor(filter, "vdim0", "dim0")
+          selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0")
       );
-    }
 
-    Assert.assertEquals(
-        "Cursor with postFiltering: " + filter,
-        expectedRows,
-        selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0")
-    );
+      if (testVectorized) {
+        Assert.assertEquals(
+            "Cursor with postFiltering (vectorized): " + filter,
+            expectedRows,
+            selectColumnValuesMatchingFilterUsingVectorizedPostFiltering(filter, "dim0")
+        );
+      }
 
-    if (testVectorized) {
       Assert.assertEquals(
-          "Cursor with postFiltering (vectorized): " + filter,
-          expectedRows,
-          selectColumnValuesMatchingFilterUsingVectorizedPostFiltering(filter, "dim0")
-      );
-    }
-
-    Assert.assertEquals(
-        "Filtered aggregator: " + filter,
-        expectedRows.size(),
-        selectCountUsingFilteredAggregator(filter)
-    );
-
-    if (testVectorized) {
-      Assert.assertEquals(
-          "Filtered aggregator (vectorized): " + filter,
+          "Filtered aggregator: " + filter,
           expectedRows.size(),
-          selectCountUsingVectorizedFilteredAggregator(filter)
+          selectCountUsingFilteredAggregator(filter)
+      );
+
+      if (testVectorized) {
+        Assert.assertEquals(
+            "Filtered aggregator (vectorized): " + filter,
+            expectedRows.size(),
+            selectCountUsingVectorizedFilteredAggregator(filter)
+        );
+      }
+
+      Assert.assertEquals(
+          "RowBasedColumnSelectorFactory: " + filter,
+          expectedRows,
+          selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(filter, "dim0")
       );
     }
-
-    Assert.assertEquals(
-        "RowBasedColumnSelectorFactory: " + filter,
-        expectedRows,
-        selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(filter, "dim0")
-    );
+    catch (ISE ise) {
+      // ignore failures resulting from 'auto'
+      if (!(testName.contains("AutoTypes") && "Unsupported type[ARRAY<STRING>]".equals(ise.getMessage()))) {
+        throw ise;
+      }
+    }
   }
 }

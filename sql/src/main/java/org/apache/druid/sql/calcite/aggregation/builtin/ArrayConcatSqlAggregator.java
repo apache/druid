@@ -80,7 +80,7 @@ public class ArrayConcatSqlAggregator implements SqlAggregator
     final List<RexNode> arguments = aggregateCall
         .getArgList()
         .stream()
-        .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
+        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
         .collect(Collectors.toList());
 
     Integer maxSizeBytes = null;
@@ -93,7 +93,7 @@ public class ArrayConcatSqlAggregator implements SqlAggregator
       maxSizeBytes = ((Number) RexLiteral.value(maxBytes)).intValue();
     }
     final DruidExpression arg = Expressions.toDruidExpression(plannerContext, rowSignature, arguments.get(0));
-    final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
+    final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();
 
     final String fieldName;
     final ColumnType druidType = Calcites.getValueTypeForRelDataTypeFull(aggregateCall.getType());
@@ -163,7 +163,7 @@ public class ArrayConcatSqlAggregator implements SqlAggregator
           OperandTypes.or(
               OperandTypes.ARRAY,
               OperandTypes.sequence(
-                  StringUtils.format("'%s'(expr, maxSizeBytes)", NAME),
+                  StringUtils.format("'%s(expr, maxSizeBytes)'", NAME),
                   OperandTypes.ARRAY,
                   OperandTypes.POSITIVE_INTEGER_LITERAL
               )

@@ -22,20 +22,17 @@ package org.apache.druid.server.coordinator.duty;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.coordinator.CoordinatorStats;
-import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
-import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
 
 /**
  * Unloads segments that are no longer marked as used from servers.
@@ -44,62 +41,38 @@ public class UnloadUnusedSegments implements CoordinatorDuty
 {
   private static final Logger log = new Logger(UnloadUnusedSegments.class);
 
+  private final SegmentLoadQueueManager loadQueueManager;
+
+  public UnloadUnusedSegments(SegmentLoadQueueManager loadQueueManager)
+  {
+    this.loadQueueManager = loadQueueManager;
+  }
+
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    CoordinatorStats stats = new CoordinatorStats();
-    Set<DataSegment> usedSegments = params.getUsedSegments();
-    DruidCluster cluster = params.getDruidCluster();
-
-    Map<String, Boolean> broadcastStatusByDatasource = new HashMap<>();
+    final Map<String, Boolean> broadcastStatusByDatasource = new HashMap<>();
     for (String broadcastDatasource : params.getBroadcastDatasources()) {
       broadcastStatusByDatasource.put(broadcastDatasource, true);
     }
 
-    for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
-      for (ServerHolder serverHolder : serverHolders) {
-        handleUnusedSegmentsForServer(
-            serverHolder,
-            usedSegments,
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    params.getDruidCluster().getAllServers().forEach(
+        server -> handleUnusedSegmentsForServer(
+            server,
             params,
             stats,
-            false,
             broadcastStatusByDatasource
-        );
-      }
-    }
+        )
+    );
 
-    for (ServerHolder serverHolder : cluster.getBrokers()) {
-      handleUnusedSegmentsForServer(
-          serverHolder,
-          usedSegments,
-          params,
-          stats,
-          false,
-          broadcastStatusByDatasource
-      );
-    }
-
-    for (ServerHolder serverHolder : cluster.getRealtimes()) {
-      handleUnusedSegmentsForServer(
-          serverHolder,
-          usedSegments,
-          params,
-          stats,
-          true,
-          broadcastStatusByDatasource
-      );
-    }
-
-    return params.buildFromExisting().withCoordinatorStats(stats).build();
+    return params;
   }
 
   private void handleUnusedSegmentsForServer(
       ServerHolder serverHolder,
-      Set<DataSegment> usedSegments,
       DruidCoordinatorRuntimeParams params,
-      CoordinatorStats stats,
-      boolean dropBroadcastOnly,
+      CoordinatorRunStats stats,
       Map<String, Boolean> broadcastStatusByDatasource
   )
   {
@@ -107,16 +80,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
     for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
       boolean isBroadcastDatasource = broadcastStatusByDatasource.computeIfAbsent(
           dataSource.getName(),
-          (dataSourceName) -> {
-            List<Rule> rules = params.getDatabaseRuleManager().getRulesWithDefault(dataSource.getName());
-            for (Rule rule : rules) {
-              // A datasource is considered a broadcast datasource if it has any broadcast rules.
-              if (rule instanceof BroadcastDistributionRule) {
-                return true;
-              }
-            }
-            return false;
-          }
+          dataSourceName -> isBroadcastDatasource(dataSourceName, params)
       );
 
       // The coordinator tracks used segments by examining the metadata store.
@@ -127,26 +91,35 @@ public class UnloadUnusedSegments implements CoordinatorDuty
       // datasource, this will result in the those segments not being dropped from tasks.
       // A more robust solution which requires a larger rework could be to expose
       // the set of segments that were created by a task/indexer here, and exclude them.
-      if (dropBroadcastOnly && !isBroadcastDatasource) {
+      if (serverHolder.isRealtimeServer() && !isBroadcastDatasource) {
         continue;
       }
 
+      int totalUnneededCount = 0;
+      final Set<DataSegment> usedSegments = params.getUsedSegments();
       for (DataSegment segment : dataSource.getSegments()) {
-        if (!usedSegments.contains(segment)) {
-          LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
-
-          if (!queuePeon.getSegmentsToDrop().contains(segment)) {
-            queuePeon.dropSegment(segment, () -> {});
-            stats.addToTieredStat("unneededCount", server.getTier(), 1);
-            log.info(
-                "Dropping uneeded segment [%s] from server [%s] in tier [%s]",
-                segment.getId(),
-                server.getName(),
-                server.getTier()
-            );
-          }
+        if (!usedSegments.contains(segment)
+            && loadQueueManager.dropSegment(segment, serverHolder)) {
+          totalUnneededCount++;
+          log.info(
+              "Dropping uneeded segment [%s] from server [%s] in tier [%s]",
+              segment.getId(), server.getName(), server.getTier()
+          );
         }
       }
+
+      if (totalUnneededCount > 0) {
+        stats.addToSegmentStat(Stats.Segments.UNNEEDED, server.getTier(), dataSource.getName(), totalUnneededCount);
+      }
     }
+  }
+
+  /**
+   * A datasource is considered a broadcast datasource if it has even one broadcast rule.
+   */
+  private boolean isBroadcastDatasource(String datasource, DruidCoordinatorRuntimeParams params)
+  {
+    return params.getDatabaseRuleManager().getRulesWithDefault(datasource).stream()
+                 .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
   }
 }

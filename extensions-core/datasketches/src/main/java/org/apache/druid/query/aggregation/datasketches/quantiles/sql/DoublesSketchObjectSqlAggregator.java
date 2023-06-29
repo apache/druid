@@ -28,12 +28,11 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -42,6 +41,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
@@ -50,8 +50,16 @@ import java.util.List;
 
 public class DoublesSketchObjectSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new DoublesSketchSqlAggFunction();
   private static final String NAME = "DS_QUANTILES_SKETCH";
+  private static final SqlAggFunction FUNCTION_INSTANCE =
+      OperatorConversions.aggregatorBuilder(NAME)
+                         .operandNames("column", "k")
+                         .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC)
+                         .returnTypeNonNull(SqlTypeName.OTHER)
+                         .requiredOperandCount(1)
+                         .literalOperands(1)
+                         .functionCategory(SqlFunctionCategory.NUMERIC)
+                         .build();
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -77,6 +85,7 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
         plannerContext,
         rowSignature,
         Expressions.fromFieldAccess(
+            rexBuilder.getTypeFactory(),
             rowSignature,
             project,
             aggregateCall.getArgList().get(0)
@@ -92,6 +101,7 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
 
     if (aggregateCall.getArgList().size() >= 2) {
       final RexNode resolutionArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(1)
@@ -113,7 +123,8 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
           histogramName,
           input.getDirectColumn(),
           k,
-          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
+          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
+          SketchQueryContext.isFinalizeOuterSketches(plannerContext)
       );
     } else {
       String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -124,7 +135,8 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
           histogramName,
           virtualColumnName,
           k,
-          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
+          DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
+          SketchQueryContext.isFinalizeOuterSketches(plannerContext)
       );
     }
 
@@ -132,32 +144,5 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
         ImmutableList.of(aggregatorFactory),
         null
     );
-  }
-
-  private static class DoublesSketchSqlAggFunction extends SqlAggFunction
-  {
-    private static final String SIGNATURE1 = "'" + NAME + "(column)'\n";
-    private static final String SIGNATURE2 = "'" + NAME + "(column, k)'\n";
-
-    DoublesSketchSqlAggFunction()
-    {
-      super(
-          NAME,
-          null,
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.OTHER),
-          null,
-          OperandTypes.or(
-              OperandTypes.ANY,
-              OperandTypes.and(
-                  OperandTypes.sequence(SIGNATURE2, OperandTypes.ANY, OperandTypes.LITERAL),
-                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.EXACT_NUMERIC)
-              )
-          ),
-          SqlFunctionCategory.USER_DEFINED_FUNCTION,
-          false,
-          false
-      );
-    }
   }
 }

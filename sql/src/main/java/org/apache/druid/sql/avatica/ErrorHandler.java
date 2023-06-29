@@ -32,7 +32,7 @@ import org.apache.druid.server.security.ForbiddenException;
 
 
 /**
- * ErrorHandler is a utilty class that is used to sanitize exceptions.
+ * ErrorHandler is a utility class that is used to sanitize exceptions.
  */
 class ErrorHandler
 {
@@ -61,6 +61,8 @@ class ErrorHandler
     if (error instanceof ForbiddenException) {
       return (ForbiddenException) errorResponseTransformStrategy.transformIfNeeded((ForbiddenException) error);
     }
+    // Should map BasicSecurityAuthenticationException also, but the class is not
+    // visible here.
     if (error instanceof ISE) {
       return (ISE) errorResponseTransformStrategy.transformIfNeeded((ISE) error);
     }
@@ -74,7 +76,7 @@ class ErrorHandler
     // cannot check cause of the throwable because it cannot be cast back to the original's type
     // so this only checks runtime exceptions for causes
     if (error instanceof RuntimeException && error.getCause() instanceof SanitizableException) {
-      // could do `throw sanitize(error);` but just sanitizing immediatley avoids unnecessary going down multiple levels
+      // could do `throw sanitize(error);` but just sanitizing immediately avoids unnecessary going down multiple levels
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error.getCause()));
     }
     QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(error);
@@ -84,7 +86,7 @@ class ErrorHandler
   /**
    * Check to see if something needs to be sanitized.
    * <p>
-   * This does this by checking to see if the ErrorResponse is different than a NoOp Error response transform strategy.
+   * Done by checking to see if the ErrorResponse is different than a NoOp Error response transform strategy.
    *
    * @return a boolean that returns true if error handler has an error response strategy other than the NoOp error
    * response strategy

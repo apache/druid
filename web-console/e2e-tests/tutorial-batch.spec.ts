@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-import { SqlTableRef } from 'druid-query-toolkit';
-import * as playwright from 'playwright-chromium';
+import { T } from 'druid-query-toolkit';
+import type * as playwright from 'playwright-chromium';
 
 import { DatasourcesOverview } from './component/datasources/overview';
-import { IngestionOverview } from './component/ingestion/overview';
+import { TasksOverview } from './component/ingestion/overview';
 import { ConfigureSchemaConfig } from './component/load-data/config/configure-schema';
 import { ConfigureTimestampConfig } from './component/load-data/config/configure-timestamp';
 import { PartitionConfig, SegmentGranularity } from './component/load-data/config/partition';
@@ -143,10 +143,10 @@ function validateConnectLocalData(preview: string) {
 }
 
 async function validateTaskStatus(page: playwright.Page, datasourceName: string) {
-  const ingestionOverview = new IngestionOverview(page, UNIFIED_CONSOLE_URL);
+  const tasksOverview = new TasksOverview(page, UNIFIED_CONSOLE_URL);
 
   await retryIfJestAssertionError(async () => {
-    const tasks = await ingestionOverview.getTasks();
+    const tasks = await tasksOverview.getTasks();
     const task = tasks.find(t => t.datasource === datasourceName);
     expect(task).toBeDefined();
     expect(task!.status).toMatch('SUCCESS');
@@ -167,20 +167,18 @@ async function validateDatasourceStatus(page: playwright.Page, datasourceName: s
 
 async function validateQuery(page: playwright.Page, datasourceName: string) {
   const queryOverview = new QueryOverview(page, UNIFIED_CONSOLE_URL);
-  const query = `SELECT * FROM ${SqlTableRef.create(datasourceName)} ORDER BY __time`;
+  const query = `SELECT * FROM ${T(datasourceName)} ORDER BY __time`;
   const results = await queryOverview.runQuery(query);
   expect(results).toBeDefined();
   expect(results.length).toBeGreaterThan(0);
   expect(results[0]).toStrictEqual([
     /* __time */ '2015-09-12T00:46:58.772Z',
-    /* added */ '36',
+    /* time */ '2015-09-12T00:46:58.771Z',
     /* channel */ '#en.wikipedia',
     /* cityName */ 'null',
     /* comment */ 'added project',
     /* countryIsoCode */ 'null',
     /* countryName */ 'null',
-    /* deleted */ '0',
-    /* delta */ '36',
     /* isAnonymous */ 'false',
     /* isMinor */ 'false',
     /* isNew */ 'false',
@@ -191,7 +189,9 @@ async function validateQuery(page: playwright.Page, datasourceName: string) {
     /* page */ 'Talk:Oswald Tilghman',
     /* regionIsoCode */ 'null',
     /* regionName */ 'null',
-    /* time */ '2015-09-12T00:46:58.771Z',
     /* user */ 'GELongstreet',
+    /* added */ '36',
+    /* delta */ '36',
+    /* deleted */ '0',
   ]);
 }

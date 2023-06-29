@@ -23,6 +23,7 @@ import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketch;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesSketches;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.data.SafeWritableMemory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -48,7 +49,9 @@ public class ArrayOfDoublesSketchObjectStrategy implements ObjectStrategy<ArrayO
   @Override
   public ArrayOfDoublesSketch fromByteBuffer(final ByteBuffer buffer, final int numBytes)
   {
-    return ArrayOfDoublesSketches.wrapSketch(Memory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes));
+    return ArrayOfDoublesSketches.wrapSketch(
+        Memory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes)
+    );
   }
 
   @Override
@@ -61,4 +64,12 @@ public class ArrayOfDoublesSketchObjectStrategy implements ObjectStrategy<ArrayO
     return sketch.toByteArray();
   }
 
+  @Nullable
+  @Override
+  public ArrayOfDoublesSketch fromByteBufferSafe(ByteBuffer buffer, int numBytes)
+  {
+    return ArrayOfDoublesSketches.wrapSketch(
+        SafeWritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes)
+    );
+  }
 }

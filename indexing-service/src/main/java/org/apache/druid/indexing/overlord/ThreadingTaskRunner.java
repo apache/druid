@@ -24,7 +24,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -36,6 +35,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReportFileWriter;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -61,6 +61,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -109,10 +110,11 @@ public class ThreadingTaskRunner
       ObjectMapper jsonMapper,
       AppenderatorsManager appenderatorsManager,
       TaskReportFileWriter taskReportFileWriter,
-      @Self DruidNode node
+      @Self DruidNode node,
+      TaskStorageDirTracker dirTracker
   )
   {
-    super(jsonMapper, taskConfig);
+    super(jsonMapper, taskConfig, dirTracker);
     this.toolboxFactory = toolboxFactory;
     this.taskLogPusher = taskLogPusher;
     this.node = node;
@@ -128,7 +130,7 @@ public class ThreadingTaskRunner
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(String taskid, long offset)
+  public Optional<InputStream> streamTaskLog(String taskid, long offset)
   {
     // task logs will appear in the main indexer log, streaming individual task logs is not supported
     return Optional.absent();
@@ -153,8 +155,21 @@ public class ThreadingTaskRunner
                         @Override
                         public TaskStatus call()
                         {
+                          final TaskStorageDirTracker.StorageSlot storageSlot;
+                          try {
+                            storageSlot = getTracker().pickStorageSlot(task.getId());
+                          }
+                          catch (RuntimeException e) {
+                            LOG.error(e, "Failed to get directory for task [%s], cannot schedule.", task.getId());
+                            return TaskStatus.failure(
+                                task.getId(),
+                                StringUtils.format("Could not schedule due to error [%s]", e.getMessage())
+                            );
+
+                          }
+                          final File taskDir = new File(storageSlot.getDirectory(), task.getId());
+
                           final String attemptUUID = UUID.randomUUID().toString();
-                          final File taskDir = taskConfig.getTaskDir(task.getId());
                           final File attemptDir = new File(taskDir, attemptUUID);
 
                           final TaskLocation taskLocation = TaskLocation.create(
@@ -197,7 +212,11 @@ public class ThreadingTaskRunner
                                   .setName(StringUtils.format("[%s]-%s", task.getId(), priorThreadName));
 
                             TaskStatus taskStatus;
-                            final TaskToolbox toolbox = toolboxFactory.build(task);
+                            final TaskToolbox toolbox = toolboxFactory.build(
+                                config -> config.withBaseTaskDir(storageSlot.getDirectory())
+                                                .withTmpStorageBytesPerTask(storageSlot.getNumBytes()),
+                                task
+                            );
                             TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
                             TaskRunnerUtils.notifyStatusChanged(
                                 listeners,
@@ -210,10 +229,13 @@ public class ThreadingTaskRunner
                               taskStatus = task.run(toolbox);
                             }
                             catch (Throwable t) {
-                              LOGGER.error(t, "Exception caught while running the task.");
+                              LOGGER.error(t, "Exception caught while running task [%s].", task.getId());
                               taskStatus = TaskStatus.failure(
                                   task.getId(),
-                                  "Failed with an exception. See indexer logs for more details."
+                                  StringUtils.format(
+                                      "Failed with exception [%s]. See indexer logs for details.",
+                                      t.getMessage()
+                                  )
                               );
                             }
                             finally {
@@ -242,6 +264,8 @@ public class ThreadingTaskRunner
                                   saveRunningTasks();
                                 }
                               }
+
+                              getTracker().returnStorageSlot(storageSlot);
 
                               try {
                                 if (!stopping && taskDir.exists()) {

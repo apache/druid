@@ -176,4 +176,20 @@ public class FixedBucketsHistogramBufferAggregatorTest
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
   }
+
+  @Test
+  public void testWithName()
+  {
+    FixedBucketsHistogramAggregatorFactory factory = new FixedBucketsHistogramAggregatorFactory(
+        "billy",
+        "billy",
+        5,
+        0,
+        50,
+        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+        false
+    );
+    Assert.assertEquals(factory, factory.withName("billy"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
 }

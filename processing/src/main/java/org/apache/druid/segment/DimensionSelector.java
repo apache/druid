@@ -311,6 +311,12 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
       {
         // nothing to inspect
       }
+
+      @Override
+      public boolean isNull()
+      {
+        return NullHandling.sqlCompatible();
+      }
     }
   }
 }

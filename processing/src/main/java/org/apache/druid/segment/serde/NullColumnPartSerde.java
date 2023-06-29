@@ -26,12 +26,15 @@ import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.nio.channels.WritableByteChannel;
@@ -60,14 +63,18 @@ public class NullColumnPartSerde implements ColumnPartSerde
   };
 
   private final int numRows;
+  private final BitmapSerdeFactory bitmapSerdeFactory;
+
   private final NullDictionaryEncodedColumn nullDictionaryEncodedColumn;
 
   @JsonCreator
   public NullColumnPartSerde(
-      @JsonProperty("numRows") int numRows
+      @JsonProperty("numRows") int numRows,
+      @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory
   )
   {
     this.numRows = numRows;
+    this.bitmapSerdeFactory = bitmapSerdeFactory;
     this.nullDictionaryEncodedColumn = new NullDictionaryEncodedColumn();
   }
 
@@ -75,6 +82,17 @@ public class NullColumnPartSerde implements ColumnPartSerde
   public int getNumRows()
   {
     return numRows;
+  }
+
+  /**
+   * This is no longer used for anything, but is required for backwards compatibility, so that segments with
+   * explicit null columns can be read with 0.23
+   */
+  @Deprecated
+  @JsonProperty
+  public BitmapSerdeFactory getBitmapSerdeFactory()
+  {
+    return bitmapSerdeFactory;
   }
 
   @Nullable
@@ -108,13 +126,13 @@ public class NullColumnPartSerde implements ColumnPartSerde
       return false;
     }
     NullColumnPartSerde partSerde = (NullColumnPartSerde) o;
-    return numRows == partSerde.numRows;
+    return numRows == partSerde.numRows && Objects.equals(bitmapSerdeFactory, partSerde.bitmapSerdeFactory);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(numRows);
+    return Objects.hash(numRows, bitmapSerdeFactory);
   }
 
   private final class NullDictionaryEncodedColumn implements DictionaryEncodedColumn<String>
@@ -188,7 +206,19 @@ public class NullColumnPartSerde implements ColumnPartSerde
         ReadableVectorOffset vectorOffset
     )
     {
-      throw new RuntimeException("This method should not be called for null-only columns");
+      throw new UnsupportedOperationException("This method should not be called for null-only columns");
+    }
+
+    @Override
+    public VectorValueSelector makeVectorValueSelector(ReadableVectorOffset offset)
+    {
+      return NilVectorSelector.create(offset);
+    }
+
+    @Override
+    public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
+    {
+      return NilVectorSelector.create(offset);
     }
 
     @Override

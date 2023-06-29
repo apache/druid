@@ -27,6 +27,7 @@ import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -36,6 +37,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
 {
   private final Map<String, Object> consumerProperties;
   private final long pollTimeout;
+  private final KafkaConfigOverrides configOverrides;
 
   @JsonCreator
   public KafkaIndexTaskIOConfig(
@@ -56,7 +58,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
-      @JsonProperty("inputFormat") @Nullable InputFormat inputFormat
+      @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
+      @JsonProperty("configOverrides") @Nullable KafkaConfigOverrides configOverrides
   )
   {
     super(
@@ -74,13 +77,14 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     this.pollTimeout = pollTimeout != null ? pollTimeout : KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS;
+    this.configOverrides = configOverrides;
 
     final SeekableStreamEndSequenceNumbers<Integer, Long> myEndSequenceNumbers = getEndSequenceNumbers();
     for (int partition : myEndSequenceNumbers.getPartitionSequenceNumberMap().keySet()) {
       Preconditions.checkArgument(
           myEndSequenceNumbers.getPartitionSequenceNumberMap()
-                       .get(partition)
-                       .compareTo(getStartSequenceNumbers().getPartitionSequenceNumberMap().get(partition)) >= 0,
+                              .get(partition)
+                              .compareTo(getStartSequenceNumbers().getPartitionSequenceNumberMap().get(partition)) >= 0,
           "end offset must be >= start offset for partition[%s]",
           partition
       );
@@ -97,7 +101,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
       Boolean useTransaction,
       DateTime minimumMessageTime,
       DateTime maximumMessageTime,
-      InputFormat inputFormat
+      InputFormat inputFormat,
+      KafkaConfigOverrides configOverrides
   )
   {
     this(
@@ -112,7 +117,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
         useTransaction,
         minimumMessageTime,
         maximumMessageTime,
-        inputFormat
+        inputFormat,
+        configOverrides
     );
   }
 
@@ -156,6 +162,12 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
     return pollTimeout;
   }
 
+  @JsonProperty
+  public KafkaConfigOverrides getConfigOverrides()
+  {
+    return configOverrides;
+  }
+
   @Override
   public String toString()
   {
@@ -169,6 +181,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
            ", useTransaction=" + isUseTransaction() +
            ", minimumMessageTime=" + getMinimumMessageTime() +
            ", maximumMessageTime=" + getMaximumMessageTime() +
+           ", configOverrides=" + getConfigOverrides() +
            '}';
   }
 }

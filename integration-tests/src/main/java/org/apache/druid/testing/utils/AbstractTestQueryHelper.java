@@ -41,7 +41,6 @@ import java.util.function.Function;
 
 public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQueryWithResults>
 {
-
   public static final Logger LOG = new Logger(TestQueryHelper.class);
 
   protected final AbstractQueryResourceTestClient queryClient;
@@ -54,7 +53,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
   @Inject
   AbstractTestQueryHelper(
       ObjectMapper jsonMapper,
-      AbstractQueryResourceTestClient queryClient,
+      AbstractQueryResourceTestClient<?> queryClient,
       IntegrationTestingConfig config
   )
   {
@@ -70,7 +69,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
 
   AbstractTestQueryHelper(
       ObjectMapper jsonMapper,
-      AbstractQueryResourceTestClient queryClient,
+      AbstractQueryResourceTestClient<?> queryClient,
       String broker,
       String brokerTLS,
       String router,
@@ -103,9 +102,13 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
   public void testQueriesFromString(String str) throws Exception
   {
     testQueriesFromString(getQueryURL(broker), str);
-    testQueriesFromString(getQueryURL(brokerTLS), str);
+    if (!broker.equals(brokerTLS)) {
+      testQueriesFromString(getQueryURL(brokerTLS), str);
+    }
     testQueriesFromString(getQueryURL(router), str);
-    testQueriesFromString(getQueryURL(routerTLS), str);
+    if (!router.equals(routerTLS)) {
+      testQueriesFromString(getQueryURL(routerTLS), str);
+    }
   }
 
   public void testQueriesFromFile(String url, String filePath) throws Exception
@@ -143,23 +146,27 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
     for (QueryResultType queryWithResult : queries) {
       LOG.info("Running Query %s", queryWithResult.getQuery());
       List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
-      if (!QueryResultVerifier.compareResults(result, queryWithResult.getExpectedResults(),
-                                              queryWithResult.getFieldsToTest()
-      )) {
+      QueryResultVerifier.ResultVerificationObject resultsComparison = QueryResultVerifier.compareResults(
+          result,
+          queryWithResult.getExpectedResults(),
+          queryWithResult.getFieldsToTest()
+      );
+      if (!resultsComparison.isSuccess()) {
         LOG.error(
             "Failed while executing query %s \n expectedResults: %s \n actualResults : %s",
             queryWithResult.getQuery(),
             jsonMapper.writeValueAsString(queryWithResult.getExpectedResults()),
             jsonMapper.writeValueAsString(result)
         );
-        failed = true;
+        throw new ISE(
+            "Results mismatch while executing the query %s.\n"
+            + "Mismatch error: %s\n",
+            queryWithResult.getQuery(),
+            resultsComparison.getErrorMessage()
+        );
       } else {
         LOG.info("Results Verified for Query %s", queryWithResult.getQuery());
       }
-    }
-
-    if (failed) {
-      throw new ISE("one or more queries failed");
     }
   }
 

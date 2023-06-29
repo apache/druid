@@ -289,9 +289,8 @@ public class VectorizedVirtualColumnTest
   }
 
   @Test
-  public void testTimeseriesTrueVirtualContextCannotVectorize()
+  public void testTimeseriesTrueVirtualContextDefault()
   {
-    expectNonvectorized();
     testTimeseries(
         ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
         CONTEXT_USE_DEFAULTS,

@@ -54,7 +54,7 @@ public class AnnouncerModule implements Module
     JsonConfigProvider.bind(binder, "druid.announcer", BatchDataSegmentAnnouncerConfig.class);
     JsonConfigProvider.bind(binder, "druid.announcer", DataSegmentAnnouncerProvider.class);
     binder.bind(DataSegmentAnnouncer.class).toProvider(DataSegmentAnnouncerProvider.class);
-    binder.bind(BatchDataSegmentAnnouncer.class).in(LazySingleton.class);
+    binder.bind(BatchDataSegmentAnnouncer.class).in(ManageLifecycleAnnouncements.class);
 
     if (isZkEnabled) {
       binder.bind(DataSegmentServerAnnouncer.class).to(CuratorDataSegmentServerAnnouncer.class).in(LazySingleton.class);

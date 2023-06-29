@@ -46,4 +46,9 @@ public class DefaultGenericQueryMetricsFactory implements GenericQueryMetricsFac
     return queryMetrics;
   }
 
+  @Override
+  public QueryMetrics<Query<?>> makeMetrics()
+  {
+    return new DefaultQueryMetrics<>();
+  }
 }

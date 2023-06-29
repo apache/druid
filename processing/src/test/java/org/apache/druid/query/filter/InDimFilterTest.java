@@ -31,11 +31,20 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
+import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.StringValueSetIndex;
+import org.apache.druid.segment.column.Utf8ValueSetIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
+import org.mockito.quality.Strictness;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -51,6 +60,9 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
   private final String serializedFilter =
       "{\"type\":\"in\",\"dimension\":\"dimTest\",\"values\":[\"bad\",\"good\"]}";
+
+  @Rule
+  public MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
 
   @Test
   public void testDeserialization() throws IOException
@@ -71,21 +83,23 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   @Test
   public void testGetValuesWithValuesSetOfNonEmptyStringsUseTheGivenSet()
   {
-    final Set<String> values = ImmutableSet.of("v1", "v2", "v3");
-    final InDimFilter filter = new InDimFilter("dim", values, null, null);
+    final Set<String> values = new InDimFilter.ValuesSet();
+    values.addAll(Arrays.asList("v1", "v2", "v3"));
+    final InDimFilter filter = new InDimFilter("dim", values);
     Assert.assertSame(values, filter.getValues());
   }
 
   @Test
   public void testGetValuesWithValuesSetIncludingEmptyString()
   {
-    final Set<String> values = Sets.newHashSet("v1", "", "v3");
-    final InDimFilter filter = new InDimFilter("dim", values, null, null);
+    final InDimFilter.ValuesSet values = new InDimFilter.ValuesSet(ImmutableSet.of("v1", "", "v3"));
+    final InDimFilter filter = new InDimFilter("dim", values);
     if (NullHandling.replaceWithDefault()) {
-      Assert.assertNotSame(values, filter.getValues());
+      Assert.assertSame(values, filter.getValues());
       Assert.assertEquals(Sets.newHashSet("v1", null, "v3"), filter.getValues());
     } else {
       Assert.assertSame(values, filter.getValues());
+      Assert.assertEquals(Sets.newHashSet("v1", "", "v3"), filter.getValues());
     }
   }
 
@@ -218,7 +232,8 @@ public class InDimFilterTest extends InitializedNullHandlingTest
         RowAdapters.standardRow(),
         () -> new MapBasedRow(0, row),
         RowSignature.builder().add("dim", ColumnType.STRING).build(),
-        true
+        true,
+        false
     );
 
     final ValueMatcher matcher = filter.toFilter().makeMatcher(columnSelectorFactory);
@@ -233,5 +248,54 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     row.put("dim", "fox");
     // Now it *shouldn't* match.
     Assert.assertFalse(matcher.matches());
+  }
+
+  @Test
+  public void testUsesUtf8SetIndex()
+  {
+    // An implementation test.
+    // This test confirms that "in" filters use utf8 index lookups when available.
+
+    final Filter inFilter = new InDimFilter("dim0", ImmutableSet.of("v1", "v2")).toFilter();
+
+    final ColumnIndexSelector indexSelector = Mockito.mock(ColumnIndexSelector.class);
+    final ColumnIndexSupplier indexSupplier = Mockito.mock(ColumnIndexSupplier.class);
+    final Utf8ValueSetIndex valueIndex = Mockito.mock(Utf8ValueSetIndex.class);
+    final BitmapColumnIndex bitmapColumnIndex = Mockito.mock(BitmapColumnIndex.class);
+
+    final InDimFilter.ValuesSet expectedValuesSet = new InDimFilter.ValuesSet();
+    expectedValuesSet.addAll(Arrays.asList("v1", "v2"));
+
+    Mockito.when(indexSelector.getIndexSupplier("dim0")).thenReturn(indexSupplier);
+    Mockito.when(indexSupplier.as(Utf8ValueSetIndex.class)).thenReturn(valueIndex);
+    Mockito.when(valueIndex.forSortedValuesUtf8(expectedValuesSet.toUtf8())).thenReturn(bitmapColumnIndex);
+
+    final BitmapColumnIndex retVal = inFilter.getBitmapColumnIndex(indexSelector);
+    Assert.assertSame("inFilter returns the intended bitmapColumnIndex", bitmapColumnIndex, retVal);
+  }
+
+  @Test
+  public void testUsesStringSetIndex()
+  {
+    // An implementation test.
+    // This test confirms that "in" filters use non-utf8 string index lookups when utf8 indexes are not available.
+
+    final Filter inFilter = new InDimFilter("dim0", ImmutableSet.of("v1", "v2")).toFilter();
+
+    final ColumnIndexSelector indexSelector = Mockito.mock(ColumnIndexSelector.class);
+    final ColumnIndexSupplier indexSupplier = Mockito.mock(ColumnIndexSupplier.class);
+    final StringValueSetIndex valueIndex = Mockito.mock(StringValueSetIndex.class);
+    final BitmapColumnIndex bitmapColumnIndex = Mockito.mock(BitmapColumnIndex.class);
+
+    final InDimFilter.ValuesSet expectedValuesSet = new InDimFilter.ValuesSet();
+    expectedValuesSet.addAll(Arrays.asList("v1", "v2"));
+
+    Mockito.when(indexSelector.getIndexSupplier("dim0")).thenReturn(indexSupplier);
+    Mockito.when(indexSupplier.as(Utf8ValueSetIndex.class)).thenReturn(null); // Will check for UTF-8 first.
+    Mockito.when(indexSupplier.as(StringValueSetIndex.class)).thenReturn(valueIndex);
+    Mockito.when(valueIndex.forSortedValues(expectedValuesSet)).thenReturn(bitmapColumnIndex);
+
+    final BitmapColumnIndex retVal = inFilter.getBitmapColumnIndex(indexSelector);
+    Assert.assertSame("inFilter returns the intended bitmapColumnIndex", bitmapColumnIndex, retVal);
   }
 }

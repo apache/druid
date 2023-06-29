@@ -80,7 +80,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     try {
       AZURE_ACCOUNT_NAME = "azureAccount1";
       AZURE_ACCOUNT_KEY = Base64.getUrlEncoder()
-                                .encodeToString("azureKey1".getBytes(StandardCharsets.UTF_8.toString()));
+                                .encodeToString("azureKey1".getBytes(StandardCharsets.UTF_8));
       AZURE_SHARED_ACCESS_TOKEN = "dummyToken";
       AZURE_CONTAINER = "azureContainer1";
       AZURE_PREFIX = "azurePrefix1";
@@ -194,17 +194,6 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetAzureCloudBlobToLocationConverterExpectedConverted()
-  {
-    injector = makeInjectorWithProperties(PROPERTIES);
-    AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobLocationConverter1 = injector.getInstance(
-        AzureCloudBlobHolderToCloudObjectLocationConverter.class);
-    AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobLocationConverter2 = injector.getInstance(
-        AzureCloudBlobHolderToCloudObjectLocationConverter.class);
-    Assert.assertSame(azureCloudBlobLocationConverter1, azureCloudBlobLocationConverter2);
-  }
-
-  @Test
   public void testGetAzureByteSourceFactoryCanCreateAzureByteSource()
   {
     injector = makeInjectorWithProperties(PROPERTIES);
@@ -278,11 +267,11 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
     Assert.assertTrue(killer.getKillers().containsKey(AzureStorageDruidModule.SCHEME));
     Assert.assertSame(
         AzureDataSegmentKiller.class,
-        killer.getKillers().get(AzureStorageDruidModule.SCHEME).getClass()
+        killer.getKillers().get(AzureStorageDruidModule.SCHEME).get().getClass()
     );
     Assert.assertSame(
-        killer.getKillers().get(AzureStorageDruidModule.SCHEME),
-        killer.getKillers().get(AzureStorageDruidModule.SCHEME)
+        killer.getKillers().get(AzureStorageDruidModule.SCHEME).get(),
+        killer.getKillers().get(AzureStorageDruidModule.SCHEME).get()
     );
   }
 

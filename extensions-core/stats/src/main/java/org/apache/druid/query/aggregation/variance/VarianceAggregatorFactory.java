@@ -60,7 +60,7 @@ import java.util.Objects;
 @JsonTypeName("variance")
 public class VarianceAggregatorFactory extends AggregatorFactory
 {
-  private static final String VARIANCE_TYPE_NAME = "variance";
+  public static final String VARIANCE_TYPE_NAME = "variance";
   public static final ColumnType TYPE = ColumnType.ofComplex(VARIANCE_TYPE_NAME);
 
   protected final String fieldName;
@@ -115,6 +115,12 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   public int getMaxIntermediateSize()
   {
     return VarianceAggregatorCollector.getMaxIntermediateSize();
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new VarianceAggregatorFactory(newName, getFieldName(), getEstimator(), inputType);
   }
 
   @Override

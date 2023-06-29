@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -30,7 +31,6 @@ import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -47,6 +47,7 @@ import org.apache.druid.segment.virtual.VirtualizedColumnInspector;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -119,7 +120,7 @@ public class VirtualColumns implements Cacheable
   public static boolean shouldVectorize(Query<?> query, VirtualColumns virtualColumns, ColumnInspector inspector)
   {
     if (virtualColumns.getVirtualColumns().length > 0) {
-      return QueryContexts.getVectorizeVirtualColumns(query).shouldVectorize(virtualColumns.canVectorize(inspector));
+      return query.context().getVectorizeVirtualColumns().shouldVectorize(virtualColumns.canVectorize(inspector));
     } else {
       return true;
     }
@@ -246,7 +247,8 @@ public class VirtualColumns implements Cacheable
 
   public boolean canVectorize(ColumnInspector columnInspector)
   {
-    return virtualColumns.stream().allMatch(virtualColumn -> virtualColumn.canVectorize(columnInspector));
+    final ColumnInspector inspector = wrapInspector(columnInspector);
+    return virtualColumns.stream().allMatch(virtualColumn -> virtualColumn.canVectorize(inspector));
   }
 
   /**
@@ -464,12 +466,11 @@ public class VirtualColumns implements Cacheable
                                 : Sets.newHashSet(columnNames);
 
     for (String columnName : virtualColumn.requiredColumns()) {
-      if (!nextSet.add(columnName)) {
-        throw new IAE("Self-referential column[%s]", columnName);
-      }
-
       final VirtualColumn dependency = getVirtualColumn(columnName);
       if (dependency != null) {
+        if (!nextSet.add(columnName)) {
+          throw new IAE("Self-referential column[%s]", columnName);
+        }
         detectCycles(dependency, nextSet);
       }
     }
@@ -502,4 +503,20 @@ public class VirtualColumns implements Cacheable
     return virtualColumns.toString();
   }
 
+  /**
+   * {@link JsonInclude} filter for {@code getVirtualColumns()}.
+   *
+   * This API works by "creative" use of equals. It requires warnings to be suppressed
+   * and also requires spotbugs exclusions (see spotbugs-exclude.xml).
+   */
+  @SuppressWarnings({"EqualsAndHashcode", "EqualsHashCode"})
+  public static class JsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
+  {
+    @Override
+    public boolean equals(Object obj)
+    {
+      return obj instanceof VirtualColumns &&
+             ((VirtualColumns) obj).virtualColumns.isEmpty();
+    }
+  }
 }

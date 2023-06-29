@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 
 import java.lang.ref.WeakReference;
@@ -132,25 +133,18 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   void monitor(ServiceEmitter serviceEmitter)
   {
     long numEntries = 0;
-    long size = 0;
+    long heapSizeInBytes = 0;
     expungeCollectedCaches();
     for (WeakReference<Map<String, String>> cacheRef : caches) {
       final Map<String, String> cache = cacheRef.get();
-      if (cache == null) {
-        continue;
-      }
-      numEntries += cache.size();
-      for (Map.Entry<String, String> sEntry : cache.entrySet()) {
-        final String key = sEntry.getKey();
-        final String value = sEntry.getValue();
-        if (key == null || value == null) {
-          LOG.debug("Missing entries for cache key");
-          continue;
-        }
-        size += key.length() + value.length();
+
+      if (cache != null) {
+        numEntries += cache.size();
+        heapSizeInBytes += MapLookupExtractor.estimateHeapFootprint(cache);
       }
     }
+
     serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/numEntries", numEntries));
-    serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/heapSizeInBytes", size * Character.BYTES));
+    serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/heapSizeInBytes", heapSizeInBytes));
   }
 }

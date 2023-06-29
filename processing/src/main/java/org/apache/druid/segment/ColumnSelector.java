@@ -29,6 +29,10 @@ import java.util.List;
  */
 public interface ColumnSelector extends ColumnInspector
 {
+  /**
+   * This method is apparently no longer used anymore, so deprecating it.
+   */
+  @Deprecated
   List<String> getColumnNames();
 
   @Nullable

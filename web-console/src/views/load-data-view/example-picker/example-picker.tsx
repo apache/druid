@@ -20,15 +20,15 @@ import { Button, Callout, FormGroup, HTMLSelect, Intent } from '@blueprintjs/cor
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { ExampleManifest } from '../../../utils/sampler';
+import type { ExampleSpec } from '../example-specs';
 
 export interface ExamplePickerProps {
-  exampleManifests: ExampleManifest[];
-  onSelectExample: (exampleManifest: ExampleManifest) => void;
+  exampleSpecs: ExampleSpec[];
+  onSelectExample(exampleSpec: ExampleSpec): void;
 }
 
 export const ExamplePicker = React.memo(function ExamplePicker(props: ExamplePickerProps) {
-  const { exampleManifests, onSelectExample } = props;
+  const { exampleSpecs, onSelectExample } = props;
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   return (
@@ -39,15 +39,15 @@ export const ExamplePicker = React.memo(function ExamplePicker(props: ExamplePic
           value={selectedIndex}
           onChange={e => setSelectedIndex(e.target.value as any)}
         >
-          {exampleManifests.map((exampleManifest, i) => (
+          {exampleSpecs.map((exampleSpec, i) => (
             <option key={i} value={i}>
-              {exampleManifest.name}
+              {exampleSpec.name}
             </option>
           ))}
         </HTMLSelect>
       </FormGroup>
       <FormGroup>
-        <Callout>{exampleManifests[selectedIndex].description}</Callout>
+        <Callout>{exampleSpecs[selectedIndex].description}</Callout>
       </FormGroup>
       <FormGroup>
         <Button
@@ -55,7 +55,7 @@ export const ExamplePicker = React.memo(function ExamplePicker(props: ExamplePic
           rightIcon={IconNames.ARROW_RIGHT}
           intent={Intent.PRIMARY}
           onClick={() => {
-            onSelectExample(exampleManifests[selectedIndex]);
+            onSelectExample(exampleSpecs[selectedIndex]);
           }}
         />
       </FormGroup>

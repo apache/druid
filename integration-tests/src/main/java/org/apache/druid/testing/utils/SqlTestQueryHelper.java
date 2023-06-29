@@ -58,7 +58,7 @@ public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResu
         null,
         null
     );
-
+    
     try {
       //noinspection unchecked
       queryClient.query(getQueryURL(broker), query);

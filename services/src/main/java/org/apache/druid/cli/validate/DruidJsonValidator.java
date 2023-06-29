@@ -39,7 +39,7 @@ import org.apache.druid.cli.GuiceRunnable;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.guice.DruidProcessingModule;
-import org.apache.druid.guice.ExtensionsConfig;
+import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
@@ -50,7 +50,6 @@ import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.IndexingHadoopModule;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
@@ -124,11 +123,12 @@ public class DruidJsonValidator extends GuiceRunnable
 
     final Injector injector = makeInjector();
     final ObjectMapper jsonMapper = injector.getInstance(ObjectMapper.class);
+    ExtensionsLoader extnLoader = injector.getInstance(ExtensionsLoader.class);
 
     registerModules(
         jsonMapper,
         Iterables.concat(
-            Initialization.getFromExtensions(injector.getInstance(ExtensionsConfig.class), DruidModule.class),
+            extnLoader.getModules(),
             Arrays.asList(
                 new FirehoseModule(),
                 new IndexingHadoopModule(),

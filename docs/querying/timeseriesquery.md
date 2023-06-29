@@ -78,6 +78,7 @@ There are 7 main parts to a timeseries query:
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |granularity|Defines the granularity to bucket query results. See [Granularities](../querying/granularities.md)|yes|
 |filter|See [Filters](../querying/filters.md)|no|
+|virtualColumns|A JSON list of [virtual columns](./virtual-columns.md). You can reference the virtual columns in `aggregations` or `postAggregations`.| no (default none)|
 |aggregations|See [Aggregations](../querying/aggregations.md)|no|
 |postAggregations|See [Post Aggregations](../querying/post-aggregations.md)|no|
 |limit|An integer that limits the number of results. The default is unlimited.|no|

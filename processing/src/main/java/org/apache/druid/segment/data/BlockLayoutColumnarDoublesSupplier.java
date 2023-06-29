@@ -22,6 +22,7 @@ package org.apache.druid.segment.data;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.DoubleBuffer;
@@ -82,10 +83,12 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedDoubleBuffers = baseDoubleBuffers.singleThreaded();
 
     int currBufferNum = -1;
+    @Nullable
     ResourceHolder<ByteBuffer> holder;
     /**
      * doubleBuffer's position must be 0
      */
+    @Nullable
     DoubleBuffer doubleBuffer;
 
     @Override
@@ -180,7 +183,10 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
     public void close()
     {
       if (holder != null) {
+        currBufferNum = -1;
         holder.close();
+        holder = null;
+        doubleBuffer = null;
       }
     }
 

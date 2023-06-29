@@ -144,11 +144,11 @@ T00:00:00.000Z/2015-04-14T02:41:09.484Z/0/index.zip] to [/opt/druid/zk_druid/dde
 
 * DataSegmentKiller
 
-The easiest way of testing the segment killing is marking a segment as not used and then starting a killing task through the old Coordinator console.
+The easiest way of testing the segment killing is marking a segment as not used and then starting a killing task in the [web console](../operations/web-console.md).
 
 To mark a segment as not used, you need to connect to your metadata storage and update the `used` column to `false` on the segment table rows.
 
-To start a segment killing task, you need to access the old Coordinator console `http://<COODRINATOR_IP>:<COORDINATOR_PORT/old-console/kill.html` then select the appropriate datasource and then input a time range (e.g. `2000/3000`).
+To start a segment killing task, you need to access the web console then select `issue kill task` for the appropriate datasource.
 
 After the killing task ends, `index.zip` (`partitionNum_index.zip` for HDFS data storage) file should be deleted from the data storage.
 

@@ -32,8 +32,8 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -70,6 +70,7 @@ public class AvgSqlAggregator implements SqlAggregator
   {
 
     final List<DruidExpression> arguments = Aggregations.getArgumentsForSimpleAggregator(
+        rexBuilder,
         plannerContext,
         rowSignature,
         aggregateCall,
@@ -93,13 +94,13 @@ public class AvgSqlAggregator implements SqlAggregator
 
     final DruidExpression arg = Iterables.getOnlyElement(arguments);
 
-    final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
-    final ValueType sumType;
+    final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();
+    final ColumnType sumType;
     // Use 64-bit sum regardless of the type of the AVG aggregator.
     if (SqlTypeName.INT_TYPES.contains(aggregateCall.getType().getSqlTypeName())) {
-      sumType = ValueType.LONG;
+      sumType = ColumnType.LONG;
     } else {
-      sumType = ValueType.DOUBLE;
+      sumType = ColumnType.DOUBLE;
     }
 
     final String fieldName;
@@ -108,6 +109,7 @@ public class AvgSqlAggregator implements SqlAggregator
       fieldName = arg.getDirectColumn();
     } else {
       final RexNode resolutionArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           Iterables.getOnlyElement(aggregateCall.getArgList())

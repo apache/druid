@@ -53,7 +53,8 @@ public class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQue
       @JsonProperty("chatHandlerTimeout") @Nullable Duration chatHandlerTimeout,
       @JsonProperty("chatHandlerNumRetries") @Nullable Integer chatHandlerNumRetries,
       @JsonProperty("maxNumSegmentsToMerge") @Nullable Integer maxNumSegmentsToMerge,
-      @JsonProperty("totalNumMergeTasks") @Nullable Integer totalNumMergeTasks
+      @JsonProperty("totalNumMergeTasks") @Nullable Integer totalNumMergeTasks,
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
   )
   {
     super(
@@ -75,7 +76,8 @@ public class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQue
         chatHandlerTimeout,
         chatHandlerNumRetries,
         maxNumSegmentsToMerge,
-        totalNumMergeTasks
+        totalNumMergeTasks,
+        maxColumnsToMerge
     );
   }
 

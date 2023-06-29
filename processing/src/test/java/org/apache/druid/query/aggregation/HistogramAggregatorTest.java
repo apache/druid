@@ -114,7 +114,7 @@ public class HistogramAggregatorTest
     );
     HistogramBufferAggregator agg = new HistogramBufferAggregator(selector, breaks);
 
-    ByteBuffer buf = ByteBuffer.allocateDirect(factory.getMaxIntermediateSizeWithNulls());
+    ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSizeWithNulls());
     int position = 0;
 
     agg.init(buf, position);

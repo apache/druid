@@ -27,7 +27,7 @@ export async function createBrowser(): Promise<playwright.Browser> {
   const headless = process.env['DRUID_E2E_TEST_HEADLESS'] || TRUE;
   const debug = headless !== TRUE;
   const launchOptions: any = {
-    args: [`--window-size=${WIDTH},${HEIGHT + PADDING}`],
+    args: [`--window-size=${WIDTH},${HEIGHT + PADDING}`, `--disable-local-storage`],
   };
   if (debug) {
     launchOptions.headless = false;

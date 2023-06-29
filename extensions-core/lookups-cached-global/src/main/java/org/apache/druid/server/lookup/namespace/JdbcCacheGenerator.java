@@ -105,7 +105,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
       );
       final long duration = System.nanoTime() - startNs;
       LOG.info(
-          "Finished loading %,d values (%d bytes) for [%s] in %,d ns",
+          "Finished loading %d values (%d bytes) for [%s] in %d ns",
           populateResult.getEntries(),
           populateResult.getBytes(),
           entryId,
@@ -151,7 +151,7 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     final String keyColumn = namespace.getKeyColumn();
 
     return handle.createQuery(buildLookupQuery(table, filter, keyColumn, valueColumn))
-            .map((index1, r1, ctx1) -> new Pair<>(r1.getString(keyColumn), r1.getString(valueColumn)))
+            .map((index1, r1, ctx1) -> new Pair<>(r1.getString(1), r1.getString(2)))
             .iterator();
   }
 

@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.joda.time.Duration;
 
 import javax.validation.constraints.NotNull;
 import java.io.File;
@@ -54,6 +55,9 @@ public class FileRequestLoggerProvider implements RequestLoggerProvider
   @Json
   private ObjectMapper jsonMapper = null;
 
+  @JsonProperty
+  private Duration durationToRetain;
+
   @Override
   public RequestLogger get()
   {
@@ -61,7 +65,8 @@ public class FileRequestLoggerProvider implements RequestLoggerProvider
         jsonMapper,
         factory.create(1, "RequestLogger-%s"),
         dir,
-        filePattern
+        filePattern,
+        durationToRetain
     );
     log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;

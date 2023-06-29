@@ -27,15 +27,20 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
 
-public class CsvInputSourceSamplerTest
+public class CsvInputSourceSamplerTest extends InitializedNullHandlingTest
 {
   @Test
   public void testCSVColumnAllNull()
@@ -60,7 +65,7 @@ public class CsvInputSourceSamplerTest
     );
     final InputSource inputSource = new InlineInputSource(String.join("\n", strCsvRows));
     final InputFormat inputFormat = new CsvInputFormat(null, null, null, true, 0);
-    final InputSourceSampler inputSourceSampler = new InputSourceSampler();
+    final InputSourceSampler inputSourceSampler = new InputSourceSampler(new DefaultObjectMapper());
 
     final SamplerResponse response = inputSourceSampler.sample(
         inputSource,
@@ -72,6 +77,25 @@ public class CsvInputSourceSamplerTest
     Assert.assertEquals(4, response.getNumRowsRead());
     Assert.assertEquals(4, response.getNumRowsIndexed());
     Assert.assertEquals(4, response.getData().size());
+    Assert.assertEquals(
+        ImmutableList.of(
+            new StringDimensionSchema("FirstName"),
+            new StringDimensionSchema("LastName"),
+            new StringDimensionSchema("Number"),
+            new StringDimensionSchema("Gender")
+        ),
+        response.getLogicalDimensions()
+    );
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .add("__time", ColumnType.LONG)
+                    .add("FirstName", ColumnType.STRING)
+                    .add("LastName", ColumnType.STRING)
+                    .add("Number", ColumnType.STRING)
+                    .add("Gender", ColumnType.STRING)
+                    .build(),
+        response.getLogicalSegmentSchema()
+    );
 
     List<SamplerResponseRow> data = response.getData();
 

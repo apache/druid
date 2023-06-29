@@ -34,8 +34,11 @@ import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.MapStringDynamicConfigProvider;
 import org.apache.druid.segment.TestHelper;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.MetricName;
+import org.apache.kafka.common.metrics.KafkaMetric;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -57,6 +60,7 @@ public class KafkaRecordSupplierTest
 {
 
   private static String topic = "topic";
+  private static String additonal_parameter = "additional.parameter";
   private static long poll_timeout_millis = 1000;
   private static int pollRetry = 5;
   private static int topicPosFix = 0;
@@ -156,6 +160,30 @@ public class KafkaRecordSupplierTest
     }
   }
 
+
+  public static class TestKafkaDeserializerRequiresParameter implements Deserializer<byte[]>
+  {
+    @Override
+    public void configure(Map<String, ?> map, boolean b)
+    {
+      if (!map.containsKey("additional.parameter")) {
+        throw new IllegalStateException("require additional.parameter configured");
+      }
+    }
+
+    @Override
+    public void close()
+    {
+
+    }
+
+    @Override
+    public byte[] deserialize(String topic, byte[] data)
+    {
+      return data;
+    }
+  }
+
   @BeforeClass
   public static void setupClass() throws Exception
   {
@@ -202,7 +230,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
 
@@ -232,7 +260,8 @@ public class KafkaRecordSupplierTest
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
         properties,
-        OBJECT_MAPPER
+        OBJECT_MAPPER,
+        null
     );
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
@@ -242,6 +271,44 @@ public class KafkaRecordSupplierTest
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
     Assert.assertEquals(ImmutableSet.of(0, 1), recordSupplier.getPartitionIds(topic));
 
+    recordSupplier.close();
+  }
+
+
+  @Test
+  public void testSupplierSetupCustomDeserializerRequiresParameter()
+  {
+
+    Map<String, Object> properties = kafkaServer.consumerProperties();
+    properties.put("key.deserializer", KafkaRecordSupplierTest.TestKafkaDeserializerRequiresParameter.class.getName());
+    properties.put("value.deserializer", KafkaRecordSupplierTest.TestKafkaDeserializerRequiresParameter.class.getName());
+    properties.put(additonal_parameter, "stringValue");
+
+    KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
+            properties,
+            OBJECT_MAPPER,
+            null
+    );
+
+    Assert.assertTrue(recordSupplier.getAssignment().isEmpty()); //just test recordSupplier is initiated
+    recordSupplier.close();
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testSupplierSetupCustomDeserializerRequiresParameterButMissingIt()
+  {
+
+    Map<String, Object> properties = kafkaServer.consumerProperties();
+    properties.put("key.deserializer", KafkaRecordSupplierTest.TestKafkaDeserializerRequiresParameter.class.getName());
+    properties.put("value.deserializer", KafkaRecordSupplierTest.TestKafkaDeserializerRequiresParameter.class.getName());
+
+    KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
+            properties,
+            OBJECT_MAPPER,
+            null
+    );
+
+    Assert.assertTrue(recordSupplier.getAssignment().isEmpty()); //just test recordSupplier is initiated
     recordSupplier.close();
   }
 
@@ -263,7 +330,8 @@ public class KafkaRecordSupplierTest
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
         properties,
-        OBJECT_MAPPER
+        OBJECT_MAPPER,
+        null
     );
 
     recordSupplier.assign(partitions);
@@ -297,7 +365,10 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER);
+        kafkaServer.consumerProperties(),
+        OBJECT_MAPPER,
+        null
+    );
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -338,7 +409,7 @@ public class KafkaRecordSupplierTest
 
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -409,7 +480,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -452,7 +523,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -485,7 +556,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
 
     recordSupplier.assign(partitions);
 
@@ -511,7 +582,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -546,7 +617,7 @@ public class KafkaRecordSupplierTest
   public void getLatestSequenceNumberWhenPartitionIsEmptyAndUseEarliestOffsetShouldReturnsValidNonNull()
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
     StreamPartition<Integer> streamPartition = StreamPartition.of(topic, 0);
     Set<StreamPartition<Integer>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
@@ -558,7 +629,7 @@ public class KafkaRecordSupplierTest
   public void getEarliestSequenceNumberWhenPartitionIsEmptyAndUseEarliestOffsetShouldReturnsValidNonNull()
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
     StreamPartition<Integer> streamPartition = StreamPartition.of(topic, 0);
     Set<StreamPartition<Integer>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
@@ -570,7 +641,7 @@ public class KafkaRecordSupplierTest
   public void getLatestSequenceNumberWhenPartitionIsEmptyAndUseLatestOffsetShouldReturnsValidNonNull()
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
     StreamPartition<Integer> streamPartition = StreamPartition.of(topic, 0);
     Set<StreamPartition<Integer>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
@@ -582,7 +653,7 @@ public class KafkaRecordSupplierTest
   public void getEarliestSequenceNumberWhenPartitionIsEmptyAndUseLatestOffsetShouldReturnsValidNonNull()
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        kafkaServer.consumerProperties(), OBJECT_MAPPER);
+        kafkaServer.consumerProperties(), OBJECT_MAPPER, null);
     StreamPartition<Integer> streamPartition = StreamPartition.of(topic, 0);
     Set<StreamPartition<Integer>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
@@ -615,6 +686,27 @@ public class KafkaRecordSupplierTest
     Assert.assertEquals("value.1", properties.getProperty("kafka.prop.1"));
     Assert.assertEquals("value.2", properties.getProperty("kafka.prop.2"));
     Assert.assertEquals("pwd2", properties.getProperty(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY));
+  }
+
+  @Test
+  public void testUseKafkaConsumerOverrides()
+  {
+    KafkaConsumer<byte[], byte[]> kafkaConsumer = KafkaRecordSupplier.getKafkaConsumer(
+        OBJECT_MAPPER,
+        kafkaServer.consumerProperties(),
+        originalConsumerProperties -> {
+          final Map<String, Object> newMap = new HashMap<>(originalConsumerProperties);
+          newMap.put("client.id", "overrideConfigTest");
+          return newMap;
+        }
+    );
+
+    // We set a client ID via config override, it should appear in the metric name tags
+    Map<MetricName, KafkaMetric> metrics = (Map<MetricName, KafkaMetric>) kafkaConsumer.metrics();
+    for (MetricName metricName : metrics.keySet()) {
+      Assert.assertEquals("overrideConfigTest", metricName.tags().get("client-id"));
+      break;
+    }
   }
 
   private void insertData() throws ExecutionException, InterruptedException

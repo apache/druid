@@ -21,7 +21,7 @@ package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.segment.indexing.IOConfig;
+import org.apache.druid.segment.indexing.BatchIOConfig;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -45,7 +45,7 @@ public class ClientCompactionIOConfig
   )
   {
     this.inputSpec = inputSpec;
-    this.dropExisting = dropExisting == null ? IOConfig.DEFAULT_DROP_EXISTING : dropExisting;
+    this.dropExisting = dropExisting == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : dropExisting;
   }
 
   @JsonProperty

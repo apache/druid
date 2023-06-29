@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.input;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
@@ -50,7 +51,7 @@ public class DruidSegmentInputFormatTest
     DruidSegmentInputFormat format = new DruidSegmentInputFormat(null, null);
     InputEntityReader reader = format.createReader(
         INPUT_ROW_SCHEMA,
-        DruidSegmentReaderTest.makeInputEntity(Intervals.of("2000/P1D"), null),
+        DruidSegmentReaderTest.makeInputEntity(Intervals.of("2000/P1D"), null, ImmutableList.of("s", "d"), ImmutableList.of("cnt", "met_s")),
         null
     );
     Assert.assertTrue(reader instanceof DruidSegmentReader);

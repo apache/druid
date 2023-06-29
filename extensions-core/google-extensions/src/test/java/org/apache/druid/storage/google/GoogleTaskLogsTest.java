@@ -27,7 +27,6 @@ import com.google.api.services.storage.model.StorageObject;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteSource;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.FileUtils;
@@ -42,6 +41,7 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -110,6 +110,35 @@ public class GoogleTaskLogsTest extends EasyMockSupport
   }
 
   @Test
+  public void testPushTaskStatus() throws Exception
+  {
+    final File tmpDir = FileUtils.createTempDir();
+
+    try {
+      final File statusFile = new File(tmpDir, "status.json");
+      BufferedWriter output = Files.newBufferedWriter(statusFile.toPath(), StandardCharsets.UTF_8);
+      output.write("{}");
+      output.close();
+
+      storage.insert(
+          EasyMock.eq(BUCKET),
+          EasyMock.eq(PREFIX + "/" + TASKID),
+          EasyMock.anyObject(InputStreamContent.class)
+      );
+      EasyMock.expectLastCall();
+
+      replayAll();
+
+      googleTaskLogs.pushTaskLog(TASKID, statusFile);
+
+      verifyAll();
+    }
+    finally {
+      FileUtils.deleteDirectory(tmpDir);
+    }
+  }
+
+  @Test
   public void testStreamTaskLogWithoutOffset() throws Exception
   {
     final String testLog = "hello this is a log";
@@ -121,10 +150,10 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = googleTaskLogs.streamTaskLog(TASKID, 0);
+    final Optional<InputStream> stream = googleTaskLogs.streamTaskLog(TASKID, 0);
 
     final StringWriter writer = new StringWriter();
-    IOUtils.copy(byteSource.get().openStream(), writer, "UTF-8");
+    IOUtils.copy(stream.get(), writer, "UTF-8");
     Assert.assertEquals(writer.toString(), testLog);
 
     verifyAll();
@@ -144,10 +173,10 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = googleTaskLogs.streamTaskLog(TASKID, offset);
+    final Optional<InputStream> stream = googleTaskLogs.streamTaskLog(TASKID, offset);
 
     final StringWriter writer = new StringWriter();
-    IOUtils.copy(byteSource.get().openStream(), writer, "UTF-8");
+    IOUtils.copy(stream.get(), writer, "UTF-8");
     Assert.assertEquals(writer.toString(), expectedLog);
 
     verifyAll();
@@ -168,11 +197,32 @@ public class GoogleTaskLogsTest extends EasyMockSupport
 
     replayAll();
 
-    final Optional<ByteSource> byteSource = googleTaskLogs.streamTaskLog(TASKID, offset);
+    final Optional<InputStream> stream = googleTaskLogs.streamTaskLog(TASKID, offset);
 
     final StringWriter writer = new StringWriter();
-    IOUtils.copy(byteSource.get().openStream(), writer, "UTF-8");
+    IOUtils.copy(stream.get(), writer, "UTF-8");
     Assert.assertEquals(writer.toString(), expectedLog);
+
+    verifyAll();
+  }
+
+  @Test
+  public void testStreamTaskStatus() throws Exception
+  {
+    final String taskStatus = "{}";
+
+    final String logPath = PREFIX + "/" + TASKID + ".status.json";
+    EasyMock.expect(storage.exists(BUCKET, logPath)).andReturn(true);
+    EasyMock.expect(storage.size(BUCKET, logPath)).andReturn((long) taskStatus.length());
+    EasyMock.expect(storage.get(BUCKET, logPath, 0)).andReturn(new ByteArrayInputStream(StringUtils.toUtf8(taskStatus)));
+
+    replayAll();
+
+    final Optional<InputStream> stream = googleTaskLogs.streamTaskStatus(TASKID);
+
+    final StringWriter writer = new StringWriter();
+    IOUtils.copy(stream.get(), writer, "UTF-8");
+    Assert.assertEquals(writer.toString(), taskStatus);
 
     verifyAll();
   }

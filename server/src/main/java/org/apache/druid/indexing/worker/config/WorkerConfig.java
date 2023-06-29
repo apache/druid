@@ -26,6 +26,7 @@ import org.joda.time.Period;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.List;
 
 /**
  */
@@ -44,6 +45,12 @@ public class WorkerConfig
   private int capacity = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1);
 
   @JsonProperty
+  private long baseTaskDirSize = Long.MAX_VALUE;
+
+  @JsonProperty
+  private List<String> baseTaskDirs = null;
+
+  @JsonProperty
   @NotNull
   private String category = DEFAULT_CATEGORY;
 
@@ -53,13 +60,13 @@ public class WorkerConfig
   private long intermediaryPartitionCleanupPeriodSec = 300L;
 
   @JsonProperty
-  private Period intermediaryPartitionTimeout = new Period("P1D");
+  private Period intermediaryPartitionTimeout = new Period("PT5M");
 
   @JsonProperty
-  private final long globalIngestionHeapLimitBytes = Runtime.getRuntime().maxMemory() / 6;
+  private long globalIngestionHeapLimitBytes = Runtime.getRuntime().maxMemory() / 6;
 
   @JsonProperty
-  private final int numConcurrentMerges = Math.max(1, capacity / 2);
+  private int numConcurrentMerges = Math.max(1, capacity / 2);
 
   public String getIp()
   {
@@ -76,6 +83,23 @@ public class WorkerConfig
     return capacity;
   }
 
+  public WorkerConfig setCapacity(int capacity)
+  {
+    this.capacity = capacity;
+    return this;
+  }
+
+  public long getBaseTaskDirSize()
+  {
+    return baseTaskDirSize;
+  }
+
+  public List<String> getBaseTaskDirs()
+  {
+    return baseTaskDirs;
+  }
+
+  @NotNull
   public String getCategory()
   {
     return category;
@@ -104,5 +128,123 @@ public class WorkerConfig
   public int getNumConcurrentMerges()
   {
     return numConcurrentMerges;
+  }
+
+  public Builder cloneBuilder()
+  {
+    return new Builder(this);
+  }
+
+  public static class Builder
+  {
+    private String ip;
+    private String version;
+    private int capacity;
+    private long baseTaskDirSize;
+    private List<String> baseTaskDirs;
+    private String category;
+    private long intermediaryPartitionDiscoveryPeriodSec;
+    private long intermediaryPartitionCleanupPeriodSec;
+    private Period intermediaryPartitionTimeout;
+    private long globalIngestionHeapLimitBytes;
+    private int numConcurrentMerges;
+
+    private Builder(WorkerConfig input)
+    {
+      this.ip = input.ip;
+      this.version = input.version;
+      this.capacity = input.capacity;
+      this.baseTaskDirSize = input.baseTaskDirSize;
+      this.baseTaskDirs = input.baseTaskDirs;
+      this.category = input.category;
+      this.intermediaryPartitionDiscoveryPeriodSec = input.intermediaryPartitionDiscoveryPeriodSec;
+      this.intermediaryPartitionCleanupPeriodSec = input.intermediaryPartitionCleanupPeriodSec;
+      this.intermediaryPartitionTimeout = input.intermediaryPartitionTimeout;
+      this.globalIngestionHeapLimitBytes = input.globalIngestionHeapLimitBytes;
+      this.numConcurrentMerges = input.numConcurrentMerges;
+    }
+
+    public Builder setIp(String ip)
+    {
+      this.ip = ip;
+      return this;
+    }
+
+    public Builder setVersion(String version)
+    {
+      this.version = version;
+      return this;
+    }
+
+    public Builder setCapacity(int capacity)
+    {
+      this.capacity = capacity;
+      return this;
+    }
+
+    public Builder setBaseTaskDirSize(long baseTaskDirSize)
+    {
+      this.baseTaskDirSize = baseTaskDirSize;
+      return this;
+    }
+
+    public Builder setBaseTaskDirs(List<String> baseTaskDirs)
+    {
+      this.baseTaskDirs = baseTaskDirs;
+      return this;
+    }
+
+    public Builder setCategory(String category)
+    {
+      this.category = category;
+      return this;
+    }
+
+    public Builder setIntermediaryPartitionDiscoveryPeriodSec(long intermediaryPartitionDiscoveryPeriodSec)
+    {
+      this.intermediaryPartitionDiscoveryPeriodSec = intermediaryPartitionDiscoveryPeriodSec;
+      return this;
+    }
+
+    public Builder setIntermediaryPartitionCleanupPeriodSec(long intermediaryPartitionCleanupPeriodSec)
+    {
+      this.intermediaryPartitionCleanupPeriodSec = intermediaryPartitionCleanupPeriodSec;
+      return this;
+    }
+
+    public Builder setIntermediaryPartitionTimeout(Period intermediaryPartitionTimeout)
+    {
+      this.intermediaryPartitionTimeout = intermediaryPartitionTimeout;
+      return this;
+    }
+
+    public Builder setGlobalIngestionHeapLimitBytes(long globalIngestionHeapLimitBytes)
+    {
+      this.globalIngestionHeapLimitBytes = globalIngestionHeapLimitBytes;
+      return this;
+    }
+
+    public Builder setNumConcurrentMerges(int numConcurrentMerges)
+    {
+      this.numConcurrentMerges = numConcurrentMerges;
+      return this;
+    }
+
+    public WorkerConfig build()
+    {
+      final WorkerConfig retVal = new WorkerConfig();
+      retVal.ip = this.ip;
+      retVal.version = this.version;
+      retVal.capacity = this.capacity;
+      retVal.baseTaskDirSize = this.baseTaskDirSize;
+      retVal.baseTaskDirs = this.baseTaskDirs;
+      retVal.category = this.category;
+      retVal.intermediaryPartitionDiscoveryPeriodSec = this.intermediaryPartitionDiscoveryPeriodSec;
+      retVal.intermediaryPartitionCleanupPeriodSec = this.intermediaryPartitionCleanupPeriodSec;
+      retVal.intermediaryPartitionTimeout = this.intermediaryPartitionTimeout;
+      retVal.globalIngestionHeapLimitBytes = this.globalIngestionHeapLimitBytes;
+      retVal.numConcurrentMerges = this.numConcurrentMerges;
+      return retVal;
+    }
   }
 }

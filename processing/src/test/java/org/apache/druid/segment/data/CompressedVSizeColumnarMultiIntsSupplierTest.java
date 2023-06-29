@@ -21,30 +21,23 @@ package org.apache.druid.segment.data;
 
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.io.Closer;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.Channels;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 
 /**
+ *
  */
-public class CompressedVSizeColumnarMultiIntsSupplierTest
+public class CompressedVSizeColumnarMultiIntsSupplierTest extends CompressedVSizeColumnarMultiIntsSupplierTestBase
 {
   private Closer closer;
-  protected List<int[]> vals;
+  private List<int[]> vals;
+  private WritableSupplier<ColumnarMultiInts> columnarMultiIntsSupplier;
 
-  protected WritableSupplier<ColumnarMultiInts> columnarMultiIntsSupplier;
-
-  @Before
+  @Override
   public void setUpSimple()
   {
     closer = Closer.create();
@@ -55,84 +48,48 @@ public class CompressedVSizeColumnarMultiIntsSupplierTest
         new int[]{11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
     );
 
-    columnarMultiIntsSupplier = CompressedVSizeColumnarMultiIntsSupplier.fromIterable(
-        Iterables.transform(vals, input -> VSizeColumnarInts.fromArray(input, 20)),
-        20,
-        ByteOrder.nativeOrder(),
-        CompressionStrategy.LZ4,
+    columnarMultiIntsSupplier = wrapSupplier(
+        CompressedVSizeColumnarMultiIntsSupplier.fromIterable(
+            Iterables.transform(vals, input -> VSizeColumnarInts.fromArray(input, 20)),
+            20,
+            ByteOrder.nativeOrder(),
+            CompressionStrategy.LZ4,
+            closer
+        ),
         closer
     );
   }
 
-  @After
+  @Override
   public void teardown() throws IOException
   {
+    closer.close();
+    closer = null;
     columnarMultiIntsSupplier = null;
     vals = null;
-    closer.close();
   }
 
-  @Test
-  public void testSanity()
+  @Override
+  public List<int[]> getValsUsed()
   {
-    assertSame(vals, columnarMultiIntsSupplier.get());
+    return vals;
   }
 
-  @Test
-  public void testSerde() throws IOException
+  @Override
+  public WritableSupplier<ColumnarMultiInts> getColumnarMultiIntsSupplier()
   {
-    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    columnarMultiIntsSupplier.writeTo(Channels.newChannel(baos), null);
-
-    final byte[] bytes = baos.toByteArray();
-    Assert.assertEquals(columnarMultiIntsSupplier.getSerializedSize(), bytes.length);
-    WritableSupplier<ColumnarMultiInts> deserializedColumnarMultiInts = fromByteBuffer(ByteBuffer.wrap(bytes));
-
-    assertSame(vals, deserializedColumnarMultiInts.get());
+    return columnarMultiIntsSupplier;
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testGetInvalidElementInRow()
+  @Override
+  public WritableSupplier<ColumnarMultiInts> fromByteBuffer(ByteBuffer buffer)
   {
-    columnarMultiIntsSupplier.get().get(3).get(15);
-  }
-
-  @Test
-  public void testIterators()
-  {
-    Iterator<IndexedInts> iterator = columnarMultiIntsSupplier.get().iterator();
-    int row = 0;
-    while (iterator.hasNext()) {
-      final int[] ints = vals.get(row);
-      final IndexedInts vSizeIndexedInts = iterator.next();
-
-      Assert.assertEquals(ints.length, vSizeIndexedInts.size());
-      for (int i = 0, size = vSizeIndexedInts.size(); i < size; i++) {
-        Assert.assertEquals(ints[i], vSizeIndexedInts.get(i));
-      }
-      row++;
-    }
-  }
-
-  private void assertSame(List<int[]> someInts, ColumnarMultiInts columnarMultiInts)
-  {
-    Assert.assertEquals(someInts.size(), columnarMultiInts.size());
-    for (int i = 0; i < columnarMultiInts.size(); ++i) {
-      final int[] ints = someInts.get(i);
-      final IndexedInts vSizeIndexedInts = columnarMultiInts.get(i);
-
-      Assert.assertEquals(ints.length, vSizeIndexedInts.size());
-      for (int j = 0; j < ints.length; j++) {
-        Assert.assertEquals(ints[j], vSizeIndexedInts.get(j));
-      }
-    }
-  }
-
-  protected WritableSupplier<ColumnarMultiInts> fromByteBuffer(ByteBuffer buffer)
-  {
-    return CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(
-        buffer,
-        ByteOrder.nativeOrder()
+    return wrapSupplier(
+        CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(
+            buffer,
+            ByteOrder.nativeOrder()
+        ),
+        closer
     );
   }
 }

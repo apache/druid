@@ -807,6 +807,36 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertEquals(ExpressionType.STRING_ARRAY, thePlan.getOutputType());
   }
 
+  @Test
+  public void testNestedColumnExpression()
+  {
+    ExpressionPlan thePlan = plan("json_object('long1', long1, 'long2', long2)");
+    Assert.assertFalse(
+        thePlan.is(
+            ExpressionPlan.Trait.NON_SCALAR_OUTPUT,
+            ExpressionPlan.Trait.SINGLE_INPUT_SCALAR,
+            ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE,
+            ExpressionPlan.Trait.UNKNOWN_INPUTS,
+            ExpressionPlan.Trait.INCOMPLETE_INPUTS,
+            ExpressionPlan.Trait.NEEDS_APPLIED,
+            ExpressionPlan.Trait.NON_SCALAR_INPUTS,
+            ExpressionPlan.Trait.VECTORIZABLE
+        )
+    );
+    Assert.assertEquals(ExpressionType.NESTED_DATA, thePlan.getOutputType());
+    ColumnCapabilities inferred = thePlan.inferColumnCapabilities(
+        ExpressionType.toColumnType(thePlan.getOutputType())
+    );
+    Assert.assertEquals(
+        ColumnType.NESTED_DATA.getType(),
+        inferred.getType()
+    );
+    Assert.assertEquals(
+        ColumnType.NESTED_DATA.getComplexTypeName(),
+        inferred.getComplexTypeName()
+    );
+  }
+
   private static ExpressionPlan plan(String expression)
   {
     return ExpressionPlanner.plan(SYNTHETIC_INSPECTOR, Parser.parse(expression, TestExprMacroTable.INSTANCE));

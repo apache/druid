@@ -32,6 +32,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import org.apache.curator.framework.CuratorFramework;
@@ -77,12 +78,12 @@ import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.server.audit.AuditManagerProvider;
-import org.apache.druid.server.coordinator.BalancerStrategyFactory;
-import org.apache.druid.server.coordinator.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.KillStalePendingSegments;
-import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
+import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
+import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
+import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
@@ -93,6 +94,8 @@ import org.apache.druid.server.coordinator.duty.KillDatasourceMetadata;
 import org.apache.druid.server.coordinator.duty.KillRules;
 import org.apache.druid.server.coordinator.duty.KillSupervisors;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
+import org.apache.druid.server.coordinator.duty.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.http.ClusterResource;
 import org.apache.druid.server.http.CompactionResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
@@ -118,8 +121,10 @@ import org.eclipse.jetty.server.Server;
 import org.joda.time.Duration;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -186,7 +191,7 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(MetadataStorage.class).toProvider(MetadataStorageProvider.class);
 
-            JsonConfigProvider.bind(binder, "druid.manager.segments", SegmentsMetadataManagerConfig.class);
+            JsonConfigProvider.bind(binder, SegmentsMetadataManagerConfig.CONFIG_PREFIX, SegmentsMetadataManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.lookups", LookupCoordinatorManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.balancer", BalancerStrategyFactory.class);
@@ -258,13 +263,13 @@ public class CliCoordinator extends ServerRunnable
                   "'druid.coordinator.merge.on' is not supported anymore. "
                   + "Please consider using Coordinator's automatic compaction instead. "
                   + "See https://druid.apache.org/docs/latest/operations/segment-optimization.html and "
-                  + "https://druid.apache.org/docs/latest/operations/api-reference.html#compaction-configuration "
+                  + "https://druid.apache.org/docs/latest/api-reference/api-reference.html#compaction-configuration "
                   + "for more details about compaction."
               );
             }
             conditionalIndexingServiceDutyMultibind.addConditionBinding(
                 "druid.coordinator.kill.on",
-                "true",
+                "false",
                 Predicates.equalTo("true"),
                 KillUnusedSegments.class
             );
@@ -312,6 +317,9 @@ public class CliCoordinator extends ServerRunnable
                 KillCompactionConfig.class
             );
 
+            //TODO: make this configurable when there are multiple search policies
+            binder.bind(CompactionSegmentSearchPolicy.class).to(NewestSegmentFirstPolicy.class);
+
             bindAnnouncer(
                 binder,
                 Coordinator.class,
@@ -326,6 +334,10 @@ public class CliCoordinator extends ServerRunnable
               binder.bind(TaskStorage.class).toProvider(Providers.of(null));
               binder.bind(TaskMaster.class).toProvider(Providers.of(null));
               binder.bind(RowIngestionMetersFactory.class).toProvider(Providers.of(null));
+              // Bind HeartbeatSupplier only when the service operates independently of Overlord.
+              binder.bind(new TypeLiteral<Supplier<Map<String, Object>>>() {})
+                  .annotatedWith(Names.named("heartbeat"))
+                  .toProvider(HeartbeatSupplier.class);
             }
 
             binder.bind(CoordinatorCustomDutyGroups.class)
@@ -435,11 +447,7 @@ public class CliCoordinator extends ServerRunnable
               adjustedProps.put(typeProperty, dutyName);
             }
             coordinatorCustomDutyProvider.inject(adjustedProps, configurator);
-            Supplier<CoordinatorCustomDuty> coordinatorCustomDutySupplier = coordinatorCustomDutyProvider.get();
-            if (coordinatorCustomDutySupplier == null) {
-              throw new ISE("Could not create CoordinatorCustomDuty with name: %s for group: %s", dutyName, coordinatorCustomDutyGroupName);
-            }
-            CoordinatorCustomDuty coordinatorCustomDuty = coordinatorCustomDutySupplier.get();
+            CoordinatorCustomDuty coordinatorCustomDuty = coordinatorCustomDutyProvider.get();
             if (coordinatorCustomDuty == null) {
               throw new ISE("Could not create CoordinatorCustomDuty with name: %s for group: %s", dutyName, coordinatorCustomDutyGroupName);
             }
@@ -457,6 +465,28 @@ public class CliCoordinator extends ServerRunnable
       catch (Exception e) {
         throw new RuntimeException(e);
       }
+    }
+  }
+
+  private static class HeartbeatSupplier implements Provider<Supplier<Map<String, Object>>>
+  {
+    private final DruidCoordinator coordinator;
+
+    @Inject
+    public HeartbeatSupplier(DruidCoordinator coordinator)
+    {
+      this.coordinator = coordinator;
+    }
+
+    @Override
+    public Supplier<Map<String, Object>> get()
+    {
+      return () -> {
+        Map<String, Object> heartbeatTags = new HashMap<>();
+        heartbeatTags.put("leader", coordinator.isLeader() ? 1 : 0);
+
+        return heartbeatTags;
+      };
     }
   }
 }

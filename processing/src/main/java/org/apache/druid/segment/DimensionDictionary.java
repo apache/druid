@@ -23,21 +23,20 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 
 import javax.annotation.Nullable;
-
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.StampedLock;
 
 /**
  * Buildable dictionary for some comparable type. Values are unsorted, or rather sorted in the order which they are
  * added. A {@link SortedDimensionDictionary} can be constructed with a mapping of ids from this dictionary to the
  * sorted dictionary with the {@link #sort()} method.
- *
- * This dictionary is thread-safe.
+ * <p>
+ * Concrete implementations of this dictionary must be thread-safe.
  */
-public class DimensionDictionary<T extends Comparable<T>>
+public abstract class DimensionDictionary<T extends Comparable<T>>
 {
   public static final int ABSENT_VALUE_ID = -1;
   private final Class<T> cls;
@@ -52,41 +51,51 @@ public class DimensionDictionary<T extends Comparable<T>>
   private final Object2IntMap<T> valueToId = new Object2IntOpenHashMap<>();
 
   private final List<T> idToValue = new ArrayList<>();
-  private final ReentrantReadWriteLock lock;
+  private final StampedLock lock;
 
   public DimensionDictionary(Class<T> cls)
   {
     this.cls = cls;
-    this.lock = new ReentrantReadWriteLock();
+    this.lock = new StampedLock();
     valueToId.defaultReturnValue(ABSENT_VALUE_ID);
   }
 
   public int getId(@Nullable T value)
   {
-    lock.readLock().lock();
+    if (value == null) {
+      return idForNull;
+    }
+
+    long stamp = lock.readLock();
     try {
-      if (value == null) {
-        return idForNull;
-      }
       return valueToId.getInt(value);
     }
     finally {
-      lock.readLock().unlock();
+      lock.unlockRead(stamp);
     }
   }
 
   @Nullable
   public T getValue(int id)
   {
-    lock.readLock().lock();
+    if (id == idForNull) {
+      return null;
+    }
+
+    // optimistic read
+    long stamp = lock.tryOptimisticRead();
+    T output = idToValue.get(id);
+    if (lock.validate(stamp)) {
+      return output;
+    }
+
+    // classic lock
+    stamp = lock.readLock();
     try {
-      if (id == idForNull) {
-        return null;
-      }
       return idToValue.get(id);
     }
     finally {
-      lock.readLock().unlock();
+      lock.unlockRead(stamp);
     }
   }
 
@@ -94,27 +103,36 @@ public class DimensionDictionary<T extends Comparable<T>>
   {
     T[] values = (T[]) Array.newInstance(cls, ids.length);
 
-    lock.readLock().lock();
+    long stamp = lock.readLock();
     try {
       for (int i = 0; i < ids.length; i++) {
-        values[i] = (ids[i] == idForNull) ? null : idToValue.get(ids[i]);
+        values[i] = idToValue.get(ids[i]);
       }
       return values;
     }
     finally {
-      lock.readLock().unlock();
+      lock.unlockRead(stamp);
     }
   }
 
   public int size()
   {
-    lock.readLock().lock();
+    // using idToValue rather than valueToId because the valueToId doesn't account null value, if it is present.
+
+    // optimistic read
+    long stamp = lock.tryOptimisticRead();
+    int size = idToValue.size();
+    if (lock.validate(stamp)) {
+      return size;
+    }
+
+    // classic lock
+    stamp = lock.readLock();
     try {
-      // using idToValue rather than valueToId because the valueToId doesn't account null value, if it is present.
       return idToValue.size();
     }
     finally {
-      lock.readLock().unlock();
+      lock.unlockRead(stamp);
     }
   }
 
@@ -134,56 +152,104 @@ public class DimensionDictionary<T extends Comparable<T>>
 
   public int add(@Nullable T originalValue)
   {
-    lock.writeLock().lock();
-    try {
-      if (originalValue == null) {
-        if (idForNull == ABSENT_VALUE_ID) {
-          idForNull = idToValue.size();
-          idToValue.add(null);
+    if (originalValue == null) {
+      return addNull();
+    }
+
+    long stamp = lock.tryReadLock();
+    if (stamp != 0) {
+      try {
+        int existing = valueToId.getInt(originalValue);
+        if (existing >= 0) {
+          return existing;
         }
-        return idForNull;
       }
-      int prev = valueToId.getInt(originalValue);
+      finally {
+        lock.unlockRead(stamp);
+      }
+    }
+
+    long extraSize = 0;
+    if (computeOnHeapSize()) {
+      // Add size of new dim value and 2 references (valueToId and idToValue)
+      extraSize = estimateSizeOfValue(originalValue) + 2L * Long.BYTES;
+    }
+
+    stamp = lock.writeLock();
+    try {
+      final int index = idToValue.size();
+      final int prev = valueToId.putIfAbsent(originalValue, index);
       if (prev >= 0) {
         return prev;
       }
-      final int index = idToValue.size();
-      valueToId.put(originalValue, index);
-      idToValue.add(originalValue);
 
-      if (computeOnHeapSize()) {
-        // Add size of new dim value and 2 references (valueToId and idToValue)
-        sizeInBytes.addAndGet(estimateSizeOfValue(originalValue) + 2L * Long.BYTES);
-      }
+      idToValue.add(originalValue);
+      sizeInBytes.addAndGet(extraSize);
 
       minValue = minValue == null || minValue.compareTo(originalValue) > 0 ? originalValue : minValue;
       maxValue = maxValue == null || maxValue.compareTo(originalValue) < 0 ? originalValue : maxValue;
       return index;
     }
     finally {
-      lock.writeLock().unlock();
+      lock.unlockWrite(stamp);
+    }
+  }
+
+  private int addNull()
+  {
+    if (idForNull != ABSENT_VALUE_ID) {
+      return idForNull;
+    }
+
+    long stamp = lock.writeLock();
+    try {
+      // check, in case it was changed by another thread
+      if (idForNull == ABSENT_VALUE_ID) {
+        idForNull = idToValue.size();
+        idToValue.add(null);
+      }
+      return idForNull;
+    }
+    finally {
+      lock.unlockWrite(stamp);
     }
   }
 
   public T getMinValue()
   {
-    lock.readLock().lock();
+    // optimistic read
+    long stamp = lock.tryOptimisticRead();
+    T output = minValue;
+    if (lock.validate(stamp)) {
+      return output;
+    }
+
+    // classic lock
+    stamp = lock.readLock();
     try {
       return minValue;
     }
     finally {
-      lock.readLock().unlock();
+      lock.unlockRead(stamp);
     }
   }
 
   public T getMaxValue()
   {
-    lock.readLock().lock();
+    // optimistic read
+    long stamp = lock.tryOptimisticRead();
+    T output = maxValue;
+    if (lock.validate(stamp)) {
+      return output;
+    }
+
+    // classic lock
+    stamp = lock.readLock();
     try {
       return maxValue;
     }
     finally {
-      lock.readLock().unlock();
+      lock.unlockRead(stamp);
     }
   }
 
@@ -194,36 +260,26 @@ public class DimensionDictionary<T extends Comparable<T>>
 
   public SortedDimensionDictionary<T> sort()
   {
-    lock.readLock().lock();
+    long stamp = lock.readLock();
     try {
-      return new SortedDimensionDictionary<T>(idToValue, idToValue.size());
+      return new SortedDimensionDictionary<>(idToValue, idToValue.size());
     }
     finally {
-      lock.readLock().unlock();
+      lock.unlockRead(stamp);
     }
   }
 
   /**
-   * Estimates the size of the dimension value in bytes. This method is called
-   * only when a new dimension value is being added to the lookup.
-   *
-   * @throws UnsupportedOperationException Implementations that want to estimate
-   *                                       memory must override this method.
+   * Estimates the size of the dimension value in bytes.
+   * <p>
+   * This method is called when adding a new dimension value to the lookup only
+   * if {@link #computeOnHeapSize()} returns true.
    */
-  public long estimateSizeOfValue(T value)
-  {
-    throw new UnsupportedOperationException();
-  }
+  public abstract long estimateSizeOfValue(T value);
 
   /**
    * Whether on-heap size of this dictionary should be computed.
-   *
-   * @return false, by default. Implementations that want to estimate memory
-   * must override this method.
    */
-  public boolean computeOnHeapSize()
-  {
-    return false;
-  }
+  public abstract boolean computeOnHeapSize();
 
 }

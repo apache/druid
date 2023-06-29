@@ -348,13 +348,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
         data,
         Intervals.of(interval),
         segmentDir,
-        new IndexSpec(
-            null,
-            null,
-            null,
-            null,
-            factory
-        ),
+        IndexSpec.builder().withSegmentLoader(factory).build(),
         null
     );
     final File factoryJson = new File(segmentDir, "factory.json");

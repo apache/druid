@@ -78,7 +78,7 @@ The following `jobProperties` excludes `javax.validation.` classes from being lo
 }
 ```
 
-[mapred-default.xml](https://hadoop.apache.org/docs/current/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml) documentation contains more information about this property.
+[mapred-default.xml](https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml) documentation contains more information about this property.
 
 ## Tip #3: Use specific versions of Hadoop libraries
 

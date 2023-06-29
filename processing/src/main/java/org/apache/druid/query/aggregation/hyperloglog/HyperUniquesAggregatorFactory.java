@@ -285,6 +285,12 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new HyperUniquesAggregatorFactory(newName, getFieldName(), getIsInputHyperUnique(), isRound());
+  }
+
+  @Override
   public String toString()
   {
     return "HyperUniquesAggregatorFactory{" +

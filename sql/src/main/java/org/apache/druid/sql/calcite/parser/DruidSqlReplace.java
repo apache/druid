@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.parser;
 
-import com.google.common.base.Preconditions;
 import org.apache.calcite.sql.SqlInsert;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
@@ -38,16 +37,11 @@ import javax.annotation.Nullable;
  * This class extends the {@link SqlInsert} so that this SqlNode can be used in
  * {@link org.apache.calcite.sql2rel.SqlToRelConverter} for getting converted into RelNode, and further processing
  */
-public class DruidSqlReplace extends SqlInsert
+public class DruidSqlReplace extends DruidSqlIngest
 {
   public static final String SQL_REPLACE_TIME_CHUNKS = "sqlReplaceTimeChunks";
 
   public static final SqlOperator OPERATOR = new SqlSpecialOperator("REPLACE", SqlKind.OTHER);
-
-  private final Granularity partitionedBy;
-
-  // Used in the unparse function to generate the original query since we convert the string to an enum
-  private final String partitionedByStringForUnparse;
 
   private final SqlNode replaceTimeQuery;
 
@@ -61,22 +55,20 @@ public class DruidSqlReplace extends SqlInsert
       @Nonnull SqlInsert insertNode,
       @Nullable Granularity partitionedBy,
       @Nullable String partitionedByStringForUnparse,
-      @Nonnull SqlNode replaceTimeQuery
-  ) throws ParseException
+      @Nullable SqlNodeList clusteredBy,
+      @Nullable SqlNode replaceTimeQuery
+  )
   {
     super(
         insertNode.getParserPosition(),
         (SqlNodeList) insertNode.getOperandList().get(0), // No better getter to extract this
         insertNode.getTargetTable(),
         insertNode.getSource(),
-        insertNode.getTargetColumnList()
+        insertNode.getTargetColumnList(),
+        partitionedBy,
+        partitionedByStringForUnparse,
+        clusteredBy
     );
-    if (partitionedBy == null) {
-      throw new ParseException("REPLACE statements must specify PARTITIONED BY clause explictly");
-    }
-    this.partitionedBy = partitionedBy;
-
-    this.partitionedByStringForUnparse = Preconditions.checkNotNull(partitionedByStringForUnparse);
 
     this.replaceTimeQuery = replaceTimeQuery;
   }
@@ -84,11 +76,6 @@ public class DruidSqlReplace extends SqlInsert
   public SqlNode getReplaceTimeQuery()
   {
     return replaceTimeQuery;
-  }
-
-  public Granularity getPartitionedBy()
-  {
-    return partitionedBy;
   }
 
   @Nonnull
@@ -125,5 +112,14 @@ public class DruidSqlReplace extends SqlInsert
 
     writer.keyword("PARTITIONED BY");
     writer.keyword(partitionedByStringForUnparse);
+
+    if (getClusteredBy() != null) {
+      writer.keyword("CLUSTERED BY");
+      SqlWriter.Frame frame = writer.startList("", "");
+      for (SqlNode clusterByOpts : getClusteredBy().getList()) {
+        clusterByOpts.unparse(writer, leftPrec, rightPrec);
+      }
+      writer.endList(frame);
+    }
   }
 }

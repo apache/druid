@@ -192,7 +192,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
                 LOG.debug("Scheduled db userMap poll is done");
               }
               catch (Throwable t) {
-                LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();
+                LOG.makeAlert(t, "Error occurred while polling for cachedUserMaps.").emit();
               }
               return ScheduledExecutors.Signal.REPEAT;
             }

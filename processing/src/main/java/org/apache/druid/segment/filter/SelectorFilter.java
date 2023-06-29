@@ -35,6 +35,7 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -83,16 +84,25 @@ public class SelectorFilter implements Filter
     if (!Filters.checkFilterTuningUseIndex(dimension, selector, filterTuning)) {
       return null;
     }
+    final boolean isNull = NullHandling.isNullOrEquivalent(value);
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
     if (indexSupplier == null) {
-      return Filters.makeNullIndex(NullHandling.isNullOrEquivalent(value), selector);
+      return Filters.makeNullIndex(isNull, selector);
     }
-    final StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
-    if (valueSetIndex == null) {
-      // column exists, but has no index
-      return null;
+    if (isNull) {
+      final NullValueIndex nullValueIndex = indexSupplier.as(NullValueIndex.class);
+      if (nullValueIndex == null) {
+        return null;
+      }
+      return nullValueIndex.forNull();
+    } else {
+      final StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
+      if (valueSetIndex == null) {
+        // column exists, but has no index
+        return null;
+      }
+      return valueSetIndex.forValue(value);
     }
-    return valueSetIndex.forValue(value);
   }
 
   @Override

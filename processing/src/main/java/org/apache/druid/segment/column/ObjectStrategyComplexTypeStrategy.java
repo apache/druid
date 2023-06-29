@@ -46,7 +46,7 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   public int estimateSizeBytes(@Nullable T value)
   {
     byte[] bytes = objectStrategy.toBytes(value);
-    return bytes == null ? 0 : bytes.length;
+    return Integer.BYTES + (bytes == null ? 0 : bytes.length);
   }
 
   @Override
@@ -54,8 +54,18 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   {
     final int complexLength = buffer.getInt();
     ByteBuffer dupe = buffer.duplicate();
+    dupe.order(buffer.order());
     dupe.limit(dupe.position() + complexLength);
-    return objectStrategy.fromByteBuffer(dupe, complexLength);
+    T value = objectStrategy.fromByteBuffer(dupe, complexLength);
+    buffer.position(buffer.position() + complexLength);
+    return value;
+  }
+
+  @Override
+  public boolean readRetainsBufferReference()
+  {
+    // Can't guarantee that ObjectStrategy *doesn't* retain a reference.
+    return true;
   }
 
   @Override
@@ -74,8 +84,14 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   }
 
   @Override
-  public int compare(T o1, T o2)
+  public int compare(Object o1, Object o2)
   {
-    return objectStrategy.compare(o1, o2);
+    return objectStrategy.compare((T) o1, (T) o2);
+  }
+
+  @Override
+  public T fromBytes(byte[] value)
+  {
+    return objectStrategy.fromByteBufferSafe(ByteBuffer.wrap(value), value.length);
   }
 }

@@ -26,6 +26,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.joda.time.DateTime;
 
@@ -69,8 +70,10 @@ public class HashJoinEngine
                                                       closer
                                                   );
 
-    class JoinColumnSelectorFactory implements ColumnSelectorFactory
+    class JoinColumnSelectorFactory implements ColumnSelectorFactory, RowIdSupplier
     {
+      private long rowId = 0;
+
       @Override
       public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
       {
@@ -115,6 +118,29 @@ public class HashJoinEngine
         } else {
           return leftColumnSelectorFactory.getColumnCapabilities(column);
         }
+      }
+
+      @Nullable
+      @Override
+      public RowIdSupplier getRowIdSupplier()
+      {
+        return this;
+      }
+
+      @Override
+      public long getRowId()
+      {
+        return rowId;
+      }
+
+      void advanceRowId()
+      {
+        rowId++;
+      }
+
+      void resetRowId()
+      {
+        rowId = 0;
       }
     }
 
@@ -171,6 +197,8 @@ public class HashJoinEngine
       @Override
       public void advanceUninterruptibly()
       {
+        joinColumnSelectorFactory.advanceRowId();
+
         if (joinMatcher.hasMatch()) {
           joinMatcher.nextMatch();
 
@@ -218,6 +246,7 @@ public class HashJoinEngine
       {
         leftCursor.reset();
         joinMatcher.reset();
+        joinColumnSelectorFactory.resetRowId();
       }
     }
 

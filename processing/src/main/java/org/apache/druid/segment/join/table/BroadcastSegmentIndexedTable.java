@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.NilColumnValueSelector;
@@ -50,7 +51,6 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -240,12 +240,10 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
   public ColumnSelectorFactory makeColumnSelectorFactory(ReadableOffset offset, boolean descending, Closer closer)
   {
     return new QueryableIndexColumnSelectorFactory(
-        queryableIndex,
         VirtualColumns.EMPTY,
         descending,
-        closer,
         offset,
-        new HashMap<>()
+        new ColumnCache(queryableIndex, closer)
     );
   }
 

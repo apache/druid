@@ -221,7 +221,7 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
         overlordTwoTLSUrl = StringUtils.format("https://%s:%s", overlordTwoHost, props.get("overlord_two_tls_port"));
       }
     }
-    
+
     middleManagerHost = props.get("middlemanager_host");
 
     zookeeperHosts = props.get("zookeeper_hosts");
@@ -259,7 +259,6 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
   {
     return new IntegrationTestingConfig()
     {
-
       @Override
       public String getCoordinatorUrl()
       {

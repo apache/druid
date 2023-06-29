@@ -67,7 +67,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public Object get(final ByteBuffer buf, final int position)
   {
-    return helper.get(buf, position);
+    return HllSketchHolder.of(helper.get(buf, position));
   }
 
   @Override

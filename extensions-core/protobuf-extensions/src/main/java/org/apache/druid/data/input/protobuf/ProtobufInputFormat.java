@@ -28,7 +28,6 @@ import org.apache.druid.data.input.impl.NestedInputFormat;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.util.Objects;
 
@@ -61,12 +60,7 @@ public class ProtobufInputFormat extends NestedInputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    return new ProtobufReader(
-        inputRowSchema,
-        source,
-        protobufBytesDecoder,
-        getFlattenSpec()
-    );
+    return new ProtobufReader(inputRowSchema, source, protobufBytesDecoder, getFlattenSpec());
   }
 
   @Override
@@ -88,5 +82,4 @@ public class ProtobufInputFormat extends NestedInputFormat
   {
     return Objects.hash(protobufBytesDecoder, getFlattenSpec());
   }
-
 }

@@ -34,13 +34,13 @@ public class StringToArrayOperatorConversion extends DirectOperatorConversion
       .operatorBuilder("STRING_TO_ARRAY")
       .operandTypeChecker(
           OperandTypes.sequence(
-              "(string,expr)",
+              "'STRING_TO_ARRAY(string, expr)'",
               OperandTypes.family(SqlTypeFamily.STRING),
               OperandTypes.family(SqlTypeFamily.STRING)
           )
       )
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeNullableArray(SqlTypeName.VARCHAR)
+      .returnTypeNullableArrayWithNullableElements(SqlTypeName.VARCHAR)
       .build();
 
   public StringToArrayOperatorConversion()

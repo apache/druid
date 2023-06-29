@@ -85,6 +85,7 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
     // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
     // for string columns.
     final RexNode rexNode = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         Iterables.getOnlyElement(aggregateCall.getArgList())
@@ -121,13 +122,22 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
         dimensionSpec = new DefaultDimensionSpec(virtualColumnName, null, inputType);
       }
 
-      aggregatorFactory = new CardinalityAggregatorFactory(
-          aggregatorName,
-          null,
-          ImmutableList.of(dimensionSpec),
-          false,
-          true
-      );
+      if (inputType.is(ValueType.COMPLEX)) {
+        aggregatorFactory = new HyperUniquesAggregatorFactory(
+            aggregatorName,
+            dimensionSpec.getOutputName(),
+            false,
+            true
+        );
+      } else {
+        aggregatorFactory = new CardinalityAggregatorFactory(
+            aggregatorName,
+            null,
+            ImmutableList.of(dimensionSpec),
+            false,
+            true
+        );
+      }
     }
 
     return Aggregation.create(

@@ -49,11 +49,11 @@ A local repository that Maven will use to put downloaded files. Then pull-deps w
 
 `-r` or `--remoteRepository`
 
-Add a remote repository. Unless `--no-default-remote-repositories` is provided, these will be used after https://repo1.maven.org/maven2/ and http://metamx.artifactoryonline.com/metamx/pub-libs-releases-local
+Add a remote repository. Unless `--no-default-remote-repositories` is provided, these will be used after https://repo1.maven.org/maven2/.
 
 `--no-default-remote-repositories`
 
-Don't use the default remote repositories, only use the repositories provided directly via --remoteRepository.
+Don't use the default remote repository, https://repo1.maven.org/maven2/. Only use the repositories provided directly via --remoteRepository.
 
 `-d` or `--defaultVersion`
 
@@ -136,4 +136,4 @@ java -classpath "/my/druid/lib/*" org.apache.druid.cli.Main tools pull-deps --de
 
 > Please note to use the pull-deps tool you must know the Maven groupId, artifactId, and version of your extension.
 >
-> For Druid community extensions listed [here](../development/extensions.md), the groupId is "org.apache.druid.extensions.contrib" and the artifactId is the name of the extension.
+> For Druid community extensions listed [here](../configuration/extensions.md), the groupId is "org.apache.druid.extensions.contrib" and the artifactId is the name of the extension.

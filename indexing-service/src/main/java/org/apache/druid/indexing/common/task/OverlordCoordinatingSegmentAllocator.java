@@ -55,7 +55,7 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorFor
       final @Nullable SupervisorTaskAccess supervisorTaskAccess,
       final DataSchema dataSchema,
       final TaskLockHelper taskLockHelper,
-      final boolean appendToExisting,
+      final AbstractTask.IngestionMode ingestionMode,
       final PartitionsSpec partitionsSpec
   )
   {
@@ -72,7 +72,7 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorFor
               .bucketInterval(row.getTimestamp())
               .or(granularitySpec.getSegmentGranularity().bucket(row.getTimestamp()));
           final PartialShardSpec partialShardSpec = createPartialShardSpec(
-              appendToExisting,
+              ingestionMode,
               partitionsSpec,
               taskLockHelper,
               interval
@@ -107,7 +107,7 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorFor
   }
 
   private static PartialShardSpec createPartialShardSpec(
-      boolean appendToExisting,
+      AbstractTask.IngestionMode ingestionMode,
       PartitionsSpec partitionsSpec,
       TaskLockHelper taskLockHelper,
       Interval interval
@@ -115,7 +115,8 @@ public class OverlordCoordinatingSegmentAllocator implements SegmentAllocatorFor
   {
     if (partitionsSpec.getType() == SecondaryPartitionType.LINEAR) {
       if (taskLockHelper.isUseSegmentLock()) {
-        if (taskLockHelper.hasOverwritingRootGenerationPartition(interval) && !appendToExisting) {
+        if (taskLockHelper.hasOverwritingRootGenerationPartition(interval) && (ingestionMode
+                                                                               != AbstractTask.IngestionMode.APPEND)) {
           final OverwritingRootGenerationPartitions overwritingRootGenerationPartitions = taskLockHelper
               .getOverwritingRootGenerationPartition(interval);
           if (overwritingRootGenerationPartitions == null) {

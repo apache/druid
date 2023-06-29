@@ -37,6 +37,7 @@ import org.skife.jdbi.v2.util.StringMapper;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.sql.SQLException;
+import java.util.Locale;
 
 public class MySQLConnector extends SQLMetadataConnector
 {
@@ -45,7 +46,12 @@ public class MySQLConnector extends SQLMetadataConnector
   private static final String SERIAL_TYPE = "BIGINT(20) AUTO_INCREMENT";
   private static final String QUOTE_STRING = "`";
   private static final String COLLATION = "CHARACTER SET utf8mb4 COLLATE utf8mb4_bin";
-  private static final String MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME = "com.mysql.jdbc.exceptions.MySQLTransientException";
+  private static final String MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME
+      = "com.mysql.jdbc.exceptions.MySQLTransientException";
+  private static final String MARIA_DB_PACKET_EXCEPTION_CLASS_NAME
+      = "org.mariadb.jdbc.internal.util.exceptions.MaxAllowedPacketException";
+  private static final String MYSQL_PACKET_EXCEPTION_CLASS_NAME
+      = "com.mysql.jdbc.PacketTooBigException";
 
   @Nullable
   private final Class<?> myTransientExceptionClass;
@@ -60,7 +66,7 @@ public class MySQLConnector extends SQLMetadataConnector
   )
   {
     super(config, dbTables);
-    log.info("Loading \"MySQL\" metadata connector driver %s", driverConfig.getDriverClassName());
+    log.info("Loading MySQL metadata connector driver %s", driverConfig.getDriverClassName());
     tryLoadDriverClass(driverConfig.getDriverClassName(), true);
 
     if (driverConfig.getDriverClassName().contains("mysql")) {
@@ -178,6 +184,12 @@ public class MySQLConnector extends SQLMetadataConnector
   }
 
   @Override
+  public String limitClause(int limit)
+  {
+    return String.format(Locale.ENGLISH, "LIMIT %d", limit);
+  }
+
+  @Override
   public boolean tableExists(Handle handle, String tableName)
   {
     String databaseCharset = handle
@@ -209,6 +221,19 @@ public class MySQLConnector extends SQLMetadataConnector
              || e instanceof SQLException && ((SQLException) e).getErrorCode() == 1317 /* ER_QUERY_INTERRUPTED */;
     }
     return false;
+  }
+
+  @Override
+  protected boolean isRootCausePacketTooBigException(Throwable t)
+  {
+    if (t == null) {
+      return false;
+    }
+
+    final String className = t.getClass().getName();
+    return MARIA_DB_PACKET_EXCEPTION_CLASS_NAME.equals(className)
+           || MYSQL_PACKET_EXCEPTION_CLASS_NAME.equals(className)
+           || isRootCausePacketTooBigException(t.getCause());
   }
 
   @Override
@@ -254,7 +279,7 @@ public class MySQLConnector extends SQLMetadataConnector
       if (failIfNotFound) {
         throw new ISE(e, "Could not find %s on the classpath. The MySQL Connector library is not included in the Druid "
                          + "distribution but is required to use MySQL. Please download a compatible library (for example "
-                         + "'mysql-connector-java-5.1.48.jar') and place it under 'extensions/mysql-metadata-storage/'. See "
+                         + "'mysql-connector-java-5.1.49.jar') and place it under 'extensions/mysql-metadata-storage/'. See "
                          + "https://druid.apache.org/downloads for more details.",
                       className
         );

@@ -30,7 +30,6 @@ import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
-import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.InputSourceProcessor;
 import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
@@ -110,14 +109,10 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   @Override
   public final TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-    final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
-        ingestionSchema.getDataSchema().getParser()
-    );
+    final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
 
-    final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
-        new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
-        getId(),
-        1, // always use a single http thread
+    final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
+        supervisorTaskId,
         ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
         ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
     );
@@ -131,7 +126,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
 
     Map<String, TaskReport> taskReport = getTaskCompletionReports();
 
-    taskClient.report(supervisorTaskId, createGeneratedPartitionsReport(toolbox, segments, taskReport));
+    taskClient.report(createGeneratedPartitionsReport(toolbox, segments, taskReport));
 
     return TaskStatus.success(getId());
   }
@@ -169,12 +164,11 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
     final FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
     buildSegmentsMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
 
-    toolbox.addMonitor(
-        new RealtimeMetricsMonitor(
-            Collections.singletonList(fireDepartmentForMetrics),
-            Collections.singletonMap(DruidMetrics.TASK_ID, new String[]{getId()})
-        )
+    RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(
+        Collections.singletonList(fireDepartmentForMetrics),
+        Collections.singletonMap(DruidMetrics.TASK_ID, new String[]{getId()})
     );
+    toolbox.addMonitor(metricsMonitor);
 
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final PartitionsSpec partitionsSpec = tuningConfig.getGivenOrDefaultPartitionsSpec();
@@ -234,6 +228,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
       } else {
         appenderator.close();
       }
+      toolbox.removeMonitor(metricsMonitor);
     }
   }
 

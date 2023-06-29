@@ -38,6 +38,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 
 public class StringLastAggregationTest
 {
@@ -215,6 +216,32 @@ public class StringLastAggregationTest
     stringFirstAggregateCombiner.reset(columnSelector);
 
     Assert.assertEquals(pairs[1], stringFirstAggregateCombiner.getObject());
+  }
+
+  @Test
+  @SuppressWarnings("EqualsWithItself")
+  public void testStringLastAggregatorComparator()
+  {
+    Comparator<SerializablePairLongString> comparator =
+        (Comparator<SerializablePairLongString>) stringLastAggFactory.getComparator();
+    SerializablePairLongString pair1 = new SerializablePairLongString(1L, "Z");
+    SerializablePairLongString pair2 = new SerializablePairLongString(2L, "A");
+    SerializablePairLongString pair3 = new SerializablePairLongString(3L, null);
+
+    // check non null values
+    Assert.assertEquals(0, comparator.compare(pair1, pair1));
+    Assert.assertTrue(comparator.compare(pair1, pair2) > 0);
+    Assert.assertTrue(comparator.compare(pair2, pair1) < 0);
+
+    // check non null value with null value (null values first comparator)
+    Assert.assertEquals(0, comparator.compare(pair3, pair3));
+    Assert.assertTrue(comparator.compare(pair1, pair3) > 0);
+    Assert.assertTrue(comparator.compare(pair3, pair1) < 0);
+
+    // check non null pair with null pair (null pairs first comparator)
+    Assert.assertEquals(0, comparator.compare(null, null));
+    Assert.assertTrue(comparator.compare(pair1, null) > 0);
+    Assert.assertTrue(comparator.compare(null, pair1) < 0);
   }
 
   private void aggregate(

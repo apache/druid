@@ -1,7 +1,7 @@
 ---
 id: tutorial-retention
-title: "Tutorial: Configuring data retention"
-sidebar_label: "Configuring data retention"
+title: Configure data retention
+sidebar_label: Configure data retention
 ---
 
 <!--
@@ -29,7 +29,7 @@ This tutorial demonstrates how to configure retention rules on a datasource to s
 For this tutorial, we'll assume you've already downloaded Apache Druid as described in
 the [single-machine quickstart](index.md) and have it running on your local machine.
 
-It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
+It will also be helpful to have finished [Load a file](../tutorials/tutorial-batch.md) and [Query data](../tutorials/tutorial-query.md) tutorials.
 
 ## Load the example data
 
@@ -41,7 +41,7 @@ The ingestion spec can be found at `quickstart/tutorial/retention-index.json`. L
 bin/post-index-task --file quickstart/tutorial/retention-index.json --url http://localhost:8081
 ```
 
-After the ingestion completes, go to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to access the Druid Console's datasource view.
+After the ingestion completes, go to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to access the web console's datasource view.
 
 This view shows the available datasources and a summary of the retention rules for each datasource:
 
@@ -85,7 +85,7 @@ Now click `Save`. You can see the new rules in the datasources view:
 
 ![New rules](../assets/tutorial-retention-05.png "New rules")
 
-Give the cluster a few minutes to apply the rule change, and go to the [segments view](http://localhost:8888/unified-console.html#segments) in the Druid Console.
+Give the cluster a few minutes to apply the rule change, and go to the [segments view](http://localhost:8888/unified-console.html#segments) in the web console.
 The segments for the first 12 hours of 2015-09-12 are now gone:
 
 ![New segments](../assets/tutorial-retention-06.png "New segments")

@@ -22,11 +22,11 @@ package org.apache.druid.segment.join.lookup;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.common.config.NullHandlingTest;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.Joinable;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -43,7 +43,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @RunWith(MockitoJUnitRunner.class)
-public class LookupJoinableTest extends NullHandlingTest
+public class LookupJoinableTest extends InitializedNullHandlingTest
 {
   private static final String UNKNOWN_COLUMN = "UNKNOWN_COLUMN";
   private static final String SEARCH_KEY_VALUE = "SEARCH_KEY_VALUE";
@@ -276,38 +276,36 @@ public class LookupJoinableTest extends NullHandlingTest
   @Test
   public void getNonNullColumnValuesIfAllUniqueForValueColumnShouldReturnEmpty()
   {
-    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(
+    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(
         LookupColumnSelectorFactory.VALUE_COLUMN,
         Integer.MAX_VALUE
     );
 
-    Assert.assertEquals(Optional.empty(), values);
+    Assert.assertEquals(ImmutableSet.of(), values.getColumnValues());
   }
 
   @Test
   public void getNonNullColumnValuesIfAllUniqueForKeyColumnShouldReturnValues()
   {
-    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(
+    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(
         LookupColumnSelectorFactory.KEY_COLUMN,
         Integer.MAX_VALUE
     );
 
     Assert.assertEquals(
-        Optional.of(
-            NullHandling.replaceWithDefault() ? ImmutableSet.of("foo", "bar") : ImmutableSet.of("foo", "bar", "")
-        ),
-        values
+        NullHandling.replaceWithDefault() ? ImmutableSet.of("foo", "bar") : ImmutableSet.of("foo", "bar", ""),
+        values.getColumnValues()
     );
   }
 
   @Test
   public void getNonNullColumnValuesIfAllUniqueForKeyColumnWithLowMaxValuesShouldReturnEmpty()
   {
-    final Optional<Set<String>> values = target.getNonNullColumnValuesIfAllUnique(
+    final Joinable.ColumnValuesWithUniqueFlag values = target.getNonNullColumnValues(
         LookupColumnSelectorFactory.KEY_COLUMN,
         1
     );
 
-    Assert.assertEquals(Optional.empty(), values);
+    Assert.assertEquals(ImmutableSet.of(), values.getColumnValues());
   }
 }

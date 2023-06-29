@@ -36,10 +36,12 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.initialization.DruidModule;
@@ -56,7 +58,9 @@ import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -86,6 +90,12 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
       URI.create("gs://bar/foo/file2.csv.gz")
   );
 
+  private static final List<URI> URIS_BEFORE_GLOB = Arrays.asList(
+      URI.create("gs://foo/bar/file.csv"),
+      URI.create("gs://bar/foo/file2.csv"),
+      URI.create("gs://bar/foo/file3.txt")
+  );
+
   private static final List<List<CloudObjectLocation>> EXPECTED_OBJECTS =
       EXPECTED_URIS.stream()
                    .map(uri -> Collections.singletonList(new CloudObjectLocation(uri)))
@@ -96,19 +106,19 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
       URI.create("gs://bar/foo")
   );
 
-  private static final List<CloudObjectLocation> EXPECTED_LOCATION =
-      ImmutableList.of(new CloudObjectLocation("foo", "bar/file.csv"));
-
   private static final DateTime NOW = DateTimes.nowUtc();
   private static final byte[] CONTENT =
       StringUtils.toUtf8(StringUtils.format("%d,hello,world", NOW.getMillis()));
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSerde() throws Exception
   {
     final ObjectMapper mapper = createGoogleObjectMapper();
     final GoogleCloudStorageInputSource withUris =
-        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, EXPECTED_URIS, ImmutableList.of(), null);
+        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, EXPECTED_URIS, ImmutableList.of(), null, null);
     final GoogleCloudStorageInputSource serdeWithUris =
         mapper.readValue(mapper.writeValueAsString(withUris), GoogleCloudStorageInputSource.class);
     Assert.assertEquals(withUris, serdeWithUris);
@@ -119,7 +129,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   {
     final ObjectMapper mapper = createGoogleObjectMapper();
     final GoogleCloudStorageInputSource withPrefixes =
-        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, ImmutableList.of(), PREFIXES, null);
+        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, ImmutableList.of(), PREFIXES, null, null);
     final GoogleCloudStorageInputSource serdeWithPrefixes =
         mapper.readValue(mapper.writeValueAsString(withPrefixes), GoogleCloudStorageInputSource.class);
     Assert.assertEquals(withPrefixes, serdeWithPrefixes);
@@ -135,7 +145,8 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
             INPUT_DATA_CONFIG,
             null,
             null,
-            ImmutableList.of(new CloudObjectLocation("foo", "bar/file.gz"))
+            ImmutableList.of(new CloudObjectLocation("foo", "bar/file.gz")),
+            null
         );
     final GoogleCloudStorageInputSource serdeWithObjects =
         mapper.readValue(mapper.writeValueAsString(withObjects), GoogleCloudStorageInputSource.class);
@@ -143,17 +154,103 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
   }
 
   @Test
-  public void testWithUrisSplit()
+  public void testGetTypes()
   {
+    final GoogleCloudStorageInputSource inputSource =
+        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, EXPECTED_URIS, ImmutableList.of(), null, null);
+    Assert.assertEquals(Collections.singleton(GoogleCloudStorageInputSource.TYPE_KEY), inputSource.getTypes());
+  }
 
+  @Test
+  public void testWithUrisSplit() throws Exception
+  {
+    EasyMock.reset(STORAGE);
+    EasyMock.expect(
+        STORAGE.getMetadata(
+            EXPECTED_URIS.get(0).getAuthority(),
+            StringUtils.maybeRemoveLeadingSlash(EXPECTED_URIS.get(0).getPath())
+        )
+    ).andReturn(new StorageObject().setSize(BigInteger.valueOf(CONTENT.length)));
+    EasyMock.expect(
+        STORAGE.getMetadata(
+            EXPECTED_URIS.get(1).getAuthority(),
+            StringUtils.maybeRemoveLeadingSlash(EXPECTED_URIS.get(1).getPath())
+        )
+    ).andReturn(new StorageObject().setSize(BigInteger.valueOf(CONTENT.length)));
+    EasyMock.replay(STORAGE);
     GoogleCloudStorageInputSource inputSource =
-        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, EXPECTED_URIS, ImmutableList.of(), null);
+        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, EXPECTED_URIS, ImmutableList.of(), null, null);
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
-        null
+        null,
+        new MaxSizeSplitHintSpec(10, null)
     );
     Assert.assertEquals(EXPECTED_OBJECTS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    EasyMock.verify(STORAGE);
+  }
+
+  @Test
+  public void testWithUrisGlob() throws Exception
+  {
+    EasyMock.reset(STORAGE);
+    EasyMock.expect(
+        STORAGE.getMetadata(
+            EXPECTED_URIS.get(0).getAuthority(),
+            StringUtils.maybeRemoveLeadingSlash(EXPECTED_URIS.get(0).getPath())
+        )
+    ).andReturn(new StorageObject().setSize(BigInteger.valueOf(CONTENT.length)));
+    EasyMock.expect(
+        STORAGE.getMetadata(
+            EXPECTED_URIS.get(1).getAuthority(),
+            StringUtils.maybeRemoveLeadingSlash(EXPECTED_URIS.get(1).getPath())
+        )
+    ).andReturn(new StorageObject().setSize(BigInteger.valueOf(CONTENT.length)));
+    EasyMock.replay(STORAGE);
+    GoogleCloudStorageInputSource inputSource = new GoogleCloudStorageInputSource(
+        STORAGE,
+        INPUT_DATA_CONFIG,
+        URIS_BEFORE_GLOB,
+        null,
+        null,
+        "**.csv"
+    );
+
+    Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
+        null,
+        new MaxSizeSplitHintSpec(10, null)
+    );
+    Assert.assertEquals(EXPECTED_OBJECTS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    EasyMock.verify(STORAGE);
+  }
+
+  @Test
+  public void testIllegalObjectsAndPrefixes()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    // constructor will explode
+    new GoogleCloudStorageInputSource(
+        STORAGE,
+        INPUT_DATA_CONFIG,
+        null,
+        PREFIXES,
+        EXPECTED_OBJECTS.get(0),
+        "**.csv"
+    );
+  }
+
+  @Test
+  public void testIllegalUrisAndPrefixes()
+  {
+    expectedException.expect(IllegalArgumentException.class);
+    // constructor will explode
+    new GoogleCloudStorageInputSource(
+        STORAGE,
+        INPUT_DATA_CONFIG,
+        URIS_BEFORE_GLOB,
+        PREFIXES,
+        null,
+        "**.csv"
+    );
   }
 
   @Test
@@ -168,10 +265,10 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     EasyMock.replay(INPUT_DATA_CONFIG);
 
     GoogleCloudStorageInputSource inputSource =
-        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, null, PREFIXES, null);
+        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, null, PREFIXES, null, null);
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
         new MaxSizeSplitHintSpec(null, 1)
     );
 
@@ -190,10 +287,10 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
     EasyMock.replay(INPUT_DATA_CONFIG);
 
     GoogleCloudStorageInputSource inputSource =
-        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, null, PREFIXES, null);
+        new GoogleCloudStorageInputSource(STORAGE, INPUT_DATA_CONFIG, null, PREFIXES, null, null);
 
     Stream<InputSplit<List<CloudObjectLocation>>> splits = inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null),
+        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
         new MaxSizeSplitHintSpec(new HumanReadableBytes(CONTENT.length * 3L), null)
     );
 
@@ -221,6 +318,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
+        null,
         null
     );
 
@@ -236,7 +334,8 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         null
     );
 
-    CloseableIterator<InputRow> iterator = reader.read();
+    final InputStats inputStats = new InputStatsImpl();
+    CloseableIterator<InputRow> iterator = reader.read(inputStats);
 
     while (iterator.hasNext()) {
       InputRow nextRow = iterator.next();
@@ -244,6 +343,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
       Assert.assertEquals("hello", nextRow.getDimension("dim1").get(0));
       Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
     }
+    Assert.assertEquals(2 * CONTENT.length, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -264,6 +364,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         INPUT_DATA_CONFIG,
         null,
         PREFIXES,
+        null,
         null
     );
 
@@ -279,7 +380,8 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
         null
     );
 
-    CloseableIterator<InputRow> iterator = reader.read();
+    final InputStats inputStats = new InputStatsImpl();
+    CloseableIterator<InputRow> iterator = reader.read(inputStats);
 
     while (iterator.hasNext()) {
       InputRow nextRow = iterator.next();
@@ -287,6 +389,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
       Assert.assertEquals("hello", nextRow.getDimension("dim1").get(0));
       Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
     }
+    Assert.assertEquals(2 * CONTENT.length, inputStats.getProcessedBytes());
   }
 
   private static void addExpectedPrefixObjects(URI prefix, List<URI> uris) throws IOException

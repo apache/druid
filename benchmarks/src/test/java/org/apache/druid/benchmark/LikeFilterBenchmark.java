@@ -25,6 +25,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
@@ -50,6 +51,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -118,14 +120,17 @@ public class LikeFilterBenchmark
   {
     step = (END_INT - START_INT) / cardinality;
     final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
-    final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory(null);
+    final BitmapSerdeFactory serdeFactory = RoaringBitmapSerdeFactory.getInstance();
     final List<Integer> ints = generateInts();
     final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
         FluentIterable.from(ints)
-                      .transform(
-                          i -> i.toString()
-                      ),
+                      .transform(Object::toString),
         GenericIndexed.STRING_STRATEGY
+    );
+    final GenericIndexed<ByteBuffer> dictionaryUtf8 = GenericIndexed.fromIterable(
+        FluentIterable.from(ints)
+                      .transform(i -> ByteBuffer.wrap(StringUtils.toUtf8(String.valueOf(i)))),
+        GenericIndexed.UTF8_STRATEGY
     );
     final GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.fromIterable(
         FluentIterable.from(ints)
@@ -140,7 +145,7 @@ public class LikeFilterBenchmark
     );
     selector = new MockColumnIndexSelector(
         bitmapFactory,
-        new DictionaryEncodedStringIndexSupplier(bitmapFactory, dictionary, bitmaps, null)
+        new DictionaryEncodedStringIndexSupplier(bitmapFactory, dictionary, dictionaryUtf8, bitmaps, null)
     );
   }
 

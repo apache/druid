@@ -23,199 +23,131 @@ title: "Segments"
   -->
 
 
-Apache Druid stores its index in *segment files*, which are partitioned by
-time. In a basic setup, one segment file is created for each time
-interval, where the time interval is configurable in the
-`segmentGranularity` parameter of the
-[`granularitySpec`](../ingestion/ingestion-spec.md#granularityspec).  For Druid to
-operate well under heavy query load, it is important for the segment
-file size to be within the recommended range of 300MB-700MB. If your
+Apache Druid stores its data and indexes in *segment files* partitioned by time. Druid creates a segment for each segment interval that contains data. If an interval is empty—that is, containing no rows—no segment exists for that time interval. Druid may create multiple segments for the same interval if you ingest data for that period via different ingestion jobs. [Compaction](../data-management/compaction.md) is the Druid process that attempts to combine these segments into a single segment per interval for optimal performance.
+
+The time interval is configurable in the `segmentGranularity` parameter of the [`granularitySpec`](../ingestion/ingestion-spec.md#granularityspec).
+
+For Druid to operate well under heavy query load, it is important for the segment
+file size to be within the recommended range of 300-700 MB. If your
 segment files are larger than this range, then consider either
-changing the granularity of the time interval or partitioning your
-data and tweaking the `targetRowsPerSegment` in your `partitionsSpec`
-(a good starting point for this parameter is 5 million rows).  See the
-sharding section below and the 'Partitioning specification' section of
+changing the granularity of the segment time interval or partitioning your
+data and/or adjusting the `targetRowsPerSegment` in your `partitionsSpec`.
+A good starting point for this parameter is 5 million rows.
+See the Sharding section below and the "Partitioning specification" section of
 the [Batch ingestion](../ingestion/hadoop.md#partitionsspec) documentation
-for more information.
+for more guidance.
 
-### A segment file's core data structures
+## Segment file structure
 
-Here we describe the internal structure of segment files, which is
-essentially *columnar*: the data for each column is laid out in
-separate data structures. By storing each column separately, Druid can
-decrease query latency by scanning only those columns actually needed
-for a query.  There are three basic column types: the timestamp
-column, dimension columns, and metric columns, as illustrated in the
-image below:
+Segment files are *columnar*: the data for each column is laid out in
+separate data structures. By storing each column separately, Druid decreases query latency by scanning only those columns actually needed for a query. There are three basic column types: timestamp, dimensions, and metrics:
 
 ![Druid column types](../assets/druid-column-types.png "Druid Column Types")
 
-The timestamp and metric columns are simple: behind the scenes each of
-these is an array of integer or floating point values compressed with
-LZ4. Once a query knows which rows it needs to select, it simply
-decompresses these, pulls out the relevant rows, and applies the
-desired aggregation operator. As with all columns, if a query doesn’t
-require a column, then that column’s data is just skipped over.
+Timestamp and metrics type columns are arrays of integer or floating point values compressed with
+[LZ4](https://github.com/lz4/lz4-java). Once a query identifies which rows to select, it decompresses them, pulls out the relevant rows, and applies the
+desired aggregation operator. If a query doesn’t require a column, Druid skips over that column's data.
 
-Dimensions columns are different because they support filter and
+Dimension columns are different because they support filter and
 group-by operations, so each dimension requires the following
 three data structures:
 
-1. A dictionary that maps values (which are always treated as strings) to integer IDs,
-2. A list of the column’s values, encoded using the dictionary in 1, and
-3. For each distinct value in the column, a bitmap that indicates which rows contain that value.
+- __Dictionary__: Maps values (which are always treated as strings) to integer IDs, allowing compact representation of the list and bitmap values.
+- __List__: The column’s values, encoded using the dictionary. Required for GroupBy and TopN queries. These operators allow queries that solely aggregate metrics based on filters to run without accessing the list of values.
+- __Bitmap__: One bitmap for each distinct value in the column, to indicate which rows contain that value. Bitmaps allow for quick filtering operations because they are convenient for quickly applying AND and OR operators. Also known as inverted indexes.
 
-
-Why these three data structures? The dictionary simply maps string
-values to integer ids so that the values in \(2\) and \(3\) can be
-represented compactly. The bitmaps in \(3\) -- also known as *inverted
-indexes* allow for quick filtering operations (specifically, bitmaps
-are convenient for quickly applying AND and OR operators). Finally,
-the list of values in \(2\) is needed for *group by* and *TopN*
-queries. In other words, queries that solely aggregate metrics based
-on filters do not need to touch the list of dimension values stored in \(2\).
-
-To get a concrete sense of these data structures, consider the ‘page’
-column from the example data above.  The three data structures that
-represent this dimension are illustrated in the diagram below.
+To get a better sense of these data structures, consider the "Page" column from the example data above, represented by the following data structures:
 
 ```
-1: Dictionary that encodes column values
-  {
+1: Dictionary
+   {
     "Justin Bieber": 0,
     "Ke$ha":         1
-  }
+   }
 
-2: Column data
-  [0,
+2: List of column data
+   [0,
    0,
    1,
    1]
 
-3: Bitmaps - one for each unique value of the column
-  value="Justin Bieber": [1,1,0,0]
-  value="Ke$ha":         [0,0,1,1]
+3: Bitmaps
+   value="Justin Bieber": [1,1,0,0]
+   value="Ke$ha":         [0,0,1,1]
 ```
 
-Note that the bitmap is different from the first two data structures:
-whereas the first two grow linearly in the size of the data (in the
-worst case), the size of the bitmap section is the product of data
-size * column cardinality. Compression will help us here though
-because we know that for each row in 'column data', there will only be a
-single bitmap that has non-zero entry. This means that high cardinality
-columns will have extremely sparse, and therefore highly compressible,
-bitmaps. Druid exploits this using compression algorithms that are
-specially suited for bitmaps, such as roaring bitmap compression.
+Note that the bitmap is different from the dictionary and list data structures: the dictionary and list grow linearly with the size of the data, but the size of the bitmap section is the product of data size and column cardinality. That is, there is one bitmap per separate column value. Columns with the same value share the same bitmap.
 
-### Multi-value columns
+For each row in the list of column data, there is only a single bitmap that has a non-zero entry. This means that high cardinality columns have extremely sparse, and therefore highly compressible, bitmaps. Druid exploits this using compression algorithms that are specially suited for bitmaps, such as [Roaring bitmap compression](https://github.com/RoaringBitmap/RoaringBitmap).
 
-If a data source makes use of multi-value columns, then the data
-structures within the segment files look a bit different. Let's
-imagine that in the example above, the second row were tagged with
-both the 'Ke$ha' *and* 'Justin Bieber' topics. In this case, the three
-data structures would now look as follows:
+## Handling null values
 
-```
-1: Dictionary that encodes column values
-  {
-    "Justin Bieber": 0,
-    "Ke$ha":         1
-  }
+By default, Druid string dimension columns use the values `''` and `null` interchangeably. Numeric and metric columns cannot represent `null` but use nulls to mean `0`. However, Druid provides a SQL compatible null handling mode, which you can enable at the system level through `druid.generic.useDefaultValueForNull`. This setting, when set to `false`, allows Druid to create segments _at ingestion time_ in which the following occurs:
+* String columns can distinguish `''` from `null`,
+* Numeric columns can represent `null` valued rows instead of `0`.
 
-2: Column data
-  [0,
-   [0,1],  <--Row value of multi-value column can have array of values
-   1,
-   1]
+String dimension columns contain no additional column structures in SQL compatible null handling mode. Instead, they reserve an additional dictionary entry for the `null` value. Numeric columns are stored in the segment with an additional bitmap in which the set bits indicate `null`-valued rows. 
 
-3: Bitmaps - one for each unique value
-  value="Justin Bieber": [1,1,0,0]
-  value="Ke$ha":         [0,1,1,1]
-                            ^
-                            |
-                            |
-    Multi-value column has multiple non-zero entries
-```
+In addition to slightly increased segment sizes, SQL compatible null handling can incur a performance cost at query time, due to the need to check the null bitmap. This performance cost only occurs for columns that actually contain null values.
 
-Note the changes to the second row in the column data and the Ke$ha
-bitmap. If a row has more than one value for a column, its entry in
-the 'column data' is an array of values. Additionally, a row with *n*
-values in 'column data' will have *n* non-zero valued entries in
-bitmaps.
+## Segments with different schemas
 
-## SQL Compatible Null Handling
-By default, Druid string dimension columns use the values `''` and `null` interchangeably and numeric and metric columns can not represent `null` at all, instead coercing nulls to `0`. However, Druid also provides a SQL compatible null handling mode, which must be enabled at the system level, through `druid.generic.useDefaultValueForNull`. This setting, when set to `false`, will allow Druid to _at ingestion time_ create segments whose string columns can distinguish `''` from `null`, and numeric columns which can represent `null` valued rows instead of `0`.
+Druid segments for the same datasource may have different schemas. If a string column (dimension) exists in one segment but not another, queries that involve both segments still work. In default mode, queries for the segment without the dimension behave as if the dimension contains only blank values. In SQL-compatible mode, queries for the segment without the dimension behave as if the dimension contains only null values. Similarly, if one segment has a numeric column (metric) but another does not, queries on the segment without the metric generally operate as expected. Aggregations over the missing metric operate as if the metric doesn't exist.
 
-String dimension columns contain no additional column structures in this mode, instead just reserving an additional dictionary entry for the `null` value. Numeric columns however will be stored in the segment with an additional bitmap whose set bits indicate `null` valued rows. In addition to slightly increased segment sizes, SQL compatible null handling can incur a performance cost at query time as well, due to the need to check the null bitmap. This performance cost only occurs for columns that actually contain nulls.
-
-## Naming Convention
-
-Identifiers for segments are typically constructed using the segment datasource, interval start time (in ISO 8601 format), interval end time (in ISO 8601 format), and a version. If data is additionally sharded beyond a time range, the segment identifier will also contain a partition number.
-
-An example segment identifier may be:
-datasource_intervalStart_intervalEnd_version_partitionNum
-
-## Segment Components
-
-Behind the scenes, a segment is comprised of several files, listed below.
-
-* `version.bin`
-
-    4 bytes representing the current segment version as an integer. E.g., for v9 segments, the version is 0x0, 0x0, 0x0, 0x9
-
-* `meta.smoosh`
-
-    A file with metadata (filenames and offsets) about the contents of the other `smoosh` files
-
-* `XXXXX.smoosh`
-
-    There are some number of these files, which are concatenated binary data
-
-    The `smoosh` files represent multiple files "smooshed" together in order to minimize the number of file descriptors that must be open to house the data. They are files of up to 2GB in size (to match the limit of a memory mapped ByteBuffer in Java). The `smoosh` files house individual files for each of the columns in the data as well as an `index.drd` file with extra metadata about the segment.
-
-    There is also a special column called `__time` that refers to the time column of the segment. This will hopefully become less and less special as the code evolves, but for now it’s as special as my Mommy always told me I am.
-
-In the codebase, segments have an internal format version. The current segment format version is `v9`.
-
-## Format of a column
+## Column format
 
 Each column is stored as two parts:
 
-1.  A Jackson-serialized ColumnDescriptor
-2.  The rest of the binary for the column
+- A Jackson-serialized `ColumnDescriptor`.
+- The binary data for the column.
 
-A ColumnDescriptor is essentially an object that allows us to use Jackson's polymorphic deserialization to add new and interesting methods of serialization with minimal impact to the code. It consists of some metadata about the column (what type is it, is it multi-value, etc.) and then a list of serialization/deserialization logic that can deserialize the rest of the binary.
+A `ColumnDescriptor` is  Jackson-serialized instance of the internal Druid `ColumnDescriptor` class . It allows the use of Jackson's polymorphic deserialization to add new and interesting methods of serialization with minimal impact to the code. It consists of some metadata about the column (for example: type, whether it's multi-value) and a list of serialization/deserialization logic that can deserialize the rest of the binary.
 
-### Compression
-Druid compresses blocks of values for string, long, float, and double columns, using [LZ4](https://github.com/lz4/lz4-java) by default, and bitmaps for string columns and numeric null values are compressed using [Roaring](https://github.com/RoaringBitmap/RoaringBitmap). We recommend sticking with these defaults unless experimental verification with your own data and query patterns suggest that non-default options will perform better in your specific case. For example, for bitmap in string columns, the differences between using Roaring and CONCISE are most pronounced for high cardinality columns. In this case, Roaring is substantially faster on filters that match a lot of values, but in some cases CONCISE can have a lower footprint due to the overhead of the Roaring format (but is still slower when lots of values are matched). Currently, compression is configured on at the segment level rather than individual columns, see [IndexSpec](../ingestion/ingestion-spec.md#indexspec) for more details.
+### Multi-value columns
 
-## Sharding Data to Create Segments
+A multi-value column allows a single row to contain multiple strings for a column. You can think of it as an array of strings. If a datasource uses multi-value columns, then the data structures within the segment files look a bit different. Let's imagine that in the example above, the second row is tagged with both the `Ke$ha` *and* `Justin Bieber` topics, as follows:
 
-### Sharding
+```
+1: Dictionary
+   {
+    "Justin Bieber": 0,
+    "Ke$ha":         1
+   }
 
-Multiple segments may exist for the same interval of time for the same datasource. These segments form a `block` for an interval.
-Depending on the type of `shardSpec` that is used to shard the data, Druid queries may only complete if a `block` is complete. That is to say, if a block consists of 3 segments, such as:
+2: List of column data
+   [0,
+   [0,1],  <--Row value in a multi-value column can contain an array of values
+   1,
+   1]
 
-`sampleData_2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z_v1_0`
+3: Bitmaps
+   value="Justin Bieber": [1,1,0,0]
+   value="Ke$ha":         [0,1,1,1]
+                            ^
+                            |
+                            |
+   Multi-value column contains multiple non-zero entries
+```
 
-`sampleData_2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z_v1_1`
+Note the changes to the second row in the list of column data and the `Ke$ha`
+bitmap. If a row has more than one value for a column, its entry in
+the list is an array of values. Additionally, a row with *n* values in the list has *n* non-zero valued entries in bitmaps.
 
-`sampleData_2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z_v1_2`
+## Compression
 
-All 3 segments must be loaded before a query for the interval `2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z` completes.
+Druid uses LZ4 by default to compress blocks of values for string, long, float, and double columns. Druid uses Roaring to compress bitmaps for string columns and numeric null values. We recommend that you use these defaults unless you've experimented with your data and query patterns suggest that non-default options will perform better in your specific case. 
 
-The exception to this rule is with using linear shard specs. Linear shard specs do not force 'completeness' and queries can complete even if shards are not loaded in the system.
-For example, if your real-time ingestion creates 3 segments that were sharded with linear shard spec, and only two of the segments were loaded in the system, queries would return results only for those 2 segments.
+Druid also supports Concise bitmap compression. For string column bitmaps, the differences between using Roaring and Concise are most pronounced for high cardinality columns. In this case, Roaring is substantially faster on filters that match many values, but in some cases Concise can have a lower footprint due to the overhead of the Roaring format (but is still slower when many values are matched). You configure compression at the segment level, not for individual columns. See [IndexSpec](../ingestion/ingestion-spec.md#indexspec) for more details.
 
-## Schema changes
+## Segment identification
 
-## Replacing segments
+Segment identifiers typically contain the segment datasource, interval start time (in ISO 8601 format), interval end time (in ISO 8601 format), and version information. If data is additionally sharded beyond a time range, the segment identifier also contains a partition number:
 
-Druid uniquely
-identifies segments using the datasource, interval, version, and partition number. The partition number is only visible in the segment id if
-there are multiple segments created for some granularity of time. For example, if you have hourly segments, but you
-have more data in an hour than a single segment can hold, you can create multiple segments for the same hour. These segments will share
-the same datasource, interval, and version, but have linearly increasing partition numbers.
+`datasource_intervalStart_intervalEnd_version_partitionNum`
+
+### Segment ID examples
+
+The increasing partition numbers in the following segments indicate that multiple segments exist for the same interval:
 
 ```
 foo_2015-01-01/2015-01-02_v1_0
@@ -223,8 +155,7 @@ foo_2015-01-01/2015-01-02_v1_1
 foo_2015-01-01/2015-01-02_v1_2
 ```
 
-In the example segments above, the `dataSource = foo`, `interval = 2015-01-01/2015-01-02`, `version = v1`, and `partitionNum = 0`.
-If at some later point in time, you reindex the data with a new schema, the newly created segments will have a higher version id.
+If you reindex the data with a new schema, Druid allocates a new version ID to the newly created segments:
 
 ```
 foo_2015-01-01/2015-01-02_v2_0
@@ -232,13 +163,48 @@ foo_2015-01-01/2015-01-02_v2_1
 foo_2015-01-01/2015-01-02_v2_2
 ```
 
-Druid batch indexing (either Hadoop-based or IndexTask-based) guarantees atomic updates on an interval-by-interval basis.
-In our example, until all `v2` segments for `2015-01-01/2015-01-02` are loaded in a Druid cluster, queries exclusively use `v1` segments.
-Once all `v2` segments are loaded and queryable, all queries ignore `v1` segments and switch to the `v2` segments.
-Shortly afterwards, the `v1` segments are unloaded from the cluster.
+## Sharding
 
-Note that updates that span multiple segment intervals are only atomic within each interval. They are not atomic across the entire update.
-For example, you have segments such as the following:
+Multiple segments can exist for a single time interval and datasource. These segments form a `block` for an interval. Depending on the type of `shardSpec` used to shard the data, Druid queries may only complete if a `block` is complete. For example, if a block consists of the following three segments:
+
+```
+sampleData_2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z_v1_0
+sampleData_2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z_v1_1
+sampleData_2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z_v1_2
+```
+
+All three segments must load before a query for the interval `2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z` can complete.
+
+Linear shard specs are an exception to this rule. Linear shard specs do not enforce "completeness" so queries can complete even if shards are not completely loaded.
+
+For example, if a real-time ingestion creates three segments that were sharded with linear shard spec, and only two of the segments are loaded, queries return results for those two segments.
+
+## Segment components
+
+A segment contains several files:
+
+* `version.bin`
+
+    4 bytes representing the current segment version as an integer. For example, for v9 segments the version is 0x0, 0x0, 0x0, 0x9.
+
+* `meta.smoosh`
+
+    A file containing metadata (filenames and offsets) about the contents of the other `smoosh` files.
+
+* `XXXXX.smoosh`
+
+    Smoosh (`.smoosh`) files contain concatenated binary data. This file consolidation reduces the number of file descriptors that must be open when accessing data. The files are 2 GB or less in size to remain within the limit of a memory-mapped `ByteBuffer` in Java. 
+    Smoosh files contain the following: 
+    - Individual files for each column in the data, including one for the `__time` column that refers to the timestamp of the segment. 
+    - An `index.drd` file that contains additional segment metadata.
+
+In the codebase, segments have an internal format version. The current segment format version is `v9`.
+
+## Implications of updating segments
+
+Druid uses versioning to manage updates to create a form of multi-version concurrency control (MVCC). These MVCC versions are distinct from the segment format version discussed above.
+
+Note that updates that span multiple segment intervals are only atomic within each interval. They are not atomic across the entire update. For example, if you have the following segments:
 
 ```
 foo_2015-01-01/2015-01-02_v1_0
@@ -246,8 +212,7 @@ foo_2015-01-02/2015-01-03_v1_1
 foo_2015-01-03/2015-01-04_v1_2
 ```
 
-`v2` segments will be loaded into the cluster as soon as they are built and replace `v1` segments for the period of time the
-segments overlap. Before v2 segments are completely loaded, your cluster may have a mixture of `v1` and `v2` segments.
+`v2` segments are loaded into the cluster as soon as they are built and replace `v1` segments for the period of time the segments overlap. Before `v2` segments are completely loaded, the cluster may contain a mixture of `v1` and `v2` segments.
 
 ```
 foo_2015-01-01/2015-01-02_v1_0
@@ -256,10 +221,3 @@ foo_2015-01-03/2015-01-04_v1_2
 ```
 
 In this case, queries may hit a mixture of `v1` and `v2` segments.
-
-## Different schemas among segments
-
-Druid segments for the same datasource may have different schemas. If a string column (dimension) exists in one segment but not
-another, queries that involve both segments still work. Queries for the segment missing the dimension will behave as if the dimension has only null values.
-Similarly, if one segment has a numeric column (metric) but another does not, queries on the segment missing the
-metric will generally "do the right thing". Aggregations over this missing metric behave as if the metric were missing.

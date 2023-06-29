@@ -36,6 +36,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
+import org.apache.druid.frame.segment.FrameCursorUtils;
+import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriterUtils;
+import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MappedSequence;
@@ -44,8 +51,9 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.FrameSignaturePair;
+import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -63,6 +71,7 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 import org.apache.druid.query.groupby.strategy.GroupByStrategy;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
@@ -74,6 +83,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.BinaryOperator;
 
@@ -118,7 +128,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public QueryRunner<ResultRow> mergeResults(final QueryRunner<ResultRow> runner)
   {
     return (queryPlus, responseContext) -> {
-      if (QueryContexts.isBySegment(queryPlus.getQuery())) {
+      if (queryPlus.getQuery().context().isBySegment()) {
         return runner.run(queryPlus, responseContext);
       }
 
@@ -304,7 +314,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   private Sequence<ResultRow> finalizeSubqueryResults(Sequence<ResultRow> subqueryResult, GroupByQuery subquery)
   {
     final Sequence<ResultRow> finalizingResults;
-    if (QueryContexts.isFinalize(subquery, false)) {
+    if (subquery.context().isFinalize(false)) {
       finalizingResults = new MappedSequence<>(
           subqueryResult,
           makePreComputeManipulatorFn(
@@ -321,7 +331,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public static boolean isNestedQueryPushDown(GroupByQuery q, GroupByStrategy strategy)
   {
     return q.getDataSource() instanceof QueryDataSource
-           && q.getContextBoolean(GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, false)
+           && q.context().getBoolean(GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, false)
            && q.getSubtotalsSpec() == null
            && strategy.supportsNestedQueryPushDown();
   }
@@ -418,7 +428,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   @Override
   public ObjectMapper decorateObjectMapper(final ObjectMapper objectMapper, final GroupByQuery query)
   {
-    final boolean resultAsArray = query.getContextBoolean(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false);
+    final boolean resultAsArray = query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false);
 
     if (resultAsArray && !queryConfig.isIntermediateResultAsMapCompat()) {
       // We can assume ResultRow are serialized and deserialized as arrays. No need for special decoration,
@@ -704,6 +714,40 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public Sequence<Object[]> resultsAsArrays(final GroupByQuery query, final Sequence<ResultRow> resultSequence)
   {
     return resultSequence.map(ResultRow::getArray);
+  }
+
+  /**
+   * This returns a single frame containing the results of the group by query.
+   */
+  @Override
+  public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
+      GroupByQuery query,
+      Sequence<ResultRow> resultSequence,
+      MemoryAllocatorFactory memoryAllocatorFactory,
+      boolean useNestedForUnknownTypes
+  )
+  {
+    RowSignature rowSignature = resultArraySignature(query);
+    RowSignature modifiedRowSignature = useNestedForUnknownTypes
+                                        ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
+                                        : rowSignature;
+
+    FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+        FrameType.COLUMNAR,
+        memoryAllocatorFactory,
+        modifiedRowSignature,
+        new ArrayList<>()
+    );
+
+
+    Cursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
+        resultsAsArrays(query, resultSequence),
+        rowSignature
+    );
+
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory);
+
+    return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));
   }
 
   /**

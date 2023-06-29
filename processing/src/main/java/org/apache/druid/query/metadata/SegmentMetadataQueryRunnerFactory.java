@@ -31,7 +31,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.AbstractPrioritizedQueryRunnerCallable;
 import org.apache.druid.query.ConcatQueryRunner;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
@@ -52,9 +52,9 @@ import org.joda.time.Interval;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -98,7 +98,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           totalSize = analyzedColumns.size() * numRows;
         }
 
-        Map<String, ColumnAnalysis> columns = new TreeMap<>();
+        LinkedHashMap<String, ColumnAnalysis> columns = new LinkedHashMap<>();
         ColumnIncluderator includerator = updatedQuery.getToInclude();
         for (Map.Entry<String, ColumnAnalysis> entry : analyzedColumns.entrySet()) {
           final String columnName = entry.getKey();
@@ -205,7 +205,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                   )
                   {
                     final Query<SegmentAnalysis> query = queryPlus.getQuery();
-                    final int priority = QueryContexts.getPriority(query);
+                    final int priority = query.context().getPriority();
                     final QueryPlus<SegmentAnalysis> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
                     ListenableFuture<Sequence<SegmentAnalysis>> future = queryProcessingPool.submitRunnerTask(
                         new AbstractPrioritizedQueryRunnerCallable<Sequence<SegmentAnalysis>, SegmentAnalysis>(priority, input)
@@ -219,8 +219,9 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     );
                     try {
                       queryWatcher.registerQueryFuture(query, future);
-                      if (QueryContexts.hasTimeout(query)) {
-                        return future.get(QueryContexts.getTimeout(query), TimeUnit.MILLISECONDS);
+                      final QueryContext context = query.context();
+                      if (context.hasTimeout()) {
+                        return future.get(context.getTimeout(), TimeUnit.MILLISECONDS);
                       } else {
                         return future.get();
                       }

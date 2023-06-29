@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -49,7 +50,10 @@ public class MultipleFileTaskReportFileWriter implements TaskReportFileWriter
       if (reportsFileParent != null) {
         FileUtils.mkdirp(reportsFileParent);
       }
-      objectMapper.writeValue(reportsFile, reports);
+
+      try (final FileOutputStream outputStream = new FileOutputStream(reportsFile)) {
+        SingleFileTaskReportFileWriter.writeReportToStream(objectMapper, outputStream, reports);
+      }
     }
     catch (Exception e) {
       log.error(e, "Encountered exception in write().");

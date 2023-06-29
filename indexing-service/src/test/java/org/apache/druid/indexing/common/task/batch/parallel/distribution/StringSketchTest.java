@@ -40,6 +40,7 @@ import org.junit.runner.RunWith;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.StringJoiner;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -62,7 +63,7 @@ public class StringSketchTest
 
   public static class SerializationDeserializationTest
   {
-    private static final ObjectMapper OBJECT_MAPPER = new JacksonModule().smileMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new JacksonModule().smileMapper(new Properties());
 
     @Test
     public void serializesDeserializes()
@@ -104,13 +105,13 @@ public class StringSketchTest
 
       target.putIfNewMin(value);
       Assert.assertEquals(1, getCount());
-      Assert.assertEquals(value, target.getDelegate().getMinValue());
-      Assert.assertEquals(value, target.getDelegate().getMaxValue());
+      Assert.assertEquals(value, target.getDelegate().getMinItem());
+      Assert.assertEquals(value, target.getDelegate().getMaxItem());
 
       target.putIfNewMin(MIN_STRING);
       Assert.assertEquals(2, getCount());
-      Assert.assertEquals(MIN_STRING, target.getDelegate().getMinValue());
-      Assert.assertEquals(MAX_STRING, target.getDelegate().getMaxValue());
+      Assert.assertEquals(MIN_STRING, target.getDelegate().getMinItem());
+      Assert.assertEquals(MAX_STRING, target.getDelegate().getMaxItem());
     }
 
     @Test
@@ -124,13 +125,13 @@ public class StringSketchTest
 
       target.putIfNewMax(value);
       Assert.assertEquals(1, getCount());
-      Assert.assertEquals(value, target.getDelegate().getMinValue());
-      Assert.assertEquals(value, target.getDelegate().getMaxValue());
+      Assert.assertEquals(value, target.getDelegate().getMinItem());
+      Assert.assertEquals(value, target.getDelegate().getMaxItem());
 
       target.putIfNewMax(MAX_STRING);
       Assert.assertEquals(2, getCount());
-      Assert.assertEquals(MIN_STRING, target.getDelegate().getMinValue());
-      Assert.assertEquals(MAX_STRING, target.getDelegate().getMaxValue());
+      Assert.assertEquals(MIN_STRING, target.getDelegate().getMinItem());
+      Assert.assertEquals(MAX_STRING, target.getDelegate().getMaxItem());
     }
 
     private long getCount()

@@ -22,18 +22,22 @@ package org.apache.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.io.ByteStreams;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexingServiceCondition;
-import org.apache.druid.indexing.common.TestRealtimeTask;
+import org.apache.druid.indexing.common.TestIndexTask;
 import org.apache.druid.indexing.common.TestTasks;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -46,6 +50,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
 import org.easymock.Capture;
@@ -61,6 +67,9 @@ import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.mockito.Mockito;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
@@ -73,13 +82,17 @@ public class RemoteTaskRunnerTest
   private static final Logger LOG = new Logger(RemoteTaskRunnerTest.class);
   private static final Joiner JOINER = RemoteTaskRunnerTestUtils.JOINER;
   private static final String WORKER_HOST = "worker";
-  private static final String ANNOUCEMENTS_PATH = JOINER.join(RemoteTaskRunnerTestUtils.ANNOUNCEMENTS_PATH, WORKER_HOST);
+  private static final String ANNOUCEMENTS_PATH = JOINER.join(
+      RemoteTaskRunnerTestUtils.ANNOUNCEMENTS_PATH,
+      WORKER_HOST
+  );
   private static final String STATUS_PATH = JOINER.join(RemoteTaskRunnerTestUtils.STATUS_PATH, WORKER_HOST);
 
   // higher timeout to reduce flakiness on CI pipeline
   private static final Period TIMEOUT_PERIOD = Period.millis(30000);
 
   private RemoteTaskRunner remoteTaskRunner;
+  private HttpClient httpClient;
   private RemoteTaskRunnerTestUtils rtrTestUtils = new RemoteTaskRunnerTestUtils();
   private ObjectMapper jsonMapper;
   private CuratorFramework cf;
@@ -101,9 +114,6 @@ public class RemoteTaskRunnerTest
       LOG.info("Finishing test: " + description.getMethodName());
     }
   };
-
-
-
 
   @Rule
   public final TestRule timeout = new DeadlockDetectingTimeout(60, TimeUnit.SECONDS);
@@ -241,7 +251,7 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
 
-    TestRealtimeTask task1 = new TestRealtimeTask(
+    TestIndexTask task1 = new TestIndexTask(
         "rt1",
         new TaskResource("rt1", 1),
         "foo",
@@ -252,7 +262,7 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(taskAnnounced(task1.getId()));
     mockWorkerRunningTask(task1);
 
-    TestRealtimeTask task2 = new TestRealtimeTask(
+    TestIndexTask task2 = new TestIndexTask(
         "rt2",
         new TaskResource("rt1", 1),
         "foo",
@@ -261,7 +271,7 @@ public class RemoteTaskRunnerTest
     );
     remoteTaskRunner.run(task2);
 
-    TestRealtimeTask task3 = new TestRealtimeTask(
+    TestIndexTask task3 = new TestIndexTask(
         "rt3",
         new TaskResource("rt2", 1),
         "foo",
@@ -304,7 +314,7 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
 
-    TestRealtimeTask task1 = new TestRealtimeTask(
+    TestIndexTask task1 = new TestIndexTask(
         "rt1",
         new TaskResource("rt1", 1),
         "foo",
@@ -315,7 +325,7 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(taskAnnounced(task1.getId()));
     mockWorkerRunningTask(task1);
 
-    TestRealtimeTask task2 = new TestRealtimeTask(
+    TestIndexTask task2 = new TestIndexTask(
         "rt2",
         new TaskResource("rt2", 3),
         "foo",
@@ -324,7 +334,7 @@ public class RemoteTaskRunnerTest
     );
     remoteTaskRunner.run(task2);
 
-    TestRealtimeTask task3 = new TestRealtimeTask(
+    TestIndexTask task3 = new TestIndexTask(
         "rt3",
         new TaskResource("rt3", 2),
         "foo",
@@ -396,30 +406,33 @@ public class RemoteTaskRunnerTest
 
     makeRemoteTaskRunner(rtrConfig);
 
-    TestRealtimeTask task1 = new TestRealtimeTask(
+    TestIndexTask task1 = new TestIndexTask(
         "first",
         new TaskResource("first", 1),
         "foo",
         TaskStatus.running("first"),
-        jsonMapper);
+        jsonMapper
+    );
     remoteTaskRunner.run(task1);
     Assert.assertTrue(taskAnnounced(task1.getId()));
     mockWorkerRunningTask(task1);
 
-    TestRealtimeTask task = new TestRealtimeTask(
+    TestIndexTask task = new TestIndexTask(
         "second",
         new TaskResource("task", 2),
         "foo",
         TaskStatus.running("task"),
-        jsonMapper);
+        jsonMapper
+    );
     remoteTaskRunner.run(task);
-    
-    TestRealtimeTask task2 = new TestRealtimeTask(
+
+    TestIndexTask task2 = new TestIndexTask(
         "second",
         new TaskResource("second", 2),
         "foo",
         TaskStatus.running("second"),
-        jsonMapper);
+        jsonMapper
+    );
     remoteTaskRunner.run(task2);
     Assert.assertTrue(taskAnnounced(task2.getId()));
     mockWorkerRunningTask(task2);
@@ -444,12 +457,13 @@ public class RemoteTaskRunnerTest
   public void testRunWithTaskComplete() throws Exception
   {
     doSetup();
-    TestRealtimeTask task1 = new TestRealtimeTask(
+    TestIndexTask task1 = new TestIndexTask(
         "testTask",
         new TaskResource("testTask", 2),
         "foo",
         TaskStatus.success("testTask"),
-        jsonMapper);
+        jsonMapper
+    );
     remoteTaskRunner.run(task1);
     Assert.assertTrue(taskAnnounced(task1.getId()));
     mockWorkerRunningTask(task1);
@@ -554,6 +568,7 @@ public class RemoteTaskRunnerTest
   public void testRunPendingTaskFailToAssignTask() throws Exception
   {
     doSetup();
+    Thread.sleep(100);
     RemoteTaskRunnerWorkItem originalItem = remoteTaskRunner.addPendingTask(task);
     // modify taskId to make task assignment failed
     RemoteTaskRunnerWorkItem wankyItem = Mockito.mock(RemoteTaskRunnerWorkItem.class);
@@ -590,7 +605,8 @@ public class RemoteTaskRunnerTest
 
   private void makeRemoteTaskRunner(RemoteTaskRunnerConfig config)
   {
-    remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(config);
+    httpClient = EasyMock.createMock(HttpClient.class);
+    remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(config, httpClient);
   }
 
   private void makeWorker() throws Exception
@@ -801,11 +817,11 @@ public class RemoteTaskRunnerTest
 
     makeRemoteTaskRunner(rtrConfig);
 
-    TestRealtimeTask task1 = new TestRealtimeTask(
-        "realtime1",
-        new TaskResource("realtime1", 1),
+    TestIndexTask task1 = new TestIndexTask(
+        "test_index1",
+        new TaskResource("test_index1", 1),
         "foo",
-        TaskStatus.success("realtime1"),
+        TaskStatus.success("test_index1"),
         jsonMapper
     );
     Future<TaskStatus> taskFuture1 = remoteTaskRunner.run(task1);
@@ -819,11 +835,11 @@ public class RemoteTaskRunnerTest
         remoteTaskRunner.findWorkerRunningTask(task1.getId()).getContinuouslyFailedTasksCount()
     );
 
-    TestRealtimeTask task2 = new TestRealtimeTask(
-        "realtime2",
-        new TaskResource("realtime2", 1),
+    TestIndexTask task2 = new TestIndexTask(
+        "test_index2",
+        new TaskResource("test_index2", 1),
         "foo",
-        TaskStatus.running("realtime2"),
+        TaskStatus.running("test_index2"),
         jsonMapper
     );
     Future<TaskStatus> taskFuture2 = remoteTaskRunner.run(task2);
@@ -854,11 +870,11 @@ public class RemoteTaskRunnerTest
         remoteTaskRunner.findWorkerRunningTask(task2.getId()).getContinuouslyFailedTasksCount()
     );
 
-    TestRealtimeTask task3 = new TestRealtimeTask(
-        "realtime3",
-        new TaskResource("realtime3", 1),
+    TestIndexTask task3 = new TestIndexTask(
+        "test_index3",
+        new TaskResource("test_index3", 1),
         "foo",
-        TaskStatus.running("realtime3"),
+        TaskStatus.running("test_index3"),
         jsonMapper
     );
     Future<TaskStatus> taskFuture3 = remoteTaskRunner.run(task3);
@@ -893,7 +909,7 @@ public class RemoteTaskRunnerTest
 
     for (int i = 1; i < 13; i++) {
       String taskId = StringUtils.format("rt-%d", i);
-      TestRealtimeTask task = new TestRealtimeTask(
+      TestIndexTask task = new TestIndexTask(
           taskId,
           new TaskResource(taskId, 1),
           "foo",
@@ -948,7 +964,7 @@ public class RemoteTaskRunnerTest
 
     for (int i = 1; i < 13; i++) {
       String taskId = StringUtils.format("rt-%d", i);
-      TestRealtimeTask task = new TestRealtimeTask(
+      TestIndexTask task = new TestIndexTask(
           taskId,
           new TaskResource(taskId, 1),
           "foo",
@@ -993,14 +1009,14 @@ public class RemoteTaskRunnerTest
 
     makeRemoteTaskRunner(rtrConfig);
 
-    TestRealtimeTask task1 = new TestRealtimeTask(
-        "realtime1", new TaskResource("realtime1", 1), "foo", TaskStatus.success("realtime1"), jsonMapper
+    TestIndexTask task1 = new TestIndexTask(
+        "test_index1", new TaskResource("test_index1", 1), "foo", TaskStatus.success("test_index1"), jsonMapper
     );
-    TestRealtimeTask task2 = new TestRealtimeTask(
-        "realtime2", new TaskResource("realtime2", 1), "foo", TaskStatus.success("realtime2"), jsonMapper
+    TestIndexTask task2 = new TestIndexTask(
+        "test_index2", new TaskResource("test_index2", 1), "foo", TaskStatus.success("test_index2"), jsonMapper
     );
-    TestRealtimeTask task3 = new TestRealtimeTask(
-        "realtime3", new TaskResource("realtime3", 1), "foo", TaskStatus.success("realtime3"), jsonMapper
+    TestIndexTask task3 = new TestIndexTask(
+        "test_index3", new TaskResource("test_index3", 1), "foo", TaskStatus.success("test_index3"), jsonMapper
     );
 
     Future<TaskStatus> taskFuture1 = remoteTaskRunner.run(task1);
@@ -1022,7 +1038,10 @@ public class RemoteTaskRunnerTest
     mockWorkerCompleteFailedTask(task3);
     Assert.assertTrue(taskFuture3.get().isFailure());
     Assert.assertEquals(1, remoteTaskRunner.getBlackListedWorkers().size());
-    Assert.assertEquals(3, remoteTaskRunner.getBlacklistedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
+    Assert.assertEquals(
+        3,
+        remoteTaskRunner.getBlacklistedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue()
+    );
 
     mockWorkerCompleteSuccessfulTask(task2);
     Assert.assertTrue(taskFuture2.get().isSuccess());
@@ -1046,7 +1065,8 @@ public class RemoteTaskRunnerTest
 
     PathChildrenCache cache = new PathChildrenCache(cf, "/test", true);
     testStartWithNoWorker();
-    cache.getListenable().addListener(remoteTaskRunner.getStatusListener(worker, new ZkWorker(worker, cache, jsonMapper), null));
+    cache.getListenable()
+         .addListener(remoteTaskRunner.getStatusListener(worker, new ZkWorker(worker, cache, jsonMapper), null));
     cache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
 
     // Status listener will recieve event with null data
@@ -1061,5 +1081,57 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(alertDataMap.containsKey("znode"));
     Assert.assertNull(alertDataMap.get("znode"));
     // Status listener should successfully completes without throwing exception
+  }
+
+  @Test
+  public void testStreamTaskReportsUnknownTask() throws Exception
+  {
+    doSetup();
+    Assert.assertEquals(Optional.absent(), remoteTaskRunner.streamTaskReports("foo"));
+  }
+
+  @Test
+  public void testStreamTaskReportsKnownTask() throws Exception
+  {
+    doSetup();
+    final Capture<Request> capturedRequest = Capture.newInstance();
+    final String reportString = "my report!";
+    final ByteArrayInputStream reportResponse = new ByteArrayInputStream(StringUtils.toUtf8(reportString));
+    EasyMock.expect(httpClient.go(EasyMock.capture(capturedRequest), EasyMock.anyObject()))
+            .andReturn(Futures.immediateFuture(reportResponse));
+    EasyMock.replay(httpClient);
+
+    ListenableFuture<TaskStatus> result = remoteTaskRunner.run(task);
+    Assert.assertTrue(taskAnnounced(task.getId()));
+    mockWorkerRunningTask(task);
+
+    // Wait for the task to have a known location.
+    Assert.assertTrue(
+        TestUtils.conditionValid(
+            () ->
+                !remoteTaskRunner.getRunningTasks().isEmpty()
+                && !Iterables.getOnlyElement(remoteTaskRunner.getRunningTasks())
+                             .getLocation()
+                             .equals(TaskLocation.unknown())
+        )
+    );
+
+    // Stream task reports from a running task.
+    final InputStream in = remoteTaskRunner.streamTaskReports(task.getId()).get();
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ByteStreams.copy(in, baos);
+    Assert.assertEquals(reportString, StringUtils.fromUtf8(baos.toByteArray()));
+
+    // Stream task reports from a completed task.
+    mockWorkerCompleteSuccessfulTask(task);
+    Assert.assertTrue(workerCompletedTask(result));
+    Assert.assertEquals(Optional.absent(), remoteTaskRunner.streamTaskReports(task.getId()));
+
+    // Verify the HTTP request.
+    EasyMock.verify(httpClient);
+    Assert.assertEquals(
+        "http://dummy:9000/druid/worker/v1/chat/task%20id%20with%20spaces/liveReports",
+        capturedRequest.getValue().getUrl().toString()
+    );
   }
 }

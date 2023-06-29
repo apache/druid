@@ -286,6 +286,19 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new JavaScriptAggregatorFactory(
+        newName,
+        getFieldNames(),
+        getFnAggregate(),
+        getFnReset(),
+        getFnCombine(),
+        config
+    );
+  }
+
+  @Override
   public String toString()
   {
     return "JavaScriptAggregatorFactory{" +

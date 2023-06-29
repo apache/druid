@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
@@ -62,6 +63,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
 import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.MapSegmentWrangler;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -72,11 +74,13 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.ComparableList;
 import org.apache.druid.segment.data.ComparableStringArray;
+import org.apache.druid.segment.join.FrameBasedInlineJoinableFactory;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
@@ -125,6 +129,7 @@ public class ClientQuerySegmentWalkerTest
   private static final Interval INTERVAL = Intervals.of("2000/P1Y");
   private static final String VERSION = "A";
   private static final ShardSpec SHARD_SPEC = new NumberedShardSpec(0, 1);
+
 
   private static final InlineDataSource FOO_INLINE = InlineDataSource.fromIterable(
       ImmutableList.<Object[]>builder()
@@ -346,7 +351,7 @@ public class ClientQuerySegmentWalkerTest
 
     testQuery(
         query,
-        ImmutableList.of(
+        new ArrayList<>(ImmutableList.of(
             ExpectedQuery.cluster(subquery.withId(DUMMY_QUERY_ID).withSubQueryId("1.1")),
             ExpectedQuery.local(
                 query.withDataSource(
@@ -356,7 +361,7 @@ public class ClientQuerySegmentWalkerTest
                     )
                 )
             )
-        ),
+        )),
         ImmutableList.of(new Object[]{Intervals.ETERNITY.getStartMillis(), 3L})
     );
 
@@ -501,7 +506,11 @@ public class ClientQuerySegmentWalkerTest
                                            "\"j.s\" == \"s\"",
                                            JoinType.INNER,
                                            null,
-                                           ExprMacroTable.nil()
+                                           ExprMacroTable.nil(),
+                                           new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
+                                               null,
+                                               null,
+                                               null))
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -569,7 +578,11 @@ public class ClientQuerySegmentWalkerTest
                                            "\"j.s\" == \"s\"",
                                            JoinType.INNER,
                                            null,
-                                           ExprMacroTable.nil()
+                                           ExprMacroTable.nil(),
+                                           new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
+                                               null,
+                                               null,
+                                               null))
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -748,7 +761,8 @@ public class ClientQuerySegmentWalkerTest
                                            "\"j.s\" == \"s\"",
                                            JoinType.INNER,
                                            null,
-                                           ExprMacroTable.nil()
+                                           ExprMacroTable.nil(),
+                                           null
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -787,7 +801,35 @@ public class ClientQuerySegmentWalkerTest
                                 .withId(DUMMY_QUERY_ID);
 
     expectedException.expect(ResourceLimitExceededException.class);
-    expectedException.expectMessage("Subquery generated results beyond maximum[2]");
+    expectedException.expectMessage("Subquery generated results beyond maximum[2] rows");
+
+    testQuery(query, ImmutableList.of(), ImmutableList.of());
+  }
+
+
+  @Test
+  public void testTimeseriesOnGroupByOnTableErrorTooLarge()
+  {
+    final GroupByQuery subquery =
+        GroupByQuery.builder()
+                    .setDataSource(FOO)
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Collections.singletonList(INTERVAL))
+                    .setDimensions(DefaultDimensionSpec.of("s"))
+                    .build();
+
+    final TimeseriesQuery query =
+        (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
+                                .dataSource(new QueryDataSource(subquery))
+                                .granularity(Granularities.ALL)
+                                .intervals(Intervals.ONLY_ETERNITY)
+                                .aggregators(new CountAggregatorFactory("cnt"))
+                                .context(ImmutableMap.of(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "1"))
+                                .build()
+                                .withId(DUMMY_QUERY_ID);
+
+    expectedException.expect(ResourceLimitExceededException.class);
+    expectedException.expectMessage("Subquery generated results beyond maximum[1] bytes");
 
     testQuery(query, ImmutableList.of(), ImmutableList.of());
   }
@@ -1305,8 +1347,9 @@ public class ClientQuerySegmentWalkerTest
 
     final SegmentWrangler segmentWrangler = new MapSegmentWrangler(
         ImmutableMap.<Class<? extends DataSource>, SegmentWrangler>builder()
-            .put(InlineDataSource.class, new InlineSegmentWrangler())
-            .build()
+                    .put(InlineDataSource.class, new InlineSegmentWrangler())
+                    .put(FrameBasedInlineDataSource.class, new FrameBasedInlineSegmentWrangler())
+                    .build()
     );
 
     final JoinableFactory globalFactory = new JoinableFactory()
@@ -1325,12 +1368,14 @@ public class ClientQuerySegmentWalkerTest
     };
 
     final JoinableFactory joinableFactory = new MapJoinableFactory(
-        ImmutableSet.of(globalFactory, new InlineJoinableFactory()),
+        ImmutableSet.of(globalFactory, new InlineJoinableFactory(), new FrameBasedInlineJoinableFactory()),
         ImmutableMap.<Class<? extends JoinableFactory>, Class<? extends DataSource>>builder()
-            .put(InlineJoinableFactory.class, InlineDataSource.class)
-            .put(globalFactory.getClass(), GlobalTableDataSource.class)
-            .build()
+                    .put(InlineJoinableFactory.class, InlineDataSource.class)
+                    .put(FrameBasedInlineJoinableFactory.class, FrameBasedInlineDataSource.class)
+                    .put(globalFactory.getClass(), GlobalTableDataSource.class)
+                    .build()
     );
+    final JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
 
     class CapturingWalker implements QuerySegmentWalker
     {
@@ -1379,7 +1424,6 @@ public class ClientQuerySegmentWalkerTest
                     .put(ARRAY, makeTimeline(ARRAY, ARRAY_INLINE))
                     .put(ARRAY_UNKNOWN, makeTimeline(ARRAY_UNKNOWN, ARRAY_INLINE_UNKNOWN))
                     .build(),
-                joinableFactory,
                 conglomerate,
                 schedulerForTest
             ),
@@ -1389,7 +1433,7 @@ public class ClientQuerySegmentWalkerTest
             QueryStackTests.createLocalQuerySegmentWalker(
                 conglomerate,
                 segmentWrangler,
-                joinableFactory,
+                joinableFactoryWrapper,
                 schedulerForTest
                 ),
             ClusterOrLocal.LOCAL
@@ -1439,8 +1483,9 @@ public class ClientQuerySegmentWalkerTest
 
     ExpectedQuery(Query<?> query, ClusterOrLocal how)
     {
+      Query<?> modifiedQuery;
       // Need to blast various parameters that will vary and aren't important to test for.
-      this.query = query.withOverriddenContext(
+      modifiedQuery = query.withOverriddenContext(
           ImmutableMap.<String, Object>builder()
               .put(DirectDruidClient.QUERY_FAIL_TIME, 0L)
               .put(QueryContexts.DEFAULT_TIMEOUT_KEY, 0L)
@@ -1456,6 +1501,11 @@ public class ClientQuerySegmentWalkerTest
               .build()
       );
 
+      if (modifiedQuery.getDataSource() instanceof FrameBasedInlineDataSource) {
+        // Do this recursively for if the query's datasource is a query datasource
+      }
+
+      this.query = modifiedQuery;
       this.how = how;
     }
 

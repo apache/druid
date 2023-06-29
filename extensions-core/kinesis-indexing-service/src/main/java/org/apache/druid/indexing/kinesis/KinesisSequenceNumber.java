@@ -52,6 +52,16 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
   public static final String EXPIRED_MARKER = "EXPIRED";
 
   /**
+   * Indicates that records have not been read from a shard which needs to be processed from sequence type: TRIM_HORIZON
+   */
+  public static final String UNREAD_TRIM_HORIZON = "UNREAD_TRIM_HORIZON";
+
+  /**
+   * Indicates that records have not been read from a shard which needs to be processed from sequence type: LATEST
+   */
+  public static final String UNREAD_LATEST = "UNREAD_LATEST";
+
+  /**
    * this flag is used to indicate either END_OF_SHARD_MARKER, NO_END_SEQUENCE_NUMBER
    * or EXPIRED_MARKER so that they can be properly compared
    * with other sequence numbers
@@ -62,14 +72,12 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
   private KinesisSequenceNumber(String sequenceNumber, boolean isExclusive)
   {
     super(sequenceNumber, isExclusive);
-    if (END_OF_SHARD_MARKER.equals(sequenceNumber)
-        || NO_END_SEQUENCE_NUMBER.equals(sequenceNumber)
-        || EXPIRED_MARKER.equals(sequenceNumber)) {
-      isMaxSequenceNumber = true;
+    if (!isValidAWSKinesisSequence(sequenceNumber)) {
+      isMaxSequenceNumber = !isUnreadSequence(sequenceNumber);
       this.intSequence = null;
     } else {
-      isMaxSequenceNumber = false;
       this.intSequence = new BigInteger(sequenceNumber);
+      this.isMaxSequenceNumber = false;
     }
   }
 
@@ -93,6 +101,8 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
     return !(END_OF_SHARD_MARKER.equals(sequenceNumber)
              || NO_END_SEQUENCE_NUMBER.equals(sequenceNumber)
              || EXPIRED_MARKER.equals(sequenceNumber)
+             || UNREAD_TRIM_HORIZON.equals(sequenceNumber)
+             || UNREAD_LATEST.equals(sequenceNumber)
       );
   }
 
@@ -100,14 +110,50 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
   public int compareTo(OrderedSequenceNumber<String> o)
   {
     KinesisSequenceNumber num = (KinesisSequenceNumber) o;
+    if (isUnread() && num.isUnread()) {
+      return 0;
+    } else if (isUnread()) {
+      return -1;
+    } else if (num.isUnread()) {
+      return 1;
+    }
     if (isMaxSequenceNumber && num.isMaxSequenceNumber) {
       return 0;
     } else if (isMaxSequenceNumber) {
       return 1;
     } else if (num.isMaxSequenceNumber) {
       return -1;
-    } else {
-      return this.intSequence.compareTo(new BigInteger(o.get()));
     }
+    return this.intSequence.compareTo(new BigInteger(o.get()));
+  }
+
+  @Override
+  public boolean isAvailableWithEarliest(OrderedSequenceNumber<String> earliest)
+  {
+    if (isUnread()) {
+      return true;
+    }
+    return super.isAvailableWithEarliest(earliest);
+  }
+
+  @Override
+  public boolean isMoreToReadBeforeReadingRecord(OrderedSequenceNumber<String> end, boolean isEndOffsetExclusive)
+  {
+    // Kinesis sequence number checks are exclusive for AWS numeric sequences
+    // However, If a record is UNREAD and the end offset is finalized to be UNREAD, we have caught up. (inclusive)
+    if (isUnreadSequence(end.get())) {
+      return false;
+    }
+    return super.isMoreToReadBeforeReadingRecord(end, isEndOffsetExclusive);
+  }
+
+  public boolean isUnread()
+  {
+    return isUnreadSequence(get());
+  }
+
+  private boolean isUnreadSequence(String sequence)
+  {
+    return UNREAD_TRIM_HORIZON.equals(sequence) || UNREAD_LATEST.equals(sequence);
   }
 }

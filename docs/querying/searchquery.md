@@ -62,6 +62,7 @@ There are several main parts to a search query:
 |limit| Defines the maximum number per Historical process (parsed as int) of search results to return. |no (default to 1000)|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |searchDimensions|The dimensions to run the search over. Excluding this means the search is run over all dimensions.|no|
+|virtualColumns|A JSON list of [virtual columns](./virtual-columns.md) available to use in `searchDimensions`.| no (default none)|
 |query|See [SearchQuerySpec](#searchqueryspec).|yes|
 |sort|An object specifying how the results of the search should be sorted.<br/>Possible types are "lexicographic" (the default sort), "alphanumeric", "strlen", and "numeric".<br/>See [Sorting Orders](./sorting-orders.md) for more details.|no|
 |context|See [Context](../querying/query-context.md)|no|

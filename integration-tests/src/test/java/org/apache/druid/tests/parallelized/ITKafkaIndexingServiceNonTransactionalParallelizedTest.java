@@ -62,6 +62,12 @@ public class ITKafkaIndexingServiceNonTransactionalParallelizedTest extends Abst
     doTestIndexDataWithAutoscaler(false);
   }
 
+  @Test
+  public void testIndexDataWithIdleConfigEnabled() throws Exception
+  {
+    doTestIndexDataWithIdleConfigEnabled(false);
+  }
+
   /**
    * This test can be run concurrently with other tests as it creates/modifies/teardowns a unique datasource
    * and supervisor maintained and scoped within this test only

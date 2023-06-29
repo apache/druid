@@ -25,20 +25,16 @@
     width: 600px;
   }
 
+  .loader {
+    position: relative;
+  }
+
   .#{$bp-ns}-dialog-body {
     max-height: 70vh;
 
     .auto-form {
       max-height: 60vh;
       overflow: auto;
-
-      .ace_editor {
-        height: 25vh !important;
-      }
-    }
-
-    .html-select {
-      width: 195px;
     }
 
     .config-comment {

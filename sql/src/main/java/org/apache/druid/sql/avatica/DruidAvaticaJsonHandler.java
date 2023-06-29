@@ -35,8 +35,8 @@ import java.io.IOException;
 
 public class DruidAvaticaJsonHandler extends AvaticaJsonHandler
 {
-  public static final String AVATICA_PATH = "/druid/v2/sql/avatica/";
   public static final String AVATICA_PATH_NO_TRAILING_SLASH = "/druid/v2/sql/avatica";
+  public static final String AVATICA_PATH = AVATICA_PATH_NO_TRAILING_SLASH + "/";
 
   @Inject
   public DruidAvaticaJsonHandler(

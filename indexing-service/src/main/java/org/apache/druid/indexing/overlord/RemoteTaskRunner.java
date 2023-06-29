@@ -31,10 +31,8 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -101,6 +99,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -465,8 +464,24 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @Override
   public Collection<RemoteTaskRunnerWorkItem> getKnownTasks()
   {
-    // Racey, since there is a period of time during assignment when a task is neither pending nor running
-    return ImmutableList.copyOf(Iterables.concat(pendingTasks.values(), runningTasks.values(), completeTasks.values()));
+    // Use a map to dedupe tasks, since they may transition from one state to another while this method is iterating
+    // through the various collections.
+    final Map<String, RemoteTaskRunnerWorkItem> items = new LinkedHashMap<>();
+
+    // Racey, since there is a period of time during assignment when a task is neither pending nor running.
+    for (RemoteTaskRunnerWorkItem item : pendingTasks.values()) {
+      items.put(item.getTaskId(), item);
+    }
+
+    for (RemoteTaskRunnerWorkItem item : runningTasks.values()) {
+      items.put(item.getTaskId(), item);
+    }
+
+    for (RemoteTaskRunnerWorkItem item : completeTasks.values()) {
+      items.put(item.getTaskId(), item);
+    }
+
+    return ImmutableList.copyOf(items.values());
   }
 
   @Nullable
@@ -611,7 +626,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(final String taskId, final long offset)
+  public Optional<InputStream> streamTaskLog(final String taskId, final long offset) throws IOException
   {
     final ZkWorker zkWorker = findWorkerRunningTask(taskId);
 
@@ -626,72 +641,70 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           taskId,
           Long.toString(offset)
       );
-      return Optional.of(
-          new ByteSource()
-          {
-            @Override
-            public InputStream openStream() throws IOException
-            {
-              try {
-                return httpClient.go(
-                    new Request(HttpMethod.GET, url),
-                    new InputStreamResponseHandler()
-                ).get();
-              }
-              catch (InterruptedException e) {
-                throw new RuntimeException(e);
-              }
-              catch (ExecutionException e) {
-                // Unwrap if possible
-                Throwables.propagateIfPossible(e.getCause(), IOException.class);
-                throw new RuntimeException(e);
-              }
-            }
-          }
-      );
+      try {
+        return Optional.of(httpClient.go(
+            new Request(HttpMethod.GET, url),
+            new InputStreamResponseHandler()
+        ).get());
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      catch (ExecutionException e) {
+        // Unwrap if possible
+        Throwables.propagateIfPossible(e.getCause(), IOException.class);
+        throw new RuntimeException(e);
+      }
     }
   }
 
+
   @Override
-  public Optional<ByteSource> streamTaskReports(final String taskId)
+  public Optional<InputStream> streamTaskReports(final String taskId) throws IOException
   {
     final ZkWorker zkWorker = findWorkerRunningTask(taskId);
 
     if (zkWorker == null) {
       // Worker is not running this task, it might be available in deep storage
       return Optional.absent();
-    } else {
-      TaskLocation taskLocation = runningTasks.get(taskId).getLocation();
-      final URL url = TaskRunnerUtils.makeTaskLocationURL(
-          taskLocation,
-          "/druid/worker/v1/chat/%s/liveReports",
-          taskId
-      );
-      return Optional.of(
-          new ByteSource()
-          {
-            @Override
-            public InputStream openStream() throws IOException
-            {
-              try {
-                return httpClient.go(
-                    new Request(HttpMethod.GET, url),
-                    new InputStreamResponseHandler()
-                ).get();
-              }
-              catch (InterruptedException e) {
-                throw new RuntimeException(e);
-              }
-              catch (ExecutionException e) {
-                // Unwrap if possible
-                Throwables.propagateIfPossible(e.getCause(), IOException.class);
-                throw new RuntimeException(e);
-              }
-            }
-          }
-      );
+    }
+
+    final RemoteTaskRunnerWorkItem runningWorkItem = runningTasks.get(taskId);
+
+    if (runningWorkItem == null) {
+      // Worker very recently exited.
+      return Optional.absent();
+    }
+
+    final TaskLocation taskLocation = runningWorkItem.getLocation();
+
+    if (TaskLocation.unknown().equals(taskLocation)) {
+      // No location known for this task. It may have not been assigned one yet.
+      return Optional.absent();
+    }
+
+    final URL url = TaskRunnerUtils.makeTaskLocationURL(
+        taskLocation,
+        "/druid/worker/v1/chat/%s/liveReports",
+        taskId
+    );
+
+    try {
+      return Optional.of(httpClient.go(
+          new Request(HttpMethod.GET, url),
+          new InputStreamResponseHandler()
+      ).get());
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    catch (ExecutionException e) {
+      // Unwrap if possible
+      Throwables.propagateIfPossible(e.getCause(), IOException.class);
+      throw new RuntimeException(e);
     }
   }
+
 
   /**
    * Adds a task to the pending queue.
@@ -919,10 +932,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     synchronized (statusLock) {
       if (!zkWorkers.containsKey(worker) || lazyWorkers.containsKey(worker)) {
         // the worker might have been killed or marked as lazy
-        log.info("Not assigning task to already removed worker[%s]", worker);
+        log.debug("Not assigning task to already removed worker[%s]", worker);
         return false;
       }
-      log.info("Coordinator asking Worker[%s] to add task[%s]", worker, task.getId());
+      log.info("Assigning task [%s] to worker [%s]", task.getId(), worker);
 
       CuratorUtils.createIfNotExists(
           cf,
@@ -949,7 +962,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
       RemoteTaskRunnerWorkItem newWorkItem = workItem.withWorker(theZkWorker.getWorker(), null);
       runningTasks.put(task.getId(), newWorkItem);
-      log.info("Task %s switched from pending to running (on [%s])", task.getId(), newWorkItem.getWorker().getHost());
+      log.info("Task [%s] started running on worker [%s]", task.getId(), newWorkItem.getWorker().getHost());
       TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.running(task.getId()));
 
       // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running

@@ -20,7 +20,9 @@
 package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.jackson.DefaultTrueJsonIncludeFilter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
@@ -94,12 +96,14 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   }
 
   @JsonProperty
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = DefaultTrueJsonIncludeFilter.class)
   public boolean getShouldFinalize()
   {
     return shouldFinalize;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean getIsInputThetaSketch()
   {
     return isInputThetaSketch;
@@ -107,6 +111,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Integer getErrorBoundsStdDev()
   {
     return errorBoundsStdDev;
@@ -162,6 +167,19 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
       return ColumnType.DOUBLE;
     }
     return getIntermediateType();
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new SketchMergeAggregatorFactory(
+        newName,
+        getFieldName(),
+        getSize(),
+        getShouldFinalize(),
+        getIsInputThetaSketch(),
+        getErrorBoundsStdDev()
+    );
   }
 
   @Override

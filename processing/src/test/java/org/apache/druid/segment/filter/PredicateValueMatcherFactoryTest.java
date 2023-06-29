@@ -75,7 +75,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
                 ByteBuffer.wrap(StringUtils.toUtf8("v2")),
                 ByteBuffer.wrap(StringUtils.toUtf8("v3"))
             ),
-            GenericIndexed.BYTE_BUFFER_STRATEGY
+            GenericIndexed.UTF8_STRATEGY
         ),
         null,
         () -> VSizeColumnarMultiInts.fromIterable(ImmutableList.of(VSizeColumnarInts.fromArray(new int[]{1}))),
@@ -98,7 +98,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
                 ByteBuffer.wrap(StringUtils.toUtf8("v2")),
                 ByteBuffer.wrap(StringUtils.toUtf8("v3"))
             ),
-            GenericIndexed.BYTE_BUFFER_STRATEGY
+            GenericIndexed.UTF8_STRATEGY
         ),
         null,
         () -> VSizeColumnarMultiInts.fromIterable(ImmutableList.of(VSizeColumnarInts.fromArray(new int[]{1}))),

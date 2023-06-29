@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
+import org.apache.druid.java.util.emitter.service.SegmentMetadataEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.hadoop.metrics2.sink.timeline.AbstractTimelineMetricsSink;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
@@ -137,6 +138,8 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
       for (Emitter emitter : emitterList) {
         emitter.emit(event);
       }
+    } else if (event instanceof SegmentMetadataEvent) {
+      // do nothing. Ignore this event type
     } else {
       throw new ISE("unknown event type [%s]", event.getClass());
     }

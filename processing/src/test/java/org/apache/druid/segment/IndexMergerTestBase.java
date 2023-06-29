@@ -114,25 +114,6 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     );
   }
 
-  static IndexSpec makeIndexSpec(
-      BitmapSerdeFactory bitmapSerdeFactory,
-      CompressionStrategy compressionStrategy,
-      CompressionStrategy dimCompressionStrategy,
-      CompressionFactory.LongEncodingStrategy longEncodingStrategy
-  )
-  {
-    if (bitmapSerdeFactory != null || compressionStrategy != null) {
-      return new IndexSpec(
-          bitmapSerdeFactory,
-          dimCompressionStrategy,
-          compressionStrategy,
-          longEncodingStrategy
-      );
-    } else {
-      return new IndexSpec();
-    }
-  }
-
   static BitmapValues getBitmapIndex(QueryableIndexIndexableAdapter adapter, String dimension, String value)
   {
     final ColumnHolder columnHolder = adapter.getQueryableIndex().getColumnHolder(dimension);
@@ -170,12 +151,12 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
       CompressionFactory.LongEncodingStrategy longEncodingStrategy
   )
   {
-    this.indexSpec = makeIndexSpec(
-        bitmapSerdeFactory != null ? bitmapSerdeFactory : new ConciseBitmapSerdeFactory(),
-        compressionStrategy,
-        dimCompressionStrategy,
-        longEncodingStrategy
-    );
+    this.indexSpec = IndexSpec.builder()
+                              .withBitmapSerdeFactory(bitmapSerdeFactory != null ? bitmapSerdeFactory : new ConciseBitmapSerdeFactory())
+                              .withDimensionCompression(dimCompressionStrategy)
+                              .withMetricCompression(compressionStrategy)
+                              .withLongEncoding(longEncodingStrategy)
+                              .build();
     this.indexIO = TestHelper.getTestIndexIO();
     this.useBitmapIndexes = bitmapSerdeFactory != null;
   }
@@ -516,18 +497,20 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
     Assert.assertEquals(3, index1.getColumnNames().size());
 
-    IndexSpec newSpec = new IndexSpec(
-        indexSpec.getBitmapSerdeFactory(),
-        CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
-        CompressionStrategy.LZF :
-        CompressionStrategy.LZ4,
-        CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
-        CompressionStrategy.LZF :
-        CompressionStrategy.LZ4,
-        CompressionFactory.LongEncodingStrategy.LONGS.equals(indexSpec.getLongEncoding()) ?
-        CompressionFactory.LongEncodingStrategy.AUTO :
-        CompressionFactory.LongEncodingStrategy.LONGS
-    );
+    IndexSpec.Builder builder = IndexSpec.builder().withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory());
+    if (CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression())) {
+      builder.withDimensionCompression(CompressionStrategy.LZF)
+             .withMetricCompression(CompressionStrategy.LZF);
+    } else {
+      builder.withDimensionCompression(CompressionStrategy.LZ4)
+             .withMetricCompression(CompressionStrategy.LZ4);
+    }
+    if (CompressionFactory.LongEncodingStrategy.LONGS.equals(indexSpec.getLongEncoding())) {
+      builder.withLongEncoding(CompressionFactory.LongEncodingStrategy.AUTO);
+    } else {
+      builder.withLongEncoding(CompressionFactory.LongEncodingStrategy.LONGS);
+    }
+    IndexSpec newSpec = builder.build();
 
     AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{new CountAggregatorFactory("count")};
     QueryableIndex merged = closer.closeLater(

@@ -123,6 +123,14 @@ public class ApproximateHistogramFoldingVectorAggregatorTest
 
   }
 
+  @Test
+  public void testWithName()
+  {
+    ApproximateHistogramFoldingAggregatorFactory factory = buildHistogramFactory();
+    Assert.assertEquals(factory, factory.withName("approximateHistoFold"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
+
   private ApproximateHistogramFoldingAggregatorFactory buildHistogramFactory()
   {
     return buildHistogramFactory("field");

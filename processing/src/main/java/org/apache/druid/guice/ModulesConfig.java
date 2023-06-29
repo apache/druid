@@ -26,6 +26,8 @@ import java.util.List;
 
 public class ModulesConfig
 {
+  public static final String PROPERTY_BASE = "druid.modules";
+
   /**
    * Canonical class names of modules, which should not be loaded despite they are founded in extensions from {@link
    * ExtensionsConfig#loadList} or the standard list of modules loaded by some node type, e. g. {@code

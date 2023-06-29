@@ -153,6 +153,8 @@ public class CliIndexerServerModule implements Module
         oldConfig.getDefaultQueryTimeout(),
         oldConfig.getMaxScatterGatherBytes(),
         oldConfig.getMaxSubqueryRows(),
+        oldConfig.getMaxSubqueryBytes(),
+        oldConfig.isuseNestedForUnknownTypeInSubquery(),
         oldConfig.getMaxQueryTimeout(),
         oldConfig.getMaxRequestHeaderSize(),
         oldConfig.getGracefulShutdownTimeout(),
@@ -162,7 +164,9 @@ public class CliIndexerServerModule implements Module
         oldConfig.isEnableForwardedRequestCustomizer(),
         oldConfig.getAllowedHttpMethods(),
         oldConfig.isShowDetailedJettyErrors(),
-        oldConfig.getErrorResponseTransformStrategy()
+        oldConfig.getErrorResponseTransformStrategy(),
+        oldConfig.getContentSecurityPolicy(),
+        oldConfig.isEnableHSTS()
     );
   }
 }

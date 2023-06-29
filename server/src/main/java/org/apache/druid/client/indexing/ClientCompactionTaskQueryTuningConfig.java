@@ -75,6 +75,8 @@ public class ClientCompactionTaskQueryTuningConfig
   @Nullable
   private final Integer totalNumMergeTasks;
   @Nullable
+  private final Integer maxColumnsToMerge;
+  @Nullable
   private final AppendableIndexSpec appendableIndexSpec;
 
   public static ClientCompactionTaskQueryTuningConfig from(
@@ -87,6 +89,7 @@ public class ClientCompactionTaskQueryTuningConfig
       return new ClientCompactionTaskQueryTuningConfig(
           maxRowsPerSegment,
           new OnheapIncrementalIndex.Spec(preserveExistingMetrics),
+          null,
           null,
           null,
           null,
@@ -128,7 +131,8 @@ public class ClientCompactionTaskQueryTuningConfig
           userCompactionTaskQueryTuningConfig.getChatHandlerTimeout(),
           userCompactionTaskQueryTuningConfig.getChatHandlerNumRetries(),
           userCompactionTaskQueryTuningConfig.getMaxNumSegmentsToMerge(),
-          userCompactionTaskQueryTuningConfig.getTotalNumMergeTasks()
+          userCompactionTaskQueryTuningConfig.getTotalNumMergeTasks(),
+          userCompactionTaskQueryTuningConfig.getMaxColumnsToMerge()
       );
     }
   }
@@ -153,7 +157,8 @@ public class ClientCompactionTaskQueryTuningConfig
       @JsonProperty("chatHandlerTimeout") @Nullable Duration chatHandlerTimeout,
       @JsonProperty("chatHandlerNumRetries") @Nullable Integer chatHandlerNumRetries,
       @JsonProperty("maxNumSegmentsToMerge") @Nullable Integer maxNumSegmentsToMerge,
-      @JsonProperty("totalNumMergeTasks") @Nullable Integer totalNumMergeTasks
+      @JsonProperty("totalNumMergeTasks") @Nullable Integer totalNumMergeTasks,
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
   )
   {
     this.maxRowsPerSegment = maxRowsPerSegment;
@@ -175,6 +180,7 @@ public class ClientCompactionTaskQueryTuningConfig
     this.chatHandlerNumRetries = chatHandlerNumRetries;
     this.maxNumSegmentsToMerge = maxNumSegmentsToMerge;
     this.totalNumMergeTasks = totalNumMergeTasks;
+    this.maxColumnsToMerge = maxColumnsToMerge;
   }
 
   @JsonProperty
@@ -320,6 +326,13 @@ public class ClientCompactionTaskQueryTuningConfig
 
   @JsonProperty
   @Nullable
+  public Integer getMaxColumnsToMerge()
+  {
+    return maxColumnsToMerge;
+  }
+
+  @JsonProperty
+  @Nullable
   public AppendableIndexSpec getAppendableIndexSpec()
   {
     return appendableIndexSpec;
@@ -353,6 +366,7 @@ public class ClientCompactionTaskQueryTuningConfig
            Objects.equals(chatHandlerNumRetries, that.chatHandlerNumRetries) &&
            Objects.equals(maxNumSegmentsToMerge, that.maxNumSegmentsToMerge) &&
            Objects.equals(totalNumMergeTasks, that.totalNumMergeTasks) &&
+           Objects.equals(maxColumnsToMerge, that.maxColumnsToMerge) &&
            Objects.equals(appendableIndexSpec, that.appendableIndexSpec);
   }
 
@@ -378,6 +392,7 @@ public class ClientCompactionTaskQueryTuningConfig
         chatHandlerNumRetries,
         maxNumSegmentsToMerge,
         totalNumMergeTasks,
+        maxColumnsToMerge,
         appendableIndexSpec
     );
   }
@@ -404,6 +419,7 @@ public class ClientCompactionTaskQueryTuningConfig
            ", chatHandlerNumRetries=" + chatHandlerNumRetries +
            ", maxNumSegmentsToMerge=" + maxNumSegmentsToMerge +
            ", totalNumMergeTasks=" + totalNumMergeTasks +
+           ", maxColumnsToMerge=" + maxColumnsToMerge +
            ", appendableIndexSpec=" + appendableIndexSpec +
            '}';
   }

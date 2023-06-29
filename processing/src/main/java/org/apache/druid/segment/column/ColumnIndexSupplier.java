@@ -39,7 +39,19 @@ public interface ColumnIndexSupplier
    * {@link org.apache.druid.segment.data.Offset} to form the basis of a {@link org.apache.druid.segment.Cursor}
    * (or {@link org.apache.druid.segment.vector.VectorOffset} and {@link org.apache.druid.segment.vector.VectorCursor})
    * which can greatly reduce the total number of rows which need to be scanned and processed.
+   *
+   * Objects returned by this method are not thread-safe.
    */
   @Nullable
   <T> T as(Class<T> clazz);
+
+  static boolean skipComputingRangeIndexes(ColumnConfig columnConfig, int numRows, int rangeSize)
+  {
+    return rangeSize > (int) Math.ceil(columnConfig.skipValueRangeIndexScale() * numRows);
+  }
+
+  static boolean skipComputingPredicateIndexes(ColumnConfig columnConfig, int numRowsToScan, int dictionaryCardinality)
+  {
+    return dictionaryCardinality > (int) Math.ceil(columnConfig.skipValuePredicateIndexScale() * numRowsToScan);
+  }
 }

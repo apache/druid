@@ -38,6 +38,9 @@ def generate_report(module_path, report_orig_path, report_out_path):
         command = "cp -r {} {}".format(report_orig_path, report_out_path)
         subprocess.check_output(command, cwd=module_path, shell=True)
         print("Generated report for {} in {}".format(module_path, report_out_path))
+    except subprocess.CalledProcessError as e:
+        print("Encountered error [{}] with the following output when generating report for {}".format(e, module_path))
+        print(e.output.decode('utf-8'))
     except Exception as e:
         print("Encountered error [{}] when generating report for {}".format(e, module_path))
 
@@ -56,7 +59,8 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
 
     if not exclude_ext:
         extensions_core_path = os.path.join(druid_path, "extensions-core")
-        extension_dirs = os.listdir(extensions_core_path)
+        command = "mvn -Dexec.executable='echo' -Dexec.args='${basedir}' exec:exec -q | grep extensions-core | grep -o '[^/]*$'"
+        extension_dirs = subprocess.check_output(command, cwd=druid_path, shell=True).decode().split('\n')[:-1]
         print("Found {} extensions".format(len(extension_dirs)))
         for extension_dir in extension_dirs:
             print("extension dir: {}".format(extension_dir))

@@ -20,11 +20,11 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.ParseSpec;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -58,7 +58,6 @@ import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
-import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -175,7 +174,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   {
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     TaskStatus taskStatus = getIndexingServiceClient().runAndWait(task);
-    Assert.assertEquals(expectedTaskStatus, taskStatus.getStatusCode());
+    Assert.assertEquals("Actual task status: " + taskStatus, expectedTaskStatus, taskStatus.getStatusCode());
   }
 
   Set<DataSegment> runTask(Task task, TaskState expectedTaskStatus)
@@ -187,7 +186,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   Map<String, Object> runTaskAndGetReports(Task task, TaskState expectedTaskStatus)
   {
     runTaskAndVerifyStatus(task, expectedTaskStatus);
-    return getIndexingServiceClient().getTaskReport(task.getId());
+    return FutureUtils.getUnchecked(getIndexingServiceClient().taskReportAsMap(task.getId()), true);
   }
 
   protected ParallelIndexSupervisorTask createTask(
@@ -240,24 +239,22 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
           tuningConfig
       );
     } else {
-      Preconditions.checkArgument(inputFormat == null);
+      Preconditions.checkArgument(inputFormat == null && parseSpec != null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          new LocalFirehoseFactory(inputDirectory, filter, null),
+          null,
+          new LocalInputSource(inputDirectory, filter),
+          createInputFormatFromParseSpec(parseSpec),
           appendToExisting,
           dropExisting
       );
-      //noinspection unchecked
       ingestionSpec = new ParallelIndexIngestionSpec(
           new DataSchema(
-              "dataSource",
-              getObjectMapper().convertValue(
-                  new StringInputRowParser(parseSpec, null),
-                  Map.class
-              ),
+              DATASOURCE,
+              parseSpec.getTimestampSpec(),
+              parseSpec.getDimensionsSpec(),
               DEFAULT_METRICS_SPEC,
               granularitySpec,
-              null,
-              getObjectMapper()
+              null
           ),
           ioConfig,
           tuningConfig

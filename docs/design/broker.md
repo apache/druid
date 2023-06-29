@@ -27,9 +27,11 @@ title: "Broker"
 
 For Apache Druid Broker Process Configuration, see [Broker Configuration](../configuration/index.md#broker).
 
+For basic tuning guidance for the Broker process, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#broker).
+
 ### HTTP endpoints
 
-For a list of API endpoints supported by the Broker, see [Broker API](../operations/api-reference.md#broker).
+For a list of API endpoints supported by the Broker, see [Broker API](../api-reference/legacy-metadata-api.md#broker).
 
 ### Overview
 

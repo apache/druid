@@ -98,13 +98,12 @@ public class WorkerTaskManager
   //synchronizes access to "running", "completed" and "changeHistory"
   protected final Object lock = new Object();
 
-  private final TaskConfig taskConfig;
-
   private final ScheduledExecutorService completedTasksCleanupExecutor;
 
   private final AtomicBoolean disabled = new AtomicBoolean(false);
 
   private final DruidLeaderClient overlordClient;
+  private final File storageDir;
 
   @Inject
   public WorkerTaskManager(
@@ -116,10 +115,11 @@ public class WorkerTaskManager
   {
     this.jsonMapper = jsonMapper;
     this.taskRunner = taskRunner;
-    this.taskConfig = taskConfig;
     this.exec = Execs.singleThreaded("WorkerTaskManager-NoticeHandler");
     this.completedTasksCleanupExecutor = Execs.scheduledSingleThreaded("WorkerTaskManager-CompletedTasksCleaner");
     this.overlordClient = overlordClient;
+
+    storageDir = taskConfig.getBaseTaskDir();
   }
 
   @LifecycleStart
@@ -309,7 +309,7 @@ public class WorkerTaskManager
 
   private File getTmpTaskDir()
   {
-    return new File(taskConfig.getBaseTaskDir(), "workerTaskManagerTmp");
+    return new File(storageDir, "workerTaskManagerTmp");
   }
 
   private void cleanupAndMakeTmpTaskDir() throws IOException
@@ -331,7 +331,7 @@ public class WorkerTaskManager
 
   public File getAssignedTaskDir()
   {
-    return new File(taskConfig.getBaseTaskDir(), "assignedTasks");
+    return new File(storageDir, "assignedTasks");
   }
 
   private void initAssignedTasks() throws IOException
@@ -432,7 +432,7 @@ public class WorkerTaskManager
 
   public File getCompletedTaskDir()
   {
-    return new File(taskConfig.getBaseTaskDir(), "completedTasks");
+    return new File(storageDir, "completedTasks");
   }
 
   private void moveFromRunningToCompleted(String taskId, TaskAnnouncement taskAnnouncement)

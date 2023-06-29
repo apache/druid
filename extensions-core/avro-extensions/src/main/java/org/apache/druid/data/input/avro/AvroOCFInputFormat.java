@@ -21,6 +21,7 @@ package org.apache.druid.data.input.avro;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.avro.Schema;
@@ -39,6 +40,7 @@ import java.util.Objects;
 
 public class AvroOCFInputFormat extends NestedInputFormat
 {
+  static final long SCALE_FACTOR = 8L;
   private static final Logger LOGGER = new Logger(AvroOCFInputFormat.class);
 
   private final boolean binaryAsString;
@@ -79,19 +81,23 @@ public class AvroOCFInputFormat extends NestedInputFormat
     return false;
   }
 
+  @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Map<String, Object> getSchema()
   {
     return schema;
   }
 
   @JsonProperty
-  public Boolean getBinaryAsString()
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public boolean getBinaryAsString()
   {
     return binaryAsString;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public Boolean isExtractUnionsByType()
   {
     return extractUnionsByType;
@@ -109,6 +115,12 @@ public class AvroOCFInputFormat extends NestedInputFormat
         binaryAsString,
         extractUnionsByType
     );
+  }
+
+  @Override
+  public long getWeightedSize(String path, long size)
+  {
+    return size * SCALE_FACTOR;
   }
 
   @Override

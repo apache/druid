@@ -46,6 +46,12 @@ public class SupervisorStateManagerConfig
   @JsonProperty
   private int maxStoredExceptionEvents = Math.max(unhealthinessThreshold, healthinessThreshold);
 
+  @JsonProperty("idleConfig.enabled")
+  private boolean idleConfigEnabled = false;
+
+  @JsonProperty("idleConfig.inactiveAfterMillis")
+  private long inactiveAfterMillis = 600_000L;
+
   public SupervisorStateManagerConfig()
   {
 
@@ -84,5 +90,15 @@ public class SupervisorStateManagerConfig
   public int getMaxStoredExceptionEvents()
   {
     return maxStoredExceptionEvents;
+  }
+
+  public boolean isIdleConfigEnabled()
+  {
+    return idleConfigEnabled;
+  }
+
+  public long getInactiveAfterMillis()
+  {
+    return inactiveAfterMillis;
   }
 }

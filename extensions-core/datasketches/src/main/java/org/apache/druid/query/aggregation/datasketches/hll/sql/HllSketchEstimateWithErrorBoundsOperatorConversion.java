@@ -46,7 +46,7 @@ public class HllSketchEstimateWithErrorBoundsOperatorConversion implements SqlOp
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(FUNCTION_NAME))
       .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.INTEGER)
-      .requiredOperands(1)
+      .requiredOperandCount(1)
       .returnTypeNonNull(SqlTypeName.OTHER)
       .build();
 
@@ -80,7 +80,8 @@ public class HllSketchEstimateWithErrorBoundsOperatorConversion implements SqlOp
         plannerContext,
         rowSignature,
         operands.get(0),
-        postAggregatorVisitor
+        postAggregatorVisitor,
+        true
     );
 
     if (firstOperand == null) {

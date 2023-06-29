@@ -21,6 +21,7 @@ package org.apache.druid.data.input.orc;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
@@ -29,13 +30,16 @@ import org.apache.druid.data.input.impl.NestedInputFormat;
 import org.apache.druid.data.input.orc.guice.Orc;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.util.Objects;
 
 public class OrcInputFormat extends NestedInputFormat
 {
+  static final long SCALE_FACTOR = 8L;
   private final boolean binaryAsString;
   private final Configuration conf;
 
@@ -47,8 +51,28 @@ public class OrcInputFormat extends NestedInputFormat
   )
   {
     super(flattenSpec);
-    this.binaryAsString = binaryAsString == null ? false : binaryAsString;
+    this.binaryAsString = binaryAsString != null && binaryAsString;
     this.conf = conf;
+  }
+
+  private void initialize(Configuration conf)
+  {
+    //Initializing seperately since during eager initialization, resolving
+    //namenode hostname throws an error if nodes are ephemeral
+
+    // Ensure that FileSystem class level initialization happens with correct CL
+    // See https://github.com/apache/druid/issues/1714
+    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      FileSystem.get(conf);
+    }
+    catch (IOException ex) {
+      throw new RuntimeException(ex);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(currCtxCl);
+    }
   }
 
   @Override
@@ -57,10 +81,24 @@ public class OrcInputFormat extends NestedInputFormat
     return false;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public boolean getBinaryAsString()
+  {
+    return binaryAsString;
+  }
+
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
+    initialize(conf);
     return new OrcReader(conf, inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString);
+  }
+
+  @Override
+  public long getWeightedSize(String path, long size)
+  {
+    return size * SCALE_FACTOR;
   }
 
   @Override

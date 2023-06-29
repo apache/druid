@@ -25,13 +25,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
-import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -45,8 +43,6 @@ import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
-import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
-import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.IAE;
@@ -61,6 +57,7 @@ import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -74,7 +71,7 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.DateTime;
@@ -85,10 +82,8 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -127,9 +122,9 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   // Store lock versions
   Map<Interval, String> intervalToVersion = new HashMap<>();
 
-  protected AbstractBatchIndexTask(String id, String dataSource, Map<String, Object> context)
+  protected AbstractBatchIndexTask(String id, String dataSource, Map<String, Object> context, IngestionMode ingestionMode)
   {
-    super(id, dataSource, context);
+    super(id, dataSource, context, ingestionMode);
     maxAllowedLockCount = -1;
   }
 
@@ -139,10 +134,11 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       @Nullable TaskResource taskResource,
       String dataSource,
       @Nullable Map<String, Object> context,
-      int maxAllowedLockCount
+      int maxAllowedLockCount,
+      IngestionMode ingestionMode
   )
   {
-    super(id, groupId, taskResource, dataSource, context);
+    super(id, groupId, taskResource, dataSource, context, ingestionMode);
     this.maxAllowedLockCount = maxAllowedLockCount;
   }
 
@@ -154,7 +150,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    * @see #stopGracefully(TaskConfig)
    */
   @Override
-  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  public String setup(TaskToolbox toolbox) throws Exception
   {
     if (taskLockHelper == null) {
       // Subclasses generally use "isReady" to initialize the taskLockHelper. It's not guaranteed to be called before
@@ -169,8 +165,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
     synchronized (this) {
       if (stopped) {
-        String errMsg = "Attempting to run a task that has been stopped. See overlord & task logs for more details.";
-        return TaskStatus.failure(getId(), errMsg);
+        return "Attempting to run a task that has been stopped. See overlord & task logs for more details.";
       } else {
         // Register the cleaner to interrupt the current thread first.
         // Since the resource closer cleans up the registered resources in LIFO order,
@@ -183,7 +178,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         resourceCloserOnAbnormalExit.register(config -> currentThread.interrupt());
       }
     }
-    return runTask(toolbox);
+    return super.setup(toolbox);
   }
 
   @Override
@@ -219,7 +214,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         )
     );
     return new FilteringCloseableInputRowIterator(
-        inputSourceReader.read(),
+        inputSourceReader.read(ingestionMeters),
         rowFilter,
         ingestionMeters,
         parseExceptionHandler
@@ -248,11 +243,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       resourceCloserOnAbnormalExit.register(cleaner);
     }
   }
-
-  /**
-   * The method to actually process this task. This method is executed in {@link #run(TaskToolbox)}.
-   */
-  public abstract TaskStatus runTask(TaskToolbox toolbox) throws Exception;
 
   /**
    * Return true if this task can overwrite existing segments.
@@ -306,11 +296,14 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
         Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
     );
-    final boolean useSharedLock = ioConfig.isAppendToExisting() && getContextValue(Tasks.USE_SHARED_LOCK, false);
+    IngestionMode ingestionMode = getIngestionMode();
+    final boolean useSharedLock = ingestionMode == IngestionMode.APPEND
+                                  && getContextValue(Tasks.USE_SHARED_LOCK, false);
     // Respect task context value most.
-    if (forceTimeChunkLock || ioConfig.isDropExisting()) {
-      log.info("forceTimeChunkLock[%s] or isDropExisting[%s] is set to true. Use timeChunk lock",
-               forceTimeChunkLock, ioConfig.isDropExisting()
+    if (forceTimeChunkLock || ingestionMode == IngestionMode.REPLACE) {
+      log.info(
+          "forceTimeChunkLock[%s] is set to true or mode[%s] is replace. Use timeChunk lock",
+          forceTimeChunkLock, ingestionMode
       );
       taskLockHelper = new TaskLockHelper(false, useSharedLock);
       if (!intervals.isEmpty()) {
@@ -479,7 +472,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       } else {
         // Use segment lock
         // Create a timeline to find latest segments only
-        final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(
+        final SegmentTimeline timeline = SegmentTimeline.forSegments(
             segments
         );
 
@@ -505,10 +498,13 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    * the start partition ID of the set of perfectly rolled up segments is 0. Instead it might need to store an ordinal
    * in addition to the partition ID which represents the ordinal in the perfectly rolled up segment set.
    */
-  public static boolean isGuaranteedRollup(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
+  public static boolean isGuaranteedRollup(
+      IngestionMode ingestionMode,
+      IndexTuningConfig tuningConfig
+  )
   {
     Preconditions.checkArgument(
-        !tuningConfig.isForceGuaranteedRollup() || !ioConfig.isAppendToExisting(),
+        !(ingestionMode == IngestionMode.APPEND && tuningConfig.isForceGuaranteedRollup()),
         "Perfect rollup cannot be guaranteed when appending to existing dataSources"
     );
     return tuningConfig.isForceGuaranteedRollup();
@@ -552,28 +548,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     }
   }
 
-  public static Set<DataSegment> getUsedSegmentsWithinInterval(
-      TaskToolbox toolbox,
-      String dataSource,
-      List<Interval> intervals
-  ) throws IOException
-  {
-    Set<DataSegment> segmentsFoundForDrop = new HashSet<>();
-    List<Interval> condensedIntervals = JodaUtils.condenseIntervals(intervals);
-    if (!intervals.isEmpty()) {
-      Collection<DataSegment> usedSegment = toolbox.getTaskActionClient().submit(new RetrieveUsedSegmentsAction(dataSource, null, condensedIntervals, Segments.ONLY_VISIBLE));
-      for (DataSegment segment : usedSegment) {
-        for (Interval interval : condensedIntervals) {
-          if (interval.contains(segment.getInterval())) {
-            segmentsFoundForDrop.add(segment);
-            break;
-          }
-        }
-      }
-    }
-    return segmentsFoundForDrop;
-  }
-
   @Nullable
   static Granularity findGranularityFromSegments(List<DataSegment> segments)
   {
@@ -592,13 +566,9 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   }
 
   /**
-   * If the given firehoseFactory is {@link IngestSegmentFirehoseFactory}, then it finds the segments to lock
-   * from the firehoseFactory. This is because those segments will be read by this task no matter what segments would be
-   * filtered by intervalsToRead, so they need to be locked.
    * <p>
-   * However, firehoseFactory is not IngestSegmentFirehoseFactory, it means this task will overwrite some segments
-   * with data read from some input source outside of Druid. As a result, only the segments falling in intervalsToRead
-   * should be locked.
+   * This task will overwrite some segments with data read from input source outside of Druid.
+   * As a result, only the segments falling in intervalsToRead should be locked.
    * <p>
    * The order of segments within the returned list is unspecified, but each segment is guaranteed to appear in the list
    * only once.
@@ -606,48 +576,14 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   protected static List<DataSegment> findInputSegments(
       String dataSource,
       TaskActionClient actionClient,
-      List<Interval> intervalsToRead,
-      FirehoseFactory firehoseFactory
+      List<Interval> intervalsToRead
   ) throws IOException
   {
-    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
-      // intervalsToRead is ignored here.
-      final List<WindowedSegmentId> inputSegments = ((IngestSegmentFirehoseFactory) firehoseFactory).getSegments();
-      if (inputSegments == null) {
-        final Interval inputInterval = Preconditions.checkNotNull(
-            ((IngestSegmentFirehoseFactory) firehoseFactory).getInterval(),
-            "input interval"
-        );
-
-        return ImmutableList.copyOf(
-            actionClient.submit(
-                new RetrieveUsedSegmentsAction(dataSource, inputInterval, null, Segments.ONLY_VISIBLE)
-            )
-        );
-      } else {
-        final List<String> inputSegmentIds =
-            inputSegments.stream().map(WindowedSegmentId::getSegmentId).collect(Collectors.toList());
-        final Collection<DataSegment> dataSegmentsInIntervals = actionClient.submit(
-            new RetrieveUsedSegmentsAction(
-                dataSource,
-                null,
-                inputSegments.stream()
-                             .flatMap(windowedSegmentId -> windowedSegmentId.getIntervals().stream())
-                             .collect(Collectors.toSet()),
-                Segments.ONLY_VISIBLE
-            )
-        );
-        return dataSegmentsInIntervals.stream()
-                                      .filter(segment -> inputSegmentIds.contains(segment.getId().toString()))
-                                      .collect(Collectors.toList());
-      }
-    } else {
-      return ImmutableList.copyOf(
-          actionClient.submit(
-              new RetrieveUsedSegmentsAction(dataSource, null, intervalsToRead, Segments.ONLY_VISIBLE)
-          )
-      );
-    }
+    return ImmutableList.copyOf(
+        actionClient.submit(
+            new RetrieveUsedSegmentsAction(dataSource, null, intervalsToRead, Segments.ONLY_VISIBLE)
+        )
+    );
   }
 
   /**
@@ -714,6 +650,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
               .setDimension("dataSource", getDataSource())
               .setDimension("taskType", getType())
               .setDimension("taskId", getId())
+              .setDimension("groupId", getGroupId())
+              .setDimensionIfNotNull(DruidMetrics.TAGS, getContextValue(DruidMetrics.TAGS))
               .setDimension("segmentAvailabilityConfirmed", segmentAvailabilityConfirmationCompleted)
               .build("task/segmentAvailability/wait/time", segmentAvailabilityWaitTimeMs)
       );

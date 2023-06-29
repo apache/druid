@@ -276,6 +276,12 @@ public class StringLastAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new StringLastAggregatorFactory(newName, getFieldName(), getTimeColumn(), getMaxStringBytes());
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

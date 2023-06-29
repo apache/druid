@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import { deepGet } from './object-change';
+
 export function isLookupsUninitialized(error: Error | undefined) {
-  return error && error.message === 'Request failed with status code 404';
+  return deepGet(error || {}, 'response.status') === 404;
 }

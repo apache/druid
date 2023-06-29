@@ -22,7 +22,6 @@ package org.apache.druid.server.scheduling;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServerSelector;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.server.QueryLaningStrategy;
 
@@ -47,6 +46,6 @@ public class NoQueryLaningStrategy implements QueryLaningStrategy
   @Override
   public <T> Optional<String> computeLane(QueryPlus<T> query, Set<SegmentServerSelector> segments)
   {
-    return Optional.ofNullable(QueryContexts.getLane(query.getQuery()));
+    return Optional.ofNullable(query.getQuery().context().getLane());
   }
 }

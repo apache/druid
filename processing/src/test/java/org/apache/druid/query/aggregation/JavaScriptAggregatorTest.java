@@ -159,7 +159,7 @@ public class JavaScriptAggregatorTest
         )
     );
 
-    ByteBuffer buf = ByteBuffer.allocateDirect(32);
+    ByteBuffer buf = ByteBuffer.allocate(32);
     final int position = 4;
     agg.init(buf, position);
 

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -39,10 +40,11 @@ public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregator
   public DoublesSketchMergeAggregatorFactory(
       @JsonProperty("name") final String name,
       @JsonProperty("k") @Nullable final Integer k,
-      @JsonProperty("maxStreamLength") @Nullable final Long maxStreamLength
+      @JsonProperty("maxStreamLength") @Nullable final Long maxStreamLength,
+      @JsonProperty("shouldFinalize") @Nullable final Boolean shouldFinalize
   )
   {
-    super(name, name, k, maxStreamLength, AggregatorUtil.QUANTILES_DOUBLES_SKETCH_MERGE_CACHE_TYPE_ID);
+    super(name, name, k, maxStreamLength, shouldFinalize, AggregatorUtil.QUANTILES_DOUBLES_SKETCH_MERGE_CACHE_TYPE_ID);
   }
 
   @VisibleForTesting
@@ -51,7 +53,7 @@ public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregator
       @Nullable final Integer k
   )
   {
-    this(name, k, null);
+    this(name, k, null, null);
   }
 
   @Override
@@ -74,4 +76,9 @@ public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregator
     return new DoublesSketchMergeBufferAggregator(selector, getK(), getMaxIntermediateSizeWithNulls());
   }
 
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new DoublesSketchMergeAggregatorFactory(newName, getK(), getMaxStreamLength(), isShouldFinalize());
+  }
 }

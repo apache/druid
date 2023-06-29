@@ -74,8 +74,6 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
-import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
-import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -84,8 +82,11 @@ import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskTransformConfig;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -121,6 +122,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -138,6 +140,7 @@ public class CompactSegmentsTest
   private static final int TOTAL_SEGMENT_PER_DATASOURCE = 44;
   private static final int TOTAL_INTERVAL_PER_DATASOURCE = 11;
   private static final int MAXIMUM_CAPACITY_WITH_AUTO_SCALE = 10;
+  private static final NewestSegmentFirstPolicy SEARCH_POLICY = new NewestSegmentFirstPolicy(JSON_MAPPER);
 
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
@@ -176,7 +179,7 @@ public class CompactSegmentsTest
   private final PartitionsSpec partitionsSpec;
   private final BiFunction<Integer, Integer, ShardSpec> shardSpecFactory;
 
-  private Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
+  private DataSourcesSnapshot dataSources;
   Map<String, List<DataSegment>> datasourceToSegments = new HashMap<>();
 
   public CompactSegmentsTest(PartitionsSpec partitionsSpec, BiFunction<Integer, Integer, ShardSpec> shardSpecFactory)
@@ -203,9 +206,7 @@ public class CompactSegmentsTest
         }
       }
     }
-    dataSources = DataSourcesSnapshot
-        .fromUsedSegments(allSegments, ImmutableMap.of())
-        .getUsedSegmentsTimelinesPerDataSource();
+    dataSources = DataSourcesSnapshot.fromUsedSegments(allSegments, ImmutableMap.of());
     Mockito.when(COORDINATOR_CONFIG.getCompactionSkipLockedIntervals()).thenReturn(true);
   }
 
@@ -232,8 +233,8 @@ public class CompactSegmentsTest
         interval,
         "version",
         null,
-        ImmutableList.of(),
-        ImmutableList.of(),
+        Collections.emptyList(),
+        Collections.emptyList(),
         shardSpec,
         0,
         10L
@@ -249,17 +250,15 @@ public class CompactSegmentsTest
     JSON_MAPPER.setInjectableValues(
         new InjectableValues.Std()
             .addValue(DruidCoordinatorConfig.class, COORDINATOR_CONFIG)
-            .addValue(ObjectMapper.class, JSON_MAPPER)
             .addValue(IndexingServiceClient.class, indexingServiceClient)
+            .addValue(CompactionSegmentSearchPolicy.class, SEARCH_POLICY)
     );
 
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
     String compactSegmentString = JSON_MAPPER.writeValueAsString(compactSegments);
     CompactSegments serdeCompactSegments = JSON_MAPPER.readValue(compactSegmentString, CompactSegments.class);
 
     Assert.assertNotNull(serdeCompactSegments);
-    Assert.assertEquals(COORDINATOR_CONFIG.getCompactionSkipLockedIntervals(), serdeCompactSegments.isSkipLockedIntervals());
-    Assert.assertEquals(indexingServiceClient, serdeCompactSegments.getIndexingServiceClient());
   }
 
   @Test
@@ -268,7 +267,7 @@ public class CompactSegmentsTest
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
 
     final Supplier<String> expectedVersionSupplier = new Supplier<String>()
     {
@@ -346,7 +345,7 @@ public class CompactSegmentsTest
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
 
     // Before any compaction, we do not have any snapshot of compactions
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
@@ -356,10 +355,10 @@ public class CompactSegmentsTest
       doCompactionAndAssertCompactSegmentStatistics(compactSegments, compactionRunCount);
     }
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
-    final CoordinatorStats stats = doCompactSegments(compactSegments);
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         0,
-        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+        stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
     for (int i = 0; i < 3; i++) {
       verifySnapshot(
@@ -405,7 +404,7 @@ public class CompactSegmentsTest
     doCompactSegments(compactSegments, new ArrayList<>());
     Assert.assertEquals(
         0,
-        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+        stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
     Assert.assertTrue(compactSegments.getAutoCompactionSnapshot().isEmpty());
 
@@ -437,15 +436,12 @@ public class CompactSegmentsTest
       }
     }
 
-    dataSources = DataSourcesSnapshot
-        .fromUsedSegments(segments, ImmutableMap.of())
-        .getUsedSegmentsTimelinesPerDataSource();
-
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
 
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
 
     // Before any compaction, we do not have any snapshot of compactions
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
@@ -454,10 +450,10 @@ public class CompactSegmentsTest
     // 3 intervals, 120 byte, 12 segments already compacted before the run
     for (int compactionRunCount = 0; compactionRunCount < 8; compactionRunCount++) {
       // Do a cycle of auto compaction which creates one compaction task
-      final CoordinatorStats stats = doCompactSegments(compactSegments);
+      final CoordinatorRunStats stats = doCompactSegments(compactSegments);
       Assert.assertEquals(
           1,
-          stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+          stats.get(Stats.Compaction.SUBMITTED_TASKS)
       );
 
       verifySnapshot(
@@ -480,10 +476,10 @@ public class CompactSegmentsTest
     }
 
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
-    final CoordinatorStats stats = doCompactSegments(compactSegments);
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         0,
-        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+        stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
     verifySnapshot(
         compactSegments,
@@ -509,7 +505,7 @@ public class CompactSegmentsTest
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
 
     // Before any compaction, we do not have any snapshot of compactions
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
@@ -519,10 +515,10 @@ public class CompactSegmentsTest
       doCompactionAndAssertCompactSegmentStatistics(compactSegments, compactionRunCount);
     }
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
-    final CoordinatorStats stats = doCompactSegments(compactSegments);
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         0,
-        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+        stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
     for (int i = 0; i < 3; i++) {
       verifySnapshot(
@@ -542,7 +538,8 @@ public class CompactSegmentsTest
     }
 
     // Deactivate one datasource (datasource 0 no longer exist in timeline)
-    dataSources.remove(DATA_SOURCE_PREFIX + 0);
+    dataSources.getUsedSegmentsTimelinesPerDataSource()
+               .remove(DATA_SOURCE_PREFIX + 0);
 
     // Test run auto compaction with one datasource deactivated
     // Snapshot should not contain deactivated datasource
@@ -597,15 +594,12 @@ public class CompactSegmentsTest
       }
     }
 
-    dataSources = DataSourcesSnapshot
-        .fromUsedSegments(segments, ImmutableMap.of())
-        .getUsedSegmentsTimelinesPerDataSource();
-
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
 
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
 
     // Before any compaction, we do not have any snapshot of compactions
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
@@ -614,10 +608,10 @@ public class CompactSegmentsTest
     // 3 intervals, 1200 byte (each segment is 100 bytes), 12 segments will be skipped by auto compaction
     for (int compactionRunCount = 0; compactionRunCount < 8; compactionRunCount++) {
       // Do a cycle of auto compaction which creates one compaction task
-      final CoordinatorStats stats = doCompactSegments(compactSegments);
+      final CoordinatorRunStats stats = doCompactSegments(compactSegments);
       Assert.assertEquals(
           1,
-          stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+          stats.get(Stats.Compaction.SUBMITTED_TASKS)
       );
 
       verifySnapshot(
@@ -638,10 +632,10 @@ public class CompactSegmentsTest
     }
 
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
-    final CoordinatorStats stats = doCompactSegments(compactSegments);
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         0,
-        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+        stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
     verifySnapshot(
         compactSegments,
@@ -666,12 +660,12 @@ public class CompactSegmentsTest
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
 
-    final CoordinatorStats stats = doCompactSegments(compactSegments, 3);
-    Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments, 3);
+    Assert.assertEquals(3, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Compaction.SUBMITTED_TASKS));
   }
 
   @Test
@@ -682,11 +676,11 @@ public class CompactSegmentsTest
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
-    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
-    Assert.assertEquals(maxCompactionSlot, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(maxCompactionSlot, stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(maxCompactionSlot, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
+    Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
+    Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.SUBMITTED_TASKS));
   }
 
   @Test
@@ -697,18 +691,18 @@ public class CompactSegmentsTest
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
-    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
-    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot, true);
+    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
+    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.SUBMITTED_TASKS));
   }
 
   @Test
   public void testCompactWithoutGranularitySpec()
   {
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -731,6 +725,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -773,7 +768,7 @@ public class CompactSegmentsTest
   public void testCompactWithNotNullIOConfig()
   {
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -796,6 +791,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -832,7 +828,7 @@ public class CompactSegmentsTest
   public void testCompactWithNullIOConfig()
   {
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -855,6 +851,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -891,7 +888,7 @@ public class CompactSegmentsTest
   public void testCompactWithGranularitySpec()
   {
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -914,6 +911,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -958,7 +956,7 @@ public class CompactSegmentsTest
   public void testCompactWithDimensionSpec()
   {
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -981,6 +979,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1020,7 +1019,7 @@ public class CompactSegmentsTest
   public void testCompactWithoutDimensionSpec()
   {
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -1043,6 +1042,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1081,7 +1081,7 @@ public class CompactSegmentsTest
   public void testCompactWithRollupInGranularitySpec()
   {
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -1104,6 +1104,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1184,7 +1185,7 @@ public class CompactSegmentsTest
     Mockito.when(mockIndexingServiceClient.getActiveTasks()).thenReturn(ImmutableList.of(runningConflictCompactionTask));
     Mockito.when(mockIndexingServiceClient.getTaskPayload(ArgumentMatchers.eq(conflictTaskId))).thenReturn(runningConflictCompactionTaskPayload);
 
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     compactionConfigs.add(
         new DataSourceCompactionConfig(
@@ -1206,6 +1207,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1257,12 +1259,12 @@ public class CompactSegmentsTest
     final TestDruidLeaderClient leaderClient = new TestDruidLeaderClient(JSON_MAPPER);
     leaderClient.start();
     final HttpIndexingServiceClient indexingServiceClient = new HttpIndexingServiceClient(JSON_MAPPER, leaderClient);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
 
-    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(2), 4);
-    Assert.assertEquals(4, stats.getGlobalStat(CompactSegments.AVAILABLE_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(4, stats.getGlobalStat(CompactSegments.MAX_COMPACTION_TASK_SLOT));
-    Assert.assertEquals(2, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments, createCompactionConfigs(2), 4);
+    Assert.assertEquals(4, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
+    Assert.assertEquals(4, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Compaction.SUBMITTED_TASKS));
   }
 
   @Test
@@ -1291,9 +1293,9 @@ public class CompactSegmentsTest
 
     // Verify that locked intervals are skipped and only one compaction task
     // is submitted for dataSource_0
-    CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
-    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(2), 4);
-    Assert.assertEquals(1, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+    CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments, createCompactionConfigs(2), 4);
+    Assert.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
     Assert.assertEquals(1, leaderClient.submittedCompactionTasks.size());
 
     final ClientCompactionTaskQuery compactionTask = leaderClient.submittedCompactionTasks.get(0);
@@ -1309,7 +1311,7 @@ public class CompactSegmentsTest
   {
     NullHandling.initializeForTests();
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -1332,6 +1334,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1371,7 +1374,7 @@ public class CompactSegmentsTest
   public void testCompactWithoutCustomSpecs()
   {
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -1394,6 +1397,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1437,7 +1441,7 @@ public class CompactSegmentsTest
     NullHandling.initializeForTests();
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[] {new CountAggregatorFactory("cnt")};
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -1460,6 +1464,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1520,10 +1525,10 @@ public class CompactSegmentsTest
         .add(Intervals.of("2017/2018"));
 
     // Verify that no locked intervals are skipped
-    CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, indexingServiceClient);
+    CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, indexingServiceClient);
     int maxTaskSlots = partitionsSpec instanceof SingleDimensionPartitionsSpec ? 5 : 3;
-    final CoordinatorStats stats = doCompactSegments(compactSegments, createCompactionConfigs(1), maxTaskSlots);
-    Assert.assertEquals(3, stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT));
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments, createCompactionConfigs(1), maxTaskSlots);
+    Assert.assertEquals(3, stats.get(Stats.Compaction.SUBMITTED_TASKS));
     Assert.assertEquals(3, leaderClient.submittedCompactionTasks.size());
     leaderClient.submittedCompactionTasks.forEach(task -> {
       System.out.println(task.getDataSource() + " : " + task.getIoConfig().getInputSpec().getInterval());
@@ -1579,13 +1584,10 @@ public class CompactSegmentsTest
             10L
         )
     );
-    dataSources = DataSourcesSnapshot
-        .fromUsedSegments(segments, ImmutableMap.of())
-        .getUsedSegmentsTimelinesPerDataSource();
-
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
 
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     compactionConfigs.add(
         new DataSourceCompactionConfig(
@@ -1607,6 +1609,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1676,13 +1679,10 @@ public class CompactSegmentsTest
             10L
         )
     );
-    dataSources = DataSourcesSnapshot
-        .fromUsedSegments(segments, ImmutableMap.of())
-        .getUsedSegmentsTimelinesPerDataSource();
-
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
 
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     compactionConfigs.add(
         new DataSourceCompactionConfig(
@@ -1704,6 +1704,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1746,7 +1747,7 @@ public class CompactSegmentsTest
   public void testCompactWithMetricsSpecShouldSetPreserveExistingMetricsTrue()
   {
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -1769,6 +1770,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1808,7 +1810,7 @@ public class CompactSegmentsTest
   public void testCompactWithoutMetricsSpecShouldSetPreserveExistingMetricsFalse()
   {
     final HttpIndexingServiceClient mockIndexingServiceClient = Mockito.mock(HttpIndexingServiceClient.class);
-    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, JSON_MAPPER, mockIndexingServiceClient);
+    final CompactSegments compactSegments = new CompactSegments(COORDINATOR_CONFIG, SEARCH_POLICY, mockIndexingServiceClient);
     final List<DataSourceCompactionConfig> compactionConfigs = new ArrayList<>();
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     compactionConfigs.add(
@@ -1831,6 +1833,7 @@ public class CompactSegmentsTest
                 null,
                 null,
                 3,
+                null,
                 null,
                 null,
                 null,
@@ -1900,10 +1903,10 @@ public class CompactSegmentsTest
   {
     for (int dataSourceIndex = 0; dataSourceIndex < 3; dataSourceIndex++) {
       // One compaction task triggered
-      final CoordinatorStats stats = doCompactSegments(compactSegments);
+      final CoordinatorRunStats stats = doCompactSegments(compactSegments);
       Assert.assertEquals(
           1,
-          stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+          stats.get(Stats.Compaction.SUBMITTED_TASKS)
       );
       // Note: Subsequent compaction run after the dataSource was compacted will show different numbers than
       // on the run it was compacted. For example, in a compaction run, if a dataSource had 4 segments compacted,
@@ -1917,14 +1920,14 @@ public class CompactSegmentsTest
               compactSegments,
               AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
               DATA_SOURCE_PREFIX + i,
-              TOTAL_BYTE_PER_DATASOURCE - 40 * (compactionRunCount + 1),
-              40 * (compactionRunCount + 1),
+              TOTAL_BYTE_PER_DATASOURCE - 40L * (compactionRunCount + 1),
+              40L * (compactionRunCount + 1),
               40,
               TOTAL_INTERVAL_PER_DATASOURCE - (compactionRunCount + 1),
               (compactionRunCount + 1),
               1,
-              TOTAL_SEGMENT_PER_DATASOURCE - 4 * (compactionRunCount + 1),
-              2 * (compactionRunCount + 1),
+              TOTAL_SEGMENT_PER_DATASOURCE - 4L * (compactionRunCount + 1),
+              2L * (compactionRunCount + 1),
               4
           );
         } else {
@@ -1932,14 +1935,14 @@ public class CompactSegmentsTest
               compactSegments,
               AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
               DATA_SOURCE_PREFIX + i,
-              TOTAL_BYTE_PER_DATASOURCE - 40 * (compactionRunCount + 1),
-              40 * (compactionRunCount + 1),
+              TOTAL_BYTE_PER_DATASOURCE - 40L * (compactionRunCount + 1),
+              40L * (compactionRunCount + 1),
               40,
               TOTAL_INTERVAL_PER_DATASOURCE - (compactionRunCount + 1),
               (compactionRunCount + 1),
               1,
-              TOTAL_SEGMENT_PER_DATASOURCE - 4 * (compactionRunCount + 1),
-              2 * compactionRunCount + 4,
+              TOTAL_SEGMENT_PER_DATASOURCE - 4L * (compactionRunCount + 1),
+              2L * compactionRunCount + 4,
               4
           );
         }
@@ -1951,39 +1954,39 @@ public class CompactSegmentsTest
             compactSegments,
             AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
             DATA_SOURCE_PREFIX + i,
-            TOTAL_BYTE_PER_DATASOURCE - 40 * compactionRunCount,
-            40 * compactionRunCount,
+            TOTAL_BYTE_PER_DATASOURCE - 40L * compactionRunCount,
+            40L * compactionRunCount,
             40,
             TOTAL_INTERVAL_PER_DATASOURCE - compactionRunCount,
             compactionRunCount,
             1,
-            TOTAL_SEGMENT_PER_DATASOURCE - 4 * compactionRunCount,
-            2 * compactionRunCount,
+            TOTAL_SEGMENT_PER_DATASOURCE - 4L * compactionRunCount,
+            2L * compactionRunCount,
             4
         );
       }
     }
   }
 
-  private CoordinatorStats doCompactSegments(CompactSegments compactSegments)
+  private CoordinatorRunStats doCompactSegments(CompactSegments compactSegments)
   {
     return doCompactSegments(compactSegments, (Integer) null);
   }
 
-  private CoordinatorStats doCompactSegments(CompactSegments compactSegments, @Nullable Integer numCompactionTaskSlots)
+  private CoordinatorRunStats doCompactSegments(CompactSegments compactSegments, @Nullable Integer numCompactionTaskSlots)
   {
     return doCompactSegments(compactSegments, createCompactionConfigs(), numCompactionTaskSlots);
   }
 
-  private CoordinatorStats doCompactSegments(
+  private void doCompactSegments(
       CompactSegments compactSegments,
       List<DataSourceCompactionConfig> compactionConfigs
   )
   {
-    return doCompactSegments(compactSegments, compactionConfigs, null);
+    doCompactSegments(compactSegments, compactionConfigs, null);
   }
 
-  private CoordinatorStats doCompactSegments(
+  private CoordinatorRunStats doCompactSegments(
       CompactSegments compactSegments,
       List<DataSourceCompactionConfig> compactionConfigs,
       @Nullable Integer numCompactionTaskSlots
@@ -1992,20 +1995,20 @@ public class CompactSegmentsTest
     return doCompactSegments(compactSegments, compactionConfigs, numCompactionTaskSlots, false);
   }
 
-  private CoordinatorStats doCompactSegments(
+  private CoordinatorRunStats doCompactSegments(
       CompactSegments compactSegments,
       List<DataSourceCompactionConfig> compactionConfigs,
       @Nullable Integer numCompactionTaskSlots,
       boolean useAutoScaleSlots
   )
   {
-    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
-        .newBuilder()
-        .withUsedSegmentsTimelinesPerDataSourceInTest(dataSources)
+    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
+        .newBuilder(DateTimes.nowUtc())
+        .withSnapshotOfDataSourcesWithAllUsedSegments(dataSources)
         .withCompactionConfig(
             new CoordinatorCompactionConfig(
                 compactionConfigs,
-                numCompactionTaskSlots == null ? null : 1., // 100% when numCompactionTaskSlots is not null
+                numCompactionTaskSlots == null ? null : 1.0, // 100% when numCompactionTaskSlots is not null
                 numCompactionTaskSlots,
                 useAutoScaleSlots
             )
@@ -2023,35 +2026,37 @@ public class CompactSegmentsTest
   )
   {
     for (int i = 0; i < 3; i++) {
-      final CoordinatorStats stats = doCompactSegments(compactSegments);
+      final CoordinatorRunStats stats = doCompactSegments(compactSegments);
       Assert.assertEquals(
           expectedCompactTaskCount,
-          stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+          stats.get(Stats.Compaction.SUBMITTED_TASKS)
       );
 
-      // One of dataSource is compacted
+      // If expectedRemainingSegments is positive, we count the number of datasources
+      // which have that many segments waiting for compaction. Otherwise, we count
+      // all the datasources in the coordinator stats
+      final AtomicInteger numDatasources = new AtomicInteger();
+      stats.forEachStat(
+          (stat, rowKey, value) -> {
+            if (stat.equals(Stats.Compaction.PENDING_BYTES)
+                && (expectedRemainingSegments <= 0 || value == expectedRemainingSegments)) {
+              numDatasources.incrementAndGet();
+            }
+          }
+      );
+
       if (expectedRemainingSegments > 0) {
-        // If expectedRemainingSegments is positive, we check how many dataSources have the segments waiting for
-        // compaction.
-        long numDataSourceOfExpectedRemainingSegments = stats
-            .getDataSources(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING)
-            .stream()
-            .mapToLong(ds -> stats.getDataSourceStat(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING, ds))
-            .filter(stat -> stat == expectedRemainingSegments)
-            .count();
-        Assert.assertEquals(i + 1, numDataSourceOfExpectedRemainingSegments);
+        Assert.assertEquals(i + 1, numDatasources.get());
       } else {
-        // Otherwise, we check how many dataSources are in the coordinator stats.
-        Assert.assertEquals(
-            2 - i,
-            stats.getDataSources(CompactSegments.TOTAL_SIZE_OF_SEGMENTS_AWAITING).size()
-        );
+        Assert.assertEquals(2 - i, numDatasources.get());
       }
     }
 
+    final Map<String, SegmentTimeline> dataSourceToTimeline
+        = dataSources.getUsedSegmentsTimelinesPerDataSource();
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
-      List<TimelineObjectHolder<String, DataSegment>> holders = dataSources.get(dataSource).lookup(expectedInterval);
+      List<TimelineObjectHolder<String, DataSegment>> holders = dataSourceToTimeline.get(dataSource).lookup(expectedInterval);
       Assert.assertEquals(1, holders.size());
       List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holders.get(0).getObject());
       Assert.assertEquals(2, chunks.size());
@@ -2066,10 +2071,12 @@ public class CompactSegmentsTest
   private void assertLastSegmentNotCompacted(CompactSegments compactSegments)
   {
     // Segments of the latest interval should not be compacted
+    final Map<String, SegmentTimeline> dataSourceToTimeline
+        = dataSources.getUsedSegmentsTimelinesPerDataSource();
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
       final Interval interval = Intervals.of(StringUtils.format("2017-01-09T12:00:00/2017-01-10"));
-      List<TimelineObjectHolder<String, DataSegment>> holders = dataSources.get(dataSource).lookup(interval);
+      List<TimelineObjectHolder<String, DataSegment>> holders = dataSourceToTimeline.get(dataSource).lookup(interval);
       Assert.assertEquals(1, holders.size());
       for (TimelineObjectHolder<String, DataSegment> holder : holders) {
         List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holder.getObject());
@@ -2086,10 +2093,10 @@ public class CompactSegmentsTest
     final String dataSource = DATA_SOURCE_PREFIX + 0;
     addMoreData(dataSource, 9);
 
-    CoordinatorStats stats = doCompactSegments(compactSegments);
+    CoordinatorRunStats stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         1,
-        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+        stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
 
     addMoreData(dataSource, 10);
@@ -2097,21 +2104,23 @@ public class CompactSegmentsTest
     stats = doCompactSegments(compactSegments);
     Assert.assertEquals(
         1,
-        stats.getGlobalStat(CompactSegments.COMPACTION_TASK_COUNT)
+        stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
   }
 
   private void addMoreData(String dataSource, int day)
   {
+    final SegmentTimeline timeline
+        = dataSources.getUsedSegmentsTimelinesPerDataSource().get(dataSource);
     for (int i = 0; i < 2; i++) {
       DataSegment newSegment = createSegment(dataSource, day, true, i);
-      dataSources.get(dataSource).add(
+      timeline.add(
           newSegment.getInterval(),
           newSegment.getVersion(),
           newSegment.getShardSpec().createChunk(newSegment)
       );
       newSegment = createSegment(dataSource, day, false, i);
-      dataSources.get(dataSource).add(
+      timeline.add(
           newSegment.getInterval(),
           newSegment.getVersion(),
           newSegment.getShardSpec().createChunk(newSegment)
@@ -2149,6 +2158,7 @@ public class CompactSegmentsTest
                   null,
                   null,
                   maxNumConcurrentSubTasks,
+                  null,
                   null,
                   null,
                   null,
@@ -2259,19 +2269,15 @@ public class CompactSegmentsTest
       submittedCompactionTasks.add(compactionTaskQuery);
 
       final Interval intervalToCompact = compactionTaskQuery.getIoConfig().getInputSpec().getInterval();
-      final VersionedIntervalTimeline<String, DataSegment> timeline = dataSources.get(
-          compactionTaskQuery.getDataSource()
-      );
+      final SegmentTimeline timeline = dataSources.getUsedSegmentsTimelinesPerDataSource()
+                                                  .get(compactionTaskQuery.getDataSource());
       final List<DataSegment> segments = timeline.lookup(intervalToCompact)
                                                  .stream()
                                                  .flatMap(holder -> Streams.sequentialStreamFrom(holder.getObject()))
                                                  .map(PartitionChunk::getObject)
                                                  .collect(Collectors.toList());
-      compactSegments(
-          timeline,
-          segments,
-          compactionTaskQuery
-      );
+
+      compactSegments(timeline, segments, compactionTaskQuery);
       return createStringFullResponseHolder(jsonMapper.writeValueAsString(ImmutableMap.of("task", taskQuery.getId())));
     }
 
@@ -2355,7 +2361,7 @@ public class CompactSegmentsTest
                 transformSpec,
                 ImmutableMap.of(
                     "bitmap",
-                    ImmutableMap.of("type", "roaring", "compressRunOnSerialization", true),
+                    ImmutableMap.of("type", "roaring"),
                     "dimensionCompression",
                     "lz4",
                     "metricCompression",

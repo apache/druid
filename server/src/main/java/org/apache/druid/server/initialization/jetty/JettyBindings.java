@@ -22,7 +22,6 @@ package org.apache.druid.server.initialization.jetty;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.multibindings.Multibinder;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.servlets.QoSFilter;
 
@@ -33,22 +32,14 @@ import java.util.Map;
 
 public class JettyBindings
 {
-  private static final Logger log = new Logger(JettyBindings.class);
-
   private JettyBindings()
   {
     // No instantiation.
   }
 
-  public static void addQosFilter(Binder binder, String paths, int maxRequests)
+  public static void addQosFilter(Binder binder, String path, int maxRequests)
   {
-    if (maxRequests <= 0) {
-      return;
-    }
-
-    Multibinder.newSetBinder(binder, ServletFilterHolder.class)
-               .addBinding()
-               .toInstance(new QosFilterHolder(new String[]{paths}, maxRequests));
+    addQosFilter(binder, new String[]{path}, maxRequests);
   }
 
   public static void addQosFilter(Binder binder, String[] paths, int maxRequests)
@@ -57,7 +48,7 @@ public class JettyBindings
       return;
     }
 
-    Multibinder.newSetBinder(binder, ServletFilterHolder.class)
+    Multibinder.newSetBinder(binder, QosFilterHolder.class)
                .addBinding()
                .toInstance(new QosFilterHolder(paths, maxRequests));
   }
@@ -69,7 +60,7 @@ public class JettyBindings
                .to(handlerClass);
   }
 
-  private static class QosFilterHolder implements ServletFilterHolder
+  public static class QosFilterHolder implements ServletFilterHolder
   {
     private final String[] paths;
     private final int maxRequests;

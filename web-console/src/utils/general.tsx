@@ -17,8 +17,9 @@
  */
 
 import { Intent } from '@blueprintjs/core';
+import type { IconName } from '@blueprintjs/icons';
+import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
-import FileSaver from 'file-saver';
 import hasOwnProp from 'has-own-prop';
 import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
@@ -30,20 +31,38 @@ import { AppToaster } from '../singletons';
 export const EMPTY_OBJECT: any = {};
 export const EMPTY_ARRAY: any[] = [];
 
-export type NumberLike = number | BigInt;
+export type NumberLike = number | bigint;
 
 export function isNumberLikeNaN(x: NumberLike): boolean {
   return isNaN(Number(x));
 }
 
-export function nonEmptyArray(a: any): a is unknown[] {
+export function nonEmptyString(s: unknown): s is string {
+  return typeof s === 'string' && s !== '';
+}
+
+export function nonEmptyArray(a: unknown): a is unknown[] {
   return Array.isArray(a) && Boolean(a.length);
+}
+
+export function isSimpleArray(a: any): a is (string | number | boolean)[] {
+  return (
+    Array.isArray(a) &&
+    a.every(x => {
+      const t = typeof x;
+      return t === 'string' || t === 'number' || t === 'boolean';
+    })
+  );
 }
 
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
   });
+}
+
+export function clamp(n: number, min: number, max: number): number {
+  return Math.min(Math.max(n, min), max);
 }
 
 export function addOrUpdate<T>(xs: readonly T[], x: T, keyFn: (x: T) => string | number): T[] {
@@ -147,7 +166,23 @@ export function groupBy<T, Q>(
     buckets[key] = buckets[key] || [];
     buckets[key].push(value);
   }
-  return Object.keys(buckets).map(key => aggregateFn(buckets[key], key));
+  return Object.entries(buckets).map(([key, xs]) => aggregateFn(xs, key));
+}
+
+export function groupByAsMap<T, Q>(
+  array: readonly T[],
+  keyFn: (x: T, index: number) => string,
+  aggregateFn: (xs: readonly T[], key: string) => Q,
+): Record<string, Q> {
+  const buckets: Record<string, T[]> = {};
+  const n = array.length;
+  for (let i = 0; i < n; i++) {
+    const value = array[i];
+    const key = keyFn(value, i);
+    buckets[key] = buckets[key] || [];
+    buckets[key].push(value);
+  }
+  return mapRecord(buckets, aggregateFn);
 }
 
 export function uniq(array: readonly string[]): string[] {
@@ -199,11 +234,11 @@ export function formatMillions(n: NumberLike): string {
 }
 
 function pad2(str: string | number): string {
-  return ('00' + str).substr(-2);
+  return ('00' + str).slice(-2);
 }
 
 function pad3(str: string | number): string {
-  return ('000' + str).substr(-3);
+  return ('000' + str).slice(-3);
 }
 
 export function formatDuration(ms: NumberLike): string {
@@ -233,7 +268,7 @@ export function formatDurationHybrid(ms: NumberLike): string {
     const timeInMs = Math.floor(n) % 1000;
     return `${timeInMin ? `${timeInMin}:` : ''}${timeInMin ? pad2(timeInSec) : timeInSec}.${pad3(
       timeInMs,
-    ).substring(0, 2)}s`;
+    ).slice(0, 2)}s`;
   } else {
     return formatDuration(n);
   }
@@ -245,14 +280,6 @@ export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string)
 }
 
 // ----------------------------
-
-export function parseJson(json: string): any {
-  try {
-    return JSONBig.parse(json);
-  } catch (e) {
-    return undefined;
-  }
-}
 
 export function validJson(json: string): boolean {
   try {
@@ -267,6 +294,13 @@ export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | un
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }
 
+export function findMap<T, Q>(
+  xs: readonly T[],
+  f: (x: T, i: number) => Q | undefined,
+): Q | undefined {
+  return filterMap(xs, f)[0];
+}
+
 export function compact<T>(xs: (T | undefined | false | null | '')[]): T[] {
   return xs.filter(Boolean) as T[];
 }
@@ -275,8 +309,24 @@ export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
   return xs.filter(Boolean) as T[];
 }
 
+export function moveToEnd<T>(
+  xs: T[],
+  predicate: (value: T, index: number, array: T[]) => unknown,
+): T[] {
+  return xs.filter((x, i, a) => !predicate(x, i, a)).concat(xs.filter(predicate));
+}
+
 export function alphanumericCompare(a: string, b: string): number {
   return String(a).localeCompare(b, undefined, { numeric: true });
+}
+
+export function zeroDivide(a: number, b: number): number {
+  if (b === 0) return 0;
+  return a / b;
+}
+
+export function capitalizeFirst(str: string): string {
+  return str.slice(0, 1).toUpperCase() + str.slice(1).toLowerCase();
 }
 
 export function arrangeWithPrefixSuffix(
@@ -291,25 +341,6 @@ export function arrangeWithPrefixSuffix(
 }
 
 // ----------------------------
-
-export function downloadFile(text: string, type: string, filename: string): void {
-  let blobType;
-  switch (type) {
-    case 'json':
-      blobType = 'application/json';
-      break;
-    case 'tsv':
-      blobType = 'text/tab-separated-values';
-      break;
-    default:
-      // csv
-      blobType = `text/${type}`;
-  }
-  const blob = new Blob([text], {
-    type: blobType,
-  });
-  FileSaver.saveAs(blob, filename);
-}
 
 export function copyAndAlert(copyString: string, alertMessage: string): void {
   copy(copyString, { format: 'text/plain' });
@@ -396,7 +427,7 @@ export function isInBackground(): boolean {
   return document.visibilityState === 'hidden';
 }
 
-export function twoLines(line1: string, line2: string) {
+export function twoLines(line1: string | JSX.Element, line2: string | JSX.Element) {
   return (
     <>
       {line1}
@@ -412,7 +443,7 @@ export function parseCsvLine(line: string): string[] {
   let m: RegExpExecArray | null;
   while ((m = /^,(?:"([^"]*(?:""[^"]*)*)"|([^,\r\n]*))/m.exec(line))) {
     parts.push(typeof m[1] === 'string' ? m[1].replace(/""/g, '"') : m[2]);
-    line = line.substr(m[0].length);
+    line = line.slice(m[0].length);
   }
   return parts;
 }
@@ -444,4 +475,39 @@ export function objectHash(obj: any): string {
 
 export function hasPopoverOpen(): boolean {
   return Boolean(document.querySelector('.bp4-portal .bp4-overlay .bp4-popover2'));
+}
+
+export function checkedCircleIcon(checked: boolean): IconName {
+  return checked ? IconNames.TICK_CIRCLE : IconNames.CIRCLE;
+}
+
+export function tickIcon(checked: boolean): IconName {
+  return checked ? IconNames.TICK : IconNames.BLANK;
+}
+
+export function generate8HexId(): string {
+  return (Math.random() * 1e10).toString(16).replace('.', '').slice(0, 8);
+}
+
+export function offsetToRowColumn(
+  str: string,
+  offset: number,
+): { row: number; column: number } | undefined {
+  // Ensure offset is within the string length
+  if (offset < 0 || offset > str.length) return;
+
+  const lines = str.split('\n');
+  for (let row = 0; row < lines.length; row++) {
+    const line = lines[row];
+    if (offset < line.length) {
+      return {
+        row,
+        column: offset,
+      };
+    }
+
+    offset -= line.length + 1;
+  }
+
+  return;
 }

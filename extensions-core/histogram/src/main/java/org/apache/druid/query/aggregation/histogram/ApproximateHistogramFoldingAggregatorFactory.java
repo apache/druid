@@ -143,6 +143,20 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new ApproximateHistogramFoldingAggregatorFactory(
+        newName,
+        getFieldName(),
+        getResolution(),
+        getNumBuckets(),
+        getLowerLimit(),
+        getUpperLimit(),
+        finalizeAsBase64Binary
+    );
+  }
+
+  @Override
   public String toString()
   {
     return "ApproximateHistogramFoldingAggregatorFactory{" +

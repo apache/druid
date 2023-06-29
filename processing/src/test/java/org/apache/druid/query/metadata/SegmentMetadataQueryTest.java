@@ -69,6 +69,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -202,42 +203,44 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     expectedSegmentAnalysis1 = new SegmentAnalysis(
         id1.toString(),
         ImmutableList.of(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
-        ImmutableMap.of(
-            "__time",
-            new ColumnAnalysis(
-                ColumnType.LONG,
-                ValueType.LONG.toString(),
-                false,
-                false,
-                12090,
-                null,
-                null,
-                null,
-                null
-            ),
-            "index",
-            new ColumnAnalysis(
-                ColumnType.DOUBLE,
-                ValueType.DOUBLE.toString(),
-                false,
-                false,
-                9672,
-                null,
-                null,
-                null,
-                null
-            ),
-            "placement",
-            new ColumnAnalysis(
-                ColumnType.STRING,
-                ValueType.STRING.toString(),
-                false,
-                false,
-                preferedSize1,
-                1,
-                "preferred",
-                "preferred",
-                null
+        new LinkedHashMap<>(
+            ImmutableMap.of(
+                "__time",
+                new ColumnAnalysis(
+                    ColumnType.LONG,
+                    ValueType.LONG.toString(),
+                    false,
+                    false,
+                    12090,
+                    null,
+                    null,
+                    null,
+                    null
+                ),
+                "index",
+                new ColumnAnalysis(
+                    ColumnType.DOUBLE,
+                    ValueType.DOUBLE.toString(),
+                    false,
+                    false,
+                    9672,
+                    null,
+                    null,
+                    null,
+                    null
+                ),
+                "placement",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.toString(),
+                    false,
+                    false,
+                    preferedSize1,
+                    1,
+                    "preferred",
+                    "preferred",
+                    null
+                )
             )
         ),
         overallSize1,
@@ -250,42 +253,44 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     expectedSegmentAnalysis2 = new SegmentAnalysis(
         id2.toString(),
         ImmutableList.of(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
-        ImmutableMap.of(
-            "__time",
-            new ColumnAnalysis(
-                ColumnType.LONG,
-                ValueType.LONG.toString(),
-                false,
-                false,
-                12090,
-                null,
-                null,
-                null,
-                null
-            ),
-            "index",
-            new ColumnAnalysis(
-                ColumnType.DOUBLE,
-                ValueType.DOUBLE.toString(),
-                false,
-                false,
-                9672,
-                null,
-                null,
-                null,
-                null
-            ),
-            "placement",
-            new ColumnAnalysis(
-                ColumnType.STRING,
-                ValueType.STRING.toString(),
-                false,
-                false,
-                placementSize2,
-                1,
-                null,
-                null,
-                null
+        new LinkedHashMap<>(
+            ImmutableMap.of(
+                "__time",
+                new ColumnAnalysis(
+                    ColumnType.LONG,
+                    ValueType.LONG.toString(),
+                    false,
+                    false,
+                    12090,
+                    null,
+                    null,
+                    null,
+                    null
+                ),
+                "index",
+                new ColumnAnalysis(
+                    ColumnType.DOUBLE,
+                    ValueType.DOUBLE.toString(),
+                    false,
+                    false,
+                    9672,
+                    null,
+                    null,
+                    null,
+                    null
+                ),
+                "placement",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.toString(),
+                    false,
+                    false,
+                    placementSize2,
+                    1,
+                    null,
+                    null,
+                    null
+                )
             )
         ),
         // null_column will be included only for incremental index, which makes a little bigger result than expected
@@ -313,30 +318,32 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
         differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
-        ImmutableMap.of(
-            "placement",
-            new ColumnAnalysis(
-                ColumnType.STRING,
-                ValueType.STRING.toString(),
-                false,
-                false,
-                0,
-                0,
-                NullHandling.defaultStringValue(),
-                NullHandling.defaultStringValue(),
-                null
-            ),
-            "placementish",
-            new ColumnAnalysis(
-                ColumnType.STRING,
-                ValueType.STRING.toString(),
-                true,
-                false,
-                0,
-                0,
-                NullHandling.defaultStringValue(),
-                NullHandling.defaultStringValue(),
-                null
+        new LinkedHashMap<>(
+            ImmutableMap.of(
+                "placement",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.toString(),
+                    false,
+                    false,
+                    0,
+                    0,
+                    NullHandling.defaultStringValue(),
+                    NullHandling.defaultStringValue(),
+                    null
+                ),
+                "placementish",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.toString(),
+                    true,
+                    false,
+                    0,
+                    0,
+                    NullHandling.defaultStringValue(),
+                    NullHandling.defaultStringValue(),
+                    null
+                )
             )
         ),
         0,
@@ -385,30 +392,32 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
         differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
-        ImmutableMap.of(
-            "placement",
-            new ColumnAnalysis(
-                ColumnType.STRING,
-                ValueType.STRING.toString(),
-                false,
-                false,
-                0,
-                1,
-                NullHandling.defaultStringValue(),
-                NullHandling.defaultStringValue(),
-                null
-            ),
-            "placementish",
-            new ColumnAnalysis(
-                ColumnType.STRING,
-                ValueType.STRING.toString(),
-                true,
-                false,
-                0,
-                9,
-                NullHandling.defaultStringValue(),
-                NullHandling.defaultStringValue(),
-                null
+        new LinkedHashMap<>(
+            ImmutableMap.of(
+                "placement",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.toString(),
+                    false,
+                    false,
+                    0,
+                    1,
+                    NullHandling.defaultStringValue(),
+                    NullHandling.defaultStringValue(),
+                    null
+                ),
+                "placementish",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.toString(),
+                    true,
+                    false,
+                    0,
+                    9,
+                    NullHandling.defaultStringValue(),
+                    NullHandling.defaultStringValue(),
+                    null
+                )
             )
         ),
         0,
@@ -457,30 +466,32 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
         differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
-        ImmutableMap.of(
-            "placement",
-            new ColumnAnalysis(
-                ColumnType.STRING,
-                ValueType.STRING.toString(),
-                false,
-                false,
-                0,
-                1,
-                NullHandling.defaultStringValue(),
-                NullHandling.defaultStringValue(),
-                null
-            ),
-            "quality_uniques",
-            new ColumnAnalysis(
-                ColumnType.ofComplex("hyperUnique"),
-                "hyperUnique",
-                false,
-                true,
-                0,
-                null,
-                null,
-                null,
-                null
+        new LinkedHashMap<>(
+            ImmutableMap.of(
+                "placement",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.toString(),
+                    false,
+                    false,
+                    0,
+                    1,
+                    NullHandling.defaultStringValue(),
+                    NullHandling.defaultStringValue(),
+                    null
+                ),
+                "quality_uniques",
+                new ColumnAnalysis(
+                    ColumnType.ofComplex("hyperUnique"),
+                    "hyperUnique",
+                    false,
+                    true,
+                    0,
+                    null,
+                    null,
+                    null,
+                    null
+                )
             )
         ),
         0,
@@ -600,33 +611,35 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
         differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         ImmutableList.of(expectedSegmentAnalysis1.getIntervals().get(0)),
-        ImmutableMap.of(
-            "__time",
-            new ColumnAnalysis(
-                ColumnType.LONG,
-                ValueType.LONG.toString(),
-                false,
-                false,
-                12090 * 2,
-                null,
-                null,
-                null,
-                null
-            ),
-            "index",
-            new ColumnAnalysis(
-                ColumnType.DOUBLE,
-                ValueType.DOUBLE.toString(),
-                false,
-                false,
-                9672 * 2,
-                null,
-                null,
-                null,
-                null
-            ),
-            column,
-            analysis
+        new LinkedHashMap<>(
+            ImmutableMap.of(
+                "__time",
+                new ColumnAnalysis(
+                    ColumnType.LONG,
+                    ValueType.LONG.toString(),
+                    false,
+                    false,
+                    12090 * 2,
+                    null,
+                    null,
+                    null,
+                    null
+                ),
+                "index",
+                new ColumnAnalysis(
+                    ColumnType.DOUBLE,
+                    ValueType.DOUBLE.toString(),
+                    false,
+                    false,
+                    9672 * 2,
+                    null,
+                    null,
+                    null,
+                    null
+                ),
+                column,
+                analysis
+            )
         ),
         expectedSegmentAnalysis1.getSize() + expectedSegmentAnalysis2.getSize(),
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
@@ -668,18 +681,20 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
         differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
-        ImmutableMap.of(
-            "placement",
-            new ColumnAnalysis(
-                ColumnType.STRING,
-                ValueType.STRING.toString(),
-                false,
-                false,
-                0,
-                0,
-                NullHandling.defaultStringValue(),
-                NullHandling.defaultStringValue(),
-                null
+        new LinkedHashMap<>(
+            ImmutableMap.of(
+                "placement",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.toString(),
+                    false,
+                    false,
+                    0,
+                    0,
+                    NullHandling.defaultStringValue(),
+                    NullHandling.defaultStringValue(),
+                    null
+                )
             )
         ),
         0,
@@ -732,18 +747,20 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
         differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
-        ImmutableMap.of(
-            "placement",
-            new ColumnAnalysis(
-                ColumnType.STRING,
-                ValueType.STRING.toString(),
-                false,
-                false,
-                0,
-                0,
-                NullHandling.defaultStringValue(),
-                NullHandling.defaultStringValue(),
-                null
+        new LinkedHashMap<>(
+            ImmutableMap.of(
+                "placement",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.toString(),
+                    false,
+                    false,
+                    0,
+                    0,
+                    NullHandling.defaultStringValue(),
+                    NullHandling.defaultStringValue(),
+                    null
+                )
             )
         ),
         0,
@@ -792,18 +809,20 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
         differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
-        ImmutableMap.of(
-            "placement",
-            new ColumnAnalysis(
-                ColumnType.STRING,
-                ValueType.STRING.toString(),
-                false,
-                false,
-                0,
-                0,
-                NullHandling.defaultStringValue(),
-                NullHandling.defaultStringValue(),
-                null
+        new LinkedHashMap<>(
+            ImmutableMap.of(
+                "placement",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.toString(),
+                    false,
+                    false,
+                    0,
+                    0,
+                    NullHandling.defaultStringValue(),
+                    NullHandling.defaultStringValue(),
+                    null
+                )
             )
         ),
         0,
@@ -852,18 +871,20 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
         differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
-        ImmutableMap.of(
-            "placement",
-            new ColumnAnalysis(
-                ColumnType.STRING,
-                ValueType.STRING.toString(),
-                false,
-                false,
-                0,
-                0,
-                NullHandling.defaultStringValue(),
-                NullHandling.defaultStringValue(),
-                null
+        new LinkedHashMap<>(
+            ImmutableMap.of(
+                "placement",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.toString(),
+                    false,
+                    false,
+                    0,
+                    0,
+                    NullHandling.defaultStringValue(),
+                    NullHandling.defaultStringValue(),
+                    null
+                )
             )
         ),
         0,
@@ -937,7 +958,10 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
 
     TestHelper.assertExpectedObjects(
         ImmutableList.of(bySegmentResult, bySegmentResult),
-        myRunner.run(QueryPlus.wrap(testQuery.withOverriddenContext(ImmutableMap.of(QueryContexts.BY_SEGMENT_KEY, true)))),
+        myRunner.run(QueryPlus.wrap(testQuery.withOverriddenContext(ImmutableMap.of(
+            QueryContexts.BY_SEGMENT_KEY,
+            true
+        )))),
         "failed SegmentMetadata bySegment query"
     );
     exec.shutdownNow();
@@ -1265,12 +1289,12 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                                                 .build();
 
     final byte[] oneColumnQueryCacheKey = new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()).getCacheStrategy(
-        oneColumnQuery)
+                                                                                                                      oneColumnQuery)
                                                                                                                   .computeCacheKey(
                                                                                                                       oneColumnQuery);
 
     final byte[] twoColumnQueryCacheKey = new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()).getCacheStrategy(
-        twoColumnQuery)
+                                                                                                                      twoColumnQuery)
                                                                                                                   .computeCacheKey(
                                                                                                                       twoColumnQuery);
 

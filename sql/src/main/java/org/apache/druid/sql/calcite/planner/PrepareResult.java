@@ -27,20 +27,46 @@ import org.apache.calcite.rel.type.RelDataType;
  */
 public class PrepareResult
 {
-  private final RelDataType rowType;
+  private final RelDataType validatedRowType;
+  private final RelDataType returnedRowType;
   private final RelDataType parameterRowType;
 
-  public PrepareResult(final RelDataType rowType, final RelDataType parameterRowType)
+  public PrepareResult(
+      final RelDataType validatedRowType,
+      final RelDataType returnedRowType,
+      final RelDataType parameterRowType
+  )
   {
-    this.rowType = rowType;
+    this.validatedRowType = validatedRowType;
+    this.returnedRowType = returnedRowType;
     this.parameterRowType = parameterRowType;
   }
 
-  public RelDataType getRowType()
+  /**
+   * Row type from {@link org.apache.calcite.rel.RelRoot#validatedRowType} prepared by {@link DruidPlanner#prepare()}.
+   * Corresponds to the SELECT portion of a SQL statement. For SELECT, this is the row type of the SELECT itself.
+   * For EXPLAIN PLAN FOR SELECT, INSERT ... SELECT, or REPLACE ... SELECT, this is the row type of the
+   * embedded SELECT.
+   */
+  public RelDataType getValidatedRowType()
   {
-    return rowType;
+    return validatedRowType;
   }
 
+  /**
+   * Row type for the result that the end user will receive. Different from {@link #getValidatedRowType()} in
+   * cases like EXPLAIN (where the user gets an explanation, not the query results) and other non-SELECT
+   * statements.
+   */
+  public RelDataType getReturnedRowType()
+  {
+    return returnedRowType;
+  }
+
+  /**
+   * Row type from {@link org.apache.calcite.sql.validate.SqlValidator#getParameterRowType} containing the
+   * name and type of each parameter.
+   */
   public RelDataType getParameterRowType()
   {
     return parameterRowType;

@@ -27,8 +27,8 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.joda.time.Interval;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  */
@@ -41,7 +41,7 @@ public class MultipleIntervalSegmentSpec implements QuerySegmentSpec
       @JsonProperty("intervals") List<Interval> intervals
   )
   {
-    this.intervals = Collections.unmodifiableList(JodaUtils.condenseIntervals(intervals));
+    this.intervals = JodaUtils.condenseIntervals(intervals);
   }
 
   @Override
@@ -76,12 +76,7 @@ public class MultipleIntervalSegmentSpec implements QuerySegmentSpec
     }
 
     MultipleIntervalSegmentSpec that = (MultipleIntervalSegmentSpec) o;
-
-    if (intervals != null ? !intervals.equals(that.intervals) : that.intervals != null) {
-      return false;
-    }
-
-    return true;
+    return Objects.equals(intervals, that.intervals);
   }
 
   @Override

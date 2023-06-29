@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.HumanReadableBytesRange;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -42,6 +43,9 @@ import java.util.zip.Deflater;
 public class ServerConfig
 {
   public static final int DEFAULT_GZIP_INFLATE_BUFFER_SIZE = 4096;
+  public static final long DEFAULT_MAX_SUBQUERY_BYTES = -1L;
+
+  private static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
 
   /**
    * The ServerConfig is normally created using {@link org.apache.druid.guice.JsonConfigProvider} binding.
@@ -56,6 +60,8 @@ public class ServerConfig
       long defaultQueryTimeout,
       long maxScatterGatherBytes,
       int maxSubqueryRows,
+      long maxSubqueryBytes,
+      boolean useNestedForUnknownTypeInSubquery,
       long maxQueryTimeout,
       int maxRequestHeaderSize,
       @NotNull Period gracefulShutdownTimeout,
@@ -65,7 +71,9 @@ public class ServerConfig
       boolean enableForwardedRequestCustomizer,
       @NotNull List<String> allowedHttpMethods,
       boolean showDetailedJettyErrors,
-      @NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy
+      @NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy,
+      @Nullable String contentSecurityPolicy,
+      boolean enableHSTS
   )
   {
     this.numThreads = numThreads;
@@ -75,6 +83,8 @@ public class ServerConfig
     this.defaultQueryTimeout = defaultQueryTimeout;
     this.maxScatterGatherBytes = HumanReadableBytes.valueOf(maxScatterGatherBytes);
     this.maxSubqueryRows = maxSubqueryRows;
+    this.maxSubqueryBytes = maxSubqueryBytes;
+    this.useNestedForUnknownTypeInSubquery = useNestedForUnknownTypeInSubquery;
     this.maxQueryTimeout = maxQueryTimeout;
     this.maxRequestHeaderSize = maxRequestHeaderSize;
     this.gracefulShutdownTimeout = gracefulShutdownTimeout;
@@ -85,6 +95,8 @@ public class ServerConfig
     this.allowedHttpMethods = allowedHttpMethods;
     this.showDetailedJettyErrors = showDetailedJettyErrors;
     this.errorResponseTransformStrategy = errorResponseTransformStrategy;
+    this.contentSecurityPolicy = contentSecurityPolicy;
+    this.enableHSTS = enableHSTS;
   }
 
   public ServerConfig()
@@ -121,6 +133,12 @@ public class ServerConfig
   private int maxSubqueryRows = 100000;
 
   @JsonProperty
+  private long maxSubqueryBytes = DEFAULT_MAX_SUBQUERY_BYTES;
+
+  @JsonProperty
+  private boolean useNestedForUnknownTypeInSubquery = DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY;
+
+  @JsonProperty
   @Min(1)
   private long maxQueryTimeout = Long.MAX_VALUE;
 
@@ -154,6 +172,12 @@ public class ServerConfig
   @JsonProperty("errorResponseTransform")
   @NotNull
   private ErrorResponseTransformStrategy errorResponseTransformStrategy = NoErrorResponseTransformStrategy.INSTANCE;
+
+  @JsonProperty("contentSecurityPolicy")
+  private String contentSecurityPolicy;
+
+  @JsonProperty
+  private boolean enableHSTS = false;
 
   @JsonProperty
   private boolean showDetailedJettyErrors = true;
@@ -191,6 +215,16 @@ public class ServerConfig
   public int getMaxSubqueryRows()
   {
     return maxSubqueryRows;
+  }
+
+  public long getMaxSubqueryBytes()
+  {
+    return maxSubqueryBytes;
+  }
+
+  public boolean isuseNestedForUnknownTypeInSubquery()
+  {
+    return useNestedForUnknownTypeInSubquery;
   }
 
   public long getMaxQueryTimeout()
@@ -244,6 +278,16 @@ public class ServerConfig
     return allowedHttpMethods;
   }
 
+  public String getContentSecurityPolicy()
+  {
+    return contentSecurityPolicy;
+  }
+
+  public boolean isEnableHSTS()
+  {
+    return enableHSTS;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -259,6 +303,8 @@ public class ServerConfig
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
            maxSubqueryRows == that.maxSubqueryRows &&
+           maxSubqueryBytes == that.maxSubqueryBytes &&
+           useNestedForUnknownTypeInSubquery == that.useNestedForUnknownTypeInSubquery &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
            inflateBufferSize == that.inflateBufferSize &&
@@ -270,7 +316,9 @@ public class ServerConfig
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
            unannouncePropagationDelay.equals(that.unannouncePropagationDelay) &&
            allowedHttpMethods.equals(that.allowedHttpMethods) &&
-           errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy);
+           errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy) &&
+           Objects.equals(contentSecurityPolicy, that.getContentSecurityPolicy()) &&
+           enableHSTS == that.enableHSTS;
   }
 
   @Override
@@ -284,6 +332,8 @@ public class ServerConfig
         defaultQueryTimeout,
         maxScatterGatherBytes,
         maxSubqueryRows,
+        maxSubqueryBytes,
+        useNestedForUnknownTypeInSubquery,
         maxQueryTimeout,
         maxRequestHeaderSize,
         gracefulShutdownTimeout,
@@ -293,7 +343,9 @@ public class ServerConfig
         enableForwardedRequestCustomizer,
         allowedHttpMethods,
         errorResponseTransformStrategy,
-        showDetailedJettyErrors
+        showDetailedJettyErrors,
+        contentSecurityPolicy,
+        enableHSTS
     );
   }
 
@@ -308,6 +360,8 @@ public class ServerConfig
            ", defaultQueryTimeout=" + defaultQueryTimeout +
            ", maxScatterGatherBytes=" + maxScatterGatherBytes +
            ", maxSubqueryRows=" + maxSubqueryRows +
+           ", maxSubqueryBytes=" + maxSubqueryBytes +
+           ", useNestedForUnknownTypeInSubquery=" + useNestedForUnknownTypeInSubquery +
            ", maxQueryTimeout=" + maxQueryTimeout +
            ", maxRequestHeaderSize=" + maxRequestHeaderSize +
            ", gracefulShutdownTimeout=" + gracefulShutdownTimeout +
@@ -318,6 +372,8 @@ public class ServerConfig
            ", allowedHttpMethods=" + allowedHttpMethods +
            ", errorResponseTransformStrategy=" + errorResponseTransformStrategy +
            ", showDetailedJettyErrors=" + showDetailedJettyErrors +
+           ", contentSecurityPolicy=" + contentSecurityPolicy +
+           ", enableHSTS=" + enableHSTS +
            '}';
   }
 

@@ -20,7 +20,6 @@
 package org.apache.druid.segment.data;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
@@ -34,27 +33,20 @@ import java.nio.ByteBuffer;
  */
 public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
 {
-  public static final boolean DEFAULT_COMPRESS_RUN_ON_SERIALIZATION = true;
+  public static final RoaringBitmapSerdeFactory INSTANCE = new RoaringBitmapSerdeFactory(RoaringBitmapFactory.INSTANCE);
   private static final ObjectStrategy<ImmutableBitmap> OBJECT_STRATEGY = new ImmutableRoaringBitmapObjectStrategy();
 
-  private final boolean compressRunOnSerialization;
   private final BitmapFactory bitmapFactory;
 
-  @JsonCreator
-  public RoaringBitmapSerdeFactory(
-      @JsonProperty("compressRunOnSerialization") @Nullable Boolean compressRunOnSerialization
-  )
+  protected RoaringBitmapSerdeFactory(BitmapFactory bitmapFactory)
   {
-    this.compressRunOnSerialization = compressRunOnSerialization == null
-                                      ? DEFAULT_COMPRESS_RUN_ON_SERIALIZATION
-                                      : compressRunOnSerialization;
-    this.bitmapFactory = new RoaringBitmapFactory(this.compressRunOnSerialization);
+    this.bitmapFactory = bitmapFactory;
   }
 
-  @JsonProperty
-  public boolean getCompressRunOnSerialization()
+  @JsonCreator
+  public static RoaringBitmapSerdeFactory getInstance()
   {
-    return compressRunOnSerialization;
+    return INSTANCE;
   }
 
   @Override
@@ -81,6 +73,9 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
     @Nullable
     public ImmutableBitmap fromByteBuffer(ByteBuffer buffer, int numBytes)
     {
+      if (numBytes == 0) {
+        return INSTANCE.bitmapFactory.makeEmptyImmutableBitmap();
+      }
       buffer.limit(buffer.position() + numBytes);
       return new WrappedImmutableRoaringBitmap(new ImmutableRoaringBitmap(buffer));
     }
@@ -93,6 +88,12 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
         return new byte[]{};
       }
       return val.toBytes();
+    }
+
+    @Override
+    public boolean canCompare()
+    {
+      return false;
     }
 
     @Override

@@ -42,7 +42,7 @@ import org.junit.Test;
 public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
 {
   @Test
-  public void testGroupByTimeAndDim() throws Exception
+  public void testGroupByTimeAndDim()
   {
     testQuery(
         "SELECT FLOOR(__time TO MONTH), dim2, SUM(cnt)\n"
@@ -90,7 +90,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTime() throws Exception
+  public void testGroupByDimAndTime()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), SUM(cnt)\n"
@@ -138,7 +138,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTimeWhereOnTime() throws Exception
+  public void testGroupByDimAndTimeWhereOnTime()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), SUM(cnt)\n"
@@ -182,7 +182,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTimeOnDim() throws Exception
+  public void testGroupByDimAndTimeOnDim()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), SUM(cnt)\n"
@@ -227,7 +227,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByTimeAndDimOrderByDim() throws Exception
+  public void testGroupByTimeAndDimOrderByDim()
   {
     testQuery(
         "SELECT FLOOR(__time TO MONTH), dim2, SUM(cnt)\n"
@@ -282,7 +282,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByTimeAndDimOrderByDimDesc() throws Exception
+  public void testGroupByTimeAndDimOrderByDimDesc()
   {
     testQuery(
         "SELECT FLOOR(__time TO MONTH), dim2, SUM(cnt)\n"
@@ -337,7 +337,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTimeOrderByTime() throws Exception
+  public void testGroupByDimAndTimeOrderByTime()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), SUM(cnt)\n"
@@ -394,7 +394,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTimeOrderByTimeDesc() throws Exception
+  public void testGroupByDimAndTimeOrderByTimeDesc()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), SUM(cnt)\n"
@@ -451,7 +451,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTimeOrderByTimeAndDim() throws Exception
+  public void testGroupByDimAndTimeOrderByTimeAndDim()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), SUM(cnt)\n"
@@ -509,7 +509,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTimeOrderByDimAndTime() throws Exception
+  public void testGroupByDimAndTimeOrderByDimAndTime()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), SUM(cnt)\n"
@@ -567,7 +567,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTimeAndDimOrderByDimAndTimeDim() throws Exception
+  public void testGroupByDimAndTimeAndDimOrderByDimAndTimeDim()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), dim1, SUM(cnt)\n"

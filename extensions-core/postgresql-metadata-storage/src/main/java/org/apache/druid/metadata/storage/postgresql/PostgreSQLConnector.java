@@ -40,6 +40,7 @@ import org.skife.jdbi.v2.util.StringMapper;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Locale;
 
 public class PostgreSQLConnector extends SQLMetadataConnector
 {
@@ -142,6 +143,12 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   public int getStreamingFetchSize()
   {
     return DEFAULT_STREAMING_RESULT_SIZE;
+  }
+
+  @Override
+  public String limitClause(int limit)
+  {
+    return String.format(Locale.ENGLISH, "LIMIT %d", limit);
   }
 
   protected boolean canUpsert(Handle handle) throws SQLException

@@ -240,9 +240,9 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
+    public TaskStatus runTask(TaskToolbox toolbox) throws Exception
     {
-      final TaskStatus result = super.run(toolbox);
+      final TaskStatus result = super.runTask(toolbox);
       phaseRunner.collectReport(new EmptySubTaskReport(getId()));
       return result;
     }

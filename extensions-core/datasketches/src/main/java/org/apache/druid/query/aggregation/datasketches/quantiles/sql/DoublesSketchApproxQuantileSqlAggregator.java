@@ -28,8 +28,6 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
@@ -45,6 +43,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
@@ -55,8 +54,16 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 {
   public static final String CTX_APPROX_QUANTILE_DS_MAX_STREAM_LENGTH = "approxQuantileDsMaxStreamLength";
 
-  private static final SqlAggFunction FUNCTION_INSTANCE = new DoublesSketchApproxQuantileSqlAggFunction();
   private static final String NAME = "APPROX_QUANTILE_DS";
+  private static final SqlAggFunction FUNCTION_INSTANCE =
+      OperatorConversions.aggregatorBuilder(NAME)
+          .operandNames("column", "probability", "k")
+          .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.EXACT_NUMERIC)
+          .returnTypeNonNull(SqlTypeName.DOUBLE)
+          .requiredOperandCount(2)
+          .literalOperands(1, 2)
+          .functionCategory(SqlFunctionCategory.NUMERIC)
+          .build();
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -82,6 +89,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
         plannerContext,
         rowSignature,
         Expressions.fromFieldAccess(
+            rexBuilder.getTypeFactory(),
             rowSignature,
             project,
             aggregateCall.getArgList().get(0)
@@ -94,6 +102,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
     final AggregatorFactory aggregatorFactory;
     final String histogramName = StringUtils.format("%s:agg", name);
     final RexNode probabilityArg = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         aggregateCall.getArgList().get(1)
@@ -109,6 +118,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 
     if (aggregateCall.getArgList().size() >= 3) {
       final RexNode resolutionArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(2)
@@ -171,7 +181,8 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
           histogramName,
           input.getDirectColumn(),
           k,
-          getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
+          getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
+          true
       );
     } else {
       String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
@@ -182,7 +193,8 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
           histogramName,
           virtualColumnName,
           k,
-          getMaxStreamLengthFromQueryContext(plannerContext.getQueryContext())
+          getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
+          true
       );
     }
 
@@ -201,39 +213,9 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 
   static long getMaxStreamLengthFromQueryContext(QueryContext queryContext)
   {
-    return queryContext.getAsLong(
+    return queryContext.getLong(
         CTX_APPROX_QUANTILE_DS_MAX_STREAM_LENGTH,
         DoublesSketchAggregatorFactory.DEFAULT_MAX_STREAM_LENGTH
     );
-  }
-
-  private static class DoublesSketchApproxQuantileSqlAggFunction extends SqlAggFunction
-  {
-    private static final String SIGNATURE1 = "'" + NAME + "(column, probability)'\n";
-    private static final String SIGNATURE2 = "'" + NAME + "(column, probability, k)'\n";
-
-    DoublesSketchApproxQuantileSqlAggFunction()
-    {
-      super(
-          NAME,
-          null,
-          SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.DOUBLE),
-          null,
-          OperandTypes.or(
-              OperandTypes.and(
-                  OperandTypes.sequence(SIGNATURE1, OperandTypes.ANY, OperandTypes.LITERAL),
-                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
-              ),
-              OperandTypes.and(
-                  OperandTypes.sequence(SIGNATURE2, OperandTypes.ANY, OperandTypes.LITERAL, OperandTypes.LITERAL),
-                  OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.EXACT_NUMERIC)
-              )
-          ),
-          SqlFunctionCategory.NUMERIC,
-          false,
-          false
-      );
-    }
   }
 }

@@ -19,7 +19,7 @@ exports[`ShowJson matches snapshot 1`] = `
         <span
           class="bp4-button-text"
         >
-          Save
+          Download
         </span>
       </button>
       <button

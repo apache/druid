@@ -79,6 +79,23 @@ public class HdfsTaskLogsTest
   }
 
   @Test
+  public void test_taskStatus() throws Exception
+  {
+    final File tmpDir = tempFolder.newFolder();
+    final File logDir = new File(tmpDir, "logs");
+    final File statusFile = new File(tmpDir, "status.json");
+    final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
+
+
+    Files.write("{}", statusFile, StandardCharsets.UTF_8);
+    taskLogs.pushTaskStatus("id", statusFile);
+    Assert.assertEquals(
+        "{}",
+        StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskStatus("id").get()))
+    );
+  }
+
+  @Test
   public void testKill() throws Exception
   {
     final File tmpDir = tempFolder.newFolder();
@@ -115,6 +132,6 @@ public class HdfsTaskLogsTest
 
   private String readLog(TaskLogs taskLogs, String logFile, long offset) throws IOException
   {
-    return StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskLog(logFile, offset).get().openStream()));
+    return StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskLog(logFile, offset).get()));
   }
 }

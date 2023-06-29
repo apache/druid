@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
@@ -27,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.IngestionState;
@@ -39,8 +41,8 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
+import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
-import org.apache.druid.indexing.common.task.ClientBasedTaskInfoProvider;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
@@ -70,13 +72,17 @@ import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -96,6 +102,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * The worker task of {@link SinglePhaseParallelIndexTaskRunner}. Similar to {@link IndexTask}, but this task
@@ -161,7 +168,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         groupId,
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
-        context
+        context,
+        AbstractTask.computeBatchIngestionMode(ingestionSchema.getIOConfig())
     );
 
     if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
@@ -172,7 +180,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     this.numAttempts = numAttempts;
     this.ingestionSchema = ingestionSchema;
     this.supervisorTaskId = supervisorTaskId;
-    this.missingIntervalsInOverwriteMode = !ingestionSchema.getIOConfig().isAppendToExisting()
+    this.missingIntervalsInOverwriteMode = ingestionSchema.getIOConfig().isAppendToExisting() != true
                                            && ingestionSchema.getDataSchema()
                                                              .getGranularitySpec()
                                                              .inputIntervals()
@@ -187,6 +195,22 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   public String getType()
   {
     return TYPE;
+  }
+
+  @Nonnull
+  @JsonIgnore
+  @Override
+  public Set<ResourceAction> getInputSourceResources()
+  {
+    if (getIngestionSchema().getIOConfig().getFirehoseFactory() != null) {
+      throw getInputSecurityOnFirehoseUnsupportedError();
+    }
+    return getIngestionSchema().getIOConfig().getInputSource() != null ?
+           getIngestionSchema().getIOConfig().getInputSource().getTypes()
+                               .stream()
+                               .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
+                               .collect(Collectors.toSet()) :
+           ImmutableSet.of();
   }
 
   @Override
@@ -225,7 +249,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   }
 
   @Override
-  public TaskStatus runTask(final TaskToolbox toolbox)
+  public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
     try {
       if (missingIntervalsInOverwriteMode) {
@@ -246,14 +270,10 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
 
-      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
-          ingestionSchema.getDataSchema().getParser()
-      );
+      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
 
-      final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientFactory().build(
-          new ClientBasedTaskInfoProvider(toolbox.getIndexingServiceClient()),
-          getId(),
-          1, // always use a single http thread
+      final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
+          supervisorTaskId,
           ingestionSchema.getTuningConfig().getChatHandlerTimeout(),
           ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
       );
@@ -268,14 +288,14 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       // Find inputSegments overshadowed by pushedSegments
       final Set<DataSegment> allSegments = new HashSet<>(getTaskLockHelper().getLockedExistingSegments());
       allSegments.addAll(pushedSegments);
-      final VersionedIntervalTimeline<String, DataSegment> timeline = VersionedIntervalTimeline.forSegments(allSegments);
+      final SegmentTimeline timeline = SegmentTimeline.forSegments(allSegments);
       final Set<DataSegment> oldSegments = FluentIterable.from(timeline.findFullyOvershadowed())
                                                          .transformAndConcat(TimelineObjectHolder::getObject)
                                                          .transform(PartitionChunk::getObject)
                                                          .toSet();
 
       Map<String, TaskReport> taskReport = getTaskCompletionReports();
-      taskClient.report(supervisorTaskId, new PushedSegmentsReport(getId(), oldSegments, pushedSegments, taskReport));
+      taskClient.report(new PushedSegmentsReport(getId(), oldSegments, pushedSegments, taskReport));
 
       toolbox.getTaskReportFileWriter().write(getId(), taskReport);
 
@@ -298,7 +318,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   @Override
   public boolean requireLockExistingSegments()
   {
-    return !ingestionSchema.getIOConfig().isAppendToExisting();
+    return getIngestionMode() != IngestionMode.APPEND;
   }
 
   @Override
@@ -308,8 +328,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     return findInputSegments(
         getDataSource(),
         taskActionClient,
-        intervals,
-        ingestionSchema.getIOConfig().getFirehoseFactory()
+        intervals
     );
   }
 
@@ -362,12 +381,11 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         new FireDepartment(dataSchema, new RealtimeIOConfig(null, null), null);
     final FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
 
-    toolbox.addMonitor(
-        new RealtimeMetricsMonitor(
-            Collections.singletonList(fireDepartmentForMetrics),
-            Collections.singletonMap(DruidMetrics.TASK_ID, new String[]{getId()})
-        )
+    RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(
+        Collections.singletonList(fireDepartmentForMetrics),
+        Collections.singletonMap(DruidMetrics.TASK_ID, new String[]{getId()})
     );
+    toolbox.addMonitor(metricsMonitor);
 
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     final DynamicPartitionsSpec partitionsSpec = (DynamicPartitionsSpec) tuningConfig.getGivenOrDefaultPartitionsSpec();
@@ -388,7 +406,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         new SupervisorTaskAccess(getSupervisorTaskId(), taskClient),
         getIngestionSchema().getDataSchema(),
         getTaskLockHelper(),
-        ingestionSchema.getIOConfig().isAppendToExisting(),
+        getIngestionMode(),
         partitionsSpec,
         useLineageBasedSegmentAllocation
     );
@@ -484,6 +502,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       } else {
         appenderator.close();
       }
+      toolbox.removeMonitor(metricsMonitor);
     }
   }
 

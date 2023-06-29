@@ -3,6 +3,15 @@
     "spec": {
         "dataSchema": {
             "dataSource": "%%REINDEX_DATASOURCE%%",
+            "timestampSpec": {
+                "column": "timestamp",
+                "format": "iso"
+            },
+            "dimensionsSpec": {
+                "dimensions": [
+                    "continent"
+                ]
+            },
             "metricsSpec": [
                 {
                     "type": "doubleSum",
@@ -34,28 +43,17 @@
                 "segmentGranularity": "DAY",
                 "queryGranularity": "DAY",
                 "intervals" : [ "2013-08-31/2013-09-01" ]
-            },
-            "parser": {
-                "parseSpec": {
-                    "format" : "json",
-                    "timestampSpec": {
-                        "column": "timestamp",
-                        "format": "iso"
-                    },
-                    "dimensionsSpec": {
-                        "dimensions": [
-                            "continent"
-                        ]
-                    }
-                }
             }
         },
         "ioConfig": {
             "type": "index",
-            "firehose": {
-                "type": "ingestSegment",
+            "inputSource": {
+                "type": "druid",
                 "dataSource": "%%DATASOURCE%%",
                 "interval": "2013-08-31/2013-09-01"
+            },
+            "inputFormat": {
+                "type" : "json"
             }
         },
         "tuningConfig": {

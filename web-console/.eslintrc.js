@@ -30,6 +30,7 @@ module.exports = {
     },
   },
   rules: {
+    '@typescript-eslint/consistent-type-imports': ['warn', { prefer: 'type-imports' }],
     'header/header': [
       2,
       'block',

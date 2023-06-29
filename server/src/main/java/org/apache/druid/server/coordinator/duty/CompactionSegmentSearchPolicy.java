@@ -20,8 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -37,7 +36,7 @@ public interface CompactionSegmentSearchPolicy
    */
   CompactionSegmentIterator reset(
       Map<String, DataSourceCompactionConfig> compactionConfigs,
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
+      Map<String, SegmentTimeline> dataSources,
       Map<String, List<Interval>> skipIntervals
   );
 }

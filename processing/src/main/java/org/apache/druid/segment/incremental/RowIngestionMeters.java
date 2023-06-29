@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
 import java.util.Map;
@@ -30,18 +31,31 @@ import java.util.Map;
  * RowIngestionMeters to avoid unnecessary overhead from maintaining these moving averages.
  */
 @ExtensionPoint
-public interface RowIngestionMeters
+public interface RowIngestionMeters extends InputStats
 {
   String BUILD_SEGMENTS = "buildSegments";
   String DETERMINE_PARTITIONS = "determinePartitions";
 
   String PROCESSED = "processed";
+  String PROCESSED_BYTES = "processedBytes";
   String PROCESSED_WITH_ERROR = "processedWithError";
   String UNPARSEABLE = "unparseable";
   String THROWN_AWAY = "thrownAway";
 
   long getProcessed();
   void incrementProcessed();
+
+  @Override
+  default void incrementProcessedBytes(long incrementByValue)
+  {
+
+  }
+
+  @Override
+  default long getProcessedBytes()
+  {
+    return 0;
+  }
 
   long getProcessedWithError();
   void incrementProcessedWithError();

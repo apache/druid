@@ -20,6 +20,7 @@
 package org.apache.druid.query.search;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -33,9 +34,11 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.VirtualColumns;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -46,6 +49,8 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   private final DimFilter dimFilter;
   private final SearchSortSpec sortSpec;
   private final List<DimensionSpec> dimensions;
+
+  private final VirtualColumns virtualColumns;
   private final SearchQuerySpec querySpec;
   private final int limit;
 
@@ -57,6 +62,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       @JsonProperty("limit") int limit,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("searchDimensions") List<DimensionSpec> dimensions,
+      @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
       @JsonProperty("query") SearchQuerySpec querySpec,
       @JsonProperty("sort") SearchSortSpec sortSpec,
       @JsonProperty("context") Map<String, Object> context
@@ -69,6 +75,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     this.sortSpec = sortSpec == null ? DEFAULT_SORT_SPEC : sortSpec;
     this.limit = (limit == 0) ? 1000 : limit;
     this.dimensions = dimensions;
+    this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.querySpec = querySpec == null ? new AllSearchQuerySpec() : querySpec;
   }
 
@@ -127,6 +134,14 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     return dimensions;
   }
 
+  @JsonProperty
+  @Override
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = VirtualColumns.JsonIncludeFilter.class)
+  public VirtualColumns getVirtualColumns()
+  {
+    return virtualColumns;
+  }
+
   @JsonProperty("query")
   public SearchQuerySpec getQuery()
   {
@@ -152,6 +167,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
            ", dimFilter=" + dimFilter +
            ", granularity='" + getGranularity() + '\'' +
            ", dimensions=" + dimensions +
+           ", virtualColumns=" + virtualColumns +
            ", querySpec=" + querySpec +
            ", querySegmentSpec=" + getQuerySegmentSpec() +
            ", limit=" + limit +
@@ -173,34 +189,25 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
 
     SearchQuery that = (SearchQuery) o;
 
-    if (limit != that.limit) {
-      return false;
-    }
-    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) {
-      return false;
-    }
-    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) {
-      return false;
-    }
-    if (querySpec != null ? !querySpec.equals(that.querySpec) : that.querySpec != null) {
-      return false;
-    }
-    if (sortSpec != null ? !sortSpec.equals(that.sortSpec) : that.sortSpec != null) {
-      return false;
-    }
-
-    return true;
+    return limit == that.limit &&
+           Objects.equals(dimFilter, that.dimFilter) &&
+           Objects.equals(dimensions, that.dimensions) &&
+           Objects.equals(virtualColumns, that.virtualColumns) &&
+           Objects.equals(querySpec, that.querySpec) &&
+           Objects.equals(sortSpec, that.sortSpec);
   }
 
   @Override
   public int hashCode()
   {
-    int result = super.hashCode();
-    result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);
-    result = 31 * result + (sortSpec != null ? sortSpec.hashCode() : 0);
-    result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
-    result = 31 * result + (querySpec != null ? querySpec.hashCode() : 0);
-    result = 31 * result + limit;
-    return result;
+    return Objects.hash(
+        super.hashCode(),
+        dimFilter,
+        sortSpec,
+        dimensions,
+        virtualColumns,
+        querySpec,
+        limit
+    );
   }
 }

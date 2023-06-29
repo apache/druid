@@ -34,7 +34,7 @@ sidebar_label: "Scalar functions"
 > Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
 > This document describes the SQL language.
 
-Druid SQL includes scalar functions that include numeric and string functions, IP address functions, Sketch functions, and more, as described on this page. 
+[Druid SQL](./sql.md) includes scalar functions that include numeric and string functions, IP address functions, Sketch functions, and more, as described on this page. 
 
 
 ## Numeric functions
@@ -96,7 +96,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`CHAR_LENGTH(expr)`|Alias for `LENGTH`.|
 |`CHARACTER_LENGTH(expr)`|Alias for `LENGTH`.|
 |`STRLEN(expr)`|Alias for `LENGTH`.|
-|`LOOKUP(expr, lookupName)`|Look up `expr` in a registered [query-time lookup table](lookups.md). Note that lookups can also be queried directly using the [`lookup` schema](sql-syntax.md#from).|
+|`LOOKUP(expr, lookupName)`|Look up `expr` in a registered [query-time lookup table](lookups.md). Note that lookups can also be queried directly using the [`lookup` schema](sql.md#from).|
 |`LOWER(expr)`|Returns `expr` in all lowercase.|
 |`UPPER(expr)`|Returns `expr` in all uppercase.|
 |`PARSE_LONG(string, [radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
@@ -123,17 +123,36 @@ String functions accept strings, and return a type appropriate to the function.
 
 ## Date and time functions 
 
-Time functions can be used with Druid's `__time` column, with any column storing millisecond timestamps through use
-of the `MILLIS_TO_TIMESTAMP` function, or with any column storing string timestamps through use of the `TIME_PARSE`
-function. By default, time operations use the UTC time zone. You can change the time zone by setting the connection
-context parameter "sqlTimeZone" to the name of another time zone, like "America/Los_Angeles", or to an offset like
-"-08:00". If you need to mix multiple time zones in the same query, or if you need to use a time zone other than
+Time functions can be used with:
+
+- Druid's primary timestamp column, `__time`;
+- Numeric values representing milliseconds since the epoch, through the MILLIS_TO_TIMESTAMP function; and
+- String timestamps, through the TIME_PARSE function.
+
+By default, time operations use the UTC time zone. You can change the time zone by setting the connection
+context parameter `sqlTimeZone` to the name of another time zone, like `America/Los_Angeles`, or to an offset like
+`-08:00`. If you need to mix multiple time zones in the same query, or if you need to use a time zone other than
 the connection time zone, some functions also accept time zones as parameters. These parameters always take precedence
 over the connection time zone.
 
 Literal timestamps in the connection time zone can be written using `TIMESTAMP '2000-01-01 00:00:00'` syntax. The
 simplest way to write literal timestamps in other time zones is to use TIME_PARSE, like
 `TIME_PARSE('2000-02-01 00:00:00', NULL, 'America/Los_Angeles')`.
+
+The best ways to filter based on time are by using ISO8601 intervals, like
+`TIME_IN_INTERVAL(__time, '2000-01-01/2000-02-01')`, or by using literal timestamps with the `>=` and `<` operators, like
+`__time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-02-01 00:00:00'`.
+
+Druid supports the standard SQL BETWEEN operator, but we recommend avoiding it for time filters. BETWEEN is inclusive
+of its upper bound, which makes it awkward to write time filters correctly. For example, the equivalent of
+`TIME_IN_INTERVAL(__time, '2000-01-01/2000-02-01')` is
+`__time BETWEEN TIMESTAMP '2000-01-01 00:00:00' AND TIMESTAMP '2000-01-31 23:59:59.999'`.
+
+Druid processes timestamps internally as longs (64-bit integers) representing milliseconds since the epoch. Therefore,
+time functions perform best when used with the primary timestamp column, or with timestamps stored in long columns as
+milliseconds and accessed with MILLIS_TO_TIMESTAMP. Other timestamp representations, include string timestamps and
+POSIX timestamps (seconds since the epoch) require query-time conversion to Druid's internal form, which adds additional
+overhead.
 
 |Function|Notes|
 |--------|-----|
@@ -146,7 +165,8 @@ simplest way to write literal timestamps in other time zones is to use TIME_PARS
 |`TIME_EXTRACT(timestamp_expr, [unit, [timezone]])`|Extracts a time part from `expr`, returning it as a number. Unit can be EPOCH, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of [week year](https://en.wikipedia.org/wiki/ISO_week_date)), MONTH (1 through 12), QUARTER (1 through 4), or YEAR. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `EXTRACT` but is more flexible. Unit and time zone must be literals, and must be provided quoted, like `TIME_EXTRACT(__time, 'HOUR')` or `TIME_EXTRACT(__time, 'HOUR', 'America/Los_Angeles')`.|
 |`TIME_PARSE(string_expr, [pattern, [timezone]])`|Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 (e.g. `2000-01-02T03:04:05Z`) if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00", and will be used as the time zone for strings that do not include a time zone offset. Pattern and time zone must be literals. Strings that cannot be parsed as timestamps will be returned as NULL.|
 |`TIME_FORMAT(timestamp_expr, [pattern, [timezone]])`|Formats a timestamp as a string with a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 (e.g. `2000-01-02T03:04:05Z`) if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". Pattern and time zone must be literals.|
-|`MILLIS_TO_TIMESTAMP(millis_expr)`|Converts a number of milliseconds since the epoch into a timestamp.|
+|`TIME_IN_INTERVAL(timestamp_expr, interval)`|Returns whether a timestamp is contained within a particular interval. The interval must be a literal string containing any ISO8601 interval, such as `'2001-01-01/P1D'` or `'2001-01-01T01:00:00/2001-01-02T01:00:00'`. The start instant of the interval is inclusive and the end instant is exclusive.|
+|`MILLIS_TO_TIMESTAMP(millis_expr)`|Converts a number of milliseconds since the epoch (1970-01-01 00:00:00 UTC) into a timestamp.|
 |`TIMESTAMP_TO_MILLIS(timestamp_expr)`|Converts a timestamp into a number of milliseconds since the epoch.|
 |`EXTRACT(unit FROM timestamp_expr)`|Extracts a time part from `expr`, returning it as a number. Unit can be EPOCH, MICROSECOND, MILLISECOND, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), ISODOW (ISO day of week), DOY (day of year), WEEK (week of year), MONTH, QUARTER, YEAR, ISOYEAR, DECADE, CENTURY or MILLENNIUM. Units must be provided unquoted, like `EXTRACT(HOUR FROM __time)`.|
 |`FLOOR(timestamp_expr TO unit)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
@@ -228,6 +248,19 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |`DS_RANK(expr, value)`|Returns an approximation to the rank of a given value that is the fraction of the distribution less than that value from a quantiles sketch. `expr` must return a quantiles sketch.|
 |`DS_QUANTILE_SUMMARY(expr)`|Returns a string summary of a quantiles sketch, useful for debugging. `expr` must return a quantiles sketch.|
 
+### Tuple sketch functions
+
+The following functions operate on [tuple sketches](../development/extensions-core/datasketches-tuple.md).
+The [DataSketches extension](../development/extensions-core/datasketches-extension.md) must be loaded to use the following functions.
+
+|Function|Notes|Default|
+|--------|-----|-------|
+|`DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(expr)`|Computes approximate sums of the values contained within a [Tuple sketch](../development/extensions-core/datasketches-tuple.md#estimated-metrics-values-for-each-column-of-arrayofdoublessketch) column which contains an array of double values as its Summary Object.
+|`DS_TUPLE_DOUBLES_INTERSECT(expr, ..., [nominalEntries])`|Returns an intersection of tuple sketches, where each input expression must return a tuple sketch which contains an array of double values as its Summary Object. The values contained in the Summary Objects are summed when combined. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).|
+|`DS_TUPLE_DOUBLES_NOT(expr, ..., [nominalEntries])`|Returns a set difference of tuple sketches, where each input expression must return a tuple sketch which contains an array of double values as its Summary Object. The values contained in the Summary Object are preserved as is. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).|
+|`DS_TUPLE_DOUBLES_UNION(expr, ..., [nominalEntries])`|Returns a union of tuple sketches, where each input expression must return a tuple sketch which contains an array of double values as its Summary Object. The values contained in the Summary Objects are summed when combined. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).|
+
+
 ## Other scalar functions
 
 |Function|Notes|
@@ -237,6 +270,6 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |`CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`|Searched CASE.|
 |`NULLIF(value1, value2)`|Returns NULL if value1 and value2 match, else returns value1.|
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
-|`NVL(expr, expr-for-null)`|Returns `expr-for-null` if `expr` is null (or empty string for string type).|
+|`NVL(value1, value2)`|Returns `value1` if `value1` is not null, otherwise `value2`.|
 |`BLOOM_FILTER_TEST(expr, serialized-filter)`|Returns true if the value of `expr` is contained in the Base64-serialized Bloom filter. See the [Bloom filter extension](../development/extensions-core/bloom-filter.md) documentation for additional details. See the [`BLOOM_FILTER` function](sql-aggregations.md) for computing Bloom filters.|
 

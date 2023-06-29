@@ -48,6 +48,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
   private final ProvisioningSchedulerConfig provisioningSchedulerConfig;
   private final ProvisioningStrategy provisioningStrategy;
   private final ServiceEmitter emitter;
+  private RemoteTaskRunner runner;
 
   @Inject
   public RemoteTaskRunnerFactory(
@@ -76,7 +77,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
   @Override
   public RemoteTaskRunner build()
   {
-    return new RemoteTaskRunner(
+    runner = new RemoteTaskRunner(
         jsonMapper,
         remoteTaskRunnerConfig,
         zkPaths,
@@ -87,5 +88,12 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
         provisioningSchedulerConfig.isDoAutoscale() ? provisioningStrategy : new NoopProvisioningStrategy<>(),
         emitter
     );
+    return runner;
+  }
+
+  @Override
+  public RemoteTaskRunner get()
+  {
+    return runner;
   }
 }

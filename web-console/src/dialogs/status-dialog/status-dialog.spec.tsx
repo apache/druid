@@ -19,26 +19,12 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { anywhereMatcher, StatusDialog } from './status-dialog';
+import { StatusDialog } from './status-dialog';
 
 describe('StatusDialog', () => {
   it('matches snapshot', () => {
     const statusDialog = <StatusDialog onClose={() => {}} />;
     render(statusDialog);
     expect(document.body.lastChild).toMatchSnapshot();
-  });
-
-  it('filters data that contains input', () => {
-    const row = [
-      'org.apache.druid.common.gcp.GcpModule',
-      'org.apache.druid.common.aws.AWSModule',
-      'org.apache.druid.OtherModule',
-    ];
-
-    expect(anywhereMatcher({ id: '0', value: 'common' }, row)).toEqual(true);
-    expect(anywhereMatcher({ id: '1', value: 'common' }, row)).toEqual(true);
-    expect(anywhereMatcher({ id: '0', value: 'org' }, row)).toEqual(true);
-    expect(anywhereMatcher({ id: '1', value: 'org' }, row)).toEqual(true);
-    expect(anywhereMatcher({ id: '2', value: 'common' }, row)).toEqual(false);
   });
 });

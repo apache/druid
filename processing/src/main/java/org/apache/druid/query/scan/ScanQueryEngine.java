@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.context.ResponseContext;
@@ -40,7 +39,9 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -67,9 +68,6 @@ public class ScanQueryEngine
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-    if (segment.asQueryableIndex() != null && segment.asQueryableIndex().isFromTombstone()) {
-      return Sequences.empty();
-    }
 
     // "legacy" should be non-null due to toolChest.mergeResults
     final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "Expected non-null 'legacy' parameter");
@@ -78,15 +76,18 @@ public class ScanQueryEngine
     if (numScannedRows != null && numScannedRows >= query.getScanRowsLimit() && query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
       return Sequences.empty();
     }
-    final boolean hasTimeout = QueryContexts.hasTimeout(query);
+    final boolean hasTimeout = query.context().hasTimeout();
     final Long timeoutAt = responseContext.getTimeoutTime();
-    final long start = System.currentTimeMillis();
     final StorageAdapter adapter = segment.asStorageAdapter();
 
     if (adapter == null) {
       throw new ISE(
           "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
       );
+    }
+
+    if (adapter.isFromTombstone()) {
+      return Sequences.empty();
     }
 
     final List<String> allColumns = new ArrayList<>();
@@ -147,6 +148,7 @@ public class ScanQueryEngine
                       public Iterator<ScanResultValue> make()
                       {
                         final List<BaseObjectColumnValueSelector> columnSelectors = new ArrayList<>(allColumns.size());
+                        final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
 
                         for (String column : allColumns) {
                           final BaseObjectColumnValueSelector selector;
@@ -154,8 +156,20 @@ public class ScanQueryEngine
                           if (legacy && LEGACY_TIMESTAMP_KEY.equals(column)) {
                             selector = cursor.getColumnSelectorFactory()
                                              .makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
+                            ColumnCapabilities columnCapabilities = cursor.getColumnSelectorFactory()
+                                                                          .getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME);
+                            rowSignatureBuilder.add(
+                                column,
+                                columnCapabilities == null ? null : columnCapabilities.toColumnType()
+                            );
                           } else {
                             selector = cursor.getColumnSelectorFactory().makeColumnValueSelector(column);
+                            ColumnCapabilities columnCapabilities = cursor.getColumnSelectorFactory()
+                                                                          .getColumnCapabilities(column);
+                            rowSignatureBuilder.add(
+                                column,
+                                columnCapabilities == null ? null : columnCapabilities.toColumnType()
+                            );
                           }
 
                           columnSelectors.add(selector);
@@ -192,12 +206,7 @@ public class ScanQueryEngine
                               throw new UOE("resultFormat[%s] is not supported", resultFormat.toString());
                             }
                             responseContext.addRowScanCount(offset - lastOffset);
-                            if (hasTimeout) {
-                              responseContext.putTimeoutTime(
-                                  timeoutAt - (System.currentTimeMillis() - start)
-                              );
-                            }
-                            return new ScanResultValue(segmentId.toString(), allColumns, events);
+                            return new ScanResultValue(segmentId.toString(), allColumns, events, rowSignatureBuilder.build());
                           }
 
                           @Override

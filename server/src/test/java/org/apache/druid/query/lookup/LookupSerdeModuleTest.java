@@ -19,15 +19,13 @@
 
 package org.apache.druid.query.lookup;
 
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.druid.guice.ExpressionModule;
-import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
@@ -49,22 +47,14 @@ public class LookupSerdeModuleTest
   @Before
   public void setUp()
   {
-    final ImmutableList<DruidModule> modules = ImmutableList.of(
-        new ExpressionModule(),
-        new LookupSerdeModule()
-    );
+    injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build())
+        .add(
+            new ExpressionModule(),
+            new LookupSerdeModule()
+         )
+        .build();
 
-    injector = GuiceInjectors.makeStartupInjectorWithModules(modules);
     objectMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
-    objectMapper.setInjectableValues(
-        new InjectableValues.Std()
-            .addValue(ExprMacroTable.class, injector.getInstance(ExprMacroTable.class))
-            .addValue(
-                LookupExtractorFactoryContainerProvider.class,
-                injector.getInstance(LookupExtractorFactoryContainerProvider.class)
-            )
-    );
-    modules.stream().flatMap(module -> module.getJacksonModules().stream()).forEach(objectMapper::registerModule);
   }
 
   @Test

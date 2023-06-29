@@ -20,8 +20,10 @@
 package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.IOConfig;
 
 import javax.annotation.Nullable;
@@ -37,22 +39,32 @@ import java.util.Objects;
 public class CompactionIOConfig implements IOConfig
 {
   private final CompactionInputSpec inputSpec;
+  private final boolean allowNonAlignedInterval;
   private final boolean dropExisting;
 
   @JsonCreator
   public CompactionIOConfig(
       @JsonProperty("inputSpec") CompactionInputSpec inputSpec,
+      @JsonProperty("allowNonAlignedInterval") boolean allowNonAlignedInterval,
       @JsonProperty("dropExisting") @Nullable Boolean dropExisting
   )
   {
     this.inputSpec = inputSpec;
-    this.dropExisting = dropExisting == null ? DEFAULT_DROP_EXISTING : dropExisting;
+    this.allowNonAlignedInterval = allowNonAlignedInterval;
+    this.dropExisting = dropExisting == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : dropExisting;
   }
 
   @JsonProperty
   public CompactionInputSpec getInputSpec()
   {
     return inputSpec;
+  }
+
+  @JsonProperty("allowNonAlignedInterval")
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public boolean isAllowNonAlignedInterval()
+  {
+    return allowNonAlignedInterval;
   }
 
   @JsonProperty
@@ -71,14 +83,15 @@ public class CompactionIOConfig implements IOConfig
       return false;
     }
     CompactionIOConfig that = (CompactionIOConfig) o;
-    return dropExisting == that.dropExisting &&
-           Objects.equals(inputSpec, that.inputSpec);
+    return allowNonAlignedInterval == that.allowNonAlignedInterval
+           && dropExisting == that.dropExisting
+           && Objects.equals(inputSpec, that.inputSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(inputSpec, dropExisting);
+    return Objects.hash(inputSpec, allowNonAlignedInterval, dropExisting);
   }
 
   @Override
@@ -86,6 +99,7 @@ public class CompactionIOConfig implements IOConfig
   {
     return "CompactionIOConfig{" +
            "inputSpec=" + inputSpec +
+           ", allowNonAlignedInterval=" + allowNonAlignedInterval +
            ", dropExisting=" + dropExisting +
            '}';
   }

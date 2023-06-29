@@ -19,35 +19,50 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import com.google.inject.Binder;
+import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.SqlLifecycle;
-import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
+import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
+import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
+import org.apache.druid.sql.calcite.external.InlineOperatorConversion;
+import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.guice.SqlBindings;
+import org.apache.druid.sql.http.SqlParameter;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
@@ -55,25 +70,38 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Stream;
 
 public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 {
   protected static final Map<String, Object> DEFAULT_CONTEXT =
       ImmutableMap.<String, Object>builder()
-                  .put(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
+                  .put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
                   .build();
+
+  public static final Map<String, Object> PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT = ImmutableMap.of(
+      DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
+      "{\"type\":\"all\"}"
+  );
+
 
   protected static final RowSignature FOO_TABLE_SIGNATURE =
       RowSignature.builder()
                   .addTimeColumn()
-                  .add("cnt", ColumnType.LONG)
                   .add("dim1", ColumnType.STRING)
                   .add("dim2", ColumnType.STRING)
                   .add("dim3", ColumnType.STRING)
+                  .add("cnt", ColumnType.LONG)
                   .add("m1", ColumnType.FLOAT)
                   .add("m2", ColumnType.DOUBLE)
                   .add("unique_dim1", HyperUniquesAggregatorFactory.TYPE)
@@ -91,12 +119,71 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
   protected boolean didTest = false;
 
-  @After
-  @Override
-  public void tearDown() throws Exception
+  public CalciteIngestionDmlTest()
   {
-    super.tearDown();
+    super(IngestionTestSqlEngine.INSTANCE);
+  }
 
+  @Override
+  public void configureGuice(DruidInjectorBuilder builder)
+  {
+    super.configureGuice(builder);
+
+    builder.addModule(new DruidModule() {
+
+      // Clone of MSQExternalDataSourceModule since it is not
+      // visible here.
+      @Override
+      public List<? extends Module> getJacksonModules()
+      {
+        return Collections.singletonList(
+            new SimpleModule(getClass().getSimpleName())
+                .registerSubtypes(ExternalDataSource.class)
+        );
+      }
+
+      @Override
+      public void configure(Binder binder)
+      {
+        // Nothing to do.
+      }
+    });
+
+    builder.addModule(new DruidModule() {
+
+      // Partial clone of MsqSqlModule, since that module is not
+      // visible to this one.
+
+      @Override
+      public List<? extends Module> getJacksonModules()
+      {
+        // We want this module to bring input sources along for the ride.
+        List<Module> modules = new ArrayList<>(new InputSourceModule().getJacksonModules());
+        modules.add(new SimpleModule("test-module").registerSubtypes(TestFileInputSource.class));
+        return modules;
+      }
+
+      @Override
+      public void configure(Binder binder)
+      {
+        // We want this module to bring InputSourceModule along for the ride.
+        binder.install(new InputSourceModule());
+
+        // Set up the EXTERN macro.
+        SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+
+        // Enable the extended table functions for testing even though these
+        // are not enabled in production in Druid 26.
+        SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
+        SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
+        SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
+      }
+    });
+  }
+
+  @After
+  public void tearDown()
+  {
     // Catch situations where tests forgot to call "verify" on their tester.
     if (!didTest) {
       throw new ISE("Test was not run; did you call verify() on a tester?");
@@ -105,6 +192,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
   protected String externSql(final ExternalDataSource externalDataSource)
   {
+    ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
     try {
       return StringUtils.format(
           "TABLE(extern(%s, %s, %s))",
@@ -120,6 +208,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
   protected Map<String, Object> queryContextWithGranularity(Granularity granularity)
   {
+    ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
     String granularityString = null;
     try {
       granularityString = queryJsonMapper.writeValueAsString(granularity);
@@ -144,8 +233,11 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     private String expectedTargetDataSource;
     private RowSignature expectedTargetSignature;
     private List<ResourceAction> expectedResources;
-    private Query expectedQuery;
+    private Query<?> expectedQuery;
     private Matcher<Throwable> validationErrorMatcher;
+    private String expectedLogicalPlanResource;
+    private List<SqlParameter> parameters;
+    private AuthConfig authConfig;
 
     private IngestionDmlTester()
     {
@@ -176,6 +268,18 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     public IngestionDmlTester authentication(final AuthenticationResult authenticationResult)
     {
       this.authenticationResult = authenticationResult;
+      return this;
+    }
+
+    public IngestionDmlTester parameters(List<SqlParameter> parameters)
+    {
+      this.parameters = parameters;
+      return this;
+    }
+
+    public IngestionDmlTester authConfig(AuthConfig authConfig)
+    {
+      this.authConfig = authConfig;
       return this;
     }
 
@@ -223,6 +327,12 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       );
     }
 
+    public IngestionDmlTester expectLogicalPlanFrom(String resource)
+    {
+      this.expectedLogicalPlanResource = resource;
+      return this;
+    }
+
     public void verify()
     {
       if (didTest) {
@@ -239,13 +349,15 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
       try {
         log.info("SQL: %s", sql);
-        queryLogHook.clearRecordedQueries();
 
         if (validationErrorMatcher != null) {
           verifyValidationError();
         } else {
           verifySuccess();
         }
+      }
+      catch (RuntimeException e) {
+        throw e;
       }
       catch (Exception e) {
         throw new RuntimeException(e);
@@ -266,23 +378,11 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
         throw new ISE("Test must not have expectedQuery");
       }
 
-      final SqlLifecycleFactory sqlLifecycleFactory = getSqlLifecycleFactory(
-          plannerConfig,
-          new AuthConfig(),
-          createOperatorTable(),
-          createMacroTable(),
-          CalciteTests.TEST_AUTHORIZER_MAPPER,
-          queryJsonMapper
-      );
-
-      final SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-      sqlLifecycle.initialize(sql, new QueryContext(queryContext));
-
+      queryLogHook.clearRecordedQueries();
       final Throwable e = Assert.assertThrows(
           Throwable.class,
           () -> {
-            sqlLifecycle.validateAndAuthorize(authenticationResult);
-            sqlLifecycle.plan();
+            getSqlStatementFactory(plannerConfig, authConfig).directStatement(sqlQuery()).execute();
           }
       );
 
@@ -290,7 +390,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       Assert.assertTrue(queryLogHook.getRecordedQueries().isEmpty());
     }
 
-    private void verifySuccess() throws Exception
+    private void verifySuccess()
     {
       if (expectedTargetDataSource == null) {
         throw new ISE("Test must have expectedTargetDataSource");
@@ -300,40 +400,120 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
         throw new ISE("Test must have expectedResources");
       }
 
-      final List<Query> expectedQueries =
-          expectedQuery == null
-          ? Collections.emptyList()
-          : Collections.singletonList(recursivelyOverrideContext(expectedQuery, queryContext));
+      testBuilder()
+          .sql(sql)
+          .queryContext(queryContext)
+          .authResult(authenticationResult)
+          .parameters(parameters)
+          .plannerConfig(plannerConfig)
+          .authConfig(authConfig)
+          .expectedResources(expectedResources)
+          .run();
 
-      Assert.assertEquals(
-          ImmutableSet.copyOf(expectedResources),
-          analyzeResources(plannerConfig, new AuthConfig(), sql, queryContext, authenticationResult)
-      );
+      String expectedLogicalPlan;
+      if (expectedLogicalPlanResource != null) {
+        expectedLogicalPlan = StringUtils.getResource(
+            this,
+            "/calcite/expected/ingest/" + expectedLogicalPlanResource + "-logicalPlan.txt"
+        );
+      } else {
+        expectedLogicalPlan = null;
+      }
+      testBuilder()
+          .sql(sql)
+          .queryContext(queryContext)
+          .authResult(authenticationResult)
+          .parameters(parameters)
+          .plannerConfig(plannerConfig)
+          .authConfig(authConfig)
+          .expectedQuery(expectedQuery)
+          .expectedResults(Collections.singletonList(new Object[]{expectedTargetDataSource, expectedTargetSignature}))
+          .expectedLogicalPlan(expectedLogicalPlan)
+          .run();
+    }
 
-      final List<Object[]> results =
-          getResults(plannerConfig, queryContext, Collections.emptyList(), sql, authenticationResult);
-
-      verifyResults(
-          sql,
-          expectedQueries,
-          Collections.singletonList(new Object[]{expectedTargetDataSource, expectedTargetSignature}),
-          results
-      );
+    private SqlQueryPlus sqlQuery()
+    {
+      return SqlQueryPlus.builder(sql)
+          .context(queryContext)
+          .auth(authenticationResult)
+          .build();
     }
   }
 
-  protected static ResourceAction viewRead(final String viewName)
+  static class TestFileInputSource extends AbstractInputSource implements SplittableInputSource<File>
   {
-    return new ResourceAction(new Resource(viewName, ResourceType.VIEW), Action.READ);
+    private final List<File> files;
+
+    @JsonCreator
+    TestFileInputSource(@JsonProperty("files") List<File> fileList)
+    {
+      files = fileList;
+    }
+
+    @Override
+    @JsonIgnore
+    @Nonnull
+    public Set<String> getTypes()
+    {
+      throw new CalciteIngestDmlTestException("getTypes()");
+    }
+
+    @JsonProperty
+    public List<File> getFiles()
+    {
+      return files;
+    }
+
+    @Override
+    public Stream<InputSplit<File>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+    {
+      return files.stream().map(InputSplit::new);
+    }
+
+    @Override
+    public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
+    {
+      return files.size();
+    }
+
+    @Override
+    public SplittableInputSource<File> withSplit(InputSplit<File> split)
+    {
+      return new TestFileInputSource(ImmutableList.of(split.get()));
+    }
+
+    @Override
+    public boolean needsFormat()
+    {
+      return true;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      TestFileInputSource that = (TestFileInputSource) o;
+      return Objects.equals(files, that.files);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(files);
+    }
   }
 
-  protected static ResourceAction dataSourceRead(final String dataSource)
+  static class CalciteIngestDmlTestException extends RuntimeException
   {
-    return new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.READ);
-  }
-
-  protected static ResourceAction dataSourceWrite(final String dataSource)
-  {
-    return new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE);
+    public CalciteIngestDmlTestException(String message)
+    {
+      super(message);
+    }
   }
 }

@@ -30,6 +30,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
@@ -89,7 +90,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
     TaskStuff newTaskStuff = new TaskStuff(task, status, DateTimes.nowUtc(), task.getDataSource());
     TaskStuff alreadyExisted = tasks.putIfAbsent(task.getId(), newTaskStuff);
     if (alreadyExisted != null) {
-      throw new EntryExistsException(task.getId());
+      throw new EntryExistsException("Task", task.getId());
     }
 
     log.info("Inserted task %s with status: %s", task.getId(), status);
@@ -231,6 +232,18 @@ public class HeapMemoryTaskStorage implements TaskStorage
       }
     });
     return tasks;
+  }
+
+  @Override
+  public List<TaskStatusPlus> getTaskStatusPlusList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String datasource
+  )
+  {
+    return getTaskInfos(taskLookups, datasource).stream()
+                                                .map(Task::toTaskIdentifierInfo)
+                                                .map(TaskStatusPlus::fromTaskIdentifierInfo)
+                                                .collect(Collectors.toList());
   }
 
   private List<TaskInfo<Task, TaskStatus>> getRecentlyCreatedAlreadyFinishedTaskInfoSince(

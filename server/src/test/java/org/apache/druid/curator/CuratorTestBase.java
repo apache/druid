@@ -59,7 +59,6 @@ public class CuratorTestBase
         .retryPolicy(new RetryOneTime(1))
         .compressionProvider(new PotentiallyGzippedCompressionProvider(true))
         .build();
-
   }
 
   protected void setupZNodeForServer(DruidServer server, ZkPathsConfig zkPathsConfig, ObjectMapper jsonMapper)

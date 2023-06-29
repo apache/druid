@@ -30,10 +30,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -41,6 +42,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -68,6 +70,7 @@ import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.AbstractFixedIntervalTask;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -95,6 +98,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -122,6 +126,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentMover;
@@ -161,6 +166,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -172,7 +178,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 @RunWith(Parameterized.class)
 public class TaskLifecycleTest extends InitializedNullHandlingTest
@@ -290,7 +295,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       return new InputSourceReader()
       {
         @Override
-        public CloseableIterator<InputRow> read()
+        public CloseableIterator<InputRow> read(InputStats inputStats)
         {
           return new CloseableIterator<InputRow>()
           {
@@ -342,7 +347,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       return new InputSourceReader()
       {
         @Override
-        public CloseableIterator<InputRow> read()
+        public CloseableIterator<InputRow> read(InputStats inputStats)
         {
           final Iterator<InputRow> inputRowIterator = IDX_TASK_INPUT_ROWS.iterator();
           return CloseableIterators.withEmptyBaggage(inputRowIterator);
@@ -410,7 +415,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     // initialize variables
     announcedSinks = 0;
     pushedSegments = 0;
-    indexSpec = new IndexSpec();
+    indexSpec = IndexSpec.DEFAULT;
     emitter = newMockEmitter();
     EmittingLogger.registerEmitter(emitter);
     mapper = TEST_UTILS.getTestObjectMapper();
@@ -597,26 +602,17 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             taskStorage,
             mdc,
             emitter,
-            EasyMock.createMock(SupervisorManager.class)
+            EasyMock.createMock(SupervisorManager.class),
+            mapper
         ),
         new TaskAuditLogConfig(true)
     );
-    File tmpDir = temporaryFolder.newFolder();
-    taskConfig = new TaskConfig(
-        tmpDir.toString(),
-        null,
-        null,
-        50000,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false,
-        TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name(),
-        null
-    );
+    taskConfig = new TaskConfigBuilder()
+        .setBaseDir(temporaryFolder.newFolder().toString())
+        .setDefaultRowFlushBoundary(50000)
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .setTmpStorageBytesPerTask(-1L)
+        .build();
 
     return new TaskToolboxFactory(
         taskConfig,
@@ -696,10 +692,12 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new NoopChatHandlerProvider(),
         TEST_UTILS.getRowIngestionMetersFactory(),
         appenderatorsManager,
-        new NoopIndexingServiceClient(),
+        new NoopOverlordClient(),
         null,
         null,
-        null
+        null,
+        null,
+        "1"
     );
   }
 
@@ -938,7 +936,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     List<File> segmentFiles = new ArrayList<>();
     for (DataSegment segment : mdc.retrieveUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"))) {
       File file = new File((String) segment.getLoadSpec().get("path"));
-      FileUtils.mkdirp(file);
+      FileUtils.mkdirp(file.getParentFile());
+      Files.write(file.toPath(), ByteArrays.EMPTY_ARRAY);
       segmentFiles.add(file);
     }
 
@@ -1034,7 +1033,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public TaskStatus run(TaskToolbox toolbox) throws Exception
+      public TaskStatus runTask(TaskToolbox toolbox) throws Exception
       {
         final Interval interval = Intervals.of("2012-01-01/P1D");
         final TimeChunkLockTryAcquireAction action = new TimeChunkLockTryAcquireAction(
@@ -1084,7 +1083,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public TaskStatus run(TaskToolbox toolbox) throws Exception
+      public TaskStatus runTask(TaskToolbox toolbox) throws Exception
       {
         final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
 
@@ -1126,7 +1125,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public TaskStatus run(TaskToolbox toolbox) throws Exception
+      public TaskStatus runTask(TaskToolbox toolbox) throws Exception
       {
         final TaskLock myLock = Iterables.getOnlyElement(toolbox.getTaskActionClient().submit(new LockListAction()));
 
@@ -1156,9 +1155,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   {
     publishCountDown = new CountDownLatch(1);
     monitorScheduler.addMonitor(EasyMock.anyObject(Monitor.class));
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().times(1);
     monitorScheduler.removeMonitor(EasyMock.anyObject(Monitor.class));
-    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expectLastCall().times(1);
     EasyMock.replay(monitorScheduler, queryRunnerFactoryConglomerate);
 
     RealtimeIndexTask realtimeIndexTask = newRealtimeIndexTask();
@@ -1236,9 +1235,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     taskQueue = setUpTaskQueue(taskStorage, taskRunner);
 
     monitorScheduler.addMonitor(EasyMock.anyObject(Monitor.class));
-    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expectLastCall().times(1);
     monitorScheduler.removeMonitor(EasyMock.anyObject(Monitor.class));
-    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expectLastCall().times(1);
     EasyMock.replay(monitorScheduler, queryRunnerFactoryConglomerate);
 
     RealtimeIndexTask realtimeIndexTask = newRealtimeIndexTask();
@@ -1355,11 +1354,11 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   @Test
   public void testUnifiedAppenderatorsManagerCleanup() throws Exception
   {
-    final ExecutorService exec = Executors.newFixedThreadPool(8);
+    final ExecutorService exec = Execs.multiThreaded(8, "TaskLifecycleTest-%d");
 
     UnifiedIndexerAppenderatorsManager unifiedIndexerAppenderatorsManager = new UnifiedIndexerAppenderatorsManager(
         new ForwardingQueryProcessingPool(exec),
-        NoopJoinableFactory.INSTANCE,
+        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new WorkerConfig(),
         MapCache.create(2048),
         new CacheConfig(),
@@ -1463,7 +1462,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public TaskStatus run(TaskToolbox toolbox) throws Exception
+      public TaskStatus runTask(TaskToolbox toolbox) throws Exception
       {
         final Interval interval = Intervals.of("2012-01-01/P1D");
         final TimeChunkLockTryAcquireAction action = new TimeChunkLockTryAcquireAction(

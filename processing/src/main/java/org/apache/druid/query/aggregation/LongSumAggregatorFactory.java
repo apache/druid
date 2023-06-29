@@ -106,6 +106,12 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new LongSumAggregatorFactory(newName, getFieldName(), getExpression(), macroTable);
+  }
+
+  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new LongSumAggregatorFactory(name, name, null, macroTable);

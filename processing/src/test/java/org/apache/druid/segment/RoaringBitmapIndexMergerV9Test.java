@@ -37,7 +37,7 @@ public class RoaringBitmapIndexMergerV9Test extends IndexMergerTestBase
   )
   {
     super(
-        new RoaringBitmapSerdeFactory(null),
+        RoaringBitmapSerdeFactory.getInstance(),
         compressionStrategy,
         dimCompressionStrategy,
         longEncodingStrategy

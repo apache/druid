@@ -42,8 +42,8 @@ public class LocalDataStorageDruidModuleTest
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
     Assert.assertTrue(killer.getKillers().containsKey(LocalDataStorageDruidModule.SCHEME));
     Assert.assertSame(
-        killer.getKillers().get(LocalDataStorageDruidModule.SCHEME),
-        killer.getKillers().get(LocalDataStorageDruidModule.SCHEME)
+        killer.getKillers().get(LocalDataStorageDruidModule.SCHEME).get(),
+        killer.getKillers().get(LocalDataStorageDruidModule.SCHEME).get()
     );
   }
 

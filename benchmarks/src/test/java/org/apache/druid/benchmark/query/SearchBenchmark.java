@@ -317,7 +317,7 @@ public class SearchBenchmark
   {
     log.info("SETUP CALLED AT " + +System.currentTimeMillis());
 
-    ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde());
+    ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
 
     setupQueries();
 
@@ -407,7 +407,7 @@ public class SearchBenchmark
         File indexFile = INDEX_MERGER_V9.persist(
             incIndex,
             new File(qIndexesDir, String.valueOf(i)),
-            new IndexSpec(),
+            IndexSpec.DEFAULT,
             null
         );
         incIndex.close();

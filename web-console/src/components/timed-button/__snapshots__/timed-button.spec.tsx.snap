@@ -36,6 +36,7 @@ exports[`TimedButton matches snapshot 1`] = `
     hoverOpenDelay={150}
     inheritDarkTheme={true}
     interactionKind="click"
+    matchTargetWidth={false}
     minimal={false}
     openOnTargetFocus={true}
     positioningStrategy="absolute"

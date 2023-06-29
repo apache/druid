@@ -20,15 +20,16 @@
 package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import org.apache.druid.common.exception.DruidException;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
@@ -58,6 +59,7 @@ import java.util.stream.Collectors;
 
 public class MetadataTaskStorage implements TaskStorage
 {
+
   private static final MetadataStorageActionHandlerTypes<Task, TaskStatus, TaskAction, TaskLock> TASK_TYPES = new MetadataStorageActionHandlerTypes<Task, TaskStatus, TaskAction, TaskLock>()
   {
     @Override
@@ -115,6 +117,8 @@ public class MetadataTaskStorage implements TaskStorage
   public void start()
   {
     metadataStorageConnector.createTaskTables();
+    // begins migration of existing tasks to new schema
+    handler.populateTaskTypeAndGroupIdAsync();
   }
 
   @LifecycleStop
@@ -135,7 +139,7 @@ public class MetadataTaskStorage implements TaskStorage
         status.getId()
     );
 
-    log.info("Inserting task %s with status: %s", task.getId(), status);
+    log.info("Inserting task [%s] with status [%s].", task.getId(), status);
 
     try {
       handler.insert(
@@ -144,15 +148,16 @@ public class MetadataTaskStorage implements TaskStorage
           task.getDataSource(),
           task,
           status.isRunnable(),
-          status
+          status,
+          task.getType(),
+          task.getGroupId()
       );
     }
+    catch (DruidException e) {
+      throw e;
+    }
     catch (Exception e) {
-      if (e instanceof EntryExistsException) {
-        throw (EntryExistsException) e;
-      } else {
-        throw new RuntimeException(e);
-      }
+      throw new RuntimeException(e);
     }
   }
 
@@ -161,15 +166,12 @@ public class MetadataTaskStorage implements TaskStorage
   {
     Preconditions.checkNotNull(status, "status");
 
-    log.info("Updating task %s to status: %s", status.getId(), status);
+    final String taskId = status.getId();
+    log.info("Updating status of task [%s] to [%s].", taskId, status);
 
-    final boolean set = handler.setStatus(
-        status.getId(),
-        status.isRunnable(),
-        status
-    );
+    final boolean set = handler.setStatus(taskId, status.isRunnable(), status);
     if (!set) {
-      throw new ISE("Active task not found: %s", status.getId());
+      throw new ISE("No active task for id [%s]", taskId);
     }
   }
 
@@ -226,21 +228,44 @@ public class MetadataTaskStorage implements TaskStorage
       @Nullable String datasource
   )
   {
-    Map<TaskLookupType, TaskLookup> theTaskLookups = Maps.newHashMapWithExpectedSize(taskLookups.size());
+    Map<TaskLookupType, TaskLookup> theTaskLookups = processTaskLookups(taskLookups);
+    return Collections.unmodifiableList(handler.getTaskInfos(theTaskLookups, datasource));
+  }
+
+  @Override
+  public List<TaskStatusPlus> getTaskStatusPlusList(
+      Map<TaskLookupType, TaskLookup> taskLookups,
+      @Nullable String datasource
+  )
+  {
+    Map<TaskLookupType, TaskLookup> processedTaskLookups = processTaskLookups(taskLookups);
+    return Collections.unmodifiableList(
+        handler.getTaskStatusList(processedTaskLookups, datasource)
+               .stream()
+               .map(TaskStatusPlus::fromTaskIdentifierInfo)
+               .collect(Collectors.toList())
+    );
+  }
+
+  private Map<TaskLookupType, TaskLookup> processTaskLookups(
+      Map<TaskLookupType, TaskLookup> taskLookups
+  )
+  {
+    Map<TaskLookupType, TaskLookup> processedTaskLookups = Maps.newHashMapWithExpectedSize(taskLookups.size());
     for (Entry<TaskLookupType, TaskLookup> entry : taskLookups.entrySet()) {
       if (entry.getKey() == TaskLookupType.COMPLETE) {
         CompleteTaskLookup completeTaskLookup = (CompleteTaskLookup) entry.getValue();
-        theTaskLookups.put(
+        processedTaskLookups.put(
             entry.getKey(),
             completeTaskLookup.hasTaskCreatedTimeFilter()
             ? completeTaskLookup
             : completeTaskLookup.withDurationBeforeNow(config.getRecentlyFinishedThreshold())
         );
       } else {
-        theTaskLookups.put(entry.getKey(), entry.getValue());
+        processedTaskLookups.put(entry.getKey(), entry.getValue());
       }
     }
-    return Collections.unmodifiableList(handler.getTaskInfos(theTaskLookups, datasource));
+    return processedTaskLookups;
   }
 
   @Override
@@ -250,10 +275,8 @@ public class MetadataTaskStorage implements TaskStorage
     Preconditions.checkNotNull(taskLock, "taskLock");
 
     log.info(
-        "Adding lock on interval[%s] version[%s] for task: %s",
-        taskLock.getInterval(),
-        taskLock.getVersion(),
-        taskid
+        "Adding lock on interval[%s] version[%s] for task [%s].",
+        taskLock.getInterval(), taskLock.getVersion(), taskid
     );
 
     handler.addLock(taskid, taskLock);
@@ -267,15 +290,13 @@ public class MetadataTaskStorage implements TaskStorage
     Preconditions.checkNotNull(newLock, "newLock");
 
     log.info(
-        "Replacing an existing lock[%s] with a new lock[%s] for task: %s",
-        oldLock,
-        newLock,
-        taskid
+        "Replacing an existing lock[%s] with a new lock[%s] for task [%s].",
+        oldLock, newLock, taskid
     );
 
     final Long oldLockId = handler.getLockId(taskid, oldLock);
     if (oldLockId == null) {
-      throw new ISE("Cannot find an existing lock[%s]", oldLock);
+      throw new ISE("Cannot find lock[%s] for task [%s]", oldLock, taskid);
     }
 
     handler.replaceLock(taskid, oldLockId, newLock);
@@ -307,14 +328,8 @@ public class MetadataTaskStorage implements TaskStorage
   {
     return ImmutableList.copyOf(
         Iterables.transform(
-            getLocksWithIds(taskid).entrySet(), new Function<Map.Entry<Long, TaskLock>, TaskLock>()
-            {
-              @Override
-              public TaskLock apply(Map.Entry<Long, TaskLock> e)
-              {
-                return e.getValue();
-              }
-            }
+            getLocksWithIds(taskid).entrySet(),
+            Entry::getValue
         )
     );
   }

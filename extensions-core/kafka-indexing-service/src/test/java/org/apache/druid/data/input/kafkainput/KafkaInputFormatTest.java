@@ -22,12 +22,12 @@ package org.apache.druid.data.input.kafkainput;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
@@ -52,35 +53,42 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Optional;
 
 public class KafkaInputFormatTest
 {
   private KafkaRecordEntity inputEntity;
-  private long timestamp = DateTimes.of("2021-06-24").getMillis();
-  private static final Iterable<Header> SAMPLE_HEADERS = ImmutableList.of(new Header() {
-      @Override
-      public String key()
+  private final long timestamp = DateTimes.of("2021-06-24").getMillis();
+  private static final Iterable<Header> SAMPLE_HEADERS = ImmutableList.of(
+      new Header()
       {
-        return "encoding";
-      }
-      @Override
-      public byte[] value()
+        @Override
+        public String key()
+        {
+          return "encoding";
+        }
+
+        @Override
+        public byte[] value()
+        {
+          return "application/json".getBytes(StandardCharsets.UTF_8);
+        }
+      },
+      new Header()
       {
-        return "application/json".getBytes(StandardCharsets.UTF_8);
+        @Override
+        public String key()
+        {
+          return "kafkapkc";
+        }
+
+        @Override
+        public byte[] value()
+        {
+          return "pkc-bar".getBytes(StandardCharsets.UTF_8);
+        }
       }
-    },
-      new Header() {
-      @Override
-      public String key()
-      {
-        return "kafkapkc";
-      }
-      @Override
-      public byte[] value()
-      {
-        return "pkc-bar".getBytes(StandardCharsets.UTF_8);
-      }
-    });
+  );
   private KafkaInputFormat format;
 
   @Before
@@ -91,7 +99,11 @@ public class KafkaInputFormatTest
         // Key Format
         new JsonInputFormat(
             new JSONPathSpec(true, ImmutableList.of()),
-            null, null, false //make sure JsonReader is used
+            null,
+            null,
+            false, //make sure JsonReader is used
+            false,
+            false
         ),
         // Value Format
         new JsonInputFormat(
@@ -106,9 +118,15 @@ public class KafkaInputFormatTest
                     new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
                 )
             ),
-            null, null, false //make sure JsonReader is used
+            null,
+            null,
+            false, //make sure JsonReader is used
+            false,
+            false
         ),
-        "kafka.newheader.", "kafka.newkey.key", "kafka.newts.timestamp"
+        "kafka.newheader.",
+        "kafka.newkey.key",
+        "kafka.newts.timestamp"
     );
   }
 
@@ -121,7 +139,11 @@ public class KafkaInputFormatTest
         // Key Format
         new JsonInputFormat(
             new JSONPathSpec(true, ImmutableList.of()),
-            null, null, false //make sure JsonReader is used
+            null,
+            null,
+            false, //make sure JsonReader is used
+            false,
+            false
         ),
         // Value Format
         new JsonInputFormat(
@@ -136,15 +158,21 @@ public class KafkaInputFormatTest
                     new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
                 )
             ),
-            null, null, false //make sure JsonReader is used
+            null,
+            null,
+            false, //make sure JsonReader is used
+            false,
+            false
         ),
-        "kafka.newheader.", "kafka.newkey.key", "kafka.newts.timestamp"
+        "kafka.newheader.",
+        "kafka.newkey.key",
+        "kafka.newts.timestamp"
     );
     Assert.assertEquals(format, kif);
 
     final byte[] formatBytes = mapper.writeValueAsBytes(format);
     final byte[] kifBytes = mapper.writeValueAsBytes(kif);
-    Assert.assertTrue(Arrays.equals(formatBytes, kifBytes));
+    Assert.assertArrayEquals(formatBytes, kifBytes);
   }
 
   @Test
@@ -153,7 +181,8 @@ public class KafkaInputFormatTest
     final byte[] key = StringUtils.toUtf8(
         "{\n"
         + "    \"key\": \"sampleKey\"\n"
-        + "}");
+        + "}"
+    );
 
     final byte[] payload = StringUtils.toUtf8(
         "{\n"
@@ -164,23 +193,26 @@ public class KafkaInputFormatTest
         + "    \"o\": {\n"
         + "        \"mg\": 1\n"
         + "    }\n"
-        + "}");
+        + "}"
+    );
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
-    inputEntity = new KafkaRecordEntity(new ConsumerRecord<byte[], byte[]>(
-        "sample", 0, 0, timestamp,
-        null, null, 0, 0,
-        key, payload, headers));
+    inputEntity = makeInputEntity(key, payload, headers);
 
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
             new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                "bar", "foo",
-                "kafka.newheader.encoding",
-                "kafka.newheader.kafkapkc",
-                "kafka.newts.timestamp"
-            ))),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(
+                    ImmutableList.of(
+                        "bar",
+                        "foo",
+                        "kafka.newheader.encoding",
+                        "kafka.newheader.kafkapkc",
+                        "kafka.newts.timestamp"
+                    )
+                )
+            ),
             ColumnsFilter.all()
         ),
         newSettableByteEntity(inputEntity),
@@ -193,22 +225,39 @@ public class KafkaInputFormatTest
       while (iterator.hasNext()) {
 
         final InputRow row = iterator.next();
-
+        Assert.assertEquals(
+            Arrays.asList(
+                "bar",
+                "foo",
+                "kafka.newheader.encoding",
+                "kafka.newheader.kafkapkc",
+                "kafka.newts.timestamp"
+            ),
+            row.getDimensions()
+        );
         // Payload verifications
+        // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
+        // but test reading them anyway since it isn't technically illegal
+        
         Assert.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
         // Header verification
         Assert.assertEquals("application/json", Iterables.getOnlyElement(row.getDimension("kafka.newheader.encoding")));
         Assert.assertEquals("pkc-bar", Iterables.getOnlyElement(row.getDimension("kafka.newheader.kafkapkc")));
-        Assert.assertEquals(String.valueOf(DateTimes.of("2021-06-24").getMillis()),
-                            Iterables.getOnlyElement(row.getDimension("kafka.newts.timestamp")));
-        Assert.assertEquals("2021-06-25",
-                            Iterables.getOnlyElement(row.getDimension("timestamp")));
+        Assert.assertEquals(
+            String.valueOf(DateTimes.of("2021-06-24").getMillis()),
+            Iterables.getOnlyElement(row.getDimension("kafka.newts.timestamp"))
+        );
+        Assert.assertEquals(
+            "2021-06-25",
+            Iterables.getOnlyElement(row.getDimension("timestamp"))
+        );
 
         // Key verification
         Assert.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
@@ -237,23 +286,26 @@ public class KafkaInputFormatTest
         + "    \"o\": {\n"
         + "        \"mg\": 1\n"
         + "    }\n"
-        + "}");
+        + "}"
+    );
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
-    inputEntity = new KafkaRecordEntity(new ConsumerRecord<byte[], byte[]>(
-        "sample", 0, 0, timestamp,
-        null, null, 0, 0,
-        null, payload, headers));
+    inputEntity = makeInputEntity(null, payload, headers);
 
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
             new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                "bar", "foo",
-                "kafka.newheader.encoding",
-                "kafka.newheader.kafkapkc",
-                "kafka.newts.timestamp"
-            ))),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(
+                    ImmutableList.of(
+                        "bar",
+                        "foo",
+                        "kafka.newheader.encoding",
+                        "kafka.newheader.kafkapkc",
+                        "kafka.newts.timestamp"
+                    )
+                )
+            ),
             ColumnsFilter.all()
         ),
         newSettableByteEntity(inputEntity),
@@ -283,23 +335,29 @@ public class KafkaInputFormatTest
     Iterable<Header> sample_header_with_ts = Iterables.unmodifiableIterable(
         Iterables.concat(
             SAMPLE_HEADERS,
-            ImmutableList.of(new Header() {
-              @Override
-              public String key()
-              {
-                return "headerTs";
-              }
-              @Override
-              public byte[] value()
-              {
-                return "2021-06-24".getBytes(StandardCharsets.UTF_8);
-              }
-            }
-    )));
+            ImmutableList.of(
+                new Header()
+                {
+                  @Override
+                  public String key()
+                  {
+                    return "headerTs";
+                  }
+
+                  @Override
+                  public byte[] value()
+                  {
+                    return "2021-06-24".getBytes(StandardCharsets.UTF_8);
+                  }
+                }
+            )
+        )
+    );
     final byte[] key = StringUtils.toUtf8(
         "{\n"
         + "    \"key\": \"sampleKey\"\n"
-        + "}");
+        + "}"
+    );
 
     final byte[] payload = StringUtils.toUtf8(
         "{\n"
@@ -310,22 +368,25 @@ public class KafkaInputFormatTest
         + "    \"o\": {\n"
         + "        \"mg\": 1\n"
         + "    }\n"
-        + "}");
+        + "}"
+    );
 
     Headers headers = new RecordHeaders(sample_header_with_ts);
-    inputEntity = new KafkaRecordEntity(new ConsumerRecord<byte[], byte[]>(
-        "sample", 0, 0, timestamp,
-        null, null, 0, 0,
-        key, payload, headers));
+    inputEntity = makeInputEntity(key, payload, headers);
 
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
             new TimestampSpec("kafka.newheader.headerTs", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                "bar", "foo",
-                "kafka.newheader.encoding",
-                "kafka.newheader.kafkapkc"
-            ))),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(
+                    ImmutableList.of(
+                        "bar",
+                        "foo",
+                        "kafka.newheader.encoding",
+                        "kafka.newheader.kafkapkc"
+                    )
+                )
+            ),
             ColumnsFilter.all()
         ),
         newSettableByteEntity(inputEntity),
@@ -338,24 +399,33 @@ public class KafkaInputFormatTest
       while (iterator.hasNext()) {
 
         final InputRow row = iterator.next();
-        final MapBasedInputRow mrow = (MapBasedInputRow) row;
         // Payload verifications
+        // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
+        // but test reading them anyway since it isn't technically illegal
+
         Assert.assertEquals(DateTimes.of("2021-06-24"), row.getTimestamp());
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
 
         // Header verification
         Assert.assertEquals("application/json", Iterables.getOnlyElement(row.getDimension("kafka.newheader.encoding")));
         Assert.assertEquals("pkc-bar", Iterables.getOnlyElement(row.getDimension("kafka.newheader.kafkapkc")));
-        Assert.assertEquals(String.valueOf(DateTimes.of("2021-06-24").getMillis()),
-                            Iterables.getOnlyElement(row.getDimension("kafka.newts.timestamp")));
-        Assert.assertEquals("2021-06-24",
-                            Iterables.getOnlyElement(row.getDimension("kafka.newheader.headerTs")));
-        Assert.assertEquals("2021-06-24",
-                            Iterables.getOnlyElement(row.getDimension("timestamp")));
+        Assert.assertEquals(
+            String.valueOf(DateTimes.of("2021-06-24").getMillis()),
+            Iterables.getOnlyElement(row.getDimension("kafka.newts.timestamp"))
+        );
+        Assert.assertEquals(
+            "2021-06-24",
+            Iterables.getOnlyElement(row.getDimension("kafka.newheader.headerTs"))
+        );
+        Assert.assertEquals(
+            "2021-06-24",
+            Iterables.getOnlyElement(row.getDimension("timestamp"))
+        );
 
         // Key verification
         Assert.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
@@ -383,13 +453,11 @@ public class KafkaInputFormatTest
         + "    \"o\": {\n"
         + "        \"mg\": 1\n"
         + "    }\n"
-        + "}");
+        + "}"
+    );
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
-    inputEntity = new KafkaRecordEntity(new ConsumerRecord<byte[], byte[]>(
-        "sample", 0, 0, timestamp,
-        null, null, 0, 0,
-        null, payload, headers));
+    inputEntity = makeInputEntity(null, payload, headers);
 
     KafkaInputFormat localFormat = new KafkaInputFormat(
         null,
@@ -407,7 +475,8 @@ public class KafkaInputFormatTest
                     new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
                 )
             ),
-            null, null, false //make sure JsonReader is used
+            null, null, false, //make sure JsonReader is used
+            false, false
         ),
         "kafka.newheader.", "kafka.newkey.", "kafka.newts."
     );
@@ -415,10 +484,15 @@ public class KafkaInputFormatTest
     final InputEntityReader reader = localFormat.createReader(
         new InputRowSchema(
             new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                "bar", "foo",
-                "kafka.newts.timestamp"
-            ))),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(
+                    ImmutableList.of(
+                        "bar",
+                        "foo",
+                        "kafka.newts.timestamp"
+                    )
+                )
+            ),
             ColumnsFilter.all()
         ),
         newSettableByteEntity(inputEntity),
@@ -433,12 +507,15 @@ public class KafkaInputFormatTest
         final InputRow row = iterator.next();
 
         // Key verification
+        // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
+        // but test reading them anyway since it isn't technically illegal
         Assert.assertTrue(row.getDimension("kafka.newkey.key").isEmpty());
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
         Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
         numActualIterations++;
       }
 
@@ -456,23 +533,25 @@ public class KafkaInputFormatTest
     for (int i = 0; i < keys.length; i++) {
       keys[i] = StringUtils.toUtf8(
           "{\n"
-              + "    \"key\": \"sampleKey-" + i + "\"\n"
-              + "}");
+          + "    \"key\": \"sampleKey-" + i + "\"\n"
+          + "}"
+      );
     }
     keys[2] = null;
 
     for (int i = 0; i < values.length; i++) {
       values[i] = StringUtils.toUtf8(
           "{\n"
-              + "    \"timestamp\": \"2021-06-2" + i + "\",\n"
-              + "    \"bar\": null,\n"
-              + "    \"foo\": \"x\",\n"
-              + "    \"baz\": 4,\n"
-              + "    \"index\": " + i + ",\n"
-              + "    \"o\": {\n"
-              + "        \"mg\": 1\n"
-              + "    }\n"
-              + "}");
+          + "    \"timestamp\": \"2021-06-2" + i + "\",\n"
+          + "    \"bar\": null,\n"
+          + "    \"foo\": \"x\",\n"
+          + "    \"baz\": 4,\n"
+          + "    \"index\": " + i + ",\n"
+          + "    \"o\": {\n"
+          + "        \"mg\": 1\n"
+          + "    }\n"
+          + "}"
+      );
     }
 
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
@@ -481,12 +560,17 @@ public class KafkaInputFormatTest
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
             new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                "bar", "foo",
-                "kafka.newheader.encoding",
-                "kafka.newheader.kafkapkc",
-                "kafka.newts.timestamp"
-            ))),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(
+                    ImmutableList.of(
+                        "bar",
+                        "foo",
+                        "kafka.newheader.encoding",
+                        "kafka.newheader.kafkapkc",
+                        "kafka.newts.timestamp"
+                    )
+                )
+            ),
             ColumnsFilter.all()
         ),
         settableByteEntity,
@@ -496,10 +580,7 @@ public class KafkaInputFormatTest
     for (int i = 0; i < keys.length; i++) {
       headers = headers.add(new RecordHeader("indexH", String.valueOf(i).getBytes(StandardCharsets.UTF_8)));
 
-      inputEntity = new KafkaRecordEntity(new ConsumerRecord<>(
-          "sample", 0, 0, timestamp,
-          null, null, 0, 0,
-          keys[i], values[i], headers));
+      inputEntity = makeInputEntity(keys[i], values[i], headers);
       settableByteEntity.setEntity(inputEntity);
 
       final int numExpectedIterations = 1;
@@ -510,20 +591,28 @@ public class KafkaInputFormatTest
           final InputRow row = iterator.next();
 
           // Payload verification
+          // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
+          // but test reading them anyway since it isn't technically illegal
           Assert.assertEquals(DateTimes.of("2021-06-2" + i), row.getTimestamp());
           Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
           Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
           Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
           Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
           Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+          Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
           Assert.assertEquals(String.valueOf(i), Iterables.getOnlyElement(row.getDimension("index")));
 
 
           // Header verification
-          Assert.assertEquals("application/json", Iterables.getOnlyElement(row.getDimension("kafka.newheader.encoding")));
+          Assert.assertEquals(
+              "application/json",
+              Iterables.getOnlyElement(row.getDimension("kafka.newheader.encoding"))
+          );
           Assert.assertEquals("pkc-bar", Iterables.getOnlyElement(row.getDimension("kafka.newheader.kafkapkc")));
-          Assert.assertEquals(String.valueOf(DateTimes.of("2021-06-24").getMillis()),
-              Iterables.getOnlyElement(row.getDimension("kafka.newts.timestamp")));
+          Assert.assertEquals(
+              String.valueOf(DateTimes.of("2021-06-24").getMillis()),
+              Iterables.getOnlyElement(row.getDimension("kafka.newts.timestamp"))
+          );
           Assert.assertEquals(String.valueOf(i), Iterables.getOnlyElement(row.getDimension("kafka.newheader.indexH")));
 
 
@@ -545,6 +634,276 @@ public class KafkaInputFormatTest
       }
     }
   }
+
+  @Test
+  public void testMissingTimestampThrowsException() throws IOException
+  {
+    final byte[] key = StringUtils.toUtf8(
+        "{\n"
+        + "    \"key\": \"sampleKey\"\n"
+        + "}"
+    );
+
+    final byte[] payload = StringUtils.toUtf8(
+        "{\n"
+        + "    \"timestamp\": \"2021-06-25\",\n"
+        + "    \"bar\": null,\n"
+        + "    \"foo\": \"x\",\n"
+        + "    \"baz\": 4,\n"
+        + "    \"o\": {\n"
+        + "        \"mg\": 1\n"
+        + "    }\n"
+        + "}"
+    );
+
+    Headers headers = new RecordHeaders(SAMPLE_HEADERS);
+    inputEntity = makeInputEntity(key, payload, headers);
+
+    final InputEntityReader reader = format.createReader(
+        new InputRowSchema(
+            new TimestampSpec("time", "iso", null),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(
+                    ImmutableList.of(
+                        "bar",
+                        "foo",
+                        "kafka.newheader.encoding",
+                        "kafka.newheader.kafkapkc",
+                        "kafka.newts.timestamp"
+                    )
+                )
+            ),
+            ColumnsFilter.all()
+        ),
+        newSettableByteEntity(inputEntity),
+        null
+    );
+
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      while (iterator.hasNext()) {
+        Throwable t = Assert.assertThrows(ParseException.class, () -> iterator.next());
+        Assert.assertEquals(
+            "Timestamp[null] is unparseable! Event: {foo=x, kafka.newts.timestamp=1624492800000, kafka.newkey.key=sampleKey, root_baz=4, bar=null, kafka...",
+            t.getMessage()
+        );
+      }
+    }
+  }
+
+  @Test
+  public void testWithSchemaDiscovery() throws IOException
+  {
+    // testWithHeaderKeyAndValue + schemaless
+    final byte[] key = StringUtils.toUtf8(
+        "{\n"
+        + "    \"key\": \"sampleKey\"\n"
+        + "}"
+    );
+
+    final byte[] payload = StringUtils.toUtf8(
+        "{\n"
+        + "    \"timestamp\": \"2021-06-25\",\n"
+        + "    \"bar\": null,\n"
+        + "    \"foo\": \"x\",\n"
+        + "    \"baz\": 4,\n"
+        + "    \"o\": {\n"
+        + "        \"mg\": 1\n"
+        + "    }\n"
+        + "}"
+    );
+
+    Headers headers = new RecordHeaders(SAMPLE_HEADERS);
+    inputEntity = makeInputEntity(key, payload, headers);
+
+    final InputEntityReader reader = format.createReader(
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "iso", null),
+            DimensionsSpec.builder().useSchemaDiscovery(true).build(),
+            ColumnsFilter.all()
+        ),
+        newSettableByteEntity(inputEntity),
+        null
+    );
+
+    final int numExpectedIterations = 1;
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      int numActualIterations = 0;
+      while (iterator.hasNext()) {
+
+        final InputRow row = iterator.next();
+        Assert.assertEquals(
+            Arrays.asList(
+                "foo",
+                "kafka.newts.timestamp",
+                "kafka.newkey.key",
+                "root_baz",
+                "o",
+                "bar",
+                "kafka.newheader.kafkapkc",
+                "path_omg",
+                "jq_omg",
+                "jq_omg2",
+                "baz",
+                "root_baz2",
+                "kafka.newheader.encoding",
+                "path_omg2"
+            ),
+            row.getDimensions()
+        );
+
+        // Payload verifications
+        Assert.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
+        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+
+        // Header verification
+        Assert.assertEquals("application/json", Iterables.getOnlyElement(row.getDimension("kafka.newheader.encoding")));
+        Assert.assertEquals("pkc-bar", Iterables.getOnlyElement(row.getDimension("kafka.newheader.kafkapkc")));
+        Assert.assertEquals(
+            String.valueOf(DateTimes.of("2021-06-24").getMillis()),
+            Iterables.getOnlyElement(row.getDimension("kafka.newts.timestamp"))
+        );
+        Assert.assertEquals(
+            "2021-06-25",
+            Iterables.getOnlyElement(row.getDimension("timestamp"))
+        );
+
+        // Key verification
+        Assert.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
+
+        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+
+        numActualIterations++;
+      }
+
+      Assert.assertEquals(numExpectedIterations, numActualIterations);
+    }
+  }
+
+  @Test
+  public void testWithPartialDeclarationSchemaDiscovery() throws IOException
+  {
+    // testWithHeaderKeyAndValue + partial-schema + schema discovery
+    final byte[] key = StringUtils.toUtf8(
+        "{\n"
+        + "    \"key\": \"sampleKey\"\n"
+        + "}"
+    );
+
+    final byte[] payload = StringUtils.toUtf8(
+        "{\n"
+        + "    \"timestamp\": \"2021-06-25\",\n"
+        + "    \"bar\": null,\n"
+        + "    \"foo\": \"x\",\n"
+        + "    \"baz\": 4,\n"
+        + "    \"o\": {\n"
+        + "        \"mg\": 1\n"
+        + "    }\n"
+        + "}"
+    );
+
+    Headers headers = new RecordHeaders(SAMPLE_HEADERS);
+    inputEntity = makeInputEntity(key, payload, headers);
+
+    final InputEntityReader reader = format.createReader(
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "iso", null),
+            DimensionsSpec.builder().setDimensions(
+                DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "kafka.newheader.kafkapkc"))
+            ).useSchemaDiscovery(true).build(),
+            ColumnsFilter.all()
+        ),
+        newSettableByteEntity(inputEntity),
+        null
+    );
+
+    final int numExpectedIterations = 1;
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      int numActualIterations = 0;
+      while (iterator.hasNext()) {
+
+        final InputRow row = iterator.next();
+
+        Assert.assertEquals(
+            Arrays.asList(
+                "bar",
+                "kafka.newheader.kafkapkc",
+                "foo",
+                "kafka.newts.timestamp",
+                "kafka.newkey.key",
+                "root_baz",
+                "o",
+                "path_omg",
+                "jq_omg",
+                "jq_omg2",
+                "baz",
+                "root_baz2",
+                "kafka.newheader.encoding",
+                "path_omg2"
+            ),
+            row.getDimensions()
+        );
+
+        // Payload verifications
+        Assert.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
+        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        Assert.assertEquals(ImmutableMap.of("mg", 1L), row.getRaw("o"));
+
+        // Header verification
+        Assert.assertEquals("application/json", Iterables.getOnlyElement(row.getDimension("kafka.newheader.encoding")));
+        Assert.assertEquals("pkc-bar", Iterables.getOnlyElement(row.getDimension("kafka.newheader.kafkapkc")));
+        Assert.assertEquals(
+            String.valueOf(DateTimes.of("2021-06-24").getMillis()),
+            Iterables.getOnlyElement(row.getDimension("kafka.newts.timestamp"))
+        );
+        Assert.assertEquals(
+            "2021-06-25",
+            Iterables.getOnlyElement(row.getDimension("timestamp"))
+        );
+
+        // Key verification
+        Assert.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
+
+        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
+        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
+        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+
+        numActualIterations++;
+      }
+
+      Assert.assertEquals(numExpectedIterations, numActualIterations);
+    }
+  }
+
+  private KafkaRecordEntity makeInputEntity(byte[] key, byte[] payload, Headers headers)
+  {
+    return new KafkaRecordEntity(
+        new ConsumerRecord<>(
+            "sample",
+            0,
+            0,
+            timestamp,
+            null,
+            0,
+            0,
+            key,
+            payload,
+            headers,
+            Optional.empty()
+        )
+    );
+  }
+
 
   private SettableByteEntity<KafkaRecordEntity> newSettableByteEntity(KafkaRecordEntity kafkaRecordEntity)
   {

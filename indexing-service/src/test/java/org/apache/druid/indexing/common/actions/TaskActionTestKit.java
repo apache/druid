@@ -27,7 +27,10 @@ import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -99,12 +102,36 @@ public class TaskActionTestKit extends ExternalResource
         Suppliers.ofInstance(metadataStorageTablesConfig),
         testDerbyConnector
     );
+    final ServiceEmitter noopEmitter = new NoopServiceEmitter();
+    final TaskLockConfig taskLockConfig = new TaskLockConfig()
+    {
+      @Override
+      public boolean isBatchSegmentAllocation()
+      {
+        return true;
+      }
+
+      @Override
+      public long getBatchAllocationWaitTime()
+      {
+        return 10L;
+      }
+    };
+
     taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         taskStorage,
         metadataStorageCoordinator,
-        new NoopServiceEmitter(),
-        EasyMock.createMock(SupervisorManager.class)
+        new SegmentAllocationQueue(
+            taskLockbox,
+            taskLockConfig,
+            metadataStorageCoordinator,
+            noopEmitter,
+            ScheduledExecutors::fixed
+        ),
+        noopEmitter,
+        EasyMock.createMock(SupervisorManager.class),
+        objectMapper
     );
     testDerbyConnector.createDataSourceTable();
     testDerbyConnector.createPendingSegmentsTable();

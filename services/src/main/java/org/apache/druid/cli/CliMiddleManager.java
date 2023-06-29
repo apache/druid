@@ -27,12 +27,9 @@ import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
-import org.apache.druid.client.indexing.HttpIndexingServiceClient;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.discovery.WorkerNodeService;
@@ -49,10 +46,11 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.MiddleManagerServiceModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexing.common.RetryPolicyFactory;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.overlord.ForkingTaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -135,14 +133,13 @@ public class CliMiddleManager extends ServerRunnable
 
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
             JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
+            binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
 
             binder.bind(TaskRunner.class).to(ForkingTaskRunner.class);
-            binder.bind(ForkingTaskRunner.class).in(LazySingleton.class);
+            binder.bind(ForkingTaskRunner.class).in(ManageLifecycle.class);
             binder.bind(WorkerTaskCountStatsProvider.class).to(ForkingTaskRunner.class);
 
-            binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
-            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>>() {})
-                  .toProvider(Providers.of(null));
+            binder.bind(ParallelIndexSupervisorTaskClientProvider.class).toProvider(Providers.of(null));
             binder.bind(ShuffleClient.class).toProvider(Providers.of(null));
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(new NoopChatHandlerProvider()));
             PolyBind.createChoice(
@@ -159,7 +156,7 @@ public class CliMiddleManager extends ServerRunnable
                 .in(LazySingleton.class);
             binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
-            bindWorkerManagementClasses(binder, isZkEnabled);
+            binder.install(makeWorkerManagementModule(isZkEnabled));
 
             binder.bind(JettyServerInitializer.class)
                   .to(MiddleManagerJettyServerInitializer.class)
@@ -234,18 +231,32 @@ public class CliMiddleManager extends ServerRunnable
     );
   }
 
-  public static void bindWorkerManagementClasses(Binder binder, boolean isZkEnabled)
+  public static Module makeWorkerManagementModule(boolean isZkEnabled)
   {
-    if (isZkEnabled) {
-      binder.bind(WorkerTaskManager.class).to(WorkerTaskMonitor.class);
-      binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
-      binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
-      LifecycleModule.register(binder, WorkerTaskMonitor.class);
-    } else {
-      binder.bind(WorkerTaskManager.class).in(ManageLifecycle.class);
-    }
+    return new Module()
+    {
+      @Override
+      public void configure(Binder binder)
+      {
+        if (isZkEnabled) {
+          binder.bind(WorkerTaskManager.class).to(WorkerTaskMonitor.class);
+          binder.bind(WorkerTaskMonitor.class).in(ManageLifecycle.class);
+          binder.bind(WorkerCuratorCoordinator.class).in(ManageLifecycle.class);
+          LifecycleModule.register(binder, WorkerTaskMonitor.class);
+        } else {
+          binder.bind(WorkerTaskManager.class).in(ManageLifecycle.class);
+        }
 
-    Jerseys.addResource(binder, WorkerResource.class);
-    Jerseys.addResource(binder, TaskManagementResource.class);
+        Jerseys.addResource(binder, WorkerResource.class);
+        Jerseys.addResource(binder, TaskManagementResource.class);
+      }
+
+      @Provides
+      @ManageLifecycle
+      public TaskStorageDirTracker getTaskStorageDirTracker(WorkerConfig workerConfig, TaskConfig taskConfig)
+      {
+        return TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig);
+      }
+    };
   }
 }

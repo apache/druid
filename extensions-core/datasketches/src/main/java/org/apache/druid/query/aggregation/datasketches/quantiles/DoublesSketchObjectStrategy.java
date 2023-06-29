@@ -23,7 +23,9 @@ import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.data.SafeWritableMemory;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -60,4 +62,15 @@ public class DoublesSketchObjectStrategy implements ObjectStrategy<DoublesSketch
     return sketch.toByteArray(true);
   }
 
+  @Nullable
+  @Override
+  public DoublesSketch fromByteBufferSafe(ByteBuffer buffer, int numBytes)
+  {
+    if (numBytes == 0) {
+      return DoublesSketchOperations.EMPTY_SKETCH;
+    }
+    return DoublesSketch.wrap(
+        SafeWritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes)
+    );
+  }
 }

@@ -46,6 +46,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -77,20 +78,23 @@ public class SegmentMetadataQueryQueryToolChestTest
     SegmentAnalysis result = new SegmentAnalysis(
         "testSegment",
         ImmutableList.of(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
-        ImmutableMap.of(
-            "placement",
-            new ColumnAnalysis(
-                ColumnType.STRING,
-                ValueType.STRING.name(),
-                true,
-                false,
-                10881,
-                1,
-                "preferred",
-                "preferred",
-                null
+        new LinkedHashMap<>(
+            ImmutableMap.of(
+                "placement",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.name(),
+                    true,
+                    false,
+                    10881,
+                    1,
+                    "preferred",
+                    "preferred",
+                    null
+                )
             )
-        ), 71982,
+        ),
+        71982,
         100,
         null,
         null,
@@ -117,7 +121,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         ImmutableMap.of(
@@ -131,7 +135,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         ImmutableMap.of(
@@ -167,7 +171,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -178,7 +182,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         ImmutableMap.of(
@@ -206,7 +210,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -217,7 +221,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -236,7 +240,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         ImmutableMap.of(
@@ -250,7 +254,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         ImmutableMap.of(
@@ -331,7 +335,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -342,7 +346,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -353,7 +357,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis3 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -364,7 +368,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis4 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -375,7 +379,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis5 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -395,6 +399,7 @@ public class SegmentMetadataQueryQueryToolChestTest
   {
     return SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
         SegmentMetadataQueryQueryToolChest.mergeAnalyses(
+            null,
             analysis1,
             analysis2,
             false
@@ -406,6 +411,7 @@ public class SegmentMetadataQueryQueryToolChestTest
   {
     return SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
         SegmentMetadataQueryQueryToolChest.mergeAnalyses(
+            null,
             analysis1,
             analysis2,
             true

@@ -39,7 +39,6 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -81,18 +80,18 @@ import java.util.stream.Collectors;
  * <li>Manages headers size by dropping fields when the header would get too
  * large.</li>
  * </ul>
- *
+ * <p>
  * A result is that the information the context, when inspected by a calling
  * query, may be incomplete if some of it was previously dropped by the
  * called query.
  *
  * <h4>API</h4>
- *
+ * <p>
  * The query profile needs to obtain the full, untruncated information. To do this
  * it piggy-backs on the set operations to obtain the full value. To ensure this
  * is possible, code that works with standard values should call the set (or add)
  * functions provided which will do the needed map update.
-  */
+ */
 @PublicApi
 public abstract class ResponseContext
 {
@@ -119,7 +118,7 @@ public abstract class ResponseContext
 
     /**
      * Merges two values of type T.
-     *
+     * <p>
      * This method may modify "oldValue" but must not modify "newValue".
      */
     Object mergeValues(Object oldValue, Object newValue);
@@ -318,7 +317,8 @@ public abstract class ResponseContext
         true, true,
         new TypeReference<List<Interval>>()
         {
-        })
+        }
+    )
     {
       @Override
       @SuppressWarnings("unchecked")
@@ -335,14 +335,15 @@ public abstract class ResponseContext
      */
     public static final Key UNCOVERED_INTERVALS_OVERFLOWED = new BooleanKey(
         "uncoveredIntervalsOverflowed",
-        true);
+        true
+    );
 
     /**
      * Map of most relevant query ID to remaining number of responses from query nodes.
      * The value is initialized in {@code CachingClusteredClient} when it initializes the connection to the query nodes,
      * and is updated whenever they respond (@code DirectDruidClient). {@code RetryQueryRunner} uses this value to
      * check if the {@link #MISSING_SEGMENTS} is valid.
-     *
+     * <p>
      * Currently, the broker doesn't run subqueries in parallel, the remaining number of responses will be updated
      * one by one per subquery. However, since it can be parallelized to run subqueries simultaneously, we store them
      * in a ConcurrentHashMap.
@@ -352,7 +353,8 @@ public abstract class ResponseContext
     public static final Key REMAINING_RESPONSES_FROM_QUERY_SERVERS = new AbstractKey(
         "remainingResponsesFromQueryServers",
         false, true,
-        Object.class)
+        Object.class
+    )
     {
       @Override
       @SuppressWarnings("unchecked")
@@ -362,7 +364,8 @@ public abstract class ResponseContext
         final NonnullPair<String, Integer> pair = (NonnullPair<String, Integer>) idAndNumResponses;
         map.compute(
             pair.lhs,
-            (id, remaining) -> remaining == null ? pair.rhs : remaining + pair.rhs);
+            (id, remaining) -> remaining == null ? pair.rhs : remaining + pair.rhs
+        );
         return map;
       }
     };
@@ -373,7 +376,10 @@ public abstract class ResponseContext
     public static final Key MISSING_SEGMENTS = new AbstractKey(
         "missingSegments",
         true, true,
-        new TypeReference<List<SegmentDescriptor>>() {})
+        new TypeReference<List<SegmentDescriptor>>()
+        {
+        }
+    )
     {
       @Override
       @SuppressWarnings("unchecked")
@@ -397,7 +403,10 @@ public abstract class ResponseContext
     public static final Key QUERY_TOTAL_BYTES_GATHERED = new AbstractKey(
         "queryTotalBytesGathered",
         false, false,
-        new TypeReference<AtomicLong>() {})
+        new TypeReference<AtomicLong>()
+        {
+        }
+    )
     {
       @Override
       public Object mergeValues(Object oldValue, Object newValue)
@@ -408,31 +417,31 @@ public abstract class ResponseContext
 
     /**
      * Query fail time (current time + timeout).
-     * It is not updated continuously as {@link Keys#TIMEOUT_AT}.
      */
     public static final Key QUERY_FAIL_DEADLINE_MILLIS = new LongKey(
         "queryFailTime",
-        false);
+        false
+    );
 
     /**
      * This variable indicates when a running query should be expired,
      * and is effective only when 'timeout' of queryContext has a positive value.
-     * Continuously updated by {@link org.apache.druid.query.scan.ScanQueryEngine}
-     * by reducing its value on the time of every scan iteration.
      */
     public static final Key TIMEOUT_AT = new LongKey(
         "timeoutAt",
-        false);
+        false
+    );
 
     /**
      * The number of rows scanned by {@link org.apache.druid.query.scan.ScanQueryEngine}.
-     *
+     * <p>
      * Named "count" for backwards compatibility with older data servers that still send this, even though it's now
      * marked as internal.
      */
     public static final Key NUM_SCANNED_ROWS = new CounterKey(
         "count",
-        false);
+        false
+    );
 
     /**
      * The total CPU time for threads related to Sequence processing of the query.
@@ -441,14 +450,16 @@ public abstract class ResponseContext
      */
     public static final Key CPU_CONSUMED_NANOS = new CounterKey(
         "cpuConsumed",
-        false);
+        false
+    );
 
     /**
      * Indicates if a {@link ResponseContext} was truncated during serialization.
      */
     public static final Key TRUNCATED = new BooleanKey(
         "truncated",
-        false);
+        false
+    );
 
     /**
      * One and only global list of keys. This is a semi-constant: it is mutable
@@ -465,20 +476,21 @@ public abstract class ResponseContext
     private final ConcurrentMap<String, Key> registeredKeys = new ConcurrentSkipListMap<>();
 
     static {
-      instance().registerKeys(new Key[]
-      {
-          UNCOVERED_INTERVALS,
-          UNCOVERED_INTERVALS_OVERFLOWED,
-          REMAINING_RESPONSES_FROM_QUERY_SERVERS,
-          MISSING_SEGMENTS,
-          ETAG,
-          QUERY_TOTAL_BYTES_GATHERED,
-          QUERY_FAIL_DEADLINE_MILLIS,
-          TIMEOUT_AT,
-          NUM_SCANNED_ROWS,
-          CPU_CONSUMED_NANOS,
-          TRUNCATED,
-      });
+      instance().registerKeys(
+          new Key[]{
+              UNCOVERED_INTERVALS,
+              UNCOVERED_INTERVALS_OVERFLOWED,
+              REMAINING_RESPONSES_FROM_QUERY_SERVERS,
+              MISSING_SEGMENTS,
+              ETAG,
+              QUERY_TOTAL_BYTES_GATHERED,
+              QUERY_FAIL_DEADLINE_MILLIS,
+              TIMEOUT_AT,
+              NUM_SCANNED_ROWS,
+              CPU_CONSUMED_NANOS,
+              TRUNCATED,
+              }
+      );
     }
 
     /**
@@ -705,8 +717,10 @@ public abstract class ResponseContext
 
   public void addRemainingResponse(String id, int count)
   {
-    addValue(Keys.REMAINING_RESPONSES_FROM_QUERY_SERVERS,
-        new NonnullPair<>(id, count));
+    addValue(
+        Keys.REMAINING_RESPONSES_FROM_QUERY_SERVERS,
+        new NonnullPair<>(id, count)
+    );
   }
 
   public void addMissingSegments(List<SegmentDescriptor> descriptors)
@@ -736,6 +750,10 @@ public abstract class ResponseContext
    */
   public void merge(ResponseContext responseContext)
   {
+    if (responseContext == null) {
+      return;
+    }
+
     responseContext.getDelegate().forEach((key, newValue) -> {
       if (newValue != null) {
         add(key, newValue);
@@ -820,7 +838,6 @@ public abstract class ResponseContext
    *
    * @param node   {@link ArrayNode} which elements are being removed.
    * @param target the number of chars need to be removed.
-   *
    * @return the number of removed chars.
    */
   private static int removeNodeElementsToSatisfyCharsLimit(ArrayNode node, int target)
@@ -851,7 +868,7 @@ public abstract class ResponseContext
     private final String truncatedResult;
     private final String fullResult;
 
-    SerializationResult(@Nullable String truncatedResult, String fullResult)
+    public SerializationResult(@Nullable String truncatedResult, String fullResult)
     {
       this.truncatedResult = truncatedResult;
       this.fullResult = fullResult;

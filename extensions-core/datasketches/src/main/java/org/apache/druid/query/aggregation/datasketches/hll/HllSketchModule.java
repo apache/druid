@@ -25,8 +25,11 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import org.apache.datasketches.hll.HllSketch;
+import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllPostAggExprMacros;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctSqlAggregator;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctUtf8SqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchEstimateOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchEstimateWithErrorBoundsOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchObjectSqlAggregator;
@@ -44,7 +47,6 @@ import java.util.List;
  */
 public class HllSketchModule implements DruidModule
 {
-
   public static final String TYPE_NAME = "HLLSketch"; // common type name to be associated with segment data
   public static final String BUILD_TYPE_NAME = "HLLSketchBuild";
   public static final String MERGE_TYPE_NAME = "HLLSketchMerge";
@@ -53,12 +55,12 @@ public class HllSketchModule implements DruidModule
   public static final String ESTIMATE_WITH_BOUNDS_TYPE_NAME = "HLLSketchEstimateWithBounds";
   public static final String ESTIMATE_TYPE_NAME = "HLLSketchEstimate";
 
-
   @Override
   public void configure(final Binder binder)
   {
     registerSerde();
     SqlBindings.addAggregator(binder, HllSketchApproxCountDistinctSqlAggregator.class);
+    SqlBindings.addAggregator(binder, HllSketchApproxCountDistinctUtf8SqlAggregator.class);
     SqlBindings.addAggregator(binder, HllSketchObjectSqlAggregator.class);
 
     SqlBindings.addOperatorConversion(binder, HllSketchEstimateOperatorConversion.class);
@@ -66,6 +68,7 @@ public class HllSketchModule implements DruidModule
     SqlBindings.addOperatorConversion(binder, HllSketchSetUnionOperatorConversion.class);
     SqlBindings.addOperatorConversion(binder, HllSketchToStringOperatorConversion.class);
 
+    ExpressionModule.addExprMacro(binder, HllPostAggExprMacros.HLLSketchEstimateExprMacro.class);
     SqlBindings.addApproxCountDistinctChoice(
         binder,
         HllSketchApproxCountDistinctSqlAggregator.NAME,

@@ -39,6 +39,7 @@ public class HllSketchMergeAggregatorFactoryTest
   private static final int LG_K = 2;
   private static final String TGT_HLL_TYPE = TgtHllType.HLL_6.name();
   private static final StringEncoding STRING_ENCODING = StringEncoding.UTF16LE;
+  private static final boolean SHOULD_FINALIZE = true;
   private static final boolean ROUND = true;
 
   private HllSketchMergeAggregatorFactory targetRound;
@@ -47,8 +48,24 @@ public class HllSketchMergeAggregatorFactoryTest
   @Before
   public void setUp()
   {
-    targetRound = new HllSketchMergeAggregatorFactory(NAME, FIELD_NAME, LG_K, TGT_HLL_TYPE, STRING_ENCODING, ROUND);
-    targetNoRound = new HllSketchMergeAggregatorFactory(NAME, FIELD_NAME, LG_K, TGT_HLL_TYPE, STRING_ENCODING, !ROUND);
+    targetRound = new HllSketchMergeAggregatorFactory(
+        NAME,
+        FIELD_NAME,
+        LG_K,
+        TGT_HLL_TYPE,
+        STRING_ENCODING,
+        SHOULD_FINALIZE,
+        ROUND
+    );
+    targetNoRound = new HllSketchMergeAggregatorFactory(
+        NAME,
+        FIELD_NAME,
+        LG_K,
+        TGT_HLL_TYPE,
+        STRING_ENCODING,
+        SHOULD_FINALIZE,
+        !ROUND
+    );
   }
 
   @Test(expected = AggregatorFactoryNotMergeableException.class)
@@ -60,6 +77,7 @@ public class HllSketchMergeAggregatorFactoryTest
         LG_K,
         TGT_HLL_TYPE,
         STRING_ENCODING,
+        SHOULD_FINALIZE,
         ROUND
     );
     targetRound.getMergingFactory(other);
@@ -74,6 +92,7 @@ public class HllSketchMergeAggregatorFactoryTest
         LG_K,
         TGT_HLL_TYPE,
         STRING_ENCODING,
+        SHOULD_FINALIZE,
         ROUND
     );
     targetRound.getMergingFactory(other);
@@ -88,6 +107,7 @@ public class HllSketchMergeAggregatorFactoryTest
         LG_K,
         TGT_HLL_TYPE,
         StringEncoding.UTF8,
+        SHOULD_FINALIZE,
         ROUND
     );
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(other);
@@ -104,6 +124,7 @@ public class HllSketchMergeAggregatorFactoryTest
         smallerLgK,
         TGT_HLL_TYPE,
         STRING_ENCODING,
+        SHOULD_FINALIZE,
         ROUND
     );
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(other);
@@ -120,6 +141,7 @@ public class HllSketchMergeAggregatorFactoryTest
         largerLgK,
         TGT_HLL_TYPE,
         STRING_ENCODING,
+        SHOULD_FINALIZE,
         ROUND
     );
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(other);
@@ -136,6 +158,7 @@ public class HllSketchMergeAggregatorFactoryTest
         LG_K,
         smallerTgtHllType,
         STRING_ENCODING,
+        SHOULD_FINALIZE,
         ROUND
     );
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(other);
@@ -152,6 +175,7 @@ public class HllSketchMergeAggregatorFactoryTest
         LG_K,
         largerTgtHllType,
         STRING_ENCODING,
+        SHOULD_FINALIZE,
         ROUND
     );
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(other);
@@ -198,13 +222,15 @@ public class HllSketchMergeAggregatorFactoryTest
         18,
         TgtHllType.HLL_8.name(),
         StringEncoding.UTF8,
+        false,
         true
     );
 
     final String serializedString = jsonMapper.writeValueAsString(factory);
 
     Assert.assertEquals(
-        "{\"type\":\"HLLSketchMerge\",\"name\":\"foo\",\"fieldName\":\"bar\",\"lgK\":18,\"tgtHllType\":\"HLL_8\",\"stringEncoding\":\"utf8\",\"round\":true}",
+        "{\"type\":\"HLLSketchMerge\",\"name\":\"foo\",\"fieldName\":\"bar\",\"lgK\":18,\"tgtHllType\":\"HLL_8\","
+        + "\"stringEncoding\":\"utf8\",\"shouldFinalize\":false,\"round\":true}",
         serializedString
     );
 
@@ -228,6 +254,7 @@ public class HllSketchMergeAggregatorFactoryTest
         null,
         null,
         null,
+        null,
         false
     );
 
@@ -238,8 +265,7 @@ public class HllSketchMergeAggregatorFactoryTest
         + "\"name\":\"foo\","
         + "\"fieldName\":\"bar\","
         + "\"lgK\":12,"
-        + "\"tgtHllType\":\"HLL_4\","
-        + "\"round\":false"
+        + "\"tgtHllType\":\"HLL_4\""
         + "}",
         serializedString
     );
@@ -256,5 +282,13 @@ public class HllSketchMergeAggregatorFactoryTest
   public void testEquals()
   {
     EqualsVerifier.forClass(HllSketchBuildAggregatorFactory.class).usingGetClass().verify();
+  }
+
+  @Test
+  public void testWithName() throws Exception
+  {
+    HllSketchAggregatorFactory factory = (HllSketchAggregatorFactory) targetRound.getMergingFactory(targetRound);
+    Assert.assertEquals(factory, factory.withName(targetRound.getName()));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
   }
 }

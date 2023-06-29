@@ -171,6 +171,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
    * the query is sent to).
    */
   public static final String CTX_KEY_OUTERMOST = "scanOutermost";
+  public static final int DEFAULT_BATCH_SIZE = 4096 * 5;
 
   private final VirtualColumns virtualColumns;
   private final ResultFormat resultFormat;
@@ -205,7 +206,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     super(dataSource, querySegmentSpec, false, context);
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.resultFormat = (resultFormat == null) ? ResultFormat.RESULT_FORMAT_LIST : resultFormat;
-    this.batchSize = (batchSize == 0) ? 4096 * 5 : batchSize;
+    this.batchSize = (batchSize == 0) ? DEFAULT_BATCH_SIZE : batchSize;
     Preconditions.checkArgument(
         this.batchSize > 0,
         "batchSize must be greater than 0"
@@ -263,7 +264,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   private Integer validateAndGetMaxRowsQueuedForOrdering()
   {
     final Integer maxRowsQueuedForOrdering =
-        getContextValue(ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING, null);
+        context().getInt(ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING);
     Preconditions.checkArgument(
         maxRowsQueuedForOrdering == null || maxRowsQueuedForOrdering > 0,
         "maxRowsQueuedForOrdering must be greater than 0"
@@ -274,7 +275,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   private Integer validateAndGetMaxSegmentPartitionsOrderedInMemory()
   {
     final Integer maxSegmentPartitionsOrderedInMemory =
-        getContextValue(ScanQueryConfig.CTX_KEY_MAX_SEGMENT_PARTITIONS_FOR_ORDERING, null);
+        context().getInt(ScanQueryConfig.CTX_KEY_MAX_SEGMENT_PARTITIONS_FOR_ORDERING);
     Preconditions.checkArgument(
         maxSegmentPartitionsOrderedInMemory == null || maxSegmentPartitionsOrderedInMemory > 0,
         "maxRowsQueuedForOrdering must be greater than 0"
@@ -284,6 +285,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
 
   @JsonProperty
   @Override
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = VirtualColumns.JsonIncludeFilter.class)
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
@@ -296,6 +298,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   }
 
   @JsonProperty
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = BatchSizeJsonIncludeFilter.class)
   public int getBatchSize()
   {
     return batchSize;
@@ -313,7 +316,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
 
   /**
    * Limit for this query; behaves like SQL "LIMIT". Will always be positive. {@link Long#MAX_VALUE} is used in
-   * situations where the user wants an effectively unlimited resultset.
+   * situations where the user wants an effectively unlimited result set.
    */
   @JsonProperty("limit")
   @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = ScanRowsLimitJsonIncludeFilter.class)
@@ -389,6 +392,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   @Override
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public DimFilter getFilter()
   {
     return dimFilter;
@@ -410,6 +414,10 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
 
   /**
    * Compatibility mode with the legacy scan-query extension.
+   *
+   * True, false, and null have different meanings: true/false mean "legacy" and "not legacy"; null means use the
+   * default set by {@link ScanQueryConfig#isLegacy()}. The method {@link #withNonNullLegacy} is provided to help
+   * with this.
    */
   @Nullable
   @JsonProperty
@@ -641,6 +649,22 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     public boolean equals(Object obj)
     {
       return obj instanceof Long && (long) obj == Long.MAX_VALUE;
+    }
+  }
+
+  /**
+   * {@link JsonInclude} filter for {@link #getBatchSize()}.
+   *
+   * This API works by "creative" use of equals. It requires warnings to be suppressed and also requires spotbugs
+   * exclusions (see spotbugs-exclude.xml).
+   */
+  @SuppressWarnings({"EqualsAndHashcode", "EqualsHashCode"})
+  static class BatchSizeJsonIncludeFilter // lgtm [java/inconsistent-equals-and-hashcode]
+  {
+    @Override
+    public boolean equals(Object obj)
+    {
+      return obj instanceof Integer && (int) obj == DEFAULT_BATCH_SIZE;
     }
   }
 }

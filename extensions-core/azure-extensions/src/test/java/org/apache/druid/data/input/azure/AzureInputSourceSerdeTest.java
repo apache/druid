@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.storage.azure.AzureCloudBlobHolderToCloudObjectLocationConverter;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureDataSegmentConfig;
 import org.apache.druid.storage.azure.AzureInputDataConfig;
@@ -65,7 +64,6 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
   private AzureStorage azureStorage;
   private AzureEntityFactory entityFactory;
   private AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
-  private AzureCloudBlobHolderToCloudObjectLocationConverter azureCloudBlobToLocationConverter;
   private AzureInputDataConfig inputDataConfig;
 
   static {
@@ -88,7 +86,6 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
     azureStorage = createMock(AzureStorage.class);
     entityFactory = createMock(AzureEntityFactory.class);
     azureCloudBlobIterableFactory = createMock(AzureCloudBlobIterableFactory.class);
-    azureCloudBlobToLocationConverter = createMock(AzureCloudBlobHolderToCloudObjectLocationConverter.class);
     inputDataConfig = createMock(AzureInputDataConfig.class);
 
   }
@@ -153,10 +150,6 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
     injectableValues.addValue(AzureStorage.class, azureStorage);
     injectableValues.addValue(AzureEntityFactory.class, entityFactory);
     injectableValues.addValue(AzureCloudBlobIterableFactory.class, azureCloudBlobIterableFactory);
-    injectableValues.addValue(
-        AzureCloudBlobHolderToCloudObjectLocationConverter.class,
-        azureCloudBlobToLocationConverter
-    );
     injectableValues.addValue(AzureInputDataConfig.class, inputDataConfig);
     return injectableValues;
   }

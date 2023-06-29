@@ -22,11 +22,11 @@ exports[`ClearableInput matches snapshot 1`] = `
         aria-hidden="true"
         class="bp4-icon bp4-icon-cross"
         icon="cross"
-        tabindex="0"
       >
         <svg
           data-icon="cross"
           height="16"
+          role="img"
           viewBox="0 0 16 16"
           width="16"
         >

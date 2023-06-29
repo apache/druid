@@ -150,6 +150,7 @@ public abstract class BaseJettyTest
     {
       final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
       root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+      JettyServerInitUtils.addQosFilters(root, injector);
       JettyServerInitUtils.addExtensionFilters(root, injector);
       root.addFilter(GuiceFilter.class, "/*", null);
 

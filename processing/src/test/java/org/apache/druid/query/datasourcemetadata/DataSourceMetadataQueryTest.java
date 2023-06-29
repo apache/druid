@@ -31,6 +31,7 @@ import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -79,13 +80,13 @@ public class DataSourceMetadataQueryTest
                                                 .intervals("2013/2014")
                                                 .context(
                                                     ImmutableMap.of(
-                                                        "priority",
+                                                        QueryContexts.PRIORITY_KEY,
                                                         1,
-                                                        "useCache",
+                                                        QueryContexts.USE_CACHE_KEY,
                                                         true,
-                                                        "populateCache",
+                                                        QueryContexts.POPULATE_CACHE_KEY,
                                                         "true",
-                                                        "finalize",
+                                                        QueryContexts.FINALIZE_KEY,
                                                         true
                                                     )
                                                 ).build();
@@ -102,13 +103,14 @@ public class DataSourceMetadataQueryTest
         ), Query.class
     );
 
-    Assert.assertEquals((Integer) 1, serdeQuery.getContextValue(QueryContexts.PRIORITY_KEY));
-    Assert.assertEquals(true, serdeQuery.getContextValue("useCache"));
-    Assert.assertEquals("true", serdeQuery.getContextValue("populateCache"));
-    Assert.assertEquals(true, serdeQuery.getContextValue("finalize"));
-    Assert.assertEquals(true, serdeQuery.getContextBoolean("useCache", false));
-    Assert.assertEquals(true, serdeQuery.getContextBoolean("populateCache", false));
-    Assert.assertEquals(true, serdeQuery.getContextBoolean("finalize", false));
+    final QueryContext queryContext = serdeQuery.context();
+    Assert.assertEquals(1, (int) queryContext.getInt(QueryContexts.PRIORITY_KEY));
+    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY));
+    Assert.assertEquals("true", queryContext.getString(QueryContexts.POPULATE_CACHE_KEY));
+    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY));
+    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY, false));
+    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.POPULATE_CACHE_KEY, false));
+    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY, false));
   }
 
   @Test

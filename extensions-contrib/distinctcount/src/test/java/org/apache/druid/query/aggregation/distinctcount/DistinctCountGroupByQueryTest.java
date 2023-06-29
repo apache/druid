@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -35,6 +34,7 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
@@ -45,6 +45,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -63,11 +64,11 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
   {
     final GroupByQueryConfig config = new GroupByQueryConfig();
     config.setMaxIntermediateRows(10000);
-    final Pair<GroupByQueryRunnerFactory, Closer> factoryCloserPair = GroupByQueryRunnerTest.makeQueryRunnerFactory(
-        config
+    this.resourceCloser = Closer.create();
+    this.factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+        config,
+        this.resourceCloser.register(TestGroupByBuffers.createDefault())
     );
-    factory = factoryCloserPair.lhs;
-    resourceCloser = factoryCloserPair.rhs;
   }
 
   @After
@@ -156,5 +157,17 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
         )
     );
     TestHelper.assertExpectedObjects(expectedResults, results, "distinct-count");
+  }
+
+  @Test
+  public void testWithName()
+  {
+    DistinctCountAggregatorFactory aggregatorFactory = new DistinctCountAggregatorFactory(
+        "distinct",
+        "visitor_id",
+        null
+    );
+    Assert.assertEquals(aggregatorFactory, aggregatorFactory.withName("distinct"));
+    Assert.assertEquals("newTest", aggregatorFactory.withName("newTest").getName());
   }
 }

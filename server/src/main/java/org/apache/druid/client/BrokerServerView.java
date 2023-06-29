@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -70,9 +71,9 @@ public class BrokerServerView implements TimelineServerView
 
   private final Object lock = new Object();
 
-  private final ConcurrentMap<String, QueryableDruidServer> clients;
-  private final Map<SegmentId, ServerSelector> selectors;
-  private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines;
+  private final ConcurrentMap<String, QueryableDruidServer> clients = new ConcurrentHashMap<>();
+  private final Map<SegmentId, ServerSelector> selectors = new HashMap<>();
+  private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines = new HashMap<>();
   private final ConcurrentMap<TimelineCallback, Executor> timelineCallbacks = new ConcurrentHashMap<>();
 
   private final QueryToolChestWarehouse warehouse;
@@ -106,9 +107,6 @@ public class BrokerServerView implements TimelineServerView
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
-    this.clients = new ConcurrentHashMap<>();
-    this.selectors = new HashMap<>();
-    this.timelines = new HashMap<>();
 
     // Validate and set the segment watcher config
     validateSegmentWatcherConfig(segmentWatcherConfig);
@@ -181,10 +179,15 @@ public class BrokerServerView implements TimelineServerView
   public void start() throws InterruptedException
   {
     if (segmentWatcherConfig.isAwaitInitializationOnStart()) {
-      final long startNanos = System.nanoTime();
-      log.debug("%s waiting for initialization.", getClass().getSimpleName());
+      final long startMillis = System.currentTimeMillis();
+      log.info("BrokerServerView waiting for initialization.");
       awaitInitialization();
-      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), (System.nanoTime() - startNanos) / 1000000);
+      final long endMillis = System.currentTimeMillis();
+      log.info("BrokerServerView initialized in [%,d] ms.", endMillis - startMillis);
+      emitter.emit(ServiceMetricEvent.builder().build(
+          "init/serverview/time",
+          endMillis - startMillis
+      ));
     }
   }
 
@@ -261,7 +264,7 @@ public class BrokerServerView implements TimelineServerView
 
   private void serverAddedSegment(final DruidServerMetadata server, final DataSegment segment)
   {
-    SegmentId segmentId = segment.getId();
+    final SegmentId segmentId = segment.getId();
     synchronized (lock) {
       // in theory we could probably just filter this to ensure we don't put ourselves in here, to make broker tree
       // query topologies, but for now just skip all brokers, so we don't create some sort of wild infinite query
@@ -285,7 +288,17 @@ public class BrokerServerView implements TimelineServerView
 
         QueryableDruidServer queryableDruidServer = clients.get(server.getName());
         if (queryableDruidServer == null) {
-          queryableDruidServer = addServer(baseView.getInventoryValue(server.getName()));
+          DruidServer inventoryValue = baseView.getInventoryValue(server.getName());
+          if (inventoryValue == null) {
+            log.warn(
+                "Could not find server[%s] in inventory. Skipping addition of segment[%s].",
+                server.getName(),
+                segmentId
+            );
+            return;
+          } else {
+            queryableDruidServer = addServer(inventoryValue);
+          }
         }
         selector.addServerAndUpdateSegment(queryableDruidServer, segment);
       }
@@ -296,8 +309,7 @@ public class BrokerServerView implements TimelineServerView
 
   private void serverRemovedSegment(DruidServerMetadata server, DataSegment segment)
   {
-
-    SegmentId segmentId = segment.getId();
+    final SegmentId segmentId = segment.getId();
     final ServerSelector selector;
 
     synchronized (lock) {
@@ -317,7 +329,13 @@ public class BrokerServerView implements TimelineServerView
       }
 
       QueryableDruidServer queryableDruidServer = clients.get(server.getName());
-      if (!selector.removeServer(queryableDruidServer)) {
+      if (queryableDruidServer == null) {
+        log.warn(
+            "Could not find server[%s] in inventory. Skipping removal of segment[%s].",
+            server.getName(),
+            segmentId
+        );
+      } else if (!selector.removeServer(queryableDruidServer)) {
         log.warn(
             "Asked to disassociate non-existant association between server[%s] and segment[%s]",
             server,
@@ -353,7 +371,7 @@ public class BrokerServerView implements TimelineServerView
   {
     final TableDataSource table =
         analysis.getBaseTableDataSource()
-                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+                .orElseThrow(() -> new ISE("Cannot handle base datasource: %s", analysis.getBaseDataSource()));
 
     synchronized (lock) {
       return Optional.ofNullable(timelines.get(table.getName()));
@@ -372,7 +390,7 @@ public class BrokerServerView implements TimelineServerView
     synchronized (lock) {
       QueryableDruidServer queryableDruidServer = clients.get(server.getName());
       if (queryableDruidServer == null) {
-        log.error("No QueryableDruidServer found for %s", server.getName());
+        log.error("No QueryRunner found for server name[%s].", server.getName());
         return null;
       }
       return queryableDruidServer.getQueryRunner();

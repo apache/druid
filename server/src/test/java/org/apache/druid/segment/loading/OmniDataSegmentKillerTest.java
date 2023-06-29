@@ -21,10 +21,12 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
@@ -65,6 +67,21 @@ public class OmniDataSegmentKillerTest
     );
   }
 
+  @Test
+  public void testBadSegmentKillerAccessException()
+  {
+    final DataSegment segment = Mockito.mock(DataSegment.class);
+    Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "bad"));
+
+    final Injector injector = createInjector(null);
+    final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
+    Assert.assertThrows(
+        "BadSegmentKiller must not have been initialized",
+        RuntimeException.class,
+        () -> segmentKiller.kill(segment)
+    );
+  }
+
   private static Injector createInjector(@Nullable DataSegmentKiller killer)
   {
     return GuiceInjectors.makeStartupInjectorWithModules(
@@ -74,6 +91,10 @@ public class OmniDataSegmentKillerTest
               if (killer != null) {
                 mapBinder.addBinding("sane").toInstance(killer);
               }
+            },
+            binder -> {
+              MapBinder<String, DataSegmentKiller> mapBinder = Binders.dataSegmentKillerBinder(binder);
+              mapBinder.addBinding("bad").to(BadSegmentKiller.class);
             }
         )
     );
@@ -98,6 +119,26 @@ public class OmniDataSegmentKillerTest
     segmentKiller.kill(tombstone);
   }
 
+  @LazySingleton
+  private static class BadSegmentKiller implements DataSegmentKiller
+  {
+    @Inject
+    BadSegmentKiller()
+    {
+      throw new RuntimeException("BadSegmentKiller must not have been initialized");
+    }
 
+    @Override
+    public void kill(DataSegment segment)
+    {
+
+    }
+
+    @Override
+    public void killAll()
+    {
+
+    }
+  }
 
 }

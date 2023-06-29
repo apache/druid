@@ -21,7 +21,6 @@ package org.apache.druid.query.expression;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -90,9 +89,7 @@ public abstract class TrimExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() < 1 || args.size() > 2) {
-      throw new IAE("Function[%s] must have 1 or 2 arguments", name());
-    }
+    validationHelperCheckAnyOfArgumentCount(args, 1, 2);
 
     final Function<Expr.Shuttle, Expr> visitFn = shuttle -> shuttle.visit(apply(shuttle.visitAll(args)));
 

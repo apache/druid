@@ -25,7 +25,6 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.data.BitmapSerde.DefaultBitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
@@ -45,6 +44,7 @@ public class UserCompactionTaskQueryTuningConfigTest
   {
     final UserCompactionTaskQueryTuningConfig config =
         new UserCompactionTaskQueryTuningConfig(
+            null,
             null,
             null,
             null,
@@ -82,18 +82,16 @@ public class UserCompactionTaskQueryTuningConfigTest
         null,
         new SegmentsSplitHintSpec(new HumanReadableBytes(42L), null),
         new DynamicPartitionsSpec(1000, 20000L),
-        new IndexSpec(
-            new DefaultBitmapSerdeFactory(),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.LZF,
-            LongEncodingStrategy.LONGS
-        ),
-        new IndexSpec(
-            new DefaultBitmapSerdeFactory(),
-            CompressionStrategy.LZ4,
-            CompressionStrategy.UNCOMPRESSED,
-            LongEncodingStrategy.AUTO
-        ),
+        IndexSpec.builder()
+                 .withDimensionCompression(CompressionStrategy.LZ4)
+                 .withMetricCompression(CompressionStrategy.LZ4)
+                 .withLongEncoding(LongEncodingStrategy.LONGS)
+                 .build(),
+        IndexSpec.builder()
+                 .withDimensionCompression(CompressionStrategy.LZ4)
+                 .withMetricCompression(CompressionStrategy.LZ4)
+                 .withLongEncoding(LongEncodingStrategy.LONGS)
+                 .build(),
         2,
         1000L,
         TmpFileSegmentWriteOutMediumFactory.instance(),
@@ -103,7 +101,8 @@ public class UserCompactionTaskQueryTuningConfigTest
         new Duration(3000L),
         7,
         1000,
-        100
+        100,
+        2
     );
 
     final String json = OBJECT_MAPPER.writeValueAsString(tuningConfig);

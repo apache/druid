@@ -98,6 +98,7 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
 
+    JettyServerInitUtils.addQosFilters(root, injector);
     AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
 
     // perform no-op authorization for these resources
@@ -133,6 +134,8 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     for (Handler handler : extensionHandlers) {
       handlerList.addHandler(handler);
     }
+
+    JettyServerInitUtils.maybeAddHSTSRewriteHandler(serverConfig, handlerList);
 
     // Add Gzip handler at the very end
     handlerList.addHandler(JettyServerInitUtils.wrapWithDefaultGzipHandler(

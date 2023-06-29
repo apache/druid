@@ -9,17 +9,18 @@ exports[`MoreButton matches snapshot (empty) 1`] = `
     class="bp4-button bp4-disabled"
     disabled=""
     tabindex="-1"
+    title="More actions"
     type="button"
   >
     <span
       aria-hidden="true"
       class="bp4-icon bp4-icon-more"
       icon="more"
-      tabindex="0"
     >
       <svg
         data-icon="more"
         height="16"
+        role="img"
         viewBox="0 0 16 16"
         width="16"
       >
@@ -40,17 +41,18 @@ exports[`MoreButton matches snapshot (full) 1`] = `
 >
   <button
     class="bp4-button"
+    title="More actions"
     type="button"
   >
     <span
       aria-hidden="true"
       class="bp4-icon bp4-icon-more"
       icon="more"
-      tabindex="0"
     >
       <svg
         data-icon="more"
         height="16"
+        role="img"
         viewBox="0 0 16 16"
         width="16"
       >

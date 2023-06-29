@@ -25,16 +25,23 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TestUtils;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
+import java.io.File;
 import java.util.Map;
 
 public class TaskReportSerdeTest
 {
   private final ObjectMapper jsonMapper;
+
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   public TaskReportSerdeTest()
   {
@@ -61,20 +68,22 @@ public class TaskReportSerdeTest
         )
     );
     String report1serialized = jsonMapper.writeValueAsString(report1);
-    IngestionStatsAndErrorsTaskReport report2 = jsonMapper.readValue(
+    IngestionStatsAndErrorsTaskReport report2 = (IngestionStatsAndErrorsTaskReport) jsonMapper.readValue(
         report1serialized,
-        IngestionStatsAndErrorsTaskReport.class
+        TaskReport.class
     );
     Assert.assertEquals(report1, report2);
     Assert.assertEquals(report1.hashCode(), report2.hashCode());
 
+    final File reportFile = temporaryFolder.newFile();
+    final SingleFileTaskReportFileWriter writer = new SingleFileTaskReportFileWriter(reportFile);
+    writer.setObjectMapper(jsonMapper);
     Map<String, TaskReport> reportMap1 = TaskReport.buildTaskReports(report1);
-    String reportMapSerialized = jsonMapper.writeValueAsString(reportMap1);
+    writer.write("testID", reportMap1);
+
     Map<String, TaskReport> reportMap2 = jsonMapper.readValue(
-        reportMapSerialized,
-        new TypeReference<Map<String, TaskReport>>()
-        {
-        }
+        reportFile,
+        new TypeReference<Map<String, TaskReport>>() {}
     );
     Assert.assertEquals(reportMap1, reportMap2);
   }

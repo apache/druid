@@ -53,8 +53,10 @@ import org.testng.annotations.Test;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import javax.ws.rs.core.MediaType;
+
 import java.io.IOException;
 import java.net.URL;
+import java.nio.channels.ClosedChannelException;
 
 @Test(groups = TestNGGroup.SECURITY)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -445,8 +447,7 @@ public class ITTLSTest
       catch (RuntimeException re) {
         Throwable rootCause = Throwables.getRootCause(re);
 
-        if (rootCause instanceof IOException && ("Broken pipe".equals(rootCause.getMessage())
-                                                 || "Connection reset by peer".contains(rootCause.getMessage()))) {
+        if (isRetriable(rootCause)) {
           if (retries > MAX_CONNECTION_EXCEPTION_RETRIES) {
             Assert.fail(StringUtils.format(
                 "Broken pipe / connection reset retries exhausted, test failed, did not get %s.",
@@ -532,5 +533,20 @@ public class ITTLSTest
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private boolean isRetriable(Throwable ex)
+  {
+    if (!(ex instanceof IOException)) {
+      return false;
+    }
+
+    if (ex instanceof ClosedChannelException) {
+      return true;
+    }
+
+    return null != ex.getMessage()
+        && ("Broken pipe".equals(ex.getMessage())
+            || "Connection reset by peer".contains(ex.getMessage()));
   }
 }

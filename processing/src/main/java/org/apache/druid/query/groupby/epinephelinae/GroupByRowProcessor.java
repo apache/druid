@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -37,7 +38,6 @@ import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBas
 import org.apache.druid.query.groupby.resource.GroupByQueryResource;
 
 import javax.annotation.Nullable;
-
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -89,6 +89,7 @@ public class GroupByRowProcessor
       final GroupByQuery subquery,
       final Sequence<ResultRow> rows,
       final GroupByQueryConfig config,
+      final DruidProcessingConfig processingConfig,
       final GroupByQueryResource resource,
       final ObjectMapper spillMapper,
       final String processingTmpDir,
@@ -105,7 +106,7 @@ public class GroupByRowProcessor
 
     final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
         temporaryStorageDirectory,
-        querySpecificConfig.getMaxOnDiskStorage()
+        querySpecificConfig.getMaxOnDiskStorage().getBytes()
     );
 
     closeOnExit.register(temporaryStorage);
@@ -114,6 +115,7 @@ public class GroupByRowProcessor
         query,
         subquery,
         querySpecificConfig,
+        processingConfig,
         new Supplier<ByteBuffer>()
         {
           @Override

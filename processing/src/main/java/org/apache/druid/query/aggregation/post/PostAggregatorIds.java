@@ -54,4 +54,16 @@ public class PostAggregatorIds
   public static final byte TDIGEST_SKETCH_TO_QUANTILES_CACHE_TYPE_ID = 30;
   public static final byte TDIGEST_SKETCH_TO_QUANTILE_CACHE_TYPE_ID = 31;
   public static final byte HLL_SKETCH_TO_ESTIMATE_CACHE_TYPE_ID = 32;
+  public static final byte KLL_DOUBLES_SKETCH_TO_RANK_CACHE_TYPE_ID = 33;
+  public static final byte KLL_DOUBLES_SKETCH_TO_CDF_CACHE_TYPE_ID = 34;
+  public static final byte KLL_DOUBLES_SKETCH_TO_HISTOGRAM_CACHE_TYPE_ID = 35;
+  public static final byte KLL_DOUBLES_SKETCH_TO_QUANTILE_CACHE_TYPE_ID = 36;
+  public static final byte KLL_DOUBLES_SKETCH_TO_QUANTILES_CACHE_TYPE_ID = 37;
+  public static final byte KLL_DOUBLES_SKETCH_TO_STRING_CACHE_TYPE_ID = 38;
+  public static final byte KLL_FLOATS_SKETCH_TO_RANK_CACHE_TYPE_ID = 39;
+  public static final byte KLL_FLOATS_SKETCH_TO_CDF_CACHE_TYPE_ID = 40;
+  public static final byte KLL_FLOATS_SKETCH_TO_HISTOGRAM_CACHE_TYPE_ID = 41;
+  public static final byte KLL_FLOATS_SKETCH_TO_QUANTILE_CACHE_TYPE_ID = 42;
+  public static final byte KLL_FLOATS_SKETCH_TO_QUANTILES_CACHE_TYPE_ID = 43;
+  public static final byte KLL_FLOATS_SKETCH_TO_STRING_CACHE_TYPE_ID = 44;
 }

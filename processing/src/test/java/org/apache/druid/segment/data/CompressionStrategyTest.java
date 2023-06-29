@@ -19,12 +19,11 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,7 +37,6 @@ import java.util.Collection;
 import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -46,19 +44,12 @@ import java.util.concurrent.TimeUnit;
 @RunWith(Parameterized.class)
 public class CompressionStrategyTest
 {
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> compressionStrategies()
   {
     return Iterables.transform(
         Arrays.asList(CompressionStrategy.noNoneValues()),
-        new Function<CompressionStrategy, Object[]>()
-        {
-          @Override
-          public Object[] apply(CompressionStrategy compressionStrategy)
-          {
-            return new Object[]{compressionStrategy};
-          }
-        }
+        compressionStrategy -> new Object[]{compressionStrategy}
     );
   }
 
@@ -71,52 +62,33 @@ public class CompressionStrategyTest
 
   // MUST be smaller than CompressedPools.BUFFER_SIZE
   private static final int DATA_SIZER = 0xFFFF;
-  private static byte[] originalData;
+  private static byte[] ORIGINAL_DATA;
 
   @BeforeClass
   public static void setupClass()
   {
-    originalData = new byte[DATA_SIZER];
+    ORIGINAL_DATA = new byte[DATA_SIZER];
     Random random = new Random(54671457);
-    random.nextBytes(originalData);
-  }
-
-  private Closer closer;
-
-  @Before
-  public void createCloser()
-  {
-    closer = Closer.create();
-  }
-
-  @After
-  public void closeCloser() throws IOException
-  {
-    closer.close();
+    random.nextBytes(ORIGINAL_DATA);
   }
 
   @Test
-  public void testBasicOperations()
+  public void testBasicOperations() throws IOException
   {
-    ByteBuffer compressionOut = compressionStrategy.getCompressor().allocateOutBuffer(originalData.length, closer);
-    ByteBuffer compressed = compressionStrategy.getCompressor().compress(ByteBuffer.wrap(originalData), compressionOut);
-    ByteBuffer output = ByteBuffer.allocate(originalData.length);
-    compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output);
-    byte[] checkArray = new byte[DATA_SIZER];
-    output.get(checkArray);
-    Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
-  }
+    try (final Closer closer = Closer.create();
+         final ResourceHolder<ByteBuffer> holder = ByteBufferUtils.allocateDirect(ORIGINAL_DATA.length)) {
+      ByteBuffer compressionOut = compressionStrategy.getCompressor().allocateOutBuffer(ORIGINAL_DATA.length, closer);
+      ByteBuffer compressionIn = compressionStrategy.getCompressor().allocateInBuffer(ORIGINAL_DATA.length, closer);
 
-  @Test
-  public void testDirectMemoryOperations()
-  {
-    ByteBuffer compressionOut = compressionStrategy.getCompressor().allocateOutBuffer(originalData.length, closer);
-    ByteBuffer compressed = compressionStrategy.getCompressor().compress(ByteBuffer.wrap(originalData), compressionOut);
-    ByteBuffer output = ByteBuffer.allocateDirect(originalData.length);
-    compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output);
-    byte[] checkArray = new byte[DATA_SIZER];
-    output.get(checkArray);
-    Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
+      final ByteBuffer output = holder.get();
+      compressionIn.put(ORIGINAL_DATA);
+      compressionIn.rewind();
+      ByteBuffer compressed = compressionStrategy.getCompressor().compress(compressionIn, compressionOut);
+      compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output);
+      byte[] checkArray = new byte[DATA_SIZER];
+      output.get(checkArray);
+      Assert.assertArrayEquals("Uncompressed data does not match", ORIGINAL_DATA, checkArray);
+    }
   }
 
   @Test(timeout = 60_000L)
@@ -135,18 +107,21 @@ public class CompressionStrategyTest
     for (int i = 0; i < numThreads; ++i) {
       results.add(
           threadPoolExecutor.submit(
-              new Callable<Boolean>()
-              {
-                @Override
-                public Boolean call()
-                {
-                  ByteBuffer compressionOut = compressionStrategy.getCompressor().allocateOutBuffer(originalData.length, closer);
-                  ByteBuffer compressed = compressionStrategy.getCompressor().compress(ByteBuffer.wrap(originalData), compressionOut);
-                  ByteBuffer output = ByteBuffer.allocate(originalData.length);
+              () -> {
+                try (final Closer closer = Closer.create()) {
+                  ByteBuffer compressionOut = compressionStrategy.getCompressor()
+                                                                 .allocateOutBuffer(ORIGINAL_DATA.length, closer);
+                  ByteBuffer compressionIn = compressionStrategy.getCompressor()
+                                                                .allocateInBuffer(ORIGINAL_DATA.length, closer);
+                  compressionIn.put(ORIGINAL_DATA);
+                  compressionIn.position(0);
+                  ByteBuffer compressed = compressionStrategy.getCompressor().compress(compressionIn, compressionOut);
+                  ByteBuffer output = compressionStrategy.getCompressor()
+                                                         .allocateOutBuffer(ORIGINAL_DATA.length, closer);
                   compressionStrategy.getDecompressor().decompress(compressed, compressed.remaining(), output);
                   byte[] checkArray = new byte[DATA_SIZER];
                   output.get(checkArray);
-                  Assert.assertArrayEquals("Uncompressed data does not match", originalData, checkArray);
+                  Assert.assertArrayEquals("Uncompressed data does not match", ORIGINAL_DATA, checkArray);
                   return true;
                 }
               }
@@ -154,8 +129,8 @@ public class CompressionStrategyTest
       );
     }
     threadPoolExecutor.shutdown();
-    for (Future result : results) {
-      Assert.assertTrue((Boolean) result.get());
+    for (Future<Boolean> result : results) {
+      Assert.assertTrue(result.get());
     }
   }
 }

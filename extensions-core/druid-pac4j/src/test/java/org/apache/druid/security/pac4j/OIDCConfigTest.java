@@ -33,7 +33,32 @@ public class OIDCConfigTest
     String jsonStr = "{\n"
                      + "  \"clientID\": \"testid\",\n"
                      + "  \"clientSecret\": \"testsecret\",\n"
-                     + "  \"discoveryURI\": \"testdiscoveryuri\"\n"
+                     + "  \"discoveryURI\": \"testdiscoveryuri\",\n"
+                     + "  \"scope\": \"testscope\"\n"
+                     + "}\n";
+
+    OIDCConfig conf = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(jsonMapper.readValue(jsonStr, OIDCConfig.class)),
+        OIDCConfig.class
+    );
+    Assert.assertEquals("testid", conf.getClientID());
+    Assert.assertEquals("testsecret", conf.getClientSecret().getPassword());
+    Assert.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
+    Assert.assertEquals("name", conf.getOidcClaim());
+    Assert.assertEquals("testscope", conf.getScope());
+  }
+
+  @Test
+  public void testSerdeWithoutDefaults() throws Exception
+  {
+    ObjectMapper jsonMapper = new ObjectMapper();
+
+    String jsonStr = "{\n"
+                     + "  \"clientID\": \"testid\",\n"
+                     + "  \"clientSecret\": \"testsecret\",\n"
+                     + "  \"discoveryURI\": \"testdiscoveryuri\",\n"
+                     + "  \"oidcClaim\": \"email\",\n"
+                     + "  \"scope\": \"testscope\"\n"
                      + "}\n";
 
     OIDCConfig conf = jsonMapper.readValue(
@@ -44,5 +69,7 @@ public class OIDCConfigTest
     Assert.assertEquals("testid", conf.getClientID());
     Assert.assertEquals("testsecret", conf.getClientSecret().getPassword());
     Assert.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
+    Assert.assertEquals("email", conf.getOidcClaim());
+    Assert.assertEquals("testscope", conf.getScope());
   }
 }

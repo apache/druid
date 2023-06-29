@@ -25,12 +25,12 @@ import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.client.SegmentServerSelector;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.server.QueryLaningStrategy;
 import org.apache.druid.server.QueryScheduler;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -84,6 +84,6 @@ public class ManualQueryLaningStrategy implements QueryLaningStrategy
   @Override
   public <T> Optional<String> computeLane(QueryPlus<T> query, Set<SegmentServerSelector> segments)
   {
-    return Optional.ofNullable(QueryContexts.getLane(query.getQuery()));
+    return Optional.ofNullable(query.getQuery().context().getLane());
   }
 }

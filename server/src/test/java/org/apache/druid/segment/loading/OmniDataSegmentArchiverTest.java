@@ -21,10 +21,12 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
@@ -62,6 +64,21 @@ public class OmniDataSegmentArchiverTest
     );
   }
 
+  @Test
+  public void testBadSegmentArchiverAccessException()
+  {
+    final DataSegment segment = Mockito.mock(DataSegment.class);
+    Mockito.when(segment.getLoadSpec()).thenReturn(ImmutableMap.of("type", "bad"));
+
+    final Injector injector = createInjector(null);
+    final OmniDataSegmentArchiver segmentArchiver = injector.getInstance(OmniDataSegmentArchiver.class);
+    Assert.assertThrows(
+        "BadSegmentArchiver must not have been initialized",
+        RuntimeException.class,
+        () -> segmentArchiver.archive(segment)
+    );
+  }
+
   private static Injector createInjector(@Nullable DataSegmentArchiver archiver)
   {
     return GuiceInjectors.makeStartupInjectorWithModules(
@@ -71,8 +88,35 @@ public class OmniDataSegmentArchiverTest
               if (archiver != null) {
                 mapBinder.addBinding("sane").toInstance(archiver);
               }
+            },
+            binder -> {
+              MapBinder<String, DataSegmentArchiver> mapBinder = Binders.dataSegmentArchiverBinder(binder);
+              mapBinder.addBinding("bad").to(BadSegmentArchiver.class);
             }
         )
     );
+  }
+  
+  @LazySingleton
+  private static class BadSegmentArchiver implements DataSegmentArchiver
+  {
+
+    @Inject
+    BadSegmentArchiver()
+    {
+      throw new RuntimeException("BadSegmentArchiver must not have been initialized");
+    }
+
+    @Override
+    public DataSegment archive(DataSegment segment)
+    {
+      return null;
+    }
+
+    @Override
+    public DataSegment restore(DataSegment segment)
+    {
+      return null;
+    }
   }
 }

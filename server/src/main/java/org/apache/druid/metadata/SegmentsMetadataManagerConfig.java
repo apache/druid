@@ -26,6 +26,8 @@ import org.joda.time.Period;
  */
 public class SegmentsMetadataManagerConfig
 {
+  public static final String CONFIG_PREFIX = "druid.manager.segments";
+
   @JsonProperty
   private Period pollDuration = new Period("PT1M");
 

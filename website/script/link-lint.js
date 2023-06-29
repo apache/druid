@@ -48,6 +48,9 @@ entries.forEach((entry) => {
       // Ignore external doc links
       if (url.startsWith('/') && !url.startsWith('/docs/')) return;
 
+      // Ignore mailto links
+      if (url.startsWith('mailto:')) return;
+
       // This one will get created externally
       if (url === '/docs/latest') return;
 

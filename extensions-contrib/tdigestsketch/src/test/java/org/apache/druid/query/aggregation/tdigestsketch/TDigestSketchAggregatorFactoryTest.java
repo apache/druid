@@ -62,4 +62,12 @@ public class TDigestSketchAggregatorFactoryTest
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
   }
+
+  @Test
+  public void testWithName()
+  {
+    TDigestSketchAggregatorFactory factory = new TDigestSketchAggregatorFactory("tdigest", "col", null);
+    Assert.assertEquals(factory, factory.withName("tdigest"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
 }

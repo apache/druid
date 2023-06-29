@@ -34,11 +34,17 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 
 public class MultiValueStringToArrayOperatorConversion extends DirectOperatorConversion
 {
-  private static final SqlFunction SQL_FUNCTION = OperatorConversions
+  public static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("MV_TO_ARRAY")
-      .operandTypeChecker(OperandTypes.family(SqlTypeFamily.STRING))
+      // allow using arrays as inputs to MV_TO_ARRAY to assist with migration of MVDs to ARRAY types
+      .operandTypeChecker(
+          OperandTypes.or(
+              OperandTypes.family(SqlTypeFamily.STRING),
+              OperandTypes.family(SqlTypeFamily.ARRAY)
+          )
+      )
       .functionCategory(SqlFunctionCategory.STRING)
-      .returnTypeNullableArray(SqlTypeName.VARCHAR)
+      .returnTypeNullableArrayWithNullableElements(SqlTypeName.VARCHAR)
       .build();
 
   public MultiValueStringToArrayOperatorConversion()

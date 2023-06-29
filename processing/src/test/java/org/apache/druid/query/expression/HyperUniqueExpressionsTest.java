@@ -19,13 +19,11 @@
 
 package org.apache.druid.query.expression;
 
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -53,15 +51,15 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   private static final long SOME_LONG = 1234L;
   private static final double SOME_DOUBLE = 1.234;
 
-  Expr.ObjectBinding inputBindings = InputBindings.withTypedSuppliers(
-      new ImmutableMap.Builder<String, Pair<ExpressionType, Supplier<Object>>>()
-          .put("hll", new Pair<>(HyperUniqueExpressions.TYPE, HyperLogLogCollector::makeLatestCollector))
-          .put("string", new Pair<>(ExpressionType.STRING, () -> SOME_STRING))
-          .put("long", new Pair<>(ExpressionType.LONG, () -> SOME_LONG))
-          .put("double", new Pair<>(ExpressionType.DOUBLE, () -> SOME_DOUBLE))
-          .put("nullString", new Pair<>(ExpressionType.STRING, () -> null))
-          .put("nullLong", new Pair<>(ExpressionType.LONG, () -> null))
-          .put("nullDouble", new Pair<>(ExpressionType.DOUBLE, () -> null))
+  Expr.ObjectBinding inputBindings = InputBindings.forInputSuppliers(
+      new ImmutableMap.Builder<String, InputBindings.InputSupplier>()
+          .put("hll", InputBindings.inputSupplier(HyperUniqueExpressions.TYPE, HyperLogLogCollector::makeLatestCollector))
+          .put("string", InputBindings.inputSupplier(ExpressionType.STRING, () -> SOME_STRING))
+          .put("long", InputBindings.inputSupplier(ExpressionType.LONG, () -> SOME_LONG))
+          .put("double", InputBindings.inputSupplier(ExpressionType.DOUBLE, () -> SOME_DOUBLE))
+          .put("nullString", InputBindings.inputSupplier(ExpressionType.STRING, () -> null))
+          .put("nullLong", InputBindings.inputSupplier(ExpressionType.LONG, () -> null))
+          .put("nullDouble", InputBindings.inputSupplier(ExpressionType.DOUBLE, () -> null))
           .build()
   );
 
@@ -199,7 +197,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   public void testCreateWrongArgsCount()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique] must have no arguments");
+    expectedException.expectMessage("Function[hyper_unique] does not accept arguments");
     Parser.parse("hyper_unique(100)", MACRO_TABLE);
   }
 
@@ -207,7 +205,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   public void testAddWrongArgsCount()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_add] must have 2 arguments");
+    expectedException.expectMessage("Function[hyper_unique_add] requires 2 arguments");
     Parser.parse("hyper_unique_add(100, hyper_unique(), 100)", MACRO_TABLE);
   }
 
@@ -215,7 +213,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   public void testAddWrongArgType()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_add] must take a hyper-log-log collector as the second argument");
+    expectedException.expectMessage("Function[hyper_unique_add] requires a hyper-log-log collector as the second argument");
     Expr expr = Parser.parse("hyper_unique_add(long, string)", MACRO_TABLE);
     expr.eval(inputBindings);
   }
@@ -224,7 +222,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   public void testEstimateWrongArgsCount()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_estimate] must have 1 argument");
+    expectedException.expectMessage("Function[hyper_unique_estimate] requires 1 argument");
     Parser.parse("hyper_unique_estimate(hyper_unique(), 100)", MACRO_TABLE);
   }
 
@@ -232,7 +230,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   public void testEstimateWrongArgTypes()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_estimate] must take a hyper-log-log collector as input");
+    expectedException.expectMessage("Function[hyper_unique_estimate] requires a hyper-log-log collector as input");
     Expr expr = Parser.parse("hyper_unique_estimate(100)", MACRO_TABLE);
     expr.eval(inputBindings);
   }
@@ -241,7 +239,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   public void testRoundEstimateWrongArgsCount()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_round_estimate] must have 1 argument");
+    expectedException.expectMessage("Function[hyper_unique_round_estimate] requires 1 argument");
     Parser.parse("hyper_unique_round_estimate(hyper_unique(), 100)", MACRO_TABLE);
   }
 
@@ -249,7 +247,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
   public void testRoundEstimateWrongArgTypes()
   {
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_round_estimate] must take a hyper-log-log collector as input");
+    expectedException.expectMessage("Function[hyper_unique_round_estimate] requires a hyper-log-log collector as input");
     Expr expr = Parser.parse("hyper_unique_round_estimate(string)", MACRO_TABLE);
     expr.eval(inputBindings);
   }

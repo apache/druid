@@ -54,6 +54,8 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
@@ -94,10 +96,16 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
-    final IndexSpec indexSpec = new IndexSpec();
+    final IndexSpec indexSpec = IndexSpec.DEFAULT;
+    final IndexSpec frontCodedIndexSpec =
+        IndexSpec.builder()
+                 .withStringDictionaryEncoding(new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1))
+                 .build();
     final IncrementalIndex rtIndex = makeIncrementalIndex();
     final QueryableIndex mMappedTestIndex = makeQueryableIndex(indexSpec);
     final QueryableIndex mergedRealtimeIndex = makeMergedQueryableIndex(indexSpec);
+    final QueryableIndex mMappedTestIndexFrontCoded = makeQueryableIndex(frontCodedIndexSpec);
+    final QueryableIndex mergedRealtimeIndexFrontCoded = makeMergedQueryableIndex(frontCodedIndexSpec);
     return Arrays.asList(
         new Object[][]{
             {
@@ -108,6 +116,12 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
             },
             {
                 new QueryableIndexSegment(mergedRealtimeIndex, null)
+            },
+            {
+                new QueryableIndexSegment(mMappedTestIndexFrontCoded, null)
+            },
+            {
+                new QueryableIndexSegment(mergedRealtimeIndexFrontCoded, null)
             }
         }
     );

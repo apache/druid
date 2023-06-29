@@ -26,12 +26,21 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
+import org.apache.druid.frame.segment.FrameCursorUtils;
+import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriterUtils;
+import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.CacheStrategy;
+import org.apache.druid.query.FrameSignaturePair;
+import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
@@ -47,15 +56,18 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BinaryOperator;
 
 /**
@@ -548,6 +560,38 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     );
   }
 
+  /**
+   * This returns a single frame containing the rows of the topN query's results
+   */
+  @Override
+  public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
+      TopNQuery query,
+      Sequence<Result<TopNResultValue>> resultSequence,
+      MemoryAllocatorFactory memoryAllocatorFactory,
+      boolean useNestedForUnknownTypes
+  )
+  {
+    final RowSignature rowSignature = resultArraySignature(query);
+    final Cursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
+        resultsAsArrays(query, resultSequence),
+        rowSignature
+    );
+
+    RowSignature modifiedRowSignature = useNestedForUnknownTypes
+                                        ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
+                                        : rowSignature;
+    FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
+        FrameType.COLUMNAR,
+        memoryAllocatorFactory,
+        rowSignature,
+        new ArrayList<>()
+    );
+
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory);
+
+    return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));
+  }
+
   static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>
   {
     private final QueryRunner<Result<TopNResultValue>> runner;
@@ -574,12 +618,12 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       }
 
       final TopNQuery query = (TopNQuery) input;
-      final int minTopNThreshold = query.getContextValue("minTopNThreshold", config.getMinTopNThreshold());
+      final int minTopNThreshold = query.context().getInt(QueryContexts.MIN_TOP_N_THRESHOLD, config.getMinTopNThreshold());
       if (query.getThreshold() > minTopNThreshold) {
         return runner.run(queryPlus, responseContext);
       }
 
-      final boolean isBySegment = QueryContexts.isBySegment(query);
+      final boolean isBySegment = query.context().isBySegment();
 
       return Sequences.map(
           runner.run(queryPlus.withQuery(query.withThreshold(minTopNThreshold)), responseContext),

@@ -56,7 +56,6 @@ import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
@@ -82,7 +81,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
+import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
@@ -107,8 +106,8 @@ public class SystemSchema extends AbstractSchema
   private static final String TASKS_TABLE = "tasks";
   private static final String SUPERVISOR_TABLE = "supervisors";
 
-  private static final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>>
-      SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR = segment ->
+  private static final Function<SegmentStatusInCluster, Iterable<ResourceAction>>
+      SEGMENT_STATUS_IN_CLUSTER_RA_GENERATOR = segment ->
       Collections.singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
           segment.getDataSegment().getDataSource())
       );
@@ -118,11 +117,15 @@ public class SystemSchema extends AbstractSchema
           segment.getDataSource())
       );
 
+  private static final long REPLICATION_FACTOR_UNKNOWN = -1L;
+
   /**
    * Booleans constants represented as long type,
    * where 1 = true and 0 = false to make it easy to count number of segments
    * which are published, available etc.
    */
+  private static final long IS_ACTIVE_FALSE = 0L;
+  private static final long IS_ACTIVE_TRUE = 1L;
   private static final long IS_PUBLISHED_FALSE = 0L;
   private static final long IS_PUBLISHED_TRUE = 1L;
   private static final long IS_AVAILABLE_TRUE = 1L;
@@ -140,6 +143,7 @@ public class SystemSchema extends AbstractSchema
       .add("partition_num", ColumnType.LONG)
       .add("num_replicas", ColumnType.LONG)
       .add("num_rows", ColumnType.LONG)
+      .add("is_active", ColumnType.LONG)
       .add("is_published", ColumnType.LONG)
       .add("is_available", ColumnType.LONG)
       .add("is_realtime", ColumnType.LONG)
@@ -148,6 +152,7 @@ public class SystemSchema extends AbstractSchema
       .add("dimensions", ColumnType.STRING)
       .add("metrics", ColumnType.STRING)
       .add("last_compaction_state", ColumnType.STRING)
+      .add("replication_factor", ColumnType.LONG)
       .build();
 
   static final RowSignature SERVERS_SIGNATURE = RowSignature
@@ -161,6 +166,7 @@ public class SystemSchema extends AbstractSchema
       .add("curr_size", ColumnType.LONG)
       .add("max_size", ColumnType.LONG)
       .add("is_leader", ColumnType.LONG)
+      .add("start_time", ColumnType.STRING)
       .build();
 
   static final RowSignature SERVER_SEGMENTS_SIGNATURE = RowSignature
@@ -270,13 +276,13 @@ public class SystemSchema extends AbstractSchema
     {
       //get available segments from druidSchema
       final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata =
-          druidSchema.getSegmentMetadataSnapshot();
+          druidSchema.cache().getSegmentMetadataSnapshot();
       final Iterator<Entry<SegmentId, AvailableSegmentMetadata>> availableSegmentEntries =
           availableSegmentMetadata.entrySet().iterator();
 
       // in memory map to store segment data from available segments
       final Map<SegmentId, PartialSegmentData> partialSegmentDataMap =
-          Maps.newHashMapWithExpectedSize(druidSchema.getTotalSegments());
+          Maps.newHashMapWithExpectedSize(druidSchema.cache().getTotalSegments());
       for (AvailableSegmentMetadata h : availableSegmentMetadata.values()) {
         PartialSegmentData partialSegmentData =
             new PartialSegmentData(IS_AVAILABLE_TRUE, h.isRealtime(), h.getNumReplicas(), h.getNumRows());
@@ -285,9 +291,9 @@ public class SystemSchema extends AbstractSchema
 
       // Get published segments from metadata segment cache (if enabled in SQL planner config), else directly from
       // Coordinator.
-      final Iterator<SegmentWithOvershadowedStatus> metadataStoreSegments = metadataView.getPublishedSegments();
+      final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getPublishedSegments();
 
-      final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.getTotalSegments());
+      final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.cache().getTotalSegments());
 
       final FluentIterable<Object[]> publishedSegments = FluentIterable
           .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments, root))
@@ -313,14 +319,20 @@ public class SystemSchema extends AbstractSchema
                   (long) segment.getShardSpec().getPartitionNum(),
                   numReplicas,
                   numRows,
-                  IS_PUBLISHED_TRUE, //is_published is true for published segments
+                  //is_active is true for published segments that are not overshadowed
+                  val.isOvershadowed() ? IS_ACTIVE_FALSE : IS_ACTIVE_TRUE,
+                  //is_published is true for published segments
+                  IS_PUBLISHED_TRUE,
                   isAvailable,
                   isRealtime,
                   val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
                   segment.getShardSpec() == null ? null : jsonMapper.writeValueAsString(segment.getShardSpec()),
                   segment.getDimensions() == null ? null : jsonMapper.writeValueAsString(segment.getDimensions()),
                   segment.getMetrics() == null ? null : jsonMapper.writeValueAsString(segment.getMetrics()),
-                  segment.getLastCompactionState() == null ? null : jsonMapper.writeValueAsString(segment.getLastCompactionState())
+                  segment.getLastCompactionState() == null ? null : jsonMapper.writeValueAsString(segment.getLastCompactionState()),
+                  // If the value is null, the load rules might have not evaluated yet, and we don't know the replication factor.
+                  // This should be automatically updated in the next refesh with Coordinator.
+                  val.getReplicationFactor() == null ? REPLICATION_FACTOR_UNKNOWN : (long) val.getReplicationFactor()
               };
             }
             catch (JsonProcessingException e) {
@@ -350,8 +362,10 @@ public class SystemSchema extends AbstractSchema
                   (long) val.getValue().getSegment().getShardSpec().getPartitionNum(),
                   numReplicas,
                   val.getValue().getNumRows(),
-                  IS_PUBLISHED_FALSE,
+                  // is_active is true for unpublished segments iff they are realtime
+                  val.getValue().isRealtime() /* is_active */,
                   // is_published is false for unpublished segments
+                  IS_PUBLISHED_FALSE,
                   // is_available is assumed to be always true for segments announced by historicals or realtime tasks
                   IS_AVAILABLE_TRUE,
                   val.getValue().isRealtime(),
@@ -360,7 +374,8 @@ public class SystemSchema extends AbstractSchema
                   val.getValue().getSegment().getShardSpec() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getShardSpec()),
                   val.getValue().getSegment().getDimensions() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getDimensions()),
                   val.getValue().getSegment().getMetrics() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getMetrics()),
-                  null // unpublished segments from realtime tasks will not be compacted yet
+                  null, // unpublished segments from realtime tasks will not be compacted yet
+                  REPLICATION_FACTOR_UNKNOWN // If the segment is unpublished, we won't have this information yet.
               };
             }
             catch (JsonProcessingException e) {
@@ -376,8 +391,8 @@ public class SystemSchema extends AbstractSchema
 
     }
 
-    private Iterator<SegmentWithOvershadowedStatus> getAuthorizedPublishedSegments(
-        Iterator<SegmentWithOvershadowedStatus> it,
+    private Iterator<SegmentStatusInCluster> getAuthorizedPublishedSegments(
+        Iterator<SegmentStatusInCluster> it,
         DataContext root
     )
     {
@@ -386,11 +401,11 @@ public class SystemSchema extends AbstractSchema
           "authenticationResult in dataContext"
       );
 
-      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils
+      final Iterable<SegmentStatusInCluster> authorizedSegments = AuthorizationUtils
           .filterAuthorizedResources(
               authenticationResult,
               () -> it,
-              SEGMENT_WITH_OVERSHADOWED_STATUS_RA_GENERATOR,
+              SEGMENT_STATUS_IN_CLUSTER_RA_GENERATOR,
               authorizerMapper
           );
       return authorizedSegments.iterator();
@@ -537,7 +552,9 @@ public class SystemSchema extends AbstractSchema
           .from(() -> druidServers)
           .transform((DiscoveryDruidNode discoveryDruidNode) -> {
             //noinspection ConstantConditions
-            final boolean isDiscoverableDataServer = isDiscoverableDataServer(discoveryDruidNode);
+            final boolean isDiscoverableDataServer = isDiscoverableDataServer(
+                discoveryDruidNode.getService(DataNodeService.DISCOVERY_SERVICE_KEY, DataNodeService.class)
+            );
             final NodeRole serverRole = discoveryDruidNode.getNodeRole();
 
             if (isDiscoverableDataServer) {
@@ -586,7 +603,8 @@ public class SystemSchema extends AbstractSchema
           null,
           UNKNOWN_SIZE,
           UNKNOWN_SIZE,
-          NullHandling.defaultLongValue()
+          NullHandling.defaultLongValue(),
+          toStringOrNull(discoveryDruidNode.getStartTime())
       };
     }
 
@@ -605,7 +623,8 @@ public class SystemSchema extends AbstractSchema
           null,
           UNKNOWN_SIZE,
           UNKNOWN_SIZE,
-          isLeader ? 1L : 0L
+          isLeader ? 1L : 0L,
+          toStringOrNull(discoveryDruidNode.getStartTime())
       };
     }
 
@@ -639,27 +658,24 @@ public class SystemSchema extends AbstractSchema
           druidServerToUse.getTier(),
           currentSize,
           druidServerToUse.getMaxSize(),
-          NullHandling.defaultLongValue()
+          NullHandling.defaultLongValue(),
+          toStringOrNull(discoveryDruidNode.getStartTime())
       };
     }
 
-    private static boolean isDiscoverableDataServer(DiscoveryDruidNode druidNode)
+    private static boolean isDiscoverableDataServer(DataNodeService dataNodeService)
     {
-      final DruidService druidService = druidNode.getServices().get(DataNodeService.DISCOVERY_SERVICE_KEY);
-      if (druidService == null) {
-        return false;
-      }
-      final DataNodeService dataNodeService = (DataNodeService) druidService;
-      return dataNodeService.isDiscoverable();
+      return dataNodeService != null && dataNodeService.isDiscoverable();
     }
 
     private static DruidServer toDruidServer(DiscoveryDruidNode discoveryDruidNode)
     {
-      if (isDiscoverableDataServer(discoveryDruidNode)) {
-        final DruidNode druidNode = discoveryDruidNode.getDruidNode();
-        final DataNodeService dataNodeService = (DataNodeService) discoveryDruidNode
-            .getServices()
-            .get(DataNodeService.DISCOVERY_SERVICE_KEY);
+      final DruidNode druidNode = discoveryDruidNode.getDruidNode();
+      final DataNodeService dataNodeService = discoveryDruidNode.getService(
+          DataNodeService.DISCOVERY_SERVICE_KEY,
+          DataNodeService.class
+      );
+      if (isDiscoverableDataServer(dataNodeService)) {
         return new DruidServer(
             druidNode.getHostAndPortToUse(),
             druidNode.getHostAndPort(),
@@ -1066,7 +1082,7 @@ public class SystemSchema extends AbstractSchema
 
       if (responseHolder.getStatus().getCode() != HttpServletResponse.SC_OK) {
         throw new RE(
-            "Failed to talk to leader node at [%s]. Error code[%d], description[%s].",
+            "Failed to talk to leader node at [%s]. Error code [%d], description [%s].",
             query,
             responseHolder.getStatus().getCode(),
             responseHolder.getStatus().getReasonPhrase()
@@ -1145,7 +1161,7 @@ public class SystemSchema extends AbstractSchema
         authorizerMapper
     );
     if (!stateAccess.isAllowed()) {
-      throw new ForbiddenException("Insufficient permission to view servers : " + stateAccess);
+      throw new ForbiddenException("Insufficient permission to view servers: " + stateAccess.toMessage());
     }
   }
 }

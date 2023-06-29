@@ -1,7 +1,7 @@
 ---
 id: tutorial-ingestion-spec
-title: "Tutorial: Writing an ingestion spec"
-sidebar_label: "Writing an ingestion spec"
+title: Write an ingestion spec
+sidebar_label: Write an ingestion spec
 ---
 
 <!--
@@ -511,8 +511,12 @@ As an example, let's add a `tuningConfig` that sets a target segment size for th
 ```json
     "tuningConfig" : {
       "type" : "index_parallel",
-      "maxRowsPerSegment" : 5000000
+      "partitionsSpec": {
+        "type": "dynamic",
+         "maxRowsPerSegment" : 5000000
+      }
     }
+         
 ```
 
 Note that each ingestion task has its own type of `tuningConfig`.
@@ -567,7 +571,10 @@ We've finished defining the ingestion spec, it should now look like the followin
     },
     "tuningConfig" : {
       "type" : "index_parallel",
-      "maxRowsPerSegment" : 5000000
+      "partitionsSpec": {
+        "type": "dynamic",
+         "maxRowsPerSegment" : 5000000
+      }
     }
   }
 }

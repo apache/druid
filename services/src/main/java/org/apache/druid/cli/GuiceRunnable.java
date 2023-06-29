@@ -19,21 +19,14 @@
 
 package org.apache.druid.cli;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.google.inject.TypeLiteral;
-import com.google.inject.multibindings.MapBinder;
-import com.google.inject.multibindings.Multibinder;
-import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.initialization.Initialization;
+import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -88,42 +81,20 @@ public abstract class GuiceRunnable implements Runnable
 
   public Injector makeInjector(Set<NodeRole> nodeRoles)
   {
-    Module registerNodeRoleModule = registerNodeRoleModule(nodeRoles);
     try {
-      return Initialization.makeInjectorWithModules(
-          nodeRoles,
-          baseInjector.createChildInjector(registerNodeRoleModule),
-          Iterables.concat(
-              // bind nodeRoles for the new injector as well
-              ImmutableList.of(registerNodeRoleModule),
-              getModules()
-          )
-      );
+      return ServerInjectorBuilder.makeServerInjector(baseInjector, nodeRoles, getModules());
     }
     catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
 
-  static Module registerNodeRoleModule(Set<NodeRole> nodeRoles)
+  public Lifecycle initLifecycle(Injector injector)
   {
-    if (nodeRoles.isEmpty()) {
-      return binder -> {};
-    } else {
-      return binder -> {
-        Multibinder<NodeRole> selfBinder = Multibinder.newSetBinder(binder, NodeRole.class, Self.class);
-        nodeRoles.forEach(nodeRole -> selfBinder.addBinding().toInstance(nodeRole));
-
-        MapBinder.newMapBinder(
-            binder,
-            new TypeLiteral<NodeRole>(){},
-            new TypeLiteral<Set<Class<? extends DruidService>>>(){}
-        );
-      };
-    }
+    return initLifecycle(injector, log);
   }
 
-  public Lifecycle initLifecycle(Injector injector)
+  public static Lifecycle initLifecycle(Injector injector, Logger log)
   {
     try {
       final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
@@ -138,11 +109,11 @@ public abstract class GuiceRunnable implements Runnable
       }
 
       log.info(
-          "Starting up with processors[%,d], memory[%,d], maxMemory[%,d]%s. Properties follow.",
+          "Starting up with processors [%,d], memory [%,d], maxMemory [%,d]%s. Properties follow.",
           JvmUtils.getRuntimeInfo().getAvailableProcessors(),
           JvmUtils.getRuntimeInfo().getTotalHeapSizeBytes(),
           JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
-          directSizeBytes != null ? StringUtils.format(", directMemory[%,d]", directSizeBytes) : ""
+          directSizeBytes != null ? StringUtils.format(", directMemory [%,d]", directSizeBytes) : ""
       );
 
       if (startupLoggingConfig.isLogProperties()) {

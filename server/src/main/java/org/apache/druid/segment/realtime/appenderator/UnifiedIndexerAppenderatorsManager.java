@@ -60,6 +60,7 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.plumber.Sink;
@@ -107,7 +108,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   private final Map<String, DatasourceBundle> datasourceBundles = new HashMap<>();
 
   private final QueryProcessingPool queryProcessingPool;
-  private final JoinableFactory joinableFactory;
+  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final WorkerConfig workerConfig;
   private final Cache cache;
   private final CacheConfig cacheConfig;
@@ -121,7 +122,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   @Inject
   public UnifiedIndexerAppenderatorsManager(
       QueryProcessingPool queryProcessingPool,
-      JoinableFactory joinableFactory,
+      JoinableFactoryWrapper joinableFactoryWrapper,
       WorkerConfig workerConfig,
       Cache cache,
       CacheConfig cacheConfig,
@@ -132,7 +133,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   )
   {
     this.queryProcessingPool = queryProcessingPool;
-    this.joinableFactory = joinableFactory;
+    this.joinableFactoryWrapper = joinableFactoryWrapper;
     this.workerConfig = workerConfig;
     this.cache = cache;
     this.cacheConfig = cacheConfig;
@@ -359,11 +360,11 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   @VisibleForTesting
   <T> DatasourceBundle getBundle(final Query<T> query)
   {
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    final DataSourceAnalysis analysis = query.getDataSource().getAnalysis();
 
     final TableDataSource table =
         analysis.getBaseTableDataSource()
-                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getDataSource()));
+                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", query.getDataSource()));
 
     final DatasourceBundle bundle;
 
@@ -399,6 +400,11 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     return datasourceBundles;
   }
 
+  public WorkerConfig getWorkerConfig()
+  {
+    return workerConfig;
+  }
+
   private AppenderatorConfig rewriteAppenderatorConfigMemoryLimits(AppenderatorConfig baseConfig)
   {
     long perWorkerLimit = workerConfig.getGlobalIngestionHeapLimitBytes() / workerConfig.getCapacity();
@@ -427,7 +433,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           serviceEmitter,
           queryRunnerFactoryConglomerateProvider.get(),
           queryProcessingPool,
-          joinableFactory,
+          joinableFactoryWrapper,
           Preconditions.checkNotNull(cache, "cache"),
           cacheConfig,
           cachePopulatorStats

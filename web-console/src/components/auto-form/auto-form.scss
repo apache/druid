@@ -16,16 +16,8 @@
  * limitations under the License.
  */
 
-@import '../../variables';
-
 .auto-form {
-  // Popover in info label
-  label.#{$bp-ns}-label {
-    position: relative;
-
-    .#{$bp-ns}-text-muted {
-      position: absolute;
-      right: 0;
-    }
+  .custom-input input {
+    cursor: pointer;
   }
 }

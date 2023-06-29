@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.schema;
 
 import org.apache.druid.sql.calcite.table.DruidTable;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -31,7 +32,7 @@ public class NoopDruidSchemaManager implements DruidSchemaManager
   private static ConcurrentMap<String, DruidTable> MAP = new ConcurrentHashMap<>();
 
   @Override
-  public ConcurrentMap<String, DruidTable> getTables()
+  public Map<String, DruidTable> getTables()
   {
     return MAP;
   }

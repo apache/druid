@@ -30,6 +30,7 @@ import org.apache.druid.security.basic.BasicSecurityAuthenticationException;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
+import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 
 import javax.annotation.Nullable;
@@ -83,7 +84,7 @@ public class MetadataStoreCredentialsValidator implements CredentialsValidator
       return new AuthenticationResult(username, authorizerName, authenticatorName, null);
     } else {
       LOG.debug("Password incorrect for metadata store user %s", username);
-      throw new BasicSecurityAuthenticationException("User metadata store authentication failed.");
+      throw new BasicSecurityAuthenticationException(Access.DEFAULT_ERROR_MESSAGE);
     }
   }
 }

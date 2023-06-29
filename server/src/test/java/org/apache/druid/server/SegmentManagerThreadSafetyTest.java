@@ -56,6 +56,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -227,6 +228,8 @@ public class SegmentManagerThreadSafetyTest
     {
       return new Segment()
       {
+        StorageAdapter storageAdapter = Mockito.mock(StorageAdapter.class);
+
         @Override
         public SegmentId getId()
         {
@@ -249,7 +252,8 @@ public class SegmentManagerThreadSafetyTest
         @Override
         public StorageAdapter asStorageAdapter()
         {
-          throw new UnsupportedOperationException();
+          Mockito.when(storageAdapter.getNumRows()).thenReturn(1);
+          return storageAdapter;
         }
 
         @Override

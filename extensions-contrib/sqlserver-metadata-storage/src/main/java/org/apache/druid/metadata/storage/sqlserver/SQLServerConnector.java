@@ -40,6 +40,7 @@ import org.skife.jdbi.v2.util.StringMapper;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -210,6 +211,12 @@ public class SQLServerConnector extends SQLMetadataConnector
         .map(StringMapper.FIRST)
         .list()
         .isEmpty();
+  }
+
+  @Override
+  public String limitClause(int limit)
+  {
+    return String.format(Locale.ENGLISH, "FETCH NEXT %d ROWS ONLY", limit);
   }
 
   /**

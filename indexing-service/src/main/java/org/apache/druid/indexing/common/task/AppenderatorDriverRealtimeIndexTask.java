@@ -62,6 +62,7 @@ import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.NoopQueryRunner;
@@ -87,10 +88,12 @@ import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
+import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -104,6 +107,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -112,6 +116,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+@Deprecated
 public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements ChatHandler
 {
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
@@ -213,6 +218,17 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   }
 
   @Override
+  @JsonIgnore
+  @Nonnull
+  public Set<ResourceAction> getInputSourceResources() throws UOE
+  {
+    throw new UOE(StringUtils.format(
+        "Task type [%s], does not support input source based security",
+        getType()
+    ));
+  }
+
+  @Override
   public String getNodeType()
   {
     return "realtime";
@@ -242,7 +258,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox)
+  public TaskStatus runTask(final TaskToolbox toolbox)
   {
     runThread = Thread.currentThread();
     authorizerMapper = toolbox.getAuthorizerMapper();

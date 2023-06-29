@@ -38,9 +38,10 @@ public class GroupByQueryConfigTest
       .put("bufferGrouperInitialBuckets", "1")
       .put("maxIntermediateRows", "2")
       .put("maxResults", "3")
-      .put("maxOnDiskStorage", "4")
+      .put("defaultOnDiskStorage", "1M")
+      .put("maxOnDiskStorage", "4M")
       .put("maxSelectorDictionarySize", "5")
-      .put("maxMergingDictionarySize", "6")
+      .put("maxMergingDictionarySize", "6M")
       .put("bufferGrouperMaxLoadFactor", "7")
       .build();
 
@@ -54,9 +55,10 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(1, config.getBufferGrouperInitialBuckets());
     Assert.assertEquals(2, config.getMaxIntermediateRows());
     Assert.assertEquals(3, config.getMaxResults());
-    Assert.assertEquals(4, config.getMaxOnDiskStorage());
-    Assert.assertEquals(5, config.getMaxSelectorDictionarySize());
-    Assert.assertEquals(6, config.getMaxMergingDictionarySize());
+    Assert.assertEquals(4_000_000, config.getMaxOnDiskStorage().getBytes());
+    Assert.assertEquals(1_000_000, config.getDefaultOnDiskStorage().getBytes());
+    Assert.assertEquals(5, config.getConfiguredMaxSelectorDictionarySize());
+    Assert.assertEquals(6_000_000, config.getConfiguredMaxMergingDictionarySize());
     Assert.assertEquals(7.0, config.getBufferGrouperMaxLoadFactor(), 0.0);
     Assert.assertFalse(config.isApplyLimitPushDownToSegment());
   }
@@ -78,9 +80,9 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(1, config2.getBufferGrouperInitialBuckets());
     Assert.assertEquals(2, config2.getMaxIntermediateRows());
     Assert.assertEquals(3, config2.getMaxResults());
-    Assert.assertEquals(4, config2.getMaxOnDiskStorage());
-    Assert.assertEquals(5, config2.getMaxSelectorDictionarySize());
-    Assert.assertEquals(6, config2.getMaxMergingDictionarySize());
+    Assert.assertEquals(1_000_000, config2.getMaxOnDiskStorage().getBytes());
+    Assert.assertEquals(5, config2.getConfiguredMaxSelectorDictionarySize());
+    Assert.assertEquals(6_000_000, config2.getConfiguredMaxMergingDictionarySize());
     Assert.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
     Assert.assertFalse(config2.isApplyLimitPushDownToSegment());
   }
@@ -97,7 +99,7 @@ public class GroupByQueryConfigTest
                     .setContext(
                         ImmutableMap.<String, Object>builder()
                                     .put("groupByStrategy", "v1")
-                                    .put("maxOnDiskStorage", 0)
+                                    .put("maxOnDiskStorage", "3M")
                                     .put("maxResults", 2)
                                     .put("maxSelectorDictionarySize", 3)
                                     .put("maxMergingDictionarySize", 4)
@@ -112,10 +114,120 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(1, config2.getBufferGrouperInitialBuckets());
     Assert.assertEquals(2, config2.getMaxIntermediateRows());
     Assert.assertEquals(2, config2.getMaxResults());
-    Assert.assertEquals(0, config2.getMaxOnDiskStorage());
-    Assert.assertEquals(3, config2.getMaxSelectorDictionarySize());
-    Assert.assertEquals(4, config2.getMaxMergingDictionarySize());
+    Assert.assertEquals(3_000_000, config2.getMaxOnDiskStorage().getBytes());
+    Assert.assertEquals(5 /* Can't override */, config2.getConfiguredMaxSelectorDictionarySize());
+    Assert.assertEquals(6_000_000 /* Can't override */, config2.getConfiguredMaxMergingDictionarySize());
     Assert.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
     Assert.assertTrue(config2.isApplyLimitPushDownToSegment());
+  }
+
+  @Test
+  public void testAutomaticMergingDictionarySize()
+  {
+    final GroupByQueryConfig config = MAPPER.convertValue(
+        ImmutableMap.of("maxMergingDictionarySize", "0"),
+        GroupByQueryConfig.class
+    );
+
+    Assert.assertEquals(GroupByQueryConfig.AUTOMATIC, config.getConfiguredMaxMergingDictionarySize());
+    Assert.assertEquals(150_000_000, config.getActualMaxMergingDictionarySize(1_000_000_000, 2));
+  }
+
+  @Test
+  public void testNonAutomaticMergingDictionarySize()
+  {
+    final GroupByQueryConfig config = MAPPER.convertValue(
+        ImmutableMap.of("maxMergingDictionarySize", "100"),
+        GroupByQueryConfig.class
+    );
+
+    Assert.assertEquals(100, config.getConfiguredMaxMergingDictionarySize());
+    Assert.assertEquals(100, config.getActualMaxMergingDictionarySize(1_000_000_000, 2));
+  }
+
+  @Test
+  public void testAutomaticSelectorDictionarySize()
+  {
+    final GroupByQueryConfig config = MAPPER.convertValue(
+        ImmutableMap.of("maxSelectorDictionarySize", "0"),
+        GroupByQueryConfig.class
+    );
+
+    Assert.assertEquals(GroupByQueryConfig.AUTOMATIC, config.getConfiguredMaxSelectorDictionarySize());
+    Assert.assertEquals(50_000_000, config.getActualMaxSelectorDictionarySize(1_000_000_000, 2));
+  }
+
+  @Test
+  public void testNonAutomaticSelectorDictionarySize()
+  {
+    final GroupByQueryConfig config = MAPPER.convertValue(
+        ImmutableMap.of("maxSelectorDictionarySize", "100"),
+        GroupByQueryConfig.class
+    );
+
+    Assert.assertEquals(100, config.getConfiguredMaxSelectorDictionarySize());
+    Assert.assertEquals(100, config.getActualMaxSelectorDictionarySize(1_000_000_000, 2));
+  }
+
+  /**
+   * Tests that the defaultOnDiskStorage value is used when applying override context that is lacking maxOnDiskStorage.
+   */
+  @Test
+  public void testUseDefaultOnDiskStorage()
+  {
+    final GroupByQueryConfig config = MAPPER.convertValue(
+        ImmutableMap.of(
+            "maxOnDiskStorage", "10G",
+            "defaultOnDiskStorage", "5G"
+        ),
+        GroupByQueryConfig.class
+    );
+    final GroupByQueryConfig config2 = config.withOverrides(
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setInterval(Intervals.of("2000/P1D"))
+                    .setGranularity(Granularities.ALL)
+                    .setContext(ImmutableMap.<String, Object>builder().build())
+                    .build()
+    );
+    Assert.assertEquals(5_000_000_000L, config2.getMaxOnDiskStorage().getBytes());
+  }
+
+  @Test
+  public void testUseMaxOnDiskStorageWhenClientOverrideIsTooLarge()
+  {
+    final GroupByQueryConfig config = MAPPER.convertValue(
+        ImmutableMap.of("maxOnDiskStorage", "500M"),
+        GroupByQueryConfig.class
+    );
+    final GroupByQueryConfig config2 = config.withOverrides(
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setInterval(Intervals.of("2000/P1D"))
+                    .setGranularity(Granularities.ALL)
+                    .setContext(
+                        ImmutableMap.<String, Object>builder()
+                            .put("maxOnDiskStorage", "1G")
+                            .build()
+                    )
+                    .build()
+    );
+    Assert.assertEquals(500_000_000, config2.getMaxOnDiskStorage().getBytes());
+  }
+
+  @Test
+  public void testGetDefaultOnDiskStorageReturnsCorrectValue()
+  {
+    final GroupByQueryConfig config = MAPPER.convertValue(
+        ImmutableMap.of("maxOnDiskStorage", "500M"),
+        GroupByQueryConfig.class
+    );
+    final GroupByQueryConfig config2 = MAPPER.convertValue(
+        ImmutableMap.of("maxOnDiskStorage", "500M",
+                        "defaultOnDiskStorage", "100M"),
+        GroupByQueryConfig.class
+    );
+    Assert.assertEquals(500_000_000, config.getDefaultOnDiskStorage().getBytes());
+    Assert.assertEquals(100_000_000, config2.getDefaultOnDiskStorage().getBytes());
   }
 }

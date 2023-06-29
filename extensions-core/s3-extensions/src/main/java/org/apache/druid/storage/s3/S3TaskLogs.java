@@ -25,7 +25,6 @@ import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.IOE;
@@ -65,54 +64,52 @@ public class S3TaskLogs implements TaskLogs
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset) throws IOException
+  public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid, "log");
     return streamTaskFile(offset, taskKey);
   }
 
   @Override
-  public Optional<ByteSource> streamTaskReports(String taskid) throws IOException
+  public Optional<InputStream> streamTaskReports(String taskid) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid, "report.json");
     return streamTaskFile(0, taskKey);
   }
 
-  private Optional<ByteSource> streamTaskFile(final long offset, String taskKey) throws IOException
+  @Override
+  public Optional<InputStream> streamTaskStatus(String taskid) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "status.json");
+    return streamTaskFile(0, taskKey);
+  }
+
+  private Optional<InputStream> streamTaskFile(final long offset, String taskKey) throws IOException
   {
     try {
       final ObjectMetadata objectMetadata = service.getObjectMetadata(config.getS3Bucket(), taskKey);
 
-      return Optional.of(
-          new ByteSource()
-          {
-            @Override
-            public InputStream openStream() throws IOException
-            {
-              try {
-                final long start;
-                final long end = objectMetadata.getContentLength() - 1;
+      try {
+        final long start;
+        final long end = objectMetadata.getContentLength() - 1;
 
-                if (offset > 0 && offset < objectMetadata.getContentLength()) {
-                  start = offset;
-                } else if (offset < 0 && (-1 * offset) < objectMetadata.getContentLength()) {
-                  start = objectMetadata.getContentLength() + offset;
-                } else {
-                  start = 0;
-                }
+        if (offset > 0 && offset < objectMetadata.getContentLength()) {
+          start = offset;
+        } else if (offset < 0 && (-1 * offset) < objectMetadata.getContentLength()) {
+          start = objectMetadata.getContentLength() + offset;
+        } else {
+          start = 0;
+        }
 
-                final GetObjectRequest request = new GetObjectRequest(config.getS3Bucket(), taskKey)
-                    .withMatchingETagConstraint(objectMetadata.getETag())
-                    .withRange(start, end);
+        final GetObjectRequest request = new GetObjectRequest(config.getS3Bucket(), taskKey)
+            .withMatchingETagConstraint(ensureQuotated(objectMetadata.getETag()))
+            .withRange(start, end);
 
-                return service.getObject(request).getObjectContent();
-              }
-              catch (AmazonServiceException e) {
-                throw new IOException(e);
-              }
-            }
-          }
-      );
+        return Optional.of(service.getObject(request).getObjectContent());
+      }
+      catch (AmazonServiceException e) {
+        throw new IOException(e);
+      }
     }
     catch (AmazonS3Exception e) {
       if (404 == e.getStatusCode()
@@ -123,6 +120,16 @@ public class S3TaskLogs implements TaskLogs
         throw new IOE(e, "Failed to stream logs from: %s", taskKey);
       }
     }
+  }
+
+  static String ensureQuotated(String eTag)
+  {
+    if (eTag != null) {
+      if (!eTag.startsWith("\"") && !eTag.endsWith("\"")) {
+        return "\"" + eTag + "\"";
+      }
+    }
+    return eTag;
   }
 
   @Override
@@ -139,6 +146,14 @@ public class S3TaskLogs implements TaskLogs
     final String taskKey = getTaskLogKey(taskid, "report.json");
     log.info("Pushing task reports %s to: %s", reportFile, taskKey);
     pushTaskFile(reportFile, taskKey);
+  }
+
+  @Override
+  public void pushTaskStatus(String taskid, File statusFile) throws IOException
+  {
+    final String taskKey = getTaskLogKey(taskid, "status.json");
+    log.info("Pushing task status %s to: %s", statusFile, taskKey);
+    pushTaskFile(statusFile, taskKey);
   }
 
   private void pushTaskFile(final File logFile, String taskKey) throws IOException
@@ -187,7 +202,7 @@ public class S3TaskLogs implements TaskLogs
     try {
       S3Utils.deleteObjectsInPath(
           service,
-          inputDataConfig,
+          inputDataConfig.getMaxListingLength(),
           config.getS3Bucket(),
           config.getS3Prefix(),
           (object) -> object.getLastModified().getTime() < timestamp

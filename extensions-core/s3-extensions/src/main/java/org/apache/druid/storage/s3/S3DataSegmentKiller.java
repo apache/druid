@@ -103,7 +103,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
     try {
       S3Utils.deleteObjectsInPath(
           s3ClientSupplier.get(),
-          inputDataConfig,
+          inputDataConfig.getMaxListingLength(),
           segmentPusherConfig.getBucket(),
           segmentPusherConfig.getBaseKey(),
           Predicates.alwaysTrue()

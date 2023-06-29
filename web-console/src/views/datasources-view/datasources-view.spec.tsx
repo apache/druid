@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
 import React from 'react';
 
-import { Capabilities } from '../../utils';
+import { Capabilities } from '../../helpers';
+import { shallow } from '../../utils/shallow-renderer';
 
 import { DatasourcesView } from './datasources-view';
 
@@ -27,8 +27,10 @@ describe('DatasourcesView', () => {
   it('matches snapshot', () => {
     const dataSourceView = shallow(
       <DatasourcesView
+        filters={[]}
+        onFiltersChange={() => {}}
         goToQuery={() => {}}
-        goToTask={() => null}
+        goToTasks={() => null}
         goToSegments={() => {}}
         capabilities={Capabilities.FULL}
       />,

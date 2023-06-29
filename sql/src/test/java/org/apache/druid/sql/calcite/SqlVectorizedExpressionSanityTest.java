@@ -21,9 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.tools.RelConversionException;
-import org.apache.calcite.tools.ValidationException;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -38,13 +36,17 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
@@ -104,13 +106,13 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   private static Closer CLOSER;
   private static QueryRunnerFactoryConglomerate CONGLOMERATE;
   private static SpecificSegmentsQuerySegmentWalker WALKER;
+  private static SqlEngine ENGINE;
   @Nullable
   private static PlannerFactory PLANNER_FACTORY;
 
   @BeforeClass
   public static void setupClass()
   {
-    Calcites.setSystemProperties();
     ExpressionProcessing.initializeForStrictBooleansTests(true);
     CLOSER = Closer.create();
 
@@ -139,15 +141,20 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(CONGLOMERATE, WALKER, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    final JoinableFactoryWrapper joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
+    ENGINE = CalciteTests.createMockSqlEngine(WALKER, CONGLOMERATE);
     PLANNER_FACTORY = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryMakerFactory(WALKER, CONGLOMERATE),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
-        CalciteTests.DRUID_SCHEMA_NAME
+        CalciteTests.DRUID_SCHEMA_NAME,
+        new CalciteRulesManager(ImmutableSet.of()),
+        joinableFactoryWrapper,
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
   }
 
@@ -155,7 +162,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   public static void teardownClass() throws IOException
   {
     CLOSER.close();
-    ExpressionProcessing.initializeForTests(null);
+    ExpressionProcessing.initializeForTests();
   }
 
   @Parameterized.Parameters(name = "query = {0}")
@@ -172,31 +179,30 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   }
 
   @Test
-  public void testQuery() throws SqlParseException, RelConversionException, ValidationException
+  public void testQuery()
   {
     sanityTestVectorizedSqlQueries(PLANNER_FACTORY, query);
   }
 
   public static void sanityTestVectorizedSqlQueries(PlannerFactory plannerFactory, String query)
-      throws ValidationException, RelConversionException, SqlParseException
   {
     final Map<String, Object> vector = ImmutableMap.of(
-        QueryContexts.VECTORIZE_KEY, "force",
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, "force"
+            QueryContexts.VECTORIZE_KEY, "force",
+            QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, "force"
     );
     final Map<String, Object> nonvector = ImmutableMap.of(
-        QueryContexts.VECTORIZE_KEY, "false",
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, "false"
+            QueryContexts.VECTORIZE_KEY, "false",
+            QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, "false"
     );
 
     try (
-        final DruidPlanner vectorPlanner = plannerFactory.createPlannerForTesting(vector, query);
-        final DruidPlanner nonVectorPlanner = plannerFactory.createPlannerForTesting(nonvector, query)
+        final DruidPlanner vectorPlanner = plannerFactory.createPlannerForTesting(ENGINE, query, vector);
+        final DruidPlanner nonVectorPlanner = plannerFactory.createPlannerForTesting(ENGINE, query, nonvector)
     ) {
       final PlannerResult vectorPlan = vectorPlanner.plan();
       final PlannerResult nonVectorPlan = nonVectorPlanner.plan();
-      final Sequence<Object[]> vectorSequence = vectorPlan.run();
-      final Sequence<Object[]> nonVectorSequence = nonVectorPlan.run();
+      final Sequence<Object[]> vectorSequence = vectorPlan.run().getResults();
+      final Sequence<Object[]> nonVectorSequence = nonVectorPlan.run().getResults();
       Yielder<Object[]> vectorizedYielder = Yielders.each(vectorSequence);
       Yielder<Object[]> nonVectorizedYielder = Yielders.each(nonVectorSequence);
       int row = 0;

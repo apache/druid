@@ -19,12 +19,8 @@
 
 package org.apache.druid.sql.calcite.table;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.calcite.config.CalciteConnectionConfig;
-import org.apache.calcite.plan.RelOptTable;
-import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.schema.Schema;
@@ -35,45 +31,19 @@ import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.external.ExternalDataSource;
-import org.apache.druid.sql.calcite.external.ExternalTableScan;
 
-import javax.annotation.Nullable;
-import java.util.Objects;
-
-public class DruidTable implements TranslatableTable
+/**
+ * Abstract base class for the various kinds of tables which Druid supports.
+ */
+public abstract class DruidTable implements TranslatableTable
 {
-  private final DataSource dataSource;
   private final RowSignature rowSignature;
 
-  @Nullable
-  private final ObjectMapper objectMapper;
-  private final boolean joinable;
-  private final boolean broadcast;
-
   public DruidTable(
-      final DataSource dataSource,
-      final RowSignature rowSignature,
-      @Nullable final ObjectMapper objectMapper,
-      final boolean isJoinable,
-      final boolean isBroadcast
+      final RowSignature rowSignature
   )
   {
-    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature");
-    this.objectMapper = objectMapper;
-    this.joinable = isJoinable;
-    this.broadcast = isBroadcast;
-
-    if (dataSource instanceof ExternalDataSource && objectMapper == null) {
-      // objectMapper is used by ExternalTableScan to generate its digest.
-      throw new NullPointerException("ObjectMapper is required for external datasources");
-    }
-  }
-
-  public DataSource getDataSource()
-  {
-    return dataSource;
   }
 
   public RowSignature getRowSignature()
@@ -81,15 +51,11 @@ public class DruidTable implements TranslatableTable
     return rowSignature;
   }
 
-  public boolean isJoinable()
-  {
-    return joinable;
-  }
+  public abstract DataSource getDataSource();
 
-  public boolean isBroadcast()
-  {
-    return broadcast;
-  }
+  public abstract boolean isJoinable();
+
+  public abstract boolean isBroadcast();
 
   @Override
   public Schema.TableType getJdbcTableType()
@@ -106,7 +72,7 @@ public class DruidTable implements TranslatableTable
   @Override
   public RelDataType getRowType(final RelDataTypeFactory typeFactory)
   {
-    return RowSignatures.toRelDataType(rowSignature, typeFactory);
+    return RowSignatures.toRelDataType(getRowSignature(), typeFactory);
   }
 
   @Override
@@ -124,52 +90,5 @@ public class DruidTable implements TranslatableTable
   )
   {
     return true;
-  }
-
-  @Override
-  public RelNode toRel(final RelOptTable.ToRelContext context, final RelOptTable table)
-  {
-    if (dataSource instanceof ExternalDataSource) {
-      // Cannot use LogicalTableScan here, because its digest is solely based on the name of the table macro.
-      // Must use our own class that computes its own digest.
-      return new ExternalTableScan(context.getCluster(), objectMapper, this);
-    } else {
-      return LogicalTableScan.create(context.getCluster(), table);
-    }
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    DruidTable that = (DruidTable) o;
-
-    if (!Objects.equals(dataSource, that.dataSource)) {
-      return false;
-    }
-    return Objects.equals(rowSignature, that.rowSignature);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = dataSource != null ? dataSource.hashCode() : 0;
-    result = 31 * result + (rowSignature != null ? rowSignature.hashCode() : 0);
-    return result;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "DruidTable{" +
-           "dataSource=" + dataSource +
-           ", rowSignature=" + rowSignature +
-           '}';
   }
 }

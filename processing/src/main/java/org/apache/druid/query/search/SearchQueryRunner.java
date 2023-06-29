@@ -19,11 +19,9 @@
 
 package org.apache.druid.query.search;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -234,14 +232,10 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
   )
   {
     Iterable<SearchHit> source = Iterables.transform(
-        retVal.object2IntEntrySet(), new Function<Object2IntMap.Entry<SearchHit>, SearchHit>()
-        {
-          @Override
-          public SearchHit apply(Object2IntMap.Entry<SearchHit> input)
-          {
-            SearchHit hit = input.getKey();
-            return new SearchHit(hit.getDimension(), hit.getValue(), input.getIntValue());
-          }
+        retVal.object2IntEntrySet(),
+        input -> {
+          SearchHit hit = input.getKey();
+          return new SearchHit(hit.getDimension(), hit.getValue(), input.getIntValue());
         }
     );
 

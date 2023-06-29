@@ -120,7 +120,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     final long taskStatusCheckingPeriod = tuningConfig.getTaskStatusCheckPeriodMs();
 
     taskMonitor = new TaskMonitor<>(
-        toolbox.getIndexingServiceClient(),
+        toolbox.getOverlordClient(),
         tuningConfig.getMaxRetry(),
         estimateTotalNumSubTasks()
     );
@@ -242,7 +242,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
       SubTaskSpec<SubTaskType> spec
   )
   {
-    LOG.info("Submit a new task for spec[%s]", spec.getId());
+    LOG.info("Submitting a new task for spec[%s]", spec.getId());
     final ListenableFuture<SubTaskCompleteEvent<SubTaskType>> future = taskMonitor.submit(spec);
     Futures.addCallback(
         future,

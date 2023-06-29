@@ -278,7 +278,6 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             // This close() call actually calls shutdownNow() on the executor registered with the Cache object, it
             // better have its own executor or ignore shutdownNow() calls...
             log.debug("Closing inventory cache for %s. Also removing listeners.", containerKey);
-            removed.getCache().getListenable().clear();
             removed.getCache().close();
             strategy.deadContainer(removed.getContainer());
 

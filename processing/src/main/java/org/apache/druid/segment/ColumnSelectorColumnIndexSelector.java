@@ -29,6 +29,7 @@ import org.apache.druid.segment.column.NumericColumn;
 import javax.annotation.Nullable;
 
 /**
+ *
  */
 public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
 {
@@ -50,7 +51,17 @@ public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
   @Override
   public int getNumRows()
   {
-    try (final NumericColumn column = (NumericColumn) columnSelector.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getColumn()) {
+    // This closes the __time column, which may initially seem like good behavior, but in reality leads to a
+    // double-close when columnSelector is a ColumnCache (because all columns from a ColumnCache are closed when
+    // the cache itself is closed). We're closing it here anyway, however, for two reasons:
+    //
+    //   1) Sometimes, columnSelector is DeprecatedQueryableIndexColumnSelector, not ColumnCache, and so the close
+    //      here is important.
+    //   2) Double-close is OK for the __time column when this method is expected to be used: the __time column is
+    //      expected to be a ColumnarLongs, which is safe to double-close.
+
+    try (final NumericColumn column = (NumericColumn) columnSelector.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME)
+                                                                    .getColumn()) {
       return column.length();
     }
   }

@@ -303,6 +303,20 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new FixedBucketsHistogramAggregatorFactory(
+        newName,
+        getFieldName(),
+        getNumBuckets(),
+        getLowerLimit(),
+        getUpperLimit(),
+        getOutlierHandlingMode(),
+        isFinalizeAsBase64Binary()
+    );
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     final CacheKeyBuilder builder = new CacheKeyBuilder(AggregatorUtil.FIXED_BUCKET_HIST_CACHE_TYPE_ID)

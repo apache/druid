@@ -215,7 +215,7 @@ public class Filters
     if (filter == null) {
       return null;
     }
-    boolean useCNF = query.getContextBoolean(QueryContexts.USE_FILTER_CNF_KEY, QueryContexts.DEFAULT_USE_FILTER_CNF);
+    boolean useCNF = query.context().getBoolean(QueryContexts.USE_FILTER_CNF_KEY, QueryContexts.DEFAULT_USE_FILTER_CNF);
     try {
       return useCNF ? Filters.toCnf(filter) : filter;
     }

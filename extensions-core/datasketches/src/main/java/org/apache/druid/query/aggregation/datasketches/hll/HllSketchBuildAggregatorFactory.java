@@ -26,6 +26,7 @@ import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
@@ -56,10 +57,11 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
       @JsonProperty("lgK") @Nullable final Integer lgK,
       @JsonProperty("tgtHllType") @Nullable final String tgtHllType,
       @JsonProperty("stringEncoding") @Nullable final StringEncoding stringEncoding,
+      @JsonProperty("shouldFinalize") final Boolean shouldFinalize,
       @JsonProperty("round") final boolean round
   )
   {
-    super(name, fieldName, lgK, tgtHllType, stringEncoding, round);
+    super(name, fieldName, lgK, tgtHllType, stringEncoding, shouldFinalize, round);
   }
 
 
@@ -142,6 +144,20 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   public int getMaxIntermediateSize()
   {
     return HllSketch.getMaxUpdatableSerializationBytes(getLgK(), TgtHllType.valueOf(getTgtHllType()));
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new HllSketchBuildAggregatorFactory(
+        newName,
+        getFieldName(),
+        getLgK(),
+        getTgtHllType(),
+        getStringEncoding(),
+        isShouldFinalize(),
+        isRound()
+    );
   }
 
   private void validateInputs(@Nullable ColumnCapabilities capabilities)

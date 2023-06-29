@@ -4,7 +4,9 @@
   "interval": "2015-09-12/2015-09-13",
   "tuningConfig" : {
     "type" : "index_parallel",
-    "maxRowsPerSegment" : 5000000,
+    "partitionsSpec": {
+        "type": "dynamic"
+    },
     "maxRowsInMemory" : 25000
   }
 }

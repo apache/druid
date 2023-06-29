@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.junit.Assert;
@@ -35,22 +36,32 @@ public class ExprMacroTest
 {
   private static final String IPV4_STRING = "192.168.0.1";
   private static final long IPV4_LONG = 3232235521L;
-  private static final Expr.ObjectBinding BINDINGS = InputBindings.withMap(
-      ImmutableMap.<String, Object>builder()
-          .put("t", DateTimes.of("2000-02-03T04:05:06").getMillis())
-          .put("t1", DateTimes.of("2000-02-03T00:00:00").getMillis())
-          .put("tstr", "2000-02-03T04:05:06")
-          .put("tstr_sql", "2000-02-03 04:05:06")
-          .put("x", "foo")
-          .put("y", 2)
-          .put("z", 3.1)
-          .put("CityOfAngels", "America/Los_Angeles")
-          .put("spacey", "  hey there  ")
-          .put("ipv4_string", IPV4_STRING)
-          .put("ipv4_long", IPV4_LONG)
-          .put("ipv4_network", "192.168.0.0")
-          .put("ipv4_broadcast", "192.168.255.255")
-          .build()
+  private static final Expr.ObjectBinding BINDINGS = InputBindings.forInputSuppliers(
+      ImmutableMap.<String, InputBindings.InputSupplier>builder()
+                  .put("t",
+                       InputBindings.inputSupplier(
+                           ExpressionType.LONG,
+                           () -> DateTimes.of("2000-02-03T04:05:06").getMillis()
+                       )
+                  )
+                  .put("t1",
+                       InputBindings.inputSupplier(
+                           ExpressionType.LONG,
+                           () -> DateTimes.of("2000-02-03T00:00:00").getMillis()
+                       )
+                  )
+                  .put("tstr", InputBindings.inputSupplier(ExpressionType.STRING, () -> "2000-02-03T04:05:06"))
+                  .put("tstr_sql", InputBindings.inputSupplier(ExpressionType.STRING, () -> "2000-02-03 04:05:06"))
+                  .put("x", InputBindings.inputSupplier(ExpressionType.STRING, () -> "foo"))
+                  .put("y", InputBindings.inputSupplier(ExpressionType.LONG, () -> 2))
+                  .put("z", InputBindings.inputSupplier(ExpressionType.DOUBLE, () -> 3.1))
+                  .put("CityOfAngels", InputBindings.inputSupplier(ExpressionType.STRING, () -> "America/Los_Angeles"))
+                  .put("spacey", InputBindings.inputSupplier(ExpressionType.STRING, () -> "  hey there  "))
+                  .put("ipv4_string", InputBindings.inputSupplier(ExpressionType.STRING, () -> IPV4_STRING))
+                  .put("ipv4_long", InputBindings.inputSupplier(ExpressionType.LONG, () -> IPV4_LONG))
+                  .put("ipv4_network", InputBindings.inputSupplier(ExpressionType.STRING, () -> "192.168.0.0"))
+                  .put("ipv4_broadcast", InputBindings.inputSupplier(ExpressionType.STRING, () -> "192.168.255.255"))
+                  .build()
   );
 
   @BeforeClass
@@ -193,8 +204,7 @@ public class ExprMacroTest
   @Test
   public void testIPv4AddressParse()
   {
-    Long nullLong = NullHandling.replaceWithDefault() ? NullHandling.ZERO_LONG : null;
-    assertExpr("ipv4_parse(x)", nullLong);
+    assertExpr("ipv4_parse(x)", null);
     assertExpr("ipv4_parse(ipv4_string)", IPV4_LONG);
     assertExpr("ipv4_parse(ipv4_long)", IPV4_LONG);
     assertExpr("ipv4_parse(ipv4_stringify(ipv4_long))", IPV4_LONG);

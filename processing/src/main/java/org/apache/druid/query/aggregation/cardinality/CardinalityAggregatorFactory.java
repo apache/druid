@@ -339,6 +339,12 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new CardinalityAggregatorFactory(newName, null, getFields(), byRow, round);
+  }
+
+  @Override
   public boolean equals(final Object o)
   {
     if (this == o) {

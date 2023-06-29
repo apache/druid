@@ -45,6 +45,7 @@ import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -306,6 +307,16 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
+  public Map<String, Long> getAverageNumOfRowsPerSegmentForDatasource()
+  {
+    return segmentManager.getAverageRowCountForDatasource();
+  }
+
+  public Map<String, SegmentRowCountDistribution> getRowCountDistributionPerDatasource()
+  {
+    return segmentManager.getRowCountDistribution();
+  }
+
   @Override
   public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
@@ -340,11 +351,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
       result = Status.SUCCESS;
     }
-    catch (Exception e) {
+    catch (Throwable e) {
       log.makeAlert(e, "Failed to load segment for dataSource")
          .addData("segment", segment)
          .emit();
-      result = Status.failed(e.getMessage());
+      result = Status.failed(e.toString());
     }
     finally {
       updateRequestStatus(new SegmentChangeRequestLoad(segment), result);

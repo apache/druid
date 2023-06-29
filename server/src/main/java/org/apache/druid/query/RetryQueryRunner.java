@@ -215,15 +215,15 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
       if (sequence != null) {
         return true;
       } else {
+        final QueryContext queryContext = queryPlus.getQuery().context();
         final List<SegmentDescriptor> missingSegments = getMissingSegments(queryPlus, context);
-        final int maxNumRetries = QueryContexts.getNumRetriesOnMissingSegments(
-            queryPlus.getQuery(),
+        final int maxNumRetries = queryContext.getNumRetriesOnMissingSegments(
             config.getNumTries()
         );
         if (missingSegments.isEmpty()) {
           return false;
         } else if (retryCount >= maxNumRetries) {
-          if (!QueryContexts.allowReturnPartialResults(queryPlus.getQuery(), config.isReturnPartialResults())) {
+          if (!queryContext.allowReturnPartialResults(config.isReturnPartialResults())) {
             throw new SegmentMissingException("No results found for segments[%s]", missingSegments);
           } else {
             return false;

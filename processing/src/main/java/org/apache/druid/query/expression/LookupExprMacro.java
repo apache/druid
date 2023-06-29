@@ -21,13 +21,11 @@ package org.apache.druid.query.expression;
 
 import com.google.inject.Inject;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.math.expr.Exprs;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
@@ -56,15 +54,14 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() != 2) {
-      throw new IAE("Function[%s] must have 2 arguments", name());
-    }
+    validationHelperCheckArgumentCount(args, 2);
 
     final Expr arg = args.get(0);
     final Expr lookupExpr = args.get(1);
 
-    if (!lookupExpr.isLiteral() || lookupExpr.getLiteralValue() == null) {
-      throw new IAE("Function[%s] second argument must be a registered lookup name", name());
+    validationHelperCheckArgIsLiteral(lookupExpr, "second argument");
+    if (lookupExpr.getLiteralValue() == null) {
+      throw validationFailed("second argument must be a registered lookup name");
     }
 
     final String lookupName = lookupExpr.getLiteralValue().toString();
@@ -111,11 +108,9 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       }
 
       @Override
-      public byte[] getCacheKey()
+      public void decorateCacheKeyBuilder(CacheKeyBuilder builder)
       {
-        return new CacheKeyBuilder(Exprs.LOOKUP_EXPR_CACHE_KEY).appendString(stringify())
-                                                               .appendCacheable(extractionFn)
-                                                               .build();
+        builder.appendCacheable(extractionFn);
       }
     }
 

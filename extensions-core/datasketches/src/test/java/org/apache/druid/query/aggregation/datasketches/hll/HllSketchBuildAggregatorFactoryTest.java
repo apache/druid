@@ -49,13 +49,15 @@ public class HllSketchBuildAggregatorFactoryTest
         18,
         TgtHllType.HLL_8.name(),
         StringEncoding.UTF8,
+        false,
         true
     );
 
     final String serializedString = jsonMapper.writeValueAsString(factory);
 
     Assert.assertEquals(
-        "{\"type\":\"HLLSketchBuild\",\"name\":\"foo\",\"fieldName\":\"bar\",\"lgK\":18,\"tgtHllType\":\"HLL_8\",\"stringEncoding\":\"utf8\",\"round\":true}",
+        "{\"type\":\"HLLSketchBuild\",\"name\":\"foo\",\"fieldName\":\"bar\",\"lgK\":18,\"tgtHllType\":\"HLL_8\","
+        + "\"stringEncoding\":\"utf8\",\"shouldFinalize\":false,\"round\":true}",
         serializedString
     );
 
@@ -76,6 +78,7 @@ public class HllSketchBuildAggregatorFactoryTest
         null,
         null,
         null,
+        null,
         false
     );
 
@@ -86,8 +89,7 @@ public class HllSketchBuildAggregatorFactoryTest
         + "\"name\":\"foo\","
         + "\"fieldName\":\"bar\","
         + "\"lgK\":12,"
-        + "\"tgtHllType\":\"HLL_4\","
-        + "\"round\":false"
+        + "\"tgtHllType\":\"HLL_4\""
         + "}",
         serializedString
     );

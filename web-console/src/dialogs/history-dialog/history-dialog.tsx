@@ -22,7 +22,7 @@ import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
-import { ShowValue } from '../../components/show-value/show-value';
+import { ShowValue } from '../../components';
 import { DiffDialog } from '../diff-dialog/diff-dialog';
 
 import './history-dialog.scss';

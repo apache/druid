@@ -24,13 +24,13 @@ sidebar_label: "Amazon Kinesis"
   -->
 
 When you enable the Kinesis indexing service, you can configure *supervisors* on the Overlord to manage the creation and lifetime of Kinesis indexing tasks. These indexing tasks read events using Kinesis' own shard and sequence number mechanism to guarantee exactly-once ingestion. The supervisor oversees the state of the indexing tasks to:
-  - coordinate handoffs
-  - manage failures
-  - ensure that scalability and replication requirements are maintained.
 
+- coordinate handoffs
+- manage failures
+- ensure that scalability and replication requirements are maintained.
 
 To use the Kinesis indexing service, load the `druid-kinesis-indexing-service` core Apache Druid extension (see
-[Including Extensions](../../development/extensions.md#loading-extensions)).
+[Including Extensions](../../configuration/extensions.md#loading-extensions)).
 
 > Before you deploy the Kinesis extension to production, read the [Kinesis known issues](#kinesis-known-issues).
 
@@ -38,12 +38,11 @@ To use the Kinesis indexing service, load the `druid-kinesis-indexing-service` c
 
 To use the Kinesis indexing service, load the `druid-kinesis-indexing-service` extension on both the Overlord and the MiddleManagers. Druid starts a supervisor for a dataSource when you submit a supervisor spec. Submit your supervisor spec to the following endpoint:
 
-
 `http://<OVERLORD_IP>:<OVERLORD_PORT>/druid/indexer/v1/supervisor`
 
 For example:
 
-```
+```sh
 curl -X POST -H 'Content-Type: application/json' -d @supervisor-spec.json http://localhost:8090/druid/indexer/v1/supervisor
 ```
 
@@ -101,9 +100,7 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
       "endpoint": "kinesis.us-east-1.amazonaws.com",
       "taskCount": 1,
       "replicas": 1,
-      "taskDuration": "PT1H",
-     "recordsPerFetch": 4000,
-      "fetchDelayMillis": 0
+      "taskDuration": "PT1H"
    },
    "tuningConfig": {
      "type": "kinesis",
@@ -113,7 +110,6 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 }
 ```
 
-
 ## Supervisor Spec
 
 |Field|Description|Required|
@@ -121,10 +117,10 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 |`type`|The supervisor type; this should always be `kinesis`.|yes|
 |`spec`|Container object for the supervisor configuration.|yes|
 |`dataSchema`|The schema that will be used by the Kinesis indexing task during ingestion. See [`dataSchema`](../../ingestion/ingestion-spec.md#dataschema).|yes|
-|`ioConfig`|A `KinesisSupervisorIOConfig` object for configuring Kafka connection and I/O-related settings for the supervisor and indexing task. See [KinesisSupervisorIOConfig](#kinesissupervisorioconfig) below.|yes|
-|`tuningConfig`|A `KinesisSupervisorTuningConfig` object for configuring performance-related settings for the supervisor and indexing tasks. See [KinesisSupervisorTuningConfig](#kinesissupervisortuningconfig) below.|no|
+|`ioConfig`|An [`ioConfig`](#ioconfig) object for configuring Kafka connection and I/O-related settings for the supervisor and indexing task.|yes|
+|`tuningConfig`|A [`tuningConfig`](#tuningconfig) object for configuring performance-related settings for the supervisor and indexing tasks.|no|
 
-### KinesisSupervisorIOConfig
+### `ioConfig`
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
@@ -138,9 +134,9 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 |`period`|ISO8601 Period|How often the supervisor will execute its management logic. Note that the supervisor will also run in response to certain events (such as tasks succeeding, failing, and reaching their taskDuration) so this value specifies the maximum time between iterations.|no (default == PT30S)|
 |`useEarliestSequenceNumber`|Boolean|If a supervisor is managing a dataSource for the first time, it will obtain a set of starting sequence numbers from Kinesis. This flag determines whether it retrieves the earliest or latest sequence numbers in Kinesis. Under normal circumstances, subsequent tasks will start from where the previous segments ended so this flag will only be used on first run.|no (default == false)|
 |`completionTimeout`|ISO8601 Period|The length of time to wait before declaring a publishing task as failed and terminating it. If this is set too low, your tasks may never publish. The publishing clock for a task begins roughly after `taskDuration` elapses.|no (default == PT6H)|
-|`lateMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps earlier than this period before the task was created; for example if this is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline).|no (default == none)|
+|`lateMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps earlier than this period before the task was created; for example if this is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a streaming and a nightly batch ingestion pipeline).|no (default == none)|
 |`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*. Messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting `earlyMessageRejectionPeriod` too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
-|`recordsPerFetch`|Integer|The number of records to request per call to fetch records from Kinesis. See [Determining fetch settings](#determining-fetch-settings).|no (default == 4000)|
+|`recordsPerFetch`|Integer|The number of records to request per call to fetch records from Kinesis. See [Determining fetch settings](#determining-fetch-settings).|no (see [Determining fetch settings](#determining-fetch-settings) for defaults)|
 |`fetchDelayMillis`|Integer|Time in milliseconds to wait between subsequent calls to fetch records from Kinesis. See [Determining fetch settings](#determining-fetch-settings).|no (default == 0)|
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|no|
 |`awsExternalId`|String|The AWS external id to use for additional permissions.|no|
@@ -148,8 +144,6 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 |`autoScalerConfig`|Object|Defines auto scaling behavior for Kinesis ingest tasks. See [Tasks Autoscaler Properties](#task-autoscaler-properties).|no (default == null)|
 
 #### Task Autoscaler Properties
-
-> Note that Task AutoScaler is currently designated as experimental.
 
 | Property | Description | Required |
 | ------------- | ------------- | ------------- |
@@ -177,6 +171,7 @@ The Kinesis indexing service reports lag metrics measured in time milliseconds r
 | `scaleOutStep` | Number of tasks to add at a time when scaling out | no (default == 2) |
 
 The following example demonstrates a supervisor spec with `lagBased` autoScaler enabled:
+
 ```json
 {
   "type": "kinesis",
@@ -245,9 +240,7 @@ The following example demonstrates a supervisor spec with `lagBased` autoScaler 
     "endpoint": "kinesis.us-east-1.amazonaws.com",
     "taskCount": 1,
     "replicas": 1,
-    "taskDuration": "PT1H",
-    "recordsPerFetch": 4000,
-    "fetchDelayMillis": 0
+    "taskDuration": "PT1H"
   },
   "tuningConfig": {
     "type": "kinesis",
@@ -261,7 +254,8 @@ The following example demonstrates a supervisor spec with `lagBased` autoScaler 
 Kinesis indexing service supports both [`inputFormat`](../../ingestion/data-formats.md#input-format) and [`parser`](../../ingestion/data-formats.md#parser) to specify the data format.
 Use the `inputFormat` to specify the data format for Kinesis indexing service unless you need a format only supported by the legacy `parser`.
 
-Supported `inputFormat`s include:
+Supported values for `inputFormat` include:
+
 - `csv`
 - `delimited`
 - `json`
@@ -273,7 +267,7 @@ For more information, see [Data formats](../../ingestion/data-formats.md). You c
 
 <a name="tuningconfig"></a>
 
-### KinesisSupervisorTuningConfig
+### `tuningConfig`
 
 The `tuningConfig` is optional. If no `tuningConfig` is specified, default parameters are used.
 
@@ -290,26 +284,26 @@ The `tuningConfig` is optional. If no `tuningConfig` is specified, default param
 |`indexSpecForIntermediatePersists`|Object|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. This can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. However, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](#indexspec) for possible values.| no (default = same as `indexSpec`)|
 |`reportParseExceptions`|Boolean|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|no (default == false)|
 |`handoffConditionTimeout`|Long| Milliseconds to wait for segment handoff. It must be >= 0, where 0 means to wait forever.| no (default == 0)|
-|`resetOffsetAutomatically`|Boolean|Controls behavior when Druid needs to read Kinesis messages that are no longer available.<br/><br/>If false, the exception will bubble up, which will cause your tasks to fail and ingestion to halt. If this occurs, manual intervention is required to correct the situation; potentially using the [Reset Supervisor API](../../operations/api-reference.md#supervisors). This mode is useful for production, since it will make you aware of issues with ingestion.<br/><br/>If true, Druid will automatically reset to the earlier or latest sequence number available in Kinesis, based on the value of the `useEarliestSequenceNumber` property (earliest if true, latest if false). Please note that this can lead to data being _DROPPED_ (if `useEarliestSequenceNumber` is false) or _DUPLICATED_ (if `useEarliestSequenceNumber` is true) without your knowledge. Messages will be logged indicating that a reset has occurred, but ingestion will continue. This mode is useful for non-production situations, since it will make Druid attempt to recover from problems automatically, even if they lead to quiet dropping or duplicating of data.|no (default == false)|
+|`resetOffsetAutomatically`|Boolean|Controls behavior when Druid needs to read Kinesis messages that are no longer available.<br/><br/>If false, the exception bubbles up, causing tasks to fail and ingestion to halt. If this occurs, manual intervention is required to correct the situation, potentially using the [Reset Supervisor API](../../api-reference/supervisor-api.md). This mode is useful for production, since it highlights issues with ingestion.<br/><br/>If true, Druid automatically resets to the earliest or latest sequence number available in Kinesis, based on the value of the `useEarliestSequenceNumber` property (earliest if true, latest if false). Note that this can lead to data being *DROPPED* (if `useEarliestSequenceNumber` is false) or *DUPLICATED* (if `useEarliestSequenceNumber` is true) without your knowledge. Druid will log messages indicating that a reset has occurred without interrupting ingestion. This mode is useful for non-production situations since it enables Druid to recover from problems automatically, even if they lead to quiet dropping or duplicating of data.|no (default == false)|
 |`skipSequenceNumberAvailabilityCheck`|Boolean|Whether to enable checking if the current sequence number is still available in a particular Kinesis shard. If set to false, the indexing task will attempt to reset the current sequence number (or not), depending on the value of `resetOffsetAutomatically`.|no (default == false)|
 |`workerThreads`|Integer|The number of threads that the supervisor uses to handle requests/responses for worker tasks, along with any other internal asynchronous operation.|no (default == min(10, taskCount))|
-|`chatThreads`|Integer|The number of threads that will be used for communicating with indexing tasks.|no (default == min(10, taskCount * replicas))|
+|`chatAsync`|Boolean| If true, the supervisor uses asynchronous communication with indexing tasks and ignores the `chatThreads` parameter. If false, the supervisor uses synchronous communication in a thread pool of size `chatThreads`.| no (default == true)|
+|`chatThreads`|Integer| The number of threads that will be used for communicating with indexing tasks. Ignored if `chatAsync` is `true` (the default).| no (default == min(10, taskCount * replicas))|
 |`chatRetries`|Integer|The number of times HTTP requests to indexing tasks will be retried before considering tasks unresponsive.| no (default == 8)|
 |`httpTimeout`|ISO8601 Period|How long to wait for a HTTP response from an indexing task.|no (default == PT10S)|
 |`shutdownTimeout`|ISO8601 Period|How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.|no (default == PT80S)|
-|`recordBufferSize`|Integer|Size of the buffer (number of events) used between the Kinesis fetch threads and the main ingestion thread.|no (default == 10000)|
+|`recordBufferSize`|Integer|Size of the buffer (number of events) used between the Kinesis fetch threads and the main ingestion thread.|no (see [Determining fetch settings](#determining-fetch-settings) for defaults)|
 |`recordBufferOfferTimeout`|Integer|Length of time in milliseconds to wait for space to become available in the buffer before timing out.| no (default == 5000)|
 |`recordBufferFullWait`|Integer|Length of time in milliseconds to wait for the buffer to drain before attempting to fetch records from Kinesis again.|no (default == 5000)|
-|`fetchSequenceNumberTimeout`|Integer|Length of time in milliseconds to wait for Kinesis to return the earliest or latest sequence number for a shard. Kinesis will not return the latest sequence number if no data is actively being written to that shard. In this case, this fetch call will repeatedly timeout and retry until fresh data is written to the stream.|no (default == 60000)|
-|`fetchThreads`|Integer|Size of the pool of threads fetching data from Kinesis. There is no benefit in having more threads than Kinesis shards.|no (default == procs * 2, where "procs" is the number of processors on the server that the task is running on)                                                                  |
+|`fetchThreads`|Integer|Size of the pool of threads fetching data from Kinesis. There is no benefit in having more threads than Kinesis shards.|no (default == procs * 2, where `procs` is the number of processors available to the task)|
 |`segmentWriteOutMediumFactory`|Object|Segment write-out medium to use when creating segments. See below for more information.|no (not specified by default, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used)|
 |`intermediateHandoffPeriod`|ISO8601 Period|How often the tasks should hand off segments. Handoff will happen either if `maxRowsPerSegment` or `maxTotalRows` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.| no (default == P2147483647D)|
 |`logParseExceptions`|Boolean|If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.|no, default == false|
 |`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|no, unlimited default|
 |`maxSavedParseExceptions`|Integer|When a parse exception occurs, Druid can keep track of the most recent parse exceptions. "maxSavedParseExceptions" limits how many exception instances will be saved. These saved exceptions will be made available after the task finishes in the [task completion report](../../ingestion/tasks.md#task-reports). Overridden if `reportParseExceptions` is set.|no, default == 0|
-|`maxRecordsPerPoll`|Integer|The maximum number of records/events to be fetched from buffer per poll. The actual maximum will be `Max(maxRecordsPerPoll, Max(bufferSize, 1))`|no, default == 100|
-|`repartitionTransitionDuration`|ISO8601 Period|When shards are split or merged, the supervisor will recompute shard -> task group mappings, and signal any running tasks created under the old mappings to stop early at (current time + `repartitionTransitionDuration`). Stopping the tasks early allows Druid to begin reading from the new shards more quickly. The repartition transition wait time controlled by this property gives the stream additional time to write records to the new shards after the split/merge, which helps avoid the issues with empty shard handling described at https://github.com/apache/druid/issues/7600.|no, (default == PT2M)|
-|`offsetFetchPeriod`|ISO8601 Period|How often the supervisor queries Kinesis and the indexing tasks to fetch current offsets and calculate lag. If the user-specified value is below the minimum value (`PT5S`), the supervisor ignores the value and uses the minimum value instead.|no (default == PT30S, min == PT5S)|
+|`maxRecordsPerPoll`|Integer|The maximum number of records/events to be fetched from buffer per poll. The actual maximum will be `Max(maxRecordsPerPoll, Max(bufferSize, 1))`|no (see [Determining fetch settings](#determining-fetch-settings) for defaults)|
+|`repartitionTransitionDuration`|ISO8601 period|When shards are split or merged, the supervisor recomputes shard to task group mappings. The supervisor also signals any running tasks created under the old mappings to stop early at (current time + `repartitionTransitionDuration`). Stopping the tasks early allows Druid to begin reading from the new shards more quickly. The repartition transition wait time controlled by this property gives the stream additional time to write records to the new shards after the split or merge, which helps avoid issues with [empty shard handling](https://github.com/apache/druid/issues/7600).|no, (default == PT2M)|
+|`offsetFetchPeriod`|ISO8601 period|How often the supervisor queries Kinesis and the indexing tasks to fetch current offsets and calculate lag. If the user-specified value is below the minimum value (`PT5S`), the supervisor ignores the value and uses the minimum value instead.|no (default == PT30S, min == PT5S)|
 |`useListShards`|Boolean|Indicates if `listShards` API of AWS Kinesis SDK can be used to prevent `LimitExceededException` during ingestion. Please note that the necessary `IAM` permissions must be set for this to work.|no (default == false)|
 
 #### IndexSpec
@@ -328,7 +322,6 @@ For Roaring bitmaps:
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |`type`|String|Must be `roaring`.|yes|
-|`compressRunOnSerialization`|Boolean|Use a run-length encoding where it is estimated as more space efficient.|no (default == `true`)|
 
 For Concise bitmaps:
 
@@ -345,12 +338,13 @@ For Concise bitmaps:
 ## Operations
 
 This section describes how some supervisor APIs work in Kinesis Indexing Service.
-For all supervisor APIs, check [Supervisor APIs](../../operations/api-reference.md#supervisors).
+For all supervisor APIs, check [Supervisor API reference](../../api-reference/supervisor-api.md).
 
 ### AWS Authentication
 
 To authenticate with AWS, you must provide your AWS access key and AWS secret key via `runtime.properties`, for example:
-```
+
+```text
 -Ddruid.kinesis.accessKey=123 -Ddruid.kinesis.secretKey=456
 ```
 
@@ -359,18 +353,18 @@ look for credentials set in environment variables, via [Web Identity Token](http
 profile provider (in this order).
 
 To ingest data from Kinesis, ensure that the policy attached to your IAM role contains the necessary permissions.
-The permissions needed depend on the value of `useListShards`.
+The required permissions depend on the value of `useListShards`.
 
 If the `useListShards` flag is set to `true`, you need following permissions:
 
-* `ListStreams`: required to list your data streams
-* `Get*`: required for `GetShardIterator`
-* `GetRecords`: required to get data records from a data stream's shard
-* `ListShards` : required to get the shards for a stream of interest
+- `ListStreams`: required to list your data streams
+- `Get*`: required for `GetShardIterator`
+- `GetRecords`: required to get data records from a data stream's shard
+- `ListShards` : required to get the shards for a stream of interest
 
 **Example policy**
 
-```
+```json
 [
   {
     "Effect": "Allow",
@@ -387,14 +381,14 @@ If the `useListShards` flag is set to `true`, you need following permissions:
 
 If the `useListShards` flag is set to `false`, you need following permissions:
 
-* `ListStreams`: required to list your data streams
-* `Get*`: required for `GetShardIterator`
-* `GetRecords`: required to get data records from a data stream's shard
-* `DescribeStream`: required to describe the specified data stream
+- `ListStreams`: required to list your data streams
+- `Get*`: required for `GetShardIterator`
+- `GetRecords`: required to get data records from a data stream's shard
+- `DescribeStream`: required to describe the specified data stream
 
 **Example policy**
 
-```    
+```json
 [
   {
     "Effect": "Allow",
@@ -423,7 +417,7 @@ Indexing Service, Kinesis reports lag metrics measured in time difference in mil
 The status report also contains the supervisor's state and a list of recently thrown exceptions (reported as
 `recentErrors`, whose max size can be controlled using the `druid.supervisor.maxStoredExceptionEvents` configuration).
 There are two fields related to the supervisor's state - `state` and `detailedState`. The `state` field will always be
-one of a small number of generic states that are applicable to any type of supervisor, while the `detailedState` field
+one of a small number of generic states that apply to any type of supervisor, while the `detailedState` field
 will contain a more descriptive, implementation-specific state that may provide more insight into the supervisor's
 activities than the generic `state` field.
 
@@ -446,6 +440,7 @@ The list of `detailedState` values and their corresponding `state` mapping is as
 |STOPPING|STOPPING|The supervisor is stopping|
 
 On each iteration of the supervisor's run loop, the supervisor completes the following tasks in sequence:
+
   1) Fetch the list of shards from Kinesis and determine the starting sequence number for each shard (either based on the
   last processed sequence number if continuing, or starting from the beginning or ending of the stream if this is a new stream).
   2) Discover any running indexing tasks that are writing to the supervisor's datasource and adopt them if they match
@@ -484,25 +479,25 @@ it will just ensure that no indexing tasks are running until the supervisor is r
 
 ### Resetting Supervisors
 
-The `POST /druid/indexer/v1/supervisor/<supervisorId>/reset` operation clears stored 
-sequence numbers, causing the supervisor to start reading from either the earliest or 
-latest sequence numbers in Kinesis (depending on the value of `useEarliestSequenceNumber`). 
-After clearing stored sequence numbers, the supervisor kills and recreates active tasks, 
-so that tasks begin reading from valid sequence numbers. 
+The `POST /druid/indexer/v1/supervisor/<supervisorId>/reset` operation clears stored
+sequence numbers, causing the supervisor to start reading from either the earliest or
+latest sequence numbers in Kinesis (depending on the value of `useEarliestSequenceNumber`).
+After clearing stored sequence numbers, the supervisor kills and recreates active tasks,
+so that tasks begin reading from valid sequence numbers.
 
-Use care when using this operation! Resetting the supervisor may cause Kinesis messages 
-to be skipped or read twice, resulting in missing or duplicate data. 
+Use care when using this operation! Resetting the supervisor may cause Kinesis messages
+to be skipped or read twice, resulting in missing or duplicate data.
 
-The reason for using this operation is to recover from a state in which the supervisor 
-ceases operating due to missing sequence numbers. The indexing service keeps track of the latest 
-persisted sequence number in order to provide exactly-once ingestion guarantees across 
-tasks. 
+The reason for using this operation is to recover from a state in which the supervisor
+ceases operating due to missing sequence numbers. The indexing service keeps track of the latest
+persisted sequence number to provide exactly-once ingestion guarantees across
+tasks.
 
-Subsequent tasks must start reading from where the previous task completed in 
-order for the generated segments to be accepted. If the messages at the expected starting sequence numbers are 
-no longer available in Kinesis (typically because the message retention period has elapsed or the topic was 
-removed and re-created) the supervisor will refuse to start and in-flight tasks will fail. This operation 
-enables you to recover from this condition. 
+Subsequent tasks must start reading from where the previous task completed
+for the generated segments to be accepted. If the messages at the expected starting sequence numbers are
+no longer available in Kinesis (typically because the message retention period has elapsed or the topic was
+removed and re-created) the supervisor will refuse to start and in-flight tasks will fail. This operation
+enables you to recover from this condition.
 
 Note that the supervisor must be running for this endpoint to be available.
 
@@ -521,7 +516,7 @@ Kinesis indexing tasks run on MiddleManagers and are thus limited by the resourc
 cluster. In particular, you should make sure that you have sufficient worker capacity (configured using the
 `druid.worker.capacity` property) to handle the configuration in the supervisor spec. Note that worker capacity is
 shared across all types of indexing tasks, so you should plan your worker capacity to handle your total indexing load
-(e.g. batch processing, realtime tasks, merging tasks, etc.). If your workers run out of capacity, Kinesis indexing tasks
+(e.g. batch processing, streaming tasks, merging tasks, etc.). If your workers run out of capacity, Kinesis indexing tasks
 will queue and wait for the next available worker. This may cause queries to return partial results but will not result
 in data loss (assuming the tasks run before Kinesis purges those sequence numbers).
 
@@ -533,10 +528,10 @@ as it takes to generate segments, push segments to deep storage, and have them b
 The number of reading tasks is controlled by `replicas` and `taskCount`. In general, there will be `replicas * taskCount`
 reading tasks, the exception being if taskCount > {numKinesisShards} in which case {numKinesisShards} tasks will
 be used instead. When `taskDuration` elapses, these tasks will transition to publishing state and `replicas * taskCount`
-new reading tasks will be created. Therefore to allow for reading tasks and publishing tasks to run concurrently, there
+new reading tasks will be created. Therefore, to allow for reading tasks and publishing tasks to run concurrently, there
 should be a minimum capacity of:
 
-```
+```text
 workerCapacity = 2 * replicas * taskCount
 ```
 
@@ -562,8 +557,8 @@ fail-overs.
 A supervisor is stopped via the `POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` endpoint. This places a
 tombstone marker in the database (to prevent the supervisor from being reloaded on a restart) and then gracefully
 shuts down the currently running supervisor. When a supervisor is shut down in this way, it will instruct its
-managed tasks to stop reading and begin publishing their segments immediately. The call to the shutdown endpoint will
-return after all tasks have been signalled to stop but before the tasks finish publishing their segments.
+managed tasks to stop reading. The tasks will begin publishing their segments immediately. The call to the shutdown
+endpoint will return after all tasks have been signalled to stop but before the tasks finish publishing their segments.
 
 ### Schema/Configuration Changes
 
@@ -579,32 +574,44 @@ In this way, configuration changes can be applied without requiring any pause in
 #### On the Subject of Segments
 
 Each Kinesis Indexing Task puts events consumed from Kinesis Shards assigned to it in a single segment for each segment
-granular interval until maxRowsPerSegment, maxTotalRows or intermediateHandoffPeriod limit is reached, at this point a new shard
+granular interval until maxRowsPerSegment, maxTotalRows or intermediateHandoffPeriod limit is reached. At this point, a new shard
 for this segment granularity is created for further events. Kinesis Indexing Task also does incremental hand-offs which
 means that all the segments created by a task will not be held up till the task duration is over. As soon as maxRowsPerSegment,
 maxTotalRows or intermediateHandoffPeriod limit is hit, all the segments held by the task at that point in time will be handed-off
 and new set of segments will be created for further events. This means that the task can run for longer durations of time
-without accumulating old segments locally on Middle Manager processes and it is encouraged to do so.
+without accumulating old segments locally on Middle Manager processes, and it is encouraged to do so.
 
-Kinesis Indexing Service may still produce some small segments. Lets say the task duration is 4 hours, segment granularity
-is set to an HOUR and Supervisor was started at 9:10 then after 4 hours at 13:10, new set of tasks will be started and
-events for the interval 13:00 - 14:00 may be split across previous and new set of tasks. If you see it becoming a problem then
+Kinesis Indexing Service may still produce some small segments. Let's say the task duration is 4 hours, segment granularity
+is set to an HOUR and Supervisor was started at 9:10. Then after 4 hours at 13:10, the new set of tasks will be started and
+events for the interval 13:00 - 14:00 may be split across the previous and the new set of tasks. If you see it becoming a problem then
 one can schedule re-indexing tasks be run to merge segments together into new segments of an ideal size (in the range of ~500-700 MB per segment).
 Details on how to optimize the segment size can be found on [Segment size optimization](../../operations/segment-optimization.md).
 There is also ongoing work to support automatic segment compaction of sharded segments as well as compaction not requiring
 Hadoop (see [here](https://github.com/apache/druid/pull/5102)).
 
 ### Determining Fetch Settings
-Internally, the Kinesis Indexing Service uses the Kinesis Record Supplier abstraction for fetching Kinesis data records and storing the records
-locally. The way the Kinesis Record Supplier fetches records is to have a separate thread run the fetching operation per each Kinesis Shard, the
-max number of threads is determined by `fetchThreads`. For example, a Kinesis stream with 3 shards will have 3 threads, each fetching from a shard separately.
-There is a delay between each fetching operation, which is controlled by `fetchDelayMillis`. The maximum number of records to be fetched per thread per
-operation is controlled by `recordsPerFetch`. Note that this is not the same as `maxRecordsPerPoll`.
 
-The records fetched by each thread will be pushed to a queue in the order that they are fetched. The records are stored in this queue until `poll()` is called
-by either the supervisor or the indexing task. `poll()` will attempt to drain the internal buffer queue up to a limit of `max(maxRecordsPerPoll, q.size())`.
-Here `maxRecordsPerPoll` controls the theoretical maximum records to drain out of the buffer queue, so setting this parameter to a reasonable value is essential
-in preventing the queue from overflowing or memory exceeding heap size.
+Kinesis indexing tasks fetch records using `fetchThreads` threads.
+If `fetchThreads` is higher than the number of Kinesis shards, the excess threads are unused.
+Each fetch thread fetches up to `recordsPerFetch` records at once from a Kinesis shard, with a delay between fetches
+of `fetchDelayMillis`.
+The records fetched by each thread are pushed into a shared queue of size `recordBufferSize`.
+The main runner thread for each task polls up to `maxRecordsPerPoll` records from the queue at once.
+
+When using Kinesis Producer Library's aggregation feature (i.e. when [`deaggregate`](#deaggregation) is set),
+each of these parameters refers to aggregated records rather than individual records.
+
+The default values for these parameters are:
+
+- `fetchThreads`: Twice the number of processors available to the task. The number of processors available to the task
+is the total number of processors on the server, divided by `druid.worker.capacity` (the number of task slots on that
+particular server).
+- `fetchDelayMillis`: 0 (no delay between fetches).
+- `recordsPerFetch`: 100 MB or an estimated 5% of available heap, whichever is smaller, divided by `fetchThreads`.
+For estimation purposes, Druid uses a figure of 10 KB for regular records and 1 MB for [aggregated records](#deaggregation).
+- `recordBufferSize`: 100 MB or an estimated 10% of available heap, whichever is smaller.
+For estimation purposes, Druid uses a figure of 10 KB for regular records and 1 MB for [aggregated records](#deaggregation).
+- `maxRecordsPerPoll`: 100 for regular records, 1 for [aggregated records](#deaggregation).
 
 Kinesis places the following restrictions on calls to fetch records:
 
@@ -613,34 +620,31 @@ Kinesis places the following restrictions on calls to fetch records:
 - Each shard can read up to 2 MB per second.
 - The maximum size of data that GetRecords can return is 10 MB.
 
-Values for `recordsPerFetch` and `fetchDelayMillis` should be chosen to maximize throughput under the above constraints.
-The values that you choose will depend on the average size of a record and the number of consumers you have reading from
-a given shard (which will be `replicas` unless you have other consumers also reading from this Kinesis stream).
+If the above limits are exceeded, Kinesis throws ProvisionedThroughputExceededException errors. If this happens, Druid
+Kinesis tasks pause by `fetchDelayMillis` or 3 seconds, whichever is larger, and then attempt the call again.
 
-If the above limits are violated, AWS will throw ProvisionedThroughputExceededException errors on subsequent calls to
-read data. When this happens, the Kinesis indexing service will pause by `fetchDelayMillis` and then attempt the call
-again.
-
-Internally, each indexing task maintains a buffer that stores the fetched but not yet processed record. `recordsPerFetch` and `fetchDelayMillis`
-control this behavior. The number of records that the indexing task fetch from the buffer is controlled by `maxRecordsPerPoll`, which
-determines the number of records to be processed per each ingestion loop in the task.
+In most cases, the default settings for fetch parameters are sufficient to achieve good performance without excessive
+memory usage. However, in some cases, you may need to adjust these parameters to control fetch rate
+and memory usage more finely. Optimal values depend on the average size of a record and the number of consumers you
+have reading from a given shard, which will be `replicas` unless you have other consumers also reading from this
+Kinesis stream.
 
 ## Deaggregation
-See [issue](https://github.com/apache/druid/issues/6714)
 
 The Kinesis indexing service supports de-aggregation of multiple rows packed into a single record by the Kinesis
 Producer Library's aggregate method for more efficient data transfer.
 
-To enable this feature, set `deaggregate` to true when submitting a supervisor-spec.
+To enable this feature, set `deaggregate` to true in your `ioConfig` when submitting a supervisor spec.
 
 ## Resharding
 
 When changing the shard count for a Kinesis stream, there will be a window of time around the resharding operation with early shutdown of Kinesis ingestion tasks and possible task failures.
 
-The early shutdowns and task failures are expected, and they occur because the supervisor will update the shard -> task group mappings as shards are closed and fully read, to ensure that tasks are not running 
-with an assignment of closed shards that have been fully read and to ensure a balanced distribution of active shards across tasks. 
+The early shutdowns and task failures are expected. They occur because the supervisor updates the shard to task group mappings as shards are closed and fully read. This ensures that tasks are not running
+with an assignment of closed shards that have been fully read and balances distribution of active shards across tasks.
 
 This window with early task shutdowns and possible task failures will conclude when:
+
 - All closed shards have been fully read and the Kinesis ingestion tasks have published the data from those shards, committing the "closed" state to metadata storage
 - Any remaining tasks that had inactive shards in the assignment have been shutdown (these tasks would have been created before the closed shards were completely drained)
 
@@ -650,7 +654,5 @@ Before you deploy the Kinesis extension to production, consider the following kn
 
 - Avoid implementing more than one Kinesis supervisor that read from the same Kinesis stream for ingestion. Kinesis has a per-shard read throughput limit and having multiple supervisors on the same stream can reduce available read throughput for an individual Supervisor's tasks. Additionally, multiple Supervisors ingesting to the same Druid Datasource can cause increased contention for locks on the Datasource.
 - The only way to change the stream reset policy is to submit a new ingestion spec and set up a new supervisor.
-- Timeouts for retrieving earliest sequence number will cause a reset of the supervisor. The job will resume own its own eventually, but it can trigger alerts.
-- The Kinesis supervisor will not make progress if you have empty shards. Make sure you have at least 1 record in the shard.
 - If ingestion tasks get stuck, the supervisor does not automatically recover. You should monitor ingestion tasks and investigate if your ingestion falls behind.
 - A Kinesis supervisor can sometimes compare the checkpoint offset to retention window of the stream to see if it has fallen behind. These checks fetch the earliest sequence number for Kinesis which can result in `IteratorAgeMilliseconds` becoming very high in AWS CloudWatch.

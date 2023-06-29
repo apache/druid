@@ -25,27 +25,40 @@ import javax.annotation.Nullable;
 
 /**
  * An optimized column value {@link BitmapColumnIndex} provider for columns which are stored in 'lexicographical' order,
- * allowing short-circuit processing of string value ranges.
+ * allowing short-circuit processing of string value ranges. This index does not match null values, union the results
+ * of this index with {@link NullValueIndex} if null values should be considered part of the value range.
  */
 public interface LexicographicalRangeIndex
 {
   /**
-   * Get an {@link BitmapColumnIndex} corresponding to the values supplied in the specified range
+   * Get a {@link BitmapColumnIndex} corresponding to the values supplied in the specified range. If supplied starting
+   * value is null, the range will begin at the first non-null value in the underlying value dictionary. If the end
+   * value is null, the range will extend to the last value in the underlying value dictionary.
+   * <p>
+   * If this method returns null it indicates that there is no index available that matches the requested range and a
+   * {@link org.apache.druid.query.filter.ValueMatcher} must be used instead.
    */
-  default BitmapColumnIndex forRange(
+  @Nullable
+  BitmapColumnIndex forRange(
       @Nullable String startValue,
       boolean startStrict,
       @Nullable String endValue,
       boolean endStrict
-  )
-  {
-    return forRange(startValue, startStrict, endValue, endStrict, (index) -> true);
-  }
+  );
 
   /**
-   * Get an {@link BitmapColumnIndex} corresponding to the values supplied in the specified range whose dictionary ids
-   * also match some predicate, such as to match a prefix
+   * Get a {@link BitmapColumnIndex} corresponding to the values supplied in the specified range whose dictionary ids
+   * also match some predicate, such as to match a prefix. If supplied starting value is null, the range will begin at
+   * the first non-null value in the underlying value dictionary that matches the predicate. If the end value is null,
+   * the range will extend to the last value in the underlying value dictionary that matches the predicate.
+   * <p>
+   * If the provided {@code} matcher is always true, it's better to use the other
+   * {@link #forRange(String, boolean, String, boolean)} method.
+   * <p>
+   * If this method returns null it indicates that there is no index available that matches the requested range and a
+   * {@link org.apache.druid.query.filter.ValueMatcher} must be used instead.
    */
+  @Nullable
   BitmapColumnIndex forRange(
       @Nullable String startValue,
       boolean startStrict,

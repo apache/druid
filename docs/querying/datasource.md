@@ -54,7 +54,7 @@ The table datasource is the most common type. This is the kind of datasource you
 [data ingestion](../ingestion/index.md). They are split up into segments, distributed around the cluster,
 and queried in parallel.
 
-In [Druid SQL](sql-syntax.md#from), table datasources reside in the `druid` schema. This is the default schema, so table
+In [Druid SQL](sql.md#from), table datasources reside in the `druid` schema. This is the default schema, so table
 datasources can be referenced as either `druid.dataSourceName` or simply `dataSourceName`.
 
 In native queries, table datasources can be referenced using their names as strings (as in the example above), or by
@@ -91,7 +91,7 @@ SELECT k, v FROM lookup.countries
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
-Lookup datasources correspond to Druid's key-value [lookup](lookups.md) objects. In [Druid SQL](sql-syntax.md#from),
+Lookup datasources correspond to Druid's key-value [lookup](lookups.md) objects. In [Druid SQL](sql.md#from),
 they reside in the `lookup` schema. They are preloaded in memory on all servers, so they can be accessed rapidly.
 They can be joined onto regular tables using the [join operator](#join).
 
@@ -139,10 +139,10 @@ FROM (
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 Unions allow you to treat two or more tables as a single datasource. In SQL, this is done with the UNION ALL operator
-applied directly to tables, called a ["table-level union"](sql-syntax.md#table-level). In native queries, this is done with a
+applied directly to tables, called a ["table-level union"](sql.md#table-level). In native queries, this is done with a
 "union" datasource.
 
-With SQL [table-level unions](sql-syntax.md#table-level) the same columns must be selected from each table in the same order,
+With SQL [table-level unions](sql.md#table-level) the same columns must be selected from each table in the same order,
 and those columns must either have the same types, or types that can be implicitly cast to each other (such as different
 numeric types). For this reason, it is more robust to write your queries to select specific columns.
 
@@ -233,7 +233,7 @@ FROM
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 Query datasources allow you to issue subqueries. In native queries, they can appear anywhere that accepts a
-`dataSource`. In SQL, they can appear in the following places, always surrounded by parentheses:
+`dataSource` (except underneath a `union`). In SQL, they can appear in the following places, always surrounded by parentheses:
 
 - The FROM clause: `FROM (<subquery>)`.
 - As inputs to a JOIN: `<table-or-subquery-1> t1 INNER JOIN <table-or-subquery-2> t2 ON t1.<col1> = t2.<col2>`.
@@ -289,10 +289,10 @@ GROUP BY
 Join datasources allow you to do a SQL-style join of two datasources. Stacking joins on top of each other allows
 you to join arbitrarily many datasources.
 
-In Druid {{DRUIDVERSION}}, joins are implemented with a broadcast hash-join algorithm. This means that all datasources
-other than the leftmost "base" datasource must fit in memory. It also means that the join condition must be an equality. This
-feature is intended mainly to allow joining regular Druid tables with [lookup](#lookup), [inline](#inline), and
-[query](#query) datasources.
+In Druid {{DRUIDVERSION}}, joins in native queries are implemented with a broadcast hash-join algorithm. This means
+that all datasources other than the leftmost "base" datasource must fit in memory. It also means that the join condition
+must be an equality. This feature is intended mainly to allow joining regular Druid tables with [lookup](#lookup),
+[inline](#inline), and [query](#query) datasources.
 
 Refer to the [Query execution](query-execution.md#join) page for more details on how queries are executed when you
 use join datasources.
@@ -333,7 +333,7 @@ Native join datasources have the following properties. All are required.
 |`left`|Left-hand datasource. Must be of type `table`, `join`, `lookup`, `query`, or `inline`. Placing another join as the left datasource allows you to join arbitrarily many datasources.|
 |`right`|Right-hand datasource. Must be of type `lookup`, `query`, or `inline`. Note that this is more rigid than what Druid SQL requires.|
 |`rightPrefix`|String prefix that will be applied to all columns from the right-hand datasource, to prevent them from colliding with columns from the left-hand datasource. Can be any string, so long as it is nonempty and is not be a prefix of the string `__time`. Any columns from the left-hand side that start with your `rightPrefix` will be shadowed. It is up to you to provide a prefix that will not shadow any important columns from the left side.|
-|`condition`|[Expression](../misc/math-expr.md) that must be an equality where one side is an expression of the left-hand side, and the other side is a simple column reference to the right-hand side. Note that this is more rigid than what Druid SQL requires: here, the right-hand reference must be a simple column reference; in SQL it can be an expression.|
+|`condition`|[Expression](math-expr.md) that must be an equality where one side is an expression of the left-hand side, and the other side is a simple column reference to the right-hand side. Note that this is more rigid than what Druid SQL requires: here, the right-hand reference must be a simple column reference; in SQL it can be an expression.|
 |`joinType`|`INNER` or `LEFT`.|
 
 #### Join performance
@@ -362,11 +362,65 @@ Also, as a result of this, comma joins should be avoided.
 Joins are an area of active development in Druid. The following features are missing today but may appear in
 future versions:
 
-- Reordering of predicates and filters (pushing up and/or pushing down) to get the most performant plan.
+- Reordering of join operations to get the most performant plan.
 - Preloaded dimension tables that are wider than lookups (i.e. supporting more than a single key and single value).
-- RIGHT OUTER and FULL OUTER joins. Currently, they are partially implemented. Queries will run but results will not
-always be correct.
+- RIGHT OUTER and FULL OUTER joins in the native query engine. Currently, they are partially implemented. Queries run
+  but results are not always correct.
 - Performance-related optimizations as mentioned in the [previous section](#join-performance).
-- Join algorithms other than broadcast hash-joins.
-- Join condition on a column compared to a constant value.
 - Join conditions on a column containing a multi-value dimension.
+
+### `unnest`
+
+> The unnest datasource is [experimental](../development/experimental.md). Its API and behavior are subject
+> to change in future releases. It is not recommended to use this feature in production at this time.
+
+Use the `unnest` datasource to unnest a column with multiple values in an array.
+For example, you have a source column that looks like this:
+
+| Nested | 
+| -- | 
+| [a, b] |
+| [c, d] |
+| [e, [f,g]] |
+
+When you use the `unnest` datasource, the unnested column looks like this:
+
+| Unnested | 
+| -- |
+| a |
+| b |
+| c |
+| d |
+| e |
+| [f, g] |
+
+When unnesting data, keep the following in mind:
+
+- The total number of rows will grow to accommodate the new rows that the unnested data occupy.
+- You can unnest the values in more than one column in a single `unnest` datasource, but this can lead to a very large number of new rows depending on your dataset.
+
+The `unnest` datasource uses the following syntax:
+
+```json
+  "dataSource": {
+    "type": "unnest",
+    "base": {
+      "type": "table",
+      "name": "nested_data"
+    },
+    "virtualColumn": {
+      "type": "expression",
+      "name": "output_column",
+      "expression": "\"column_reference\""
+    },
+    "unnestFilter": "optional_filter"
+  }
+```
+
+* `dataSource.type`: Set this to `unnest`.
+* `dataSource.base`: Defines the datasource you want to unnest.
+  * `dataSource.base.type`: The type of datasource you want to unnest, such as a table.
+* `dataSource.virtualColumn`: [Virtual column](virtual-columns.md) that references the nested values. The output name of this column is reused as the name of the column that contains unnested values. You can replace the source column with the unnested column by specifying the source column's name or a new column by specifying a different name. Outputting it to a new column can help you verify that you get the results that you expect but isn't required.
+* `unnestFilter`: A filter only on the output column. You can omit this or set it to null if there are no filters.
+
+To learn more about how to use the `unnest` datasource, see the [unnest tutorial](../tutorials/tutorial-unnest-arrays.md).

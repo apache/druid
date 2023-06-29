@@ -19,9 +19,13 @@
 
 package org.apache.druid.query.metadata;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.CharSource;
 import com.google.common.io.Resources;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.QueryPlus;
@@ -42,12 +46,19 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.IncrementalIndexSegment;
+import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -57,6 +68,7 @@ import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -68,6 +80,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -108,9 +121,20 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
         columns.size()
     ); // All columns including time and empty/null column
 
-    for (DimensionSchema schema : TestIndex.DIMENSION_SCHEMAS) {
+    // Verify key order is the same as the underlying segment.
+    // This helps DruidSchema keep things in the proper order when it does SegmentMetadata queries.
+    final List<Map.Entry<String, ColumnAnalysis>> entriesInOrder = new ArrayList<>(columns.entrySet());
+
+    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, entriesInOrder.get(0).getKey());
+    Assert.assertEquals(ColumnType.LONG, entriesInOrder.get(0).getValue().getTypeSignature());
+
+    // Start from 1: skipping __time
+    for (int i = 0; i < TestIndex.DIMENSION_SCHEMAS.size(); i++) {
+      final DimensionSchema schema = TestIndex.DIMENSION_SCHEMAS.get(i);
+      final Map.Entry<String, ColumnAnalysis> analysisEntry = entriesInOrder.get(i + 1 /* skip __time */);
       final String dimension = schema.getName();
-      final ColumnAnalysis columnAnalysis = columns.get(dimension);
+      Assert.assertEquals(dimension, analysisEntry.getKey());
+      final ColumnAnalysis columnAnalysis = analysisEntry.getValue();
       final boolean isString = schema.getColumnType().is(ValueType.STRING);
 
       Assert.assertEquals(dimension, schema.getColumnType().toString(), columnAnalysis.getType());
@@ -161,14 +185,20 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     Assert.assertEquals(SegmentId.dummy("test_1").toString(), analysis.getId());
 
     final Map<String, ColumnAnalysis> columns = analysis.getColumns();
-    Assert.assertEquals(
-        TestIndex.COLUMNS.length + 3,
-        columns.size()
-    ); // All columns including time
+    // Verify key order is the same as the underlying segment.
+    // This helps DruidSchema keep things in the proper order when it does SegmentMetadata queries.
+    final List<Map.Entry<String, ColumnAnalysis>> entriesInOrder = new ArrayList<>(columns.entrySet());
 
-    for (DimensionSchema schema : TestIndex.DIMENSION_SCHEMAS) {
+    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, entriesInOrder.get(0).getKey());
+    Assert.assertEquals(ColumnType.LONG, entriesInOrder.get(0).getValue().getTypeSignature());
+
+    // Start from 1: skipping __time
+    for (int i = 0; i < TestIndex.DIMENSION_SCHEMAS.size(); i++) {
+      final DimensionSchema schema = TestIndex.DIMENSION_SCHEMAS.get(i);
+      final Map.Entry<String, ColumnAnalysis> analysisEntry = entriesInOrder.get(i + 1 /* skip __time */);
       final String dimension = schema.getName();
-      final ColumnAnalysis columnAnalysis = columns.get(dimension);
+      Assert.assertEquals(dimension, analysisEntry.getKey());
+      final ColumnAnalysis columnAnalysis = analysisEntry.getValue();
       final boolean isString = schema.getColumnType().is(ValueType.STRING);
       Assert.assertEquals(dimension, schema.getColumnType().toString(), columnAnalysis.getType());
       Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
@@ -204,6 +234,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
    * *Awesome* method name auto-generated by IntelliJ!  I love IntelliJ!
    *
    * @param index
+   *
    * @return
    */
   private List<SegmentAnalysis> getSegmentAnalysises(Segment index, EnumSet<SegmentMetadataQuery.AnalysisType> analyses)
@@ -257,6 +288,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
    * (which can happen if an aggregator was removed for a later version), then,
    * analyzing the segment doesn't fail and the result of analysis of the complex column
    * is reported as an error.
+   *
    * @throws IOException
    */
   @Test
@@ -317,12 +349,109 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
       Assert.assertEquals("error:unknown_complex_invalid_complex_column_type", invalidColumnAnalysis.getErrorMessage());
 
       // Run a segment metadata query also to verify it doesn't break
-      final List<SegmentAnalysis> results = getSegmentAnalysises(segment, EnumSet.of(SegmentMetadataQuery.AnalysisType.SIZE));
+      final List<SegmentAnalysis> results = getSegmentAnalysises(
+          segment,
+          EnumSet.of(SegmentMetadataQuery.AnalysisType.SIZE)
+      );
       for (SegmentAnalysis result : results) {
         Assert.assertTrue(result.getColumns().get(invalid_aggregator).isError());
       }
     }
   }
+
+  @Test
+  public void testAnalysisNullAutoDiscoveredColumn() throws IOException
+  {
+    IndexBuilder bob = IndexBuilder.create();
+    bob.tmpDir(temporaryFolder.newFolder());
+    bob.writeNullColumns(true);
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("time", null, null),
+        DimensionsSpec.builder().useSchemaDiscovery(true).build(),
+        null
+    );
+    bob.schema(IncrementalIndexSchema.builder()
+                                     .withTimestampSpec(schema.getTimestampSpec())
+                                     .withDimensionsSpec(schema.getDimensionsSpec())
+                                     .build());
+    bob.rows(ImmutableList.of(
+        MapInputRowParser.parse(schema, TestHelper.makeMapWithExplicitNull("time", 1234L, "x", null)))
+    );
+
+    QueryableIndex queryableIndex = bob.buildMMappedIndex();
+    Segment s = new QueryableIndexSegment(queryableIndex, SegmentId.dummy("test"));
+
+    SegmentAnalyzer analyzer = new SegmentAnalyzer(EMPTY_ANALYSES);
+    Map<String, ColumnAnalysis> analysis = analyzer.analyze(s);
+    Assert.assertEquals(ColumnType.STRING, analysis.get("x").getTypeSignature());
+    Assert.assertFalse(analysis.get("x").isError());
+  }
+
+  @Test
+  public void testAnalysisAutoNullColumn() throws IOException
+  {
+    IndexBuilder bob = IndexBuilder.create();
+    bob.tmpDir(temporaryFolder.newFolder());
+    bob.writeNullColumns(true);
+    InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec("time", null, null),
+        DimensionsSpec.builder().useSchemaDiscovery(true).build(),
+        null
+    );
+    bob.schema(IncrementalIndexSchema.builder()
+                                     .withTimestampSpec(schema.getTimestampSpec())
+                                     .withDimensionsSpec(schema.getDimensionsSpec())
+                                     .build());
+    bob.rows(ImmutableList.of(
+        MapInputRowParser.parse(schema, TestHelper.makeMapWithExplicitNull("time", 1234L, "x", null)))
+    );
+
+    QueryableIndex queryableIndex = bob.buildMMappedIndex();
+    Segment s = new QueryableIndexSegment(queryableIndex, SegmentId.dummy("test"));
+
+    SegmentAnalyzer analyzer = new SegmentAnalyzer(EMPTY_ANALYSES);
+    Map<String, ColumnAnalysis> analysis = analyzer.analyze(s);
+    Assert.assertEquals(ColumnType.STRING, analysis.get("x").getTypeSignature());
+    Assert.assertFalse(analysis.get("x").isError());
+  }
+
+  @Test
+  public void testAnalysisImproperComplex() throws IOException
+  {
+    QueryableIndex mockIndex = EasyMock.createMock(QueryableIndex.class);
+    EasyMock.expect(mockIndex.getNumRows()).andReturn(100).atLeastOnce();
+    EasyMock.expect(mockIndex.getColumnNames()).andReturn(Collections.singletonList("x")).atLeastOnce();
+    EasyMock.expect(mockIndex.getAvailableDimensions())
+            .andReturn(new ListIndexed<>(Collections.singletonList("x")))
+            .atLeastOnce();
+    EasyMock.expect(mockIndex.getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME))
+            .andReturn(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG))
+            .atLeastOnce();
+    EasyMock.expect(mockIndex.getColumnCapabilities("x"))
+            .andReturn(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.UNKNOWN_COMPLEX))
+            .atLeastOnce();
+
+    ColumnHolder holder = EasyMock.createMock(ColumnHolder.class);
+    EasyMock.expect(mockIndex.getColumnHolder("x")).andReturn(holder).atLeastOnce();
+
+    StringDictionaryEncodedColumn dictionaryEncodedColumn = EasyMock.createMock(StringDictionaryEncodedColumn.class);
+    EasyMock.expect(holder.getColumn()).andReturn(dictionaryEncodedColumn).atLeastOnce();
+
+    dictionaryEncodedColumn.close();
+    EasyMock.expectLastCall();
+    EasyMock.replay(mockIndex, holder, dictionaryEncodedColumn);
+
+    Segment s = new QueryableIndexSegment(mockIndex, SegmentId.dummy("test"));
+
+    SegmentAnalyzer analyzer = new SegmentAnalyzer(EMPTY_ANALYSES);
+    Map<String, ColumnAnalysis> analysis = analyzer.analyze(s);
+    Assert.assertEquals(ColumnType.UNKNOWN_COMPLEX, analysis.get("x").getTypeSignature());
+    Assert.assertTrue(analysis.get("x").isError());
+    Assert.assertTrue(analysis.get("x").getErrorMessage().contains("is not a [org.apache.druid.segment.column.ComplexColumn]"));
+
+    EasyMock.verify(mockIndex, holder, dictionaryEncodedColumn);
+  }
+
 
   private static final class DummyObjectStrategy implements ObjectStrategy
   {
@@ -453,6 +582,12 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     }
 
     @Override
+    public AggregatorFactory withName(String newName)
+    {
+      return new InvalidAggregatorFactory(newName, fieldName);
+    }
+
+    @Override
     public byte[] getCacheKey()
     {
       return new byte[0];
@@ -464,5 +599,4 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
       return getIntermediateType();
     }
   }
-
 }

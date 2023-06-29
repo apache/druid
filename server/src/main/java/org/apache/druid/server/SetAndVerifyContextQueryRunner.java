@@ -22,8 +22,9 @@ package org.apache.druid.server;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.context.ResponseContext;
@@ -56,21 +57,23 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
 
   public Query<T> withTimeoutAndMaxScatterGatherBytes(Query<T> query, ServerConfig serverConfig)
   {
-    Query<T> newQuery = QueryContexts.verifyMaxQueryTimeout(
-        QueryContexts.withMaxScatterGatherBytes(
-            QueryContexts.withDefaultTimeout(
+    Query<T> newQuery =
+        Queries.withMaxScatterGatherBytes(
+            Queries.withDefaultTimeout(
                 query,
                 Math.min(serverConfig.getDefaultQueryTimeout(), serverConfig.getMaxQueryTimeout())
             ),
             serverConfig.getMaxScatterGatherBytes()
-        ),
+        );
+    newQuery.context().verifyMaxQueryTimeout(
         serverConfig.getMaxQueryTimeout()
     );
     // DirectDruidClient.QUERY_FAIL_TIME is used by DirectDruidClient and JsonParserIterator to determine when to
     // fail with a timeout exception
     final long failTime;
-    if (QueryContexts.hasTimeout(newQuery)) {
-      failTime = this.startTimeMillis + QueryContexts.getTimeout(newQuery);
+    final QueryContext context = newQuery.context();
+    if (context.hasTimeout()) {
+      failTime = this.startTimeMillis + context.getTimeout();
     } else {
       failTime = this.startTimeMillis + serverConfig.getMaxQueryTimeout();
     }
