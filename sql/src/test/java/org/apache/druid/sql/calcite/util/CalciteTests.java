@@ -327,7 +327,6 @@ public class CalciteTests
   public static SystemSchema createMockSystemSchema(
       final DruidSchema druidSchema,
       final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig,
       final AuthorizerMapper authorizerMapper
   )
   {

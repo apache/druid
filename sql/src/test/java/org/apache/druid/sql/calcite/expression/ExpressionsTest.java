@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.RegexDimFilter;
 import org.apache.druid.query.filter.SearchQueryDimFilter;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
@@ -55,6 +56,7 @@ import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.SubstringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeCeilOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
@@ -164,6 +166,96 @@ public class ExpressionsTest extends ExpressionTestBase
             )
         ),
         3L
+    );
+  }
+
+  @Test
+  public void testSubstring()
+  {
+    testHelper.testExpressionString(
+        new SubstringOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(1),
+            testHelper.makeLiteral(2)
+        ),
+        makeExpression(
+            SimpleExtraction.of("s", new SubstringDimExtractionFn(0, 2)),
+            "substring(\"s\", 0, 2)"
+        ),
+        "fo"
+    );
+
+    testHelper.testExpressionString(
+        new SubstringOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(2),
+            testHelper.makeLiteral(1)
+        ),
+        makeExpression(
+            SimpleExtraction.of("s", new SubstringDimExtractionFn(1, 1)),
+            "substring(\"s\", 1, 1)"
+        ),
+        "o"
+    );
+
+    testHelper.testExpressionString(
+        new SubstringOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(1)
+        ),
+        makeExpression(
+            SimpleExtraction.of("s", new SubstringDimExtractionFn(0, null)),
+            "substring(\"s\", 0, -1)"
+        ),
+        "foo"
+    );
+
+    testHelper.testExpressionString(
+        new SubstringOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(2)
+        ),
+        makeExpression(
+            SimpleExtraction.of("s", new SubstringDimExtractionFn(1, null)),
+            "substring(\"s\", 1, -1)"
+        ),
+        "oo"
+    );
+
+    testHelper.testExpressionString(
+        new SubstringOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral(1),
+            testHelper.makeInputRef("p") // p is 3
+        ),
+        makeExpression("substring(\"s\", 0, \"p\")"),
+        "foo"
+    );
+
+    testHelper.testExpressionString(
+        new SubstringOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeInputRef("p") // p is 3
+        ),
+        makeExpression("substring(\"spacey\", (\"p\" - 1), -1)"),
+        "hey there  "
+    );
+
+    testHelper.testExpressionString(
+        new SubstringOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("spacey"),
+            testHelper.makeInputRef("p"), // p is 3
+            testHelper.makeInputRef("p") // p is 3
+        ),
+        makeExpression("substring(\"spacey\", (\"p\" - 1), \"p\")"),
+        "hey"
     );
   }
 
