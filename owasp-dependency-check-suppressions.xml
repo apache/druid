@@ -595,7 +595,7 @@
     <cve>CVE-2015-7430</cve>
     <cve>CVE-2017-3162</cve>
   </suppress>
-  
+
   <suppress>
     <!-- Suppress avro cves that are only applicable to .NET SDK-->
     <notes><![CDATA[
@@ -704,13 +704,6 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.apache\.calcite/calcite\-core@.*$</packageUrl>
     <cve>CVE-2020-13955</cve>
-  </suppress>
-  <suppress>
-    <!-- False positive. 42.3.3 is not affected by the CVE. And we don't use Resultset.refreshRow method either  -->
-    <notes><![CDATA[
-   file name: postgresql-42.3.3.jar
-   ]]></notes>
-    <cve>CVE-2022-31197</cve>
   </suppress>
   <suppress>
     <!-- avatica-server-1.17.0.jar -->
