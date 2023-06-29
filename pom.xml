@@ -112,7 +112,7 @@
         <jna.version>5.13.0</jna.version>
         <jna-platform.version>5.13.0</jna-platform.version>
         <hadoop.compile.version>3.3.6</hadoop.compile.version>
-        <mockito.version>4.3.1</mockito.version>
+        <mockito.version>5.2.0</mockito.version>
         <aws.sdk.version>1.12.317</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.7</jacoco.version>
@@ -998,6 +998,12 @@
               <type>pom</type>
             </dependency>
             <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy</artifactId>
+                <version>1.14.5</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
                 <groupId>com.github.docker-java</groupId>
                 <artifactId>docker-java-bom</artifactId>
                 <version>3.2.13</version>
@@ -1182,7 +1188,7 @@
             <dependency>
                 <groupId>nl.jqno.equalsverifier</groupId>
                 <artifactId>equalsverifier</artifactId>
-                <version>3.10.1</version>
+                <version>3.14.3</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
