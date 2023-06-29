@@ -50,6 +50,7 @@ import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversi
 import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpLikeOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RegexpReplaceOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
@@ -387,6 +388,58 @@ public class ExpressionsTest extends ExpressionTestBase
         ),
         makeExpression("regexp_extract(null,'null')"),
         null
+    );
+  }
+
+  @Test
+  public void testRegexpReplace()
+  {
+    testHelper.testExpressionString(
+        new RegexpReplaceOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("x(.)"),
+            testHelper.makeLiteral("z")
+        ),
+        makeExpression("regexp_replace(\"s\",'x(.)','z')"),
+        "foo"
+    );
+
+    testHelper.testExpressionString(
+        new RegexpReplaceOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("(o)"),
+            testHelper.makeLiteral("z")
+        ),
+        makeExpression("regexp_replace(\"s\",'(o)','z')"),
+        "fzz"
+    );
+
+    testHelper.testExpressionString(
+        new RegexpReplaceOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeCall(
+                SqlStdOperatorTable.CONCAT,
+                testHelper.makeLiteral("Z"),
+                testHelper.makeInputRef("s")
+            ),
+            testHelper.makeLiteral("Zf(.)"),
+            testHelper.makeLiteral("z")
+        ),
+        makeExpression("regexp_replace(concat('Z',\"s\"),'Zf(.)','z')"),
+        "zo"
+    );
+
+    testHelper.testExpressionString(
+        new RegexpReplaceOperatorConversion().calciteOperator(),
+        ImmutableList.of(
+            testHelper.makeInputRef("s"),
+            testHelper.makeLiteral("f(.)"),
+            testHelper.makeLiteral("$1")
+        ),
+        makeExpression("regexp_replace(\"s\",'f(.)','$1')"),
+        "oo"
     );
   }
 
