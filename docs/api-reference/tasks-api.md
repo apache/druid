@@ -25,8 +25,8 @@ sidebar_label: Tasks
 
 This document describes the API endpoints for task retrieval, submission, and deletion for Apache Druid.
 
-Note that all _interval_ URL parameters are ISO 8601 strings delimited by a `_` instead of a `/`
-as in `2016-06-27_2016-06-28`.
+For query parameters that take an interval, provide ISO 8601 strings delimited by `_` instead of `/`. For example, `2023-06-27_2023-06-28`.
+In this document, `{domain}` is a placeholder for the server address of deployment.
 
 ## Task information and retrieval 
 
@@ -35,15 +35,18 @@ as in `2016-06-27_2016-06-28`.
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/tasks`
 
-This endpoint retrieves an array of all task objects currently running or executed in the current Druid cluster. It provides information about each task such as its task id, task status, associated data source, and other metadata. It supports a set of optional query parameters to filter results. 
+Retrieves an array of all tasks in the Druid cluster. Returns a task object with information including its ID, status, associated datasource, and other metadata. 
 
 #### Query parameters
+
+The endpoint supports a set of optional query parameters to filter results. 
+
 |Parameter|Type|Description|
 |---|---|---|
 |`state`|String|Filter list of tasks by task state, valid options are `running`, `complete`, `waiting`, and `pending`.|
 | `datasource`|String| Return tasks filtered by Druid datasource.|
 | `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. |
-| `max`|Integer|Maximum number of `"complete"` tasks to return. Only applies when `state` is set to `"complete"`.|
+| `max`|Integer|Maximum number of `complete` tasks to return. Only applies when `state` is set to `complete`.|
 | `type`|String|Filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
 #### Responses
@@ -60,6 +63,8 @@ This endpoint retrieves an array of all task objects currently running or execut
 <br/>
 *Invalid query parameter* 
 <!--END_DOCUSAURUS_CODE_TABS-->
+
+---
 
 #### Sample request
 
@@ -155,14 +160,17 @@ Host: {domain}
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/completeTasks`
 
-This endpoint retrieves an array of completed task objects in the current Druid cluster. This is functionally equivalent to `/druid/indexer/v1/tasks?state=complete`. It supports a set of optional query parameters to filter results. 
+Retrieves an array of completed tasks in the Druid cluster. This is functionally equivalent to `/druid/indexer/v1/tasks?state=complete`.
 
 #### Query parameters
+
+The endpoint supports a set of optional query parameters to filter results. 
+
 |Parameter|Type|Description|
 |---|---|---|
 | `datasource`|String| Return tasks filtered by Druid datasource.|
 | `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. |
-| `max`|Integer|Maximum number of `"complete"` tasks to return. Only applies when `state` is set to `"complete"`.|
+| `max`|Integer|Maximum number of `complete` tasks to return. Only applies when `state` is set to `complete`.|
 | `type`|String|Filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
 #### Responses
@@ -175,8 +183,9 @@ This endpoint retrieves an array of completed task objects in the current Druid 
 <!--404 NOT FOUND-->
 <br/>
 *Request sent to incorrect service* 
-
 <!--END_DOCUSAURUS_CODE_TABS-->
+
+---
 
 #### Sample request
 
@@ -246,14 +255,17 @@ Host: {domain}
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/runningTasks`
 
-This endpoint retrieves an array of running task objects in the current Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=running`. It supports a set of optional query parameters to filter results. 
+Retrieves an array of running task objects in the Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=running`.
 
 #### Query parameters
+
+The endpoint supports a set of optional query parameters to filter results. 
+
 |Parameter|Type|Description|
 |---|---|---|
 | `datasource`|String| Return tasks filtered by Druid datasource.|
 | `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. |
-| `max`|Integer|Maximum number of `"complete"` tasks to return. Only applies when `state` is set to `"complete"`.|
+| `max`|Integer|Maximum number of `complete` tasks to return. Only applies when `state` is set to `complete`.|
 | `type`|String|Filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
 #### Responses
@@ -265,6 +277,8 @@ This endpoint retrieves an array of running task objects in the current Druid cl
 *Successfully retrieved list of running tasks* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
+
+---
 
 #### Sample request
 
@@ -280,6 +294,7 @@ GET /druid/indexer/v1/runningTasks HTTP/1.1
 Host: {domain}
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
+
 
 #### Sample response
 
@@ -316,14 +331,17 @@ Host: {domain}
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/waitingTasks`
 
-This endpoint retrieves an array of waiting task objects in the current Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=waiting`. It supports a set of optional query parameters to filter results. 
+Retrieves an array of waiting tasks in the Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=waiting`.
 
 #### Query parameters
+
+The endpoint supports a set of optional query parameters to filter results. 
+
 |Parameter|Type|Description|
 |---|---|---|
 | `datasource`|String| Return tasks filtered by Druid datasource.|
 | `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. |
-| `max`|Integer|Maximum number of `"complete"` tasks to return. Only applies when `state` is set to `"complete"`.|
+| `max`|Integer|Maximum number of `complete` tasks to return. Only applies when `state` is set to `complete`.|
 | `type`|String|Filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
 #### Responses
@@ -335,6 +353,8 @@ This endpoint retrieves an array of waiting task objects in the current Druid cl
 *Successfully retrieved list of waiting tasks* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
+
+---
 
 #### Sample request
 
@@ -423,14 +443,17 @@ Host: {domain}
 
 <code class="getAPI">GET</code> `/druid/indexer/v1/pendingTasks`
 
-This endpoint retrieves an array of pending task objects in the current Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=pending`. It supports a set of optional query parameters to filter results. 
+Retrieves an array of pending tasks in the Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=pending`. 
 
 #### Query parameters
+
+The endpoint supports a set of optional query parameters to filter results. 
+
 |Parameter|Type|Description|
 |---|---|---|
 | `datasource`|String| Return tasks filtered by Druid datasource.|
 | `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. |
-| `max`|Integer|Maximum number of `"complete"` tasks to return. Only applies when `state` is set to `"complete"`.|
+| `max`|Integer|Maximum number of `complete` tasks to return. Only applies when `state` is set to `complete`.|
 | `type`|String|Filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
 #### Responses
@@ -440,8 +463,9 @@ This endpoint retrieves an array of pending task objects in the current Druid cl
 <!--200 SUCCESS-->
 <br/>
 *Successfully retrieved list of pending tasks* 
-
 <!--END_DOCUSAURUS_CODE_TABS-->
+
+---
 
 #### Sample request
 
@@ -511,11 +535,7 @@ Host: {domain}
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}`
 
-Retrieves the payload of a task given the task id. It returns a JSON object with the task id and payload which includes task configuration details and relevant specifications associated with the execution of the task.
-
-#### Query parameters
-
-No query parameters.
+Retrieves the payload of a task given the task ID. It returns a JSON object with the task ID and payload that includes task configuration details and relevant specifications associated with the execution of the task.
 
 #### Responses 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -525,13 +545,15 @@ No query parameters.
 *Successfully retrieved payload of task* 
 <!--404 NOT FOUND-->
 <br/>
-*Cannot find task with id* 
+*Cannot find task with ID* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
+---
+
 #### Sample request
 
-The following examples shows how to retrieve the task payload of a task with the specified id `query-32663269-ead9-405a-8eb6-0817a952ef47`.
+The following examples shows how to retrieve the task payload of a task with the specified ID `query-32663269-ead9-405a-8eb6-0817a952ef47`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -904,11 +926,7 @@ Host: {domain}
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/status`
 
-Retrieves the status of a task given the task id. It returns a JSON object with the task's current status (`running`, `complete`, `waiting`, `pending`), task type, datasource, and other relevant metadata.
-
-#### Query parameters
-
-No query parameters.
+Retrieves the status of a task given the task ID. It returns a JSON object with the task's current state, task type, datasource, and other relevant metadata.
 
 #### Responses 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -918,12 +936,14 @@ No query parameters.
 *Successfully retrieved task status* 
 <!--404 NOT FOUND-->
 <br/>
-*Cannot find task with id* 
+*Cannot find task with ID* 
 <!--END_DOCUSAURUS_CODE_TABS-->
+
+---
 
 #### Sample request
 
-The following examples shows how to retrieve the status of a task with the specified id `query-223549f8-b993-4483-b028-1b0d54713cad`.
+The following examples shows how to retrieve the status of a task with the specified ID `query-223549f8-b993-4483-b028-1b0d54713cad`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -973,13 +993,9 @@ Host: {domain}
 
 > This API is deprecated and will be removed in future releases.
 
-Retrieves information about segments generated by the task given the task id. To hit this endpoint, make sure to enable the audit log config on the Overlord with `druid.indexer.auditLog.enabled = true`.
+Retrieves information about segments generated by the task given the task ID. To hit this endpoint, make sure to enable the audit log config on the Overlord with `druid.indexer.auditLog.enabled = true`.
 
-In addition to enabling audit log config, enable the cleanup of audit logs on the Coordinator. For reference, see [Audit records](../operations/clean-metadata-store.md#audit-records).
-
-#### Query parameters
-
-No query parameters.
+In addition to enabling audit logs, configure a cleanup strategy to prevent overloading the metadata store with old audit logs and cause performance issues. You can enable automated cleanup of audit logs on the Coordinator with `druid.coordinator.kill.audit.on` or export the audit logs to external storage. For reference, see [Audit records](../operations/clean-metadata-store.md#audit-records).
 
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
@@ -989,9 +1005,11 @@ No query parameters.
 *Successfully retrieved task segments* 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
+---
+
 #### Sample request
 
-The following examples shows how to retrieve the task segment of the task with the specified id `query-52a8aafe-7265-4427-89fe-dc51275cc470`.
+The following examples shows how to retrieve the task segment of the task with the specified ID `query-52a8aafe-7265-4427-89fe-dc51275cc470`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -1016,11 +1034,7 @@ A successful request returns a `200 OK` response and an array of the task segmen
 
 <code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/reports`
 
-Retrieve a [task completion report](../ingestion/tasks.md#task-reports) for a task. It returns a JSON object with information about the number of rows ingested, and any parse exceptions that occurred. It is available for both completed tasks and running tasks.
-
-#### Query parameters
-
-No query parameters.
+Retrieves a [task completion report](../ingestion/tasks.md#task-reports) for a task. It returns a JSON object with information about the number of rows ingested, and any parse exceptions that occurred. It is available for both completed tasks and running tasks.
 
 #### Responses
 
@@ -1031,9 +1045,11 @@ No query parameters.
 *Successfully retrieved task report* 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
+---
+
 #### Sample request
 
-The following examples shows how to retrieve the completion report of a task with the specified id `query-52a8aafe-7265-4427-89fe-dc51275cc470`.
+The following examples shows how to retrieve the completion report of a task with the specified ID `query-52a8aafe-7265-4427-89fe-dc51275cc470`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -1094,11 +1110,7 @@ Host: {domain}
 
 <code class="postAPI">POST</code> `/druid/indexer/v1/task`
 
-Endpoint for submitting tasks and supervisor specs to the Overlord. It returns the task id of the submitted task.
-
-#### Query parameters
-
-No query parameters.
+Endpoint for submitting tasks and supervisor specs to the Overlord. It returns the task ID of the submitted task.
 
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
@@ -1117,9 +1129,11 @@ No query parameters.
 *Unexpected token or characters in request body* 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
+---
+
 #### Sample request
 
-The following request is an example of submitting a task to create a datasource named "wikipedia auto".
+The following request is an example of submitting a task to create a datasource named `"wikipedia auto"`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -1235,11 +1249,7 @@ Content-Length: 952
 #### URL
 <code class="postAPI">POST</code> `/druid/indexer/v1/task/{taskId}/shutdown`
 
-Shuts down a task if it not already complete. Returns a JSON object with the id of the task that was shutdown successfully.
-
-#### Query parameters
-
-No query parameters.
+Shuts down a task if it not already complete. Returns a JSON object with the ID of the task that was shut down successfully.
 
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
@@ -1249,12 +1259,14 @@ No query parameters.
 *Successfully shut down task* 
 <!--404 NOT FOUND-->
 <br/>
-*Cannot find task with id* 
+*Cannot find task with ID* 
 <!--END_DOCUSAURUS_CODE_TABS-->
+
+---
 
 #### Sample request
 
-The following request is an example of shutting down task of id `query-52as 8aafe-7265-4427-89fe-dc51275cc470`.
+The following request shows how to shut down a task with the ID `query-52as 8aafe-7265-4427-89fe-dc51275cc470`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -1289,10 +1301,6 @@ Host: (domain)
 
 Shuts down all tasks for a specified datasource. If successful, it returns a JSON object with the name of the datasource whose tasks are shut down.
 
-#### Query parameters
-
-No query parameters.
-
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -1304,6 +1312,8 @@ No query parameters.
 <br/>
 *Error or datasource does not have a running task* 
 <!--END_DOCUSAURUS_CODE_TABS-->
+
+---
 
 #### Sample request
 
@@ -1342,11 +1352,7 @@ Host: {domain}
 #### URL
 <code class="postAPI">POST</code> `/druid/indexer/v1/taskStatus`
 
-Retrieve list of task status objects for list of task id strings in request body. It returns a set of JSON objects with the status, duration, location of each task, and any error messages if applicable.
-
-#### Query parameters
-
-No query parameters.
+Retrieves list of task status objects for list of task ID strings in request body. It returns a set of JSON objects with the status, duration, location of each task, and any error messages if applicable.
 
 #### Responses
 
@@ -1360,9 +1366,11 @@ No query parameters.
 *Missing request body or incorrect request body type* 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
+---
+
 #### Sample request
 
-The following request is an example of retrieving status objects for task id `index_parallel_wikipedia_auto_jndhkpbo_2023-06-26T17:23:05.308Z` and `index_parallel_wikipedia_auto_jbgiianh_2023-06-26T23:17:56.769Z` .
+The following request is an example of retrieving status objects for task ID `index_parallel_wikipedia_auto_jndhkpbo_2023-06-26T17:23:05.308Z` and `index_parallel_wikipedia_auto_jbgiianh_2023-06-26T23:17:56.769Z` .
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -1417,20 +1425,16 @@ Content-Length: 134
 
 </details>
 
-### Clean up pending segments for a data source.
+### Clean up pending segments for a datasource.
 
 #### URL
 
 <code class="deleteAPI">DELETE</code> `/druid/indexer/v1/pendingSegments/{dataSource}`
 
 Manually clean up pending segments table in metadata storage for `datasource`. It returns a JSON object response with
-`numDeleted` and count of rows deleted from the pending segments table. This API is used by the
-`druid.coordinator.kill.pendingSegments.on` [coordinator setting](../configuration/index.md#coordinator-operation)
+`numDeleted` for the number of rows deleted from the pending segments table. This API is used by the
+`druid.coordinator.kill.pendingSegments.on` [Coordinator setting](../configuration/index.md#coordinator-operation)
 which automates this operation to perform periodically.
-
-#### Query parameters
-
-No query parameters.
 
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
@@ -1440,6 +1444,8 @@ No query parameters.
 *Successfully deleted pending segments* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
+
+---
 
 #### Sample request
 
