@@ -19,10 +19,12 @@
 
 package org.apache.druid.metadata;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
 import org.apache.druid.java.util.common.ISE;
@@ -51,8 +53,10 @@ import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 public abstract class SQLMetadataConnector implements MetadataStorageConnector
 {
@@ -377,9 +381,21 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  PRIMARY KEY (id)\n"
                 + ")",
                 tableName, getPayloadType(), getCollation()
-            ),
-            StringUtils.format("CREATE INDEX idx_%1$s_active_created_date ON %1$s(active, created_date)", tableName)
+            )
         )
+    );
+    final Set<String> createdIndexSet = getIndexOnTable(tableName);
+    createIndex(
+        tableName,
+        StringUtils.format("idx_%1$s_active_created_date", tableName),
+        ImmutableList.of("active", "created_date"),
+        createdIndexSet
+    );
+    createIndex(
+        tableName,
+        StringUtils.format("idx_%1$s_datasource_active", tableName),
+        ImmutableList.of("datasource", "active"),
+        createdIndexSet
     );
   }
 
@@ -828,6 +844,90 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
     catch (Exception e) {
       log.warn(e, "Exception while deleting records from table");
+    }
+  }
+
+  /**
+   * Get the Set of the index on given table
+   *
+   * @param tableName name of the table to fetch the index map
+   * @return Set of the uppercase index names, returns empty set if table does not exist
+   */
+  public Set<String> getIndexOnTable(String tableName)
+  {
+    Set<String> res = new HashSet<>();
+    try {
+      retryWithHandle(new HandleCallback<Void>()
+      {
+        @Override
+        public Void withHandle(Handle handle) throws Exception
+        {
+          DatabaseMetaData databaseMetaData = handle.getConnection().getMetaData();
+          // Fetch the index for given table
+          ResultSet resultSet = databaseMetaData.getIndexInfo(
+              null,
+              null,
+              StringUtils.toUpperCase(tableName),
+              false,
+              false
+          );
+          while (resultSet.next()) {
+            String indexName = resultSet.getString("INDEX_NAME");
+            if (org.apache.commons.lang.StringUtils.isNotBlank(indexName)) {
+              res.add(StringUtils.toUpperCase(indexName));
+            }
+          }
+          return null;
+        }
+      });
+    }
+    catch (Exception e) {
+      log.error(e, "Exception while listing the index on table %s ", tableName);
+    }
+    return ImmutableSet.copyOf(res);
+  }
+
+  /**
+   * create index on the table with retry if not already exist, to be called after createTable
+   *
+   * @param tableName       Name of the table to create index on
+   * @param indexName       case-insensitive string index name, it helps to check the existing index on table
+   * @param indexCols       List of columns to be indexed on
+   * @param createdIndexSet
+   */
+  public void createIndex(
+      final String tableName,
+      final String indexName,
+      final List<String> indexCols,
+      final Set<String> createdIndexSet
+  )
+  {
+    try {
+      retryWithHandle(
+          new HandleCallback<Void>()
+          {
+            @Override
+            public Void withHandle(Handle handle)
+            {
+              if (!createdIndexSet.contains(StringUtils.toUpperCase(indexName))) {
+                String indexSQL = StringUtils.format(
+                    "CREATE INDEX %1$s ON %2$s(%3$s)",
+                    indexName,
+                    tableName,
+                    Joiner.on(",").join(indexCols)
+                );
+                log.info("Creating Index on Table [%s], sql: [%s] ", tableName, indexSQL);
+                handle.execute(indexSQL);
+              } else {
+                log.info("Index [%s] on Table [%s] already exists", indexName, tableName);
+              }
+              return null;
+            }
+          }
+      );
+    }
+    catch (Exception e) {
+      log.error(e, StringUtils.format("Exception while creating index on table [%s]", tableName));
     }
   }
 }
