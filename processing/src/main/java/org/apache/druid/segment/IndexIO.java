@@ -364,7 +364,6 @@ public class IndexIO
         metrics.put(metric, holder);
       }
 
-      Map<String, GenericIndexed<String>> dimValueLookups = new HashMap<>();
       Map<String, GenericIndexed<ByteBuffer>> dimValueUtf8Lookups = new HashMap<>();
       Map<String, VSizeColumnarMultiInts> dimColumns = new HashMap<>();
       Map<String, GenericIndexed<ImmutableBitmap>> bitmaps = new HashMap<>();
@@ -379,8 +378,6 @@ public class IndexIO
             fileDimensionName
         );
 
-        // Duplicate the first buffer since we are reading the dictionary twice.
-        dimValueLookups.put(dimension, GenericIndexed.read(dimBuffer.duplicate(), GenericIndexed.STRING_STRATEGY));
         dimValueUtf8Lookups.put(dimension, GenericIndexed.read(dimBuffer, GenericIndexed.UTF8_STRATEGY));
         dimColumns.put(dimension, VSizeColumnarMultiInts.readFromByteBuffer(dimBuffer));
       }
@@ -410,7 +407,6 @@ public class IndexIO
           dataInterval,
           timestamps,
           metrics,
-          dimValueLookups,
           dimValueUtf8Lookups,
           dimColumns,
           bitmaps,
