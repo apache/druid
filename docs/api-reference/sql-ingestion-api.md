@@ -123,7 +123,7 @@ print(response.text)
 
 | Field | Description |
 |---|---|
-| `taskId` | Controller task ID. You can use Druid's standard [task APIs](api-reference.md#overlord) to interact with this controller task. |
+| `taskId` | Controller task ID. You can use Druid's standard [Tasks API](./tasks-api.md) to interact with this controller task. |
 | `state` | Initial state for the query, which is "RUNNING". |
 
 ## Get the status for a query task
@@ -203,6 +203,8 @@ Keep the following in mind when using the task API to view reports:
 - As an experimental feature, the MSQ task engine supports running SELECT queries. SELECT query results are written into
 the `multiStageQuery.payload.results.results` task report key as an array of arrays. The behavior and result format of plain
 SELECT queries (without INSERT or REPLACE) is subject to change.
+- `multiStageQuery.payload.results.resultsTruncated` denote whether the results of the report have been truncated to prevent
+the reports from blowing up
 
 For an explanation of the fields in a report, see [Report response fields](#report-response-fields).
 

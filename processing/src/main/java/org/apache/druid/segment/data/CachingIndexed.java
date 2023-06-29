@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.ToIntFunction;
 
 public class CachingIndexed<T> implements CloseableIndexed<T>
 {
@@ -34,7 +35,8 @@ public class CachingIndexed<T> implements CloseableIndexed<T>
 
   private static final Logger log = new Logger(CachingIndexed.class);
 
-  private final GenericIndexed<T>.BufferIndexed delegate;
+  private final Indexed<T> delegate;
+  private final ToIntFunction<T> sizeFn;
   @Nullable
   private final SizedLRUMap<Integer, T> cachedValues;
 
@@ -44,12 +46,14 @@ public class CachingIndexed<T> implements CloseableIndexed<T>
    * CachingIndexed objects are not thread safe and should only be used by a single thread at a time.
    * CachingIndexed objects must be closed to release any underlying cache resources.
    *
-   * @param delegate the GenericIndexed to wrap with a lookup cache.
+   * @param delegate the Indexed to wrap with a lookup cache.
+   * @param sizeFn function that determines the size in bytes of an object
    * @param lookupCacheSize maximum size in bytes of the lookup cache if greater than zero
    */
-  public CachingIndexed(GenericIndexed<T> delegate, final int lookupCacheSize)
+  public CachingIndexed(Indexed<T> delegate, final ToIntFunction<T> sizeFn, final int lookupCacheSize)
   {
-    this.delegate = delegate.singleThreaded();
+    this.delegate = delegate;
+    this.sizeFn = sizeFn;
 
     if (lookupCacheSize > 0) {
       log.debug("Allocating column cache of max size[%d]", lookupCacheSize);
@@ -75,7 +79,7 @@ public class CachingIndexed<T> implements CloseableIndexed<T>
       }
 
       final T value = delegate.get(index);
-      cachedValues.put(index, value, delegate.getLastValueSize());
+      cachedValues.put(index, value, sizeFn.applyAsInt(value));
       return value;
     } else {
       return delegate.get(index);

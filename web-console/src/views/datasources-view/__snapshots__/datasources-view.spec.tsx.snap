@@ -70,6 +70,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
           "Availability",
           "Availability detail",
           "Total data size",
+          "Running tasks",
           "Segment rows",
           "Segment size",
           "Segment granularity",
@@ -196,6 +197,15 @@ exports[`DatasourcesView matches snapshot 1`] = `
           "filterable": false,
           "show": true,
           "width": 100,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Running tasks",
+          "accessor": [Function],
+          "filterable": false,
+          "id": "running_tasks",
+          "show": true,
+          "width": 200,
         },
         Object {
           "Cell": [Function],

@@ -20,7 +20,7 @@
 package org.apache.druid.sql.calcite.run;
 
 import org.apache.calcite.tools.ValidationException;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.error.InvalidInput;
 
 import java.util.Map;
 import java.util.Set;
@@ -35,17 +35,14 @@ public class SqlEngines
    *
    * This is a helper function used by {@link SqlEngine#validateContext} implementations.
    */
-  public static void validateNoSpecialContextKeys(final Map<String, Object> queryContext, final Set<String> specialContextKeys)
-      throws ValidationException
+  public static void validateNoSpecialContextKeys(
+      final Map<String, Object> queryContext,
+      final Set<String> specialContextKeys
+  )
   {
     for (String contextParameterName : queryContext.keySet()) {
       if (specialContextKeys.contains(contextParameterName)) {
-        throw new ValidationException(
-            StringUtils.format(
-                "Cannot execute query with context parameter [%s]",
-                contextParameterName
-            )
-        );
+        throw InvalidInput.exception("Query context parameter [%s] is not allowed", contextParameterName);
       }
     }
   }

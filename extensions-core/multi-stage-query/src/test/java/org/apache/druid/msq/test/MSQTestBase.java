@@ -135,7 +135,6 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.security.AuthConfig;
-import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -227,6 +226,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
                   .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
                   .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
+                  .put(MSQTaskQueryMaker.USER_KEY, "allowAll")
                   .build();
 
   public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
@@ -242,12 +242,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(MultiStageQueryContext.CTX_FAULT_TOLERANCE, true)
                   .build();
 
-  public static final Map<String, Object> SEQUENTIAL_MERGE_MSQ_CONTEXT =
+  public static final Map<String, Object> PARALLEL_MERGE_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(
                       MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
-                      ClusterStatisticsMergeMode.SEQUENTIAL.toString()
+                      ClusterStatisticsMergeMode.PARALLEL.toString()
                   )
                   .build();
 
@@ -260,17 +260,17 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public static final String FAULT_TOLERANCE = "fault_tolerance";
   public static final String DURABLE_STORAGE = "durable_storage";
   public static final String DEFAULT = "default";
-  public static final String SEQUENTIAL_MERGE = "sequential_merge";
+  public static final String PARALLEL_MERGE = "parallel_merge";
 
   public final boolean useDefault = NullHandling.replaceWithDefault();
 
   protected File localFileStorageDir;
   protected LocalFileStorageConnector localFileStorageConnector;
   private static final Logger log = new Logger(MSQTestBase.class);
-  private ObjectMapper objectMapper;
-  private MSQTestOverlordServiceClient indexingServiceClient;
+  protected ObjectMapper objectMapper;
+  protected MSQTestOverlordServiceClient indexingServiceClient;
   protected MSQTestTaskActionClient testTaskActionClient;
-  private SqlStatementFactory sqlStatementFactory;
+  protected SqlStatementFactory sqlStatementFactory;
   private IndexIO indexIO;
 
   private MSQTestSegmentManager segmentManager;
@@ -494,7 +494,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         qf.operatorTable(),
         qf.macroTable(),
         PLANNER_CONFIG_DEFAULT,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.TEST_EXTERNAL_AUTHORIZER_MAPPER,
         objectMapper,
         CalciteTests.DRUID_SCHEMA_NAME,
         new CalciteRulesManager(ImmutableSet.of()),
@@ -966,10 +966,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
                     worker,
                     channel
                 );
-                Assert.assertTrue(StringUtils.format("Counters not found for stage [%d], worker [%d], channel [%s]",
-                                                     stage,
-                                                     worker,
-                                                     channel), channelToCounters.containsKey(channel));
+                Assert.assertTrue(StringUtils.format(
+                    "Counters not found for stage [%d], worker [%d], channel [%s]",
+                    stage,
+                    worker,
+                    channel
+                ), channelToCounters.containsKey(channel));
                 counter.matchQuerySnapshot(errorMessageFormat, channelToCounters.get(channel));
               }
           );
@@ -1080,7 +1082,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         verifyWorkerCount(reportPayload.getCounters());
         verifyCounters(reportPayload.getCounters());
 
-        MSQSpec foundSpec = indexingServiceClient.getQuerySpecForTask(controllerId);
+        MSQSpec foundSpec = indexingServiceClient.getMSQControllerTask(controllerId).getQuerySpec();
         log.info(
             "found generated segments: %s",
             segmentManager.getAllDataSegments().stream().map(s -> s.toString()).collect(
@@ -1299,7 +1301,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           log.info("found row signature %s", payload.getResults().getSignature());
           log.info(rows.stream().map(Arrays::toString).collect(Collectors.joining("\n")));
 
-          final MSQSpec spec = indexingServiceClient.getQuerySpecForTask(controllerId);
+          final MSQSpec spec = indexingServiceClient.getMSQControllerTask(controllerId).getQuerySpec();
           log.info("Found spec: %s", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(spec));
           return new Pair<>(spec, Pair.of(payload.getResults().getSignature(), rows));
         }
@@ -1317,7 +1319,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     {
       Preconditions.checkArgument(expectedResultRows != null, "Result rows cannot be null");
       Preconditions.checkArgument(expectedRowSignature != null, "Row signature cannot be null");
-      Preconditions.checkArgument(expectedMSQSpec != null, "MultiStageQuery Query spec not ");
+      Preconditions.checkArgument(expectedMSQSpec != null, "MultiStageQuery Query spec cannot be null ");
       Pair<MSQSpec, Pair<List<MSQResultsReport.ColumnAndType>, List<Object[]>>> specAndResults = runQueryWithResult();
 
       if (specAndResults == null) { // A fault was expected and the assertion has been done in the runQueryWithResult

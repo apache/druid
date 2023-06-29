@@ -65,7 +65,6 @@ org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity
     e = Expression(ExprContext.ACCEPT_SUB_QUERY)
     {
       granularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
-      DruidSqlParserUtils.throwIfUnsupportedGranularityInPartitionedBy(granularity);
       unparseString = e.toString();
     }
   )

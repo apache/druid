@@ -31,13 +31,13 @@ FROM jupyter/base-notebook
 WORKDIR /home/jovyan
 
 # Install required Python packages
-RUN pip install requests
-RUN pip install pandas
-RUN pip install numpy
-RUN pip install seaborn
-RUN pip install bokeh
-RUN pip install kafka-python
-RUN pip install sortedcontainers
+RUN pip install requests \
+    pip install pandas \
+    pip install numpy \
+    pip install seaborn \
+    pip install bokeh \
+    pip install kafka-python \
+    pip install sortedcontainers 
 
 # Install druidapi client from apache/druid
 # Local install requires sudo privileges 
@@ -45,21 +45,22 @@ USER root
 ADD druidapi /home/jovyan/druidapi
 WORKDIR /home/jovyan/druidapi
 RUN pip install .
-WORKDIR /home/jovyan
 
+
+
+# WIP -- install DruidDataDriver as a package
 # Import data generator and configuration file
 # Change permissions to allow import (requires sudo privileges)
-# WIP -- change to apache repo
-ADD https://raw.githubusercontent.com/shallada/druid/data-generator/examples/quickstart/jupyter-notebooks/data-generator/DruidDataDriver.py .
-ADD docker-jupyter/kafka_docker_config.json .
-RUN chmod 664 DruidDataDriver.py
-RUN chmod 664 kafka_docker_config.json
+
+# The Jupyter notebooks themselves are mounted into the image's /home/jovyan/notebooks
+# path when running this image.
+RUN mkdir -p /home/jovyan/notebooks
+
+WORKDIR /home/jovyan/notebooks
 USER jovyan
 
-# Copy the Jupyter notebook tutorials from the
-# build directory to the image working directory
-COPY ./*ipynb .
+
 
 # Add location of the data generator to PYTHONPATH
-ENV PYTHONPATH "${PYTHONPATH}:/home/jovyan"
+ENV PYTHONPATH "${PYTHONPATH}:/home/jovyan/notebooks/02-ingestion"
 

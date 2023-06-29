@@ -54,7 +54,7 @@ public class ComplexDecodeBase64OperatorConversion implements SqlOperatorConvers
       .operatorBuilder(StringUtils.toUpperCase(BuiltInExprMacros.ComplexDecodeBase64ExprMacro.NAME))
       .operandTypeChecker(
           OperandTypes.sequence(
-              "(typeName,base64)",
+              "'" + StringUtils.toUpperCase(BuiltInExprMacros.ComplexDecodeBase64ExprMacro.NAME) + "(typeName, base64)'",
               OperandTypes.and(OperandTypes.family(SqlTypeFamily.STRING), OperandTypes.LITERAL),
               OperandTypes.ANY
           )

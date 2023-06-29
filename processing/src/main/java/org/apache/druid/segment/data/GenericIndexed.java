@@ -454,28 +454,11 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
     inspector.visit("strategy", strategy);
   }
 
-  @Override
-  public String toString()
-  {
-    StringBuilder sb = new StringBuilder("GenericIndexed[");
-    if (size() > 0) {
-      for (int i = 0; i < size(); i++) {
-        T value = get(i);
-        sb.append(value).append(',').append(' ');
-      }
-      sb.setLength(sb.length() - 2);
-    }
-    sb.append(']');
-    return sb.toString();
-  }
-
   /**
    * Single-threaded view.
    */
   public abstract class BufferIndexed implements Indexed<T>
   {
-    int lastReadSize;
-
     @Override
     public int size()
     {
@@ -507,7 +490,6 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
                         || copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
         return null;
       }
-      lastReadSize = size;
 
       // ObjectStrategy.fromByteBuffer() is allowed to reset the limit of the buffer. So if the limit is changed,
       // position() call could throw an exception, if the position is set beyond the new limit. Calling limit()
@@ -525,16 +507,6 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
      */
     @Nullable
     protected abstract ByteBuffer getByteBuffer(int index);
-
-    /**
-     * This method makes no guarantees with respect to thread safety
-     *
-     * @return the size in bytes of the last value read
-     */
-    int getLastValueSize()
-    {
-      return lastReadSize;
-    }
 
     @Override
     public int indexOf(@Nullable T value)

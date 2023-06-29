@@ -42,7 +42,7 @@ import org.apache.druid.segment.column.NullValueIndex;
 import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.StringEncodingStrategy;
-import org.apache.druid.segment.column.StringFrontCodedDictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ColumnarInts;
@@ -190,13 +190,13 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
   public NestedCommonFormatColumn get()
   {
     if (frontCodedStringDictionarySupplier != null) {
-      return new StringFrontCodedDictionaryEncodedColumn(
+      return new StringUtf8DictionaryEncodedColumn(
           encodedColumnSupplier.get(),
           null,
           frontCodedStringDictionarySupplier.get()
       );
     }
-    return new ScalarStringDictionaryEncodedColumn<>(encodedColumnSupplier.get(), stringDictionary.singleThreaded());
+    return new StringUtf8DictionaryEncodedColumn(encodedColumnSupplier.get(), null, stringDictionary.singleThreaded());
   }
 
   @Nullable
