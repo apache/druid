@@ -119,8 +119,8 @@ public class S3DataSegmentKiller implements DataSegmentKiller
   /**
    * Delete all keys in a bucket from s3
    *
-   * @param s3Client client used to communicate with s3
-   * @param s3Bucket the bucket where the keys exist
+   * @param s3Client     client used to communicate with s3
+   * @param s3Bucket     the bucket where the keys exist
    * @param keysToDelete the keys to delete
    * @return a boolean value of true if there was an issue deleting one or many keys, a boolean value of false if
    * succesful
@@ -159,22 +159,20 @@ public class S3DataSegmentKiller implements DataSegmentKiller
           errorToKeys.computeIfAbsent(error.getMessage(), k -> new ArrayList<>()).add(error.getKey());
         }
         errorToKeys.forEach((key, value) -> log.error(
-            String.format(
-                "Unable to delete from bucket [%s], the following keys [%s], because [%s]",
-                s3Bucket,
-                String.join(", ", value),
-                key
-            )
+            "Unable to delete from bucket [%s], the following keys [%s], because [%s]",
+            s3Bucket,
+            String.join(", ", value),
+            key
         ));
       }
       catch (AmazonServiceException e) {
         hadException = true;
-        log.error(String.format(
+        log.error(
             "Unable to delete from bucket [%s], the following keys [%s], because [%s]",
             s3Bucket,
             chunkOfKeys.stream().map(DeleteObjectsRequest.KeyVersion::getKey).collect(Collectors.joining(", ")),
             e.getMessage()
-        ));
+        );
       }
     }
     return hadException;

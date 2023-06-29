@@ -347,7 +347,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
       segmentKiller.kill(ImmutableList.of(DATA_SEGMENT_1, DATA_SEGMENT_2));
     }
     catch (SegmentLoadingException exc) {
-      Assert.assertEquals("Couldn't delete from bucket: [test_bucket] these files [[key1/]]", exc.getMessage());
+      Assert.assertEquals("Couldn't delete segments from s3 see logs for more details", exc.getMessage());
     }
   }
 
@@ -384,7 +384,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
       segmentKiller.kill(builder.build());
     }
     catch (SegmentLoadingException exc) {
-      Assert.assertEquals("Couldn't delete from bucket: [test_bucket] these files [[key1/, key2/]]", exc.getMessage());
+      Assert.assertEquals("Couldn't delete segments from s3 see logs for more details", exc.getMessage());
     }
   }
 
@@ -403,7 +403,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
       segmentKiller.kill(ImmutableList.of(DATA_SEGMENT_1, DATA_SEGMENT_2));
     }
     catch (SegmentLoadingException exc) {
-      Assert.assertEquals("Unable to delete from bucket [test_bucket]", exc.getMessage());
+      Assert.assertEquals("Couldn't delete segments from s3 see logs for more details", exc.getMessage());
     }
   }
 }
