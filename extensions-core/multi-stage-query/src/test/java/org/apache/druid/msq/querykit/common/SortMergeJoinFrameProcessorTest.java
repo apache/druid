@@ -48,7 +48,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
 import org.apache.druid.msq.input.ReadableInput;
@@ -88,6 +87,7 @@ import java.util.concurrent.TimeUnit;
 public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
 {
   private static final StagePartition STAGE_PARTITION = new StagePartition(new StageId("q", 0), 0);
+  private static final long MAX_BUFFERED_BYTES = 10_000_000;
 
   private final int rowsPerInputFrame;
   private final int rowsPerOutputFrame;
@@ -164,7 +164,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
         JoinType.LEFT,
-        Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN
+        MAX_BUFFERED_BYTES
     );
 
     assertResult(processor, outputChannel.readable(), joinSignature, Collections.emptyList());
@@ -209,7 +209,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
         JoinType.LEFT,
-        Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN
+        MAX_BUFFERED_BYTES
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
@@ -285,7 +285,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
         JoinType.INNER,
-        Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN
+        MAX_BUFFERED_BYTES
     );
 
     assertResult(processor, outputChannel.readable(), joinSignature, Collections.emptyList());
@@ -326,7 +326,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
         JoinType.LEFT,
-        Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN
+        MAX_BUFFERED_BYTES
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
@@ -397,7 +397,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
         "j0.",
         ImmutableList.of(Collections.emptyList(), Collections.emptyList()),
         JoinType.INNER,
-        Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN
+        MAX_BUFFERED_BYTES
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
@@ -510,7 +510,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             )
         ),
         JoinType.LEFT,
-        Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN
+        MAX_BUFFERED_BYTES
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
@@ -589,7 +589,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("regionIsoCode", KeyOrder.ASCENDING))
         ),
         JoinType.RIGHT,
-        Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN
+        MAX_BUFFERED_BYTES
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
@@ -671,7 +671,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("regionIsoCode", KeyOrder.ASCENDING))
         ),
         JoinType.FULL,
-        Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN
+        MAX_BUFFERED_BYTES
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
@@ -750,7 +750,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryNumber", KeyOrder.ASCENDING))
         ),
         JoinType.LEFT,
-        Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN
+        MAX_BUFFERED_BYTES
     );
 
     final String countryCodeForNull;
@@ -844,7 +844,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryNumber", KeyOrder.ASCENDING))
         ),
         JoinType.RIGHT,
-        Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN
+        MAX_BUFFERED_BYTES
     );
 
     final String countryCodeForNull;
@@ -938,7 +938,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("countryIsoCode", KeyOrder.ASCENDING))
         ),
         JoinType.INNER,
-        Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN
+        MAX_BUFFERED_BYTES
     );
 
     final List<List<Object>> expectedRows = Arrays.asList(
@@ -1128,7 +1128,7 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             ImmutableList.of(new KeyColumn("channel", KeyOrder.ASCENDING))
         ),
         JoinType.INNER,
-        Limits.MAX_BUFFERED_BYTES_FOR_SORT_MERGE_JOIN
+        MAX_BUFFERED_BYTES
     );
 
     final List<List<Object>> expectedRows = new ArrayList<>();

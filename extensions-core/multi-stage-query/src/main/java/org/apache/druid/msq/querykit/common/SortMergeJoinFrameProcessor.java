@@ -447,6 +447,10 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
    * though this is not considered a match by join semantics. Therefore, it is important to also check
    * {@link Tracker#hasCompletelyNonNullMark()}.
    *
+   * @return negative if {@link #LEFT} key is earlier, positive if {@link #RIGHT} key is earlier, zero if the keys
+   * are the same. Returns zero even if a key component is null, even though this is not considered a match by
+   * join semantics.
+   *
    * @throws IllegalStateException if either tracker does not have a marked row and is not completely done
    */
   private int compareMarks()
@@ -629,6 +633,11 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       return bytes;
     }
 
+    /**
+     * Whether this tracker can accept more frames without exceeding {@link #maxBufferedBytes}. Always returns true
+     * if the number of buffered frames is zero or one, because the join algorithm may require two frames being
+     * buffered. (For example, if we need to verify that the last row in a frame contains a complete set of a key.)
+     */
     public boolean canBufferMoreFrames()
     {
       return holders.size() <= 1 || totalBytesBuffered() < maxBytesBuffered;
