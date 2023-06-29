@@ -97,11 +97,6 @@ public class MMappedIndex
     return metrics.get(metric);
   }
 
-  public GenericIndexed<String> getDimValueLookup(String dimension)
-  {
-    return dimValueLookups.get(dimension);
-  }
-
   public GenericIndexed<ByteBuffer> getDimValueUtf8Lookup(String dimension)
   {
     return dimValueUtf8Lookups.get(dimension);
