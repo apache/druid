@@ -13,7 +13,7 @@
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
-# under the License. 
+# under the License.
 
 name: conjunctive normal form conversion code, a variance aggregator algorithm, and Bloom filter adapted from Apache Hive
 version:
@@ -178,7 +178,7 @@ name: AWS SDK for Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.12.317
+version: 1.12.497
 libraries:
   - com.amazonaws: aws-java-sdk-core
   - com.amazonaws: aws-java-sdk-ec2
@@ -590,7 +590,7 @@ name: Apache Commons Net
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.6
+version: 3.9.0
 libraries:
   - commons-net: commons-net
 
@@ -1041,7 +1041,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.27
+version: 1.33
 libraries:
   - org.yaml: snakeyaml
 
@@ -2040,7 +2040,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.48.v20220622
+version: 9.4.51.v20230217
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -3590,7 +3590,7 @@ module: extensions/druid-avro-extensions
 license_name: Eclipse Public License 2.0
 libraries:
   - org.glassfish.hk2.external: jakarta.inject
-  
+
 ---
 
 name: jakarta.annotation
@@ -3600,7 +3600,7 @@ module: extensions/druid-avro-extensions
 license_name: Eclipse Public License 2.0
 libraries:
   - jakarta.annotation: jakarta.annotation-api
-    
+
 ---
 
 name: javax.ws.rs-api
@@ -3610,7 +3610,7 @@ module: extensions/druid-avro-extensions
 license_name: Eclipse Public License 2.0
 libraries:
   - javax.ws.rs: javax.ws.rs-api
-  
+
 ---
 
 name: jakarta.ws.rs-api
@@ -3620,7 +3620,7 @@ module: extensions/druid-avro-extensions
 license_name: Eclipse Public License 2.0
 libraries:
   - jakarta.ws.rs: jakarta.ws.rs-api
-        
+
 ---
 
 name: Kafka Schema Registry Client 6.0.1
@@ -3855,25 +3855,25 @@ notices:
   - kafka-clients: |
       Apache Kafka
       Copyright 2023 The Apache Software Foundation.
-      
+
       This product includes software developed at
       The Apache Software Foundation (https://www.apache.org/).
-      
+
       This distribution has a binary dependency on jersey, which is available under the CDDL
       License. The source code of jersey can be found at https://github.com/jersey/jersey/.
-      
+
       This distribution has a binary test dependency on jqwik, which is available under
       the Eclipse Public License 2.0. The source code can be found at
       https://github.com/jlink/jqwik.
-    
+
       The streams-scala (streams/streams-scala) module was donated by Lightbend and the original code was copyrighted by them:
         Copyright (C) 2018 Lightbend Inc. <https://www.lightbend.com>
         Copyright (C) 2017-2018 Alexis Seigneurin.
-      
+
       This project contains the following code copied from Apache Hadoop:
         clients/src/main/java/org/apache/kafka/common/utils/PureJavaCrc32C.java
         Some portions of this file Copyright (c) 2004-2006 Intel Corporation and licensed under the BSD license.
-      
+
       This project contains the following code copied from Apache Hive:
         streams/src/main/java/org/apache/kafka/streams/state/internals/Murmur3.java
 
@@ -4234,7 +4234,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.4.1
+version: 42.4.3
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4246,7 +4246,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.4.1
+version: 42.4.3
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4258,7 +4258,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.4.1
+version: 42.4.3
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4789,25 +4789,25 @@ notices:
   - kafka-clients: |
       Apache Kafka
       Copyright 2023 The Apache Software Foundation.
-      
+
       This product includes software developed at
       The Apache Software Foundation (https://www.apache.org/).
-      
+
       This distribution has a binary dependency on jersey, which is available under the CDDL
       License. The source code of jersey can be found at https://github.com/jersey/jersey/.
-      
+
       This distribution has a binary test dependency on jqwik, which is available under
       the Eclipse Public License 2.0. The source code can be found at
       https://github.com/jlink/jqwik.
-      
+
       The streams-scala (streams/streams-scala) module was donated by Lightbend and the original code was copyrighted by them:
         Copyright (C) 2018 Lightbend Inc. <https://www.lightbend.com>
         Copyright (C) 2017-2018 Alexis Seigneurin.
-      
+
       This project contains the following code copied from Apache Hadoop:
         clients/src/main/java/org/apache/kafka/common/utils/PureJavaCrc32C.java
         Some portions of this file Copyright (c) 2004-2006 Intel Corporation and licensed under the BSD license.
-      
+
       This project contains the following code copied from Apache Hive:
         streams/src/main/java/org/apache/kafka/streams/state/internals/Murmur3.java
 

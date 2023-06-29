@@ -96,7 +96,7 @@
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.48.v20220622</jetty.version>
+        <jetty.version>9.4.51.v20230217</jetty.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.10.5.20201202</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
@@ -105,7 +105,7 @@
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
         <netty4.version>4.1.86.Final</netty4.version>
-        <postgresql.version>42.4.1</postgresql.version>
+        <postgresql.version>42.4.3</postgresql.version>
         <protobuf.version>3.21.7</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
         <slf4j.version>1.7.36</slf4j.version>
@@ -113,7 +113,7 @@
         <jna-platform.version>5.13.0</jna-platform.version>
         <hadoop.compile.version>3.3.6</hadoop.compile.version>
         <mockito.version>4.3.1</mockito.version>
-        <aws.sdk.version>1.12.317</aws.sdk.version>
+        <aws.sdk.version>1.12.497</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.7</jacoco.version>
         <hibernate-validator.version>5.3.6.Final</hibernate-validator.version>
@@ -236,7 +236,7 @@
                <enabled>false</enabled>
             </snapshots>
         </repository>
-        
+
         <!-- Only used by core, but moved to root for parallel build dependency resolution -->
         <repository>
             <id>sigar</id>
@@ -246,7 +246,7 @@
             </snapshots>
         </repository>
     </repositories>
-    
+
     <pluginRepositories>
         <pluginRepository>
             <id>${repoOrgId}</id>
@@ -284,7 +284,7 @@
            <dependency>
                <groupId>commons-net</groupId>
                <artifactId>commons-net</artifactId>
-               <version>3.6</version>
+               <version>3.9.0</version>
            </dependency>
           <dependency>
               <groupId>com.github.seancfoley</groupId>
@@ -341,6 +341,11 @@
                         <artifactId>slf4j-api</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.yaml</groupId>
+                <artifactId>snakeyaml</artifactId>
+                <version>1.33</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.zookeeper</groupId>
