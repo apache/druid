@@ -222,7 +222,7 @@ public class SqlStatementResourceTest extends MSQTestBase
       new Object[]{234, "foo1", "bar1"}
   );
 
-  private static final MSQTaskReport MSQ_SELECT_TASK_REPORT = new MSQTaskReport(
+  private final MSQTaskReport selectTaskReport = new MSQTaskReport(
       FINISHED_SELECT_MSQ_QUERY,
       new MSQTaskReportPayload(
           new MSQStatusReport(
@@ -315,10 +315,11 @@ public class SqlStatementResourceTest extends MSQTestBase
   );
   private static final String FAILURE_MSG = "failure msg";
   private static SqlStatementResource resource;
-  @Mock
-  private static OverlordClient overlordClient;
 
-  private static void setupMocks(OverlordClient indexingServiceClient) throws JsonProcessingException
+  @Mock
+  private OverlordClient overlordClient;
+
+  private void setupMocks(OverlordClient indexingServiceClient) throws JsonProcessingException
   {
 
     Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(ACCEPTED_SELECT_MSQ_QUERY)))
@@ -392,8 +393,7 @@ public class SqlStatementResourceTest extends MSQTestBase
 
     Mockito.when(indexingServiceClient.taskReportAsMap(FINISHED_SELECT_MSQ_QUERY))
            .thenReturn(Futures.immediateFuture(mapper.readValue(
-               mapper.writeValueAsString(TaskReport.buildTaskReports(
-                   MSQ_SELECT_TASK_REPORT)),
+               mapper.writeValueAsString(TaskReport.buildTaskReports(selectTaskReport)),
                new TypeReference<Map<String, Object>>()
                {
                }
