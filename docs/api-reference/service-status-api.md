@@ -23,10 +23,6 @@ sidebar_label: Service status
   ~ under the License.
   -->
 
-<style>
-get { color: blue; font-weight: bold }
-post { color: green; font-weight: bold }
-</style>
 
 This document describes the API endpoints to retrieve service (process) status, cluster information for Apache Druid.
 
@@ -39,9 +35,13 @@ All processes support the following endpoints.
 ### Get process information
 
 #### URL
-<get>`GET`</get> `/status`
+`GET` `/status`
 
 Returns the Druid version, loaded extensions, memory used, total memory, and other useful information about the process.
+
+#### Query parameter
+
+No query parameters.
 
 #### Responses
 
@@ -60,15 +60,10 @@ Returns the Druid version, loaded extensions, memory used, total memory, and oth
 ```shell
 curl "{domain}/status"
 ```
-<!--Python-->
-```python
-import requests
-
-url = "{domain}/status"
-
-response = requests.get(url)
-
-print(response.text)
+<!--HTTP-->
+```http
+GET /status HTTP/1.1
+Host: {domain}
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -176,9 +171,14 @@ print(response.text)
 ### Get process health
 
 #### URL
+
 <get>`GET`</get> `/status/health`
 
-Always returns a boolean `true` value with a 200 OK response, useful for automated health checks.
+Retrieves the health of the Druid service. If online, it will always return a JSON object with the boolean `true` value, indicating that the service can receive API calls. It is useful for automated health checks.
+
+#### Query parameter
+
+No query parameters.
 
 #### Responses
 
@@ -197,15 +197,10 @@ Always returns a boolean `true` value with a 200 OK response, useful for automat
 ```shell
 curl "{domain}/status/health"
 ```
-<!--Python-->
-```python
-import requests
-
-url = "{domain}/status/health"
-
-response = requests.get(url)
-
-print(response.text)
+<!--HTTP-->
+```http
+GET /status/health HTTP/1.1
+Host: {domain}
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -226,6 +221,10 @@ print(response.text)
 
 Returns the current configuration properties of the process.
 
+#### Query parameter
+
+No query parameters.
+
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -243,15 +242,10 @@ Returns the current configuration properties of the process.
 ```shell
 curl "{domain}/status/properties"
 ```
-<!--Python-->
-```python
-import requests
-
-url = "{domain}/status/properties"
-
-response = requests.get(url)
-
-print(response.text)
+<!--HTTP-->
+```http
+GET /status/properties HTTP/1.1
+Host: {domain}
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -367,14 +361,11 @@ Returns a JSON map of the form `{"selfDiscovered": true/false}`, indicating whet
 from the central node discovery mechanism (currently ZooKeeper) of the Druid cluster that the node has been added to the
 cluster. 
 
-It is recommended to not consider a Druid node "healthy" or "ready" in automated deployment/container
-management systems until it returns `{"selfDiscovered": true}` from this endpoint. This is because a node may be
-isolated from the rest of the cluster due to network issues and it doesn't make sense to consider nodes "healthy" in
-this case. Also, when nodes such as Brokers use ZooKeeper segment discovery for building their view of the Druid cluster
-(as opposed to HTTP segment discovery), they may be unusable until the ZooKeeper client is fully initialized and starts
-to receive data from the ZooKeeper cluster. `{"selfDiscovered": true}` is a proxy event indicating that the ZooKeeper
-client on the node has started to receive data from the ZooKeeper cluster and it's expected that all segments and other
-nodes will be discovered by this node timely from this point.
+It is recommended to only consider a Druid node "healthy" or "ready" in automated deployment/container management systems when it returns `{"selfDiscovered": true}` from this endpoint. Nodes experiencing network issues may become isolated and should not be considered "healthy." Nodes utilizing Zookeeper segment discovery may be unusable until the Zookeeper client is fully initialized and receives data from the Zookeeper cluster. The presence of `{"selfDiscovered": true}` indicates that the node's Zookeeper client has started receiving data, enabling timely discovery of segments and other nodes.
+
+#### Query parameters
+
+No query parameters.
 
 #### Responses
 
@@ -393,15 +384,10 @@ nodes will be discovered by this node timely from this point.
 ```shell
 curl "{domain}/status/selfDiscovered/status"
 ```
-<!--Python-->
-```python
-import requests
-
-url = "{domain}/status/selfDiscovered/status"
-
-response = requests.get(url)
-
-print(response.text)
+<!--HTTP-->
+```http
+GET /status/selfDiscovered/status HTTP/1.1
+Host: {domain}
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -422,8 +408,11 @@ print(response.text)
 #### URL
 <get>`GET`</get> `/status/selfDiscovered`
 
-Similar to `/status/selfDiscovered/status`, but returns status codes. This endpoint might be useful because some
-monitoring checks such as AWS load balancer health checks are not able to look at the response body.
+Returns status codes to indicate if a node discovered itself within the Druid cluster. This is similar to the `status/selfDiscovered/status` endpoint but relies on HTTP status codes alone. This is useful for certain monitoring checks such as AWS load balancer health checks which are unable to examine the response body.
+
+#### Query parameters
+
+No query parameters.
 
 #### Responses
 
@@ -446,15 +435,10 @@ monitoring checks such as AWS load balancer health checks are not able to look a
 ```shell
 curl "{domain}/status/selfDiscovered"
 ```
-<!--Python-->
-```python
-import requests
-
-url = "{domain}/status/selfDiscovered"
-
-response = requests.get(url)
-
-print(response.text)
+<!--HTTP-->
+```http
+GET /status/selfDiscovered HTTP/1.1
+Host: {domain}
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -1173,3 +1157,5 @@ print(response.text)
 
 #### Sample response
 A successful response to this endpoint results in an empty response body.
+
+
