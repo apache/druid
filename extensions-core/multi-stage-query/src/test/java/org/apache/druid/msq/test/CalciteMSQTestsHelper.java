@@ -86,8 +86,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 
-import static org.apache.druid.sql.calcite.util.CalciteTests.*;
-import static org.apache.druid.sql.calcite.util.TestDataBuilder.*;
+import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
+import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
+import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE3;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.INDEX_SCHEMA_NUMERIC_DIMS;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS;
+import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
 
 /**
  * Helper class aiding in wiring up the Guice bindings required for MSQ engine to work with the Calcite's tests
