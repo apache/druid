@@ -67,7 +67,6 @@ public class ExpressionPostAggregator implements PostAggregator
   @Nullable
   private final String ordering;
 
-  private final ExprMacroTable macroTable;
   private final Map<String, Function<Object, Object>> finalizers;
   private final Expr.InputBindingInspector partialTypeInformation;
 
@@ -76,7 +75,7 @@ public class ExpressionPostAggregator implements PostAggregator
   private final Supplier<byte[]> cacheKey;
 
   /**
-   * Constructor for serialization.
+   * Constructor for deserialization.
    */
   @JsonCreator
   public ExpressionPostAggregator(
@@ -90,16 +89,35 @@ public class ExpressionPostAggregator implements PostAggregator
         name,
         expression,
         ordering,
-        macroTable,
         Parser.lazyParse(expression, macroTable)
     );
   }
 
+  /**
+   * Constructor for a pre-parsed expression.
+   */
+  public ExpressionPostAggregator(
+      final String name,
+      final String expression,
+      @Nullable final String ordering,
+      final Expr parsed
+  )
+  {
+    this(
+        name,
+        expression,
+        ordering,
+        () -> parsed
+    );
+  }
+
+  /**
+   * Constructor for a supplier of a pre-parsed expression.
+   */
   private ExpressionPostAggregator(
       final String name,
       final String expression,
       @Nullable final String ordering,
-      final ExprMacroTable macroTable,
       final Supplier<Expr> parsed
   )
   {
@@ -107,7 +125,6 @@ public class ExpressionPostAggregator implements PostAggregator
         name,
         expression,
         ordering,
-        macroTable,
         ImmutableMap.of(),
         InputBindings.nilBindings(),
         parsed,
@@ -119,7 +136,6 @@ public class ExpressionPostAggregator implements PostAggregator
       final String name,
       final String expression,
       @Nullable final String ordering,
-      final ExprMacroTable macroTable,
       final Map<String, Function<Object, Object>> finalizers,
       final Expr.InputBindingInspector partialTypeInformation,
       final Supplier<Expr> parsed,
@@ -133,7 +149,6 @@ public class ExpressionPostAggregator implements PostAggregator
     this.ordering = ordering;
     // comparator should be specialized to output type ... someday
     this.comparator = ordering == null ? DEFAULT_COMPARATOR : Ordering.valueOf(ordering);
-    this.macroTable = macroTable;
     this.finalizers = finalizers;
     this.partialTypeInformation = partialTypeInformation;
 
@@ -146,7 +161,6 @@ public class ExpressionPostAggregator implements PostAggregator
           .build();
     });
   }
-
 
   @Override
   public Set<String> getDependentFields()
@@ -208,7 +222,6 @@ public class ExpressionPostAggregator implements PostAggregator
         name,
         expression,
         ordering,
-        macroTable,
         finalizers,
         InputBindings.inspectorFromTypeMap(types),
         parsed,
@@ -252,7 +265,7 @@ public class ExpressionPostAggregator implements PostAggregator
      * Ensures the following order: numeric > NaN > Infinite.
      *
      * The name may be referenced via Ordering.valueOf(String) in the constructor {@link
-     * ExpressionPostAggregator#ExpressionPostAggregator(String, String, String, ExprMacroTable, Map, Expr.InputBindingInspector, Supplier, Supplier)}.
+     * ExpressionPostAggregator#ExpressionPostAggregator(String, String, String, Map, Expr.InputBindingInspector, Supplier, Supplier)}.
      */
     @SuppressWarnings("unused")
     numericFirst {

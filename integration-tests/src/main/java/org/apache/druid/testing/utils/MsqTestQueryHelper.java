@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
@@ -200,15 +201,17 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
 
     List<Map<String, Object>> actualResults = new ArrayList<>();
 
-    List<Object[]> results = resultsReport.getResults();
+    Yielder<Object[]> yielder = resultsReport.getResultYielder();
     List<MSQResultsReport.ColumnAndType> rowSignature = resultsReport.getSignature();
 
-    for (Object[] row : results) {
+    while (!yielder.isDone()) {
+      Object[] row = yielder.get();
       Map<String, Object> rowWithFieldNames = new LinkedHashMap<>();
       for (int i = 0; i < row.length; ++i) {
         rowWithFieldNames.put(rowSignature.get(i).getName(), row[i]);
       }
       actualResults.add(rowWithFieldNames);
+      yielder = yielder.next(null);
     }
 
     QueryResultVerifier.ResultVerificationObject resultsComparison = QueryResultVerifier.compareResults(

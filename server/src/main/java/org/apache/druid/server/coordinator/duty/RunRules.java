@@ -67,7 +67,7 @@ public class RunRules implements CoordinatorDuty
     final Set<DataSegment> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
     final Set<DataSegment> usedSegments = params.getUsedSegments();
     log.info(
-        "Applying retention rules on [%d] used segments, skipping [%d] overshadowed segments.",
+        "Applying retention rules on [%,d] used segments, skipping [%,d] overshadowed segments.",
         usedSegments.size(), overshadowed.size()
     );
 

@@ -38,7 +38,7 @@ public class RegexpExtractOperatorConversion implements SqlOperatorConversion
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("REGEXP_EXTRACT")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER, SqlTypeFamily.INTEGER)
-      .requiredOperands(2)
+      .requiredOperandCount(2)
       .literalOperands(1, 2)
       .returnTypeNullable(SqlTypeName.VARCHAR)
       .functionCategory(SqlFunctionCategory.STRING)
@@ -66,9 +66,9 @@ public class RegexpExtractOperatorConversion implements SqlOperatorConversion
         StringUtils.toLowerCase(calciteOperator().getName()),
         inputExpressions -> {
           final DruidExpression arg = inputExpressions.get(0);
-          final Expr patternExpr = inputExpressions.get(1).parse(plannerContext.getExprMacroTable());
+          final Expr patternExpr = plannerContext.parseExpression(inputExpressions.get(1).getExpression());
           final Expr indexExpr = inputExpressions.size() > 2
-                                 ? inputExpressions.get(2).parse(plannerContext.getExprMacroTable())
+                                 ? plannerContext.parseExpression(inputExpressions.get(2).getExpression())
                                  : null;
 
           if (arg.isSimpleExtraction() && patternExpr.isLiteral() && (indexExpr == null || indexExpr.isLiteral())) {

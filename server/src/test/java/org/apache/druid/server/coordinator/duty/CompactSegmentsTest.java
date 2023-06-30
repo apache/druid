@@ -2036,7 +2036,7 @@ public class CompactSegmentsTest
       // all the datasources in the coordinator stats
       final AtomicInteger numDatasources = new AtomicInteger();
       stats.forEachStat(
-          (dimensionValues, stat, value) -> {
+          (stat, rowKey, value) -> {
             if (stat.equals(Stats.Compaction.PENDING_BYTES)
                 && (expectedRemainingSegments <= 0 || value == expectedRemainingSegments)) {
               numDatasources.incrementAndGet();

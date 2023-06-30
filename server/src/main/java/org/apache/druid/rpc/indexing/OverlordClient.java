@@ -20,6 +20,7 @@
 package org.apache.druid.rpc.indexing;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.rpc.ServiceRetryPolicy;
@@ -51,6 +52,8 @@ public interface OverlordClient
   ListenableFuture<TaskStatusResponse> taskStatus(String taskId);
 
   ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId);
+
+  ListenableFuture<TaskPayloadResponse> taskPayload(String taskId);
 
   OverlordClient withRetryPolicy(ServiceRetryPolicy retryPolicy);
 }
