@@ -102,7 +102,7 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
               stringDictionaryBuffer,
               GenericIndexed.UTF8_STRATEGY,
               mapper
-          )::singleThreaded;;
+          )::singleThreaded;
         }
         final ByteBuffer encodedValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
