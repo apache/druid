@@ -75,7 +75,8 @@ public class FriendlyServersTest
                 );
                 OutputStream out = clientSocket.getOutputStream()
             ) {
-              while (!in.readLine().equals("")) {
+              String line;
+              while ((line = in.readLine()) != null && line.length() > 0) {
                 // skip lines
               }
               out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
@@ -129,13 +130,13 @@ public class FriendlyServersTest
             ) {
               StringBuilder request = new StringBuilder();
               String line;
-              while (!"".equals((line = in.readLine()))) {
+              while ((line = in.readLine()) != null && line.length() > 0) {
                 request.append(line).append("\r\n");
               }
               requestContent.set(request.toString());
               out.write("HTTP/1.1 200 OK\r\n\r\n".getBytes(StandardCharsets.UTF_8));
 
-              while (!in.readLine().equals("")) {
+              while ((line = in.readLine()) != null && line.length() > 0) {
                 // skip lines
               }
               out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
@@ -263,7 +264,7 @@ public class FriendlyServersTest
             ) {
               // Read headers
               String header;
-              while (!(header = in.readLine()).equals("")) {
+              while ((header = in.readLine()) != null && header.length() > 0) {
                 if (header.startsWith("accept-encoding:")) {
                   foundAcceptEncoding.set(header);
                 }
