@@ -464,6 +464,7 @@
                           <dependency>
                             <groupId>org.apache.maven.surefire</groupId>
                             <artifactId>surefire-junit47</artifactId>
+                            <version>${surefire.version}</version>
                           </dependency>
                         </dependencies>
                         <executions>
