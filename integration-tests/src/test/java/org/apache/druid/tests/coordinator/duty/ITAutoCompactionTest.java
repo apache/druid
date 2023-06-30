@@ -266,13 +266,16 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
               new CountAggregatorFactory("count"),
               new LongSumAggregatorFactory("sum_added", "added"),
               new SketchMergeAggregatorFactory("thetaSketch", "user", 16384, true, false, null),
-<<<<<<< HEAD
-              new HllSketchBuildAggregatorFactory("HLLSketchBuild", "user", 12, TgtHllType.HLL_4.name(), null, false),
-              new DoublesSketchAggregatorFactory("quantilesDoublesSketch", "delta", 128, 1000000000L)
-=======
-              new HllSketchBuildAggregatorFactory("HLLSketchBuild", "user", 12, TgtHllType.HLL_4.name(), false, false),
+              new HllSketchBuildAggregatorFactory(
+                  "HLLSketchBuild",
+                  "user",
+                  12,
+                  TgtHllType.HLL_4.name(),
+                  null,
+                  false,
+                  false
+              ),
               new DoublesSketchAggregatorFactory("quantilesDoublesSketch", "delta", 128, 1000000000L, null)
->>>>>>> master
           },
           false
       );
