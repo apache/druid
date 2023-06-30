@@ -133,6 +133,11 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           2L
       };
 
+  /**
+   * Expected virtual columns for {@link #testHllSketchPostAggsTimeseries()},
+   * {@link #testHllSketchPostAggsGroupBy()}, {@link #testHllSketchFilteredAggregatorsTimeseries()}, and
+   * {@link #testHllSketchFilteredAggregatorsGroupBy()}.
+   */
   private static final List<VirtualColumn> EXPECTED_PA_VIRTUAL_COLUMNS =
       ImmutableList.of(
           new ExpressionVirtualColumn(
@@ -149,6 +154,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           )
       );
 
+  /**
+   * Expected aggregators for {@link #testHllSketchPostAggsTimeseries()} and {@link #testHllSketchPostAggsGroupBy()}.
+   */
   private static final List<AggregatorFactory> EXPECTED_PA_AGGREGATORS =
       ImmutableList.of(
           new HllSketchBuildAggregatorFactory("a0", "dim2", null, null, null, false, true),
@@ -160,12 +168,20 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           new HllSketchBuildAggregatorFactory("a6", "dim2", null, null, StringEncoding.UTF8, true, true)
       );
 
+  /**
+   * Expected aggregators for {@link #testHllSketchFilteredAggregatorsTimeseries()} and
+   * {@link #testHllSketchFilteredAggregatorsGroupBy()}.
+   */
   private static final List<AggregatorFactory> EXPECTED_FILTERED_AGGREGATORS =
       EXPECTED_PA_AGGREGATORS.stream()
                              .limit(5)
                              .map(factory -> new FilteredAggregatorFactory(factory, selector("dim2", "a", null)))
                              .collect(Collectors.toList());
 
+  /**
+   * Expected post-aggregators for {@link #testHllSketchPostAggsTimeseries()} and
+   * {@link #testHllSketchPostAggsGroupBy()}.
+   */
   private static final List<PostAggregator> EXPECTED_PA_POST_AGGREGATORS =
       ImmutableList.of(
           new HllSketchToEstimatePostAggregator("p1", new FieldAccessPostAggregator("p0", "a0"), false),
@@ -182,6 +198,10 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           new HllSketchToEstimatePostAggregator("p20", new FieldAccessPostAggregator("p19", "a0"), true)
       );
 
+  /**
+   * Expected post-aggregators for {@link #testHllSketchFilteredAggregatorsTimeseries()} and
+   * {@link #testHllSketchFilteredAggregatorsGroupBy()}.
+   */
   private static final List<PostAggregator> EXPECTED_FILTERED_POST_AGGREGATORS =
       ImmutableList.of(
           new HllSketchToEstimatePostAggregator("p1", new FieldAccessPostAggregator("p0", "a0"), false),
@@ -328,9 +348,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           ),
                           new HllSketchBuildAggregatorFactory("a3", "v0", null, null, null, null, ROUND),
                           new HllSketchBuildAggregatorFactory("a4", "v1", null, null, null, null, ROUND),
-                          new HllSketchMergeAggregatorFactory("a5", "hllsketch_dim1", 21, "HLL_8", null, null,ROUND),
+                          new HllSketchMergeAggregatorFactory("a5", "hllsketch_dim1", 21, "HLL_8", null, null, ROUND),
                           new HllSketchMergeAggregatorFactory("a6", "hllsketch_dim1", null, null, null, null, ROUND),
-                          new HllSketchMergeAggregatorFactory("a7", "hllsketch_dim1", 21, "HLL_4", null,null, ROUND)
+                          new HllSketchMergeAggregatorFactory("a7", "hllsketch_dim1", 21, "HLL_4", null, null, ROUND)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)

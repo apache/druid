@@ -264,7 +264,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
         .appendString(fieldName)
         .appendInt(lgK)
         .appendInt(tgtHllType.ordinal())
-        .appendInt(stringEncoding.ordinal())
+        .appendCacheable(stringEncoding)
         .build();
   }
 

@@ -45,10 +45,7 @@ public class HllSketchBuildUtil
       // noinspection rawtypes
       for (Object entry : (List) value) {
         if (entry != null) {
-          final String asString = entry.toString();
-          if (!NullHandling.isNullOrEquivalent(asString)) {
-            updateSketchWithString(sketch, stringEncoding, asString);
-          }
+          updateSketchWithString(sketch, stringEncoding, entry.toString());
         }
       }
     } else if (value instanceof char[]) {
@@ -78,8 +75,7 @@ public class HllSketchBuildUtil
         sketch.update(buf);
       }
     } else {
-      final String s = NullHandling.nullToEmptyIfNeeded(selector.lookupName(id));
-      updateSketchWithString(sketch, stringEncoding, s);
+      updateSketchWithString(sketch, stringEncoding, selector.lookupName(id));
     }
   }
 
@@ -89,7 +85,7 @@ public class HllSketchBuildUtil
       @Nullable final String value
   )
   {
-    if (value == null) {
+    if (NullHandling.isNullOrEquivalent(value)) {
       return;
     }
 
