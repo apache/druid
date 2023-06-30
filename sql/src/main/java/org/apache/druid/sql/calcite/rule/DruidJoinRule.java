@@ -92,7 +92,7 @@ public class DruidJoinRule extends RelOptRule
     // 1) Can handle the join condition as a native join.
     // 2) Left has a PartialDruidQuery (i.e., is a real query, not top-level UNION ALL).
     // 3) Right has a PartialDruidQuery (i.e., is a real query, not top-level UNION ALL).
-    return canHandleCondition(join.getCondition(), join.getLeft().getRowType(), right)
+    return canHandleCondition(join.getCondition(), join.getLeft().getRowType(), right, join.getCluster().getRexBuilder())
            && left.getPartialDruidQuery() != null
            && right.getPartialDruidQuery() != null;
   }
@@ -116,7 +116,8 @@ public class DruidJoinRule extends RelOptRule
     ConditionAnalysis conditionAnalysis = analyzeCondition(
         join.getCondition(),
         join.getLeft().getRowType(),
-        right
+        right,
+        rexBuilder
     ).get();
     final boolean isLeftDirectAccessPossible = enableLeftScanDirect && (left instanceof DruidQueryRel);
 
@@ -223,9 +224,9 @@ public class DruidJoinRule extends RelOptRule
    * Returns whether {@link #analyzeCondition} would return something.
    */
   @VisibleForTesting
-  boolean canHandleCondition(final RexNode condition, final RelDataType leftRowType, DruidRel<?> right)
+  boolean canHandleCondition(final RexNode condition, final RelDataType leftRowType, DruidRel<?> right, final RexBuilder rexBuilder)
   {
-    return analyzeCondition(condition, leftRowType, right).isPresent();
+    return analyzeCondition(condition, leftRowType, right, rexBuilder).isPresent();
   }
 
   /**
@@ -235,13 +236,13 @@ public class DruidJoinRule extends RelOptRule
   private Optional<ConditionAnalysis> analyzeCondition(
       final RexNode condition,
       final RelDataType leftRowType,
-      final DruidRel<?> right
+      final DruidRel<?> right,
+      final RexBuilder rexBuilder
   )
   {
     final List<RexNode> subConditions = decomposeAnd(condition);
     final List<Pair<RexNode, RexInputRef>> equalitySubConditions = new ArrayList<>();
     final List<RexLiteral> literalSubConditions = new ArrayList<>();
-    final List<RexInputRef> inputRefSubConditions = new ArrayList<>();
     final int numLeftFields = leftRowType.getFieldCount();
     final Set<RexInputRef> rightColumns = new HashSet<>();
 
@@ -267,10 +268,6 @@ public class DruidJoinRule extends RelOptRule
         continue;
       }
 
-      if (subCondition.isA(SqlKind.INPUT_REF)) {
-        inputRefSubConditions.add((RexInputRef) subCondition);
-        continue;
-      }
 
       if (!subCondition.isA(SqlKind.EQUALS)) {
         // If it's not EQUALS, it's not supported.
@@ -281,16 +278,28 @@ public class DruidJoinRule extends RelOptRule
         return Optional.empty();
       }
 
-      final List<RexNode> operands = ((RexCall) subCondition).getOperands();
-      Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%,d]", operands.size());
+      RexNode firstOperand;
+      RexNode secondOperand;
 
-      if (isLeftExpression(operands.get(0), numLeftFields) && isRightInputRef(operands.get(1), numLeftFields)) {
-        equalitySubConditions.add(Pair.of(operands.get(0), (RexInputRef) operands.get(1)));
-        rightColumns.add((RexInputRef) operands.get(1));
-      } else if (isRightInputRef(operands.get(0), numLeftFields)
-                 && isLeftExpression(operands.get(1), numLeftFields)) {
-        equalitySubConditions.add(Pair.of(operands.get(1), (RexInputRef) operands.get(0)));
-        rightColumns.add((RexInputRef) operands.get(0));
+      if (subCondition.isA(SqlKind.INPUT_REF)) {
+        firstOperand = rexBuilder.makeLiteral(true);
+        secondOperand = (RexInputRef) subCondition;
+      } else if (subCondition.isA(SqlKind.EQUALS)) {
+        final List<RexNode> operands = ((RexCall) subCondition).getOperands();
+        Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%,d]", operands.size());
+        firstOperand = operands.get(0);
+        secondOperand = operands.get(1);
+      } else {
+        return Optional.empty();
+      }
+
+      if (isLeftExpression(firstOperand, numLeftFields) && isRightInputRef(secondOperand, numLeftFields)) {
+        equalitySubConditions.add(Pair.of(firstOperand, (RexInputRef) secondOperand));
+        rightColumns.add((RexInputRef) secondOperand);
+      } else if (isRightInputRef(firstOperand, numLeftFields)
+                 && isLeftExpression(secondOperand, numLeftFields)) {
+        equalitySubConditions.add(Pair.of(secondOperand, (RexInputRef) firstOperand));
+        rightColumns.add((RexInputRef) firstOperand);
       } else {
         // Cannot handle this condition.
         plannerContext.setPlanningError("SQL is resulting in a join that has unsupported operand types.");
@@ -320,8 +329,7 @@ public class DruidJoinRule extends RelOptRule
         new ConditionAnalysis(
             numLeftFields,
             equalitySubConditions,
-            literalSubConditions,
-            inputRefSubConditions
+            literalSubConditions
         ));
   }
 
@@ -353,13 +361,6 @@ public class DruidJoinRule extends RelOptRule
 
   private boolean isLeftExpression(final RexNode rexNode, final int numLeftFields)
   {
-    if (!plannerContext.getJoinAlgorithm().canHandleLeftExpressions()) {
-      // Must be INPUT_REF.
-      if (!rexNode.isA(SqlKind.INPUT_REF)) {
-        return false;
-      }
-    }
-
     return ImmutableBitSet.range(numLeftFields).contains(RelOptUtil.InputFinder.bits(rexNode));
   }
 
@@ -387,19 +388,16 @@ public class DruidJoinRule extends RelOptRule
      */
     private final List<RexLiteral> literalSubConditions;
 
-    private final List<RexInputRef> inputRefs;
 
     ConditionAnalysis(
         int numLeftFields,
         List<Pair<RexNode, RexInputRef>> equalitySubConditions,
-        List<RexLiteral> literalSubConditions,
-        List<RexInputRef> inputRefs
+        List<RexLiteral> literalSubConditions
     )
     {
       this.numLeftFields = numLeftFields;
       this.equalitySubConditions = equalitySubConditions;
       this.literalSubConditions = literalSubConditions;
-      this.inputRefs = inputRefs;
     }
 
     public ConditionAnalysis pushThroughLeftProject(final Project leftProject)
@@ -419,8 +417,7 @@ public class DruidJoinRule extends RelOptRule
                   )
               )
               .collect(Collectors.toList()),
-          literalSubConditions,
-          inputRefs
+          literalSubConditions
       );
     }
 
@@ -445,8 +442,7 @@ public class DruidJoinRule extends RelOptRule
                   )
               )
               .collect(Collectors.toList()),
-          literalSubConditions,
-          inputRefs
+          literalSubConditions
       );
     }
 
@@ -472,10 +468,6 @@ public class DruidJoinRule extends RelOptRule
               equalitySubConditions
                   .stream()
                   .map(equality -> rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, equality.lhs, equality.rhs))
-                  .collect(Collectors.toList()),
-              inputRefs
-                  .stream()
-                  .map(inputRef -> rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, inputRef, rexBuilder.makeLiteral(true)))
                   .collect(Collectors.toList())
           ),
           false

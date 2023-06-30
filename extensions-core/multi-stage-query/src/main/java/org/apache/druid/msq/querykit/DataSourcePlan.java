@@ -56,6 +56,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
@@ -144,9 +145,13 @@ public class DataSourcePlan
           broadcast
       );
     } else if (dataSource instanceof JoinDataSource) {
-      final JoinAlgorithm joinAlgorithm = PlannerContext.getJoinAlgorithm(queryContext);
+      final JoinAlgorithm preferredJoinAlgorithm = PlannerContext.getJoinAlgorithm(queryContext);
+      final JoinAlgorithm deducedJoinAlgorithm = deduceJoinAlgorithm(
+          preferredJoinAlgorithm,
+          ((JoinDataSource) dataSource)
+      );
 
-      switch (joinAlgorithm) {
+      switch (deducedJoinAlgorithm) {
         case BROADCAST:
           return forBroadcastHashJoin(
               queryKit,
@@ -171,7 +176,7 @@ public class DataSourcePlan
           );
 
         default:
-          throw new UOE("Cannot handle join algorithm [%s]", joinAlgorithm);
+          throw new UOE("Cannot handle join algorithm [%s]", deducedJoinAlgorithm);
       }
     } else {
       throw new UOE("Cannot handle dataSource [%s]", dataSource);
@@ -196,6 +201,25 @@ public class DataSourcePlan
   public Optional<QueryDefinitionBuilder> getSubQueryDefBuilder()
   {
     return Optional.ofNullable(subQueryDefBuilder);
+  }
+
+  private static JoinAlgorithm deduceJoinAlgorithm(JoinAlgorithm preferredJoinAlgorithm, JoinDataSource joinDataSource)
+  {
+    if (JoinAlgorithm.BROADCAST.equals(preferredJoinAlgorithm)) {
+      return JoinAlgorithm.BROADCAST;
+    } else {
+      if (isConditionEqualityOnLeftAndRightColumns(joinDataSource.getConditionAnalysis())) {
+        return JoinAlgorithm.SORT_MERGE;
+      }
+    }
+    return JoinAlgorithm.BROADCAST;
+  }
+
+  private static boolean isConditionEqualityOnLeftAndRightColumns(JoinConditionAnalysis joinConditionAnalysis)
+  {
+    return joinConditionAnalysis.getEquiConditions()
+                                .stream()
+                                .allMatch(equality -> equality.getLeftExpr().isIdentifier());
   }
 
   /**
