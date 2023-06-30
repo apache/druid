@@ -232,7 +232,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
       Assert.fail("Should throw an exception");
     }
     catch (Exception e) {
-      Assert.assertEquals("Cannot coerce field [fieldName] class of [Byte Array] to [BIGINT]", e.getMessage());
+      Assert.assertEquals("Cannot coerce field [fieldName] from type [Byte Array] to type [BIGINT]", e.getMessage());
     }
   }
   @Test

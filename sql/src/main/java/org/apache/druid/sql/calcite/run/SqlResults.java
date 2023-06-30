@@ -247,7 +247,7 @@ public class SqlResults
                          .ofCategory(DruidException.Category.INVALID_INPUT)
                          .build(
                              t,
-                             "Cannot coerce field [%s] class of [%s] to [%s]",
+                             "Cannot coerce field [%s] from type [%s] to type [%s]",
                              fieldName,
                              value == null
                              ? "unknown"
