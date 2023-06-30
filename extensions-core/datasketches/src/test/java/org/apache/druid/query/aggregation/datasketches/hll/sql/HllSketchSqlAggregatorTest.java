@@ -110,25 +110,25 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           "\"AgEHDAMIBgC1EYgH1mlHBwsKPwu5SK8MIiUxB7iZVwU=\"",
           2L,
           "### HLL SKETCH SUMMARY: \n"
-          + "  Log Config K   : 12\n"
-          + "  Hll Target     : HLL_4\n"
-          + "  Current Mode   : LIST\n"
-          + "  Memory         : false\n"
-          + "  LB             : 2.0\n"
-          + "  Estimate       : 2.000000004967054\n"
-          + "  UB             : 2.000099863468538\n"
-          + "  OutOfOrder Flag: false\n"
-          + "  Coupon Count   : 2\n",
+            + "  Log Config K   : 12\n"
+            + "  Hll Target     : HLL_4\n"
+            + "  Current Mode   : LIST\n"
+            + "  Memory         : false\n"
+            + "  LB             : 2.0\n"
+            + "  Estimate       : 2.000000004967054\n"
+            + "  UB             : 2.000099863468538\n"
+            + "  OutOfOrder Flag: false\n"
+            + "  Coupon Count   : 2\n",
           "### HLL SKETCH SUMMARY: \n"
-          + "  LOG CONFIG K   : 12\n"
-          + "  HLL TARGET     : HLL_4\n"
-          + "  CURRENT MODE   : LIST\n"
-          + "  MEMORY         : FALSE\n"
-          + "  LB             : 2.0\n"
-          + "  ESTIMATE       : 2.000000004967054\n"
-          + "  UB             : 2.000099863468538\n"
-          + "  OUTOFORDER FLAG: FALSE\n"
-          + "  COUPON COUNT   : 2\n",
+            + "  LOG CONFIG K   : 12\n"
+            + "  HLL TARGET     : HLL_4\n"
+            + "  CURRENT MODE   : LIST\n"
+            + "  MEMORY         : FALSE\n"
+            + "  LB             : 2.0\n"
+            + "  ESTIMATE       : 2.000000004967054\n"
+            + "  UB             : 2.000099863468538\n"
+            + "  OUTOFORDER FLAG: FALSE\n"
+            + "  COUPON COUNT   : 2\n",
           2.0,
           2L
       };
