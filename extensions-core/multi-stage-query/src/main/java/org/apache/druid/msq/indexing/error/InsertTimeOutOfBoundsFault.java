@@ -39,7 +39,9 @@ public class InsertTimeOutOfBoundsFault extends BaseMSQFault
   {
     super(
         CODE,
-        "Query generated time chunk[%s] out of bounds specified by OVERWRITE WHERE[%s]",
+        "Inserted data contains time chunk[%s] outside of bounds specified by OVERWRITE WHERE[%s]. "
+        + "If you want to include this data, expand your OVERWRITE WHERE. "
+        + "If you do not want to include this data, use SELECT ... WHERE to filter it from your inserted data.",
         interval,
         intervalBounds
     );
