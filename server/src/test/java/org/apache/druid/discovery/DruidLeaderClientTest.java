@@ -66,7 +66,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -222,7 +221,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
     EasyMock.expect(task.get()).andReturn(new StringFullResponseHolder(new DefaultHttpResponse(
         HttpVersion.HTTP_1_1,
         HttpResponseStatus.SERVICE_UNAVAILABLE
-    ), Charset.defaultCharset()));
+    ), ""));
     EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider, task);
 
     HttpClient spyHttpClient = Mockito.spy(this.httpClient);

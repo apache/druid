@@ -90,8 +90,8 @@ public abstract class SeekableStreamIndexTaskClientSyncImpl<PartitionIdType, Seq
         log.warn(
             "Task [%s] coundln't be stopped because of http request failure. Error code [%d], description [%s].",
             id,
-            response.getStatus().getCode(),
-            response.getStatus().getReasonPhrase()
+            response.getStatus().code(),
+            response.getStatus().reasonPhrase()
         );
       }
       return isSuccess;

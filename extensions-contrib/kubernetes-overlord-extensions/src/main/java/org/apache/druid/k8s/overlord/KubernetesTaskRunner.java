@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -47,7 +48,6 @@ import org.apache.druid.java.util.http.client.response.InputStreamResponseHandle
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
