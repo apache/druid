@@ -56,7 +56,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 
   private static final String NAME = "APPROX_QUANTILE_DS";
   private static final SqlAggFunction FUNCTION_INSTANCE =
-      OperatorConversions.aggregatorBuilder(NAME)
+      (SqlAggFunction) OperatorConversions.aggregatorBuilder(NAME)
           .operandNames("column", "probability", "k")
           .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.EXACT_NUMERIC)
           .returnTypeNonNull(SqlTypeName.DOUBLE)

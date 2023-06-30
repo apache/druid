@@ -25,7 +25,6 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
-import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlFunctionCategory;
@@ -48,12 +47,10 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
-import org.apache.druid.sql.calcite.expression.BasicOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -69,13 +66,20 @@ import java.util.stream.Collectors;
  */
 public class StringSqlAggregator implements SqlAggregator
 {
-  private static final String NAME = "STRING_AGG";
-  private static final SqlAggFunction FUNCTION = new StringAggFunction();
+  private final SqlAggFunction function;
+
+  public static final StringSqlAggregator STRING_AGG = new StringSqlAggregator(new StringAggFunction("STRING_AGG"));
+  public static final StringSqlAggregator LISTAGG = new StringSqlAggregator(new StringAggFunction("LISTAGG"));
+
+  public StringSqlAggregator(SqlAggFunction function)
+  {
+    this.function = function;
+  }
 
   @Override
   public SqlAggFunction calciteFunction()
   {
-    return FUNCTION;
+    return function;
   }
 
   @Nullable
@@ -232,10 +236,10 @@ public class StringSqlAggregator implements SqlAggregator
   {
     private static final StringAggReturnTypeInference RETURN_TYPE_INFERENCE = new StringAggReturnTypeInference();
 
-    StringAggFunction()
+    StringAggFunction(String name)
     {
       super(
-          NAME,
+          name,
           null,
           SqlKind.OTHER_FUNCTION,
           RETURN_TYPE_INFERENCE,
@@ -243,7 +247,7 @@ public class StringSqlAggregator implements SqlAggregator
           OperandTypes.or(
               OperandTypes.and(
                   OperandTypes.sequence(
-                      StringUtils.format("'%s(expr, separator)'", NAME),
+                      StringUtils.format("'%s(expr, separator)'", name),
                       OperandTypes.ANY,
                       OperandTypes.STRING
                   ),
@@ -251,7 +255,7 @@ public class StringSqlAggregator implements SqlAggregator
               ),
               OperandTypes.and(
                   OperandTypes.sequence(
-                      StringUtils.format("'%s(expr, separator, maxSizeBytes)'", NAME),
+                      StringUtils.format("'%s(expr, separator, maxSizeBytes)'", name),
                       OperandTypes.ANY,
                       OperandTypes.STRING,
                       OperandTypes.POSITIVE_INTEGER_LITERAL

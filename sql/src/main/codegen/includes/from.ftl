@@ -214,6 +214,7 @@ SqlNode DruidTableRef3(ExprContext exprContext, boolean lateral) :
     SqlNodeList args;
     final SqlNodeList columnAliasList;
     SqlUnnestOperator unnestOp = SqlStdOperatorTable.UNNEST;
+    SqlNodeList extendList = null;
 }
 {
     (
@@ -253,7 +254,14 @@ SqlNode DruidTableRef3(ExprContext exprContext, boolean lateral) :
         [ <LATERAL> { lateral = true; } ]
         tableRef = TableFunctionCall()
         // BEGIN: Druid-specific code
-        [ tableRef = ExtendTable(tableRef) ]
+        [
+            [ <EXTEND> ]
+            extendList = ExtendList()
+            {
+                tableRef = ExtendOperator.EXTEND.createCall(
+                      Span.of(tableRef, extendList).pos(), tableRef, extendList);
+            }
+        ]
         // END: Druid-specific code
         tableRef = addLateral(tableRef, lateral)
     |

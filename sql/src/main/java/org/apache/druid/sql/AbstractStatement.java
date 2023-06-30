@@ -128,17 +128,7 @@ public abstract class AbstractStatement implements Closeable
     plannerContext = planner.getPlannerContext();
     plannerContext.setAuthenticationResult(queryPlus.authResult());
     plannerContext.setParameters(queryPlus.parameters());
-    try {
-      planner.validate();
-    }
-    // We can't collapse catch clauses since SqlPlanningException has
-    // type-sensitive constructors.
-    catch (SqlParseException e) {
-      throw new SqlPlanningException(e);
-    }
-    catch (ValidationException e) {
-      throw new SqlPlanningException(e);
-    }
+    planner.validate();
   }
 
   /**

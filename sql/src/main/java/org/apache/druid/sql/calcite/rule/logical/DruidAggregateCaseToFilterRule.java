@@ -133,7 +133,6 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule
               .convert(aggregate.getRowType(), false);
 
     call.transformTo(relBuilder.build());
-    call.getPlanner().setImportance(aggregate, 0.0);
   }
 
   private AggregateCall transform(AggregateCall aggregateCall, Project project, List<RexNode> newProjects)

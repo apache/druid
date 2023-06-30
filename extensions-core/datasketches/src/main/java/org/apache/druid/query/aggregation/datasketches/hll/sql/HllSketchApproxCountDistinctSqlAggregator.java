@@ -36,7 +36,7 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
 {
   public static final String NAME = "APPROX_COUNT_DISTINCT_DS_HLL";
   private static final SqlAggFunction FUNCTION_INSTANCE =
-      OperatorConversions.aggregatorBuilder(NAME)
+      (SqlAggFunction) OperatorConversions.aggregatorBuilder(NAME)
                          .operandNames("column", "lgK", "tgtHllType")
                          .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING)
                          .operandTypeInference(InferTypes.VARCHAR_1024)

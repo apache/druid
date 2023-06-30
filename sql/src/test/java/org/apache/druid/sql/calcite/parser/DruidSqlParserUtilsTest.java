@@ -37,10 +37,9 @@ import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.tools.ValidationException;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
@@ -50,7 +49,6 @@ import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.runners.Enclosed;
@@ -547,7 +545,7 @@ public class DruidSqlParserUtilsTest
     private static final DateTimeZone TZ_LOS_ANGELES = DateTimeZone.forID("America/Los_Angeles");
 
     @Test
-    public void test_parseTimeStampWithTimeZone_timestamp_utc() throws ValidationException
+    public void test_parseTimeStampWithTimeZone_timestamp_utc()
     {
       final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678");
 
@@ -565,7 +563,7 @@ public class DruidSqlParserUtilsTest
     }
 
     @Test
-    public void test_parseTimeStampWithTimeZone_timestamp_losAngeles() throws ValidationException
+    public void test_parseTimeStampWithTimeZone_timestamp_losAngeles()
     {
       final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678").withZone(TZ_LOS_ANGELES);
 
@@ -583,7 +581,7 @@ public class DruidSqlParserUtilsTest
     }
 
     @Test
-    public void test_parseTimeStampWithTimeZone_timestampWithLocalTimeZone() throws ValidationException
+    public void test_parseTimeStampWithTimeZone_timestampWithLocalTimeZone()
     {
       final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678");
 
@@ -601,7 +599,7 @@ public class DruidSqlParserUtilsTest
     }
 
     @Test
-    public void test_parseTimeStampWithTimeZone_timestampWithLocalTimeZone_losAngeles() throws ValidationException
+    public void test_parseTimeStampWithTimeZone_timestampWithLocalTimeZone_losAngeles()
     {
       final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678").withZone(TZ_LOS_ANGELES);
 
@@ -619,7 +617,7 @@ public class DruidSqlParserUtilsTest
     }
 
     @Test
-    public void test_parseTimeStampWithTimeZone_unknownTimestamp() throws ValidationException
+    public void test_parseTimeStampWithTimeZone_unknownTimestamp()
     {
       final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678");
 
@@ -636,7 +634,7 @@ public class DruidSqlParserUtilsTest
     }
 
     @Test
-    public void test_parseTimeStampWithTimeZone_unknownTimestampWithLocalTimeZone() throws ValidationException
+    public void test_parseTimeStampWithTimeZone_unknownTimestampWithLocalTimeZone()
     {
       final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678");
 
@@ -653,7 +651,7 @@ public class DruidSqlParserUtilsTest
     }
 
     @Test
-    public void test_parseTimeStampWithTimeZone_unknownTimestamp_losAngeles() throws ValidationException
+    public void test_parseTimeStampWithTimeZone_unknownTimestamp_losAngeles()
     {
       final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678").withZone(TZ_LOS_ANGELES);
 
@@ -671,7 +669,6 @@ public class DruidSqlParserUtilsTest
 
     @Test
     public void test_parseTimeStampWithTimeZone_unknownTimestampWithLocalTimeZone_losAngeles()
-        throws ValidationException
     {
       final DateTime ts = DateTimes.of("2000-01-02T03:04:05.678").withZone(TZ_LOS_ANGELES);
 
@@ -688,7 +685,7 @@ public class DruidSqlParserUtilsTest
     }
 
     @Test
-    public void test_parseTimeStampWithTimeZone_unknownTimestamp_invalid() throws ValidationException
+    public void test_parseTimeStampWithTimeZone_unknownTimestamp_invalid()
     {
       final CalciteContextException e = Assert.assertThrows(
           CalciteContextException.class,

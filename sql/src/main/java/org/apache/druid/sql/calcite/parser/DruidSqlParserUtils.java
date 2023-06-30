@@ -37,10 +37,10 @@ import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlTimestampLiteral;
 import org.apache.calcite.sql.SqlUnknownLiteral;
-import org.apache.calcite.sql.parser.SqlParserUtil;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
+import org.apache.calcite.sql.parser.SqlParserUtil;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
@@ -571,7 +571,7 @@ public class DruidSqlParserUtils
    * @return the timestamp string as milliseconds from epoch
    * @throws DruidException if the SQL node is not a SqlTimestampLiteral
    */
-  private static String parseTimeStampWithTimeZone(SqlNode sqlNode, DateTimeZone timeZone)
+  static String parseTimeStampWithTimeZone(SqlNode sqlNode, DateTimeZone timeZone)
   {
     if (!(sqlNode instanceof SqlTimestampLiteral)) {
       throw InvalidSqlInput.exception("Cannot get a timestamp from sql expression [%s]", sqlNode);

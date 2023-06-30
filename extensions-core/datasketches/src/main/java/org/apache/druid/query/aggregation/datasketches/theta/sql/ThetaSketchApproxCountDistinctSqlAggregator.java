@@ -36,7 +36,7 @@ public class ThetaSketchApproxCountDistinctSqlAggregator extends ThetaSketchBase
 {
   public static final String NAME = "APPROX_COUNT_DISTINCT_DS_THETA";
   private static final SqlAggFunction FUNCTION_INSTANCE =
-      OperatorConversions.aggregatorBuilder(NAME)
+      (SqlAggFunction) OperatorConversions.aggregatorBuilder(NAME)
                          .operandNames("column", "size")
                          .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
                          .operandTypeInference(InferTypes.VARCHAR_1024)
