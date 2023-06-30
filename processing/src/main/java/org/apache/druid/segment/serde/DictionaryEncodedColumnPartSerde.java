@@ -357,15 +357,14 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         final boolean hasNulls = dictionarySupplier.get().get(0) == null;
 
+        final StringUtf8DictionaryEncodedColumnSupplier<?> supplier = new StringUtf8DictionaryEncodedColumnSupplier<>(
+            dictionarySupplier,
+            rSingleValuedColumn,
+            rMultiValuedColumn
+        );
         builder.setHasMultipleValues(hasMultipleValues)
                .setHasNulls(hasNulls)
-               .setDictionaryEncodedColumnSupplier(
-                   new StringUtf8DictionaryEncodedColumnSupplier<>(
-                       dictionarySupplier,
-                       rSingleValuedColumn,
-                       rMultiValuedColumn
-                   )
-               );
+               .setDictionaryEncodedColumnSupplier(supplier);
 
         GenericIndexed<ImmutableBitmap> rBitmaps = null;
         ImmutableRTree rSpatialIndex = null;
