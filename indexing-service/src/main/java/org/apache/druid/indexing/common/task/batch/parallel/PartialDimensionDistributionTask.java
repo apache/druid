@@ -45,6 +45,7 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.RangePartitionIndexTaskInputRowIteratorBuilder;
+import org.apache.druid.indexing.input.TaskInputSource;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -229,6 +230,9 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
     boolean isAssumeGrouped = partitionsSpec.isAssumeGrouped();
 
     InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
+    if (inputSource instanceof TaskInputSource) {
+      inputSource = ((TaskInputSource) inputSource).withTaskToolbox(toolbox);
+    }
     InputFormat inputFormat = inputSource.needsFormat()
                               ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema)
                               : null;

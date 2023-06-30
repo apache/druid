@@ -44,7 +44,7 @@ public class ActionBasedUsedSegmentCheckerTest
     final TaskActionClient taskActionClient = EasyMock.createMock(TaskActionClient.class);
     EasyMock.expect(
         taskActionClient.submit(
-            new RetrieveUsedSegmentsAction("bar", Intervals.of("2002/P1D"), null, Segments.ONLY_VISIBLE)
+            new RetrieveUsedSegmentsAction("bar", Intervals.of("2002/P1D"), null, Segments.ONLY_VISIBLE, false)
         )
     ).andReturn(
         ImmutableList.of(
@@ -70,7 +70,8 @@ public class ActionBasedUsedSegmentCheckerTest
                 "foo",
                 null,
                 ImmutableList.of(Intervals.of("2000/P1D"), Intervals.of("2001/P1D")),
-                Segments.ONLY_VISIBLE
+                Segments.ONLY_VISIBLE,
+                false
             )
         )
     ).andReturn(

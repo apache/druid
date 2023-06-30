@@ -57,6 +57,7 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
+import org.apache.druid.indexing.input.TaskInputSource;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -156,7 +157,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    * Only the compaction task can have a special base name.
    */
   private final String baseSubtaskSpecName;
-  private final InputSource baseInputSource;
+  private InputSource baseInputSource;
 
   /**
    * If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
@@ -521,6 +522,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         emitMetric(toolbox.getEmitter(), "ingest/count", 1);
 
         this.toolbox = toolbox;
+        if (baseInputSource instanceof TaskInputSource) {
+          baseInputSource = ((TaskInputSource) baseInputSource).withTaskToolbox(toolbox);
+        }
+
         if (isGuaranteedRollup(
             getIngestionMode(),
             ingestionSchema.getTuningConfig()

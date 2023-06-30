@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -33,7 +35,9 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -58,6 +62,9 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
   @JsonIgnore
   private final Segments visibility;
 
+  @JsonIgnore
+  private final boolean onlyLocked;
+
   @JsonCreator
   public RetrieveUsedSegmentsAction(
       @JsonProperty("dataSource") String dataSource,
@@ -65,10 +72,12 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
       @JsonProperty("intervals") Collection<Interval> intervals,
       // When JSON object is deserialized, this parameter is optional for backward compatibility.
       // Otherwise, it shouldn't be considered optional.
-      @JsonProperty("visibility") @Nullable Segments visibility
+      @JsonProperty("visibility") @Nullable Segments visibility,
+      @JsonProperty("onlyLocked") @Nullable Boolean onlyLocked
   )
   {
     this.dataSource = dataSource;
+    this.onlyLocked = Boolean.TRUE.equals(onlyLocked);
 
     Preconditions.checkArgument(
         interval == null || intervals == null,
@@ -79,7 +88,11 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
     if (interval != null) {
       theIntervals = ImmutableList.of(interval);
     } else if (intervals != null && intervals.size() > 0) {
-      theIntervals = JodaUtils.condenseIntervals(intervals);
+      if (this.onlyLocked) {
+        theIntervals = ImmutableList.copyOf(intervals);
+      } else {
+        theIntervals = JodaUtils.condenseIntervals(intervals);
+      }
     }
     this.intervals = Preconditions.checkNotNull(theIntervals, "no intervals found");
 
@@ -114,8 +127,22 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
   @Override
   public Collection<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
+    final Map<Interval, String> intervalToLockVersionMap = new HashMap<>();
+    if (onlyLocked) {
+      List<TaskLock> locks = toolbox.getTaskLockbox().findLocksForTask(task);
+      for (Interval interval : intervals) {
+        for (TaskLock lock : locks) {
+          if (lock.getInterval().contains(interval)
+              && !lock.isRevoked()
+              && lock.getType().equals(TaskLockType.REPLACE)) {
+            intervalToLockVersionMap.put(interval, lock.getVersion());
+            break;
+          }
+        }
+      }
+    }
     return toolbox.getIndexerMetadataStorageCoordinator()
-                  .retrieveUsedSegmentsForIntervals(dataSource, intervals, visibility);
+                  .retrieveLockedSegmentsForIntervals(dataSource, intervals, visibility, intervalToLockVersionMap);
   }
 
   @Override

@@ -292,7 +292,8 @@ public class TombstoneHelper
               dataSource,
               null,
               condensedInputIntervals,
-              Segments.ONLY_VISIBLE
+              Segments.ONLY_VISIBLE,
+              true
           ));
       for (DataSegment usedSegment : usedSegmentsInInputInterval) {
         for (Interval condensedInputInterval : condensedInputIntervals) {

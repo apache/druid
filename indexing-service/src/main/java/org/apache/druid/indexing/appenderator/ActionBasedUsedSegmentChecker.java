@@ -66,7 +66,7 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
       );
 
       final Collection<DataSegment> usedSegmentsForIntervals = taskActionClient
-          .submit(new RetrieveUsedSegmentsAction(dataSource, null, intervals, Segments.ONLY_VISIBLE));
+          .submit(new RetrieveUsedSegmentsAction(dataSource, null, intervals, Segments.ONLY_VISIBLE, null));
 
       for (DataSegment segment : usedSegmentsForIntervals) {
         if (segmentIdsInDataSource.contains(segment.getId())) {

@@ -36,6 +36,7 @@ import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
@@ -47,8 +48,11 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.common.RetryPolicy;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.firehose.WindowedSegmentId;
+import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -90,7 +94,7 @@ import java.util.stream.Stream;
  * Used internally by {@link org.apache.druid.indexing.common.task.CompactionTask}, and can also be used directly.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class DruidInputSource extends AbstractInputSource implements SplittableInputSource<List<WindowedSegmentId>>
+public class DruidInputSource extends AbstractInputSource implements SplittableInputSource<List<WindowedSegmentId>>, TaskInputSource
 {
 
   public static final String TYPE_KEY = "druid";
@@ -150,6 +154,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
    * Included for serde backwards-compatibility only. Not used.
    */
   private final List<String> metrics;
+
+  private TaskToolbox toolbox;
 
   @JsonCreator
   public DruidInputSource(
@@ -238,6 +244,13 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   }
 
   @Override
+  public InputSource withTaskToolbox(TaskToolbox toolbox)
+  {
+    this.toolbox = toolbox;
+    return this;
+  }
+
+  @Override
   protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
   {
     final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(temporaryDirectory);
@@ -313,6 +326,10 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (interval == null) {
       return getTimelineForSegmentIds(coordinatorClient, dataSource, segmentIds);
     } else {
+      if (toolbox != null) {
+        return getLockedTimelineForInterval(retryPolicyFactory, dataSource, interval);
+      }
+
       return getTimelineForInterval(coordinatorClient, retryPolicyFactory, dataSource, interval);
     }
   }
@@ -482,6 +499,54 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     SortedMap<WindowedSegmentId, Long> segmentSizeMap = new TreeMap<>(WINDOWED_SEGMENT_ID_COMPARATOR);
     windowedSegmentIds.forEach((segment, segmentId) -> segmentSizeMap.put(segmentId, segment.getSize()));
     return segmentSizeMap;
+  }
+
+
+  public List<TimelineObjectHolder<String, DataSegment>> getLockedTimelineForInterval(
+      RetryPolicyFactory retryPolicyFactory,
+      String dataSource,
+      Interval interval
+  )
+  {
+    Preconditions.checkNotNull(interval);
+
+    // This call used to use the TaskActionClient, so for compatibility we use the same retry configuration
+    // as TaskActionClient.
+    final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
+    Collection<DataSegment> usedSegments;
+    while (true) {
+      try {
+        usedSegments = toolbox.getTaskActionClient()
+                              .submit(
+                                  new RetrieveUsedSegmentsAction(
+                                      dataSource,
+                                      null,
+                                      ImmutableList.of(interval),
+                                      Segments.ONLY_VISIBLE,
+                                      true
+                                  )
+                              );
+        break;
+      }
+      catch (Throwable e) {
+        LOG.warn(e, "Exception getting database segments");
+        final Duration delay = retryPolicy.getAndIncrementRetryDelay();
+        if (delay == null) {
+          throw new RuntimeException(e);
+        } else {
+          final long sleepTime = jitter(delay.getMillis());
+          LOG.info("Will try again in [%s].", new Duration(sleepTime).toString());
+          try {
+            Thread.sleep(sleepTime);
+          }
+          catch (InterruptedException e2) {
+            throw new RuntimeException(e2);
+          }
+        }
+      }
+    }
+
+    return SegmentTimeline.forSegments(usedSegments).lookup(interval);
   }
 
   public static List<TimelineObjectHolder<String, DataSegment>> getTimelineForInterval(

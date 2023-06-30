@@ -101,10 +101,11 @@ public class SqlSegmentsMetadataQuery
    */
   public CloseableIterator<DataSegment> retrieveUsedSegments(
       final String dataSource,
-      final Collection<Interval> intervals
+      final Collection<Interval> intervals,
+      final Map<Interval, String> intervalLockVersionMap
   )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.OVERLAPS, true);
+    return retrieveSegments(dataSource, intervals, IntervalMode.OVERLAPS, true, intervalLockVersionMap);
   }
 
   /**
@@ -121,7 +122,7 @@ public class SqlSegmentsMetadataQuery
       final Collection<Interval> intervals
   )
   {
-    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false);
+    return retrieveSegments(dataSource, intervals, IntervalMode.CONTAINS, false, Collections.emptyMap());
   }
 
   /**
@@ -189,7 +190,7 @@ public class SqlSegmentsMetadataQuery
               StringUtils.format(
                   "UPDATE %s SET used=:used WHERE dataSource = :dataSource AND %s",
                   dbTables.getSegmentsTable(),
-                  IntervalMode.CONTAINS.makeSqlCondition(connector.getQuoteString(), ":start", ":end")
+                  IntervalMode.CONTAINS.makeSqlCondition(connector.getQuoteString(), ":start", ":end", null)
               )
           )
           .bind("dataSource", dataSource)
@@ -201,7 +202,7 @@ public class SqlSegmentsMetadataQuery
       // Retrieve, then drop, since we can't write a WHERE clause directly.
       final List<SegmentId> segments = ImmutableList.copyOf(
           Iterators.transform(
-              retrieveSegments(dataSource, Collections.singletonList(interval), IntervalMode.CONTAINS, true),
+              retrieveSegments(dataSource, Collections.singletonList(interval), IntervalMode.CONTAINS, true, Collections.emptyMap()),
               DataSegment::getId
           )
       );
@@ -213,7 +214,8 @@ public class SqlSegmentsMetadataQuery
       final String dataSource,
       final Collection<Interval> intervals,
       final IntervalMode matchMode,
-      final boolean used
+      final boolean used,
+      final Map<Interval, String> intervalToLockVersionMap
   )
   {
     // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
@@ -224,12 +226,14 @@ public class SqlSegmentsMetadataQuery
 
     if (compareAsString && !intervals.isEmpty()) {
       sb.append(" AND (");
-      for (int i = 0; i < intervals.size(); i++) {
+      int i = 0;
+      for (Interval interval : intervals) {
         sb.append(
             matchMode.makeSqlCondition(
                 connector.getQuoteString(),
                 StringUtils.format(":start%d", i),
-                StringUtils.format(":end%d", i)
+                StringUtils.format(":end%d", i),
+                intervalToLockVersionMap.get(interval)
             )
         );
 
@@ -240,7 +244,7 @@ public class SqlSegmentsMetadataQuery
           sb.append(StringUtils.format(" OR (start != '%s' AND \"end\" = '%s' AND start < :end%d)", Intervals.ETERNITY.getStart(), Intervals.ETERNITY.getEnd(), i));
         }
 
-        if (i != intervals.size() - 1) {
+        if (i++ != intervals.size() - 1) {
           sb.append(" OR ");
         }
       }
@@ -327,16 +331,22 @@ public class SqlSegmentsMetadataQuery
   {
     CONTAINS {
       @Override
-      public String makeSqlCondition(String quoteString, String startPlaceholder, String endPlaceholder)
+      public String makeSqlCondition(
+          String quoteString,
+          String startPlaceholder,
+          String endPlaceholder,
+          String lockVersion
+      )
       {
         // 2 range conditions are used on different columns, but not all SQL databases properly optimize it.
         // Some databases can only use an index on one of the columns. An additional condition provides
         // explicit knowledge that 'start' cannot be greater than 'end'.
         return StringUtils.format(
-            "(start >= %2$s and start <= %3$s and %1$send%1$s <= %3$s)",
+            "(start >= %2$s and start <= %3$s and %1$send%1$s <= %3$s%4$s)",
             quoteString,
             startPlaceholder,
-            endPlaceholder
+            endPlaceholder,
+            makeCreatedDateCondition(lockVersion)
         );
       }
 
@@ -348,13 +358,19 @@ public class SqlSegmentsMetadataQuery
     },
     OVERLAPS {
       @Override
-      public String makeSqlCondition(String quoteString, String startPlaceholder, String endPlaceholder)
+      public String makeSqlCondition(
+          String quoteString,
+          String startPlaceholder,
+          String endPlaceholder,
+          String lockVersion
+      )
       {
         return StringUtils.format(
-            "(start < %3$s AND %1$send%1$s > %2$s)",
+            "(start < %3$s AND %1$send%1$s > %2$s%4$s)",
             quoteString,
             startPlaceholder,
-            endPlaceholder
+            endPlaceholder,
+            makeCreatedDateCondition(lockVersion)
         );
       }
 
@@ -365,7 +381,20 @@ public class SqlSegmentsMetadataQuery
       }
     };
 
-    public abstract String makeSqlCondition(String quoteString, String startPlaceholder, String endPlaceholder);
+    public String makeCreatedDateCondition(String lockVersion)
+    {
+      if (lockVersion == null) {
+        return "";
+      }
+      return StringUtils.format(" created_date < %1$s", lockVersion);
+    }
+
+    public abstract String makeSqlCondition(
+        String quoteString,
+        String startPlaceholder,
+        String endPlaceholder,
+        String lockVersion
+    );
 
     public abstract boolean apply(Interval a, Interval b);
   }
