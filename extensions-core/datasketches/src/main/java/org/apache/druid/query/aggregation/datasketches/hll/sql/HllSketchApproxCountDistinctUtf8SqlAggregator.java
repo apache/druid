@@ -33,13 +33,24 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 
 import java.util.Collections;
 
-public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlAggregator implements SqlAggregator
+/**
+ * Like {@link HllSketchApproxCountDistinctSqlAggregator}, but uses {@link StringEncoding#UTF8} instead of
+ * {@link org.apache.druid.query.aggregation.datasketches.hll.HllSketchAggregatorFactory#DEFAULT_STRING_ENCODING}.
+ *
+ * Currently undocumented. Only accepts strings, not sketches. The purpose of this function is to allow us to experiment
+ * with UTF-8-based HLL counting while we figure out how the API should work.
+ *
+ * See https://github.com/apache/druid/pull/11201 for details.
+ */
+public class HllSketchApproxCountDistinctUtf8SqlAggregator
+    extends HllSketchBaseSqlAggregator
+    implements SqlAggregator
 {
-  public static final String NAME = "APPROX_COUNT_DISTINCT_DS_HLL";
+  public static final String NAME = "APPROX_COUNT_DISTINCT_DS_HLL_UTF8";
   private static final SqlAggFunction FUNCTION_INSTANCE =
       OperatorConversions.aggregatorBuilder(NAME)
                          .operandNames("column", "lgK", "tgtHllType")
-                         .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING)
+                         .operandTypes(SqlTypeFamily.STRING, SqlTypeFamily.NUMERIC, SqlTypeFamily.STRING)
                          .operandTypeInference(InferTypes.VARCHAR_1024)
                          .requiredOperandCount(1)
                          .literalOperands(1, 2)
@@ -47,9 +58,9 @@ public class HllSketchApproxCountDistinctSqlAggregator extends HllSketchBaseSqlA
                          .functionCategory(SqlFunctionCategory.NUMERIC)
                          .build();
 
-  public HllSketchApproxCountDistinctSqlAggregator()
+  public HllSketchApproxCountDistinctUtf8SqlAggregator()
   {
-    super(true, StringEncoding.UTF16LE);
+    super(true, StringEncoding.UTF8);
   }
 
   @Override
