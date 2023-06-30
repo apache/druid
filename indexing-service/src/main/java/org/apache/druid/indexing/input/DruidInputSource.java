@@ -89,7 +89,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
 /**
- * An {@link org.apache.druid.data.input.InputSource} that allows reading from Druid segments.
+ * An {@link InputSource} that allows reading from Druid segments.
  *
  * Used internally by {@link org.apache.druid.indexing.common.task.CompactionTask}, and can also be used directly.
  */
