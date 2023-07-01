@@ -573,12 +573,26 @@ public class DruidSqlParserUtils
    */
   static String parseTimeStampWithTimeZone(SqlNode sqlNode, DateTimeZone timeZone)
   {
+    Timestamp sqlTimestamp;
+    ZonedDateTime zonedTimestamp;
+
+    if (sqlNode instanceof SqlUnknownLiteral) {
+      try {
+        SqlTimestampLiteral timestampLiteral = (SqlTimestampLiteral) ((SqlUnknownLiteral) sqlNode).resolve(SqlTypeName.TIMESTAMP);
+        sqlTimestamp = Timestamp.valueOf(timestampLiteral.toFormattedString());
+      }
+      catch (Exception e) {
+        throw InvalidSqlInput.exception("Cannot get a timestamp from sql expression [%s]", sqlNode);
+      }
+      zonedTimestamp = sqlTimestamp.toLocalDateTime().atZone(timeZone.toTimeZone().toZoneId());
+      return String.valueOf(zonedTimestamp.toInstant().toEpochMilli());
+    }
     if (!(sqlNode instanceof SqlTimestampLiteral)) {
       throw InvalidSqlInput.exception("Cannot get a timestamp from sql expression [%s]", sqlNode);
     }
 
-    Timestamp sqlTimestamp = Timestamp.valueOf(((SqlTimestampLiteral) sqlNode).toFormattedString());
-    ZonedDateTime zonedTimestamp = sqlTimestamp.toLocalDateTime().atZone(timeZone.toTimeZone().toZoneId());
+    sqlTimestamp = Timestamp.valueOf(((SqlTimestampLiteral) sqlNode).toFormattedString());
+    zonedTimestamp = sqlTimestamp.toLocalDateTime().atZone(timeZone.toTimeZone().toZoneId());
     return String.valueOf(zonedTimestamp.toInstant().toEpochMilli());
   }
 
