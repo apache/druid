@@ -212,9 +212,9 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       List<PartitionInfo> allPartitions = new ArrayList<>();
       boolean isMultiTopic = stream.contains(",");
       for (String topic : stream.split(",")) {
-        List<PartitionInfo> partitions = consumer.partitionsFor(topic);
+        List<PartitionInfo> partitions = consumer.partitionsFor(topic.trim());
         if (partitions == null) {
-          throw new ISE("Topic [%s] is not found in KafkaConsumer's list of topics", topic);
+          throw new ISE("Topic [%s] is not found in KafkaConsumer's list of topics", topic.trim());
         }
         allPartitions.addAll(partitions);
       }

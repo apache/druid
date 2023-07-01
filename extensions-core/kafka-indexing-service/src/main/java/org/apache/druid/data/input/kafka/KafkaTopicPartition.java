@@ -92,7 +92,7 @@ public class KafkaTopicPartition
   {
     // TODO - fix this so toString is not used for serialization
     if (null != topic && multiTopicPartition) {
-      return partition + ":" + topic;
+      return topic + ":" + partition;
     } else {
       return Integer.toString(partition);
     }
@@ -169,14 +169,14 @@ public class KafkaTopicPartition
 
   public static KafkaTopicPartition fromString(String str)
   {
-    int index = str.indexOf(':');
+    int index = str.lastIndexOf(':');
     if (index < 0) {
       return new KafkaTopicPartition(false, null, Integer.parseInt(str));
     } else {
       return new KafkaTopicPartition(
           true,
-          str.substring(index + 1),
-          Integer.parseInt(str.substring(0, index))
+          str.substring(0, index),
+          Integer.parseInt(str.substring(index + 1))
       );
     }
   }
