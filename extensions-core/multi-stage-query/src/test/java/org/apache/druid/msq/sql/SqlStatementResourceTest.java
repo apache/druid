@@ -776,7 +776,7 @@ public class SqlStatementResourceTest extends MSQTestBase
   }
 
   @Test
-  public void testFinishedInsertMSQQuery() throws Exception
+  public void testFinishedInsertMSQQuery()
   {
     Response response = resource.doGetStatus(FINISHED_INSERT_MSQ_QUERY, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
