@@ -39,6 +39,7 @@ import org.apache.calcite.rex.RexSlot;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.java.util.common.Pair;
@@ -268,28 +269,33 @@ public class DruidJoinRule extends RelOptRule
         continue;
       }
 
-
-      if (!subCondition.isA(SqlKind.EQUALS)) {
-        // If it's not EQUALS, it's not supported.
-        plannerContext.setPlanningError(
-            "SQL requires a join with '%s' condition that is not supported.",
-            subCondition.getKind()
-        );
-        return Optional.empty();
-      }
-
       RexNode firstOperand;
       RexNode secondOperand;
 
       if (subCondition.isA(SqlKind.INPUT_REF)) {
         firstOperand = rexBuilder.makeLiteral(true);
         secondOperand = (RexInputRef) subCondition;
+
+        if (!SqlTypeName.BOOLEAN_TYPES.contains(secondOperand.getType().getSqlTypeName())) {
+          plannerContext.setPlanningError(
+              "SQL requires a join with '%s' condition where the column is of the type %s, that is not supported",
+              subCondition.getKind(),
+              secondOperand.getType().getSqlTypeName()
+          );
+          return Optional.empty();
+
+        }
       } else if (subCondition.isA(SqlKind.EQUALS)) {
         final List<RexNode> operands = ((RexCall) subCondition).getOperands();
         Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%,d]", operands.size());
         firstOperand = operands.get(0);
         secondOperand = operands.get(1);
       } else {
+        // If it's not EQUALS or a BOOLEAN input ref, it's not supported.
+        plannerContext.setPlanningError(
+            "SQL requires a join with '%s' condition that is not supported.",
+            subCondition.getKind()
+        );
         return Optional.empty();
       }
 
