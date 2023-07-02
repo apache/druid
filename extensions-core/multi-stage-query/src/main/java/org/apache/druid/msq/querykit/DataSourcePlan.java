@@ -25,6 +25,7 @@ import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
@@ -205,12 +206,15 @@ public class DataSourcePlan
 
   private static JoinAlgorithm deduceJoinAlgorithm(JoinAlgorithm preferredJoinAlgorithm, JoinDataSource joinDataSource)
   {
+
     if (JoinAlgorithm.BROADCAST.equals(preferredJoinAlgorithm)) {
       return JoinAlgorithm.BROADCAST;
-    } else {
-      if (isConditionEqualityOnLeftAndRightColumns(joinDataSource.getConditionAnalysis())) {
-        return JoinAlgorithm.SORT_MERGE;
-      }
+    }
+
+    // preferredJoinAlgorithm would only be sortMerge now
+
+    if (isConditionEqualityOnLeftAndRightColumns(joinDataSource.getConditionAnalysis())) {
+      return JoinAlgorithm.SORT_MERGE;
     }
     return JoinAlgorithm.BROADCAST;
   }
