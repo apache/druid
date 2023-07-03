@@ -22,7 +22,6 @@ package org.apache.druid.java.util.emitter.core;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 import org.junit.AfterClass;
@@ -67,11 +66,8 @@ public class ParametrizedUriEmitterConfigTest
     final Injector injector = makeInjector(new Properties());
     final HttpEmitterConfig config = injector.getInstance(HttpEmitterConfig.class);
 
-    Pair<Integer, Integer> batchConfigPair = BaseHttpEmittingConfig.getDefaultBatchSizeAndLimit(
-        JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes()
-    );
-    Assert.assertEquals(batchConfigPair.lhs.intValue(), config.getMaxBatchSize());
-    Assert.assertEquals(batchConfigPair.rhs.intValue(), config.getBatchQueueSizeLimit());
+    Assert.assertEquals(BaseHttpEmittingConfig.DEFAULT_MAX_BATCH_SIZE, config.getMaxBatchSize());
+    Assert.assertEquals(BaseHttpEmittingConfig.DEFAULT_BATCH_QUEUE_SIZE_LIMIT, config.getBatchQueueSizeLimit());
     Assert.assertEquals(Long.MAX_VALUE, config.getFlushTimeOut());
   }
 

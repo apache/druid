@@ -91,11 +91,6 @@ public class DefaultOfflineAppenderatorFactoryTest
                         return 1;
                       }
 
-                      @Override
-                      public int columnCacheSizeBytes()
-                      {
-                        return 25 * 1024 * 1024;
-                      }
                     }
                 );
                 binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
