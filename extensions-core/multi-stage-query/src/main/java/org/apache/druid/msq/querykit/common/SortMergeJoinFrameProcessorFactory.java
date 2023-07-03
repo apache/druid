@@ -180,7 +180,8 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
               stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator()),
               rightPrefix,
               keyColumns,
-              joinType
+              joinType,
+              frameContext.memoryParameters().getSortMergeJoinMemory()
           );
         }
     );
@@ -204,14 +205,12 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
     retVal.add(new ArrayList<>()); // Right-side key columns
 
     for (final Equality equiCondition : condition.getEquiConditions()) {
+      final String leftColumn = Preconditions.checkNotNull(
+          equiCondition.getLeftExpr().getBindingIfIdentifier(),
+          "leftExpr#getBindingIfIdentifier"
+      );
 
-      if (!equiCondition.getLeftExpr().isLiteral()) {
-        final String leftColumn = Preconditions.checkNotNull(
-            equiCondition.getLeftExpr().getBindingIfIdentifier(),
-            "leftExpr#getBindingIfIdentifier"
-        );
-        retVal.get(0).add(new KeyColumn(leftColumn, KeyOrder.ASCENDING));
-      }
+      retVal.get(0).add(new KeyColumn(leftColumn, KeyOrder.ASCENDING));
       retVal.get(1).add(new KeyColumn(equiCondition.getRightColumn(), KeyOrder.ASCENDING));
     }
 
@@ -236,7 +235,7 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
       throw new IAE("Cannot handle non-equijoin condition: %s", condition.getOriginalExpression());
     }
 
-    if (condition.getEquiConditions().stream().anyMatch(c -> !c.getLeftExpr().isIdentifier() && !c.getLeftExpr().isLiteral())) {
+    if (condition.getEquiConditions().stream().anyMatch(c -> !c.getLeftExpr().isIdentifier())) {
       throw new IAE(
           "Cannot handle equality condition involving left-hand expression: %s",
           condition.getOriginalExpression()
