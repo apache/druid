@@ -712,6 +712,8 @@ public class SqlStatementResourceTest extends MSQTestBase
         100L,
         new ResultSetInformation(
             null,
+            null,
+            null,
             MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT,
             RESULT_ROWS.stream()
                        .map(Arrays::asList)
@@ -745,12 +747,17 @@ public class SqlStatementResourceTest extends MSQTestBase
     );
 
     Assert.assertEquals(
-        Response.Status.BAD_REQUEST.getStatusCode(),
-        resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, -1L, makeOkRequest()).getStatus()
+        rows,
+        getResultRowsFromResponse(resource.doGetResults(
+            FINISHED_SELECT_MSQ_QUERY,
+            null,
+            makeOkRequest()
+        ))
     );
+
     Assert.assertEquals(
         Response.Status.BAD_REQUEST.getStatusCode(),
-        resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, null, makeOkRequest()).getStatus()
+        resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, -1L, makeOkRequest()).getStatus()
     );
   }
 
@@ -786,26 +793,17 @@ public class SqlStatementResourceTest extends MSQTestBase
         CREATED_TIME,
         null,
         100L,
-        new ResultSetInformation(null, "test", null, ImmutableList.of(new PageInformation(null, null, 0))),
+        new ResultSetInformation(null, null, null, "test", null, ImmutableList.of(new PageInformation(null, null, 0))),
         null
     ), response.getEntity());
 
-    Response resultsResponse = resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, 0L, makeOkRequest());
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse.getStatus());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, 0L, makeOkRequest()).getStatus());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, null, makeOkRequest()).getStatus());
 
     Assert.assertEquals(
         Response.Status.BAD_REQUEST.getStatusCode(),
         resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, -1L, makeOkRequest()).getStatus()
     );
-    Assert.assertEquals(
-        Response.Status.BAD_REQUEST.getStatusCode(),
-        resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, -1L, makeOkRequest()).getStatus()
-    );
-    Assert.assertEquals(
-        Response.Status.BAD_REQUEST.getStatusCode(),
-        resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, null, makeOkRequest()).getStatus()
-    );
-
   }
 
   @Test

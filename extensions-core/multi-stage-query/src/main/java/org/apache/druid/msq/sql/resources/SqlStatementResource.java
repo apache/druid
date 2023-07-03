@@ -285,16 +285,7 @@ public class SqlStatementResource
       }
       final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
-      if (page == null) {
-        return buildNonOkResponse(
-            DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "Page cannot be null."
-                          )
-        );
-      }
-      if (page < 0) {
+      if (page != null && page < 0) {
         return buildNonOkResponse(
             DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
@@ -342,7 +333,7 @@ public class SqlStatementResource
           return Response.ok().build();
         }
 
-        if (page > 0) {
+        if (page != null && page > 0) {
           // Results from task report are only present as one page.
           return buildNonOkResponse(
               DruidException.forPersona(DruidException.Persona.USER)
@@ -586,6 +577,8 @@ public class SqlStatementResource
           isSelectQuery
       );
       return Optional.of(new ResultSetInformation(
+          rowsAndSize.orElse(new Pair<>(null, null)).lhs,
+          rowsAndSize.orElse(new Pair<>(null, null)).rhs,
           null,
           dataSource,
           // only populate sample results in case a select query is successful

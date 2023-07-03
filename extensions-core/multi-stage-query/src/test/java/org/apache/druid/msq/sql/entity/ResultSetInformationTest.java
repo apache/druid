@@ -32,6 +32,8 @@ public class ResultSetInformationTest
   public static final ObjectMapper MAPPER = new ObjectMapper();
 
   public static final ResultSetInformation RESULTS = new ResultSetInformation(
+      1L,
+      1L,
       ResultFormat.OBJECT,
       "ds",
       ImmutableList.of(
@@ -41,8 +43,7 @@ public class ResultSetInformationTest
       ),
       ImmutableList.of(new PageInformation(1L, 1L, 0))
   );
-  public static final String JSON_STRING = "{\"resultFormat\":\"object\",\"dataSource\":\"ds\",\"sampleRecords\":[[\"1\"],[\"2\"],[\"3\"]],\"pageInformationList\":[{\"numRows\":1,\"sizeInBytes\":1,\"id\":0}]}";
-
+  public static final String JSON_STRING = "{\"numTotalRows\":1,\"totalSizeInBytes\":1,\"resultFormat\":\"object\",\"dataSource\":\"ds\",\"sampleRecords\":[[\"1\"],[\"2\"],[\"3\"]],\"pages\":[{\"numRows\":1,\"sizeInBytes\":1,\"id\":0}]}";
 
   @Test
   public void sanityTest() throws JsonProcessingException
@@ -54,7 +55,7 @@ public class ResultSetInformationTest
         MAPPER.readValue(MAPPER.writeValueAsString(RESULTS), ResultSetInformation.class).hashCode()
     );
     Assert.assertEquals(
-        "ResultSetInformation{resultFormat=object, records=[[1], [2], [3]], dataSource='ds', pageInformationList=[PageInformation{numRows=1, sizeInBytes=1, id=0}]}",
+        "ResultSetInformation{numTotalRows=1, totalSizeInBytes=1, resultFormat=object, records=[[1], [2], [3]], dataSource='ds', pages=[PageInformation{numRows=1, sizeInBytes=1, id=0}]}",
         RESULTS.toString()
     );
   }

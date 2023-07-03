@@ -113,6 +113,8 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
                                ),
                                MSQTestOverlordServiceClient.DURATION,
                                new ResultSetInformation(
+                                   6L,
+                                   316L,
                                    null,
                                    MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT,
                                    objectMapper.readValue(

@@ -26,6 +26,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
+/**
+ * Contains information about a single page in the results.
+ */
 public class PageInformation
 {
   @Nullable
