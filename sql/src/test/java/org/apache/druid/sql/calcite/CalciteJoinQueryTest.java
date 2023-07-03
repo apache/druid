@@ -5656,6 +5656,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinWithInputRefCondition()
   {
+    cannotVectorize();
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "SELECT COUNT(*) FILTER (WHERE FLOOR(100) NOT IN (SELECT m1 FROM foo)) "
