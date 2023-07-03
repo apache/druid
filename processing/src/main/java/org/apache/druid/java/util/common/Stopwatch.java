@@ -28,7 +28,8 @@ import java.util.concurrent.TimeUnit;
  * Thread-safe wrapper over {@link com.google.common.base.Stopwatch}.
  * <p>
  * Thread safety has been limited to the start/stop methods for now as they are
- * the only ones that can throw an exception in an illegal state.
+ * the only ones that can throw an exception in an illegal state and are thus
+ * vulnerable to race conditions.
  */
 public class Stopwatch
 {
@@ -77,7 +78,7 @@ public class Stopwatch
     delegate.reset().start();
   }
 
-  public boolean isRunning()
+  public synchronized boolean isRunning()
   {
     return delegate.isRunning();
   }

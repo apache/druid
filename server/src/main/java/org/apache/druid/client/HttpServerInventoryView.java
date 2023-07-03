@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -110,6 +111,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   private final ConcurrentHashMap<String, DruidServerHolder> servers = new ConcurrentHashMap<>();
 
   private final String execNamePrefix;
+  private final ScheduledExecutorFactory executorFactory;
   private volatile ScheduledExecutorService executor;
 
   private final HttpClient httpClient;
@@ -124,6 +126,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter,
       final HttpServerInventoryViewConfig config,
       final ServiceEmitter serviceEmitter,
+      final ScheduledExecutorFactory executorFactory,
       final String execNamePrefix
   )
   {
@@ -134,6 +137,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     this.finalPredicate = defaultFilter;
     this.config = config;
     this.serviceEmitter = serviceEmitter;
+    this.executorFactory = executorFactory;
     this.execNamePrefix = execNamePrefix;
   }
 
@@ -146,10 +150,10 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         throw new ISE("Could not start lifecycle");
       }
 
-      log.info("Starting executor [%s].", execNamePrefix);
+      log.info("Starting executor[%s].", execNamePrefix);
 
       try {
-        executor = ScheduledExecutors.fixed(
+        executor = executorFactory.create(
             config.getNumThreads(),
             execNamePrefix + "-%s"
         );
@@ -218,7 +222,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         );
         ScheduledExecutors.scheduleAtFixedRate(
             executor,
-            Duration.standardSeconds(90),
+            Duration.standardSeconds(30),
             Duration.standardMinutes(1),
             this::emitServerStatusMetrics
         );
@@ -229,7 +233,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         lifecycleLock.exitStart();
       }
 
-      log.info("Started executor [%s].", execNamePrefix);
+      log.info("Started executor[%s].", execNamePrefix);
     }
   }
 
@@ -459,13 +463,13 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       DruidServerHolder serverHolder = e.getValue();
       if (serverHolder.syncer.needsReset()) {
         synchronized (servers) {
-          // check again that server is still there and only then reset.
+          // Reset only if the server is still present in the map
           if (servers.containsKey(e.getKey())) {
-            log.makeAlert(
-                "Server[%s] is not syncing properly. Current state is [%s]. Resetting it.",
+            log.warn(
+                "Resetting server[%s] with state[%s] as it is not syncing properly.",
                 serverHolder.druidServer.getName(),
                 serverHolder.syncer.getDebugInfo()
-            ).emit();
+            );
             serverRemoved(serverHolder.druidServer);
             serverAdded(serverHolder.druidServer.copyWithoutSegments());
           }

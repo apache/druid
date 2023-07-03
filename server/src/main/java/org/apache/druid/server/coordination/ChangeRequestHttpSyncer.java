@@ -91,6 +91,7 @@ public class ChangeRequestHttpSyncer<T>
   private final String logIdentity;
   private int consecutiveFailedAttemptCount = 0;
 
+  private final Stopwatch sinceSyncerStart = Stopwatch.createUnstarted();
   private final Stopwatch sinceLastSyncRequest = Stopwatch.createUnstarted();
   private final Stopwatch sinceLastSyncSuccess = Stopwatch.createUnstarted();
   private final Stopwatch sinceUnstable = Stopwatch.createUnstarted();
@@ -140,6 +141,7 @@ public class ChangeRequestHttpSyncer<T>
         startStopLock.exitStart();
       }
 
+      sinceSyncerStart.restart();
       addNextSyncToWorkQueue();
     }
   }
@@ -148,7 +150,7 @@ public class ChangeRequestHttpSyncer<T>
   {
     synchronized (startStopLock) {
       if (!startStopLock.canStop()) {
-        throw new ISE("Could stop sync for server[%s].", logIdentity);
+        throw new ISE("Could not stop sync for server[%s].", logIdentity);
       }
       try {
         log.info("Stopping sync for server[%s].", logIdentity);
@@ -170,7 +172,7 @@ public class ChangeRequestHttpSyncer<T>
   }
 
   /**
-   * Waits upto 1 milliseconds for the first successful sync with this server.
+   * Waits upto 1 millisecond for the first successful sync with this server.
    */
   public boolean isInitialized() throws InterruptedException
   {
@@ -194,11 +196,17 @@ public class ChangeRequestHttpSyncer<T>
    * Whether this syncer should be reset. This method returning true typically
    * indicates a problem with the sync scheduler.
    *
-   * @return true if the delay since the last sync request sent to the server
-   * has exceeded {@link #maxDelayBetweenSyncRequests}, false otherwise.*/
+   * @return true if the delay since the last request to the server (or since
+   * syncer start in case of no request to the server) has exceeded
+   * {@link #maxDelayBetweenSyncRequests}.
+   */
   public boolean needsReset()
   {
-    return sinceLastSyncRequest.hasElapsed(maxDelayBetweenSyncRequests);
+    if (sinceLastSyncRequest.isRunning()) {
+      return sinceLastSyncRequest.hasElapsed(maxDelayBetweenSyncRequests);
+    } else {
+      return sinceSyncerStart.hasElapsed(maxDelayBetweenSyncRequests);
+    }
   }
 
   public long getUnstableTimeMillis()
@@ -222,7 +230,7 @@ public class ChangeRequestHttpSyncer<T>
   private void sync()
   {
     if (!startStopLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
-      log.info("Skipping sync for server [%s] as lifecycle has not started.", logIdentity);
+      log.info("Skipping sync for server[%s] as lifecycle has not started.", logIdentity);
       return;
     }
 
