@@ -122,9 +122,13 @@ Maven to only look locally for snapshot jars.
 
 1. Build docker images.
 
-   From root module run maven command, run the following command:
+   From the source root, run the following command:
    ```bash
-   mvn clean install -pl integration-tests -P integration-tests -Ddocker.run.skip=true -Dmaven.test.skip=true -Ddocker.build.hadoop=true
+   mvn clean install -Pintegration-tests,skip-static-checks,skip-tests \
+     -Dcyclonedx.skip=true \
+     -Dmaven.javadoc.skip=true \
+     -Ddocker.run.skip=true \
+     -Ddocker.build.hadoop=true
    ```
 
    > **NOTE**: `-Ddocker.build.hadoop=true` is optional if you don't run tests against Hadoop.
