@@ -33,6 +33,7 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.StringEncodingStrategies;
+import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.DictionaryWriter;
@@ -45,10 +46,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * Serializer for a string {@link NestedCommonFormatColumn} that can be read with either
- * {@link ScalarStringDictionaryEncodedColumn} or
- * {@link org.apache.druid.segment.column.StringFrontCodedDictionaryEncodedColumn} (if written with a front-coded
- * dictionary).
+ * Serializer for a string {@link NestedCommonFormatColumn} that can be read with
+ * {@link StringUtf8DictionaryEncodedColumn}.
  */
 public class ScalarStringColumnSerializer extends NestedCommonFormatColumnSerializer
 {

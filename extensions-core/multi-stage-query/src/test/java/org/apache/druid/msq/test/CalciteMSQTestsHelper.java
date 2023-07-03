@@ -61,6 +61,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -137,7 +138,7 @@ public class CalciteMSQTestsHelper
               )
           );
           ObjectMapper testMapper = MSQTestBase.setupObjectMapper(dummyInjector);
-          IndexIO indexIO = new IndexIO(testMapper, () -> 0);
+          IndexIO indexIO = new IndexIO(testMapper, ColumnConfig.DEFAULT);
           SegmentCacheManager segmentCacheManager = null;
           try {
             segmentCacheManager = new SegmentCacheManagerFactory(testMapper).manufacturate(temporaryFolder.newFolder(
