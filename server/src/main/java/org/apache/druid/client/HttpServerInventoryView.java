@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
@@ -43,6 +44,8 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
@@ -54,12 +57,12 @@ import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.joda.time.Duration;
 
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -112,6 +115,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   private final HttpClient httpClient;
   private final ObjectMapper smileMapper;
   private final HttpServerInventoryViewConfig config;
+  private final ServiceEmitter serviceEmitter;
 
   public HttpServerInventoryView(
       final ObjectMapper smileMapper,
@@ -119,6 +123,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter,
       final HttpServerInventoryViewConfig config,
+      final ServiceEmitter serviceEmitter,
       final String execNamePrefix
   )
   {
@@ -128,6 +133,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     this.defaultFilter = defaultFilter;
     this.finalPredicate = defaultFilter;
     this.config = config;
+    this.serviceEmitter = serviceEmitter;
     this.execNamePrefix = execNamePrefix;
   }
 
@@ -137,10 +143,10 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   {
     synchronized (lifecycleLock) {
       if (!lifecycleLock.canStart()) {
-        throw new ISE("can't start.");
+        throw new ISE("Could not start lifecycle");
       }
 
-      log.info("Starting %s.", execNamePrefix);
+      log.info("Starting executor [%s].", execNamePrefix);
 
       try {
         executor = ScheduledExecutors.fixed(
@@ -204,7 +210,18 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
             }
         );
 
-        scheduleSyncMonitoring();
+        ScheduledExecutors.scheduleAtFixedRate(
+            executor,
+            Duration.standardSeconds(60),
+            Duration.standardMinutes(5),
+            this::checkAndResetUnhealthyServers
+        );
+        ScheduledExecutors.scheduleAtFixedRate(
+            executor,
+            Duration.standardSeconds(90),
+            Duration.standardMinutes(1),
+            this::emitServerStatusMetrics
+        );
 
         lifecycleLock.started();
       }
@@ -212,7 +229,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         lifecycleLock.exitStart();
       }
 
-      log.info("Started %s.", execNamePrefix);
+      log.info("Started executor [%s].", execNamePrefix);
     }
   }
 
@@ -224,13 +241,13 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         throw new ISE("can't stop.");
       }
 
-      log.info("Stopping %s.", execNamePrefix);
+      log.info("Stopping executor[%s].", execNamePrefix);
 
       if (executor != null) {
         executor.shutdownNow();
       }
 
-      log.info("Stopped %s.", execNamePrefix);
+      log.info("Stopped executor[%s].", execNamePrefix);
     }
   }
 
@@ -249,10 +266,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     segmentCallbacks.put(filteringSegmentCallback, exec);
     segmentPredicates.put(filteringSegmentCallback, filter);
 
-    finalPredicate = Predicates.or(
-        defaultFilter,
-        Predicates.or(segmentPredicates.values())
-    );
+    updateFinalPredicate();
   }
 
   @Override
@@ -308,10 +322,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               if (CallbackAction.UNREGISTER == fn.apply(entry.getKey())) {
                 segmentCallbacks.remove(entry.getKey());
                 if (segmentPredicates.remove(entry.getKey()) != null) {
-                  finalPredicate = Predicates.or(
-                      defaultFilter,
-                      Predicates.or(segmentPredicates.values())
-                  );
+                  updateFinalPredicate();
                 }
               }
             }
@@ -320,7 +331,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     }
   }
 
-  private void runServerCallbacks(final DruidServer server)
+  private void runServerRemovedCallbacks(final DruidServer server)
   {
     for (final Map.Entry<ServerRemovedCallback, Executor> entry : serverCallbacks.entrySet()) {
       entry.getValue().execute(
@@ -338,8 +349,11 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     }
   }
 
-  //best effort wait for first segment listing fetch from all servers and then call
-  //segmentViewInitialized on all registered segment callbacks.
+  /**
+   * Waits until the sync wait timeout for all servers to be synced at least once.
+   * Finally calls {@link SegmentCallback#segmentViewInitialized()} regardless of
+   * whether all servers synced successfully or not.
+   */
   private void serverInventoryInitialized()
   {
     long start = System.currentTimeMillis();
@@ -360,13 +374,11 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         throw new RE(ex, "Interrupted while waiting for queryable server initial successful sync.");
       }
 
-      log.info("Checking whether all servers have been synced at least once yet....");
-      Iterator<DruidServerHolder> iter = uninitializedServers.iterator();
-      while (iter.hasNext()) {
-        if (iter.next().isSyncedSuccessfullyAtleastOnce()) {
-          iter.remove();
-        }
-      }
+      log.info("Waiting for [%d] servers to sync successfully.", uninitializedServers.size());
+      uninitializedServers.removeIf(
+          serverHolder -> serverHolder.isSyncedSuccessfullyAtleastOnce()
+                          || serverHolder.isStopped()
+      );
     }
 
     if (uninitializedServers.isEmpty()) {
@@ -380,18 +392,13 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       }
     }
 
-    log.info("Calling SegmentCallback.segmentViewInitialized() for all callbacks.");
+    log.info("Invoking segment view initialized callbacks.");
+    runSegmentCallbacks(SegmentCallback::segmentViewInitialized);
+  }
 
-    runSegmentCallbacks(
-        new Function<SegmentCallback, CallbackAction>()
-        {
-          @Override
-          public CallbackAction apply(SegmentCallback input)
-          {
-            return input.segmentViewInitialized();
-          }
-        }
-    );
+  private void updateFinalPredicate()
+  {
+    finalPredicate = Predicates.or(defaultFilter, Predicates.or(segmentPredicates.values()));
   }
 
   @VisibleForTesting
@@ -417,9 +424,9 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       if (holder != null) {
         log.info("Server[%s] disappeared.", server.getName());
         holder.stop();
-        runServerCallbacks(holder.druidServer);
+        runServerRemovedCallbacks(holder.druidServer);
       } else {
-        log.info("Server[%s] did not exist. Removal notification ignored.", server.getName());
+        log.info("Ignoring remove notification for unknown server[%s].", server.getName());
       }
     }
   }
@@ -443,37 +450,14 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     return result;
   }
 
-  private void scheduleSyncMonitoring()
-  {
-    executor.scheduleAtFixedRate(
-        () -> {
-          log.debug("Running the Sync Monitoring.");
-
-          try {
-            syncMonitoring();
-          }
-          catch (Exception ex) {
-            if (ex instanceof InterruptedException) {
-              Thread.currentThread().interrupt();
-            } else {
-              log.makeAlert(ex, "Exception in sync monitoring.").emit();
-            }
-          }
-        },
-        1,
-        5,
-        TimeUnit.MINUTES
-    );
-  }
-
   @VisibleForTesting
-  void syncMonitoring()
+  void checkAndResetUnhealthyServers()
   {
     // Ensure that the collection is not being modified during iteration. Iterate over a copy
     final Set<Map.Entry<String, DruidServerHolder>> serverEntrySet = ImmutableSet.copyOf(servers.entrySet());
     for (Map.Entry<String, DruidServerHolder> e : serverEntrySet) {
       DruidServerHolder serverHolder = e.getValue();
-      if (!serverHolder.syncer.isOK()) {
+      if (serverHolder.syncer.needsReset()) {
         synchronized (servers) {
           // check again that server is still there and only then reset.
           if (servers.containsKey(e.getKey())) {
@@ -483,18 +467,37 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                 serverHolder.syncer.getDebugInfo()
             ).emit();
             serverRemoved(serverHolder.druidServer);
-            serverAdded(new DruidServer(
-                serverHolder.druidServer.getName(),
-                serverHolder.druidServer.getHostAndPort(),
-                serverHolder.druidServer.getHostAndTlsPort(),
-                serverHolder.druidServer.getMaxSize(),
-                serverHolder.druidServer.getType(),
-                serverHolder.druidServer.getTier(),
-                serverHolder.druidServer.getPriority()
-            ));
+            serverAdded(serverHolder.druidServer.copyWithoutSegments());
           }
         }
       }
+    }
+  }
+
+  private void emitServerStatusMetrics()
+  {
+    final ServiceMetricEvent.Builder eventBuilder = ServiceMetricEvent.builder();
+    try {
+      final Map<String, DruidServerHolder> serversCopy = ImmutableMap.copyOf(servers);
+      serversCopy.forEach((serverName, serverHolder) -> {
+        final DruidServer server = serverHolder.druidServer;
+        eventBuilder.setDimension("tier", server.getTier());
+        eventBuilder.setDimension("server", serverName);
+
+        final boolean isSynced = serverHolder.syncer.isSyncedSuccessfully();
+        serviceEmitter.emit(
+            eventBuilder.build("segment/serverview/sync/healthy", isSynced ? 1 : 0)
+        );
+        final long unstableTimeMillis = serverHolder.syncer.getUnstableTimeMillis();
+        if (unstableTimeMillis > 0) {
+          serviceEmitter.emit(
+              eventBuilder.build("segment/serverview/sync/unstableTime", unstableTimeMillis)
+          );
+        }
+      });
+    }
+    catch (Exception e) {
+      log.error(e, "Error while emitting server status metrics");
     }
   }
 
@@ -514,6 +517,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   private class DruidServerHolder
   {
     private final DruidServer druidServer;
+    private final AtomicBoolean stopped = new AtomicBoolean(false);
 
     private final ChangeRequestHttpSyncer<DataSegmentChangeRequest> syncer;
 
@@ -548,19 +552,21 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     void stop()
     {
       syncer.stop();
+      stopped.set(true);
+    }
+
+    boolean isStopped()
+    {
+      return stopped.get();
     }
 
     boolean isSyncedSuccessfullyAtleastOnce()
     {
       try {
-        return syncer.awaitInitialization(1, TimeUnit.MILLISECONDS);
+        return syncer.isInitialized();
       }
       catch (InterruptedException ex) {
-        throw new RE(
-            ex,
-            "Interrupted while waiting for queryable server[%s] initial successful sync.",
-            druidServer.getName()
-        );
+        throw new ISE(ex, "Interrupted while waiting for first sync with server[%s].", druidServer.getName());
       }
     }
 

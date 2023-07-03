@@ -340,7 +340,7 @@ public class WorkerHolder
 
   public void waitForInitialization() throws InterruptedException
   {
-    if (!syncer.awaitInitialization(3 * syncer.getServerHttpTimeout(), TimeUnit.MILLISECONDS)) {
+    if (!syncer.awaitInitialization()) {
       throw new RE("Failed to sync with worker[%s].", worker.getHost());
     }
   }
@@ -348,7 +348,7 @@ public class WorkerHolder
   public boolean isInitialized()
   {
     try {
-      return syncer.awaitInitialization(1, TimeUnit.MILLISECONDS);
+      return syncer.isInitialized();
     }
     catch (InterruptedException ignored) {
       Thread.currentThread().interrupt();
