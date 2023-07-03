@@ -22,26 +22,25 @@ package org.apache.druid.segment.serde;
 import com.google.common.base.Supplier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
-import org.apache.druid.segment.data.FrontCodedIndexed;
+import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
 /**
- * {@link DictionaryEncodedColumnSupplier} but for columns using a {@link StringUtf8DictionaryEncodedColumn}
- * instead of the traditional {@link StringDictionaryEncodedColumn}
+ * Supplier for {@link StringUtf8DictionaryEncodedColumn}
  */
-public class StringFrontCodedDictionaryEncodedColumnSupplier implements Supplier<DictionaryEncodedColumn<?>>
+public class StringUtf8DictionaryEncodedColumnSupplier<TIndexed extends Indexed<ByteBuffer>> implements Supplier<DictionaryEncodedColumn<?>>
 {
-  private final Supplier<FrontCodedIndexed> utf8Dictionary;
+  private final Supplier<TIndexed> utf8Dictionary;
   private final @Nullable Supplier<ColumnarInts> singleValuedColumn;
   private final @Nullable Supplier<ColumnarMultiInts> multiValuedColumn;
 
-  public StringFrontCodedDictionaryEncodedColumnSupplier(
-      Supplier<FrontCodedIndexed> utf8Dictionary,
+  public StringUtf8DictionaryEncodedColumnSupplier(
+      Supplier<TIndexed> utf8Dictionary,
       @Nullable Supplier<ColumnarInts> singleValuedColumn,
       @Nullable Supplier<ColumnarMultiInts> multiValuedColumn
   )
@@ -54,7 +53,7 @@ public class StringFrontCodedDictionaryEncodedColumnSupplier implements Supplier
   @Override
   public DictionaryEncodedColumn<?> get()
   {
-    final FrontCodedIndexed suppliedUtf8Dictionary = utf8Dictionary.get();
+    final TIndexed suppliedUtf8Dictionary = utf8Dictionary.get();
 
     if (NullHandling.mustCombineNullAndEmptyInDictionary(suppliedUtf8Dictionary)) {
       return new StringUtf8DictionaryEncodedColumn(
