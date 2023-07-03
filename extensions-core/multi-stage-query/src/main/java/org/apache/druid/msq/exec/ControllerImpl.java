@@ -1959,7 +1959,7 @@ public class ControllerImpl implements Controller
    * If the output column is present in the outputColumnAggregatorFactories that means we already have the aggregator information for this column.
    * else treat this column as a dimension.
    *
-   * @param dimensions                      list is poulated if the output col is deemed to be a dimension
+   * @param dimensions                      list is populated if the output col is deemed to be a dimension
    * @param aggregators                     list is populated with the aggregator if the output col is deemed to be a aggregation column.
    * @param outputColumnAggregatorFactories output col -> AggregatorFactory map
    * @param outputColumn                    column name

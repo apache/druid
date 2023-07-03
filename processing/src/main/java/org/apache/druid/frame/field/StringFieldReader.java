@@ -25,6 +25,7 @@ import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -91,11 +92,38 @@ public class StringFieldReader implements FieldReader
   @Override
   public boolean isNull(Memory memory, long position)
   {
-    final byte nullByte = memory.getByte(position);
-    assert nullByte == StringFieldWriter.NULL_BYTE || nullByte == StringFieldWriter.NOT_NULL_BYTE;
+    final byte firstByte = memory.getByte(position);
+    assert StringFieldWriter.VALID_FIRST_BYTES_LEGACY.contains(firstByte)
+           || StringFieldWriter.VALID_FIRST_BYTES.contains(firstByte);
+
+
+    // Look if we are reaading a newer version of the code
+    if (StringFieldWriter.VALID_FIRST_BYTES.contains(firstByte)) {
+      if (asArray) {
+        if (StringFieldWriter.VALID_FIRST_BYTES.contains(firstByte)) {
+          return firstByte == StringFieldWriter.NULL_ARRAY_BYTE;
+        }
+      } else {
+        if (firstByte == StringFieldWriter.NULL_ARRAY_BYTE) {
+          return true;
+        } else if (firstByte == StringFieldWriter.EMPTY_ARRAY_BYTE) { // This shouldn't happen, just for sanity check
+          return false;
+        } else if (firstByte == StringFieldWriter.NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NULL) {
+          return memory.getByte(position + 1) == StringFieldWriter.VALUE_TERMINATOR
+                 && memory.getByte(position + 2) == StringFieldWriter.ROW_TERMINATOR;
+
+        } else if (firstByte == StringFieldWriter.NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NON_NULL) {
+          return NullHandling.replaceWithDefault()
+                 && memory.getByte(position + 1) == StringFieldWriter.VALUE_TERMINATOR
+                 && memory.getByte(position + 2) == StringFieldWriter.ROW_TERMINATOR;
+        }
+      }
+    }
+
+    // Now we are sure that we are reading the stuff written by an older variant of StringFrameWriter
 
     // When NullHandling.replaceWithDefault(), empty strings are considered nulls as well.
-    return (NullHandling.replaceWithDefault() || nullByte == StringFieldWriter.NULL_BYTE)
+    return (NullHandling.replaceWithDefault() || firstByte == StringFieldWriter.NULL_BYTE)
            && memory.getByte(position + 1) == StringFieldWriter.VALUE_TERMINATOR
            && memory.getByte(position + 2) == StringFieldWriter.ROW_TERMINATOR;
   }
@@ -119,7 +147,15 @@ public class StringFieldReader implements FieldReader
 
     private long currentFieldPosition = -1;
     private final RangeIndexedInts indexedInts = new RangeIndexedInts();
+
     private final List<ByteBuffer> currentUtf8Strings = new ArrayList<>();
+
+    /**
+     * Denotes if the currentUtf8Strings computed is a null array. This is to support the getObject() method
+     * in the Selector. This doesn't change the behaviour of the other methods like lookupName() which are
+     * and implementation of the methods in the DimensionSelectors (since that's supposed to be used while reading MVDs)
+     */
+    private boolean currentUtf8StringsIsNullArray = false;
 
     private Selector(
         final Memory memory,
@@ -138,9 +174,15 @@ public class StringFieldReader implements FieldReader
     @Override
     public Object getObject()
     {
-      final List<ByteBuffer> currentStrings = computeCurrentUtf8Strings();
-      final int size = currentStrings.size();
+      final Pair<List<ByteBuffer>, Boolean> currentStringsAndNullity = computeCurrentUtf8StringsAndNullity();
+      List<ByteBuffer> currentStrings = currentStringsAndNullity.lhs;
+      boolean nullity  = currentStringsAndNullity.rhs;
 
+      if (asArray && nullity) {
+        return null;
+      }
+
+      final int size = currentStrings.size();
       if (size == 0) {
         return asArray ? Collections.emptyList() : null;
       } else if (size == 1) {
@@ -157,7 +199,7 @@ public class StringFieldReader implements FieldReader
     @Override
     public IndexedInts getRow()
     {
-      indexedInts.setSize(computeCurrentUtf8Strings().size());
+      indexedInts.setSize(computeCurrentUtf8StringsAndNullity().lhs.size());
       return indexedInts;
     }
 
@@ -165,7 +207,7 @@ public class StringFieldReader implements FieldReader
     @Override
     public String lookupName(int id)
     {
-      final ByteBuffer byteBuffer = computeCurrentUtf8Strings().get(id);
+      final ByteBuffer byteBuffer = computeCurrentUtf8StringsAndNullity().lhs.get(id);
       final String s = byteBuffer != null ? StringUtils.fromUtf8(byteBuffer.duplicate()) : null;
       return extractionFn == null ? s : extractionFn.apply(s);
     }
@@ -184,7 +226,7 @@ public class StringFieldReader implements FieldReader
         throw new ISE("Cannot use lookupNameUtf8 on this selector");
       }
 
-      return computeCurrentUtf8Strings().get(id);
+      return computeCurrentUtf8StringsAndNullity().lhs.get(id);
     }
 
     @Override
@@ -233,21 +275,22 @@ public class StringFieldReader implements FieldReader
     /**
      * Update {@link #currentUtf8Strings} if needed, then return it.
      */
-    private List<ByteBuffer> computeCurrentUtf8Strings()
+    private Pair<List<ByteBuffer>, Boolean> computeCurrentUtf8StringsAndNullity()
     {
       final long fieldPosition = fieldPointer.position();
 
       if (fieldPosition != currentFieldPosition) {
-        updateCurrentUtf8Strings(fieldPosition);
+        updateCurrentUtf8StringsAndNullity(fieldPosition);
       }
 
       this.currentFieldPosition = fieldPosition;
-      return currentUtf8Strings;
+      return Pair.of(currentUtf8Strings, currentUtf8StringsIsNullArray);
     }
 
-    private void updateCurrentUtf8Strings(final long fieldPosition)
+    private void updateCurrentUtf8StringsAndNullity(final long fieldPosition)
     {
       currentUtf8Strings.clear();
+      currentUtf8StringsIsNullArray = false;
 
       long position = fieldPosition;
       long limit = memory.getCapacity();
@@ -255,6 +298,7 @@ public class StringFieldReader implements FieldReader
       boolean rowTerminatorSeen = false;
 
       while (position < limit && !rowTerminatorSeen) {
+
         final byte kind = memory.getByte(position);
         position++;
 
@@ -268,11 +312,16 @@ public class StringFieldReader implements FieldReader
             rowTerminatorSeen = true;
             break;
 
+          case StringFieldWriter.NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NULL:
           case StringFieldWriter.NULL_BYTE:
+            assert kind != StringFieldWriter.NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NULL || position == fieldPosition;
             currentUtf8Strings.add(null);
             break;
 
+          case StringFieldWriter.NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NON_NULL:
           case StringFieldWriter.NOT_NULL_BYTE:
+            assert kind != StringFieldWriter.NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NON_NULL || position == fieldPosition;
+
             for (long i = position; ; i++) {
               if (i >= limit) {
                 throw new ISE("Value overrun");
@@ -297,6 +346,14 @@ public class StringFieldReader implements FieldReader
               }
             }
 
+          case StringFieldWriter.NULL_ARRAY_BYTE:
+            assert position == fieldPosition;
+            currentUtf8StringsIsNullArray = true;
+            assert position + 1 < limit && memory.getByte(position + 1) == StringFieldWriter.ROW_TERMINATOR;
+            break;
+          case StringFieldWriter.EMPTY_ARRAY_BYTE:
+            assert position == fieldPosition;
+            assert position + 1 < limit && memory.getByte(position + 1) == StringFieldWriter.ROW_TERMINATOR;
             break;
 
           default:

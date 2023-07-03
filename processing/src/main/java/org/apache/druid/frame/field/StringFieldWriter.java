@@ -19,10 +19,12 @@
 
 package org.apache.druid.frame.field;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.segment.DimensionSelector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -33,7 +35,14 @@ import java.util.List;
  */
 public class StringFieldWriter implements FieldWriter
 {
+
+  /**
+   * Represents the termination of a String value. This isn't merely symbolic and cannot be changed because
+   * this aids in faster comparison across MVD strings. Rest all bytes are symbolic, when writing the comment,
+   * and can be updated to some other value if required.
+   */
   public static final byte VALUE_TERMINATOR = (byte) 0x00;
+
   public static final byte ROW_TERMINATOR = (byte) 0x01;
 
   // Different from the values in NullHandling, since we want to be able to sort as bytes, and we want
@@ -41,7 +50,22 @@ public class StringFieldWriter implements FieldWriter
   public static final byte NULL_BYTE = 0x02;
   public static final byte NOT_NULL_BYTE = 0x03;
 
-  private static final int ROW_OVERHEAD_BYTES = 3; // Null byte + value terminator + row terminator
+  public static final byte NULL_ARRAY_BYTE = 0x04;
+  public static final byte EMPTY_ARRAY_BYTE = 0x05;
+  public static final byte NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NULL = 0x06;
+  public static final byte NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NON_NULL = 0x07;
+
+  public static final List<Byte> VALID_FIRST_BYTES = ImmutableList.of(
+      NULL_ARRAY_BYTE,
+      EMPTY_ARRAY_BYTE,
+      NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NULL,
+      NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NON_NULL
+  );
+
+  public static final List<Byte> VALID_FIRST_BYTES_LEGACY = ImmutableList.of(
+      NULL_BYTE,
+      NOT_NULL_BYTE
+  );
 
   private final DimensionSelector selector;
 
@@ -73,39 +97,69 @@ public class StringFieldWriter implements FieldWriter
       final WritableMemory memory,
       final long position,
       final long maxSize,
-      final List<ByteBuffer> byteBuffers
+      @Nullable final List<ByteBuffer> byteBuffers
   )
   {
     long written = 0;
 
-    for (final ByteBuffer utf8Datum : byteBuffers) {
-      final int len = utf8Datum.remaining();
+    if (maxSize < 1) {
+      return -1;
+    }
 
-      if (written + ROW_OVERHEAD_BYTES > maxSize) {
-        return -1;
-      }
-
-      if (len == 1 && utf8Datum.get(utf8Datum.position()) == FrameWriterUtils.NULL_STRING_MARKER) {
-        // Null.
-        memory.putByte(position + written, NULL_BYTE);
-        written++;
+    if (byteBuffers == null) {
+      memory.putByte(position + written, NULL_ARRAY_BYTE);
+    } else {
+      if (byteBuffers.size() == 0) {
+        memory.putByte(position + written, EMPTY_ARRAY_BYTE);
       } else {
-        // Not null.
-        if (written + len + ROW_OVERHEAD_BYTES > maxSize) {
+        if (byteBuffers.get(0).remaining() == 1 &&
+            byteBuffers.get(0).get(byteBuffers.get(0).position()) == FrameWriterUtils.NULL_STRING_MARKER) {
+          memory.putByte(position + written, NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NULL);
+        } else {
+          memory.putByte(position + written, NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NON_NULL);
+        }
+      }
+    }
+
+    written++;
+
+    if (byteBuffers != null) {
+      for (int i = 0; i < byteBuffers.size(); ++i) {
+        ByteBuffer utf8Datum = byteBuffers.get(i);
+
+        final int len = utf8Datum.remaining();
+
+        if (i != 0) {
+          if (written + 1 > maxSize) {
+            return -1;
+          }
+
+          if (len == 1 && utf8Datum.get(utf8Datum.position()) == FrameWriterUtils.NULL_STRING_MARKER) {
+            // Null.
+            memory.putByte(position + written, NULL_BYTE);
+          } else {
+            memory.putByte(position + written, NOT_NULL_BYTE);
+          }
+          written++;
+        }
+
+        if (len != 1 || utf8Datum.get(utf8Datum.position()) != FrameWriterUtils.NULL_STRING_MARKER) {
+          if (written + len > maxSize) {
+            return -1;
+          }
+          if (len > 0) {
+            FrameWriterUtils.copyByteBufferToMemory(utf8Datum, memory, position + written, len, false);
+            written += len;
+          }
+        }
+
+        if (written + 1 > maxSize) {
           return -1;
         }
 
-        memory.putByte(position + written, NOT_NULL_BYTE);
+        memory.putByte(position + written, VALUE_TERMINATOR);
         written++;
-
-        if (len > 0) {
-          FrameWriterUtils.copyByteBufferToMemory(utf8Datum, memory, position + written, len, false);
-          written += len;
-        }
       }
-
-      memory.putByte(position + written, VALUE_TERMINATOR);
-      written++;
     }
 
     if (written + 1 > maxSize) {

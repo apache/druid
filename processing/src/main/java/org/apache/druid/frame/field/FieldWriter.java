@@ -36,6 +36,9 @@ public interface FieldWriter extends Closeable
 {
   /**
    * Writes the current selection at the given memory position.
+   * If there is insufficient memory to write to the Memory, then the callers shouldn't rely on this method to clean up
+   * the data written from [position, position + maxSize). Essentialy, the region of memory between
+   * [position, position + maxSize) might change irrespective of whether the "write" was successful or not
    *
    * @param memory   memory region in little-endian order
    * @param position position to write

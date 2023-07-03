@@ -80,7 +80,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
   {
     writeToMemory(Collections.singletonList(null));
     Assert.assertTrue(new StringFieldReader(false).isNull(memory, MEMORY_POSITION));
-    Assert.assertTrue(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(new StringFieldReader(true).isNull(memory, MEMORY_POSITION));
   }
 
   @Test
@@ -174,7 +174,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
         new StringFieldReader(true).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertNull(readSelector.getObject());
-    Assert.assertEquals(Collections.emptyList(), readSelectorAsArray.getObject());
+    Assert.assertEquals(null, readSelectorAsArray.getObject());
   }
 
   @Test

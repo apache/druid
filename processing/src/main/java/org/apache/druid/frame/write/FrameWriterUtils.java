@@ -129,15 +129,16 @@ public class FrameWriterUtils
    * Retrieves UTF-8 byte buffers from a {@link ColumnValueSelector}, which is expected to be the kind of
    * selector you get for an {@code ARRAY<STRING>} column.
    *
-   * Null strings are returned as {@link #NULL_STRING_MARKER_ARRAY}.
+   * Null strings are returned as {@code null}
    */
+  @Nullable
   public static List<ByteBuffer> getUtf8ByteBuffersFromStringArraySelector(
       @SuppressWarnings("rawtypes") final ColumnValueSelector selector
   )
   {
     Object row = selector.getObject();
     if (row == null) {
-      return Collections.singletonList(getUtf8ByteBufferFromString(null));
+      return null;
     } else if (row instanceof String) {
       return Collections.singletonList(getUtf8ByteBufferFromString((String) row));
     }
