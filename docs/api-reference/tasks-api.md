@@ -1029,6 +1029,60 @@ Host: {domain}
 
 A successful request returns a `200 OK` response and an array of the task segments.
 
+### Get task log
+
+#### URL
+
+<code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/log`
+
+Retrieves the event log associated with a task. It returns a list of logged events during the lifecycle of the task. The endpoint is useful for providing information about the execution of the task, including any errors or warnings raised. 
+
+#### Query parameters
+* `offset`
+    * Type: Int
+    * Exclude the first passed in number of entries from the response.
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully retrieved task report* 
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+#### Sample request
+
+The following examples shows how to retrieve the task log of a task with the specified ID `index_kafka_social_media_0e905aa31037879_nommnaeg`.
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl "{domain}/druid/indexer/v1/task/index_kafka_social_media_0e905aa31037879_nommnaeg/log"
+```
+<!--HTTP-->
+```HTTP
+GET /druid/indexer/v1/task/index_kafka_social_media_0e905aa31037879_nommnaeg/log HTTP/1.1
+Host: {domain}
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+  
+  ```json
+    2023-07-03T21:32:06,409 WARN [task-runner-0-priority-0] org.apache.druid.indexing.kafka.IncrementalPublishingKafkaIndexTaskRunner - OffsetOutOfRangeException with message [Fetch position FetchPosition{offset=230985, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9094 (id: 1 rack: null)], epoch=0}} is out of range for partition social_media-0]
+    2023-07-03T21:32:06,409 WARN [task-runner-0-priority-0] org.apache.druid.indexing.kafka.IncrementalPublishingKafkaIndexTaskRunner - Retrying in 30000ms
+    2023-07-03T21:32:36,437 INFO [task-runner-0-priority-0] org.apache.kafka.clients.consumer.internals.Fetcher - [Consumer clientId=consumer-kafka-supervisor-dcanhmig-1, groupId=kafka-supervisor-dcanhmig] Fetch position FetchPosition{offset=230985, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9094 (id: 1 rack: null)], epoch=0}} is out of range for partition social_media-0, raising error to the application since no reset policy is configured
+  ```
+
+</details>
+
 ### Get task completion report
 
 #### URL
