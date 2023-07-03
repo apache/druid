@@ -66,7 +66,6 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
-import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
@@ -103,10 +102,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -5409,11 +5406,15 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                   GroupByQuery.builder()
                                               .setDataSource(CalciteTests.DATASOURCE1)
                                               .setInterval(querySegmentSpec(Filtration.eternity()))
-                                              .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
                                               .setDimensions(
-                                                  new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING),
-                                                  new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                                  new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING)
                                               )
+                                              .setPostAggregatorSpecs(ImmutableList.of(new ExpressionPostAggregator(
+                                                  "a0",
+                                                  "1",
+                                                  null,
+                                                  ExprMacroTable.nil()
+                                              )))
                                               .setGranularity(Granularities.ALL)
                                               .setLimitSpec(NoopLimitSpec.instance())
                                               .build()
@@ -5425,19 +5426,16 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                           new QueryDataSource(
                               new TopNQueryBuilder().dataSource(CalciteTests.DATASOURCE1)
                                                     .intervals(querySegmentSpec(Filtration.eternity()))
-                                                    .filters(new InDimFilter(
-                                                        "m2",
-                                                        new HashSet<>(Arrays.asList(null, "A"))
-                                                    ))
+                                                    .filters(selector("m2", null, null))
                                                     .virtualColumns(expressionVirtualColumn(
                                                         "v0",
-                                                        "notnull(\"m2\")",
+                                                        "0",
                                                         ColumnType.LONG
                                                     ))
                                                     .dimension(new DefaultDimensionSpec("v0", "d0", ColumnType.LONG))
                                                     .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(
                                                         null,
-                                                        StringComparators.LEXICOGRAPHIC
+                                                        StringComparators.NUMERIC
                                                     )))
                                                     .aggregators(new CountAggregatorFactory("a0"))
                                                     .threshold(1)
@@ -5453,7 +5451,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                       new FilteredAggregatorFactory(
                           new CountAggregatorFactory("a0"),
                           and(
-                              not(selector("_j0.d1", null, null)),
+                              not(selector("_j0.a0", null, null)),
                               not(selector("dim1", null, null))
                           ),
                           "a0"

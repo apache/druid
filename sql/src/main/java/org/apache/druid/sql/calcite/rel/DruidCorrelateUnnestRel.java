@@ -47,7 +47,6 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilterDataSource;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.SelectProjectDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
@@ -283,9 +282,6 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
                                               ))
                                               .optimizeFilterOnly(leftSignature).getDimFilter();
         leftDataSource1 = FilterDataSource.create(updatedLeftQuery.getDataSource(), dimFilter);
-      }
-      if (virtualColumns.getVirtualColumns().length > 0) {
-        leftDataSource1 = SelectProjectDataSource.create(leftDataSource1, virtualColumns);
       }
     } else {
       leftDataSource1 = new QueryDataSource(updatedLeftQuery.getQuery());
