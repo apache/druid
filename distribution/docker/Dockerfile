@@ -49,13 +49,12 @@ RUN --mount=type=cache,target=/root/.m2 VERSION=$(mvn -B -q org.apache.maven.plu
  && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
  && mv /opt/apache-druid-${VERSION} /opt/druid
 
-FROM busybox:1.36.0-glibc as busybox
+FROM busybox:1.35.0-glibc as busybox
 
 FROM gcr.io/distroless/java$JDK_VERSION-debian11
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
-COPY --from=busybox /bin/busybox /busybox/busybox
-RUN ["/busybox/busybox", "--install", "/bin"]
+RUN ["/bin/busybox", "--install", "-s", "/bin"]
 
 # Predefined builtin arg, see: https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
 ARG TARGETARCH
