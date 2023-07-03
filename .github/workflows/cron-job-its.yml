@@ -125,10 +125,6 @@ jobs:
           distribution: 'zulu'
           cache: maven
 
-      - name: Maven build
-        id: maven_build
-        run: ./it.sh ci
-
       - name: security vulnerabilities check
         env:
           MVN: mvn --no-snapshot-updates

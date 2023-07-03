@@ -826,7 +826,7 @@
     <cve>CVE-2022-26612</cve>
     <!-- this one seems to apply to backend server - https://nvd.nist.gov/vuln/detail/CVE-2023-25613 -->
     <cve>CVE-2023-25613</cve>
-    <cve>CVE-2023-2976</cve> <!-- this is from shaded guava dependency -->
+    <cve>CVE-2023-2976</cve> <!-- hadoop-client-runtime isn't using com.google.common.io.FileBackedOutputStream -->
   </suppress>
   <suppress>
     <!-- from extensions using hadoop-client-api, these dependencies are shaded in the jar -->
