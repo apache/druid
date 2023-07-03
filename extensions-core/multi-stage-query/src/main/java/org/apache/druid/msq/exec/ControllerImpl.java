@@ -1007,7 +1007,7 @@ public class ControllerImpl implements Controller
 
       // Validate interval against the replaceTimeChunks set of intervals.
       if (destination.getReplaceTimeChunks().stream().noneMatch(chunk -> chunk.contains(interval))) {
-        throw new MSQException(new InsertTimeOutOfBoundsFault(interval));
+        throw new MSQException(new InsertTimeOutOfBoundsFault(interval, destination.getReplaceTimeChunks()));
       }
 
       final List<Pair<Integer, ClusterByPartition>> ranges = bucketEntry.getValue();
@@ -1471,7 +1471,8 @@ public class ControllerImpl implements Controller
                                      context.jsonMapper(),
                                      task.getSqlResultsContext(),
                                      value,
-                                     sqlTypeNames.get(i)
+                                     sqlTypeNames.get(i),
+                                     columnMappings.getOutputColumnName(i)
                                  );
                                }
                              }

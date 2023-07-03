@@ -28,7 +28,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.column.StringDictionaryEncodedColumn;
+import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.easymock.EasyMock;
@@ -62,7 +62,7 @@ public class ColumnSelectorColumnIndexSelectorTest
 
     ColumnHolder holder = EasyMock.createMock(ColumnHolder.class);
     EasyMock.expect(index.getColumnHolder(STRING_DICTIONARY_COLUMN_NAME)).andReturn(holder).anyTimes();
-    StringDictionaryEncodedColumn stringColumn = EasyMock.createMock(StringDictionaryEncodedColumn.class);
+    StringUtf8DictionaryEncodedColumn stringColumn = EasyMock.createMock(StringUtf8DictionaryEncodedColumn.class);
     EasyMock.expect(holder.getCapabilities()).andReturn(
         ColumnCapabilitiesImpl.createDefault()
                               .setType(ColumnType.STRING)

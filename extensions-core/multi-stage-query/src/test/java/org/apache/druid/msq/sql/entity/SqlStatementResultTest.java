@@ -43,7 +43,7 @@ public class SqlStatementResultTest
                                            + "\"createdAt\":\"2023-05-31T12:00:00.000Z\","
                                            + "\"schema\":[{\"name\":\"_time\",\"type\":\"TIMESTAMP\",\"nativeType\":\"LONG\"},{\"name\":\"alias\",\"type\":\"VARCHAR\",\"nativeType\":\"STRING\"},{\"name\":\"market\",\"type\":\"VARCHAR\",\"nativeType\":\"STRING\"}],"
                                            + "\"durationMs\":100,"
-                                           + "\"result\":{\"resultFormat\":\"object\",\"numRows\":1,\"sizeInBytes\":1,\"dataSource\":\"ds\",\"sampleRecords\":[[\"1\"],[\"2\"],[\"3\"]]},"
+                                           + "\"result\":{\"numTotalRows\":1,\"totalSizeInBytes\":1,\"resultFormat\":\"object\",\"dataSource\":\"ds\",\"sampleRecords\":[[\"1\"],[\"2\"],[\"3\"]],\"pages\":[{\"numRows\":1,\"sizeInBytes\":1,\"id\":0}]},"
                                            + "\"errorDetails\":{\"error\":\"druidException\",\"errorCode\":\"QueryNotSupported\",\"persona\":\"USER\",\"category\":\"UNCATEGORIZED\",\"errorMessage\":\"QueryNotSupported\",\"context\":{}}}";
 
   public static final SqlStatementResult SQL_STATEMENT_RESULT = new SqlStatementResult(
@@ -87,7 +87,7 @@ public class SqlStatementResultTest
         + " createdAt=2023-05-31T12:00:00.000Z,"
         + " sqlRowSignature=[ColumnNameAndTypes{colName='_time', sqlTypeName='TIMESTAMP', nativeTypeName='LONG'}, ColumnNameAndTypes{colName='alias', sqlTypeName='VARCHAR', nativeTypeName='STRING'}, ColumnNameAndTypes{colName='market', sqlTypeName='VARCHAR', nativeTypeName='STRING'}],"
         + " durationInMs=100,"
-        + " resultSetInformation=ResultSetInformation{totalRows=1, totalSize=1, resultFormat=object, records=[[1], [2], [3]], dataSource='ds'},"
+        + " resultSetInformation=ResultSetInformation{numTotalRows=1, totalSizeInBytes=1, resultFormat=object, records=[[1], [2], [3]], dataSource='ds', pages=[PageInformation{numRows=1, sizeInBytes=1, id=0}]},"
         + " errorResponse={error=druidException, errorCode=QueryNotSupported, persona=USER, category=UNCATEGORIZED, errorMessage=QueryNotSupported, context={}}}",
         SQL_STATEMENT_RESULT.toString()
     );
