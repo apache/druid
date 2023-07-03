@@ -62,26 +62,6 @@ import java.util.stream.IntStream;
 public class TestHelper
 {
   public static final ObjectMapper JSON_MAPPER = makeJsonMapper();
-  public static final ColumnConfig NO_CACHE_ALWAYS_USE_INDEXES_COLUMN_CONFIG = new ColumnConfig()
-  {
-    @Override
-    public int columnCacheSizeBytes()
-    {
-      return 0;
-    }
-
-    @Override
-    public double skipValueRangeIndexScale()
-    {
-      return 1.0;
-    }
-
-    @Override
-    public double skipValuePredicateIndexScale()
-    {
-      return 1.0;
-    }
-  };
 
   public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
   {
@@ -90,7 +70,7 @@ public class TestHelper
 
   public static IndexIO getTestIndexIO()
   {
-    return getTestIndexIO(NO_CACHE_ALWAYS_USE_INDEXES_COLUMN_CONFIG);
+    return getTestIndexIO(ColumnConfig.ALWAYS_USE_INDEXES);
   }
 
   public static IndexIO getTestIndexIO(ColumnConfig columnConfig)

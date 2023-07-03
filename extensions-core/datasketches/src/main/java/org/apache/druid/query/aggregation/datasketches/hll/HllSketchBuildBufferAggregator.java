@@ -19,12 +19,15 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
+import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
+import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * This aggregator builds sketches from raw data.
@@ -32,18 +35,21 @@ import java.nio.ByteBuffer;
  */
 public class HllSketchBuildBufferAggregator implements BufferAggregator
 {
-  private final ColumnValueSelector<Object> selector;
+  private final Consumer<Supplier<HllSketch>> processor;
   private final HllSketchBuildBufferAggregatorHelper helper;
+  private final StringEncoding stringEncoding;
 
   public HllSketchBuildBufferAggregator(
-      final ColumnValueSelector<Object> selector,
+      final Consumer<Supplier<HllSketch>> processor,
       final int lgK,
       final TgtHllType tgtHllType,
+      final StringEncoding stringEncoding,
       final int size
   )
   {
-    this.selector = selector;
+    this.processor = processor;
     this.helper = new HllSketchBuildBufferAggregatorHelper(lgK, tgtHllType, size);
+    this.stringEncoding = stringEncoding;
   }
 
   @Override
@@ -55,12 +61,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
   {
-    final Object value = selector.getObject();
-    if (value == null) {
-      return;
-    }
-
-    HllSketchBuildAggregator.updateSketch(helper.getSketchAtPosition(buf, position), value);
+    processor.accept(() -> helper.getSketchAtPosition(buf, position));
   }
 
   @Override
@@ -100,10 +101,11 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    inspector.visit("selector", selector);
+    inspector.visit("processor", processor);
     // lgK should be inspected because different execution paths exist in HllSketch.update() that is called from
     // @CalledFromHotLoop-annotated aggregate() depending on the lgK.
     // See https://github.com/apache/druid/pull/6893#discussion_r250726028
     inspector.visit("lgK", helper.getLgK());
+    inspector.visit("stringEncoding", stringEncoding);
   }
 }

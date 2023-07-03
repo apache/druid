@@ -99,7 +99,23 @@ public class JoinConditionAnalysis
       final ExprMacroTable macroTable
   )
   {
-    final Expr conditionExpr = Parser.parse(condition, macroTable);
+    return forExpression(condition, Parser.parse(condition, macroTable), rightPrefix);
+  }
+
+  /**
+   * Analyze a join condition from a pre-parsed expression.
+   *
+   * @param condition     the condition expression
+   * @param conditionExpr the parsed condition expression. Must match "condition".
+   * @param rightPrefix   prefix for the right-hand side of the join; will be used to determine which identifiers in
+   *                      the condition come from the right-hand side and which come from the left-hand side
+   */
+  public static JoinConditionAnalysis forExpression(
+      final String condition,
+      final Expr conditionExpr,
+      final String rightPrefix
+  )
+  {
     final List<Equality> equiConditions = new ArrayList<>();
     final List<Expr> nonEquiConditions = new ArrayList<>();
 
