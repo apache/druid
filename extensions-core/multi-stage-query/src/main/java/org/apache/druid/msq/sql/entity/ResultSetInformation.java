@@ -32,50 +32,50 @@ public class ResultSetInformation
 {
 
   @Nullable
-  private final Long numRows;
+  private final Long numTotalRows;
   @Nullable
-  private final Long sizeInBytes;
-
+  private final Long totalSizeInBytes;
   @Nullable
   private final ResultFormat resultFormat;
-
   @Nullable
   private final List<Object> records;
-
   @Nullable
   private final String dataSource;
+  @Nullable
+  private final List<PageInformation> pages;
 
   @JsonCreator
   public ResultSetInformation(
+      @JsonProperty("numTotalRows") @Nullable Long numTotalRows,
+      @JsonProperty("totalSizeInBytes") @Nullable Long totalSizeInBytes,
       @JsonProperty("resultFormat") @Nullable ResultFormat resultFormat,
-      @JsonProperty("numRows") @Nullable Long numRows,
-      @JsonProperty("sizeInBytes") @Nullable Long sizeInBytes,
       @JsonProperty("dataSource") @Nullable String dataSource,
-      @JsonProperty("sampleRecords") @Nullable
-      List<Object> records
+      @JsonProperty("sampleRecords") @Nullable List<Object> records,
+      @JsonProperty("pages") @Nullable List<PageInformation> pages
   )
   {
-    this.numRows = numRows;
-    this.sizeInBytes = sizeInBytes;
+    this.numTotalRows = numTotalRows;
+    this.totalSizeInBytes = totalSizeInBytes;
     this.resultFormat = resultFormat;
     this.dataSource = dataSource;
     this.records = records;
+    this.pages = pages;
   }
 
-  @Nullable
   @JsonProperty
+  @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Long getNumRows()
+  public Long getNumTotalRows()
   {
-    return numRows;
+    return numTotalRows;
   }
 
-  @Nullable
   @JsonProperty
+  @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Long getSizeInBytes()
+  public Long getTotalSizeInBytes()
   {
-    return sizeInBytes;
+    return totalSizeInBytes;
   }
 
   @JsonProperty
@@ -94,14 +94,21 @@ public class ResultSetInformation
     return dataSource;
   }
 
-  @Nullable
   @JsonProperty("sampleRecords")
+  @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<Object> getRecords()
   {
     return records;
   }
 
+  @JsonProperty
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<PageInformation> getPages()
+  {
+    return pages;
+  }
 
   @Override
   public boolean equals(Object o)
@@ -113,30 +120,31 @@ public class ResultSetInformation
       return false;
     }
     ResultSetInformation that = (ResultSetInformation) o;
-    return Objects.equals(numRows, that.numRows)
-           && Objects.equals(sizeInBytes, that.sizeInBytes)
-           && resultFormat == that.resultFormat
-           && Objects.equals(records, that.records)
-           && Objects.equals(dataSource, that.dataSource);
+    return Objects.equals(numTotalRows, that.numTotalRows) && Objects.equals(
+        totalSizeInBytes,
+        that.totalSizeInBytes
+    ) && resultFormat == that.resultFormat && Objects.equals(records, that.records) && Objects.equals(
+        dataSource,
+        that.dataSource
+    ) && Objects.equals(pages, that.pages);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(numRows, sizeInBytes, resultFormat, records, dataSource);
+    return Objects.hash(numTotalRows, totalSizeInBytes, resultFormat, records, dataSource, pages);
   }
 
   @Override
   public String toString()
   {
     return "ResultSetInformation{" +
-           "totalRows=" + numRows +
-           ", totalSize=" + sizeInBytes +
+           "numTotalRows=" + numTotalRows +
+           ", totalSizeInBytes=" + totalSizeInBytes +
            ", resultFormat=" + resultFormat +
            ", records=" + records +
            ", dataSource='" + dataSource + '\'' +
+           ", pages=" + pages +
            '}';
   }
-
 }
-

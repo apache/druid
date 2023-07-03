@@ -30,6 +30,7 @@ import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
+import org.apache.druid.msq.sql.entity.PageInformation;
 import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.sql.resources.SqlStatementResource;
@@ -112,9 +113,9 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
                                ),
                                MSQTestOverlordServiceClient.DURATION,
                                new ResultSetInformation(
-                                   null,
                                    6L,
                                    316L,
+                                   null,
                                    MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT,
                                    objectMapper.readValue(
                                        objectMapper.writeValueAsString(
@@ -122,7 +123,8 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
                                        new TypeReference<List<Object>>()
                                        {
                                        }
-                                   )
+                                   ),
+                                   ImmutableList.of(new PageInformation(6L, 316L, 0))
                                ),
                                null
         );
