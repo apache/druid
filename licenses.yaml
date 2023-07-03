@@ -1031,7 +1031,7 @@ name: io.kubernetes client-java-proto
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 11.0.1
+version: 11.0.4
 libraries:
   - io.kubernetes: client-java-proto
 
@@ -1061,7 +1061,7 @@ name: org.bouncycastle bcprov-jdk15on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: 1.68
+version: 1.70
 libraries:
   - org.bouncycastle: bcprov-jdk15on
 
@@ -1091,7 +1091,7 @@ name: org.bouncycastle bcprov-ext-jdk15on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: 1.68
+version: 1.70
 libraries:
   - org.bouncycastle: bcprov-ext-jdk15on
 
@@ -1121,7 +1121,7 @@ name: org.bouncycastle bcpkix-jdk15on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: 1.66
+version: 1.70
 libraries:
   - org.bouncycastle: bcpkix-jdk15on
 
@@ -1269,7 +1269,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.86.Final
+version: 4.1.94.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -3089,7 +3089,7 @@ name: Apache Commons Net
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 3.1
+version: 3.9
 libraries:
   - commons-net: commons-net
 notices:
