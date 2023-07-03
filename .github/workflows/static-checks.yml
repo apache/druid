@@ -122,8 +122,19 @@ jobs:
         if: ${{ matrix.java == 'jdk8' }}
         run: ${MVN} spotbugs:check --fail-at-end -pl '!benchmarks'
 
+  intellij-inspections:
+    strategy:
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout branch
+        uses: actions/checkout@v3
+
+      - name: setup JDK8
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME_8_X64" >> $GITHUB_ENV
+
       - name: intellij inspections
-        if: ${{ matrix.java == 'jdk8' }}
         run: |
           docker run --rm \
           -v $(pwd):/project \
