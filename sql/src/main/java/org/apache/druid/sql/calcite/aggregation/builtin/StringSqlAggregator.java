@@ -27,6 +27,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.sql.SqlCallBinding;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperatorBinding;
@@ -51,7 +52,6 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -128,7 +128,7 @@ public class StringSqlAggregator implements SqlAggregator
       maxSizeBytes = ((Number) RexLiteral.value(maxBytes)).intValue();
     }
     final DruidExpression arg = arguments.get(0);
-    final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
+    final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();
 
     final String initialvalue = "[]";
     final ColumnType elementType = ColumnType.STRING;
@@ -197,7 +197,16 @@ public class StringSqlAggregator implements SqlAggregator
     {
       RelDataType type = sqlOperatorBinding.getOperandType(0);
       if (type instanceof RowSignatures.ComplexSqlType) {
-        throw new UnsupportedSQLQueryException("Cannot use STRING_AGG on complex inputs %s", type);
+        String columnName = "";
+        if (sqlOperatorBinding instanceof SqlCallBinding) {
+          columnName = ((SqlCallBinding) sqlOperatorBinding).getCall().operand(0).toString();
+        }
+
+        throw SimpleSqlAggregator.badTypeException(
+            columnName,
+            "STRING_AGG",
+            ((RowSignatures.ComplexSqlType) type).getColumnType()
+        );
       }
       return Calcites.createSqlTypeWithNullability(
           sqlOperatorBinding.getTypeFactory(),

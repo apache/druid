@@ -21,7 +21,23 @@ package org.apache.druid.segment.column;
 
 public interface ColumnConfig
 {
-  int columnCacheSizeBytes();
+  ColumnConfig DEFAULT = new ColumnConfig() {};
+
+  ColumnConfig ALWAYS_USE_INDEXES = new ColumnConfig()
+  {
+
+    @Override
+    public double skipValueRangeIndexScale()
+    {
+      return 1.0;
+    }
+
+    @Override
+    public double skipValuePredicateIndexScale()
+    {
+      return 1.0;
+    }
+  };
 
   /**
    * If the total number of rows in a column multiplied by this value is smaller than the total number of bitmap

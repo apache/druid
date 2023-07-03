@@ -229,7 +229,12 @@ public class FrameWriterUtils
       final byte b = src.get(p);
 
       if (!allowNullBytes && b == 0) {
-        throw new InvalidNullByteException();
+        ByteBuffer duplicate = src.duplicate();
+        duplicate.limit(srcEnd);
+        throw InvalidNullByteException.builder()
+                                      .value(StringUtils.fromUtf8(duplicate))
+                                      .position(p - src.position())
+                                      .build();
       }
 
       dst.putByte(q, b);
@@ -290,5 +295,16 @@ public class FrameWriterUtils
     }
 
     return true;
+  }
+
+  public static RowSignature replaceUnknownTypesWithNestedColumns(final RowSignature rowSignature)
+  {
+    RowSignature.Builder retBuilder = RowSignature.builder();
+    for (int i = 0; i < rowSignature.size(); ++i) {
+      String columnName = rowSignature.getColumnName(i);
+      ColumnType columnType = rowSignature.getColumnType(i).orElse(ColumnType.NESTED_DATA);
+      retBuilder.add(columnName, columnType);
+    }
+    return retBuilder.build();
   }
 }

@@ -644,6 +644,7 @@ num_segments
 partition_num
 plaintext_port
 queue_insertion_time
+replication_factor
 runner_status
 segment_id
 server_type
@@ -1473,6 +1474,7 @@ nvl
 parse_long
 regexp_extract
 regexp_like
+regexp_replace
 contains_string
 icontains_string
 result1

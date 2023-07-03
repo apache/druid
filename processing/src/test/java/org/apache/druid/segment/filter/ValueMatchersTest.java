@@ -26,7 +26,7 @@ import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VSizeColumnarInts;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
-import org.apache.druid.segment.serde.DictionaryEncodedColumnSupplier;
+import org.apache.druid.segment.serde.StringUtf8DictionaryEncodedColumnSupplier;
 import org.apache.druid.segment.vector.NilVectorSelector;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -38,50 +38,44 @@ import java.nio.ByteBuffer;
 
 public class ValueMatchersTest extends InitializedNullHandlingTest
 {
-  private DictionaryEncodedColumnSupplier supplierSingleConstant;
-  private DictionaryEncodedColumnSupplier supplierSingle;
-  private DictionaryEncodedColumnSupplier supplierMulti;
+  private StringUtf8DictionaryEncodedColumnSupplier<?> supplierSingleConstant;
+  private StringUtf8DictionaryEncodedColumnSupplier<?> supplierSingle;
+  private StringUtf8DictionaryEncodedColumnSupplier<?> supplierMulti;
 
   @Before
   public void setup()
   {
-    supplierSingleConstant = new DictionaryEncodedColumnSupplier(
-        GenericIndexed.fromIterable(ImmutableList.of("value"), GenericIndexed.STRING_STRATEGY),
+    supplierSingleConstant = new StringUtf8DictionaryEncodedColumnSupplier<>(
         GenericIndexed.fromIterable(
             ImmutableList.of(ByteBuffer.wrap(StringUtils.toUtf8("value"))),
             GenericIndexed.UTF8_STRATEGY
-        ),
+        )::singleThreaded,
         () -> VSizeColumnarInts.fromArray(new int[]{0}),
-        null,
-        0
+        null
     );
-    supplierSingle = new DictionaryEncodedColumnSupplier(
-        GenericIndexed.fromIterable(ImmutableList.of("value", "value2"), GenericIndexed.STRING_STRATEGY),
+    supplierSingle = new StringUtf8DictionaryEncodedColumnSupplier<>(
         GenericIndexed.fromIterable(
             ImmutableList.of(
                 ByteBuffer.wrap(StringUtils.toUtf8("value")),
                 ByteBuffer.wrap(StringUtils.toUtf8("value2"))
             ),
             GenericIndexed.UTF8_STRATEGY
-        ),
+        )::singleThreaded,
         () -> VSizeColumnarInts.fromArray(new int[]{0, 0, 1, 0, 1}),
-        null,
-        0
+        null
     );
-    supplierMulti = new DictionaryEncodedColumnSupplier(
-        GenericIndexed.fromIterable(ImmutableList.of("value"), GenericIndexed.STRING_STRATEGY),
+    supplierMulti = new StringUtf8DictionaryEncodedColumnSupplier<>(
         GenericIndexed.fromIterable(
             ImmutableList.of(ByteBuffer.wrap(StringUtils.toUtf8("value"))),
             GenericIndexed.UTF8_STRATEGY
-        ),
+        )::singleThreaded,
         null,
         () -> VSizeColumnarMultiInts.fromIterable(
             ImmutableList.of(
                 VSizeColumnarInts.fromArray(new int[]{0, 0}),
                 VSizeColumnarInts.fromArray(new int[]{0})
             )
-        ),
-        0
+        )
     );
   }
   @Test

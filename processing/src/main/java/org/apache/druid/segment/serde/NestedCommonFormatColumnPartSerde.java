@@ -23,7 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -128,106 +130,18 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   public Deserializer getDeserializer()
   {
     if (isVariantType || logicalType.isArray()) {
-      return ((buffer, builder, columnConfig) -> {
-        VariantColumnAndIndexSupplier supplier = VariantColumnAndIndexSupplier.read(
-            logicalType,
-            byteOrder,
-            bitmapSerdeFactory,
-            buffer,
-            builder,
-            columnConfig
-        );
-        ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-        capabilitiesBuilder.setDictionaryEncoded(true);
-        capabilitiesBuilder.setDictionaryValuesSorted(true);
-        capabilitiesBuilder.setDictionaryValuesUnique(true);
-        builder.setType(logicalType);
-        builder.setNestedCommonFormatColumnSupplier(supplier);
-        builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
-        builder.setFilterable(true);
-      });
+      return new VariantColumnDeserializer();
     }
     if (logicalType.is(ValueType.STRING)) {
-      return ((buffer, builder, columnConfig) -> {
-        ScalarStringColumnAndIndexSupplier supplier = ScalarStringColumnAndIndexSupplier.read(
-            byteOrder,
-            bitmapSerdeFactory,
-            buffer,
-            builder,
-            columnConfig
-        );
-        ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-        capabilitiesBuilder.setDictionaryEncoded(true);
-        capabilitiesBuilder.setDictionaryValuesSorted(true);
-        capabilitiesBuilder.setDictionaryValuesUnique(true);
-        builder.setType(logicalType);
-        builder.setNestedCommonFormatColumnSupplier(supplier);
-        builder.setIndexSupplier(supplier, true, false);
-        builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
-        builder.setFilterable(true);
-      });
+      return new StringColumnDeserializer();
     }
     if (logicalType.is(ValueType.LONG)) {
-      return ((buffer, builder, columnConfig) -> {
-        ScalarLongColumnAndIndexSupplier supplier = ScalarLongColumnAndIndexSupplier.read(
-            byteOrder,
-            bitmapSerdeFactory,
-            buffer,
-            builder,
-            columnConfig
-        );
-        ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-        capabilitiesBuilder.setDictionaryEncoded(true);
-        capabilitiesBuilder.setDictionaryValuesSorted(true);
-        capabilitiesBuilder.setDictionaryValuesUnique(true);
-        builder.setType(logicalType);
-        builder.setNestedCommonFormatColumnSupplier(supplier);
-        builder.setIndexSupplier(supplier, true, false);
-        builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
-        builder.setFilterable(true);
-      });
+      return new LongColumnDeserializer();
     }
     if (logicalType.is(ValueType.DOUBLE)) {
-      return ((buffer, builder, columnConfig) -> {
-        ScalarDoubleColumnAndIndexSupplier supplier = ScalarDoubleColumnAndIndexSupplier.read(
-            byteOrder,
-            bitmapSerdeFactory,
-            buffer,
-            builder,
-            columnConfig
-        );
-        ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-        capabilitiesBuilder.setDictionaryEncoded(true);
-        capabilitiesBuilder.setDictionaryValuesSorted(true);
-        capabilitiesBuilder.setDictionaryValuesUnique(true);
-        builder.setType(logicalType);
-        builder.setNestedCommonFormatColumnSupplier(supplier);
-        builder.setIndexSupplier(supplier, true, false);
-        builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
-        builder.setFilterable(true);
-      });
+      return new DoubleColumnDeserializer();
     }
-    return (buffer, builder, columnConfig) -> {
-      NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
-          logicalType,
-          hasNulls,
-          buffer,
-          builder,
-          columnConfig,
-          bitmapSerdeFactory,
-          byteOrder
-      );
-      ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-      capabilitiesBuilder.setDictionaryEncoded(true);
-      capabilitiesBuilder.setDictionaryValuesSorted(true);
-      capabilitiesBuilder.setDictionaryValuesUnique(true);
-      ColumnType simpleType = supplier.getLogicalType();
-      ColumnType logicalType = simpleType == null ? ColumnType.NESTED_DATA : simpleType;
-      builder.setType(logicalType);
-      builder.setNestedCommonFormatColumnSupplier(supplier);
-      builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, hasNulls));
-      builder.setFilterable(true);
-    };
+    return new NestedColumnDeserializer();
   }
 
   @JsonProperty
@@ -258,6 +172,129 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   public BitmapSerdeFactory getBitmapSerdeFactory()
   {
     return bitmapSerdeFactory;
+  }
+
+  private class StringColumnDeserializer implements Deserializer
+  {
+    @Override
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+    {
+      ScalarStringColumnAndIndexSupplier supplier = ScalarStringColumnAndIndexSupplier.read(
+          byteOrder,
+          bitmapSerdeFactory,
+          buffer,
+          builder,
+          columnConfig
+      );
+      ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
+      capabilitiesBuilder.setDictionaryEncoded(true);
+      capabilitiesBuilder.setDictionaryValuesSorted(true);
+      capabilitiesBuilder.setDictionaryValuesUnique(true);
+      builder.setType(logicalType);
+      builder.setNestedCommonFormatColumnSupplier(supplier);
+      builder.setIndexSupplier(supplier, true, false);
+      builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
+      builder.setFilterable(true);
+    }
+  }
+
+  private class LongColumnDeserializer implements Deserializer
+  {
+    @Override
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+    {
+      ScalarLongColumnAndIndexSupplier supplier = ScalarLongColumnAndIndexSupplier.read(
+          byteOrder,
+          bitmapSerdeFactory,
+          buffer,
+          builder,
+          columnConfig
+      );
+      ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
+      capabilitiesBuilder.setDictionaryEncoded(true);
+      capabilitiesBuilder.setDictionaryValuesSorted(true);
+      capabilitiesBuilder.setDictionaryValuesUnique(true);
+      builder.setType(logicalType);
+      builder.setNestedCommonFormatColumnSupplier(supplier);
+      builder.setIndexSupplier(supplier, true, false);
+      builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
+      builder.setFilterable(true);
+    }
+  }
+
+  private class DoubleColumnDeserializer implements Deserializer
+  {
+    @Override
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+    {
+      ScalarDoubleColumnAndIndexSupplier supplier = ScalarDoubleColumnAndIndexSupplier.read(
+          byteOrder,
+          bitmapSerdeFactory,
+          buffer,
+          builder,
+          columnConfig
+      );
+      ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
+      capabilitiesBuilder.setDictionaryEncoded(true);
+      capabilitiesBuilder.setDictionaryValuesSorted(true);
+      capabilitiesBuilder.setDictionaryValuesUnique(true);
+      builder.setType(logicalType);
+      builder.setNestedCommonFormatColumnSupplier(supplier);
+      builder.setIndexSupplier(supplier, true, false);
+      builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
+      builder.setFilterable(true);
+    }
+  }
+
+  private class VariantColumnDeserializer implements Deserializer
+  {
+    @Override
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+    {
+      VariantColumnAndIndexSupplier supplier = VariantColumnAndIndexSupplier.read(
+          logicalType,
+          byteOrder,
+          bitmapSerdeFactory,
+          buffer,
+          builder,
+          columnConfig
+      );
+      ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
+      capabilitiesBuilder.setDictionaryEncoded(true);
+      capabilitiesBuilder.setDictionaryValuesSorted(true);
+      capabilitiesBuilder.setDictionaryValuesUnique(true);
+      builder.setType(logicalType);
+      builder.setNestedCommonFormatColumnSupplier(supplier);
+      builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue()));
+      builder.setFilterable(true);
+    }
+  }
+
+  private class NestedColumnDeserializer implements Deserializer
+  {
+    @Override
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+    {
+      NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
+          logicalType,
+          hasNulls,
+          buffer,
+          builder,
+          columnConfig,
+          bitmapSerdeFactory,
+          byteOrder
+      );
+      ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
+      capabilitiesBuilder.setDictionaryEncoded(true);
+      capabilitiesBuilder.setDictionaryValuesSorted(true);
+      capabilitiesBuilder.setDictionaryValuesUnique(true);
+      ColumnType simpleType = supplier.getLogicalType();
+      ColumnType logicalType = simpleType == null ? ColumnType.NESTED_DATA : simpleType;
+      builder.setType(logicalType);
+      builder.setNestedCommonFormatColumnSupplier(supplier);
+      builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, hasNulls));
+      builder.setFilterable(true);
+    }
   }
 
   public static class SerializerBuilder

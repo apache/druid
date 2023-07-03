@@ -26,6 +26,7 @@ import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
+import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
 
 /**
  * Create the injector used for {@link CalciteTests#INJECTOR}, but in a way
@@ -41,7 +42,8 @@ public class CalciteTestInjectorBuilder extends CoreInjectorBuilder
     add(
         new SegmentWranglerModule(),
         new LookylooModule(),
-        new SqlAggregationModule()
+        new SqlAggregationModule(),
+        new CalciteTestOperatorModule()
     );
   }
 

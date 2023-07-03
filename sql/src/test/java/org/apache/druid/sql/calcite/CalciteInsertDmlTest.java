@@ -26,6 +26,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -41,16 +43,15 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.IngestHandler;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
@@ -199,7 +200,11 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("INSERT INTO \"in/valid\" SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlPlanningException.class, "INSERT dataSource cannot contain the '/' character.")
+        .expectValidationError(
+            DruidExceptionMatcher.invalidInput().expectMessageIs(
+                "Invalid value for field [table]: Value [in/valid] cannot contain '/'."
+            )
+        )
         .verify();
   }
 
@@ -208,7 +213,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("INSERT INTO dst (foo, bar) SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlPlanningException.class, "INSERT with a target column list is not supported.")
+        .expectValidationError(
+            invalidSqlIs("Operation [INSERT] cannot be run with a target column list, given [dst (`foo`, `bar`)]")
+        )
         .verify();
   }
 
@@ -217,7 +224,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("UPSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(SqlPlanningException.class, "UPSERT is not supported.")
+        .expectValidationError(invalidSqlIs("UPSERT is not supported."))
         .verify();
   }
 
@@ -229,8 +236,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT * FROM INFORMATION_SCHEMA.COLUMNS PARTITIONED BY ALL TIME")
         .expectValidationError(
-            SqlPlanningException.class,
-            "Cannot query table INFORMATION_SCHEMA.COLUMNS with SQL engine 'ingestion-test'."
+            DruidException.class,
+            "Cannot query table(s) [INFORMATION_SCHEMA.COLUMNS] with SQL engine [ingestion-test]"
         )
         .verify();
   }
@@ -240,10 +247,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("INSERT INTO INFORMATION_SCHEMA.COLUMNS SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(
-            SqlPlanningException.class,
-            "Cannot INSERT into INFORMATION_SCHEMA.COLUMNS because it is not a Druid datasource."
-        )
+        .expectValidationError(invalidSqlIs(
+            "Table [INFORMATION_SCHEMA.COLUMNS] does not support operation [INSERT] because it is not a Druid datasource"
+        ))
         .verify();
   }
 
@@ -253,8 +259,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("INSERT INTO view.aview SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
-            SqlPlanningException.class,
-            "Cannot INSERT into view.aview because it is not a Druid datasource."
+            invalidSqlIs("Table [view.aview] does not support operation [INSERT] because it is not a Druid datasource")
         )
         .verify();
   }
@@ -282,10 +287,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("INSERT INTO nonexistent.dst SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(
-            SqlPlanningException.class,
-            "Cannot INSERT into nonexistent.dst because it is not a Druid datasource."
-        )
+        .expectValidationError(invalidSqlIs(
+            "Table [nonexistent.dst] does not support operation [INSERT] because it is not a Druid datasource"
+        ))
         .verify();
   }
 
@@ -366,11 +370,12 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       throw new RuntimeException(e);
     }
     testIngestionQuery()
-        .sql("INSERT INTO dst SELECT * FROM %s\n" +
-             "  (x VARCHAR, y VARCHAR, z BIGINT)\n" +
-             "PARTITIONED BY ALL TIME",
-             extern
-         )
+        .sql(
+            "INSERT INTO dst SELECT * FROM %s\n" +
+            "  (x VARCHAR, y VARCHAR, z BIGINT)\n" +
+            "PARTITIONED BY ALL TIME",
+            extern
+        )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", externalDataSource.getSignature())
         .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
@@ -557,9 +562,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .expectLogicalPlanFrom("insertFromExternal")
         .expectValidationError(
             CoreMatchers.allOf(
-                CoreMatchers.instanceOf(SqlPlanningException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(
-                    "org.apache.druid.java.util.common.UOE: This inputSource does not support input source based security"))
+                CoreMatchers.instanceOf(CalciteIngestDmlTestException.class),
+                ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("getTypes()"))
             )
         )
         .verify();
@@ -653,11 +657,11 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     skipVectorize();
 
     final String resources = "[{\"name\":\"dst\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"druid.dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":\"2, `dim1` DESC, CEIL(`m2`)\"}";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":[\"floor_m1\",\"dim1\",\"CEIL(\\\"m2\\\")\"]}";
 
     final String sql = "EXPLAIN PLAN FOR INSERT INTO druid.dst "
                        + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
-                       + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 DESC, CEIL(m2)";
+                       + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1, CEIL(m2)";
 
     ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
     final ScanQuery expectedQuery = newScanQueryBuilder()
@@ -671,7 +675,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .orderBy(
             ImmutableList.of(
                 new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                new ScanQuery.OrderBy("dim1", ScanQuery.Order.DESCENDING),
+                new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
                 new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
             )
         )
@@ -718,7 +722,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         + "\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\",\"expression\":\"floor(\\\"m1\\\")\",\"outputType\":\"FLOAT\"},"
         + "{\"type\":\"expression\",\"name\":\"v1\",\"expression\":\"ceil(\\\"m2\\\")\",\"outputType\":\"DOUBLE\"}],"
         + "\"resultFormat\":\"compactedList\","
-        + "\"orderBy\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},{\"columnName\":\"dim1\",\"order\":\"descending\"},"
+        + "\"orderBy\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},{\"columnName\":\"dim1\",\"order\":\"ascending\"},"
         + "{\"columnName\":\"v1\",\"order\":\"ascending\"}],\"columns\":[\"__time\",\"dim1\",\"v0\",\"v1\"],\"legacy\":false,"
         + "\"context\":{\"sqlInsertSegmentGranularity\":\"\\\"DAY\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}},"
         + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"v0\",\"type\":\"FLOAT\"},{\"name\":\"dim1\",\"type\":\"STRING\"},"
@@ -752,6 +756,23 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testExplainPlanInsertWithClusteredByDescThrowsException()
+  {
+    skipVectorize();
+
+    final String sql = "EXPLAIN PLAN FOR INSERT INTO druid.dst "
+                       + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
+                       + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 DESC, CEIL(m2)";
+
+    testIngestionQuery()
+        .sql(sql)
+        .expectValidationError(
+            invalidSqlIs("Invalid CLUSTERED BY clause [`dim1` DESC]: cannot sort in descending order.")
+        )
+        .verify();
+  }
+
+  @Test
   public void testInsertWithClusteredBy()
   {
     // Test correctness of the query when only the CLUSTERED BY clause is present
@@ -765,7 +786,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql(
             "INSERT INTO druid.dst "
             + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
-            + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
+            + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1, CEIL(m2)"
         )
         .expectTarget("dst", targetRowSignature)
         .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
@@ -781,7 +802,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 .orderBy(
                     ImmutableList.of(
                         new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.DESCENDING),
+                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
                         new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
                     )
                 )
@@ -801,10 +822,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
             + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
             + "CLUSTERED BY 2, dim1 DESC, CEIL(m2)"
         )
-        .expectValidationError(
-            SqlPlanningException.class,
-            "CLUSTERED BY found before PARTITIONED BY. In Druid, the CLUSTERED BY clause must follow the PARTITIONED BY clause"
-        )
+        .expectValidationError(invalidSqlIs(
+            "CLUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
+        ))
         .verify();
   }
 
@@ -883,11 +903,10 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       );
       Assert.fail("Exception should be thrown");
     }
-    catch (SqlPlanningException e) {
-      Assert.assertEquals(
-          "Cannot have ORDER BY on an INSERT statement, use CLUSTERED BY instead.",
-          e.getMessage()
-      );
+    catch (DruidException e) {
+      MatcherAssert.assertThat(e, invalidSqlIs(
+          "Cannot use an ORDER BY clause on a Query of type [INSERT], use CLUSTERED BY instead"
+      ));
     }
     didTest = true;
   }
@@ -895,7 +914,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testInsertWithPartitionedByContainingInvalidGranularity()
   {
-    // Throws a ValidationException, which gets converted to a SqlPlanningException before throwing to end user
+    // Throws a ValidationException, which gets converted to a DruidException before throwing to end user
     try {
       testQuery(
           "INSERT INTO dst SELECT * FROM foo PARTITIONED BY 'invalid_granularity'",
@@ -904,11 +923,13 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       );
       Assert.fail("Exception should be thrown");
     }
-    catch (SqlPlanningException e) {
-      Assert.assertEquals(
-          "Encountered 'invalid_granularity' after PARTITIONED BY. Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR function or TIME_FLOOR function",
-          e.getMessage()
-      );
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          invalidSqlIs(
+              "Invalid granularity ['invalid_granularity'] after PARTITIONED BY.  "
+              + "Expected HOUR, DAY, MONTH, YEAR, ALL TIME, FLOOR() or TIME_FLOOR()"
+          ));
     }
     didTest = true;
   }
@@ -927,10 +948,10 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       );
       Assert.fail("Exception should be thrown");
     }
-    catch (SqlPlanningException e) {
-      Assert.assertEquals(
-          "Cannot have ORDER BY on an INSERT statement, use CLUSTERED BY instead.",
-          e.getMessage()
+    catch (DruidException e) {
+      MatcherAssert.assertThat(
+          e,
+          invalidSqlIs("Cannot use an ORDER BY clause on a Query of type [INSERT], use CLUSTERED BY instead")
       );
     }
     finally {
@@ -941,8 +962,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testInsertWithoutPartitionedBy()
   {
-    SqlPlanningException e = Assert.assertThrows(
-        SqlPlanningException.class,
+    DruidException e = Assert.assertThrows(
+        DruidException.class,
         () ->
             testQuery(
                 StringUtils.format("INSERT INTO dst SELECT * FROM %s", externSql(externalDataSource)),
@@ -950,7 +971,11 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 ImmutableList.of()
             )
     );
-    Assert.assertEquals("INSERT statements must specify PARTITIONED BY clause explicitly", e.getMessage());
+
+    MatcherAssert.assertThat(
+        e,
+        invalidSqlIs("Operation [INSERT] requires a PARTITIONED BY to be explicitly defined, but none was found.")
+    );
     didTest = true;
   }
 
@@ -1052,7 +1077,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
 
     final String query = "EXPLAIN PLAN FOR INSERT INTO druid.dst "
                        + "SELECT __time, FLOOR(m1) as floor_m1, dim1, CEIL(m2) as ceil_m2 FROM foo "
-                       + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 DESC, CEIL(m2)";
+                       + "PARTITIONED BY FLOOR(__time TO DAY) CLUSTERED BY 2, dim1 ASC, CEIL(m2)";
 
     ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
     final ScanQuery expectedQuery = newScanQueryBuilder()
@@ -1066,7 +1091,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .orderBy(
             ImmutableList.of(
                 new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                new ScanQuery.OrderBy("dim1", ScanQuery.Order.DESCENDING),
+                new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
                 new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
             )
         )
@@ -1091,7 +1116,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         + "\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\",\"expression\":\"floor(\\\"m1\\\")\",\"outputType\":\"FLOAT\"},"
         + "{\"type\":\"expression\",\"name\":\"v1\",\"expression\":\"ceil(\\\"m2\\\")\",\"outputType\":\"DOUBLE\"}],"
         + "\"resultFormat\":\"compactedList\","
-        + "\"orderBy\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},{\"columnName\":\"dim1\",\"order\":\"descending\"},"
+        + "\"orderBy\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},{\"columnName\":\"dim1\",\"order\":\"ascending\"},"
         + "{\"columnName\":\"v1\",\"order\":\"ascending\"}],\"columns\":[\"__time\",\"dim1\",\"v0\",\"v1\"],\"legacy\":false,"
         + "\"context\":{\"sqlInsertSegmentGranularity\":\"\\\"DAY\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"granularity\":{\"type\":\"all\"}},"
         + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"v0\",\"type\":\"FLOAT\"},{\"name\":\"dim1\",\"type\":\"STRING\"},"
@@ -1101,7 +1126,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         + "}]";
 
     final String resources = "[{\"name\":\"dst\",\"type\":\"DATASOURCE\"},{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
-    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"druid.dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":\"2, `dim1` DESC, CEIL(`m2`)\"}";
+    final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\",\"partitionedBy\":\"DAY\",\"clusteredBy\":[\"floor_m1\",\"dim1\",\"CEIL(\\\"m2\\\")\"]}";
 
     // Use testQuery for EXPLAIN (not testIngestionQuery).
     testQuery(
@@ -1174,7 +1199,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     assertQueryIsUnplannable(
         "INSERT INTO druid.dst SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo PARTITIONED BY ALL TIME",
-        "Possible error: SQL requires 'UNION' but only 'UNION ALL' is supported."
+        "SQL requires 'UNION' but only 'UNION ALL' is supported."
     );
 
     // Not using testIngestionQuery, so must set didTest manually to satisfy the check in tearDown.
@@ -1290,14 +1315,13 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testInsertWithInvalidSelectStatement()
   {
+    // This test fails because "count" is a reserved word and it is being used without quotes.  So SQL is considering
+    // it a token instead of a name.  It would be nice if our message was more direct telling the person that they
+    // used a reserved word instead of making them know that a "token" means Calcite is seeing a reserved word.  But,
+    // that's an improvement for another day.
     testIngestionQuery()
         .sql("INSERT INTO t SELECT channel, added as count FROM foo PARTITIONED BY ALL") // count is a keyword
-        .expectValidationError(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(SqlPlanningException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Encountered \"as count\""))
-            )
-        )
+        .expectValidationError(invalidSqlContains("Received an unexpected token [as count]"))
         .verify();
   }
 
@@ -1306,10 +1330,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("INSERT INTO t SELECT dim1, dim2 || '-lol' FROM foo PARTITIONED BY ALL")
-        .expectValidationError(
-            SqlPlanningException.class,
-            IngestHandler.UNNAMED_INGESTION_COLUMN_ERROR
-        )
+        .expectValidationError(invalidSqlContains("Insertion requires columns to be named"))
         .verify();
   }
 
@@ -1318,10 +1339,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("INSERT INTO t SELECT __time, dim1 AS EXPR$0 FROM foo PARTITIONED BY ALL")
-        .expectValidationError(
-            SqlPlanningException.class,
-            IngestHandler.UNNAMED_INGESTION_COLUMN_ERROR
-        )
+        .expectValidationError(invalidSqlContains("Insertion requires columns to be named"))
         .verify();
   }
 
@@ -1332,10 +1350,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO test "
              + "SELECT __time, * FROM "
              + "(SELECT __time, LOWER(dim1) FROM foo) PARTITIONED BY ALL TIME")
-        .expectValidationError(
-            SqlPlanningException.class,
-            IngestHandler.UNNAMED_INGESTION_COLUMN_ERROR
-        )
+        .expectValidationError(invalidSqlContains("Insertion requires columns to be named"))
         .verify();
   }
 
@@ -1346,11 +1361,11 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .sql("insert into foo1 select __time, dim1 FROM foo partitioned by time_floor(__time, 'PT2H')")
         .expectValidationError(
             CoreMatchers.allOf(
-                CoreMatchers.instanceOf(SqlPlanningException.class),
+                CoreMatchers.instanceOf(DruidException.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                    "The granularity specified in PARTITIONED BY is not supported. "
-                    + "Please use an equivalent of these granularities: second, minute, five_minute, ten_minute, "
-                    + "fifteen_minute, thirty_minute, hour, six_hour, eight_hour, day, week, month, quarter, year, all."))
+                    "The granularity specified in PARTITIONED BY [`time_floor`(`__time`, 'PT2H')] is not supported.  "
+                    + "Valid options: [second, minute, five_minute, ten_minute, fifteen_minute, thirty_minute, hour, "
+                    + "six_hour, eight_hour, day, week, month, quarter, year, all]"))
             )
         )
         .verify();
@@ -1373,7 +1388,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .expectValidationError(
             CoreMatchers.allOf(
-                CoreMatchers.instanceOf(SqlPlanningException.class),
+                CoreMatchers.instanceOf(DruidException.class),
                 ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
                     "EXTERN function with __time column can be used when __time column is of type long"))
             )
@@ -1391,8 +1406,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .context(context)
         .sql("INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
-            SqlPlanningException.class,
-            "sqlOuterLimit cannot be provided with INSERT."
+            invalidSqlIs("Context parameter [sqlOuterLimit] cannot be provided on operator [INSERT]")
         )
         .verify();
   }

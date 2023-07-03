@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Ignore;
@@ -36,6 +37,7 @@ import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -105,7 +107,8 @@ public class CostBalancerStrategyBenchmark extends AbstractBenchmark
   {
     DataSegment segment = DataSegment.builder().dataSource("testds").version("1000")
                                      .interval(interval1).size(100L).build();
-    selected = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
+    Iterator<ServerHolder> candidates = strategy.findServersToLoadSegment(segment, serverHolderList);
+    selected = candidates.hasNext() ? candidates.next() : null;
   }
 
   // Benchmark Joda Interval Gap impl vs CostBalancer.gapMillis

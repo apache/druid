@@ -473,14 +473,6 @@
   </suppress>
 
   <suppress>
-    <!-- (avro, parquet, integration-tests) we don't allow velocity templates to be uploaded by untrusted users -->
-    <notes><![CDATA[
-     file name: velocity-engine-core-2.2.jar:
-     ]]></notes>
-    <cve>CVE-2020-13936</cve>
-  </suppress>
-
-  <suppress>
      <!-- (ranger, ambari, and aliyun-oss) these vulnerabilities are legit, but their latest releases still use the vulnerable jackson version -->
      <notes><![CDATA[
      file name: jackson-xc-1.9.x.jar or jackson-jaxrs-1.9.x.jar
@@ -818,7 +810,7 @@
   <suppress>
     <!-- from extensions using hadoop-client-runtime, these dependencies are shaded in the jar -->
     <notes><![CDATA[
-     file name: hadoop-client-runtime-3.3.5.jar
+     file name: hadoop-client-runtime-3.3.6.jar
      ]]></notes>
     <!-- this one is windows only - https://nvd.nist.gov/vuln/detail/CVE-2022-26612 -->
     <cve>CVE-2022-26612</cve>

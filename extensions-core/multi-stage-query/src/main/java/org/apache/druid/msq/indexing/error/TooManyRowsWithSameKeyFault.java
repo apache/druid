@@ -44,10 +44,12 @@ public class TooManyRowsWithSameKeyFault extends BaseMSQFault
   {
     super(
         CODE,
-        "Too many rows with the same key during sort-merge join (bytes buffered = %,d; limit = %,d). Key: %s",
+        "Too many rows with the same key[%s] during sort-merge join (bytes buffered[%,d], limit[%,d]). "
+        + "Try increasing heap memory available to workers, "
+        + "or adjusting your query to process fewer rows with this key.",
+        key,
         numBytes,
-        maxBytes,
-        key
+        maxBytes
     );
 
     this.key = key;

@@ -31,9 +31,11 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 public class GuavaUtilsTest
@@ -73,23 +75,23 @@ public class GuavaUtilsTest
     int tasks = 3;
     ExecutorService service = Execs.multiThreaded(tasks, "GuavaUtilsTest-%d");
     ListeningExecutorService exc = MoreExecutors.listeningDecorator(service);
-    AtomicInteger index = new AtomicInteger(0);
     //a flag what time to throw exception.
-    AtomicBoolean active = new AtomicBoolean(false);
+    AtomicBoolean someoneFailed = new AtomicBoolean(false);
+    List<CountDownLatch> latches = new ArrayList<>(tasks);
     Function<Integer, List<ListenableFuture<Object>>> function = (taskCount) -> {
       List<ListenableFuture<Object>> futures = new ArrayList<>();
       for (int i = 0; i < taskCount; i++) {
+        final CountDownLatch latch = new CountDownLatch(1);
+        latches.add(latch);
         ListenableFuture<Object> future = exc.submit(new Callable<Object>() {
           @Override
-          public Object call() throws RuntimeException
+          public Object call() throws RuntimeException, InterruptedException
           {
-            int internalIndex = index.incrementAndGet();
-            while (true) {
-              if (internalIndex == taskCount && active.get()) {
-                //here we simulate occurs exception in some one future.
-                throw new RuntimeException("A big bug");
-              }
+            latch.await(60, TimeUnit.SECONDS);
+            if (someoneFailed.compareAndSet(false, true)) {
+              throw new RuntimeException("This exception simulates an error");
             }
+            return null;
           }
         });
         futures.add(future);
@@ -99,17 +101,20 @@ public class GuavaUtilsTest
 
     List<ListenableFuture<Object>> futures = function.apply(tasks);
     Assert.assertEquals(tasks, futures.stream().filter(f -> !f.isDone()).count());
-    //here we make one of task throw exception.
-    active.set(true);
+    // "release" the last tasks, which will cause it to fail as someoneFailed will still be false
+    latches.get(tasks - 1).countDown();
 
     ListenableFuture<List<Object>> future = Futures.allAsList(futures);
-    try {
-      future.get();
-    }
-    catch (Exception e) {
-      Assert.assertEquals("java.lang.RuntimeException: A big bug", e.getMessage());
-      GuavaUtils.cancelAll(true, future, futures);
-      Assert.assertEquals(0, futures.stream().filter(f -> !f.isDone()).count());
+
+    ExecutionException thrown = Assert.assertThrows(
+        ExecutionException.class,
+        future::get
+    );
+    Assert.assertEquals("This exception simulates an error", thrown.getCause().getMessage());
+    GuavaUtils.cancelAll(true, future, futures);
+    Assert.assertEquals(0, futures.stream().filter(f -> !f.isDone()).count());
+    for (CountDownLatch latch : latches) {
+      latch.countDown();
     }
   }
 }

@@ -39,6 +39,8 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
@@ -1445,6 +1447,52 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
     Assert.assertNull(schema.getDatasource("wat"));
     schema.refresh(segments, datasources);
     Assert.assertNull(schema.getDatasource("wat"));
+  }
+
+  @Test
+  public void testRefreshShouldEmitMetrics() throws InterruptedException, IOException
+  {
+    String datasource = "xyz";
+    CountDownLatch addSegmentLatch = new CountDownLatch(2);
+    StubServiceEmitter emitter = new StubServiceEmitter("broker", "host");
+    SegmentMetadataCache schema = new SegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        segmentManager,
+        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new BrokerInternalQueryConfig(),
+        emitter
+    )
+    {
+      @Override
+      protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.addSegment(server, segment);
+        if (datasource.equals(segment.getDataSource())) {
+          addSegmentLatch.countDown();
+        }
+      }
+
+      @Override
+      void removeSegment(final DataSegment segment)
+      {
+        super.removeSegment(segment);
+      }
+    };
+
+    List<DataSegment> segments = ImmutableList.of(
+        newSegment(datasource, 1),
+        newSegment(datasource, 2)
+    );
+    serverView.addSegment(segments.get(0), ServerType.HISTORICAL);
+    serverView.addSegment(segments.get(1), ServerType.REALTIME);
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(datasource));
+
+    emitter.verifyEmitted("segment/metadatacache/refresh/time", ImmutableMap.of(DruidMetrics.DATASOURCE, datasource), 1);
+    emitter.verifyEmitted("segment/metadatacache/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, datasource), 1);
   }
 
   private static DataSegment newSegment(String datasource, int partitionId)

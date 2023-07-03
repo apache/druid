@@ -69,7 +69,7 @@ runs for the duration of the job.
 | **Method** | [Native batch](./native-batch.md) | [SQL](../multi-stage-query/index.md) | [Hadoop-based](hadoop.md) |
 |---|-----|--------------|------------|
 | **Controller task type** | `index_parallel` | `query_controller` | `index_hadoop` |
-| **How you submit it** | Send an `index_parallel` spec to the [task API](../api-reference/api-reference.md#tasks). | Send an [INSERT](../multi-stage-query/concepts.md#insert) or [REPLACE](../multi-stage-query/concepts.md#replace) statement to the [SQL task API](../api-reference/sql-ingestion-api.md#submit-a-query). | Send an `index_hadoop` spec to the [task API](../api-reference/api-reference.md#tasks). |
+| **How you submit it** | Send an `index_parallel` spec to the [Tasks API](../api-reference/tasks-api.md). | Send an [INSERT](../multi-stage-query/concepts.md#insert) or [REPLACE](../multi-stage-query/concepts.md#replace) statement to the [SQL task API](../api-reference/sql-ingestion-api.md#submit-a-query). | Send an `index_hadoop` spec to the [Tasks API](../api-reference/tasks-api.md). |
 | **Parallelism** | Using subtasks, if [`maxNumConcurrentSubTasks`](native-batch.md#tuningconfig) is greater than 1. | Using `query_worker` subtasks. | Using YARN. |
 | **Fault tolerance** | Workers automatically relaunched upon failure. Controller task failure leads to job failure. | Controller or worker task failure leads to job failure. | YARN containers automatically relaunched upon failure. Controller task failure leads to job failure. |
 | **Can append?** | Yes. | Yes (INSERT). | No. |
