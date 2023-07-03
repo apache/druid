@@ -1471,7 +1471,8 @@ public class ControllerImpl implements Controller
                                      context.jsonMapper(),
                                      task.getSqlResultsContext(),
                                      value,
-                                     sqlTypeNames.get(i)
+                                     sqlTypeNames.get(i),
+                                     columnMappings.getOutputColumnName(i)
                                  );
                                }
                              }
