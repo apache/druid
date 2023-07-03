@@ -221,8 +221,8 @@ public class RetryUtils
    */
   public static long nextRetrySleepMillis(final int nTry)
   {
-    final double fuzzyMultiplier = Math.min(Math.max(1 + 0.2 * ThreadLocalRandom.current().nextGaussian(), 0), 2);
-    return (long) (Math.min(MAX_SLEEP_MILLIS, BASE_SLEEP_MILLIS * Math.pow(2, nTry - 1))
-                   * fuzzyMultiplier);
+    final double fuzzyMultiplier = Math.min(2, Math.max(0, 1 + 0.2 * ThreadLocalRandom.current().nextGaussian()));
+    final long sleepMillis = (long) Math.min(MAX_SLEEP_MILLIS, BASE_SLEEP_MILLIS * Math.pow(2, nTry - 1));
+    return (long) (sleepMillis * fuzzyMultiplier);
   }
 }
