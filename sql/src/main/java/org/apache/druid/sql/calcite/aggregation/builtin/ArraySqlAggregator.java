@@ -99,7 +99,7 @@ public class ArraySqlAggregator implements SqlAggregator
       // can't translate argument
       return null;
     }
-    final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
+    final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();
 
     final String fieldName;
     final String initialvalue;
@@ -187,7 +187,7 @@ public class ArraySqlAggregator implements SqlAggregator
           OperandTypes.or(
             OperandTypes.ANY,
             OperandTypes.and(
-                OperandTypes.sequence(StringUtils.format("%s(expr, maxSizeBytes)", NAME), OperandTypes.ANY, OperandTypes.POSITIVE_INTEGER_LITERAL),
+                OperandTypes.sequence(StringUtils.format("'%s(expr, maxSizeBytes)'", NAME), OperandTypes.ANY, OperandTypes.POSITIVE_INTEGER_LITERAL),
                 OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
             )
           ),

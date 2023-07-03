@@ -20,7 +20,9 @@
 package org.apache.druid.sql;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.calcite.tools.ValidationException;
+import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -225,10 +227,21 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       reporter.planningTimeNanos(System.nanoTime() - planningStartNanos);
       return resultSet;
     }
+    catch (RelOptPlanner.CannotPlanException e) {
+      // Not sure if this is even thrown here.
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.UNCATEGORIZED)
+                          .build(e, "Problem planning SQL query");
+    }
     catch (RuntimeException e) {
       state = State.FAILED;
       reporter.failed(e);
       throw e;
+    }
+    catch (AssertionError e) {
+      state = State.FAILED;
+      reporter.failed(e);
+      throw InvalidSqlInput.exception(e, "Calcite assertion violated: [%s]", e.getMessage());
     }
   }
 
@@ -239,12 +252,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
   @VisibleForTesting
   protected PlannerResult createPlan(DruidPlanner planner)
   {
-    try {
-      return planner.plan();
-    }
-    catch (ValidationException e) {
-      throw new SqlPlanningException(e);
-    }
+    return planner.plan();
   }
 
   /**

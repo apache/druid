@@ -24,17 +24,21 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggregatorFactory;
@@ -49,11 +53,19 @@ import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregat
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.topn.InvertedTopNMetricSpec;
+import org.apache.druid.query.topn.NumericTopNMetricSpec;
+import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -69,6 +81,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -76,10 +89,133 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
   private static final boolean ROUND = true;
+
+  // For testHllSketchPostAggsGroupBy, testHllSketchPostAggsTimeseries
+  private static final Object[] EXPECTED_PA_RESULT =
+      new Object[]{
+          "\"AgEHDAMIAgDhUv8P63iABQ==\"",
+          "\"AgEHDAMIBgALpZ0PjpTfBY5ElQo+C7UE4jA+DKfcYQQ=\"",
+          "\"AgEHDAMIAQAr8vsG\"",
+          2.000000004967054d,
+          3.000000004967054d,
+          3.000000014901161d,
+          2.000000004967054d,
+          "[2.000000004967054,2.0,2.0001997319422404]",
+          "[2.000000004967054,2.0,2.000099863468538]",
+          "\"AgEHDAMIBgC1EYgH1mlHBwsKPwu5SK8MIiUxB7iZVwU=\"",
+          2L,
+          "### HLL SKETCH SUMMARY: \n"
+            + "  Log Config K   : 12\n"
+            + "  Hll Target     : HLL_4\n"
+            + "  Current Mode   : LIST\n"
+            + "  Memory         : false\n"
+            + "  LB             : 2.0\n"
+            + "  Estimate       : 2.000000004967054\n"
+            + "  UB             : 2.000099863468538\n"
+            + "  OutOfOrder Flag: false\n"
+            + "  Coupon Count   : 2\n",
+          "### HLL SKETCH SUMMARY: \n"
+            + "  LOG CONFIG K   : 12\n"
+            + "  HLL TARGET     : HLL_4\n"
+            + "  CURRENT MODE   : LIST\n"
+            + "  MEMORY         : FALSE\n"
+            + "  LB             : 2.0\n"
+            + "  ESTIMATE       : 2.000000004967054\n"
+            + "  UB             : 2.000099863468538\n"
+            + "  OUTOFORDER FLAG: FALSE\n"
+            + "  COUPON COUNT   : 2\n",
+          2.0,
+          2L
+      };
+
+  /**
+   * Expected virtual columns for {@link #testHllSketchPostAggsTimeseries()},
+   * {@link #testHllSketchPostAggsGroupBy()}, {@link #testHllSketchFilteredAggregatorsTimeseries()}, and
+   * {@link #testHllSketchFilteredAggregatorsGroupBy()}.
+   */
+  private static final List<VirtualColumn> EXPECTED_PA_VIRTUAL_COLUMNS =
+      ImmutableList.of(
+          new ExpressionVirtualColumn(
+              "v0",
+              "concat(\"dim2\",'hello')",
+              ColumnType.STRING,
+              TestExprMacroTable.INSTANCE
+          ),
+          new ExpressionVirtualColumn(
+              "v1",
+              "pow(abs((\"m1\" + 100)),2)",
+              ColumnType.DOUBLE,
+              TestExprMacroTable.INSTANCE
+          )
+      );
+
+  /**
+   * Expected aggregators for {@link #testHllSketchPostAggsTimeseries()} and {@link #testHllSketchPostAggsGroupBy()}.
+   */
+  private static final List<AggregatorFactory> EXPECTED_PA_AGGREGATORS =
+      ImmutableList.of(
+          new HllSketchBuildAggregatorFactory("a0", "dim2", null, null, null, false, true),
+          new HllSketchBuildAggregatorFactory("a1", "m1", null, null, null, false, true),
+          new HllSketchBuildAggregatorFactory("a2", "cnt", null, null, null, false, true),
+          new HllSketchBuildAggregatorFactory("a3", "v0", null, null, null, false, true),
+          new HllSketchBuildAggregatorFactory("a4", "v1", null, null, null, false, true),
+          new HllSketchBuildAggregatorFactory("a5", "dim2", null, null, null, true, true),
+          new HllSketchBuildAggregatorFactory("a6", "dim2", null, null, StringEncoding.UTF8, true, true)
+      );
+
+  /**
+   * Expected aggregators for {@link #testHllSketchFilteredAggregatorsTimeseries()} and
+   * {@link #testHllSketchFilteredAggregatorsGroupBy()}.
+   */
+  private static final List<AggregatorFactory> EXPECTED_FILTERED_AGGREGATORS =
+      EXPECTED_PA_AGGREGATORS.stream()
+                             .limit(5)
+                             .map(factory -> new FilteredAggregatorFactory(factory, selector("dim2", "a", null)))
+                             .collect(Collectors.toList());
+
+  /**
+   * Expected post-aggregators for {@link #testHllSketchPostAggsTimeseries()} and
+   * {@link #testHllSketchPostAggsGroupBy()}.
+   */
+  private static final List<PostAggregator> EXPECTED_PA_POST_AGGREGATORS =
+      ImmutableList.of(
+          new HllSketchToEstimatePostAggregator("p1", new FieldAccessPostAggregator("p0", "a0"), false),
+          new HllSketchToEstimatePostAggregator("p3", new FieldAccessPostAggregator("p2", "a0"), false),
+          new ExpressionPostAggregator("p4", "(\"p3\" + 1)", null, TestExprMacroTable.INSTANCE),
+          new HllSketchToEstimatePostAggregator("p6", new FieldAccessPostAggregator("p5", "a3"), false),
+          new HllSketchToEstimatePostAggregator("p8", new FieldAccessPostAggregator("p7", "a0"), false),
+          new ExpressionPostAggregator("p9", "abs(\"p8\")", null, TestExprMacroTable.INSTANCE),
+          new HllSketchToEstimateWithBoundsPostAggregator("p11", new FieldAccessPostAggregator("p10", "a0"), 2),
+          new HllSketchToEstimateWithBoundsPostAggregator("p13", new FieldAccessPostAggregator("p12", "a0"), 1),
+          new HllSketchToStringPostAggregator("p15", new FieldAccessPostAggregator("p14", "a0")),
+          new HllSketchToStringPostAggregator("p17", new FieldAccessPostAggregator("p16", "a0")),
+          new ExpressionPostAggregator("p18", "upper(\"p17\")", null, TestExprMacroTable.INSTANCE),
+          new HllSketchToEstimatePostAggregator("p20", new FieldAccessPostAggregator("p19", "a0"), true)
+      );
+
+  /**
+   * Expected post-aggregators for {@link #testHllSketchFilteredAggregatorsTimeseries()} and
+   * {@link #testHllSketchFilteredAggregatorsGroupBy()}.
+   */
+  private static final List<PostAggregator> EXPECTED_FILTERED_POST_AGGREGATORS =
+      ImmutableList.of(
+          new HllSketchToEstimatePostAggregator("p1", new FieldAccessPostAggregator("p0", "a0"), false),
+          new HllSketchToEstimatePostAggregator("p3", new FieldAccessPostAggregator("p2", "a1"), false),
+          new HllSketchToEstimatePostAggregator("p5", new FieldAccessPostAggregator("p4", "a2"), false),
+          new HllSketchToEstimatePostAggregator("p7", new FieldAccessPostAggregator("p6", "a3"), false),
+          new HllSketchToEstimatePostAggregator("p9", new FieldAccessPostAggregator("p8", "a4"), false)
+      );
+
+  private static final ExprMacroTable MACRO_TABLE = new ExprMacroTable(
+      ImmutableList.of(
+          new HllPostAggExprMacros.HLLSketchEstimateExprMacro()
+      )
+  );
 
   @Override
   public void gatherProperties(Properties properties)
@@ -119,8 +255,18 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                                              "dim1",
                                                              null,
                                                              null,
+                                                             null,
                                                              false,
                                                              ROUND
+                                                         ),
+                                                         new HllSketchBuildAggregatorFactory(
+                                                             "hllsketch_dim3",
+                                                             "dim3",
+                                                             null,
+                                                             null,
+                                                             null,
+                                                             false,
+                                                             false
                                                          )
                                                      )
                                                      .withRollup(false)
@@ -128,6 +274,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                              )
                                              .rows(TestDataBuilder.ROWS1)
                                              .buildMMappedIndex();
+
 
     return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
@@ -154,18 +301,19 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                        + "  APPROX_COUNT_DISTINCT(SUBSTRING(dim2, 1, 1)),\n" // on extractionFn, using generic A.C.D.
                        + "  COUNT(DISTINCT SUBSTRING(dim2, 1, 1) || 'x'),\n" // on expression, using COUNT DISTINCT
                        + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1, 21, 'HLL_8'),\n" // on native HllSketch column
-                       + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1)\n" // on native HllSketch column
+                       + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1),\n" // on native HllSketch column
+                       + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1, CAST(21 AS BIGINT))\n" // also native column
                        + "FROM druid.foo";
 
     final List<Object[]> expectedResults;
 
     if (NullHandling.replaceWithDefault()) {
       expectedResults = ImmutableList.of(
-          new Object[]{6L, 2L, 2L, 1L, 2L, 5L, 5L}
+          new Object[]{6L, 2L, 2L, 1L, 2L, 5L, 5L, 5L}
       );
     } else {
       expectedResults = ImmutableList.of(
-          new Object[]{6L, 2L, 2L, 1L, 1L, 5L, 5L}
+          new Object[]{6L, 2L, 2L, 1L, 1L, 5L, 5L, 5L}
       );
     }
 
@@ -193,43 +341,16 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .aggregators(
                       ImmutableList.of(
                           new LongSumAggregatorFactory("a0", "cnt"),
-                          new HllSketchBuildAggregatorFactory(
-                              "a1",
-                              "dim2",
-                              null,
-                              null,
-                              null,
-                              ROUND
-                          ),
+                          new HllSketchBuildAggregatorFactory("a1", "dim2", null, null, null, null, ROUND),
                           new FilteredAggregatorFactory(
-                              new HllSketchBuildAggregatorFactory(
-                                  "a2",
-                                  "dim2",
-                                  null,
-                                  null,
-                                  null,
-                                  ROUND
-                              ),
+                              new HllSketchBuildAggregatorFactory("a2", "dim2", null, null, null, null, ROUND),
                               BaseCalciteQueryTest.not(BaseCalciteQueryTest.selector("dim2", "", null))
                           ),
-                          new HllSketchBuildAggregatorFactory(
-                              "a3",
-                              "v0",
-                              null,
-                              null,
-                              null,
-                              ROUND
-                          ),
-                          new HllSketchBuildAggregatorFactory(
-                              "a4",
-                              "v1",
-                              null,
-                              null,
-                              null,
-                              ROUND
-                          ),
-                          new HllSketchMergeAggregatorFactory("a5", "hllsketch_dim1", 21, "HLL_8", null, ROUND),
-                          new HllSketchMergeAggregatorFactory("a6", "hllsketch_dim1", null, null, null, ROUND)
+                          new HllSketchBuildAggregatorFactory("a3", "v0", null, null, null, null, ROUND),
+                          new HllSketchBuildAggregatorFactory("a4", "v1", null, null, null, null, ROUND),
+                          new HllSketchMergeAggregatorFactory("a5", "hllsketch_dim1", 21, "HLL_8", null, null, ROUND),
+                          new HllSketchMergeAggregatorFactory("a6", "hllsketch_dim1", null, null, null, null, ROUND),
+                          new HllSketchMergeAggregatorFactory("a7", "hllsketch_dim1", 21, "HLL_4", null, null, ROUND)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -275,6 +396,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                               new HllSketchBuildAggregatorFactory(
                                                   "a0:a",
                                                   "cnt",
+                                                  null,
                                                   null,
                                                   null,
                                                   null,
@@ -355,7 +477,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
                             aggregators(
-                                new HllSketchBuildAggregatorFactory("a0", "m1", null, null, null, true)
+                                new HllSketchBuildAggregatorFactory("a0", "m1", null, null, null, true, true)
                             )
                         )
                         .setHavingSpec(having(selector("a0", "2", null)))
@@ -374,33 +496,103 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testHllSketchPostAggs()
+  public void testHllSketchFilteredAggregatorsGroupBy()
   {
-    final String sketchSummary = "### HLL SKETCH SUMMARY: \n"
-                                 + "  Log Config K   : 12\n"
-                                 + "  Hll Target     : HLL_4\n"
-                                 + "  Current Mode   : LIST\n"
-                                 + "  Memory         : false\n"
-                                 + "  LB             : 2.0\n"
-                                 + "  Estimate       : 2.000000004967054\n"
-                                 + "  UB             : 2.000099863468538\n"
-                                 + "  OutOfOrder Flag: false\n"
-                                 + "  Coupon Count   : 2\n";
+    testQuery(
+        "SELECT\n"
+        + "  DS_HLL(dim2) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(m1) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(cnt) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(CONCAT(dim2, 'hello')) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(POWER(ABS(m1 + 100), 2)) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(m1) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(cnt) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(CONCAT(dim2, 'hello')) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(POWER(ABS(m1 + 100), 2)) FILTER(WHERE MV_CONTAINS(dim2, 'a')))\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY cnt",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(new MultipleIntervalSegmentSpec(Collections.singletonList(Filtration.eternity())))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(VirtualColumns.create(EXPECTED_PA_VIRTUAL_COLUMNS))
+                        .setDimensions(new DefaultDimensionSpec("cnt", "d0", ColumnType.LONG))
+                        .setAggregatorSpecs(EXPECTED_FILTERED_AGGREGATORS)
+                        .setPostAggregatorSpecs(EXPECTED_FILTERED_POST_AGGREGATORS)
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                "\"AgEHDAMIAQDhUv8P\"",
+                "\"AgEHDAMIAgALpZ0PPgu1BA==\"",
+                "\"AgEHDAMIAQAr8vsG\"",
+                "\"AgEHDAMIAQCba0kG\"",
+                "\"AgEHDAMIAgC1EYgHuUivDA==\"",
+                1.0,
+                2.000000004967054,
+                1.0,
+                1.0,
+                2.000000004967054
+            }
+        )
+    );
+  }
 
-    final String otherSketchSummary = "### HLL SKETCH SUMMARY: \n"
-                                      + "  LOG CONFIG K   : 12\n"
-                                      + "  HLL TARGET     : HLL_4\n"
-                                      + "  CURRENT MODE   : LIST\n"
-                                      + "  MEMORY         : FALSE\n"
-                                      + "  LB             : 2.0\n"
-                                      + "  ESTIMATE       : 2.000000004967054\n"
-                                      + "  UB             : 2.000099863468538\n"
-                                      + "  OUTOFORDER FLAG: FALSE\n"
-                                      + "  COUPON COUNT   : 2\n";
+  @Test
+  public void testHllSketchFilteredAggregatorsTimeseries()
+  {
+    testQuery(
+        "SELECT\n"
+        + "  DS_HLL(dim2) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(m1) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(cnt) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(CONCAT(dim2, 'hello')) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  DS_HLL(POWER(ABS(m1 + 100), 2)) FILTER(WHERE MV_CONTAINS(dim2, 'a')),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(m1) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(cnt) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(CONCAT(dim2, 'hello')) FILTER(WHERE MV_CONTAINS(dim2, 'a'))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(POWER(ABS(m1 + 100), 2)) FILTER(WHERE MV_CONTAINS(dim2, 'a')))\n"
+        + "FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(VirtualColumns.create(EXPECTED_PA_VIRTUAL_COLUMNS))
+                  .aggregators(EXPECTED_FILTERED_AGGREGATORS)
+                  .postAggregators(EXPECTED_FILTERED_POST_AGGREGATORS)
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                "\"AgEHDAMIAQDhUv8P\"",
+                "\"AgEHDAMIAgALpZ0PPgu1BA==\"",
+                "\"AgEHDAMIAQAr8vsG\"",
+                "\"AgEHDAMIAQCba0kG\"",
+                "\"AgEHDAMIAgC1EYgHuUivDA==\"",
+                1.0,
+                2.000000004967054,
+                1.0,
+                1.0,
+                2.000000004967054
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testHllSketchPostAggsGroupBy()
+  {
     testQuery(
         "SELECT\n"
         + "  DS_HLL(dim2),\n"
         + "  DS_HLL(m1),\n"
+        + "  DS_HLL(cnt),\n"
         + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2)),\n"
         + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2)) + 1,\n"
         + "  HLL_SKETCH_ESTIMATE(DS_HLL(CONCAT(dim2, 'hello'))),\n"
@@ -411,119 +603,59 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
         + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2),\n"
         + "  HLL_SKETCH_TO_STRING(DS_HLL(dim2)),\n"
         + "  UPPER(HLL_SKETCH_TO_STRING(DS_HLL(dim2))),\n"
-        + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2), true)\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2), true)\n,"
+        + "  APPROX_COUNT_DISTINCT_DS_HLL_UTF8(dim2)\n"
+        + "FROM druid.foo\n"
+        + "GROUP BY cnt",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(new MultipleIntervalSegmentSpec(Collections.singletonList(Filtration.eternity())))
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(VirtualColumns.create(EXPECTED_PA_VIRTUAL_COLUMNS))
+                        .setDimensions(new DefaultDimensionSpec("cnt", "d0", ColumnType.LONG))
+                        .setAggregatorSpecs(EXPECTED_PA_AGGREGATORS)
+                        .setPostAggregatorSpecs(EXPECTED_PA_POST_AGGREGATORS)
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(EXPECTED_PA_RESULT)
+    );
+  }
+
+  @Test
+  public void testHllSketchPostAggsTimeseries()
+  {
+    testQuery(
+        "SELECT\n"
+        + "  DS_HLL(dim2),\n"
+        + "  DS_HLL(m1),\n"
+        + "  DS_HLL(cnt),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2)),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2)) + 1,\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(CONCAT(dim2, 'hello'))),\n"
+        + "  ABS(HLL_SKETCH_ESTIMATE(DS_HLL(dim2))),\n"
+        + "  HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(DS_HLL(dim2), 2),\n"
+        + "  HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(DS_HLL(dim2)),\n"
+        + "  DS_HLL(POWER(ABS(m1 + 100), 2)),\n"
+        + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2),\n"
+        + "  HLL_SKETCH_TO_STRING(DS_HLL(dim2)),\n"
+        + "  UPPER(HLL_SKETCH_TO_STRING(DS_HLL(dim2))),\n"
+        + "  HLL_SKETCH_ESTIMATE(DS_HLL(dim2), true),\n"
+        + "  APPROX_COUNT_DISTINCT_DS_HLL_UTF8(dim2)\n"
         + "FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .virtualColumns(
-                      new ExpressionVirtualColumn(
-                          "v0",
-                          "concat(\"dim2\",'hello')",
-                          ColumnType.STRING,
-                          TestExprMacroTable.INSTANCE
-                      ),
-                      new ExpressionVirtualColumn(
-                          "v1",
-                          "pow(abs((\"m1\" + 100)),2)",
-                          ColumnType.DOUBLE,
-                          TestExprMacroTable.INSTANCE
-                      )
-                  )
-                  .aggregators(
-                      ImmutableList.of(
-                          new HllSketchBuildAggregatorFactory(
-                              "a0",
-                              "dim2",
-                              null,
-                              null,
-                              false,
-                              true
-                          ),
-                          new HllSketchBuildAggregatorFactory(
-                              "a1",
-                              "m1",
-                              null,
-                              null,
-                              false,
-                              true
-                          ),
-                          new HllSketchBuildAggregatorFactory(
-                              "a2",
-                              "v0",
-                              null,
-                              null,
-                              false,
-                              true
-                          ),
-                          new HllSketchBuildAggregatorFactory(
-                              "a3",
-                              "v1",
-                              null,
-                              null,
-                              false,
-                              true
-                          ),
-                          new HllSketchBuildAggregatorFactory(
-                              "a4",
-                              "dim2",
-                              null,
-                              null,
-                              null,
-                              true
-                          )
-                      )
-                  )
-                  .postAggregators(
-                      ImmutableList.of(
-                          new HllSketchToEstimatePostAggregator("p1", new FieldAccessPostAggregator("p0", "a0"), false),
-                          new HllSketchToEstimatePostAggregator("p3", new FieldAccessPostAggregator("p2", "a0"), false),
-                          new ExpressionPostAggregator("p4", "(\"p3\" + 1)", null, TestExprMacroTable.INSTANCE),
-                          new HllSketchToEstimatePostAggregator("p6", new FieldAccessPostAggregator("p5", "a2"), false),
-                          new HllSketchToEstimatePostAggregator(
-                              "p8",
-                              new FieldAccessPostAggregator("p7", "a0"),
-                              false
-                          ),
-                          new ExpressionPostAggregator("p9", "abs(\"p8\")", null, TestExprMacroTable.INSTANCE),
-                          new HllSketchToEstimateWithBoundsPostAggregator(
-                              "p11",
-                              new FieldAccessPostAggregator("p10", "a0"),
-                              2
-                          ),
-                          new HllSketchToEstimateWithBoundsPostAggregator(
-                              "p13",
-                              new FieldAccessPostAggregator("p12", "a0"),
-                              1
-                          ),
-                          new HllSketchToStringPostAggregator("p15", new FieldAccessPostAggregator("p14", "a0")),
-                          new HllSketchToStringPostAggregator("p17", new FieldAccessPostAggregator("p16", "a0")),
-                          new ExpressionPostAggregator("p18", "upper(\"p17\")", null, TestExprMacroTable.INSTANCE),
-                          new HllSketchToEstimatePostAggregator("p20", new FieldAccessPostAggregator("p19", "a0"), true)
-                      )
-                  )
+                  .virtualColumns(VirtualColumns.create(EXPECTED_PA_VIRTUAL_COLUMNS))
+                  .aggregators(EXPECTED_PA_AGGREGATORS)
+                  .postAggregators(EXPECTED_PA_POST_AGGREGATORS)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
-        ImmutableList.of(
-            new Object[]{
-                "\"AgEHDAMIAgDhUv8P63iABQ==\"",
-                "\"AgEHDAMIBgALpZ0PjpTfBY5ElQo+C7UE4jA+DKfcYQQ=\"",
-                2.000000004967054d,
-                3.000000004967054d,
-                3.000000014901161d,
-                2.000000004967054d,
-                "[2.000000004967054,2.0,2.0001997319422404]",
-                "[2.000000004967054,2.0,2.000099863468538]",
-                "\"AgEHDAMIBgC1EYgH1mlHBwsKPwu5SK8MIiUxB7iZVwU=\"",
-                2L,
-                sketchSummary,
-                otherSketchSummary,
-                2.0
-            }
-        )
+        ImmutableList.of(EXPECTED_PA_RESULT)
     );
   }
 
@@ -595,46 +727,11 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   )
                   .aggregators(
                       ImmutableList.of(
-                          new HllSketchBuildAggregatorFactory(
-                              "a0",
-                              "dim2",
-                              null,
-                              null,
-                              null,
-                              true
-                          ),
-                          new HllSketchBuildAggregatorFactory(
-                              "a1",
-                              "m1",
-                              null,
-                              null,
-                              null,
-                              true
-                          ),
-                          new HllSketchBuildAggregatorFactory(
-                              "a2",
-                              "v0",
-                              null,
-                              null,
-                              null,
-                              true
-                          ),
-                          new HllSketchBuildAggregatorFactory(
-                              "a3",
-                              "v1",
-                              null,
-                              null,
-                              null,
-                              true
-                          ),
-                          new HllSketchBuildAggregatorFactory(
-                              "a4",
-                              "dim2",
-                              null,
-                              null,
-                              null,
-                              true
-                          )
+                          new HllSketchBuildAggregatorFactory("a0", "dim2", null, null, null, true, true),
+                          new HllSketchBuildAggregatorFactory("a1", "m1", null, null, null, true, true),
+                          new HllSketchBuildAggregatorFactory("a2", "v0", null, null, null, true, true),
+                          new HllSketchBuildAggregatorFactory("a3", "v1", null, null, null, true, true),
+                          new HllSketchBuildAggregatorFactory("a4", "dim2", null, null, null, true, true)
                       )
                   )
                   .postAggregators(
@@ -718,6 +815,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               "dim2",
                               null,
                               null,
+                              null,
                               false,
                               true
                           )
@@ -764,11 +862,13 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                            null,
                                            null,
                                            null,
+                                           null,
                                            true
                                        ),
                                        new HllSketchBuildAggregatorFactory(
                                            "a1",
                                            "dim2",
+                                           null,
                                            null,
                                            null,
                                            false,
@@ -808,6 +908,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         null,
                                         null,
+                                        null,
                                         true
                                     ),
                                     selector("dim1", "nonexistent", null)
@@ -816,6 +917,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                     new HllSketchBuildAggregatorFactory(
                                         "a1",
                                         "v0",
+                                        null,
                                         null,
                                         null,
                                         false,
@@ -859,25 +961,11 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(
-                                    new HllSketchBuildAggregatorFactory(
-                                        "a0",
-                                        "v0",
-                                        null,
-                                        null,
-                                        null,
-                                        true
-                                    ),
+                                    new HllSketchBuildAggregatorFactory("a0", "v0", null, null, null, null, true),
                                     selector("dim1", "nonexistent", null)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new HllSketchBuildAggregatorFactory(
-                                        "a1",
-                                        "v0",
-                                        null,
-                                        null,
-                                        null,
-                                        true
-                                    ),
+                                    new HllSketchBuildAggregatorFactory("a1", "v0", null, null, null, null, true),
                                     selector("dim1", "nonexistent", null)
                                 )
                             )
@@ -886,6 +974,195 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(new Object[]{"a", 0L, "0"})
+    );
+  }
+
+  @Test
+  public void testHllEstimateAsVirtualColumn()
+  {
+    testQuery(
+        "SELECT"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_dim1)"
+        + " FROM druid.foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(new ExpressionVirtualColumn(
+                    "v0",
+                    "hll_sketch_estimate(\"hllsketch_dim1\")",
+                    ColumnType.DOUBLE,
+                    MACRO_TABLE
+                ))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .columns("v0")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{0.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D},
+            new Object[]{1.0D}
+        )
+    );
+  }
+
+  @Test
+  public void testHllEstimateAsVirtualColumnWithRound()
+  {
+    testQuery(
+        "SELECT"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_dim3, FALSE), HLL_SKETCH_ESTIMATE(hllsketch_dim3, TRUE)"
+        + " FROM druid.foo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(new ExpressionVirtualColumn(
+                    "v0",
+                    "hll_sketch_estimate(\"hllsketch_dim3\",0)",
+                    ColumnType.DOUBLE,
+                    MACRO_TABLE
+                ), new ExpressionVirtualColumn(
+                    "v1",
+                    "hll_sketch_estimate(\"hllsketch_dim3\",1)",
+                    ColumnType.DOUBLE,
+                    MACRO_TABLE
+                ))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .columns("v0", "v1")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{2.000000004967054D, 2.0D},
+            new Object[]{2.000000004967054D, 2.0D},
+            new Object[]{1.0D, 1.0D},
+            new Object[]{0.0D, 0.0D},
+            new Object[]{0.0D, 0.0D},
+            new Object[]{0.0D, 0.0D}
+        )
+    );
+  }
+
+  @Test
+  public void testHllEstimateAsVirtualColumnOnNonHllCol()
+  {
+    try {
+      testQuery(
+          "SELECT"
+          + " HLL_SKETCH_ESTIMATE(dim2)"
+          + " FROM druid.foo",
+          ImmutableList.of(
+              newScanQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(new ExpressionVirtualColumn(
+                      "v0",
+                      "hll_sketch_estimate(\"dim2\")",
+                      ColumnType.DOUBLE,
+                      MACRO_TABLE
+                  ))
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .columns("v0")
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+          ),
+          ImmutableList.of()
+      );
+    }
+    catch (IllegalArgumentException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Input byte[] should at least have 2 bytes for base64 bytes")
+      );
+    }
+  }
+
+  @Test
+  public void testHllEstimateAsVirtualColumnWithGroupByOrderBy()
+  {
+    skipVectorize();
+    cannotVectorize();
+    testQuery(
+        "SELECT"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_dim1), count(*)"
+        + " FROM druid.foo"
+        + " GROUP BY 1"
+        + " ORDER BY 2 DESC",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(new ExpressionVirtualColumn(
+                            "v0",
+                            "hll_sketch_estimate(\"hllsketch_dim1\")",
+                            ColumnType.DOUBLE,
+                            MACRO_TABLE
+                        ))
+                        .setDimensions(
+                            new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new CountAggregatorFactory("a0")
+                            )
+                        )
+                        .setLimitSpec(
+                            DefaultLimitSpec
+                                .builder()
+                                .orderBy(
+                                    new OrderByColumnSpec(
+                                        "a0",
+                                        OrderByColumnSpec.Direction.DESCENDING,
+                                        StringComparators.NUMERIC
+                                    )
+                                )
+                                .build()
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1.0D, 5L},
+            new Object[]{0.0D, 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testHllEstimateAsVirtualColumnWithTopN()
+  {
+    testQuery(
+        "SELECT"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_dim1), COUNT(*)"
+        + " FROM druid.foo"
+        + " GROUP BY 1 ORDER BY 2"
+        + " LIMIT 2",
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE))
+                .virtualColumns(new ExpressionVirtualColumn(
+                    "v0",
+                    "hll_sketch_estimate(\"hllsketch_dim1\")",
+                    ColumnType.DOUBLE,
+                    MACRO_TABLE
+                ))
+                .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
+                .threshold(2)
+                .aggregators(new CountAggregatorFactory("a0"))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{0.0D, 1L},
+            new Object[]{1.0D, 5L}
+        )
     );
   }
 }

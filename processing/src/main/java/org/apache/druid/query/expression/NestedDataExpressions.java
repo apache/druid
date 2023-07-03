@@ -349,10 +349,14 @@ public class NestedDataExpressions
           @Override
           public ExprEval eval(ObjectBinding bindings)
           {
-            ExprEval input = args.get(0).eval(bindings);
-            return ExprEval.bestEffortOf(
-                NestedPathFinder.findLiteral(unwrap(input), parts)
-            ).castTo(castTo);
+            final ExprEval input = args.get(0).eval(bindings);
+            final ExprEval valAtPath = ExprEval.bestEffortOf(
+                NestedPathFinder.find(unwrap(input), parts)
+            );
+            if (valAtPath.type().isPrimitive() || valAtPath.type().isPrimitiveArray()) {
+              return valAtPath.castTo(castTo);
+            }
+            return ExprEval.ofType(castTo, null);
           }
 
           @Override
@@ -382,10 +386,14 @@ public class NestedDataExpressions
           @Override
           public ExprEval eval(ObjectBinding bindings)
           {
-            ExprEval input = args.get(0).eval(bindings);
-            return ExprEval.bestEffortOf(
-                NestedPathFinder.findLiteral(unwrap(input), parts)
+            final ExprEval input = args.get(0).eval(bindings);
+            final ExprEval valAtPath = ExprEval.bestEffortOf(
+                NestedPathFinder.find(unwrap(input), parts)
             );
+            if (valAtPath.type().isPrimitive() || valAtPath.type().isPrimitiveArray()) {
+              return valAtPath;
+            }
+            return ExprEval.of(null);
           }
 
           @Override
@@ -489,7 +497,7 @@ public class NestedDataExpressions
         {
           // we only want to return a non-null value here if the value is an array of primitive values
           ExprEval<?> eval = ExprEval.bestEffortArray(array);
-          if (eval.type().isArray() && eval.type().getElementType().isPrimitive()) {
+          if (eval.type().isPrimitiveArray()) {
             return ProcessedValue.NULL_LITERAL;
           }
           return null;

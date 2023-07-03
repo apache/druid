@@ -23,7 +23,7 @@ import ReactTable from 'react-table';
 
 import { TableCell } from '../../../components';
 import type { DruidFilter } from '../../../druid-models';
-import { getFilterDimension } from '../../../druid-models';
+import { getFilterDimension, TIME_COLUMN } from '../../../druid-models';
 import {
   DEFAULT_TABLE_CLASS_NAME,
   STANDARD_TABLE_PAGE_SIZE,
@@ -67,7 +67,7 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
       showPagination={sampleResponse.data.length > STANDARD_TABLE_PAGE_SIZE}
       columns={filterMap(getHeaderNamesFromSampleResponse(sampleResponse), (columnName, i) => {
         if (!caseInsensitiveContains(columnName, columnFilter)) return;
-        const timestamp = columnName === '__time';
+        const isTimestamp = columnName === TIME_COLUMN;
         const filterIndex = dimensionFilters.findIndex(f => getFilterDimension(f) === columnName);
         const filter = dimensionFilters[filterIndex];
 
@@ -84,7 +84,7 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
                   onFilterSelect(filter, filterIndex);
                 } else {
                   onFilterSelect(
-                    timestamp
+                    isTimestamp
                       ? { type: 'interval', dimension: columnName, intervals: [] }
                       : { type: 'selector', dimension: columnName, value: '' },
                     -1,
@@ -102,7 +102,7 @@ export const FilterTable = React.memo(function FilterTable(props: FilterTablePro
           accessor: (row: SampleEntry) => (row.parsed ? row.parsed[columnName] : null),
           width: 140,
           Cell: function FilterTableCell(row: RowRenderProps) {
-            return <TableCell value={timestamp ? new Date(row.value) : row.value} />;
+            return <TableCell value={isTimestamp ? new Date(Number(row.value)) : row.value} />;
           },
         };
       })}

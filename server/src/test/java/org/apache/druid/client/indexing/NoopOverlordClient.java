@@ -60,6 +60,12 @@ public class NoopOverlordClient implements OverlordClient
   }
 
   @Override
+  public ListenableFuture<TaskPayloadResponse> taskPayload(String taskId)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public OverlordClient withRetryPolicy(ServiceRetryPolicy retryPolicy)
   {
     // Ignore retryPolicy for the test client.

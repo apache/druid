@@ -19,6 +19,7 @@
 
 package org.apache.druid.utils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 
@@ -144,6 +145,7 @@ public class JvmUtils
   /**
    * Only for testing.
    */
+  @VisibleForTesting
   public static void resetTestsToDefaultRuntimeInfo()
   {
     RUNTIME_INFO = new RuntimeInfo();

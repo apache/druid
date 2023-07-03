@@ -53,6 +53,10 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.Assert;
@@ -246,6 +250,66 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
     );
 
     runSamplerAndCompareResponse(samplerSpec, false);
+  }
+
+  @Test
+  public void testGetInputSourceResources()
+  {
+    KinesisSupervisorSpec supervisorSpec = new KinesisSupervisorSpec(
+        null,
+        DATA_SCHEMA,
+        null,
+        new KinesisSupervisorIOConfig(
+            STREAM,
+            new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            true,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false
+        ),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    KinesisSamplerSpec samplerSpec = new TestableKinesisSamplerSpec(
+        supervisorSpec,
+        new SamplerConfig(5, null, null, null),
+        new InputSourceSampler(new DefaultObjectMapper()),
+        null
+    );
+
+    Assert.assertEquals(
+        Collections.singleton(
+            new ResourceAction(new Resource(
+                KinesisIndexingServiceModule.SCHEME,
+                ResourceType.EXTERNAL
+            ), Action.READ)),
+        samplerSpec.getInputSourceResources()
+    );
   }
 
   private void runSamplerAndCompareResponse(SamplerSpec samplerSpec, boolean useInputFormat) throws InterruptedException

@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -90,5 +91,15 @@ public class RegexInputFormat implements InputFormat
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
     return new RegexReader(inputRowSchema, source, pattern, compiledPatternSupplier.get(), listDelimiter, columns);
+  }
+
+  @Override
+  public long getWeightedSize(String path, long size)
+  {
+    CompressionUtils.Format compressionFormat = CompressionUtils.Format.fromFileName(path);
+    if (CompressionUtils.Format.GZ == compressionFormat) {
+      return size * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR;
+    }
+    return size;
   }
 }

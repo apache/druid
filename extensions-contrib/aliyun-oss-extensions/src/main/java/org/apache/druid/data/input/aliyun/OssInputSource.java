@@ -24,10 +24,12 @@ import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.ObjectMetadata;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputEntity;
@@ -40,6 +42,7 @@ import org.apache.druid.storage.aliyun.OssInputDataConfig;
 import org.apache.druid.storage.aliyun.OssStorageDruidModule;
 import org.apache.druid.storage.aliyun.OssUtils;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
 import java.nio.file.FileSystems;
@@ -48,6 +51,7 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public class OssInputSource extends CloudObjectInputSource
 {
@@ -92,6 +96,14 @@ public class OssInputSource extends CloudObjectInputSource
           }
         }
     );
+  }
+
+  @Override
+  @JsonIgnore
+  @Nonnull
+  public Set<String> getTypes()
+  {
+    return ImmutableSet.of(OssStorageDruidModule.SCHEME);
   }
 
 

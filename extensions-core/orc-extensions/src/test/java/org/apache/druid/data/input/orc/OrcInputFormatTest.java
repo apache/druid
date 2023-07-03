@@ -76,4 +76,15 @@ public class OrcInputFormatTest
                   .usingGetClass()
                   .verify();
   }
+
+  @Test
+  public void test_getWeightedSize_withoutCompression()
+  {
+    final OrcInputFormat format = new OrcInputFormat(null, null, null);
+    long unweightedSize = 100L;
+    Assert.assertEquals(
+        unweightedSize * OrcInputFormat.SCALE_FACTOR,
+        format.getWeightedSize("file.orc", unweightedSize)
+    );
+  }
 }

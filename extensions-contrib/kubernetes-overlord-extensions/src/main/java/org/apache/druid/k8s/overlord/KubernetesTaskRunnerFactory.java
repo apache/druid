@@ -21,8 +21,6 @@ package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import io.fabric8.kubernetes.client.Config;
-import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
@@ -55,6 +53,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final DruidNode druidNode;
   private final TaskConfig taskConfig;
   private final Properties properties;
+  private final DruidKubernetesClient druidKubernetesClient;
   private KubernetesTaskRunner runner;
 
 
@@ -67,7 +66,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       TaskLogs taskLogs,
       @Self DruidNode druidNode,
       TaskConfig taskConfig,
-      Properties properties
+      Properties properties,
+      DruidKubernetesClient druidKubernetesClient
   )
   {
     this.smileMapper = smileMapper;
@@ -78,29 +78,21 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.druidNode = druidNode;
     this.taskConfig = taskConfig;
     this.properties = properties;
+    this.druidKubernetesClient = druidKubernetesClient;
   }
 
   @Override
   public KubernetesTaskRunner build()
   {
-    DruidKubernetesClient client;
-    if (kubernetesTaskRunnerConfig.isDisableClientProxy()) {
-      Config config = new ConfigBuilder().build();
-      config.setHttpsProxy(null);
-      config.setHttpProxy(null);
-      client = new DruidKubernetesClient(config);
-    } else {
-      client = new DruidKubernetesClient();
-    }
 
     KubernetesPeonClient peonClient = new KubernetesPeonClient(
-        client,
+        druidKubernetesClient,
         kubernetesTaskRunnerConfig.getNamespace(),
         kubernetesTaskRunnerConfig.isDebugJobs()
     );
 
     runner = new KubernetesTaskRunner(
-        buildTaskAdapter(client),
+        buildTaskAdapter(druidKubernetesClient),
         kubernetesTaskRunnerConfig,
         peonClient,
         httpClient,
