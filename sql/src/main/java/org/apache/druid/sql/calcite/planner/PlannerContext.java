@@ -32,7 +32,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -89,6 +89,7 @@ public class PlannerContext
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
 
   private final PlannerToolbox plannerToolbox;
+  private final ExpressionParser expressionParser;
   private final String sql;
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
@@ -126,6 +127,7 @@ public class PlannerContext
   )
   {
     this.plannerToolbox = plannerToolbox;
+    this.expressionParser = new ExpressionParserImpl(plannerToolbox.exprMacroTable());
     this.sql = sql;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.engine = engine;
@@ -229,10 +231,17 @@ public class PlannerContext
     return plannerToolbox;
   }
 
-  // Deprecated: prefer using the toolbox
-  public ExprMacroTable getExprMacroTable()
+  public ExpressionParser getExpressionParser()
   {
-    return plannerToolbox.exprMacroTable();
+    return expressionParser;
+  }
+
+  /**
+   * Equivalent to {@link ExpressionParser#parse(String)} on {@link #getExpressionParser()}.
+   */
+  public Expr parseExpression(final String expr)
+  {
+    return expressionParser.parse(expr);
   }
 
   // Deprecated: prefer using the toolbox

@@ -81,7 +81,7 @@ public class MSQInsertTest extends MSQTestBase
         {DEFAULT, DEFAULT_MSQ_CONTEXT},
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
-        {SEQUENTIAL_MERGE, SEQUENTIAL_MERGE_MSQ_CONTEXT}
+        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT}
     };
     return Arrays.asList(data);
   }
@@ -173,7 +173,9 @@ public class MSQInsertTest extends MSQTestBase
                              + "    '{\"type\": \"json\"}',\n"
                              + "    '[{\"name\": \"__time\", \"type\": \"long\"}, {\"name\": \"flags\", \"type\": \"string\"}]'\n"
                              + "  )\n"
-                             + ") PARTITIONED BY day")
+                             + ")\n"
+                             + "WHERE __time > TIMESTAMP '1999-01-01 00:00:00'\n"
+                             + "PARTITIONED BY day")
                      .setQueryContext(context)
                      .setExpectedResultRows(expectedRows)
                      .setExpectedDataSource("foo1")

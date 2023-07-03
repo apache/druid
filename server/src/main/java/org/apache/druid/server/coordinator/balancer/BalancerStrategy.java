@@ -20,70 +20,60 @@
 package org.apache.druid.server.coordinator.balancer;
 
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
-import java.util.NavigableSet;
 
 /**
- * This interface describes the coordinator balancing strategy, which is responsible for making decisions on where
- * to place {@link DataSegment}s on historical servers (described by {@link ServerHolder}). The balancing strategy
- * is used by {@link org.apache.druid.server.coordinator.rules.LoadRule} to assign and drop segments, and by
- * {@link BalanceSegments} to migrate segments between historicals.
+ * Segment balancing strategy, used in every coordinator run by
+ * {@link org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner}
+ * to choose optimal servers to load, move or drop a segment.
  */
 public interface BalancerStrategy
 {
 
   /**
-   * Finds the best server to move a segment to according to the balancing strategy.
+   * Finds the best server from the list of {@code destinationServers} to load
+   * the {@code segmentToMove}, if it is moved from the {@code sourceServer}.
+   * <p>
+   * In order to avoid unnecessary moves when the segment is already optimally placed,
+   * include the {@code sourceServer} in the list of {@code destinationServers}.
    *
-   * @param proposalSegment    segment to move
-   * @param sourceServer       Server the segment is currently placed on.
-   * @param destinationServers servers to consider as move destinations
-   * @return The server to move to, or null if no move should be made or no server is suitable
+   * @return The server to move to, or null if the segment is already optimally placed.
    */
   @Nullable
   ServerHolder findDestinationServerToMoveSegment(
-      DataSegment proposalSegment,
+      DataSegment segmentToMove,
       ServerHolder sourceServer,
       List<ServerHolder> destinationServers
   );
 
   /**
-   * Finds the best servers on which to place the {@code proposalSegment}.
-   * This method can be used both for placing the first copy of a segment
-   * in the tier or a replica of the segment.
+   * Finds the best servers to load the given segment. This method can be used
+   * both for placing the first copy of a segment in a tier or a replica of an
+   * already available segment.
    *
-   * @param proposalSegment segment to place on servers
-   * @param serverHolders   servers to consider as segment homes
-   * @return Iterator over the best servers (in order) on which the segment
-   * can be placed.
+   * @return Iterator over the best servers (in order of preference) to load
+   * the segment.
    */
   Iterator<ServerHolder> findServersToLoadSegment(
-      DataSegment proposalSegment,
+      DataSegment segmentToLoad,
       List<ServerHolder> serverHolders
   );
 
   /**
-   * Returns an iterator for a set of servers to drop from, ordered by preference of which server to drop from first
-   * for a given drop strategy. One or more segments may be dropped, depending on how much the segment is
-   * over-replicated.
-   * @param toDropSegment segment to drop from one or more servers
-   * @param serverHolders set of historicals to consider dropping from
-   * @return Iterator for set of historicals, ordered by drop preference
+   * Finds the best servers to drop the given segment.
+   *
+   * @return Iterator over the servers (in order of preference) to drop the segment
    */
-  Iterator<ServerHolder> pickServersToDropSegment(DataSegment toDropSegment, NavigableSet<ServerHolder> serverHolders);
+  Iterator<ServerHolder> findServersToDropSegment(DataSegment segmentToDrop, List<ServerHolder> serverHolders);
 
   /**
-   * Add balancing strategy stats during the 'balanceTier' operation of
-   * {@link BalanceSegments} to be included
-   * @param tier historical tier being balanced
-   * @param stats stats object to add balancing strategy stats to
-   * @param serverHolderList servers in tier being balanced
+   * Returns the stats collected by the strategy in the current run and resets
+   * the stats collector for the next run.
    */
-  void emitStats(String tier, CoordinatorRunStats stats, List<ServerHolder> serverHolderList);
+  CoordinatorRunStats getAndResetStats();
 }

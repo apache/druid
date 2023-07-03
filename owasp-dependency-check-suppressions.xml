@@ -810,7 +810,7 @@
   <suppress>
     <!-- from extensions using hadoop-client-runtime, these dependencies are shaded in the jar -->
     <notes><![CDATA[
-     file name: hadoop-client-runtime-3.3.5.jar
+     file name: hadoop-client-runtime-3.3.6.jar
      ]]></notes>
     <!-- this one is windows only - https://nvd.nist.gov/vuln/detail/CVE-2022-26612 -->
     <cve>CVE-2022-26612</cve>
