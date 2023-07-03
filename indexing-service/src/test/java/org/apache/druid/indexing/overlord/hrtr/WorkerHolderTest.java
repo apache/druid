@@ -19,7 +19,9 @@
 
 package org.apache.druid.indexing.overlord.hrtr;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.client.TestChangeRequestHttpClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -29,23 +31,23 @@ import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.WorkerHistoryItem;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
-import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
-import org.easymock.EasyMock;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
+import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
+import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
+import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ScheduledExecutorService;
 
-/**
- */
 public class WorkerHolderTest
 {
+  private final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
+
   @Test
-  public void testSyncListener()
+  public void testInitializationAndSync()
   {
     List<TaskAnnouncement> updates = new ArrayList<>();
 
@@ -54,11 +56,16 @@ public class WorkerHolderTest
     Task task2 = NoopTask.create("task2", 0);
     Task task3 = NoopTask.create("task3", 0);
 
+    final TestChangeRequestHttpClient<ChangeRequestsSnapshot<WorkerHistoryItem>> httpClient
+        = new TestChangeRequestHttpClient<>(WorkerHolder.WORKER_SYNC_RESP_TYPE_REF, MAPPER);
+
+    final BlockingExecutorService executor = new BlockingExecutorService("workerholder-test");
+
     WorkerHolder workerHolder = new WorkerHolder(
-        TestHelper.makeJsonMapper(),
-        EasyMock.createNiceMock(HttpClient.class),
+        MAPPER,
+        httpClient,
         new HttpRemoteTaskRunnerConfig(),
-        EasyMock.createNiceMock(ScheduledExecutorService.class),
+        new WrappingScheduledExecutorService("workerholder-test", executor, false),
         (taskAnnouncement, holder) -> updates.add(taskAnnouncement),
         new Worker("http", "localhost", "127.0.0.1", 5, "v0", WorkerConfig.DEFAULT_CATEGORY),
         ImmutableList.of(
@@ -75,33 +82,38 @@ public class WorkerHolderTest
         )
     );
 
-    ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> syncListener = workerHolder.createSyncListener();
-
     Assert.assertTrue(workerHolder.disabled.get());
+    Assert.assertFalse(workerHolder.isInitialized());
 
-    syncListener.fullSync(
-        ImmutableList.of(
-            new WorkerHistoryItem.Metadata(false),
-            new WorkerHistoryItem.TaskUpdate(TaskAnnouncement.create(
-                task1,
-                TaskStatus.success(task1.getId()),
-                TaskLocation.create("w1", 1, -1)
-            )),
-            new WorkerHistoryItem.TaskUpdate(TaskAnnouncement.create(
-                task2,
-                TaskStatus.running(task2.getId()),
-                TaskLocation.create("w1", 2, -1)
-            )),
-            new WorkerHistoryItem.TaskUpdate(TaskAnnouncement.create(
-                task3,
-                TaskStatus.running(task3.getId()),
-                TaskLocation.create("w1", 2, -1)
-            ))
+    workerHolder.start();
+
+    httpClient.completeNextRequestWith(
+        ChangeRequestsSnapshot.success(
+            ChangeRequestHistory.Counter.ZERO,
+            ImmutableList.of(
+                new WorkerHistoryItem.Metadata(false),
+                new WorkerHistoryItem.TaskUpdate(TaskAnnouncement.create(
+                    task1,
+                    TaskStatus.success(task1.getId()),
+                    TaskLocation.create("w1", 1, -1)
+                )),
+                new WorkerHistoryItem.TaskUpdate(TaskAnnouncement.create(
+                    task2,
+                    TaskStatus.running(task2.getId()),
+                    TaskLocation.create("w1", 2, -1)
+                )),
+                new WorkerHistoryItem.TaskUpdate(TaskAnnouncement.create(
+                    task3,
+                    TaskStatus.running(task3.getId()),
+                    TaskLocation.create("w1", 2, -1)
+                ))
+            )
         )
     );
+    executor.finishNextPendingTasks(2);
 
     Assert.assertFalse(workerHolder.disabled.get());
-
+    Assert.assertTrue(workerHolder.isInitialized());
     Assert.assertEquals(4, updates.size());
 
     Assert.assertEquals(task1.getId(), updates.get(0).getTaskId());
@@ -124,20 +136,24 @@ public class WorkerHolderTest
 
     updates.clear();
 
-    syncListener.deltaSync(
-        ImmutableList.of(
-            new WorkerHistoryItem.Metadata(false),
-            new WorkerHistoryItem.TaskRemoval(task1.getId()),
-            new WorkerHistoryItem.Metadata(true),
-            new WorkerHistoryItem.TaskRemoval(task2.getId()),
-            new WorkerHistoryItem.Metadata(false),
-            new WorkerHistoryItem.TaskUpdate(TaskAnnouncement.create(
-                task3,
-                TaskStatus.running(task3.getId()),
-                TaskLocation.create("w1", 3, -1)
-            ))
+    httpClient.completeNextRequestWith(
+        ChangeRequestsSnapshot.success(
+            ChangeRequestHistory.Counter.ZERO,
+            ImmutableList.of(
+                new WorkerHistoryItem.Metadata(false),
+                new WorkerHistoryItem.TaskRemoval(task1.getId()),
+                new WorkerHistoryItem.Metadata(true),
+                new WorkerHistoryItem.TaskRemoval(task2.getId()),
+                new WorkerHistoryItem.Metadata(false),
+                new WorkerHistoryItem.TaskUpdate(TaskAnnouncement.create(
+                    task3,
+                    TaskStatus.running(task3.getId()),
+                    TaskLocation.create("w1", 3, -1)
+                ))
+            )
         )
     );
+    executor.finishNextPendingTasks(2);
 
     Assert.assertFalse(workerHolder.disabled.get());
     Assert.assertEquals(2, updates.size());
@@ -156,29 +172,33 @@ public class WorkerHolderTest
 
     updates.clear();
 
-    syncListener.fullSync(
-        ImmutableList.of(
-            new WorkerHistoryItem.Metadata(true),
-            new WorkerHistoryItem.TaskUpdate(TaskAnnouncement.create(
-                task1,
-                TaskStatus.success(task1.getId()),
-                TaskLocation.create("w1", 1, -1)
-            )),
-            new WorkerHistoryItem.TaskUpdate(TaskAnnouncement.create(
-                task2,
-                TaskStatus.running(task2.getId()),
-                TaskLocation.create("w1", 2, -1)
-            )),
-            new WorkerHistoryItem.TaskUpdate(TaskAnnouncement.create(
-                task3,
-                TaskStatus.running(task3.getId()),
-                TaskLocation.create("w1", 2, -1)
-            ))
+    httpClient.completeNextRequestWith(
+        ChangeRequestsSnapshot.success(
+            ChangeRequestHistory.Counter.ZERO,
+            ImmutableList.of(
+                new WorkerHistoryItem.Metadata(true),
+                new WorkerHistoryItem.TaskUpdate(TaskAnnouncement.create(
+                    task1,
+                    TaskStatus.success(task1.getId()),
+                    TaskLocation.create("w1", 1, -1)
+                )),
+                new WorkerHistoryItem.TaskUpdate(TaskAnnouncement.create(
+                    task2,
+                    TaskStatus.running(task2.getId()),
+                    TaskLocation.create("w1", 2, -1)
+                )),
+                new WorkerHistoryItem.TaskUpdate(TaskAnnouncement.create(
+                    task3,
+                    TaskStatus.running(task3.getId()),
+                    TaskLocation.create("w1", 2, -1)
+                ))
+            )
         )
     );
+    executor.finishNextPendingTasks(2);
 
     Assert.assertTrue(workerHolder.disabled.get());
-
+    Assert.assertTrue(workerHolder.isInitialized());
     Assert.assertEquals(3, updates.size());
 
     Assert.assertEquals(task1.getId(), updates.get(0).getTaskId());
@@ -192,4 +212,5 @@ public class WorkerHolderTest
 
     updates.clear();
   }
+
 }

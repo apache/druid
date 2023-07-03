@@ -26,7 +26,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -36,11 +35,11 @@ import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -325,12 +324,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   private void serverInventoryInitialized()
   {
     final Stopwatch stopwatch = Stopwatch.createUnstarted();
-    final Duration syncWaitTimeout = Duration.millis(
+    final Duration maxDurationToWaitForSync = Duration.millis(
         config.getServerTimeout() + 2 * ChangeRequestHttpSyncer.MIN_READ_TIMEOUT_MILLIS
     );
 
     final List<DruidServerHolder> uninitializedServers = new ArrayList<>(servers.values());
-    while (DateTimes.hasNotElapsed(syncWaitTimeout, stopwatch)) {
+    while (stopwatch.hasNotElapsed(maxDurationToWaitForSync)) {
       uninitializedServers.removeIf(
           serverHolder -> serverHolder.isSyncedSuccessfullyAtleastOnce()
                           || serverHolder.isStopped()

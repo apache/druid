@@ -23,15 +23,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.concurrent.LifecycleLock;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -73,8 +72,7 @@ public class ChangeRequestHttpSyncer<T>
 
   private final long requestTimeoutMillis;
   private final Duration requestReadTimeout;
-
-  private final long maxMillisToWaitForSync;
+  private final Duration maxDurationToWaitForSync;
 
   /**
    * Max duration for which sync can be unstable before an alert is raised.
@@ -101,7 +99,6 @@ public class ChangeRequestHttpSyncer<T>
 
   private int numRecentFailures;
 
-  private final Stopwatch sinceSyncerStart = Stopwatch.createUnstarted();
   private final Stopwatch sinceUnstable = Stopwatch.createUnstarted();
   private final Stopwatch sinceLastSyncSuccess = Stopwatch.createUnstarted();
   private final Stopwatch sinceLastSyncRequest = Stopwatch.createUnstarted();
@@ -135,7 +132,7 @@ public class ChangeRequestHttpSyncer<T>
 
     final long readTimeoutMillis = requestTimeoutMillis + MIN_READ_TIMEOUT_MILLIS;
     this.requestReadTimeout = Duration.millis(readTimeoutMillis);
-    this.maxMillisToWaitForSync = 3 * readTimeoutMillis;
+    this.maxDurationToWaitForSync = Duration.millis(3 * readTimeoutMillis);
     this.maxDelayBetweenSyncRequests = Duration.millis(3 * readTimeoutMillis + MAX_RETRY_BACKOFF_MILLIS);
   }
 
@@ -154,7 +151,6 @@ public class ChangeRequestHttpSyncer<T>
         startStopLock.exitStart();
       }
 
-      sinceSyncerStart.reset().start();
       addNextSyncToWorkQueue();
     }
   }
@@ -177,11 +173,11 @@ public class ChangeRequestHttpSyncer<T>
   }
 
   /**
-   * Waits for the first successful sync with this server up to .
+   * Waits for the first successful sync with this server up to {@link #maxDurationToWaitForSync}.
    */
   public boolean awaitInitialization() throws InterruptedException
   {
-    return initializationLatch.await(maxMillisToWaitForSync, TimeUnit.MILLISECONDS);
+    return initializationLatch.await(maxDurationToWaitForSync.getMillis(), TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -199,11 +195,11 @@ public class ChangeRequestHttpSyncer<T>
   {
     return ImmutableMap.of(
         "millisSinceLastSync",
-        sinceLastSyncRequest.isRunning() ? DateTimes.millisElapsed(sinceLastSyncRequest) : "Never synced",
+        sinceLastSyncRequest.isRunning() ? sinceLastSyncRequest.millisElapsed() : "Never synced",
         "millisSinceLastSuccess",
-        sinceLastSyncSuccess.isRunning() ? DateTimes.millisElapsed(sinceLastSyncSuccess) : "Never synced successfully",
+        sinceLastSyncSuccess.isRunning() ? sinceLastSyncSuccess.millisElapsed() : "Never synced successfully",
         "millisUnstableDuration",
-        sinceUnstable.isRunning() ? DateTimes.millisElapsed(sinceUnstable) : "Stable",
+        sinceUnstable.isRunning() ? sinceUnstable.millisElapsed() : "Stable",
         "numRecentFailures", numRecentFailures,
         "syncScheduled", startStopLock.isStarted()
     );
@@ -223,28 +219,25 @@ public class ChangeRequestHttpSyncer<T>
    */
   public boolean needsReset()
   {
-    return DateTimes.hasElapsed(maxDelayBetweenSyncRequests, sinceLastSyncRequest);
+    return sinceLastSyncRequest.hasElapsed(maxDelayBetweenSyncRequests);
   }
 
   /**
    * @return true if there have been no sync failures recently and the last
-   * successful sync was not more than {@link #maxMillisToWaitForSync} ago.
+   * successful sync was not more than {@link #maxDurationToWaitForSync} ago.
    */
   public boolean isSyncedSuccessfully()
   {
-    final Duration timeoutDuration = Duration.millis(maxMillisToWaitForSync);
     if (numRecentFailures > 0) {
       return false;
-    } else if (hasSyncedSuccessfullyOnce()) {
-      return DateTimes.hasNotElapsed(timeoutDuration, sinceLastSyncSuccess);
     } else {
-      return DateTimes.hasNotElapsed(timeoutDuration, sinceSyncerStart);
+      return sinceLastSyncSuccess.hasNotElapsed(maxDurationToWaitForSync);
     }
   }
 
   public long getUnstableTimeMillis()
   {
-    return numRecentFailures <= 0 ? 0 : DateTimes.millisElapsed(sinceUnstable);
+    return numRecentFailures <= 0 ? 0 : sinceUnstable.millisElapsed();
   }
 
   private void sync()
@@ -254,7 +247,7 @@ public class ChangeRequestHttpSyncer<T>
       return;
     }
 
-    sinceLastSyncRequest.reset().start();
+    sinceLastSyncRequest.restart();
 
     try {
       final String req = getRequestString();
@@ -290,7 +283,7 @@ public class ChangeRequestHttpSyncer<T>
                   final int responseStatus = responseHandler.getStatus();
                   if (responseStatus == HttpServletResponse.SC_NO_CONTENT) {
                     log.info("Received NO CONTENT from server[%s]", logIdentity);
-                    sinceLastSyncSuccess.reset().start();
+                    sinceLastSyncSuccess.restart();
                     return;
                   } else if (responseStatus != HttpServletResponse.SC_OK) {
                     handleFailure(new ISE("Received sync response [%d]", responseStatus));
@@ -329,7 +322,9 @@ public class ChangeRequestHttpSyncer<T>
                     log.info("Server[%s] synced successfully.", logIdentity);
                   }
 
-                  sinceLastSyncSuccess.reset().start();
+                  synchronized (sinceLastSyncSuccess) {
+                    sinceLastSyncSuccess.restart();
+                  }
                 }
                 catch (Exception ex) {
                   markServerUnstableAndAlert(ex, "Processing Response");
@@ -433,7 +428,7 @@ public class ChangeRequestHttpSyncer<T>
   private void markServerUnstableAndAlert(Throwable throwable, String action)
   {
     if (numRecentFailures++ == 0) {
-      sinceUnstable.reset().start();
+      sinceUnstable.restart();
     }
 
     final long unstableSeconds = getUnstableTimeMillis() / 1000;
@@ -443,7 +438,7 @@ public class ChangeRequestHttpSyncer<T>
     );
 
     // Alert if unstable alert timeout has been exceeded
-    if (DateTimes.hasElapsed(maxUnstableDuration, sinceUnstable)) {
+    if (sinceUnstable.hasElapsed(maxUnstableDuration)) {
       log.noStackTrace().makeAlert(throwable, message).emit();
     } else if (log.isDebugEnabled()) {
       log.debug(throwable, message);

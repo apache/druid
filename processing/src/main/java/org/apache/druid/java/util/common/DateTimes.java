@@ -19,13 +19,11 @@
 
 package org.apache.druid.java.util.common;
 
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableSet;
 import io.netty.util.SuppressForbidden;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Months;
 import org.joda.time.chrono.ISOChronology;
@@ -34,7 +32,6 @@ import org.joda.time.format.ISODateTimeFormat;
 
 import java.util.Set;
 import java.util.TimeZone;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 public final class DateTimes
@@ -195,31 +192,6 @@ public final class DateTimes
     return dateTime.getMillis() >= COMPARE_DATE_AS_STRING_MIN.getMillis()
            && dateTime.getMillis() <= COMPARE_DATE_AS_STRING_MAX.getMillis()
            && ISOChronology.getInstanceUTC().equals(dateTime.getChronology());
-  }
-
-  /**
-   * Returns the milliseconds elapsed on the stopwatch.
-   */
-  public static long millisElapsed(Stopwatch stopwatch)
-  {
-    return stopwatch.elapsed(TimeUnit.MILLISECONDS);
-  }
-
-  /**
-   * Checks if the given duration has already elapsed on the stopwatch.
-   */
-  public static boolean hasElapsed(Duration duration, Stopwatch stopwatch)
-  {
-    return stopwatch.elapsed(TimeUnit.MILLISECONDS) >= duration.getMillis();
-  }
-
-  /**
-   * Checks that the given duration has not elapsed on the stopwatch. Calling this
-   * method is the same as {@code !hasElapsed(duration, stopwatch)}.
-   */
-  public static boolean hasNotElapsed(Duration duration, Stopwatch stopwatch)
-  {
-    return !hasElapsed(duration, stopwatch);
   }
 
   private DateTimes()

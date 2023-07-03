@@ -365,7 +365,7 @@ public class WorkerHolder
     return syncer;
   }
 
-  public ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> createSyncListener()
+  private ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> createSyncListener()
   {
     return new ChangeRequestHttpSyncer.Listener<WorkerHistoryItem>()
     {
