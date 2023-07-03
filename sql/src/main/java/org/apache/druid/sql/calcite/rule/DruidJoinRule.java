@@ -274,7 +274,7 @@ public class DruidJoinRule extends RelOptRule
 
       if (subCondition.isA(SqlKind.INPUT_REF)) {
         firstOperand = rexBuilder.makeLiteral(true);
-        secondOperand = (RexInputRef) subCondition;
+        secondOperand = subCondition;
 
         if (!SqlTypeName.BOOLEAN_TYPES.contains(secondOperand.getType().getSqlTypeName())) {
           plannerContext.setPlanningError(

@@ -5652,4 +5652,52 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testJoinWithInputRefCondition()
+  {
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    testQuery(
+        "SELECT COUNT(*) FILTER (WHERE FLOOR(100) NOT IN (SELECT m1 FROM foo)) "
+        + "FROM foo",
+        context,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(
+                      join(
+                          new TableDataSource(CalciteTests.DATASOURCE1),
+                          new QueryDataSource(
+                              GroupByQuery.builder()
+                                          .setInterval(querySegmentSpec(Filtration.eternity()))
+                                          .setGranularity(Granularities.ALL)
+                                          .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                          .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
+                                          .setDimensions(
+                                              new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT),
+                                              new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                          )
+                                          .build()
+                          ),
+                          "j0.",
+                          "(floor(100) == \"j0.d0\")",
+                          JoinType.LEFT
+                      )
+                  )
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(
+                      new FilteredAggregatorFactory(
+                          new CountAggregatorFactory("a0"),
+                          new SelectorDimFilter("j0.d1", null, null)
+                      )
+                  ))
+                  .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .context(context)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{6L}
+        )
+    );
+  }
 }
