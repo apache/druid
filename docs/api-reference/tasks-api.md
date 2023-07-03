@@ -1048,7 +1048,7 @@ Retrieves the event log associated with a task. It returns a list of logged even
 
 <!--200 SUCCESS-->
 <br/>
-*Successfully retrieved task report* 
+*Successfully retrieved task log* 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
