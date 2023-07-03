@@ -323,7 +323,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
    */
   private void serverInventoryInitialized()
   {
-    final Stopwatch stopwatch = Stopwatch.createUnstarted();
+    final Stopwatch stopwatch = Stopwatch.createStarted();
     final Duration maxDurationToWaitForSync = Duration.millis(
         config.getServerTimeout() + 2 * ChangeRequestHttpSyncer.MIN_READ_TIMEOUT_MILLIS
     );
@@ -529,15 +529,13 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         throw new IAE(
             ex,
             "Failed to construct URL for server[%s], scheme[%s].",
-            druidServer.getHost(),
-            druidServer.getScheme()
+            druidServer.getHost(), druidServer.getScheme()
         );
       }
     }
 
     void start()
     {
-      log.info("Starting sync for server [%s]", druidServer.getName());
       syncer.start();
     }
 

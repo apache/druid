@@ -73,15 +73,7 @@ public class ChangeRequestHttpSyncer<T>
   private final long requestTimeoutMillis;
   private final Duration requestReadTimeout;
   private final Duration maxDurationToWaitForSync;
-
-  /**
-   * Max duration for which sync can be unstable before an alert is raised.
-   */
   private final Duration maxUnstableDuration;
-
-  /**
-   * <pre>3 * {@link #requestReadTimeout} + {@link #MAX_RETRY_BACKOFF_MILLIS}</pre>
-   */
   private final Duration maxDelayBetweenSyncRequests;
 
   private final Listener<T> listener;
@@ -205,11 +197,6 @@ public class ChangeRequestHttpSyncer<T>
     );
   }
 
-  private boolean hasSyncedSuccessfullyOnce()
-  {
-    return initializationLatch.getCount() <= 0;
-  }
-
   /**
    * Whether this syncer should be reset. This method returning true typically
    * indicates a problem with the sync scheduler.
@@ -322,9 +309,7 @@ public class ChangeRequestHttpSyncer<T>
                     log.info("Server[%s] synced successfully.", logIdentity);
                   }
 
-                  synchronized (sinceLastSyncSuccess) {
-                    sinceLastSyncSuccess.restart();
-                  }
+                  sinceLastSyncSuccess.restart();
                 }
                 catch (Exception ex) {
                   markServerUnstableAndAlert(ex, "Processing Response");
