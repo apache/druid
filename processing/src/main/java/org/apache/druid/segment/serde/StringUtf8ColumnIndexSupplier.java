@@ -25,6 +25,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.DictionaryEncodedValueIndex;
@@ -39,17 +40,16 @@ import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.column.SpatialIndex;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.StringValueSetIndex;
-import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
+public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>> implements ColumnIndexSupplier
 {
   private final BitmapFactory bitmapFactory;
-  private final Supplier<FrontCodedIndexed> utf8Dictionary;
+  private final Supplier<TIndexed> utf8Dictionary;
 
   @Nullable
   private final GenericIndexed<ImmutableBitmap> bitmaps;
@@ -57,17 +57,34 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
   @Nullable
   private final ImmutableRTree indexedTree;
 
-  public StringFrontCodedColumnIndexSupplier(
+  private final ColumnConfig columnConfig;
+  private final int numRows;
+
+  public StringUtf8ColumnIndexSupplier(
       BitmapFactory bitmapFactory,
-      Supplier<FrontCodedIndexed> utf8Dictionary,
+      Supplier<TIndexed> utf8Dictionary,
       @Nullable GenericIndexed<ImmutableBitmap> bitmaps,
       @Nullable ImmutableRTree indexedTree
+  )
+  {
+    this(bitmapFactory, utf8Dictionary, bitmaps, indexedTree, ColumnConfig.ALWAYS_USE_INDEXES, Integer.MAX_VALUE);
+  }
+
+  public StringUtf8ColumnIndexSupplier(
+          BitmapFactory bitmapFactory,
+          Supplier<TIndexed> utf8Dictionary,
+          @Nullable GenericIndexed<ImmutableBitmap> bitmaps,
+          @Nullable ImmutableRTree indexedTree,
+          @Nullable ColumnConfig columnConfig,
+          int numRows
   )
   {
     this.bitmapFactory = bitmapFactory;
     this.bitmaps = bitmaps;
     this.utf8Dictionary = utf8Dictionary;
     this.indexedTree = indexedTree;
+    this.columnConfig = columnConfig;
+    this.numRows = numRows;
   }
 
   @Nullable
@@ -90,7 +107,8 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
         final BitmapColumnIndex nullIndex;
         final ByteBuffer firstValue = dict.get(0);
         if (NullHandling.isNullOrEquivalent(firstValue)) {
-          nullIndex = new SimpleImmutableBitmapIndex(singleThreadedBitmaps.get(0));
+          ImmutableBitmap bitmap = singleThreadedBitmaps.get(0);
+          nullIndex = new SimpleImmutableBitmapIndex(bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap);
         } else {
           nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
         }
@@ -105,14 +123,18 @@ public class StringFrontCodedColumnIndexSupplier implements ColumnIndexSupplier
         return (T) new IndexedStringDruidPredicateIndex<>(
             bitmapFactory,
             new StringEncodingStrategies.Utf8ToStringIndexed(dict),
-            singleThreadedBitmaps
+            singleThreadedBitmaps,
+            columnConfig,
+            numRows
         );
       } else if (clazz.equals(LexicographicalRangeIndex.class)) {
         return (T) new IndexedUtf8LexicographicalRangeIndex<>(
             bitmapFactory,
             dict,
             singleThreadedBitmaps,
-            dict.get(0) == null
+            dict.get(0) == null,
+            columnConfig,
+            numRows
         );
       } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)
                  || clazz.equals(DictionaryEncodedValueIndex.class)) {
