@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatus;
@@ -128,6 +129,22 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder -> deserialize(holder, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
+    );
+  }
+
+  @Override
+  public ListenableFuture<TaskPayloadResponse> taskPayload(String taskId)
+  {
+    final String path = StringUtils.format("/druid/indexer/v1/task/%s", StringUtils.urlEncode(taskId));
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> deserialize(holder, new TypeReference<TaskPayloadResponse>()
+        {
+        })
     );
   }
 

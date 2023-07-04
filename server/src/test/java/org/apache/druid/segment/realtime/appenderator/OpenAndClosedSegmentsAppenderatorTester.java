@@ -159,11 +159,6 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
         objectMapper,
         new ColumnConfig()
         {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
         }
     );
     indexMerger = new IndexMergerV9(objectMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());

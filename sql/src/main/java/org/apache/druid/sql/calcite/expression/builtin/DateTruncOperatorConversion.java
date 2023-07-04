@@ -30,7 +30,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
@@ -67,7 +66,7 @@ public class DateTruncOperatorConversion implements SqlOperatorConversion
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("DATE_TRUNC")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.TIMESTAMP)
-      .requiredOperands(2)
+      .requiredOperandCount(2)
       .returnTypeCascadeNullable(SqlTypeName.TIMESTAMP)
       .functionCategory(SqlFunctionCategory.TIMEDATE)
       .build();
@@ -91,10 +90,7 @@ public class DateTruncOperatorConversion implements SqlOperatorConversion
         rexNode,
         inputExpressions -> {
           final DruidExpression arg = inputExpressions.get(1);
-          final Expr truncTypeExpr = Parser.parse(
-              inputExpressions.get(0).getExpression(),
-              plannerContext.getExprMacroTable()
-          );
+          final Expr truncTypeExpr = plannerContext.parseExpression(inputExpressions.get(0).getExpression());
 
           if (!truncTypeExpr.isLiteral()) {
             throw new IAE("Operator[%s] truncType must be a literal", calciteOperator().getName());

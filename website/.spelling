@@ -114,6 +114,7 @@ IcebergInputSource
 IETF
 IP
 IPv4
+IS_AGGREGATOR
 IS_BROADCAST
 IS_JOINABLE
 IS0
@@ -193,6 +194,10 @@ pull-deps
 RDBMS
 RDDs
 RDS
+ROUTINE_CATALOG
+ROUTINE_NAME
+ROUTINE_SCHEMA
+ROUTINE_TYPE
 Rackspace
 Redis
 S3
@@ -645,6 +650,7 @@ num_segments
 partition_num
 plaintext_port
 queue_insertion_time
+replication_factor
 runner_status
 segment_id
 server_type
@@ -1481,6 +1487,7 @@ nvl
 parse_long
 regexp_extract
 regexp_like
+regexp_replace
 contains_string
 icontains_string
 result1

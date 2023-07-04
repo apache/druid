@@ -631,7 +631,7 @@ public class DataSourcesResourceTest
   public void testIsHandOffComplete()
   {
     MetadataRuleManager databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
-    Rule loadRule = new IntervalLoadRule(Intervals.of("2013-01-02T00:00:00Z/2013-01-03T00:00:00Z"), null);
+    Rule loadRule = new IntervalLoadRule(Intervals.of("2013-01-02T00:00:00Z/2013-01-03T00:00:00Z"), null, null);
     Rule dropRule = new IntervalDropRule(Intervals.of("2013-01-01T00:00:00Z/2013-01-02T00:00:00Z"));
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(inventoryView, null, databaseRuleManager, null, null, null);
@@ -1449,7 +1449,7 @@ public class DataSourcesResourceTest
     EasyMock.expect(segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(EasyMock.eq("datasource1"), EasyMock.anyObject(Interval.class), EasyMock.anyBoolean()))
             .andReturn(Optional.of(segments)).once();
     DruidCoordinator druidCoordinator = EasyMock.createMock(DruidCoordinator.class);
-    EasyMock.expect(druidCoordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegments(segments))
+    EasyMock.expect(druidCoordinator.getTierToDatasourceToUnderReplicatedCount(segments, false))
             .andReturn(underReplicationCountsPerDataSourcePerTier).once();
 
     EasyMock.replay(segmentsMetadataManager, druidCoordinator);
@@ -1506,7 +1506,7 @@ public class DataSourcesResourceTest
     EasyMock.expect(segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(EasyMock.eq("datasource1"), EasyMock.anyObject(Interval.class), EasyMock.anyBoolean()))
             .andReturn(Optional.of(segments)).once();
     DruidCoordinator druidCoordinator = EasyMock.createMock(DruidCoordinator.class);
-    EasyMock.expect(druidCoordinator.computeUnderReplicationCountsPerDataSourcePerTierForSegmentsUsingClusterView(segments))
+    EasyMock.expect(druidCoordinator.getTierToDatasourceToUnderReplicatedCount(segments, true))
             .andReturn(underReplicationCountsPerDataSourcePerTier).once();
 
     EasyMock.replay(segmentsMetadataManager, druidCoordinator);

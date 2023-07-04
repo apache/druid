@@ -90,6 +90,7 @@ import org.apache.druid.msq.indexing.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelsImpl;
 import org.apache.druid.msq.indexing.MSQControllerTask;
+import org.apache.druid.msq.indexing.MSQSelectDestination;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
@@ -101,7 +102,6 @@ import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.FaultsExceededChecker;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
-import org.apache.druid.msq.indexing.error.InsertCannotOrderByDescendingFault;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
@@ -206,6 +206,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -467,7 +468,8 @@ public class ControllerImpl implements Controller
             queryDef,
             resultsYielder,
             task.getQuerySpec().getColumnMappings(),
-            task.getSqlTypeNames()
+            task.getSqlTypeNames(),
+            MultiStageQueryContext.getSelectDestination(task.getQuerySpec().getQuery().context())
         );
       } else {
         resultsReport = null;
@@ -940,7 +942,22 @@ public class ControllerImpl implements Controller
         throw new MSQException(
             new InsertCannotAllocateSegmentFault(
                 task.getDataSource(),
-                segmentGranularity.bucket(timestamp)
+                segmentGranularity.bucket(timestamp),
+                null
+            )
+        );
+      }
+
+      // Even if allocation isn't null, the overlord makes the best effort job of allocating a segment with the given
+      // segmentGranularity. This is commonly seen in case when there is already a coarser segment in the interval where
+      // the requested segment is present and that segment completely overlaps the request. Throw an error if the interval
+      // doesn't match the granularity requested
+      if (!IntervalUtils.isAligned(allocation.getInterval(), segmentGranularity)) {
+        throw new MSQException(
+            new InsertCannotAllocateSegmentFault(
+                task.getDataSource(),
+                segmentGranularity.bucket(timestamp),
+                allocation.getInterval()
             )
         );
       }
@@ -990,7 +1007,7 @@ public class ControllerImpl implements Controller
 
       // Validate interval against the replaceTimeChunks set of intervals.
       if (destination.getReplaceTimeChunks().stream().noneMatch(chunk -> chunk.contains(interval))) {
-        throw new MSQException(new InsertTimeOutOfBoundsFault(interval));
+        throw new MSQException(new InsertTimeOutOfBoundsFault(interval, destination.getReplaceTimeChunks()));
       }
 
       final List<Pair<Integer, ClusterByPartition>> ranges = bucketEntry.getValue();
@@ -1395,67 +1412,78 @@ public class ControllerImpl implements Controller
 
       return Yielders.each(
           Sequences.concat(
-              StreamSupport.stream(queryKernel.getResultPartitionsForStage(finalStageId).spliterator(), false)
-                           .map(
-                               readablePartition -> {
-                                 try {
-                                   return new FrameChannelSequence(
-                                       inputChannels.openChannel(
-                                           new StagePartition(
-                                               queryKernel.getStageDefinition(finalStageId).getId(),
-                                               readablePartition.getPartitionNumber()
-                                           )
-                                       )
-                                   );
-                                 }
-                                 catch (IOException e) {
-                                   throw new RuntimeException(e);
-                                 }
+                       StreamSupport.stream(queryKernel.getResultPartitionsForStage(finalStageId).spliterator(), false)
+                                    .map(
+                                        readablePartition -> {
+                                          try {
+                                            return new FrameChannelSequence(
+                                                inputChannels.openChannel(
+                                                    new StagePartition(
+                                                        queryKernel.getStageDefinition(finalStageId).getId(),
+                                                        readablePartition.getPartitionNumber()
+                                                    )
+                                                )
+                                            );
+                                          }
+                                          catch (IOException e) {
+                                            throw new RuntimeException(e);
+                                          }
+                                        }
+                                    ).collect(Collectors.toList())
+                   ).flatMap(
+                       frame -> {
+                         final Cursor cursor = FrameProcessors.makeCursor(
+                             frame,
+                             queryKernel.getStageDefinition(finalStageId).getFrameReader()
+                         );
+
+                         final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+                         final ColumnMappings columnMappings = task.getQuerySpec().getColumnMappings();
+                         @SuppressWarnings("rawtypes")
+                         final List<ColumnValueSelector> selectors =
+                             columnMappings.getMappings()
+                                           .stream()
+                                           .map(
+                                               mapping ->
+                                                   columnSelectorFactory.makeColumnValueSelector(mapping.getQueryColumn())
+                                           ).collect(Collectors.toList());
+
+                         final List<SqlTypeName> sqlTypeNames = task.getSqlTypeNames();
+                         Iterable<Object[]> retVal = () -> new Iterator<Object[]>()
+                         {
+                           @Override
+                           public boolean hasNext()
+                           {
+                             return !cursor.isDone();
+                           }
+
+                           @Override
+                           public Object[] next()
+                           {
+                             final Object[] row = new Object[columnMappings.size()];
+                             for (int i = 0; i < row.length; i++) {
+                               final Object value = selectors.get(i).getObject();
+                               if (sqlTypeNames == null || task.getSqlResultsContext() == null) {
+                                 // SQL type unknown, or no SQL results context: pass-through as is.
+                                 row[i] = value;
+                               } else {
+                                 row[i] = SqlResults.coerce(
+                                     context.jsonMapper(),
+                                     task.getSqlResultsContext(),
+                                     value,
+                                     sqlTypeNames.get(i),
+                                     columnMappings.getOutputColumnName(i)
+                                 );
                                }
-                           ).collect(Collectors.toList())
-          ).flatMap(
-              frame -> {
-                final Cursor cursor = FrameProcessors.makeCursor(
-                    frame,
-                    queryKernel.getStageDefinition(finalStageId).getFrameReader()
-                );
-
-                final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
-                final ColumnMappings columnMappings = task.getQuerySpec().getColumnMappings();
-                @SuppressWarnings("rawtypes")
-                final List<ColumnValueSelector> selectors =
-                    columnMappings.getMappings()
-                                  .stream()
-                                  .map(
-                                      mapping ->
-                                          columnSelectorFactory.makeColumnValueSelector(mapping.getQueryColumn())
-                                  ).collect(Collectors.toList());
-
-                final List<SqlTypeName> sqlTypeNames = task.getSqlTypeNames();
-                final List<Object[]> retVal = new ArrayList<>();
-                while (!cursor.isDone()) {
-                  final Object[] row = new Object[columnMappings.size()];
-                  for (int i = 0; i < row.length; i++) {
-                    final Object value = selectors.get(i).getObject();
-                    if (sqlTypeNames == null || task.getSqlResultsContext() == null) {
-                      // SQL type unknown, or no SQL results context: pass-through as is.
-                      row[i] = value;
-                    } else {
-                      row[i] = SqlResults.coerce(
-                          context.jsonMapper(),
-                          task.getSqlResultsContext(),
-                          value,
-                          sqlTypeNames.get(i)
-                      );
-                    }
-                  }
-                  retVal.add(row);
-                  cursor.advance();
-                }
-
-                return Sequences.simple(retVal);
-              }
-          ).withBaggage(resultReaderExec::shutdownNow)
+                             }
+                             cursor.advance();
+                             return row;
+                           }
+                         };
+                         return Sequences.simple(retVal);
+                       }
+                   )
+                   .withBaggage(resultReaderExec::shutdownNow)
       );
     } else {
       return null;
@@ -1843,10 +1871,6 @@ public class ControllerImpl implements Controller
     // Such fields in CLUSTERED BY still control partitioning as expected, but do not affect sort order of rows
     // within an individual segment.
     for (final KeyColumn clusterByColumn : queryClusterBy.getColumns()) {
-      if (clusterByColumn.order() == KeyOrder.DESCENDING) {
-        throw new MSQException(new InsertCannotOrderByDescendingFault(clusterByColumn.columnName()));
-      }
-
       final IntList outputColumns = columnMappings.getOutputColumnsForQueryColumn(clusterByColumn.columnName());
       for (final int outputColumn : outputColumns) {
         outputColumnsInOrder.add(columnMappings.getOutputColumnName(outputColumn));
@@ -2011,7 +2035,8 @@ public class ControllerImpl implements Controller
       final QueryDefinition queryDef,
       final Yielder<Object[]> resultsYielder,
       final ColumnMappings columnMappings,
-      @Nullable final List<SqlTypeName> sqlTypeNames
+      @Nullable final List<SqlTypeName> sqlTypeNames,
+      final MSQSelectDestination selectDestination
   )
   {
     final RowSignature querySignature = queryDef.getFinalStageDefinition().getSignature();
@@ -2026,7 +2051,7 @@ public class ControllerImpl implements Controller
       );
     }
 
-    return new MSQResultsReport(mappedSignature.build(), sqlTypeNames, resultsYielder);
+    return MSQResultsReport.createReportAndLimitRowsIfNeeded(mappedSignature.build(), sqlTypeNames, resultsYielder, selectDestination);
   }
 
   private static MSQStatusReport makeStatusReport(
