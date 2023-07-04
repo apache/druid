@@ -55,25 +55,25 @@ import java.util.Map;
  * Secondly, given that the DruidException requires defining a target persona, exception messages should always be
  * written with that target persona in mind.  Reviewers should use the targetPersona as added input to help validate
  * that an exception message in meaningful.
- * <br>
+ * <p>
  * For example, at the time that this exception was introduced, there is an exception that the router throws which is
  * an {@link org.apache.druid.java.util.common.ISE} with the message {@code "No default server found!"}.  This
  * exception is thrown when the router is unable to find a broker to forward a request to.  It is completely
  * meaningless to an end-user trying to run a query (what's a default server?  why does it need to be found?).  If we
- * were to convert the exception to a DruidException and keep the same message, we should mark it as targetting the
+ * were to convert the exception to a DruidException and keep the same message, we should mark it as targeting the
  * DEVELOPER persona as that is the only persona who should actually be able to figure out what a default server is
- * and why it is important.  That said, does it makes sense for an exception that means "router cannot find a broker
- * to forward the query to" to only be targetting the DEVELOPER?  The answer to that is no, it's something that should
- * really be made meaningful to a wider group.  Some options could be:
+ * and why it is important.  That said, does it make sense for an exception that means "router cannot find a broker
+ * to forward the query to" to only be targeting the DEVELOPER?  The answer to that is no, it's something that should
+ * really be made meaningful to a wider group. Some options could be
  * <ul>
- * <li>USER persona: Cannot find a queryable server, contact your cluster administrator to validate that all services are
+ * <li><b>USER</b> persona: Cannot find a queryable server, contact your cluster administrator to validate that all services are
  * operational</li>
- * <li>OPERATOR persona: Router unable to find a broker, check that brokers are up and active</li>
+ * <li><b>OPERATOR</b> persona: Router unable to find a broker, check that brokers are up and active</li>
  * </ul>
  * The user-facing message doesn't talk about any Druid-specific concepts and just tries to relay a high-level
  * understanding of what happened.  The admin-facing message includes Druid notions in it as it expects that an Admin
  * will understand the various node types of Druid.
- *
+ * <p>
  * If we think about this error more, we will realize that it's fundamentally something wrong with the cluster setup,
  * which is something that we would expect an operator to be in charge of.  So, we would pick the OPERATOR persona
  * message, which also allows us to include more specific information about what server was not found and provide a
@@ -94,8 +94,8 @@ import java.util.Map;
  * <ol>
  *   <li>It identifies why the developer is creating the exception and who they believe can take action on it.
  *   This context allows for code reviewers and other developers to evaluate the message with the persona in mind</li>
- *   <li>It can be used as a way to control which error messages should be routed where.  For example, a user-targetted
- *   error message should be able to be exposed directly to the user, while an operator-targetted error message should
+ *   <li>It can be used as a way to control which error messages should be routed where.  For example, a user-targeted
+ *   error message should be able to be exposed directly to the user, while an operator-targeted error message should
  *   perhaps be routed to the operators of the system instead of the end user firing a query.</li>
  * </ol>
  * <p>
@@ -104,11 +104,11 @@ import java.util.Map;
  * <p>
  * The error code is a code that indicates a grouping of error messages.  There is no forced structure around whether
  * a specific error code can be reused for different problems or not.  That is, an error code like "general" will get
- * reused in many different places as it's the basic error code used whenever a DruidException is created in-line.  But,
+ * reused in many places as it's the basic error code used whenever a DruidException is created in-line.  But,
  * we might decide that a specific type of error should be identified explicitly by its error code and should only mean
  * one thing, in which case that error code might only exist on a single error.
  * <p>
- * The error message is a message written targetting the target persona.  It should have values interpolated into it
+ * The error message is a message written targeting the target persona.  It should have values interpolated into it
  * in order to be as meaningful as possible for the target persona without leaking potentially sensitive information.
  * <p>
  * The context is a place to add extra information about the error that is not necessarily interpolated into the
@@ -265,7 +265,7 @@ public class DruidException extends RuntimeException
   }
 
   /**
-   * The persona that the message on a DruidException is targetting
+   * The persona that the message on a DruidException is targeting
    */
   public enum Persona
   {
@@ -306,7 +306,7 @@ public class DruidException extends RuntimeException
     DEFENSIVE(500),
     /**
      * Means that the input provided was malformed in some way.  Generally speaking, it is hoped that errors of this
-     * category have messages written either targetting the USER or ADMIN personas as those are the general users
+     * category have messages written either targeting the USER or ADMIN personas as those are the general users
      * of the APIs who could generate invalid inputs.
      */
     INVALID_INPUT(400),
@@ -314,6 +314,10 @@ public class DruidException extends RuntimeException
      * Means that the error is a problem with authorization.
      */
     UNAUTHORIZED(401),
+    /**
+     * Means that an action that was attempted is forbidden
+     */
+    FORBIDDEN(403),
     /**
      * Means that some capacity limit was exceeded, this could be due to throttling or due to some system limit
      */

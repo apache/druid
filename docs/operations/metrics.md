@@ -66,6 +66,9 @@ Metrics may have additional dimensions beyond those listed above.
 |`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 |`init/serverview/time`|Time taken to initialize the broker server view. Useful to detect if brokers are taking too long to start.||Depends on the number of segments.|
 |`init/metadatacache/time`|Time taken to initialize the broker segment metadata cache. Useful to detect if brokers are taking too long to start||Depends on the number of segments.|
+|`segment/metadatacache/refresh/count`|Number of segments to refresh in broker segment metadata cache.|`dataSource`|
+|`segment/metadatacache/refresh/time`|Time taken to refresh segments in broker segment metadata cache.|`dataSource`|
+
 
 ### Historical
 
@@ -325,6 +328,12 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 If `emitBalancingStats` is set to `true` in the Coordinator [dynamic configuration](../configuration/index.md#dynamic-configuration), then [log entries](../configuration/logging.md) for class `org.apache.druid.server.coordinator.duty.EmitClusterStatsAndMetrics` will have extra information on balancing decisions.
 
 ## General Health
+
+### Service Health
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+| `service/heartbeat` | Metric indicating the service is up. `ServiceStatusMonitor` must be enabled. |`leader` on the Overlord and Coordinator.|1|
 
 ### Historical
 

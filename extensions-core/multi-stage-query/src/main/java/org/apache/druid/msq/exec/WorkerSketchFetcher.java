@@ -244,6 +244,24 @@ public class WorkerSketchFetcher implements AutoCloseable
       throw new ISE("All worker partial key information not received for stage[%d]", stageId.getStageNumber());
     }
 
+    if (completeKeyStatisticsInformation.getTimeSegmentVsWorkerMap().isEmpty()) {
+      // No time chunks at all: skip fetching.
+      kernelActions.accept(
+          kernel -> {
+            for (final String taskId : tasks) {
+              final int workerNumber = MSQTasks.workerFromTaskId(taskId);
+              kernel.mergeClusterByStatisticsCollectorForAllTimeChunks(
+                  stageId,
+                  workerNumber,
+                  ClusterByStatisticsSnapshot.empty()
+              );
+            }
+          }
+      );
+
+      return;
+    }
+
     completeKeyStatisticsInformation.getTimeSegmentVsWorkerMap().forEach((timeChunk, wks) -> {
 
       for (String taskId : tasks) {
