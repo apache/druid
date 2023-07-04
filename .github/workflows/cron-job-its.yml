@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Cron Job ITs
+name: "Cron Job ITs"
 on:
   schedule: # Runs by default on master branch
     - cron: '0 3 * * *' # Runs every day at 3:00 AM UTC

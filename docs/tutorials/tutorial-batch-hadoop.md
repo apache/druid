@@ -1,7 +1,7 @@
 ---
 id: tutorial-batch-hadoop
-title: "Tutorial: Load batch data using Apache Hadoop"
-sidebar_label: "Load from Apache Hadoop"
+title: Load batch data using Apache Hadoop
+sidebar_label: Load from Apache Hadoop
 ---
 
 <!--

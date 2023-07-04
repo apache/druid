@@ -182,7 +182,12 @@ public interface Task
   <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
-   * @return true if this Task type is queryable, such as streaming ingestion tasks
+   * True if this task type embeds a query stack, and therefore should preload resources (like broadcast tables)
+   * that may be needed by queries.
+   *
+   * If true, {@link #getQueryRunner(Query)} does not necessarily return nonnull query runners. For example,
+   * MSQWorkerTask returns true from this method (because it embeds a query stack for running multi-stage queries)
+   * even though it is not directly queryable via HTTP.
    */
   boolean supportsQueries();
 

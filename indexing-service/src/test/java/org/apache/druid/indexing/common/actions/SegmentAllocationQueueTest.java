@@ -223,8 +223,7 @@ public class SegmentAllocationQueueTest
     executor.finishNextPendingTask();
 
     Assert.assertNotNull(getSegmentId(hourSegmentFuture));
-    Throwable t = Assert.assertThrows(ISE.class, () -> getSegmentId(halfHourSegmentFuture));
-    Assert.assertEquals("Storage coordinator could not allocate segment.", t.getMessage());
+    Assert.assertNull(getSegmentId(halfHourSegmentFuture));
   }
 
   @Test
@@ -309,7 +308,7 @@ public class SegmentAllocationQueueTest
 
     for (Future<SegmentIdWithShardSpec> future : segmentFutures) {
       Throwable t = Assert.assertThrows(ISE.class, () -> getSegmentId(future));
-      Assert.assertEquals("Cannot allocate segment if not leader", t.getMessage());
+      Assert.assertEquals("Not leader anymore", t.getMessage());
     }
   }
 

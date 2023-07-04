@@ -32,8 +32,10 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -48,6 +50,7 @@ import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -60,7 +63,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -413,22 +415,24 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
-    expectedException.expectMessage(
-        "dataSource cannot be null or empty. Please provide a dataSource."
-    );
-
-    DataSchema schema = new DataSchema(
-        "",
-        parser,
-        new AggregatorFactory[]{
-            new DoubleSumAggregatorFactory("metric1", "col1"),
-            new DoubleSumAggregatorFactory("metric2", "col2"),
-            },
-        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
-        null,
-        jsonMapper
-    );
+    DruidExceptionMatcher
+        .invalidInput()
+        .expectMessageIs("Invalid value for field [dataSource]: must not be null")
+        .assertThrowsAndMatches(
+            () -> new DataSchema(
+                "",
+                parser,
+                new AggregatorFactory[]{
+                    new DoubleSumAggregatorFactory("metric1", "col1"),
+                    new DoubleSumAggregatorFactory("metric2", "col2"),
+                    },
+                new ArbitraryGranularitySpec(
+                    Granularities.DAY,
+                    ImmutableList.of(Intervals.of("2014/2015"))
+                ),
+                null,
+                jsonMapper
+            ));
   }
 
 
@@ -442,27 +446,21 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     );
 
     for (Map.Entry<String, String> entry : invalidCharToDataSourceName.entrySet()) {
-      testInvalidWhitespaceDatasourceHelper(entry.getValue(), entry.getKey());
-    }
-  }
-
-  private void testInvalidWhitespaceDatasourceHelper(String dataSource, String invalidChar)
-  {
-    String testFailMsg = "dataSource contain invalid whitespace character: " + invalidChar;
-    try {
-      DataSchema schema = new DataSchema(
-          dataSource,
-          Collections.emptyMap(),
-          null,
-          null,
-          null,
-          jsonMapper
+      String dataSource = entry.getValue();
+      final String msg = StringUtils.format(
+          "Invalid value for field [dataSource]: Value [%s] contains illegal whitespace characters.  Only space is allowed.",
+          dataSource
       );
-      Assert.fail(testFailMsg);
-    }
-    catch (IllegalArgumentException errorMsg) {
-      String expectedMsg = "dataSource cannot contain whitespace character except space.";
-      Assert.assertEquals(testFailMsg, expectedMsg, errorMsg.getMessage());
+      DruidExceptionMatcher.invalidInput().expectMessageIs(msg).assertThrowsAndMatches(
+          () -> new DataSchema(
+              dataSource,
+              Collections.emptyMap(),
+              null,
+              null,
+              null,
+              jsonMapper
+          )
+      );
     }
   }
 
@@ -524,10 +522,22 @@ public class DataSchemaTest extends InitializedNullHandlingTest
   public void testSerializeWithInvalidDataSourceName() throws Exception
   {
     // Escape backslashes to insert a tab character in the datasource name.
-    List<String> datasources = ImmutableList.of("", "../invalid", "\tname", "name\t invalid");
-    for (String datasource : datasources) {
+    Map<String, String> datasourceToErrorMsg = ImmutableMap.of(
+        "",
+        "Invalid value for field [dataSource]: must not be null",
+
+        "../invalid",
+        "Invalid value for field [dataSource]: Value [../invalid] cannot start with '.'.",
+
+        "\tname",
+        "Invalid value for field [dataSource]: Value [\tname] contains illegal whitespace characters.  Only space is allowed.",
+
+        "name\t invalid",
+        "Invalid value for field [dataSource]: Value [name\t invalid] contains illegal whitespace characters.  Only space is allowed."
+    );
+    for (Map.Entry<String, String> entry : datasourceToErrorMsg.entrySet()) {
       String jsonStr = "{"
-                       + "\"dataSource\":\"" + StringEscapeUtils.escapeJson(datasource) + "\","
+                       + "\"dataSource\":\"" + StringEscapeUtils.escapeJson(entry.getKey()) + "\","
                        + "\"parser\":{"
                        + "\"type\":\"string\","
                        + "\"parseSpec\":{"
@@ -552,10 +562,16 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         );
       }
       catch (ValueInstantiationException e) {
-        Assert.assertEquals(IllegalArgumentException.class, e.getCause().getClass());
+        MatcherAssert.assertThat(
+            entry.getKey(),
+            e.getCause(),
+            DruidExceptionMatcher.invalidInput().expectMessageIs(
+                entry.getValue()
+            )
+        );
         continue;
       }
-      Assert.fail("Serialization of datasource " + datasource + " should have failed.");
+      Assert.fail("Serialization of datasource " + entry.getKey() + " should have failed.");
     }
   }
 

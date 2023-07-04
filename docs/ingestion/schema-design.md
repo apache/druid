@@ -24,17 +24,17 @@ title: "Schema design tips"
 
 ## Druid's data model
 
-For general information, check out the documentation on [Druid's data model](./data-model.md) on the main
+For general information, check out the documentation on [Druid schema model](./schema-model.md) on the main
 ingestion overview page. The rest of this page discusses tips for users coming from other kinds of systems, as well as
 general tips and common practices.
 
-* Druid data is stored in [datasources](./data-model.md), which are similar to tables in a traditional RDBMS.
+* Druid data is stored in [datasources](./schema-model.md), which are similar to tables in a traditional RDBMS.
 * Druid datasources can be ingested with or without [rollup](./rollup.md). With rollup enabled, Druid partially aggregates your data during ingestion, potentially reducing its row count, decreasing storage footprint, and improving query performance. With rollup disabled, Druid stores one row for each row in your input data, without any pre-aggregation.
 * Every row in Druid must have a timestamp. Data is always partitioned by time, and every query has a time filter. Query results can also be broken down by time buckets like minutes, hours, days, and so on.
 * All columns in Druid datasources, other than the timestamp column, are either dimensions or metrics. This follows the [standard naming convention](https://en.wikipedia.org/wiki/Online_analytical_processing#Overview_of_OLAP_systems) of OLAP data.
 * Typical production datasources have tens to hundreds of columns.
-* [Dimension columns](./data-model.md#dimensions) are stored as-is, so they can be filtered on, grouped by, or aggregated at query time. They are always single Strings, [arrays of Strings](../querying/multi-value-dimensions.md), single Longs, single Doubles or single Floats.
-* [Metric columns](./data-model.md#metrics) are stored [pre-aggregated](../querying/aggregations.md), so they can only be aggregated at query time (not filtered or grouped by). They are often stored as numbers (integers or floats) but can also be stored as complex objects like [HyperLogLog sketches or approximate quantile sketches](../querying/aggregations.md#approximate-aggregations). Metrics can be configured at ingestion time even when rollup is disabled, but are most useful when rollup is enabled.
+* [Dimension columns](./schema-model.md#dimensions) are stored as-is, so they can be filtered on, grouped by, or aggregated at query time. They are always single Strings, [arrays of Strings](../querying/multi-value-dimensions.md), single Longs, single Doubles or single Floats.
+* [Metric columns](./schema-model.md#metrics) are stored [pre-aggregated](../querying/aggregations.md), so they can only be aggregated at query time (not filtered or grouped by). They are often stored as numbers (integers or floats) but can also be stored as complex objects like [HyperLogLog sketches or approximate quantile sketches](../querying/aggregations.md#approximate-aggregations). Metrics can be configured at ingestion time even when rollup is disabled, but are most useful when rollup is enabled.
 
 ## If you're coming from a
 
@@ -107,7 +107,7 @@ to compute percentiles or quantiles, use Druid's [approximate aggregators](../qu
 row in your Druid datasource. This can be useful if you want to store data at a different time granularity than it is
 naturally emitted. It is also useful if you want to combine timeseries and non-timeseries data in the same datasource.
 * If you don't know ahead of time what columns you'll want to ingest, use an empty dimensions list to trigger
-[automatic detection of dimension columns](#schema-less-dimensions).
+[automatic detection of dimension columns](#schema-auto-discovery-for-dimensions).
 
 ### Log aggregation model
 
@@ -120,8 +120,7 @@ you must be more explicit. Druid columns have types specific upfront.
 
 Tips for modeling log data in Druid:
 
-* If you don't know ahead of time what columns you'll want to ingest, use an empty dimensions list to trigger
-[automatic detection of dimension columns](#schema-less-dimensions).
+* If you don't know ahead of time what columns to ingest, you can have Druid perform [schema auto-discovery](#schema-auto-discovery-for-dimensions).
 * If you have nested data, you can ingest it using the [nested columns](../querying/nested-columns.md) feature or flatten it using a [`flattenSpec`](./ingestion-spec.md#flattenspec).
 * Consider enabling [rollup](./rollup.md) if you have mainly analytical use cases for your log data. This will
 mean you lose the ability to retrieve individual events from Druid, but you potentially gain substantial compression and
@@ -189,11 +188,11 @@ Druid is able to rapidly identify and retrieve data corresponding to time ranges
 If your data has more than one timestamp, you can ingest the others as secondary timestamps. The best way to do this
 is to ingest them as [long-typed dimensions](./ingestion-spec.md#dimensionsspec) in milliseconds format.
 If necessary, you can get them into this format using a [`transformSpec`](./ingestion-spec.md#transformspec) and
-[expressions](../misc/math-expr.md) like `timestamp_parse`, which returns millisecond timestamps.
+[expressions](../querying/math-expr.md) like `timestamp_parse`, which returns millisecond timestamps.
 
 At query time, you can query secondary timestamps with [SQL time functions](../querying/sql-scalar.md#date-and-time-functions)
 like `MILLIS_TO_TIMESTAMP`, `TIME_FLOOR`, and others. If you're using native Druid queries, you can use
-[expressions](../misc/math-expr.md).
+[expressions](../querying/math-expr.md).
 
 ### Nested dimensions
 
@@ -241,12 +240,53 @@ You should query for the number of ingested rows with:
 ]
 ```
 
-### Schema-less dimensions
+### Schema auto-discovery for dimensions
 
-If the `dimensions` field is left empty in your ingestion spec, Druid will treat every column that is not the timestamp column,
-a dimension that has been excluded, or a metric column as a dimension.
+Druid can infer the schema for your data in one of two ways:
 
-Note that when using schema-less ingestion, all dimensions will be ingested as String-typed dimensions.
+- [Type-aware schema discovery (experimental)](#type-aware-schema-discovery) where Druid infers the schema and type for your data. Type-aware schema discovery is an experimental feature currently available for native batch and streaming ingestion.
+- [String-based schema discovery](#string-based-schema-discovery) where all the discovered columns are typed as either native string or multi-value string columns.
+
+#### Type-aware schema discovery
+
+> Note that using type-aware schema discovery can impact downstream BI tools depending on how they handle ARRAY typed columns.
+
+You can have Druid infer the schema and types for your data partially or fully by setting `dimensionsSpec.useSchemaDiscovery` to `true` and defining some or no dimensions in the dimensions list. 
+
+When performing type-aware schema discovery, Druid can discover all of the columns of your input data (that aren't in
+the exclusion list). Druid automatically chooses the most appropriate native Druid type among `STRING`, `LONG`,
+`DOUBLE`, `ARRAY<STRING>`, `ARRAY<LONG>`, `ARRAY<DOUBLE>`, or `COMPLEX<json>` for nested data. For input formats with
+native boolean types, Druid ingests these values as strings if `druid.expressions.useStrictBooleans` is set to `false`
+(the default), or longs if set to `true` (for more SQL compatible behavior). Array typed columns can be queried using
+the [array functions](../querying/sql-array-functions.md) or [UNNEST](../querying/sql-functions.md#unnest). Nested
+columns can be queried with the [JSON functions](../querying/sql-json-functions.md).
+
+Mixed type columns are stored in the _least_ restrictive type that can represent all values in the column. For example:
+
+- Mixed numeric columns are `DOUBLE`
+- If there are any strings present, then the column is a `STRING`
+- If there are arrays, then the column becomes an array with the least restrictive element type
+- Any nested data or arrays of nested data become `COMPLEX<json>` nested columns.
+
+If you're already using string-based schema discovery and want to migrate, see [Migrating to type-aware schema discovery](#migrating-to-type-aware-schema-discovery).
+
+#### String-based schema discovery
+
+If you do not set `dimensionsSpec.useSchemaDiscovery` to `true`, Druid can still use the string-based schema discovery for ingestion if any of the following conditions are met: 
+
+- The dimension list is empty 
+- You set `includeAllDimensions` to `true` 
+
+Druid coerces primitives and arrays of primitive types into the native Druid string type. Nested data structures and arrays of nested data structures are ignored and not ingested.
+
+#### Migrating to type-aware schema discovery
+
+If you previously used string-based schema discovery and want to migrate to type-aware schema discovery, do the following:
+
+- Update any queries that use multi-value dimensions (MVDs) to use UNNEST in conjunction with other functions so that no MVD behavior is being relied upon. Type-aware schema discovery generates ARRAY typed columns instead of MVDs, so queries that use any MVD features will fail.
+- Be aware of mixed typed inputs and test how type-aware schema discovery handles them. Druid attempts to cast them as the least restrictive type.
+- If you notice issues with numeric types, you may need to explicitly cast them. Generally, Druid handles the coercion for you.
+- Update your dimension exclusion list and add any nested columns if you want to continue to exclude them. String-based schema discovery automatically ignores nested columns, but type-aware schema discovery will ingest them.
 
 ### Including the same column as a dimension and a metric
 

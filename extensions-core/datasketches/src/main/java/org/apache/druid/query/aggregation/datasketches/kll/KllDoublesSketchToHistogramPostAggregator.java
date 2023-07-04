@@ -78,7 +78,7 @@ public class KllDoublesSketchToHistogramPostAggregator implements PostAggregator
       return histogram;
     }
     final double[] histogram = sketch.getPMF(splitPoints != null ? splitPoints :
-      equallySpacedPoints(numBins, sketch.getMinValue(), sketch.getMaxValue()));
+      equallySpacedPoints(numBins, sketch.getMinItem(), sketch.getMaxItem()));
     for (int i = 0; i < histogram.length; i++) {
       histogram[i] *= sketch.getN(); // scale fractions to counts
     }
