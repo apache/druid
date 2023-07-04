@@ -23,7 +23,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.semantic.DecoratableRowsAndColumns;
+import org.apache.druid.query.rowsandcols.semantic.RowsAndColumnsDecorator;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -61,11 +61,11 @@ public class LimitTimeIntervalOperator implements Operator
       @Override
       public Signal push(RowsAndColumns rac)
       {
-        final DecoratableRowsAndColumns decor = DecoratableRowsAndColumns.fromRAC(rac);
+        final RowsAndColumnsDecorator decor = RowsAndColumnsDecorator.fromRAC(rac);
         if (!Intervals.isEternity(interval)) {
           decor.limitTimeRange(interval);
         }
-        return receiver.push(decor);
+        return receiver.push(decor.toRowsAndColumns());
       }
 
       @Override

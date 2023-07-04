@@ -21,7 +21,6 @@ package org.apache.druid.query.rowsandcols.semantic;
 
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.operator.ColumnWithDirection;
-import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
@@ -30,24 +29,28 @@ import java.util.List;
 
 /**
  * An interface for "decorating" a rowsAndColumns.  This basically takes extra metadata that impacts the shape of the
- * RowsAndColumns.  It is expected that implementations will generally do things as lazily as possible, but there's
- * nothing forcing that in this interface.
+ * RowsAndColumns.
  *
- * Once a method is called on this interface, the RowsAndColumns object is expected to be mutated to pretend that it
- * has had the decoration applied.  That is, whether an implementation is lazy or not should not impact what is
- * visible/not visible.
+ * Generally speaking, all of the void methods on this interface should cause the RowsAndColumns object to act
+ * as if it has been mutated with that decoration already.  That is, whether an implementation is lazy or not should
+ * not impact what is visible/not visible.
+ *
+ * After all decoration methods have been called, either {@link #restrictColumns(List)} or {@link #toRowsAndColumns()}
+ * can be called to generate a RowsAndColumns with the decorations applied.  Note, that it is generally expected that
+ * implementations will choose to lazily apply the decorations and not actually materialize them until the last
+ * possible moment, but this is an implementation detail left up to the specific implementation.
  */
-public interface DecoratableRowsAndColumns extends RowsAndColumns
+public interface RowsAndColumnsDecorator
 {
-  static DecoratableRowsAndColumns fromRAC(RowsAndColumns rac)
+  static RowsAndColumnsDecorator fromRAC(RowsAndColumns rac)
   {
-    if (rac instanceof DecoratableRowsAndColumns) {
-      return (DecoratableRowsAndColumns) rac;
+    if (rac instanceof RowsAndColumnsDecorator) {
+      return (RowsAndColumnsDecorator) rac;
     }
 
-    final DecoratableRowsAndColumns retVal = rac.as(DecoratableRowsAndColumns.class);
+    final RowsAndColumnsDecorator retVal = rac.as(RowsAndColumnsDecorator.class);
     if (retVal == null) {
-      return new LazilyDecoratedRowsAndColumns(rac);
+      return new DefaultRowsAndColumnsDecorator(rac);
     }
     return retVal;
   }
@@ -60,7 +63,9 @@ public interface DecoratableRowsAndColumns extends RowsAndColumns
 
   void setLimit(int numRows);
 
-  void restrictColumns(List<String> columns);
-
   void setOrdering(List<ColumnWithDirection> ordering);
+
+  RowsAndColumns restrictColumns(List<String> columns);
+
+  RowsAndColumns toRowsAndColumns();
 }

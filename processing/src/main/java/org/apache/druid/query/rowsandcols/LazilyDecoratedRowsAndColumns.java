@@ -29,32 +29,37 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
-import org.apache.druid.query.rowsandcols.semantic.DecoratableRowsAndColumns;
+import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
+import org.apache.druid.query.rowsandcols.semantic.DefaultRowsAndColumnsDecorator;
+import org.apache.druid.query.rowsandcols.semantic.RowsAndColumnsDecorator;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.filter.AndFilter;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class LazilyDecoratedRowsAndColumns implements DecoratableRowsAndColumns
+public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 {
   private RowsAndColumns base;
   private Interval interval;
@@ -65,10 +70,22 @@ public class LazilyDecoratedRowsAndColumns implements DecoratableRowsAndColumns
   private List<ColumnWithDirection> ordering;
 
   public LazilyDecoratedRowsAndColumns(
-      RowsAndColumns base
+      RowsAndColumns base,
+      Interval interval,
+      Filter filter,
+      VirtualColumns virtualColumns,
+      int limit,
+      List<ColumnWithDirection> ordering,
+      LinkedHashSet<String> viewableColumns
   )
   {
-    reset(base);
+    this.base = base;
+    this.interval = interval;
+    this.filter = filter;
+    this.virtualColumns = virtualColumns;
+    this.limit = limit;
+    this.ordering = ordering;
+    this.viewableColumns = viewableColumns;
   }
 
   @Override
@@ -96,87 +113,28 @@ public class LazilyDecoratedRowsAndColumns implements DecoratableRowsAndColumns
     return base.findColumn(name);
   }
 
+  @SuppressWarnings("unchecked")
   @Nullable
   @Override
   public <T> T as(Class<T> clazz)
   {
-    return null;
-  }
-
-  @Override
-  public void limitTimeRange(Interval interval)
-  {
-    if (this.interval == null) {
-      this.interval = interval;
-    } else {
-      this.interval = this.interval.overlap(interval);
-    }
-  }
-
-  @Override
-  public void addFilter(Filter filter)
-  {
-    if (this.filter == null) {
-      this.filter = filter;
-    } else {
-      LinkedHashSet<Filter> newFilters = new LinkedHashSet<>();
-      if (this.filter instanceof AndFilter) {
-        newFilters.addAll(((AndFilter) this.filter).getFilters());
+    if (RowsAndColumnsDecorator.class.equals(clazz)) {
+      // If we don't have a projection defined, then it's safe to continue collecting more decorations as we
+      // can meaningfully merge them together.
+      if (viewableColumns == null || viewableColumns.isEmpty()) {
+        return (T) new DefaultRowsAndColumnsDecorator(
+            base,
+            interval,
+            filter,
+            virtualColumns,
+            limit,
+            ordering
+        );
       } else {
-        newFilters.add(this.filter);
+        return (T) new DefaultRowsAndColumnsDecorator(this);
       }
-
-      newFilters.add(filter);
-      this.filter = new AndFilter(newFilters);
     }
-  }
-
-  @Override
-  public void addVirtualColumns(VirtualColumns virtualColumns)
-  {
-    if (this.virtualColumns == null) {
-      this.virtualColumns = virtualColumns;
-    } else {
-      final VirtualColumn[] existing = this.virtualColumns.getVirtualColumns();
-      final VirtualColumn[] incoming = virtualColumns.getVirtualColumns();
-      ArrayList<VirtualColumn> cols = new ArrayList<>(existing.length + incoming.length);
-      cols.addAll(Arrays.asList(existing));
-      cols.addAll(Arrays.asList(incoming));
-
-      this.virtualColumns = VirtualColumns.create(cols);
-    }
-  }
-
-  @Override
-  public void setLimit(int numRows)
-  {
-    if (this.limit == -1) {
-      this.limit = numRows;
-    } else {
-      this.limit = Math.min(limit, numRows);
-    }
-  }
-
-  @Override
-  public void restrictColumns(List<String> columns)
-  {
-    if (this.viewableColumns == null) {
-      this.viewableColumns = new LinkedHashSet<>(columns);
-    } else {
-      LinkedHashSet<String> cols = new LinkedHashSet<>();
-      for (String column : columns) {
-        if (viewableColumns.contains(column)) {
-          cols.add(column);
-        }
-      }
-      this.viewableColumns = cols;
-    }
-  }
-
-  @Override
-  public void setOrdering(List<ColumnWithDirection> ordering)
-  {
-    this.ordering = ordering;
+    return null;
   }
 
   private void maybeMaterialize()
@@ -188,15 +146,20 @@ public class LazilyDecoratedRowsAndColumns implements DecoratableRowsAndColumns
 
   private void materialize()
   {
-    final StorageAdapter as = base.as(StorageAdapter.class);
-    if (as == null) {
-      throw new ISE("base[%s] could not become a StorageAdapter", base.getClass());
-    }
-
     if (ordering != null) {
       throw new ISE("Cannot reorder[%s] scan data right now", ordering);
     }
 
+    final StorageAdapter as = base.as(StorageAdapter.class);
+    if (as == null) {
+      reset(naiveMaterialize(base));
+    } else {
+      reset(materializeStorageAdapter(as));
+    }
+  }
+
+  private RowsAndColumns materializeStorageAdapter(StorageAdapter as)
+  {
     final Sequence<Cursor> cursors = as.makeCursors(
         filter,
         interval == null ? Intervals.ETERNITY : interval,
@@ -268,10 +231,10 @@ public class LazilyDecoratedRowsAndColumns implements DecoratableRowsAndColumns
       // This means that the accumulate was never called, which can only happen if we didn't have any cursors.
       // We would only have zero cursors if we essentially didn't match anything, meaning that our RowsAndColumns
       // should be completely empty.
-      reset(new EmptyRowsAndColumns());
+      return new EmptyRowsAndColumns();
     } else {
       final byte[] bytes = writer.toByteArray();
-      reset(new FrameRowsAndColumns(Frame.wrap(bytes), siggy.get()));
+      return new FrameRowsAndColumns(Frame.wrap(bytes), siggy.get());
     }
   }
 
@@ -285,4 +248,107 @@ public class LazilyDecoratedRowsAndColumns implements DecoratableRowsAndColumns
     viewableColumns = null;
     ordering = null;
   }
+
+  private RowsAndColumns naiveMaterialize(RowsAndColumns rac)
+  {
+    final int numRows = rac.numRows();
+
+    BitSet rowsToSkip = null;
+
+    if (interval != null) {
+      rowsToSkip = new BitSet(numRows);
+
+      final Column racColumn = rac.findColumn("__time");
+      if (racColumn == null) {
+        // The time column doesn't exist, this means that we have a null column.  A null column when coerced into a
+        // long as is required by the time filter produces all 0s, so either 0 is included and matches all rows or
+        // it's not and we skip all rows.
+        if (!interval.contains(0)) {
+          return new EmptyRowsAndColumns();
+        }
+      } else {
+        final ColumnAccessor accessor = racColumn.toAccessor();
+        for (int i = 0; i < accessor.numRows(); ++i) {
+          rowsToSkip.set(i, !interval.contains(accessor.getLong(i)));
+        }
+      }
+    }
+
+    AtomicInteger rowId = new AtomicInteger(0);
+    final ColumnSelectorFactoryMaker csfm = ColumnSelectorFactoryMaker.fromRAC(rac);
+    final ColumnSelectorFactory selectorFactory = csfm.make(rowId);
+
+    if (filter != null) {
+      if (rowsToSkip == null) {
+        rowsToSkip = new BitSet(numRows);
+      }
+
+      final ValueMatcher matcher = filter.makeMatcher(selectorFactory);
+
+      for (;rowId.get() < numRows; rowId.incrementAndGet()) {
+        final int theId = rowId.get();
+        if (rowsToSkip.get(theId)) {
+          continue;
+        }
+
+        if (!matcher.matches()) {
+          rowsToSkip.set(theId);
+        }
+      }
+    }
+
+    if (virtualColumns != null) {
+      throw new UOE("Cannot apply virtual columns [%s] with naive apply.", virtualColumns);
+    }
+
+    ArrayList<String> columnsToGenerate = new ArrayList<>();
+    if (viewableColumns != null) {
+      columnsToGenerate.addAll(viewableColumns);
+    } else {
+      columnsToGenerate.addAll(rac.getColumnNames());
+      // When/if we support virtual columns from here, we should auto-add them to the list here as well as they expand
+      // the implicit project when no projection is defined
+    }
+
+    // There is all sorts of sub-optimal things in this code, but we just ignore them for now as it is difficult to
+    // optimally build frames for incremental data processing.  In order to build the frame object here, we must first
+    // materialize everything in memory so that we know how long things are, such that we can allocate a big byte[]
+    // so that the Frame.wrap() call can be given just a big byte[] to do its reading from.
+    //
+    // It would be a bit better if we could just build the per-column byte[] and somehow re-generate a Frame from
+    // that.  But it's also possible that this impedence mis-match is a function of using column-oriented frames and
+    // row-oriented frames are a much more friendly format.  Anyway, this long comment is here because this exploration
+    // is being left as an exercise for the future.
+
+    final RowSignature.Builder sigBob = RowSignature.builder();
+    final ArenaMemoryAllocatorFactory memFactory = new ArenaMemoryAllocatorFactory(200 << 20);
+
+    for (String column : columnsToGenerate) {
+      final Column racColumn = rac.findColumn(column);
+      if (racColumn == null) {
+        continue;
+      }
+
+      sigBob.add(column, racColumn.toAccessor().getType());
+    }
+
+    final FrameWriter frameWriter = FrameWriters.makeFrameWriterFactory(
+        FrameType.COLUMNAR,
+        memFactory,
+        sigBob.build(),
+        Collections.emptyList()
+    ).newFrameWriter(selectorFactory);
+
+    rowId.set(0);
+    for (;rowId.get() < numRows; rowId.incrementAndGet()) {
+      final int theId = rowId.get();
+      if (rowsToSkip != null && rowsToSkip.get(theId)) {
+        continue;
+      }
+      frameWriter.addSelection();
+    }
+
+    return new FrameRowsAndColumns(Frame.wrap(frameWriter.toByteArray()), sigBob.build());
+  }
+
 }

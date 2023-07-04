@@ -21,7 +21,7 @@ package org.apache.druid.query.operator;
 
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.semantic.DecoratableRowsAndColumns;
+import org.apache.druid.query.rowsandcols.semantic.RowsAndColumnsDecorator;
 import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
 
@@ -79,7 +79,7 @@ public class ScanOperator implements Operator
       @Override
       public Signal push(RowsAndColumns rac)
       {
-        final DecoratableRowsAndColumns decor = DecoratableRowsAndColumns.fromRAC(rac);
+        final RowsAndColumnsDecorator decor = RowsAndColumnsDecorator.fromRAC(rac);
 
         if (filter != null) {
           decor.addFilter(filter);
@@ -97,15 +97,15 @@ public class ScanOperator implements Operator
           decor.setLimit(limit);
         }
 
-        if (!(projectedColumns == null || projectedColumns.isEmpty())) {
-          decor.restrictColumns(projectedColumns);
-        }
-
         if (!(ordering == null || ordering.isEmpty())) {
           decor.setOrdering(ordering);
         }
 
-        return receiver.push(decor);
+        if (!(projectedColumns == null || projectedColumns.isEmpty())) {
+          return receiver.push(decor.restrictColumns(projectedColumns));
+        } else {
+          return receiver.push(decor.toRowsAndColumns());
+        }
       }
 
       @Override

@@ -454,6 +454,12 @@
       <artifactId>system-rules</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.parquet</groupId>
+      <artifactId>parquet-column</artifactId>
+      <version>1.13.0</version>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
 
   <build>
