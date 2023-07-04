@@ -285,7 +285,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 
       final ValueMatcher matcher = filter.makeMatcher(selectorFactory);
 
-      for (;rowId.get() < numRows; rowId.incrementAndGet()) {
+      for (; rowId.get() < numRows; rowId.incrementAndGet()) {
         final int theId = rowId.get();
         if (rowsToSkip.get(theId)) {
           continue;
@@ -340,7 +340,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     ).newFrameWriter(selectorFactory);
 
     rowId.set(0);
-    for (;rowId.get() < numRows; rowId.incrementAndGet()) {
+    for (; rowId.get() < numRows; rowId.incrementAndGet()) {
       final int theId = rowId.get();
       if (rowsToSkip != null && rowsToSkip.get(theId)) {
         continue;

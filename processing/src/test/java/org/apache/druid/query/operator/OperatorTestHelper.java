@@ -27,7 +27,7 @@ import org.junit.Assert;
 
 import java.io.Closeable;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -39,18 +39,16 @@ public class OperatorTestHelper
   public OperatorTestHelper expectRowsAndColumns(RowsAndColumnsHelper... helpers)
   {
     return withPushFn(
-        () -> {
-          return new JustPushMe()
-          {
-            int index = 0;
+        () -> new JustPushMe()
+        {
+          int index = 0;
 
-            @Override
-            public Operator.Signal push(RowsAndColumns rac)
-            {
-              helpers[index++].validate(rac);
-              return Operator.Signal.GO;
-            }
-          };
+          @Override
+          public Operator.Signal push(RowsAndColumns rac)
+          {
+            helpers[index++].validate(rac);
+            return Operator.Signal.GO;
+          }
         }
     ).withFinalValidation(
         testReceiver -> Assert.assertEquals(helpers.length, testReceiver.getNumPushed())
@@ -60,18 +58,16 @@ public class OperatorTestHelper
   public OperatorTestHelper expectAndStopAfter(RowsAndColumnsHelper... helpers)
   {
     return withPushFn(
-        () -> {
-          return new JustPushMe()
-          {
-            int index = 0;
+        () -> new JustPushMe()
+        {
+          int index = 0;
 
-            @Override
-            public Operator.Signal push(RowsAndColumns rac)
-            {
-              helpers[index++].validate(rac);
-              return index < helpers.length ? Operator.Signal.GO : Operator.Signal.STOP;
-            }
-          };
+          @Override
+          public Operator.Signal push(RowsAndColumns rac)
+          {
+            helpers[index++].validate(rac);
+            return index < helpers.length ? Operator.Signal.GO : Operator.Signal.STOP;
+          }
         }
     ).withFinalValidation(
         testReceiver -> Assert.assertEquals(helpers.length, testReceiver.getNumPushed())
@@ -155,7 +151,7 @@ public class OperatorTestHelper
   {
     private final JustPushMe pushFn;
 
-    private AtomicLong numPushed = new AtomicLong();
+    private AtomicInteger numPushed = new AtomicInteger();
     private AtomicBoolean completed = new AtomicBoolean(false);
     private long pauseAfter = -1;
 
@@ -191,7 +187,7 @@ public class OperatorTestHelper
       }
     }
 
-    public long getNumPushed()
+    public int getNumPushed()
     {
       return numPushed.get();
     }
