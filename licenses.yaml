@@ -3300,17 +3300,13 @@ notices:
       Copyright 2007 The Apache Software Foundation
 ---
 
-name: Apache Log4j
+name: JSON Small and Fast Parser
 license_category: binary
 module: druid-pac4j
 license_name: Apache License version 2.0
-version: 1.2.17
+version: 2.4.11
 libraries:
-  - log4j: log4j
-notices:
-  - log4j: |
-      Apache log4j
-      Copyright 2007 The Apache Software Foundation
+  - net.minidev: json-smart
 ---
 
 name: JSON Small and Fast Parser
