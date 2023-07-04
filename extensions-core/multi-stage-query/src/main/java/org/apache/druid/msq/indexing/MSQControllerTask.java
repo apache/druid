@@ -82,7 +82,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
   private final Map<String, Object> sqlQueryContext;
 
   /**
-   * Enables usage of {@link SqlResults#coerce(ObjectMapper, SqlResults.Context, Object, SqlTypeName)}.
+   * Enables usage of {@link SqlResults#coerce(ObjectMapper, SqlResults.Context, Object, SqlTypeName, String)}.
    */
   @Nullable
   private final SqlResults.Context sqlResultsContext;
