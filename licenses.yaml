@@ -3300,6 +3300,19 @@ notices:
       Copyright 2007 The Apache Software Foundation
 ---
 
+name: Apache Log4j
+license_category: binary
+module: druid-pac4j
+license_name: Apache License version 2.0
+version: 1.2.17
+libraries:
+  - log4j: log4j
+notices:
+  - log4j: |
+      Apache log4j
+      Copyright 2007 The Apache Software Foundation
+---
+
 name: JSON Small and Fast Parser
 license_category: binary
 module: hadoop-client
@@ -3522,7 +3535,7 @@ libraries:
 ---
 
 name: Kafka Schema Registry Client
-version: 5.5.1
+version: 5.5.15
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -4719,7 +4732,7 @@ name: Google Cloud Storage JSON API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: v1-rev20220705-1.32.1
+version: v1-rev20190523-1.26.0
 libraries:
   - com.google.apis: google-api-services-storage
 
@@ -4729,7 +4742,7 @@ name: Google Compute Engine API
 license_category: binary
 module: extensions/gce-extensions
 license_name: Apache License version 2.0
-version: v1-rev20220720-1.32.1
+version: v1-rev20190523-1.26.0
 libraries:
   - com.google.apis: google-api-services-compute
 
