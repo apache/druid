@@ -54,6 +54,7 @@ FROM busybox:1.35.0-glibc as busybox
 FROM gcr.io/distroless/java$JDK_VERSION-debian11
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
+COPY --from=busybox /bin/busybox /busybox/busybox
 RUN ["/busybox/busybox", "--install", "-s", "/bin"]
 
 # Predefined builtin arg, see: https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
