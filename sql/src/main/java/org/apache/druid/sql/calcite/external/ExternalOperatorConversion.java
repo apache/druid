@@ -121,7 +121,9 @@ public class ExternalOperatorConversion extends DruidExternTableMacroConversion
         );
       }
       catch (JsonProcessingException e) {
-        throw DruidException.forPersona(DruidException.Persona.USER).ofCategory(DruidException.Category.INVALID_INPUT).build(e, e.getMessage());
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(e, e.getMessage());
       }
     }
   }
