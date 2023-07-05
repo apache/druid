@@ -59,9 +59,9 @@ public class SegmentLoadWaiter
   private static final long INITIAL_SLEEP_DURATION_MILLIS = TimeUnit.SECONDS.toMillis(5);
   private static final long SLEEP_DURATION_MILLIS = TimeUnit.SECONDS.toMillis(5);
   private static final long TIMEOUT_DURATION_MILLIS = TimeUnit.MINUTES.toMillis(10);
-  private static final String LOAD_QUERY = "SELECT COUNT(*) AS totalSegments, "
-                                           + "COUNT(*) FILTER (WHERE is_available = 0 AND is_published = 1) AS loadingSegments "
-                                           + "FROM sys.segments "
+  private static final String LOAD_QUERY = "SELECT COUNT(*) AS totalSegments,\n"
+                                           + "COUNT(*) FILTER (WHERE is_available = 0 AND is_published = 1 AND replication_factor != 0) AS loadingSegments\n"
+                                           + "FROM sys.segments\n"
                                            + "WHERE datasource = '%s' AND is_overshadowed = 0 AND version = '%s'";
 
   private final BrokerClient brokerClient;
@@ -71,7 +71,7 @@ public class SegmentLoadWaiter
   private final String datasource;
   private final Set<String> versionsToAwait;
   private final boolean doWait;
-  private volatile SegmentLoadAwaiterStatus status;
+  private volatile SegmentLoadWaiterStatus status;
 
   public SegmentLoadWaiter(ControllerContext context, String datasource, Set<String> versionsToAwait, int initialSegmentCount)
   {
@@ -80,7 +80,7 @@ public class SegmentLoadWaiter
     this.datasource = datasource;
     this.versionsToAwait = new TreeSet<>(versionsToAwait);
     this.versionToLoadStatusMap = new HashMap<>();
-    this.status = new SegmentLoadAwaiterStatus(State.INIT, null, 0, initialSegmentCount, initialSegmentCount);
+    this.status = new SegmentLoadWaiterStatus(State.INIT, null, 0, initialSegmentCount, initialSegmentCount);
     this.doWait = true;
   }
 
@@ -92,7 +92,7 @@ public class SegmentLoadWaiter
     this.datasource = datasource;
     this.versionsToAwait = new TreeSet<>(versionsToAwait);
     this.versionToLoadStatusMap = new HashMap<>();
-    this.status = new SegmentLoadAwaiterStatus(State.INIT, null, 0, initialSegmentCount, initialSegmentCount);
+    this.status = new SegmentLoadWaiterStatus(State.INIT, null, 0, initialSegmentCount, initialSegmentCount);
     this.doWait = doWait;
   }
   /**
@@ -104,14 +104,14 @@ public class SegmentLoadWaiter
    * <br>
    * Only expected to be called from the main controller thread.
    */
-  public void awaitSegmentLoad()
+  public void waitForSegmentsToLoad()
   {
     DateTime startTime = DateTimes.nowUtc();
 
     try {
       // Sleep for a short duration to allow the segments that were just created to reflect in broker queries.
-      // This avoids a race condition where the broker returns nothing as it is not aware of the new segments yet,
-      // as this cannot be differentiated from the case where the segments have been dropped by load rules already.
+      // This avoids a race condition where the broker returns an empty response as it is not yet aware of the new segments
+      // yet. This cannot be differentiated from the case where the segments have been dropped due to load rules already.
       waitIfNeeded(INITIAL_SLEEP_DURATION_MILLIS);
 
       while (!versionsToAwait.isEmpty()) {
@@ -177,7 +177,7 @@ public class SegmentLoadWaiter
     }
 
     long runningMillis = new Interval(startTime, DateTimes.nowUtc()).toDurationMillis();
-    status = new SegmentLoadAwaiterStatus(state, startTime, runningMillis, totalSegmentCount, pendingSegmentCount);
+    status = new SegmentLoadWaiterStatus(state, startTime, runningMillis, totalSegmentCount, pendingSegmentCount);
   }
 
   /**
@@ -205,12 +205,12 @@ public class SegmentLoadWaiter
   /**
    * Returns the current status of the load.
    */
-  public SegmentLoadAwaiterStatus status()
+  public SegmentLoadWaiterStatus status()
   {
     return status;
   }
 
-  public static class SegmentLoadAwaiterStatus
+  public static class SegmentLoadWaiterStatus
   {
     private final State state;
     private final DateTime startTime;
@@ -219,7 +219,7 @@ public class SegmentLoadWaiter
     private final int segmentsLeft;
 
     @JsonCreator
-    public SegmentLoadAwaiterStatus(
+    public SegmentLoadWaiterStatus(
         @JsonProperty("state") SegmentLoadWaiter.State state,
         @JsonProperty("startTime") DateTime startTime,
         @JsonProperty("duration") long duration,

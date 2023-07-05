@@ -64,7 +64,7 @@ public class SegmentLoadWaiterTest
       }
     }).when(brokerClient).sendQuery(any());
     segmentLoadWaiter = new SegmentLoadWaiter(brokerClient, new ObjectMapper(), TEST_DATASOURCE, ImmutableSet.of("version1"), 5, false);
-    segmentLoadWaiter.awaitSegmentLoad();
+    segmentLoadWaiter.waitForSegmentsToLoad();
 
     verify(brokerClient, times(5)).sendQuery(any());
   }
@@ -87,7 +87,7 @@ public class SegmentLoadWaiterTest
       }
     }).when(brokerClient).sendQuery(any());
     segmentLoadWaiter = new SegmentLoadWaiter(brokerClient, new ObjectMapper(), TEST_DATASOURCE, ImmutableSet.of("version1"), 5, false);
-    segmentLoadWaiter.awaitSegmentLoad();
+    segmentLoadWaiter.waitForSegmentsToLoad();
 
     verify(brokerClient, times(5)).sendQuery(any());
   }

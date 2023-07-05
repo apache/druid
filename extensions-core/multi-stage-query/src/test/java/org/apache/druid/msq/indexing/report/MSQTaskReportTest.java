@@ -92,7 +92,7 @@ public class MSQTaskReportTest
         new Object[]{"bar"}
     );
 
-    SegmentLoadWaiter.SegmentLoadAwaiterStatus status = new SegmentLoadWaiter.SegmentLoadAwaiterStatus(
+    SegmentLoadWaiter.SegmentLoadWaiterStatus status = new SegmentLoadWaiter.SegmentLoadWaiterStatus(
         SegmentLoadWaiter.State.RUNNING,
         DateTimes.nowUtc(),
         200L,
@@ -152,7 +152,7 @@ public class MSQTaskReportTest
   @Test
   public void testSerdeErrorReport() throws Exception
   {
-    SegmentLoadWaiter.SegmentLoadAwaiterStatus status = new SegmentLoadWaiter.SegmentLoadAwaiterStatus(
+    SegmentLoadWaiter.SegmentLoadWaiterStatus status = new SegmentLoadWaiter.SegmentLoadWaiterStatus(
         SegmentLoadWaiter.State.FAILED,
         DateTimes.nowUtc(),
         200L,
@@ -197,7 +197,7 @@ public class MSQTaskReportTest
   @Test
   public void testWriteTaskReport() throws Exception
   {
-    SegmentLoadWaiter.SegmentLoadAwaiterStatus status = new SegmentLoadWaiter.SegmentLoadAwaiterStatus(
+    SegmentLoadWaiter.SegmentLoadWaiterStatus status = new SegmentLoadWaiter.SegmentLoadWaiterStatus(
         SegmentLoadWaiter.State.SUCCESS,
         DateTimes.nowUtc(),
         200L,

@@ -465,9 +465,13 @@ public class MSQWorkerTaskLauncher
   public WorkerCount getWorkerTaskCount()
   {
     synchronized (taskIds) {
-      int runningTasks = fullyStartedTasks.size();
-      int pendingTasks = desiredTaskCount - runningTasks;
-      return new WorkerCount(runningTasks, pendingTasks);
+      if (stopFuture.isDone()) {
+        return new WorkerCount(0, 0);
+      } else {
+        int runningTasks = fullyStartedTasks.size();
+        int pendingTasks = desiredTaskCount - runningTasks;
+        return new WorkerCount(runningTasks, pendingTasks);
+      }
     }
   }
 

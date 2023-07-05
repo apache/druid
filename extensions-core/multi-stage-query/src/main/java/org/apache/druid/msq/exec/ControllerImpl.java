@@ -458,8 +458,8 @@ public class ControllerImpl implements Controller
 
     if (queryKernel != null && queryKernel.isSuccess()) {
       if (segmentLoadWaiter != null) {
-        // If successful and there are segments created, segmentLoadAwaiter should wait for them to become available.
-        segmentLoadWaiter.awaitSegmentLoad();
+        // If successful and there are segments created, segmentLoadWaiter should wait for them to become available.
+        segmentLoadWaiter.waitForSegmentsToLoad();
       }
     }
 
@@ -2088,7 +2088,7 @@ public class ControllerImpl implements Controller
       runningTasks = workerTaskCount.getRunningWorkerCount() + 1; // To account for controller.
     }
 
-    SegmentLoadWaiter.SegmentLoadAwaiterStatus status = segmentLoadWaiter == null ? null : segmentLoadWaiter.status();
+    SegmentLoadWaiter.SegmentLoadWaiterStatus status = segmentLoadWaiter == null ? null : segmentLoadWaiter.status();
 
     return new MSQStatusReport(
         taskState,
