@@ -39,7 +39,7 @@ public class ScanOperatorFactory implements OperatorFactory
   public ScanOperatorFactory(
       @JsonProperty("timeRange") final Interval timeRange,
       @JsonProperty("filter") final DimFilter filter,
-      @JsonProperty("limit") final int limit,
+      @JsonProperty("limit") final Integer limit,
       @JsonProperty("projectedColumns") final List<String> projectedColumns,
       @JsonProperty("virtualColumns") final VirtualColumns virtualColumns,
       @JsonProperty("ordering") final List<ColumnWithDirection> ordering
@@ -47,7 +47,7 @@ public class ScanOperatorFactory implements OperatorFactory
   {
     this.timeRange = timeRange;
     this.filter = filter;
-    this.limit = limit;
+    this.limit = limit == null ? -1 : limit;
     this.projectedColumns = projectedColumns;
     this.virtualColumns = virtualColumns;
     this.ordering = ordering;

@@ -56,6 +56,29 @@ public class ScanOperatorFactoryTest
   }
 
   @Test
+  public void testEquals()
+  {
+    final Builder bob = new Builder();
+    bob.timeRange = Intervals.utc(0, 6);
+    bob.filter = DimFilters.dimEquals("abc", "a");
+    bob.limit = 48;
+    bob.projectedColumns = Arrays.asList("a", "b");
+    bob.virtualColumns = VirtualColumns.EMPTY;
+    bob.ordering = Collections.singletonList(ColumnWithDirection.ascending("a"));
+    ScanOperatorFactory factory = bob.build();
+
+    Assert.assertEquals(factory, factory);
+    Assert.assertNotEquals(factory, new Object());
+
+    Assert.assertNotEquals(factory, bob.copy().setTimeRange(null).build());
+    Assert.assertNotEquals(factory, bob.copy().setFilter(null).build());
+    Assert.assertNotEquals(factory, bob.copy().setLimit(null).build());
+    Assert.assertNotEquals(factory, bob.copy().setProjectedColumns(null).build());
+    Assert.assertNotEquals(factory, bob.copy().setVirtualColumns(null).build());
+    Assert.assertNotEquals(factory, bob.copy().setOrdering(null).build());
+  }
+
+  @Test
   public void testWrappedOperatorCarriesThroughValues() throws JsonProcessingException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
@@ -196,6 +219,76 @@ public class ScanOperatorFactoryTest
       Assert.assertNull(msg, actualList);
     } else {
       Assert.assertEquals(msg, expectedList, actualList);
+    }
+  }
+
+  private static class Builder
+  {
+    private Interval timeRange;
+    private DimFilter filter;
+    private Integer limit;
+    private List<String> projectedColumns;
+    private VirtualColumns virtualColumns;
+    private List<ColumnWithDirection> ordering;
+
+    public Builder setTimeRange(Interval timeRange)
+    {
+      this.timeRange = timeRange;
+      return this;
+    }
+
+    public Builder setFilter(DimFilter filter)
+    {
+      this.filter = filter;
+      return this;
+    }
+
+    public Builder setLimit(Integer limit)
+    {
+      this.limit = limit;
+      return this;
+    }
+
+    public Builder setProjectedColumns(List<String> projectedColumns)
+    {
+      this.projectedColumns = projectedColumns;
+      return this;
+    }
+
+    public Builder setVirtualColumns(VirtualColumns virtualColumns)
+    {
+      this.virtualColumns = virtualColumns;
+      return this;
+    }
+
+    public Builder setOrdering(List<ColumnWithDirection> ordering)
+    {
+      this.ordering = ordering;
+      return this;
+    }
+
+    private Builder copy()
+    {
+      Builder retVal = new Builder();
+      retVal.timeRange = timeRange;
+      retVal.filter = filter;
+      retVal.limit = limit;
+      retVal.projectedColumns = projectedColumns;
+      retVal.virtualColumns = virtualColumns;
+      retVal.ordering = ordering;
+      return retVal;
+    }
+
+    private ScanOperatorFactory build()
+    {
+      return new ScanOperatorFactory(
+          timeRange,
+          filter,
+          limit,
+          projectedColumns,
+          virtualColumns,
+          ordering
+      );
     }
   }
 }
