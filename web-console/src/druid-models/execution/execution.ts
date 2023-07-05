@@ -194,9 +194,6 @@ export class Execution {
 
   static normalizeAsyncState(state: AsyncState): ExecutionStatus {
     switch (state) {
-      case 'FINISHED':
-        return 'SUCCESS';
-
       case 'ACCEPTED':
         return 'RUNNING';
 
@@ -254,40 +251,48 @@ export class Execution {
     sqlQuery?: string,
     queryContext?: QueryContext,
   ): Execution {
-    const { schema, resultSetInformation } = asyncSubmitResult;
+    const { queryId, schema, result, errorDetails } = asyncSubmitResult;
 
-    let result: QueryResult | undefined;
-    if (resultSetInformation?.sampleRecords) {
-      result = new QueryResult({
+    let queryResult: QueryResult | undefined;
+    if (schema && result?.sampleRecords) {
+      queryResult = new QueryResult({
         header: schema.map(
           s => new Column({ name: s.name, sqlType: s.type, nativeType: s.nativeType }),
         ),
-        rows: resultSetInformation.sampleRecords,
+        rows: result.sampleRecords,
       }).inflateDatesFromSqlTypes();
+    }
+
+    let executionError: ExecutionError | undefined;
+    if (errorDetails) {
+      executionError = {
+        taskId: queryId,
+        error: errorDetails as any,
+      };
     }
 
     return new Execution({
       engine: 'sql-msq-task',
-      id: 'queryId' in asyncSubmitResult ? asyncSubmitResult.queryId : 'x',
+      id: queryId,
       startTime: new Date(asyncSubmitResult.createdAt),
-      duration: asyncSubmitResult.durationInMs,
+      duration: asyncSubmitResult.durationMs,
       status: Execution.normalizeAsyncState(asyncSubmitResult.state),
       sqlQuery,
       queryContext,
-      error: asyncSubmitResult.queryException as any, // ToDo: remove 'as any'
+      error: executionError,
       destination:
-        typeof resultSetInformation?.dataSource === 'string'
-          ? resultSetInformation.dataSource !== Execution.INLINE_DATASOURCE_MARKER
+        typeof result?.dataSource === 'string'
+          ? result.dataSource !== Execution.INLINE_DATASOURCE_MARKER
             ? {
                 type: 'dataSource',
-                dataSource: resultSetInformation.dataSource,
-                numRows: resultSetInformation.numRows,
+                dataSource: result.dataSource,
+                numRows: result.numTotalRows,
               }
             : {
                 type: 'taskReport',
               }
           : undefined,
-      result,
+      result: queryResult,
     });
   }
 

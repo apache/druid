@@ -16,26 +16,22 @@
  * limitations under the License.
  */
 
-export type AsyncState = 'ACCEPTED' | 'RUNNING' | 'FINISHED' | 'FAILED';
+import type { ErrorResponse } from '../../utils';
+
+export type AsyncState = 'ACCEPTED' | 'RUNNING' | 'SUCCESS' | 'FAILED';
 
 export interface AsyncStatusResponse {
   queryId: string;
   state: AsyncState;
   createdAt: string;
-  durationInMs: number;
-  schema: { name: string; type: string; nativeType: string }[];
-  resultSetInformation?: {
+  durationMs: number;
+  schema?: { name: string; type: string; nativeType: string }[];
+  result?: {
     dataSource: string;
     sampleRecords: any[][];
-    numRows: number;
-    sizeInBytes: number;
+    numTotalRows: number;
+    totalSizeInBytes: number;
+    pages: any[];
   };
-  queryException?: AsyncError;
-}
-
-export interface AsyncError {
-  error: string;
-  errorMessage: string;
-  errorClass: string;
-  host?: string;
+  errorDetails?: ErrorResponse;
 }

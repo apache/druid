@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import { FAILED_ASYNC_STATUS, SUCCESS_ASYNC_STATUS } from '../async-query/async-query.mock';
+
 import { Execution } from './execution';
 import { EXECUTION_INGEST_COMPLETE } from './execution-ingest-complete.mock';
 
@@ -543,6 +545,97 @@ describe('Execution', () => {
             "pendingTasks": 0,
             "runningTasks": 2,
           },
+          "warnings": undefined,
+        }
+      `);
+    });
+  });
+
+  describe('.fromAsyncStatus', () => {
+    it('works on SUCCESS', () => {
+      expect(Execution.fromAsyncStatus(SUCCESS_ASYNC_STATUS)).toMatchInlineSnapshot(`
+        Execution {
+          "_payload": undefined,
+          "capacityInfo": undefined,
+          "destination": Object {
+            "type": "taskReport",
+          },
+          "duration": 29168,
+          "engine": "sql-msq-task",
+          "error": undefined,
+          "id": "query-ad84d20a-c331-4ee9-ac59-83024e369cf1",
+          "nativeQuery": undefined,
+          "queryContext": undefined,
+          "result": _QueryResult {
+            "header": Array [
+              Column {
+                "name": "channel",
+                "nativeType": "STRING",
+                "sqlType": "VARCHAR",
+              },
+              Column {
+                "name": "Count",
+                "nativeType": "LONG",
+                "sqlType": "BIGINT",
+              },
+            ],
+            "query": undefined,
+            "queryDuration": undefined,
+            "queryId": undefined,
+            "resultContext": undefined,
+            "rows": Array [
+              Array [
+                "#en.wikipedia",
+                6650,
+              ],
+              Array [
+                "#sh.wikipedia",
+                3969,
+              ],
+            ],
+            "sqlQuery": undefined,
+            "sqlQueryId": undefined,
+          },
+          "sqlQuery": undefined,
+          "stages": undefined,
+          "startTime": 2023-07-05T21:33:19.147Z,
+          "status": "SUCCESS",
+          "usageInfo": undefined,
+          "warnings": undefined,
+        }
+      `);
+    });
+
+    it('works on FAILED', () => {
+      expect(Execution.fromAsyncStatus(FAILED_ASYNC_STATUS)).toMatchInlineSnapshot(`
+        Execution {
+          "_payload": undefined,
+          "capacityInfo": undefined,
+          "destination": undefined,
+          "duration": 11217,
+          "engine": "sql-msq-task",
+          "error": Object {
+            "error": Object {
+              "category": "UNCATEGORIZED",
+              "context": Object {
+                "message": "java.io.UncheckedIOException: /",
+              },
+              "error": "druidException",
+              "errorCode": "UnknownError",
+              "errorMessage": "java.io.UncheckedIOException: /",
+              "persona": "USER",
+            },
+            "taskId": "query-36ea273a-bd6d-48de-b890-2d853d879bf8",
+          },
+          "id": "query-36ea273a-bd6d-48de-b890-2d853d879bf8",
+          "nativeQuery": undefined,
+          "queryContext": undefined,
+          "result": undefined,
+          "sqlQuery": undefined,
+          "stages": undefined,
+          "startTime": 2023-07-05T21:40:39.986Z,
+          "status": "FAILED",
+          "usageInfo": undefined,
           "warnings": undefined,
         }
       `);

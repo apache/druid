@@ -42,6 +42,7 @@ export type ErrorResponseCategory =
 export interface ErrorResponse {
   persona: ErrorResponsePersona;
   category: ErrorResponseCategory;
+  errorCode?: string;
   errorMessage: string; // a message for the intended audience
   context?: Record<string, any>; // a map of extra context values that might be helpful
 

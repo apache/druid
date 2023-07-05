@@ -31,7 +31,8 @@ import {
 } from '../../utils';
 import { maybeGetClusterCapacity } from '../capacity';
 
-const USE_TASK_REPORTS = false;
+const USE_TASK_PAYLOAD = true;
+const USE_TASK_REPORTS = true;
 const WAIT_FOR_SEGMENT_METADATA_TIMEOUT = 180000; // 3 minutes to wait until segments appear in the metadata
 const WAIT_FOR_SEGMENT_LOAD_TIMEOUT = 540000; // 9 minutes to wait for segments to load at all
 
@@ -216,7 +217,7 @@ export async function getTaskExecution(
   }
 
   let taskPayload: any = taskPayloadOverride;
-  if (!taskPayload) {
+  if (USE_TASK_PAYLOAD && !taskPayload) {
     try {
       taskPayload = (
         await Api.instance.get(`/druid/indexer/v1/task/${encodedId}`, {
