@@ -255,21 +255,21 @@ public abstract class Granularity implements Cacheable
   {
     private final Interval inputInterval;
 
-    private DateTime currStart;
-    private DateTime currEnd;
+    private long currStart;
+    private long currEnd;
 
     private IntervalIterator(Interval inputInterval)
     {
       this.inputInterval = inputInterval;
 
-      currStart = bucketStart(inputInterval.getStart());
+      currStart = bucketStart(inputInterval.getStartMillis());
       currEnd = increment(currStart);
     }
 
     @Override
     public boolean hasNext()
     {
-      return currStart.isBefore(inputInterval.getEnd());
+      return currStart < inputInterval.getEndMillis();
     }
 
     @Override
