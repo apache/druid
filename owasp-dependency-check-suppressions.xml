@@ -122,7 +122,8 @@
     https://github.com/FasterXML/jackson-databind/issues/3328
     -->
     <cve>CVE-2021-46877</cve>
-    <cve>CVE-2023-35116</cve> <!-- This vulnerability is currently awaiting analysis. -->
+    <!-- according to jackson community, this is not a security issue, see https://github.com/FasterXML/jackson-databind/issues/3972#issuecomment-1596193098, https://github.com/jeremylong/DependencyCheck/issues/5779 -->
+    <cve>CVE-2023-35116</cve>
   </suppress>
 
 
@@ -221,13 +222,13 @@
     <cve>CVE-2019-20444</cve>
     <cve>CVE-2019-20445</cve>
     <cve>CVE-2020-11612</cve>
-    <cve>CVE-2021-21290</cve> <!-- Not applicable to Netty Client -->
-    <cve>CVE-2021-21295</cve> <!-- Not applicable to Netty Client -->
-    <cve>CVE-2021-21409</cve> <!-- Not applicable to Netty Client -->
+    <cve>CVE-2021-21290</cve> <!-- We don't use HttpPostRequestDecoder or HttpPostMultiPartRequestDecoder which uses vulnerable AbstractDiskHttpData - https://github.com/advisories/GHSA-5mcr-gq6c-3hq2 -->
+    <cve>CVE-2021-21295</cve> <!-- We don't use HTTP2MultiplexCodec or Http2FrameCodec or Http2StreamFrameToHttpObjectCodec affected or convert HTTP/2 to HTTP/1.1 requests - https://github.com/advisories/GHSA-wm47-8v5p-wjpj -->
+    <cve>CVE-2021-21409</cve> <!-- We don't use Http2HeaderFrame or convert HTTP/2 to HTTP/1.1 requests https://github.com/advisories/GHSA-f256-j965-7f32 -->
     <cve>CVE-2021-37136</cve>
     <cve>CVE-2021-37137</cve>
-    <cve>CVE-2021-43797</cve> <!-- Not applicable to Netty Client -->
-    <cve>CVE-2022-24823</cve> <!-- Not applicable to Netty Client -->
+    <cve>CVE-2021-43797</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-wx5j-54mm-rqqq -->
+    <cve>CVE-2022-24823</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-269q-hmxg-m83q -->
     <cve>CVE-2022-41881</cve>
   </suppress>
   <suppress>
