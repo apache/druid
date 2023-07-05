@@ -62,7 +62,7 @@ export function wait(ms: number): Promise<void> {
   });
 }
 
-export function clamp(n: number, min: number, max: number): number {
+export function clamp(n: number, min = -Infinity, max = Infinity): number {
   return Math.min(Math.max(n, min), max);
 }
 

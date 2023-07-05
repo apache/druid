@@ -30,10 +30,10 @@ import React from 'react';
 
 import { deepDelete, deepGet, deepSet, durationSanitizer } from '../../utils';
 import { ArrayInput } from '../array-input/array-input';
+import { FancyNumericInput } from '../fancy-numeric-input/fancy-numeric-input';
 import { FormGroupWithInfo } from '../form-group-with-info/form-group-with-info';
 import { IntervalInput } from '../interval-input/interval-input';
 import { JsonInput } from '../json-input/json-input';
-import { NumericInputWithDefault } from '../numeric-input-with-default/numeric-input-with-default';
 import { PopoverText } from '../popover-text/popover-text';
 import { SuggestibleInput } from '../suggestible-input/suggestible-input';
 import type { Suggestion } from '../suggestion-menu/suggestion-menu';
@@ -48,6 +48,7 @@ export interface Field<M> {
   info?: React.ReactNode;
   type:
     | 'number'
+    | 'ratio'
     | 'size-bytes'
     | 'string'
     | 'duration'
@@ -250,15 +251,14 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     const { required, defaultValue, modelValue } = AutoForm.computeFieldValues(model, field);
 
     return (
-      <NumericInputWithDefault
-        value={modelValue}
-        defaultValue={defaultValue}
-        onValueChange={(valueAsNumber: number, valueAsString: string) => {
-          let newValue: number | undefined;
-          if (valueAsString !== '' && !isNaN(valueAsNumber)) {
-            newValue = valueAsNumber === 0 && field.zeroMeansUndefined ? undefined : valueAsNumber;
-          }
-          this.fieldChange(field, newValue);
+      <FancyNumericInput
+        value={Number(modelValue)}
+        defaultValue={Number(defaultValue)}
+        onValueChange={valueAsNumber => {
+          this.fieldChange(
+            field,
+            valueAsNumber === 0 && field.zeroMeansUndefined ? undefined : valueAsNumber,
+          );
         }}
         onBlur={e => {
           if (e.target.value === '') {
@@ -266,8 +266,42 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           }
           if (onFinalize) onFinalize();
         }}
-        min={field.min || 0}
+        min={field.min ?? 0}
         max={field.max}
+        fill
+        large={large}
+        disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
+        placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
+        intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
+      />
+    );
+  }
+
+  private renderRatioInput(field: Field<T>): JSX.Element {
+    const { model, large, onFinalize } = this.props;
+    const { required, defaultValue, modelValue } = AutoForm.computeFieldValues(model, field);
+
+    return (
+      <FancyNumericInput
+        value={Number(modelValue)}
+        defaultValue={Number(defaultValue)}
+        onValueChange={valueAsNumber => {
+          this.fieldChange(
+            field,
+            valueAsNumber === 0 && field.zeroMeansUndefined ? undefined : valueAsNumber,
+          );
+        }}
+        onBlur={e => {
+          if (e.target.value === '') {
+            this.fieldChange(field, undefined);
+          }
+          if (onFinalize) onFinalize();
+        }}
+        min={field.min ?? 0}
+        max={field.max ?? 1}
+        minorStepSize={0.001}
+        stepSize={0.01}
+        majorStepSize={0.05}
         fill
         large={large}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
@@ -446,6 +480,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     switch (field.type) {
       case 'number':
         return this.renderNumberInput(field);
+      case 'ratio':
+        return this.renderRatioInput(field);
       case 'size-bytes':
         return this.renderSizeBytesInput(field);
       case 'string':

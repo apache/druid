@@ -138,7 +138,6 @@ describe('WorkbenchQuery', () => {
           `End of input while parsing an object (missing '}') at line 40,2 >>>} ...`,
         ),
       ).toEqual({
-        match: '',
         row: 39,
         column: 1,
       });

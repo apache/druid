@@ -155,7 +155,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
             disabled={saveDisabled}
             text="Save"
             onClick={this.save}
-            intent={Intent.PRIMARY as any}
+            intent={Intent.PRIMARY}
             rightIcon={IconNames.TICK}
           />
         ) : (
@@ -163,7 +163,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
             disabled={saveDisabled}
             text="Next"
             onClick={this.goToFinalStep}
-            intent={Intent.PRIMARY as any}
+            intent={Intent.PRIMARY}
             rightIcon={IconNames.ARROW_RIGHT}
           />
         )}

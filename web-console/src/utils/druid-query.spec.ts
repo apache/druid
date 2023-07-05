@@ -59,7 +59,9 @@ describe('DruidQuery', () => {
         FROM wikipedia -- test ==
         WHERE channel == '#ar.wikipedia'
       `;
-      const suggestion = DruidError.getSuggestion(`Encountered "= =" at line 3, column 15.`);
+      const suggestion = DruidError.getSuggestion(
+        `Received an unexpected token [= =] (line [3], column [15]), acceptable options:`,
+      );
       expect(suggestion!.label).toEqual(`Replace == with =`);
       expect(suggestion!.fn(sql)).toEqual(sane`
         SELECT *
@@ -78,7 +80,7 @@ describe('DruidQuery', () => {
         ORDER BY 2 DESC
       `;
       const suggestion = DruidError.getSuggestion(
-        `Encountered "= =" at line 4, column 15. Was expecting one of: <EOF> "EXCEPT" ... "FETCH" ... "GROUP" ...`,
+        `Received an unexpected token [= =] (line [4], column [15]), acceptable options:`,
       );
       expect(suggestion!.label).toEqual(`Replace == with =`);
       expect(suggestion!.fn(sql)).toEqual(sane`
@@ -137,7 +139,7 @@ describe('DruidQuery', () => {
         WHERE channel = "#ar.wikipedia"
       `;
       const suggestion = DruidError.getSuggestion(
-        `org.apache.calcite.runtime.CalciteContextException: From line 3, column 17 to line 3, column 31: Column '#ar.wikipedia' not found in any table`,
+        `Column '#ar.wikipedia' not found in any table (line [3], column [17])`,
       );
       expect(suggestion!.label).toEqual(`Replace "#ar.wikipedia" with '#ar.wikipedia'`);
       expect(suggestion!.fn(sql)).toEqual(sane`
@@ -148,41 +150,43 @@ describe('DruidQuery', () => {
     });
 
     it('works for incorrectly quoted AS alias', () => {
-      const suggestion = DruidError.getSuggestion(`Encountered "AS \\'c\\'" at line 1, column 16.`);
-      expect(suggestion!.label).toEqual(`Replace 'c' with "c"`);
-      expect(suggestion!.fn(`SELECT channel AS 'c' FROM wikipedia`)).toEqual(
-        `SELECT channel AS "c" FROM wikipedia`,
+      const sql = `SELECT channel AS 'c' FROM wikipedia`;
+      const suggestion = DruidError.getSuggestion(
+        `Received an unexpected token [AS \\'c\\'] (line [1], column [16]), acceptable options:`,
       );
+      expect(suggestion!.label).toEqual(`Replace 'c' with "c"`);
+      expect(suggestion!.fn(sql)).toEqual(`SELECT channel AS "c" FROM wikipedia`);
     });
 
     it('removes comma (,) before FROM', () => {
+      const sql = `SELECT page, FROM wikipedia WHERE channel = '#ar.wikipedia'`;
       const suggestion = DruidError.getSuggestion(
-        `Encountered ", FROM" at line 1, column 12. Was expecting one of: "ABS" ...`,
+        `Received an unexpected token [, FROM] (line [1], column [12]), acceptable options:`,
       );
       expect(suggestion!.label).toEqual(`Remove , before FROM`);
-      expect(suggestion!.fn(`SELECT page, FROM wikipedia WHERE channel = '#ar.wikipedia'`)).toEqual(
+      expect(suggestion!.fn(sql)).toEqual(
         `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia'`,
       );
     });
 
     it('removes comma (,) before ORDER', () => {
+      const sql = `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia' GROUP BY 1, ORDER BY 1`;
       const suggestion = DruidError.getSuggestion(
-        `Encountered ", ORDER" at line 1, column 14. Was expecting one of: "ABS" ...`,
+        `Received an unexpected token [, ORDER] (line [1], column [70]), acceptable options:`,
       );
       expect(suggestion!.label).toEqual(`Remove , before ORDER`);
-      expect(
-        suggestion!.fn(
-          `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia' GROUP BY 1, ORDER BY 1`,
-        ),
-      ).toEqual(`SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia' GROUP BY 1 ORDER BY 1`);
+      expect(suggestion!.fn(sql)).toEqual(
+        `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia' GROUP BY 1 ORDER BY 1`,
+      );
     });
 
     it('removes trailing semicolon (;)', () => {
+      const sql = `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia';`;
       const suggestion = DruidError.getSuggestion(
-        `Encountered ";" at line 1, column 59. Was expecting one of: "ABS" ...`,
+        `Received an unexpected token [;] (line [1], column [59]), acceptable options:`,
       );
       expect(suggestion!.label).toEqual(`Remove trailing ;`);
-      expect(suggestion!.fn(`SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia';`)).toEqual(
+      expect(suggestion!.fn(sql)).toEqual(
         `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia'`,
       );
     });

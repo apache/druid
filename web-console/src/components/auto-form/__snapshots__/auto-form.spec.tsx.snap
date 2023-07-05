@@ -7,13 +7,15 @@ exports[`AutoForm matches snapshot 1`] = `
   <Memo(FormGroupWithInfo)
     label="Test number"
   >
-    <Memo(NumericInputWithDefault)
+    <Memo(FancyNumericInput)
+      defaultValue={NaN}
       disabled={false}
       fill={true}
       min={0}
       onBlur={[Function]}
       onValueChange={[Function]}
       placeholder=""
+      value={NaN}
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
