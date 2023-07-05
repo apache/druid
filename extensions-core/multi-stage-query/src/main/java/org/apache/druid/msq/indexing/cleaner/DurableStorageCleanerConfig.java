@@ -17,22 +17,44 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.indexing.cleaner;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
-import org.junit.Test;
+import javax.validation.constraints.Min;
 
-public class DataSourceMSQDestinationTest
+public class DurableStorageCleanerConfig
 {
 
-  @Test
-  public void testEquals()
+  /**
+   * Whether the {@link DurableStorageCleaner} helper should be enabled or not
+   */
+  @JsonProperty
+  public boolean enabled = false;
+
+  /**
+   * The delay (in seconds) after the last run post which the durable storage cleaner would clean the outputs
+   */
+  @JsonProperty
+  @Min(1)
+  public long delaySeconds = 86400L;
+
+  public boolean isEnabled()
   {
-    EqualsVerifier.forClass(DataSourceMSQDestination.class)
-                  .withNonnullFields("dataSource", "segmentGranularity", "segmentSortOrder")
-                  .usingGetClass()
-                  .verify();
+    return enabled;
+  }
+
+  public long getDelaySeconds()
+  {
+    return delaySeconds;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DurableStorageCleanerConfig{" +
+           "enabled=" + enabled +
+           ", delaySeconds=" + delaySeconds +
+           '}';
   }
 }

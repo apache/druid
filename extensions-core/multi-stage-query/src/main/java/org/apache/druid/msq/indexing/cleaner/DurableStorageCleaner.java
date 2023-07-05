@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.indexing.cleaner;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.google.common.base.Optional;

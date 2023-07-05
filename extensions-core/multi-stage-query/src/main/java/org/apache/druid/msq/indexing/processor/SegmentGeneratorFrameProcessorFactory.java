@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.indexing.processor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -38,6 +38,7 @@ import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.counters.SegmentGeneratorMetricsWrapper;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
+import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;

@@ -17,44 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.indexing.destination;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Min;
-
-public class DurableStorageCleanerConfig
+/**
+ * Determines the destination for results of select queries.
+ */
+public enum MSQSelectDestination
 {
-
   /**
-   * Whether the {@link DurableStorageCleaner} helper should be enabled or not
+   * Writes all the results directly to the report.
    */
-  @JsonProperty
-  public boolean enabled = false;
-
+  TASK_REPORT(false),
   /**
-   * The delay (in seconds) after the last run post which the durable storage cleaner would clean the outputs
+   * Writes the results as frame files to durable storage. Task report can be truncated to a preview.
    */
-  @JsonProperty
-  @Min(1)
-  public long delaySeconds = 86400L;
+  DURABLE_STORAGE(true);
 
-  public boolean isEnabled()
+  private final boolean shouldTruncateResultsInTaskReport;
+
+  public boolean shouldTruncateResultsInTaskReport()
   {
-    return enabled;
+    return shouldTruncateResultsInTaskReport;
   }
 
-  public long getDelaySeconds()
+  MSQSelectDestination(boolean shouldTruncateResultsInTaskReport)
   {
-    return delaySeconds;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "DurableStorageCleanerConfig{" +
-           "enabled=" + enabled +
-           ", delaySeconds=" + delaySeconds +
-           '}';
+    this.shouldTruncateResultsInTaskReport = shouldTruncateResultsInTaskReport;
   }
 }

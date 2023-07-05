@@ -31,8 +31,9 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.overlord.duty.OverlordDuty;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.msq.indexing.DurableStorageCleaner;
-import org.apache.druid.msq.indexing.DurableStorageCleanerConfig;
+import org.apache.druid.msq.indexing.cleaner.DurableStorageCleaner;
+import org.apache.druid.msq.indexing.cleaner.DurableStorageCleanerConfig;
+import org.apache.druid.storage.NilStorageConnector;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
@@ -98,6 +99,9 @@ public class MSQDurableStorageModule implements DruidModule
                    .addBinding()
                    .to(DurableStorageCleaner.class);
       }
+    } else {
+      // bind with nil implementation so that configs are not required during service startups.
+      binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class)).toInstance(NilStorageConnector.getInstance());
     }
   }
 

@@ -43,6 +43,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
@@ -70,6 +71,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.input.InputSourceModule;
@@ -85,9 +87,12 @@ import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.MultiStageQuery;
-import org.apache.druid.msq.indexing.DataSourceMSQDestination;
+import org.apache.druid.msq.indexing.InputChannelFactory;
+import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
+import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFaultTest;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQFault;
@@ -97,10 +102,13 @@ import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
+import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.msq.util.SqlStatementResourceHelper;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryContexts;
@@ -190,6 +198,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -1292,20 +1301,51 @@ public class MSQTestBase extends BaseCalciteQueryTest
         verifyCounters(payload.getCounters());
         verifyWorkerCount(payload.getCounters());
 
+
         if (payload.getStatus().getErrorReport() != null) {
           throw new ISE("Query %s failed due to %s", sql, payload.getStatus().getErrorReport().toString());
         } else {
-          final List<Object[]> rows = getRows(payload.getResults());
+          MSQControllerTask msqControllerTask = indexingServiceClient.getMSQControllerTask(controllerId);
+
+          final MSQSpec spec = msqControllerTask.getQuerySpec();
+          final List<Object[]> rows;
+
+          if (spec.getDestination() instanceof TaskReportMSQDestination) {
+            rows = getRows(payload.getResults());
+          } else {
+            StageDefinition finalStage = Objects.requireNonNull(SqlStatementResourceHelper.getFinalStage(
+                payload)).getStageDefinition();
+            InputChannelFactory inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
+                controllerId,
+                localFileStorageConnector,
+                Closer.create(),
+                true
+            );
+            rows = new FrameChannelSequence(inputChannelFactory.openChannel(
+                finalStage.getId(),
+                0,
+                0
+            )).flatMap(frame -> SqlStatementResourceHelper.getResultSequence(
+                msqControllerTask,
+                finalStage,
+                frame,
+                objectMapper
+            )).toList();
+
+          }
           if (rows == null) {
             throw new ISE("Query successful but no results found");
           }
           log.info("found row signature %s", payload.getResults().getSignature());
           log.info(rows.stream().map(Arrays::toString).collect(Collectors.joining("\n")));
 
-          final MSQSpec spec = indexingServiceClient.getMSQControllerTask(controllerId).getQuerySpec();
+
           log.info("Found spec: %s", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(spec));
           return new Pair<>(spec, Pair.of(payload.getResults().getSignature(), rows));
         }
+      }
+      catch (JsonProcessingException ex) {
+        throw new RuntimeException(ex);
       }
       catch (Exception e) {
         if (expectedExecutionErrorMatcher == null) {

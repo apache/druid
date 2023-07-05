@@ -27,7 +27,7 @@ import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Limits;
-import org.apache.druid.msq.indexing.MSQSelectDestination;
+import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
@@ -217,8 +217,18 @@ public class MultiStageQueryContext
         queryContext.getString(
             CTX_SELECT_DESTINATION,
             DEFAULT_SELECT_DESTINATION
-        )
+        ).toUpperCase()
     );
+  }
+
+  @Nullable
+  public static MSQSelectDestination getSelectDestinationOrNull(final QueryContext queryContext)
+  {
+    String selectDestination = queryContext.getString(CTX_SELECT_DESTINATION);
+    if (selectDestination == null) {
+      return null;
+    }
+    return MSQSelectDestination.valueOf(selectDestination.toUpperCase());
   }
 
   public static int getRowsInMemory(final QueryContext queryContext)

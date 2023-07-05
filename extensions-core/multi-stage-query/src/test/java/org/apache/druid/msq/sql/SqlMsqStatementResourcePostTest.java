@@ -20,7 +20,6 @@
 package org.apache.druid.msq.sql;
 
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -41,6 +40,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlQuery;
+import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -55,21 +55,24 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
 {
   private SqlStatementResource resource;
 
+
   @Before
-  public void init()
+  public void init() throws IOException
   {
     resource = new SqlStatementResource(
         sqlStatementFactory,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         objectMapper,
-        indexingServiceClient
+        indexingServiceClient,
+        new LocalFileStorageConnector(tmpFolder.newFolder("results"))
+
     );
   }
 
   @Test
   public void testMSQSelectQueryTest() throws IOException
   {
-    List<Object> results = ImmutableList.of(
+    List<Object[]> results = ImmutableList.of(
         new Object[]{1L, ""},
         new Object[]{
             1L,
@@ -117,19 +120,16 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
                                    316L,
                                    null,
                                    MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT,
-                                   objectMapper.readValue(
-                                       objectMapper.writeValueAsString(
-                                           results),
-                                       new TypeReference<List<Object>>()
-                                       {
-                                       }
-                                   ),
+                                   results,
                                    ImmutableList.of(new PageInformation(6L, 316L, 0))
                                ),
                                null
         );
 
-    Assert.assertEquals(expected, response.getEntity());
+    Assert.assertEquals(
+        objectMapper.writeValueAsString(expected),
+        objectMapper.writeValueAsString(response.getEntity())
+    );
   }
 
 

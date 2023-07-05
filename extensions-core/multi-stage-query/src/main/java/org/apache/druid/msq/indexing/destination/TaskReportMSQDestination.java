@@ -17,14 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.msq.indexing.MSQDestination;
 
 public class TaskReportMSQDestination implements MSQDestination
 {
   public static final TaskReportMSQDestination INSTANCE = new TaskReportMSQDestination();
-  static final String TYPE = "taskReport";
+  public static final String TYPE = "taskReport";
 
   private TaskReportMSQDestination()
   {
@@ -42,4 +43,5 @@ public class TaskReportMSQDestination implements MSQDestination
   {
     return "TaskReportMSQDestination{}";
   }
+
 }

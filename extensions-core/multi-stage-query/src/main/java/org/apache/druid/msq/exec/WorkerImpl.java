@@ -80,8 +80,8 @@ import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.indexing.CountingOutputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelsImpl;
-import org.apache.druid.msq.indexing.KeyStatisticsCollectionProcessor;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
+import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
@@ -91,6 +91,7 @@ import org.apache.druid.msq.indexing.error.MSQWarningReportLimiterPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportPublisher;
 import org.apache.druid.msq.indexing.error.MSQWarningReportSimplePublisher;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
+import org.apache.druid.msq.indexing.processor.KeyStatisticsCollectionProcessor;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.InputSlices;
@@ -119,9 +120,9 @@ import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.worker.WorkerStageKernel;
 import org.apache.druid.msq.kernel.worker.WorkerStagePhase;
-import org.apache.druid.msq.shuffle.DurableStorageInputChannelFactory;
-import org.apache.druid.msq.shuffle.DurableStorageOutputChannelFactory;
-import org.apache.druid.msq.shuffle.WorkerInputChannelFactory;
+import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
+import org.apache.druid.msq.shuffle.input.WorkerInputChannelFactory;
+import org.apache.druid.msq.shuffle.output.DurableStorageOutputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
@@ -181,6 +182,11 @@ public class WorkerImpl implements Worker
   private final ByteTracker intermediateSuperSorterLocalStorageTracker;
   private final boolean durableStageStorageEnabled;
   private final WorkerStorageParameters workerStorageParameters;
+  /**
+   * Only set for select jobs.
+   */
+  @Nullable
+  private final MSQSelectDestination selectDestination;
 
   /**
    * Set once in {@link #runTask} and never reassigned.
@@ -205,7 +211,8 @@ public class WorkerImpl implements Worker
         context,
         WorkerStorageParameters.createProductionInstance(
             context.injector(),
-            MultiStageQueryContext.isDurableStorageEnabled(QueryContext.of(task.getContext())) // If Durable Storage is enabled, then super sorter intermediate storage can be enabled.
+            MultiStageQueryContext.isDurableStorageEnabled(QueryContext.of(task.getContext()))
+            // If Durable Storage is enabled, then super sorter intermediate storage can be enabled.
         )
     );
   }
@@ -217,12 +224,14 @@ public class WorkerImpl implements Worker
     this.context = context;
     this.selfDruidNode = context.selfNode();
     this.processorBouncer = context.processorBouncer();
-    this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(
-        QueryContext.of(task.getContext())
-    );
+    QueryContext queryContext = QueryContext.of(task.getContext());
+    this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(queryContext);
+    this.selectDestination = MultiStageQueryContext.getSelectDestinationOrNull(queryContext);
     this.workerStorageParameters = workerStorageParameters;
 
-    long maxBytes = workerStorageParameters.isIntermediateStorageLimitConfigured() ? workerStorageParameters.getIntermediateSuperSorterStorageMaxLocalBytes() : Long.MAX_VALUE;
+    long maxBytes = workerStorageParameters.isIntermediateStorageLimitConfigured()
+                    ? workerStorageParameters.getIntermediateSuperSorterStorageMaxLocalBytes()
+                    : Long.MAX_VALUE;
     this.intermediateSuperSorterLocalStorageTracker = new ByteTracker(maxBytes);
   }
 
@@ -704,20 +713,26 @@ public class WorkerImpl implements Worker
       return DurableStorageInputChannelFactory.createStandardImplementation(
           task.getControllerTaskId(),
           MSQTasks.makeStorageConnector(context.injector()),
-          closer
+          closer,
+          false
       );
     } else {
       return new WorkerOrLocalInputChannelFactory(workerTaskList);
     }
   }
 
-  private OutputChannelFactory makeStageOutputChannelFactory(final FrameContext frameContext, final int stageNumber)
+  private OutputChannelFactory makeStageOutputChannelFactory(
+      final FrameContext frameContext,
+      final int stageNumber,
+      boolean isFinalStage
+  )
   {
     // Use the standard frame size, since we assume this size when computing how much is needed to merge output
     // files from different workers.
     final int frameSize = frameContext.memoryParameters().getStandardFrameSize();
 
-    if (durableStageStorageEnabled) {
+    if (durableStageStorageEnabled || (isFinalStage
+                                       && MSQSelectDestination.DURABLE_STORAGE.equals(selectDestination))) {
       return DurableStorageOutputChannelFactory.createStandardImplementation(
           task.getControllerTaskId(),
           task().getWorkerNumber(),
@@ -725,7 +740,8 @@ public class WorkerImpl implements Worker
           task().getId(),
           frameSize,
           MSQTasks.makeStorageConnector(context.injector()),
-          context.tempDir()
+          context.tempDir(),
+          (isFinalStage && MSQSelectDestination.DURABLE_STORAGE.equals(selectDestination))
       );
     } else {
       final File fileChannelDirectory =
@@ -758,7 +774,8 @@ public class WorkerImpl implements Worker
                   task().getId(),
                   frameSize,
                   MSQTasks.makeStorageConnector(context.injector()),
-                  tmpDir
+                  tmpDir,
+                  false
               )
           ),
           frameSize
@@ -1014,9 +1031,13 @@ public class WorkerImpl implements Worker
       final WorkOrder workOrder = kernel.getWorkOrder();
       final StageDefinition stageDef = workOrder.getStageDefinition();
 
+      final boolean isFinalStage = stageDef.getStageNumber() == workOrder.getQueryDefinition()
+                                                                         .getFinalStageDefinition()
+                                                                         .getStageNumber();
+
       makeInputSliceReader();
-      makeWorkOutputChannelFactory();
-      makeShuffleOutputChannelFactory();
+      makeWorkOutputChannelFactory(isFinalStage);
+      makeShuffleOutputChannelFactory(isFinalStage);
       makeAndRunWorkProcessors();
 
       if (stageDef.doesShuffle()) {
@@ -1027,7 +1048,7 @@ public class WorkerImpl implements Worker
             Futures.immediateFuture(workResultAndOutputChannels.getOutputChannels().readOnly());
       }
 
-      setUpCompletionCallbacks();
+      setUpCompletionCallbacks(isFinalStage);
     }
 
     /**
@@ -1072,7 +1093,7 @@ public class WorkerImpl implements Worker
       );
     }
 
-    private void makeWorkOutputChannelFactory()
+    private void makeWorkOutputChannelFactory(boolean isFinalStage)
     {
       if (workOutputChannelFactory != null) {
         throw new ISE("processorOutputChannelFactory already created");
@@ -1096,7 +1117,7 @@ public class WorkerImpl implements Worker
       } else {
         // Writing stage output.
         baseOutputChannelFactory =
-            makeStageOutputChannelFactory(frameContext, kernel.getStageDefinition().getStageNumber());
+            makeStageOutputChannelFactory(frameContext, kernel.getStageDefinition().getStageNumber(), isFinalStage);
       }
 
       workOutputChannelFactory = new CountingOutputChannelFactory(
@@ -1105,11 +1126,11 @@ public class WorkerImpl implements Worker
       );
     }
 
-    private void makeShuffleOutputChannelFactory()
+    private void makeShuffleOutputChannelFactory(boolean isFinalStage)
     {
       shuffleOutputChannelFactory =
           new CountingOutputChannelFactory(
-              makeStageOutputChannelFactory(frameContext, kernel.getStageDefinition().getStageNumber()),
+              makeStageOutputChannelFactory(frameContext, kernel.getStageDefinition().getStageNumber(), isFinalStage),
               counterTracker.channel(CounterNames.shuffleChannel())
           );
     }
@@ -1237,7 +1258,7 @@ public class WorkerImpl implements Worker
       }
     }
 
-    private void setUpCompletionCallbacks()
+    private void setUpCompletionCallbacks(boolean isFinalStage)
     {
       final StageDefinition stageDef = kernel.getStageDefinition();
 
@@ -1273,7 +1294,7 @@ public class WorkerImpl implements Worker
 
               // Once the outputs channels have been resolved and are ready for reading, write success file, if
               // using durable storage.
-              writeDurableStorageSuccessFileIfNeeded(stageDef.getStageNumber());
+              writeDurableStorageSuccessFileIfNeeded(stageDef.getStageNumber(), isFinalStage);
 
               kernelManipulationQueue.add(holder -> holder.getStageKernelMap()
                                                           .get(stageDef.getId())
@@ -1295,22 +1316,24 @@ public class WorkerImpl implements Worker
     /**
      * Write {@link DurableStorageUtils#SUCCESS_MARKER_FILENAME} for a particular stage, if durable storage is enabled.
      */
-    private void writeDurableStorageSuccessFileIfNeeded(final int stageNumber)
+    private void writeDurableStorageSuccessFileIfNeeded(final int stageNumber, boolean isFinalStage)
     {
-      if (!durableStageStorageEnabled) {
+      final DurableStorageOutputChannelFactory durableStorageOutputChannelFactory;
+      if (durableStageStorageEnabled || (isFinalStage
+                                         && MSQSelectDestination.DURABLE_STORAGE.equals(selectDestination))) {
+        durableStorageOutputChannelFactory = DurableStorageOutputChannelFactory.createStandardImplementation(
+            task.getControllerTaskId(),
+            task().getWorkerNumber(),
+            stageNumber,
+            task().getId(),
+            frameContext.memoryParameters().getStandardFrameSize(),
+            MSQTasks.makeStorageConnector(context.injector()),
+            context.tempDir(),
+            (isFinalStage && MSQSelectDestination.DURABLE_STORAGE.equals(selectDestination))
+        );
+      } else {
         return;
       }
-
-      DurableStorageOutputChannelFactory durableStorageOutputChannelFactory =
-          DurableStorageOutputChannelFactory.createStandardImplementation(
-              task.getControllerTaskId(),
-              task().getWorkerNumber(),
-              stageNumber,
-              task().getId(),
-              frameContext.memoryParameters().getStandardFrameSize(),
-              MSQTasks.makeStorageConnector(context.injector()),
-              context.tempDir()
-          );
       try {
         durableStorageOutputChannelFactory.createSuccessFile(task.getId());
       }
@@ -1319,7 +1342,7 @@ public class WorkerImpl implements Worker
             e,
             "Unable to create the success file [%s] at the location [%s]",
             DurableStorageUtils.SUCCESS_MARKER_FILENAME,
-            DurableStorageUtils.getSuccessFilePath(
+            DurableStorageUtils.getWorkerOutputSuccessFilePath(
                 task.getControllerTaskId(),
                 stageNumber,
                 task().getWorkerNumber()

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.shuffle;
+package org.apache.druid.msq.shuffle.output;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
@@ -33,100 +33,63 @@ import org.apache.druid.frame.channel.WritableFrameFileChannel;
 import org.apache.druid.frame.file.FrameFileFooter;
 import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.processor.OutputChannel;
-import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.PartitionedOutputChannel;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.MappedByteBufferHandler;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStreamWriter;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
-public class DurableStorageOutputChannelFactory implements OutputChannelFactory
+public class DurableStorageTaskOutputChannelFactoryImpl
+    extends DurableStorageOutputChannelFactory
 {
-  private static final Logger LOG = new Logger(DurableStorageOutputChannelFactory.class);
-
-  private final String controllerTaskId;
-  private final int workerNumber;
-  private final int stageNumber;
-  private final String taskId;
-  private final int frameSize;
-  private final StorageConnector storageConnector;
-  private final File tmpDir;
-  private final ExecutorService remoteInputStreamPool;
-
-  public DurableStorageOutputChannelFactory(
-      final String controllerTaskId,
-      final int workerNumber,
-      final int stageNumber,
-      final String taskId,
-      final int frameSize,
-      final StorageConnector storageConnector,
-      final File tmpDir
+  public DurableStorageTaskOutputChannelFactoryImpl(
+      String controllerTaskId,
+      int workerNumber,
+      int stageNumber,
+      String taskId,
+      int frameSize,
+      StorageConnector storageConnector,
+      File tmpDir
   )
   {
-    this.controllerTaskId = Preconditions.checkNotNull(controllerTaskId, "controllerTaskId");
-    this.workerNumber = workerNumber;
-    this.stageNumber = stageNumber;
-    this.taskId = taskId;
-    this.frameSize = frameSize;
-    this.storageConnector = Preconditions.checkNotNull(storageConnector, "storageConnector");
-    this.tmpDir = Preconditions.checkNotNull(tmpDir, "tmpDir is null");
-    this.remoteInputStreamPool =
-        Executors.newCachedThreadPool(Execs.makeThreadFactory("-remote-fetcher-%d"));
-  }
-
-  /**
-   * Creates an instance that is the standard production implementation. Closeable items are registered with
-   * the provided Closer.
-   */
-  public static DurableStorageOutputChannelFactory createStandardImplementation(
-      final String controllerTaskId,
-      final int workerNumber,
-      final int stageNumber,
-      final String taskId,
-      final int frameSize,
-      final StorageConnector storageConnector,
-      final File tmpDir
-  )
-  {
-    return new DurableStorageOutputChannelFactory(
-        controllerTaskId,
-        workerNumber,
-        stageNumber,
-        taskId,
-        frameSize,
-        storageConnector,
-        tmpDir
-    );
+    super(controllerTaskId, workerNumber, stageNumber, taskId, frameSize, storageConnector, tmpDir);
   }
 
   @Override
-  public OutputChannel openChannel(int partitionNumber) throws IOException
+  protected String getSuccessFilePath()
   {
-    final String fileName = DurableStorageUtils.getPartitionOutputsFileNameForPartition(
+    return DurableStorageUtils.getWorkerOutputSuccessFilePath(controllerTaskId, stageNumber, workerNumber);
+  }
+
+  @Override
+  protected String getFileNameForPartition(int partitionNumber)
+  {
+    return DurableStorageUtils.getPartitionOutputsFileNameForPartition(
         controllerTaskId,
         stageNumber,
         workerNumber,
         taskId,
         partitionNumber
     );
+  }
+
+
+  @Override
+  public OutputChannel openChannel(int partitionNumber) throws IOException
+  {
+    final String fileName = getFileNameForPartition(partitionNumber);
     final WritableFrameFileChannel writableChannel =
         new WritableFrameFileChannel(
             FrameFileWriter.open(
@@ -211,8 +174,8 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
         FileUtils.mkdirp(footerFile.getParentFile());
         Preconditions.checkState(footerFile.createNewFile(), "Unable to create local footer file");
         try (FileOutputStream footerFileStream = new FileOutputStream(footerFile);
-            InputStream footerInputStream =
-                storageConnector.readRange(fileName, channelSize - footerLength, footerLength)) {
+             InputStream footerInputStream =
+                 storageConnector.readRange(fileName, channelSize - footerLength, footerLength)) {
           IOUtils.copy(footerInputStream, footerFileStream);
         }
         MappedByteBufferHandler mapHandle = FileUtils.map(footerFile);
@@ -239,49 +202,4 @@ public class DurableStorageOutputChannelFactory implements OutputChannelFactory
     );
   }
 
-  @Override
-  public OutputChannel openNilChannel(int partitionNumber)
-  {
-    final String fileName = DurableStorageUtils.getPartitionOutputsFileNameForPartition(
-        controllerTaskId,
-        stageNumber,
-        workerNumber,
-        taskId,
-        partitionNumber
-    );
-    // As tasks dependent on output of this partition will forever block if no file is present in RemoteStorage. Hence, writing a dummy frame.
-    try {
-
-      FrameFileWriter.open(Channels.newChannel(storageConnector.write(fileName)), null, ByteTracker.unboundedTracker()).close();
-      return OutputChannel.nil(partitionNumber);
-    }
-    catch (IOException e) {
-      throw new ISE(
-          e,
-          "Unable to create empty remote output of stage [%d], partition [%d] for worker [%d]",
-          stageNumber,
-          partitionNumber,
-          workerNumber
-      );
-    }
-  }
-
-  /**
-   * Creates a file with name __success and adds the worker's id which has successfully written its outputs. While reading
-   * this file can be used to find out the worker which has written its outputs completely.
-   * Rename operation is not very quick in cloud storage like S3 due to which this alternative
-   * route has been taken.
-   * If the success file is already present in the location, then this method is a noop
-   */
-  public void createSuccessFile(String taskId) throws IOException
-  {
-    String fileName = DurableStorageUtils.getSuccessFilePath(controllerTaskId, stageNumber, workerNumber);
-    if (storageConnector.pathExists(fileName)) {
-      LOG.warn("Path [%s] already exists. Won't attempt to rewrite on top of it.", fileName);
-      return;
-    }
-    OutputStreamWriter os = new OutputStreamWriter(storageConnector.write(fileName), StandardCharsets.UTF_8);
-    os.write(taskId); // Add some dummy content in the file
-    os.close();
-  }
 }

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.shuffle;
+package org.apache.druid.msq.shuffle.input;
 
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.indexing.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -111,16 +111,20 @@ public class IndexerWorkerClient implements WorkerClient
       int stageNumber
   )
   {
-    String path = StringUtils.format("/keyStatistics/%s/%d",
-                                     StringUtils.urlEncode(queryId),
-                                     stageNumber);
+    String path = StringUtils.format(
+        "/keyStatistics/%s/%d",
+        StringUtils.urlEncode(queryId),
+        stageNumber
+    );
 
     return FutureUtils.transform(
         getClient(workerTaskId).asyncRequest(
             new RequestBuilder(HttpMethod.POST, path),
             new BytesFullResponseHandler()
         ),
-        holder -> deserialize(holder, new TypeReference<ClusterByStatisticsSnapshot>() {})
+        holder -> deserialize(holder, new TypeReference<ClusterByStatisticsSnapshot>()
+        {
+        })
     );
   }
 
@@ -132,17 +136,21 @@ public class IndexerWorkerClient implements WorkerClient
       long timeChunk
   )
   {
-    String path = StringUtils.format("/keyStatisticsForTimeChunk/%s/%d/%d",
-                                     StringUtils.urlEncode(queryId),
-                                     stageNumber,
-                                     timeChunk);
+    String path = StringUtils.format(
+        "/keyStatisticsForTimeChunk/%s/%d/%d",
+        StringUtils.urlEncode(queryId),
+        stageNumber,
+        timeChunk
+    );
 
     return FutureUtils.transform(
         getClient(workerTaskId).asyncRequest(
             new RequestBuilder(HttpMethod.POST, path),
             new BytesFullResponseHandler()
         ),
-        holder -> deserialize(holder, new TypeReference<ClusterByStatisticsSnapshot>() {})
+        holder -> deserialize(holder, new TypeReference<ClusterByStatisticsSnapshot>()
+        {
+        })
     );
   }
 
@@ -204,7 +212,9 @@ public class IndexerWorkerClient implements WorkerClient
             new RequestBuilder(HttpMethod.GET, "/counters"),
             new BytesFullResponseHandler()
         ),
-        holder -> deserialize(holder, new TypeReference<CounterSnapshotsTree>() {})
+        holder -> deserialize(holder, new TypeReference<CounterSnapshotsTree>()
+        {
+        })
     );
   }
 
@@ -299,7 +309,7 @@ public class IndexerWorkerClient implements WorkerClient
 
   /**
    * Deserialize a {@link BytesFullResponseHolder} as JSON.
-   *
+   * <p>
    * It would be reasonable to move this to {@link BytesFullResponseHolder} itself, or some shared utility class.
    */
   private <T> T deserialize(final BytesFullResponseHolder bytesHolder, final TypeReference<T> typeReference)

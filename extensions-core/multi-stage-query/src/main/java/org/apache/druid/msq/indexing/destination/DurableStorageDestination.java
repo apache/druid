@@ -17,31 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.indexing.destination;
 
-/**
- * Determines the destination for results of select queries.
- */
-public enum MSQSelectDestination
+import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.msq.indexing.MSQDestination;
+
+public class DurableStorageDestination implements MSQDestination
 {
-  /**
-   * Writes all the results directly to the report.
-   */
-  TASK_REPORT(false),
-  /**
-   * Writes the results as frame files to durable storage. Task report can be truncated to a preview.
-   */
-  DURABLE_STORAGE(true);
+  public static final String TYPE = "durableStorage";
 
-  private final boolean shouldTruncateResultsInTaskReport;
+  public static final DurableStorageDestination INSTANCE = new DurableStorageDestination();
 
-  public boolean shouldTruncateResultsInTaskReport()
+
+  private DurableStorageDestination()
   {
-    return shouldTruncateResultsInTaskReport;
+    // Singleton.
   }
 
-  MSQSelectDestination(boolean shouldTruncateResultsInTaskReport)
+  @JsonCreator
+  public static DurableStorageDestination instance()
   {
-    this.shouldTruncateResultsInTaskReport = shouldTruncateResultsInTaskReport;
+    return INSTANCE;
   }
+
+  @Override
+  public String toString()
+  {
+    return "DurableStorageDestination{}";
+  }
+
 }
