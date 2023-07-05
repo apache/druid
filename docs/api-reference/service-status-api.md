@@ -37,7 +37,7 @@ All processes support the following endpoints.
 #### URL
 `GET` `/status`
 
-Returns the Druid version, loaded extensions, memory used, total memory, and other useful information about the process.
+Retrieves the Druid version, loaded extensions, memory used, total memory, and other useful information about the process.
 
 #### Responses
 
@@ -45,7 +45,7 @@ Returns the Druid version, loaded extensions, memory used, total memory, and oth
 
 <!--200 SUCCESS-->
 <br/>
-*Successfully retrieved service information*  
+*Successfully retrieved process information*  
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
@@ -172,7 +172,7 @@ Host: {domain}
 
 `GET` `/status/health`
 
-Retrieves the health of the Druid service. If online, it will always return a JSON object with the boolean `true` value, indicating that the service can receive API calls. It is useful for automated health checks.
+Retrieves the health of the Druid service. If online, it will always return a JSON object with the boolean `true` value, indicating that the service can receive API calls. This endpoint is suitable for automated health checks.
 
 #### Responses
 
@@ -180,7 +180,7 @@ Retrieves the health of the Druid service. If online, it will always return a JS
 
 <!--200 SUCCESS-->
 <br/>
-*Successfully retrieved service health*  
+*Successfully retrieved process health*  
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample request
@@ -213,7 +213,7 @@ Host: {domain}
 #### URL
 `GET` `/status/properties`
 
-Returns the current configuration properties of the process.
+Retrieves the current configuration properties of the process.
 
 #### Responses
 
@@ -429,7 +429,7 @@ A successful response to this endpoint results in an empty response body.
 
 ## Coordinator
 
-### Get leader coordinator
+### Get leader address
 
 #### URL
 
@@ -443,7 +443,7 @@ Retrieves the address of the current leader Coordinator of the cluster.
 
 <!--200 SUCCESS-->
 <br/>
-*Successfully retrieved leader coordinator*  
+*Successfully retrieved leader Coordinator address*  
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
@@ -475,7 +475,7 @@ Host: {domain}
 #### URL
 `GET` `/druid/coordinator/v1/isLeader`
 
-Retrieves a JSON object with a `leader` key. The value can be `true` or `false`, indicating if this server is the current leader Coordinator of the cluster. In addition to the response object, it returns HTTP 200 if the server is the current leader and HTTP 404 if not. This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service at the load balancer.
+Retrieves a JSON object with a `leader` key. The value can be `true` or `false`, indicating if this server is the current leader Coordinator of the cluster. This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service at the load balancer.
 
 #### Responses
 
@@ -522,13 +522,13 @@ Host: {domain}
 
 ## Overlord
 
-### Get leader overlord
+### Get leader address
 
 #### URL
 
 `GET` `/druid/indexer/v1/leader`
 
-Retrieves the address of the current leader Overlord of the cluster. If you have multiple Overlords, just one is leading at any given time. The others are on standby.
+Retrieves the address of the current leader Overlord of the cluster. In a cluster of multiple Overlords, only one Overlord assumes the leading role, while the remaining Overlords remain on standby.
 
 #### Responses
 
@@ -536,8 +536,7 @@ Retrieves the address of the current leader Overlord of the cluster. If you have
 
 <!--200 SUCCESS-->
 <br/>
-*Current server is the leader*  
- 
+*Successfully retrieved leader Overlord address*  
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
@@ -572,7 +571,7 @@ Host: {domain}
 #### URL
 `GET` `/druid/indexer/v1/isLeader`
 
-Retrieves a JSON object with a `leader` key. The value can be `true` or `false`, indicating if this server is the current leader Overlord of the cluster. In addition to the response object, it returns HTTP 200 if the server is the current leader and HTTP 404 if not. This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service at the load balancer.
+Retrieves a JSON object with a `leader` property. The value can be `true` or `false`, indicating if this server is the current leader Overlord of the cluster. This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service at the load balancer.
 
 #### Responses
 
@@ -635,10 +634,6 @@ To use this endpoint, `{domain}` should be the address of the MiddleManager serv
 <br/>
 *Successfully retrieved MiddleManager state*  
 
-<!--404 NOT FOUND->
-<br/>
-*Error or request was sent to the incorrect service address*  
-
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
@@ -684,10 +679,6 @@ To use this endpoint, `{domain}` should be the address of the MiddleManager serv
 <!--200 SUCCESS-->
 <br/>
 *Successfully retrieved active tasks*  
-<!--404 NOT FOUND->
-<br/>
-*Error or request was sent to the incorrect service address*  
-
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
@@ -701,7 +692,7 @@ curl "{domain}/druid/worker/v1/tasks"
 ```
 <!--HTTP-->
 ```http
-GET /druid/worker/v1/enabled HTTP/1.1
+GET /druid/worker/v1/tasks HTTP/1.1
 Host: {domain}
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -722,7 +713,7 @@ Host: {domain}
 #### URL
 `GET` `/druid/worker/v1/task/{taskid}/log`
 
-Retrieves task log output stream by task ID. It is highly recommended that for normal usage, you should use the `/druid/indexer/v1/task/{taskId}/log`
+Retrieves task log output stream by task ID. It is strongly advised that, for normal usage, you should use the `/druid/indexer/v1/task/{taskId}/log`
 [Tasks API](./tasks-api.md) instead.
 
 ### Shut down running task
@@ -730,7 +721,7 @@ Retrieves task log output stream by task ID. It is highly recommended that for n
 #### URL
 <post>`POST`</post> `/druid/worker/v1/task/{taskid}/shutdown`
 
-Shuts down a running task by `taskid`. For normal usage, you should prefer to use the `/druid/indexer/v1/task/{taskId}/shutdown`
+Shuts down a running task by ID. For normal usage, you should prefer to use the `/druid/indexer/v1/task/{taskId}/shutdown`
 [Tasks API](./tasks-api.md) instead.
 
 #### Responses
@@ -749,11 +740,11 @@ Shuts down a running task by `taskid`. For normal usage, you should prefer to us
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "{domain}/druid/worker/v1/task/{taskid}/shutdown"
+curl "{domain}/druid/worker/v1/task/index_kafka_wikiticker_f7011f8ffba384b_fpeclode/shutdown"
 ```
 <!--HTTP-->
 ```http
-POST /druid/worker/v1/task/index_parallel_wikipedia_auto_eglhheik_2023-06-27T21:05:23.603Z/shutdown HTTP/1.1
+POST /druid/worker/v1/task/index_kafka_wikiticker_f7011f8ffba384b_fpeclode/shutdown HTTP/1.1
 Host: {domain}
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -879,9 +870,6 @@ To use this endpoint, `{domain}` should be the address of the Historical service
 <!--200 SUCCESS-->
 <br/>
 *Successfully retrieved status*  
-<!--404 NOT FOUND-->
-<br/>
-*Resource not found or request was sent to an incorrect node*  
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -910,7 +898,7 @@ Host: {domain}
   ```
 </details>
 
-### Get segment readiness status
+### Get segment readiness
 
 #### URL
 `GET` `/druid/historical/v1/readiness`
@@ -993,7 +981,7 @@ Host: {domain}
   ```
 </details>
 
-### Get Broker query readiness status
+### Get Broker query readiness
 
 #### URL
 
