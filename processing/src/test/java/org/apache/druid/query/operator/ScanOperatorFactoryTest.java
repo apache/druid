@@ -212,7 +212,9 @@ public class ScanOperatorFactoryTest
   }
 
   private static <T> void validateList(
-      String msg, List<T> expectedList, List<T> actualList
+      String msg,
+      List<T> expectedList,
+      List<T> actualList
   )
   {
     if (expectedList != null && expectedList.isEmpty()) {

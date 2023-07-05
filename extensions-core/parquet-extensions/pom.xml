@@ -33,7 +33,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <parquet.version>1.13.0</parquet.version>
+    <parquet.version>1.12.0</parquet.version>
   </properties>
   <dependencies>
     <dependency>
@@ -426,9 +426,6 @@
           </exclusions>
         </dependency>
       </dependencies>
-      <properties>
-        <parquet.version>1.12.0</parquet.version>
-      </properties>
     </profile>
     <profile>
       <id>hadoop3</id>
@@ -449,6 +446,9 @@
           <scope>runtime</scope>
         </dependency>
       </dependencies>
+      <properties>
+        <parquet.version>1.13.0</parquet.version>
+      </properties>
     </profile>
   </profiles>
 </project>
