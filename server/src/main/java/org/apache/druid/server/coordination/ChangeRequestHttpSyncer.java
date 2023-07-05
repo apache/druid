@@ -131,7 +131,7 @@ public class ChangeRequestHttpSyncer<T>
   {
     synchronized (startStopLock) {
       if (!startStopLock.canStart()) {
-        throw new ISE("Could not start sync for server[%s] as lifecycle has not started.", logIdentity);
+        throw new ISE("Could not start sync for server[%s].", logIdentity);
       }
       try {
         log.info("Starting sync for server[%s].", logIdentity);
@@ -230,7 +230,7 @@ public class ChangeRequestHttpSyncer<T>
   private void sync()
   {
     if (!startStopLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
-      log.info("Skipping sync for server[%s] as lifecycle has not started.", logIdentity);
+      log.info("Skipping sync for server[%s] as syncer has not started yet.", logIdentity);
       return;
     }
 
@@ -262,7 +262,7 @@ public class ChangeRequestHttpSyncer<T>
             {
               synchronized (startStopLock) {
                 if (!startStopLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
-                  log.info("Not handling sync response for server[%s] as lifecycle has not started.", logIdentity);
+                  log.info("Not handling response for server[%s] as syncer has not started yet.", logIdentity);
                   return;
                 }
 
@@ -322,7 +322,7 @@ public class ChangeRequestHttpSyncer<T>
             {
               synchronized (startStopLock) {
                 if (!startStopLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
-                  log.info("Not handling sync failure for server[%s] as lifecycle has not started.", logIdentity);
+                  log.info("Not handling sync failure for server[%s] as syncer has not started yet.", logIdentity);
                   return;
                 }
 
@@ -385,12 +385,12 @@ public class ChangeRequestHttpSyncer<T>
 
       try {
         if (consecutiveFailedAttemptCount > 0) {
-          long sleepMillis = Math.min(
+          long delayMillis = Math.min(
               MAX_RETRY_BACKOFF,
               RetryUtils.nextRetrySleepMillis(consecutiveFailedAttemptCount)
           );
-          log.info("Scheduling next syncup in [%d] millis for server[%s].", sleepMillis, logIdentity);
-          executor.schedule(this::sync, sleepMillis, TimeUnit.MILLISECONDS);
+          log.info("Scheduling next sync for server[%s] in [%d] millis.", logIdentity, delayMillis);
+          executor.schedule(this::sync, delayMillis, TimeUnit.MILLISECONDS);
         } else {
           executor.execute(this::sync);
         }
@@ -399,11 +399,12 @@ public class ChangeRequestHttpSyncer<T>
         if (executor.isShutdown()) {
           log.warn(th, "Could not schedule sync for server[%s] because executor is stopped.", logIdentity);
         } else {
-          log.makeAlert(
+          log.warn(
               th,
-              "Could not schedule sync for server [%s]. Try restarting the Druid process on that server.",
+              "Could not schedule sync for server [%s]. This syncer will be reset automatically."
+              + " If the issue persists, try restarting this Druid service.",
               logIdentity
-          ).emit();
+          );
         }
       }
     }
@@ -423,7 +424,11 @@ public class ChangeRequestHttpSyncer<T>
 
     // Alert if unstable alert timeout has been exceeded
     if (sinceUnstable.hasElapsed(maxUnstableDuration)) {
-      log.noStackTrace().makeAlert(throwable, message).emit();
+      String alertMessage = StringUtils.format(
+          "%s. Try restarting the Druid process on server[%s].",
+          message, baseServerURL
+      );
+      log.noStackTrace().makeAlert(throwable, alertMessage).emit();
     } else if (log.isDebugEnabled()) {
       log.debug(throwable, message);
     } else {

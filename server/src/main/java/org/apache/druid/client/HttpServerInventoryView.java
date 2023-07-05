@@ -112,7 +112,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
   private final String execNamePrefix;
   private final ScheduledExecutorFactory executorFactory;
-  private volatile ScheduledExecutorService executor;
+  private volatile ScheduledExecutorService inventorySyncExecutor;
+  private volatile ScheduledExecutorService monitoringExecutor;
 
   private final HttpClient httpClient;
   private final ObjectMapper smileMapper;
@@ -153,10 +154,11 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       log.info("Starting executor[%s].", execNamePrefix);
 
       try {
-        executor = executorFactory.create(
+        inventorySyncExecutor = executorFactory.create(
             config.getNumThreads(),
             execNamePrefix + "-%s"
         );
+        monitoringExecutor = executorFactory.create(1, execNamePrefix + "-monitor-%s");
 
         DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForService(DataNodeService.DISCOVERY_SERVICE_KEY);
         druidNodeDiscovery.registerListener(
@@ -180,7 +182,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               public void nodeViewInitialized()
               {
                 if (!initialized.getAndSet(true)) {
-                  executor.execute(HttpServerInventoryView.this::serverInventoryInitialized);
+                  inventorySyncExecutor.execute(HttpServerInventoryView.this::serverInventoryInitialized);
                 }
               }
 
@@ -214,14 +216,14 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
             }
         );
 
-        ScheduledExecutors.scheduleAtFixedRate(
-            executor,
+        ScheduledExecutors.scheduleWithFixedDelay(
+            monitoringExecutor,
             Duration.standardSeconds(60),
             Duration.standardMinutes(5),
             this::checkAndResetUnhealthyServers
         );
         ScheduledExecutors.scheduleAtFixedRate(
-            executor,
+            monitoringExecutor,
             Duration.standardSeconds(30),
             Duration.standardMinutes(1),
             this::emitServerStatusMetrics
@@ -247,8 +249,11 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
       log.info("Stopping executor[%s].", execNamePrefix);
 
-      if (executor != null) {
-        executor.shutdownNow();
+      if (inventorySyncExecutor != null) {
+        inventorySyncExecutor.shutdownNow();
+      }
+      if (monitoringExecutor != null) {
+        monitoringExecutor.shutdownNow();
       }
 
       log.info("Stopped executor[%s].", execNamePrefix);
@@ -534,7 +539,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         this.syncer = new ChangeRequestHttpSyncer<>(
             smileMapper,
             httpClient,
-            executor,
+            inventorySyncExecutor,
             new URL(druidServer.getScheme(), hostAndPort.getHostText(), hostAndPort.getPort(), "/"),
             "/druid-internal/v1/segments",
             SEGMENT_LIST_RESP_TYPE_REF,

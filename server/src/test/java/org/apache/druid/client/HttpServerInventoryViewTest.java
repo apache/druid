@@ -149,10 +149,10 @@ public class HttpServerInventoryViewTest
   public void testStopShutsDownExecutors()
   {
     httpServerInventoryView.start();
-    Assert.assertFalse(execHelper.executor.isShutdown());
+    Assert.assertFalse(execHelper.syncExecutor.isShutdown());
 
     httpServerInventoryView.stop();
-    Assert.assertTrue(execHelper.executor.isShutdown());
+    Assert.assertTrue(execHelper.syncExecutor.isShutdown());
   }
 
   @Test
@@ -566,72 +566,62 @@ public class HttpServerInventoryViewTest
   }
 
   /**
-   * Creates and retains a handle on the executor used by the inventory view.
-   *
-   * There are 4 types of tasks submitted to the executor. Upon succesful
+   * Creates and retains a handle on the executors used by the inventory view.
+   * <p>
+   * There are 4 types of tasks submitted to the two executors. Upon succesful
    * completion, each of these tasks add another task to the execution queue.
+   * <p>
+   * Tasks running on sync executor:
    * <ol>
-   *   <li>check and reset unhealthy servers (adds self to queue)</li>
-   *   <li>emit metrics (adds self to queue)</li>
    *   <li>send request to server (adds "handle response" to queue)</li>
    *   <li>handle response and execute callbacks (adds "send request" to queue)</li>
+   * </ol>
+   * <p>
+   * Tasks running on monitoring executor.
+   * <ol>
+   * <li>check and reset unhealthy servers (adds self to queue)</li>
+   * <li>emit metrics (adds self to queue)</li>
    * </ol>
    */
   private static class TestExecutorFactory implements ScheduledExecutorFactory
   {
-    private BlockingExecutorService executor;
+    private BlockingExecutorService syncExecutor;
+    private BlockingExecutorService monitorExecutor;
 
     @Override
     public ScheduledExecutorService create(int corePoolSize, String nameFormat)
     {
       BlockingExecutorService executorService = new BlockingExecutorService(nameFormat);
       final String syncExecutorPrefix = EXEC_NAME_PREFIX + "-%s";
+      final String monitorExecutorPrefix = EXEC_NAME_PREFIX + "-monitor-%s";
       if (syncExecutorPrefix.equals(nameFormat)) {
-        executor = executorService;
+        syncExecutor = executorService;
+      } else if (monitorExecutorPrefix.equals(nameFormat)) {
+        monitorExecutor = executorService;
       }
 
       return new WrappingScheduledExecutorService(nameFormat, executorService, false);
     }
 
-    // Methods to execute pending tasks in the executor
-
     void sendSyncRequestAndHandleResponse()
     {
-      sendSyncRequest();
-
-      finishCheckAndResetTask();
-      finishEmitMetricsTask();
-      executor.finishNextPendingTask();
+      syncExecutor.finishNextPendingTasks(2);
     }
 
     void sendSyncRequest()
     {
-      finishCheckAndResetTask();
-      finishEmitMetricsTask();
-      executor.finishNextPendingTask();
+      syncExecutor.finishNextPendingTask();
     }
 
     void finishInventoryInitialization()
     {
-      finishCheckAndResetTask();
-      finishEmitMetricsTask();
-      executor.finishNextPendingTask();
+      syncExecutor.finishNextPendingTask();
     }
 
     void emitMetrics()
     {
-      finishCheckAndResetTask();
-      finishEmitMetricsTask();
-    }
-
-    void finishEmitMetricsTask()
-    {
-      executor.finishNextPendingTask();
-    }
-
-    void finishCheckAndResetTask()
-    {
-      executor.finishNextPendingTask();
+      // Finish 1 task for check and reset, 1 for metric emission
+      monitorExecutor.finishNextPendingTasks(2);
     }
   }
 }
