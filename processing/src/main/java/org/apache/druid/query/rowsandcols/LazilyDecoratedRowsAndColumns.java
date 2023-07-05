@@ -332,6 +332,13 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       sigBob.add(column, racColumn.toAccessor().getType());
     }
 
+    final int limitedNumRows;
+    if (limit == -1) {
+      limitedNumRows = Integer.MAX_VALUE;
+    } else {
+      limitedNumRows = limit;
+    }
+
     final FrameWriter frameWriter = FrameWriters.makeFrameWriterFactory(
         FrameType.COLUMNAR,
         memFactory,
@@ -340,7 +347,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     ).newFrameWriter(selectorFactory);
 
     rowId.set(0);
-    for (; rowId.get() < numRows; rowId.incrementAndGet()) {
+    for (; rowId.get() < numRows && frameWriter.getNumRows() < limitedNumRows; rowId.incrementAndGet()) {
       final int theId = rowId.get();
       if (rowsToSkip != null && rowsToSkip.get(theId)) {
         continue;

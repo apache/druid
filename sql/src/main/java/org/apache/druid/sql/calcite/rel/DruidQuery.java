@@ -818,7 +818,7 @@ public class DruidQuery
 
   /**
    * Whether the given datasource can make use of "intervals" based filtering. The is true for anything based on
-   * regular tables ({@link org.apache.druid.query.TableDataSource}).
+   * regular tables ({@link TableDataSource}).
    */
   private static boolean canUseIntervalFiltering(final DataSource dataSource)
   {

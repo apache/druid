@@ -173,7 +173,7 @@ public class DruidException extends RuntimeException
    */
   public static DruidException defensive(String format, Object... args)
   {
-    return forPersona(Persona.DEVELOPER).ofCategory(Category.DEFENSIVE).build(format, args);
+    return defensive().build(format, args);
   }
 
   private final Persona targetPersona;
@@ -360,17 +360,6 @@ public class DruidException extends RuntimeException
      * Indicates some unsupported behavior was requested.
      */
     UNSUPPORTED(501),
-    /**
-     * Indicates that some requested/required functionality is not implemented (yet).  This is generally used to
-     * indicate some known corner that is just lacking in implementation rather than some functionality that is
-     * intentionally being denied.  It is marked as a 400-style error because requesting the functionality is
-     * not going to produce a working query in whatever code is throwing the exception, so user input needs to change
-     * in order for the request to succeed.
-     *
-     * That said, When these errors/exceptions get thrown a lot in production, it is indicative that it is time to
-     * implement the unimplemented thing, rather than the user actually doing something wrong.
-     */
-    NOT_IMPLEMENTED(400),
     /**
      * A catch-all for any time when we cannot come up with a meaningful categorization.  This is hopefully only
      * used when converting generic exceptions from frameworks and libraries that we do not control into DruidExceptions

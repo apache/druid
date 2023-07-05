@@ -114,7 +114,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
 
     // call the same method multiple times
 
-    for (int i = 2; i <= intervals.length; ++i) {
+    for (int i = 0; i <= intervals.length; ++i) {
       Interval interval = (i == 0 ? null : intervals[i - 1]);
       for (int j = 0; j <= filters.length; ++j) {
         Filter filter = (j == 0 ? null : filters[j - 1]);

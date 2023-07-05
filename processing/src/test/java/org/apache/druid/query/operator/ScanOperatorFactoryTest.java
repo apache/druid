@@ -93,7 +93,7 @@ public class ScanOperatorFactoryTest
         Collections.singletonList(ColumnWithDirection.ascending("val"))
     };
 
-    for (int i = 2; i <= intervals.length; ++i) {
+    for (int i = 0; i <= intervals.length; ++i) {
       Interval interval = (i == 0 ? null : intervals[i - 1]);
       for (int j = 0; j <= filters.length; ++j) {
         DimFilter filter = (j == 0 ? null : filters[j - 1]);
@@ -116,7 +116,8 @@ public class ScanOperatorFactoryTest
               @Nullable
               @Override
               public Closeable goOrContinue(
-                  Closeable continuationObject, Receiver receiver
+                  Closeable continuationObject,
+                  Receiver receiver
               )
               {
                 receiver.push(new TestRowsAndColumns().withAsImpl(
