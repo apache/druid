@@ -66,10 +66,9 @@ The notebooks are located in the [apache/druid repo](https://github.com/apache/d
 
 The links that follow are the raw GitHub URLs, so you can use them to download the notebook directly, such as with `wget`, or manually through your web browser. Note that if you save the file from your web browser, make sure to remove the `.txt` extension.
 
-- [Introduction to the Druid REST API](
-  https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/api-tutorial.ipynb)
-  walks you through some of the basics related to the Druid REST API and several endpoints.
-- [Introduction to the Druid Python API](
-  https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/Python_API_Tutorial.ipynb)
-  walks you through some of the basics related to the Druid API using the Python wrapper API.
-- [Introduction to Druid SQL](https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/sql-tutorial.ipynb) covers the basics of Druid SQL.
+- [Introduction to the Druid REST API](https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/notebooks/04-api/00-getting-started.ipynb) walks you through some of the
+  basics related to the Druid REST API and several endpoints.
+- [Introduction to the Druid Python API](https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/notebooks/01-introduction/01-druidapi-package-intro.ipynb) walks you through some of the
+  basics related to the Druid API using the Python wrapper API.
+- [Learn the basics of Druid SQL](https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/notebooks/03-query/00-using-sql-with-druidapi.ipynb) introduces you to the unique aspects of Druid SQL with the primary focus on the SELECT statement.
+- [Ingest and query data from Apache Kafka](https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/notebooks/02-ingestion/01-streaming-from-kafka.ipynb) walks you through ingesting an event stream from Kafka.
