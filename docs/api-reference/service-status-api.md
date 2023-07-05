@@ -35,7 +35,7 @@ All processes support the following endpoints.
 ### Get process information
 
 #### URL
-`GET` `/status`
+<code class="getAPI">GET</code> `/status`
 
 Retrieves the Druid version, loaded extensions, memory used, total memory, and other useful information about the process.
 
@@ -170,7 +170,7 @@ Host: {domain}
 
 #### URL
 
-`GET` `/status/health`
+<code class="getAPI">GET</code> `/status/health`
 
 Retrieves the health of the Druid service. If online, it will always return a JSON object with the boolean `true` value, indicating that the service can receive API calls. This endpoint is suitable for automated health checks.
 
@@ -211,7 +211,7 @@ Host: {domain}
 ### Get configuration properties
 
 #### URL
-`GET` `/status/properties`
+<code class="getAPI">GET</code> `/status/properties`
 
 Retrieves the current configuration properties of the process.
 
@@ -345,7 +345,7 @@ Host: {domain}
 ### Get node discovery status and cluster integration confirmation
 
 #### URL
-`GET` `/status/selfDiscovered/status`
+<code class="getAPI">GET</code> `/status/selfDiscovered/status`
 
 Retrieves a JSON map of the form `{"selfDiscovered": true/false}`, indicating whether the node has received a confirmation from the central node discovery mechanism (currently ZooKeeper) of the Druid cluster that the node has been added to the
 cluster. 
@@ -391,7 +391,7 @@ Host: {domain}
 ### Get node self-discovery status
 
 #### URL
-`GET` `/status/selfDiscovered`
+<code class="getAPI">GET</code> `/status/selfDiscovered`
 
 Retrieves a status code to indicate if a node discovered itself within the Druid cluster. This is similar to the `status/selfDiscovered/status` endpoint but relies on HTTP status codes alone. This is useful for certain monitoring checks such as AWS load balancer health checks that are unable to examine the response body.
 
@@ -433,7 +433,7 @@ A successful response to this endpoint results in an empty response body.
 
 #### URL
 
-`GET` `/druid/coordinator/v1/leader`
+<code class="getAPI">GET</code> `/druid/coordinator/v1/leader`
 
 Retrieves the address of the current leader Coordinator of the cluster.
 
@@ -473,7 +473,7 @@ Host: {domain}
 ### Get leader status
 
 #### URL
-`GET` `/druid/coordinator/v1/isLeader`
+<code class="getAPI">GET</code> `/druid/coordinator/v1/isLeader`
 
 Retrieves a JSON object with a `leader` key. The value can be `true` or `false`, indicating if this server is the current leader Coordinator of the cluster. This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service at the load balancer.
 
@@ -526,7 +526,7 @@ Host: {domain}
 
 #### URL
 
-`GET` `/druid/indexer/v1/leader`
+<code class="getAPI">GET</code> `/druid/indexer/v1/leader`
 
 Retrieves the address of the current leader Overlord of the cluster. In a cluster of multiple Overlords, only one Overlord assumes the leading role, while the remaining Overlords remain on standby.
 
@@ -569,7 +569,7 @@ Host: {domain}
 ### Get leader status
 
 #### URL
-`GET` `/druid/indexer/v1/isLeader`
+<code class="getAPI">GET</code> `/druid/indexer/v1/isLeader`
 
 Retrieves a JSON object with a `leader` property. The value can be `true` or `false`, indicating if this server is the current leader Overlord of the cluster. This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service at the load balancer.
 
@@ -620,7 +620,7 @@ Host: {domain}
 
 #### URL
 
-`GET` `/druid/worker/v1/enabled`
+<code class="getAPI">GET</code> `/druid/worker/v1/enabled`
 
 Retrieves the enabled state of the MiddleManager. Returns JSON object keyed by the combined `druid.host` and `druid.port` with a boolean `true` or `false` state as the value.
 
@@ -666,7 +666,7 @@ Host: {domain}
 ### Get active tasks 
 
 #### URL 
-`GET` `/druid/worker/v1/tasks`
+<code class="getAPI">GET</code> `/druid/worker/v1/tasks`
 
 Retrieves a list of active tasks being run on MiddleManager. Returns JSON list of task ID strings. Normal usage should prefer to use the `/druid/indexer/v1/tasks` [Tasks API](./tasks-api.md) or one of it's task state specific variants instead.
 
@@ -711,7 +711,7 @@ Host: {domain}
 ### Get task log
 
 #### URL
-`GET` `/druid/worker/v1/task/{taskid}/log`
+<code class="getAPI">GET</code> `/druid/worker/v1/task/{taskid}/log`
 
 Retrieves task log output stream by task ID. It is strongly advised that, for normal usage, you should use the `/druid/indexer/v1/task/{taskId}/log`
 [Tasks API](./tasks-api.md) instead.
@@ -719,7 +719,7 @@ Retrieves task log output stream by task ID. It is strongly advised that, for no
 ### Shut down running task
 
 #### URL
-<post>`POST`</post> `/druid/worker/v1/task/{taskid}/shutdown`
+<code class="postAPI">POST</code> `/druid/worker/v1/task/{taskid}/shutdown`
 
 Shuts down a running task by ID. For normal usage, you should prefer to use the `/druid/indexer/v1/task/{taskId}/shutdown`
 [Tasks API](./tasks-api.md) instead.
@@ -764,7 +764,7 @@ Host: {domain}
 ### Disable MiddleManager
 
 #### URL
-`POST` `/druid/worker/v1/disable`
+<code class="postAPI">POST</code> `/druid/worker/v1/disable`
 
 Disables a MiddleManager, causing it to stop accepting new tasks but complete all existing tasks. Returns a JSON  object
 keyed by the combined `druid.host` and `druid.port`.
@@ -810,7 +810,7 @@ Host: {domain}
 
 #### URL
 
-`POST` `/druid/worker/v1/enable`
+<code class="postAPI">POST</code> `/druid/worker/v1/enable`
 
 Enables a MiddleManager, allowing it to accept new tasks again if it was previously disabled. Returns a JSON  object
 keyed by the combined `druid.host` and `druid.port`.
@@ -858,7 +858,7 @@ Host: {domain}
 
 #### URL
 
-`GET` `/druid/historical/v1/loadstatus`
+<code class="getAPI">GET</code> `/druid/historical/v1/loadstatus`
 
 Retrieves a JSON object of the form `{"cacheInitialized":<value>}`, where value is either `true` or `false` indicating if all segments in the local cache have been loaded. This can be used to know when a Historical process is ready to be queried after a restart.
 
@@ -901,7 +901,7 @@ Host: {domain}
 ### Get segment readiness
 
 #### URL
-`GET` `/druid/historical/v1/readiness`
+<code class="getAPI">GET</code> `/druid/historical/v1/readiness`
 
 Retrieves a status code to indicate if all segments in the local cache have been loaded. Similar to `/druid/historical/v1/loadstatus`, but instead of returning JSON with a flag, it returns status codes.
 
@@ -942,7 +942,7 @@ A successful response to this endpoint results in an empty response body.
 
 #### URL
 
-`GET` `/druid/broker/v1/loadstatus`
+<code class="getAPI">GET</code> `/druid/broker/v1/loadstatus`
 
 Retrieves a flag indicating if the Broker knows about all segments in the cluster. This can be used to know when a Broker process is ready to be queried after a restart.
 
@@ -985,7 +985,7 @@ Host: {domain}
 
 #### URL
 
-`GET` `/druid/broker/v1/readiness`
+<code class="getAPI">GET</code> `/druid/broker/v1/readiness`
 
 Retrieves a status code indicating if the Broker knows about all segments in the cluster and is ready to be queried after a restart. Similar to `/druid/broker/v1/loadstatus`, but instead of returning a JSON, it returns status codes.
 
