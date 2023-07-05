@@ -29,6 +29,7 @@ import org.apache.druid.catalog.model.table.BaseTableFunction;
 import org.apache.druid.catalog.model.table.ExternalTableSpec;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.RowSignature;
@@ -120,7 +121,7 @@ public class ExternalOperatorConversion extends DruidExternTableMacroConversion
         );
       }
       catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
+        throw DruidException.forPersona(DruidException.Persona.USER).ofCategory(DruidException.Category.INVALID_INPUT).build(e, e.getMessage());
       }
     }
   }

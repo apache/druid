@@ -1410,4 +1410,26 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .verify();
   }
+
+  @Test
+  public void testSyntaxError()
+  {
+    final String sqlString = "insert into test_talaria_test_extern_extern_cols \n"
+                             + "select time_parse(\"time\") as __time, * \n"
+                             + "from table( \n"
+                             + "extern(\n"
+                             + "'{\"type\": \"s3\", \"uris\": [\\\"s3://imply-eng-datasets/qa/IngestionTest/wikipedia/files/wikiticker-2015-09-12-sampled.mini.json.gz\\\"]}',\n"
+                             + "'{\"type\\\": \"json\"}',\n"
+                             + "'[{\"name\": \"time\", \"type\": \"string\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"countryName\": \"string\"}]'\n"
+                             + ")\n"
+                             + ")\n"
+                             + "partitioned by DAY\n"
+                             + "clustered by channel";
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);
+    testIngestionQuery().context(context).sql(sqlString).expectValidationError(
+                            invalidSqlIs("Context parameter [sqlOuterLimit] cannot be provided on operator [INSERT]")
+                        )
+                        .verify();
+  }
 }
