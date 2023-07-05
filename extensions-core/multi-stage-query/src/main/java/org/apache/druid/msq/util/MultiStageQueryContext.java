@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -217,7 +218,7 @@ public class MultiStageQueryContext
         queryContext.getString(
             CTX_SELECT_DESTINATION,
             DEFAULT_SELECT_DESTINATION
-        ).toUpperCase()
+        ).toUpperCase(Locale.ENGLISH)
     );
   }
 
@@ -228,7 +229,7 @@ public class MultiStageQueryContext
     if (selectDestination == null) {
       return null;
     }
-    return MSQSelectDestination.valueOf(selectDestination.toUpperCase());
+    return MSQSelectDestination.valueOf(selectDestination.toUpperCase(Locale.ENGLISH));
   }
 
   public static int getRowsInMemory(final QueryContext queryContext)

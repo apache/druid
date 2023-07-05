@@ -529,7 +529,6 @@ public class SqlStatementResource
                           );
     } else {
       // do nothing
-      System.out.println("abc");
     }
   }
 
