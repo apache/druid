@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.remote.ChunkingStorageConnector;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
@@ -60,7 +61,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * In this implementation, all remote calls to aws s3 are retried {@link S3OutputConfig#getMaxRetry()} times.
  */
-public class S3StorageConnector implements StorageConnector
+public class S3StorageConnector extends ChunkingStorageConnector
 {
   private static final Logger log = new Logger(S3StorageConnector.class);
 
@@ -125,6 +126,18 @@ public class S3StorageConnector implements StorageConnector
         new GetObjectRequest(config.getBucket(), objectPath(path)).withRange(from, from + size - 1),
         path
     );
+  }
+
+  @Override
+  public BuildInputStreamParams buildInputParams(String path)
+  {
+    return null;
+  }
+
+  @Override
+  public BuildInputStreamParams buildInputParams(String path, long from, long size)
+  {
+    return null;
   }
 
   private InputStream buildInputStream(GetObjectRequest getObjectRequest, String path)
