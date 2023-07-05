@@ -214,7 +214,7 @@ export class DruidError extends Error {
     if (matchComma) {
       const keyword = matchComma[1];
       return {
-        label: `Remove , before ${keyword}`,
+        label: `Remove comma (,) before ${keyword}`,
         fn: str => {
           const newQuery = str.replace(new RegExp(`,(\\s+${keyword})`, 'gim'), '$1');
           if (newQuery === str) return;
@@ -232,7 +232,7 @@ export class DruidError extends Error {
       const line = Number(matchSemicolon[1]);
       const column = Number(matchSemicolon[2]);
       return {
-        label: `Remove trailing ;`,
+        label: `Remove trailing semicolon (;)`,
         fn: str => {
           const index = DruidError.positionToIndex(str, line, column);
           if (str[index] !== ';') return;

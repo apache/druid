@@ -163,7 +163,7 @@ describe('DruidQuery', () => {
       const suggestion = DruidError.getSuggestion(
         `Received an unexpected token [, FROM] (line [1], column [12]), acceptable options:`,
       );
-      expect(suggestion!.label).toEqual(`Remove , before FROM`);
+      expect(suggestion!.label).toEqual(`Remove comma (,) before FROM`);
       expect(suggestion!.fn(sql)).toEqual(
         `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia'`,
       );
@@ -174,7 +174,7 @@ describe('DruidQuery', () => {
       const suggestion = DruidError.getSuggestion(
         `Received an unexpected token [, ORDER] (line [1], column [70]), acceptable options:`,
       );
-      expect(suggestion!.label).toEqual(`Remove , before ORDER`);
+      expect(suggestion!.label).toEqual(`Remove comma (,) before ORDER`);
       expect(suggestion!.fn(sql)).toEqual(
         `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia' GROUP BY 1 ORDER BY 1`,
       );
@@ -185,7 +185,7 @@ describe('DruidQuery', () => {
       const suggestion = DruidError.getSuggestion(
         `Received an unexpected token [;] (line [1], column [59]), acceptable options:`,
       );
-      expect(suggestion!.label).toEqual(`Remove trailing ;`);
+      expect(suggestion!.label).toEqual(`Remove trailing semicolon (;)`);
       expect(suggestion!.fn(sql)).toEqual(
         `SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia'`,
       );
