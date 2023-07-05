@@ -41,13 +41,13 @@ public class NilStorageConnector implements StorageConnector
   }
 
   @Override
-  public boolean pathExists(String path) throws IOException
+  public boolean pathExists(String path)
   {
     throw new UOE("Please configure durable storage.");
   }
 
   @Override
-  public InputStream read(String path) throws IOException
+  public InputStream read(String path)
   {
     throw new UOE("Please configure durable storage.");
   }
