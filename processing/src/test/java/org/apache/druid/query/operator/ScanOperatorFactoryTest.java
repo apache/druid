@@ -60,7 +60,7 @@ public class ScanOperatorFactoryTest
   {
     final Builder bob = new Builder();
     bob.timeRange = Intervals.utc(0, 6);
-    bob.filter = DimFilters.dimEquals("abc", "a");
+    bob.filter = DimFilters.dimEquals("abc", "b");
     bob.limit = 48;
     bob.projectedColumns = Arrays.asList("a", "b");
     bob.virtualColumns = VirtualColumns.EMPTY;
