@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
@@ -33,6 +35,7 @@ import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
+import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.ProcessorsAndChannels;
@@ -74,19 +77,40 @@ public class QueryResultFrameProcessorFactory extends BaseFrameProcessorFactory
       return new ProcessorsAndChannels<>(Sequences.empty(), OutputChannels.none());
     }
 
+    final Int2ObjectSortedMap<OutputChannel> outputChannels = new Int2ObjectAVLTreeMap<>();
 
-    final OutputChannel outputChannel = outputChannelFactory.openChannel(0);
+    for (final ReadablePartition partition : slice.getPartitions()) {
+      outputChannels.computeIfAbsent(
+          partition.getPartitionNumber(),
+          i -> {
+            try {
+              return outputChannelFactory.openChannel(i);
+            }
+            catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          }
+      );
+    }
 
     final Sequence<ReadableInput> readableInputs =
         Sequences.simple(inputSliceReader.attach(0, slice, counters, warningPublisher));
 
     final Sequence<FrameProcessor<Long>> processors = readableInputs.map(
-        readableInput -> new QueryResultsFrameProcessor(readableInput.getChannel(),
-                                                        outputChannel.getWritableChannel()));
+        readableInput -> {
+          final OutputChannel outputChannel =
+              outputChannels.get(readableInput.getStagePartition().getPartitionNumber());
+
+          return new QueryResultsFrameProcessor(
+              readableInput.getChannel(),
+              outputChannel.getWritableChannel()
+          );
+        }
+    );
 
     return new ProcessorsAndChannels<>(
         processors,
-        OutputChannels.wrapReadOnly(ImmutableList.of(outputChannel))
+        OutputChannels.wrapReadOnly(ImmutableList.copyOf(outputChannels.values()))
     );
 
   }
