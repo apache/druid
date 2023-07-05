@@ -125,9 +125,11 @@ jobs:
           distribution: 'zulu'
           cache: maven
 
+      - name: maven build # needed to rebuild incase of maven snapshot resolution fails
+        run: ./it.sh ci
+
       - name: security vulnerabilities check
         env:
-          MVN: mvn --no-snapshot-updates
           HADOOP_PROFILE: ${{ matrix.HADOOP_PROFILE }}
         run: |
           mvn dependency-check:purge dependency-check:check ${HADOOP_PROFILE} || { echo "
