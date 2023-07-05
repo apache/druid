@@ -21,7 +21,6 @@ package org.apache.druid.storage;
 
 import org.apache.druid.java.util.common.UOE;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Iterator;
