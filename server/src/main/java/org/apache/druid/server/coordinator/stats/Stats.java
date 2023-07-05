@@ -132,10 +132,8 @@ public class Stats
   public static class Balancer
   {
     public static final CoordinatorStat COMPUTATION_ERRORS
-        = new CoordinatorStat("costComputeError", "segment/balancer/compute/error");
-    public static final CoordinatorStat COMPUTATION_TIME
-        = new CoordinatorStat("costComputeTime", "segment/balancer/compute/time");
-    public static final CoordinatorStat COMPUTATION_COUNT
-        = new CoordinatorStat("costComputeCount", "segment/balancer/compute/count");
+        = new CoordinatorStat("costComputeError", "segment/balancer/compute/error", CoordinatorStat.Level.ERROR);
+    public static final CoordinatorStat COMPUTATION_TIME = new CoordinatorStat("costComputeTime");
+    public static final CoordinatorStat COMPUTATION_COUNT = new CoordinatorStat("costComputeCount");
   }
 }
