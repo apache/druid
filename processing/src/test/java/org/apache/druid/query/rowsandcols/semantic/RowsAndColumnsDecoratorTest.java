@@ -55,6 +55,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 
+@SuppressWarnings({"unchecked", "rawtypes", "ConstantConditions", "SingleStatementInBlock", "VariableNotUsedInsideIf"})
 public class RowsAndColumnsDecoratorTest extends SemanticTestBase
 {
   public RowsAndColumnsDecoratorTest(
@@ -92,7 +93,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
 
     final RowsAndColumns base = make(MapOfColumnsRowsAndColumns.fromRowObjects(vals, siggy));
 
-    Interval[] intervals = new Interval[]{new Interval(0, 6), new Interval(6, 13), new Interval(4, 8)};
+    Interval[] intervals = new Interval[]{Intervals.utc(0, 6), Intervals.utc(6, 13), Intervals.utc(4, 8)};
     Filter[] filters = new Filter[]{
         new InDimFilter("dim", ImmutableSet.of("a", "b", "c", "e", "g")),
         new AndFilter(Arrays.asList(
@@ -105,7 +106,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
         )),
         new SelectorFilter("dim", "f")
     };
-    int[] limits = new int[]{100, 1000};
+    int[] limits = new int[]{3, 6, 100};
     List<ColumnWithDirection>[] orderings = new List[]{
         Arrays.asList(ColumnWithDirection.descending("__time"), ColumnWithDirection.ascending("dim")),
         Collections.singletonList(ColumnWithDirection.ascending("val"))
@@ -113,7 +114,6 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
 
     // call the same method multiple times
 
-    int counter = 0;
     for (int i = 2; i <= intervals.length; ++i) {
       Interval interval = (i == 0 ? null : intervals[i - 1]);
       for (int j = 0; j <= filters.length; ++j) {
