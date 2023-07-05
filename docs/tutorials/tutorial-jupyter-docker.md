@@ -110,7 +110,7 @@ If Druid is running local to the same machine as Jupyter, open the tutorial and 
 host = "host.docker.internal"
 ```
 
-To enable Druid to ingest data from Kafka within the Docker Compose environment, update the `bootstrap.server` property in the Kafka ingestion spec to `localhost:9094` before ingesting. For reference, see [more on consumer properties](../development/extensions-core/kafka-supervisor-reference.md#more-on-consumerproperties).
+To enable Druid to ingest data from Kafka within the Docker Compose environment, update the `bootstrap.servers` property in the Kafka ingestion spec to `localhost:9094` before ingesting. For reference, see [more on consumer properties](../development/extensions-core/kafka-supervisor-reference.md#more-on-consumerproperties).
 
 ### Update image from Docker Hub
 
@@ -240,7 +240,7 @@ For ARM-based devices, follow this setup to start Druid externally, while keepin
    ```python
    host = "host.docker.internal"
    ```
-4. If using Kafka to handle the data stream that will be ingested into Druid and Druid is running local to the same machine, update the consumer property `bootstrap.server` to `localhost:9094`.
+4. If using Kafka to handle the data stream that will be ingested into Druid and Druid is running local to the same machine, update the consumer property `bootstrap.servers` to `localhost:9094`.
 
 ## Learn more
 
