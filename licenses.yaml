@@ -1057,16 +1057,6 @@ libraries:
 
 ---
 
-name: org.bouncycastle bcprov-jdk15on
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: MIT License
-version: 1.70
-libraries:
-  - org.bouncycastle: bcprov-jdk15on
-
----
-
 name: io.sundr resourcecify-annotations
 license_category: binary
 module: extensions/druid-kubernetes-extensions
@@ -1087,6 +1077,16 @@ libraries:
 
 ---
 
+name: org.bouncycastle bcprov-jdk15on
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: MIT License
+version: 1.70
+libraries:
+  - org.bouncycastle: bcprov-jdk15on
+
+---
+
 name: org.bouncycastle bcprov-ext-jdk15on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
@@ -1094,26 +1094,6 @@ license_name: MIT License
 version: 1.70
 libraries:
   - org.bouncycastle: bcprov-ext-jdk15on
-
----
-
-name: io.sundr sundr-core
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: Apache License version 2.0
-version: 0.22.0
-libraries:
-  - io.sundr: sundr-core
-
----
-
-name: com.squareup.okhttp3 logging-interceptor
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: Apache License version 2.0
-version: 3.14.9
-libraries:
-  - com.squareup.okhttp3: logging-interceptor
 
 ---
 
@@ -1134,6 +1114,26 @@ license_name: MIT License
 version: 1.70
 libraries:
   - org.bouncycastle: bcutil-jdk15on
+
+---
+
+name: io.sundr sundr-core
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 0.22.0
+libraries:
+  - io.sundr: sundr-core
+
+---
+
+name: com.squareup.okhttp3 logging-interceptor
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: Apache License version 2.0
+version: 3.14.9
+libraries:
+  - com.squareup.okhttp3: logging-interceptor
 
 ---
 
@@ -3548,8 +3548,8 @@ libraries:
 
 ---
 
-name: Kafka Schema Registry Client
-version: 5.5.12
+name: Kafka clients
+version: 5.5.12-ccs
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3557,8 +3557,8 @@ libraries:
   - org.apache.kafka: kafka-clients
 
 ---
-name: Kafka Clients
-version: 5.5.12-ccs
+name: Kafka-schema-registry-client
+version: 5.5.12
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3586,7 +3586,7 @@ license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
 libraries:
-  - com.fasterxml.jackson.dataformat, artifactId : jackson-dataformat-yaml
+  - com.fasterxml.jackson.dataformat: jackson-dataformat-yaml
 
 ---
 
