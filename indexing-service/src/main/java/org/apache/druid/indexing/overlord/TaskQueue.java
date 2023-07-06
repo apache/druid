@@ -776,7 +776,8 @@ public class TaskQueue
                  .addData("task", task.getId())
                  .addData("statusCode", status.getStatusCode())
                  .emit();
-            } finally {
+            }
+            finally {
               statusUpdatesInQueue.decrementAndGet();
               handledStatusUpdates.incrementAndGet();
             }
