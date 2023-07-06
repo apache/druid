@@ -141,22 +141,24 @@ The Segment ID is also conveniently broken down into Datasource, Start, End, Ver
 
 ![Segments](../assets/web-console-06-segments.png)
 
-## Supervisors and tasks
+## Supervisors
 
 From this view, you can check the status of existing supervisors as well as suspend, resume, and reset them.
 The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that the scalability and replication requirements are maintained. Submit a supervisor manually by clicking the ellipsis icon and selecting **Submit JSON supervisor**.
 
 ![Supervisors](../assets/web-console-07-supervisors.png)
 
+Click on the magnifying glass for any supervisor to see detailed reports of its progress.
+
+![Supervisors status](../assets/web-console-08-supervisor-status.png)
+
+## Tasks
+
 The tasks table allows you to see the currently running and recently completed tasks.
 To navigate your tasks more easily, you can group them by their **Type**, **Datasource**, or **Status**.
 Submit a task manually by clicking the ellipsis icon and selecting **Submit JSON task**.
 
 ![Tasks](../assets/web-console-0.7-tasks.png)
-
-Click on the magnifying glass for any supervisor to see detailed reports of its progress.
-
-![Supervisors status](../assets/web-console-08-supervisor-status.png)
 
 Click on the magnifying glass for any task to see more detail about it.
 
@@ -172,7 +174,7 @@ You can group the nodes by **Type** or by **Tier** to get meaningful summary sta
 
 ## Lookups
 
-Access the **Lookups** view from the **Lookups** card in the home view or by clicking on the gear icon in the upper right corner.
+Access the **Lookups** view from the **Lookups** card in the home view or by clicking on the ellipsis icon in the top-level navigation.
 Here you can create and edit query time [lookups](../querying/lookups.md).
 
 ![Lookups](../assets/web-console-13-lookups.png)
