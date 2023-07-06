@@ -92,6 +92,9 @@ jobs:
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
         run: |
           for v in broker router ${{ inputs.use_indexer }} historical coordinator overlord; do
-            echo "------------------------druid-"$v"-------------------------";
-            sudo docker exec druid-"$v" tail -1000 /shared/logs/"$v".log;
+            echo "/=======================druid-"$v"========================\";
+            echo "|-----------------------docker logs-----------------------|";
+            sudo docker logs druid-"$v" | tail -1000 ||:;
+            echo "|-----------------------service logs----------------------|";
+            sudo docker exec druid-"$v" tail -1000 /shared/logs/"$v".log ||:;
           done
