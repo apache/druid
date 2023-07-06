@@ -1081,7 +1081,7 @@ name: org.bouncycastle bcprov-jdk15on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: 1.70
+version: "1.70"
 libraries:
   - org.bouncycastle: bcprov-jdk15on
 
@@ -1091,7 +1091,7 @@ name: org.bouncycastle bcprov-ext-jdk15on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: 1.70
+version: "1.70"
 libraries:
   - org.bouncycastle: bcprov-ext-jdk15on
 
@@ -1101,7 +1101,7 @@ name: org.bouncycastle bcpkix-jdk15on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: 1.70
+version: "1.70"
 libraries:
   - org.bouncycastle: bcpkix-jdk15on
 
@@ -1111,7 +1111,7 @@ name: org.bouncycastle bcutil-jdk15on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: 1.70
+version: "1.70"
 libraries:
   - org.bouncycastle: bcutil-jdk15on
 
