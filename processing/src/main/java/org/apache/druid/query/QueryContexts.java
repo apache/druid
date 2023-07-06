@@ -83,6 +83,7 @@ public class QueryContexts
   public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
+  public static final String FEDERATED_CLUSSTER_BROKERS = "federatedClusterBrokers";
 
   // SQL query context keys
   public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;

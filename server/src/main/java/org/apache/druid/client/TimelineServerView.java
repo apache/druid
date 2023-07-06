@@ -19,6 +19,7 @@
 
 package org.apache.druid.client;
 
+import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.planning.DataSourceAnalysis;
@@ -102,4 +103,10 @@ public interface TimelineServerView extends ServerView
      */
     CallbackAction serverSegmentRemoved(DruidServerMetadata server, DataSegment segment);
   }
+
+  default QueryableDruidServer getAndAddServer(String hostAndPort)
+  {
+    throw new RuntimeException("This function currently does not support being called.");
+  }
+
 }
