@@ -174,6 +174,17 @@ source_paths:
 
 ---
 
+name: Test Framework for Apache Drill
+version:
+url: https://github.com/apache/drill-test-framework
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+source_paths:
+  - sql/src/test/resources/drill/window
+
+---
+
 name: AWS SDK for Java
 license_category: binary
 module: java-core
