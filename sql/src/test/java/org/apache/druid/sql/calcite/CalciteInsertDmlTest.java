@@ -1638,7 +1638,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                                 "general"
                             )
                                 .expectMessageContains(
-                                    "Cannot construct instance of `org.apache.druid.segment.column.ColumnSignature`, problem: `java.lang.NullPointerException`\n"
+                                    "Cannot construct instance of `org.apache.druid.segment.column.ColumnSignature`, problem: Column name must be provided and non-empty"
                                 )
                         )
                         .verify();
