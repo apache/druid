@@ -90,6 +90,7 @@ import org.apache.druid.msq.indexing.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelsImpl;
 import org.apache.druid.msq.indexing.MSQControllerTask;
+import org.apache.druid.msq.indexing.MSQSelectDestination;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
@@ -467,7 +468,8 @@ public class ControllerImpl implements Controller
             queryDef,
             resultsYielder,
             task.getQuerySpec().getColumnMappings(),
-            task.getSqlTypeNames()
+            task.getSqlTypeNames(),
+            MultiStageQueryContext.getSelectDestination(task.getQuerySpec().getQuery().context())
         );
       } else {
         resultsReport = null;
@@ -1005,7 +1007,7 @@ public class ControllerImpl implements Controller
 
       // Validate interval against the replaceTimeChunks set of intervals.
       if (destination.getReplaceTimeChunks().stream().noneMatch(chunk -> chunk.contains(interval))) {
-        throw new MSQException(new InsertTimeOutOfBoundsFault(interval));
+        throw new MSQException(new InsertTimeOutOfBoundsFault(interval, destination.getReplaceTimeChunks()));
       }
 
       final List<Pair<Integer, ClusterByPartition>> ranges = bucketEntry.getValue();
@@ -1469,7 +1471,8 @@ public class ControllerImpl implements Controller
                                      context.jsonMapper(),
                                      task.getSqlResultsContext(),
                                      value,
-                                     sqlTypeNames.get(i)
+                                     sqlTypeNames.get(i),
+                                     columnMappings.getOutputColumnName(i)
                                  );
                                }
                              }
@@ -2032,7 +2035,8 @@ public class ControllerImpl implements Controller
       final QueryDefinition queryDef,
       final Yielder<Object[]> resultsYielder,
       final ColumnMappings columnMappings,
-      @Nullable final List<SqlTypeName> sqlTypeNames
+      @Nullable final List<SqlTypeName> sqlTypeNames,
+      final MSQSelectDestination selectDestination
   )
   {
     final RowSignature querySignature = queryDef.getFinalStageDefinition().getSignature();
@@ -2047,7 +2051,7 @@ public class ControllerImpl implements Controller
       );
     }
 
-    return new MSQResultsReport(mappedSignature.build(), sqlTypeNames, resultsYielder, null);
+    return MSQResultsReport.createReportAndLimitRowsIfNeeded(mappedSignature.build(), sqlTypeNames, resultsYielder, selectDestination);
   }
 
   private static MSQStatusReport makeStatusReport(

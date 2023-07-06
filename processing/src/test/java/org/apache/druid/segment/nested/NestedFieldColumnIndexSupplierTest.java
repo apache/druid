@@ -67,12 +67,6 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
   static final ColumnConfig ALWAYS_USE_INDEXES = new ColumnConfig()
   {
     @Override
-    public int columnCacheSizeBytes()
-    {
-      return 0;
-    }
-
-    @Override
     public double skipValueRangeIndexScale()
     {
       return 1.0;
@@ -1470,12 +1464,6 @@ public class NestedFieldColumnIndexSupplierTest extends InitializedNullHandlingT
   {
     ColumnConfig twentyPercent = new ColumnConfig()
     {
-      @Override
-      public int columnCacheSizeBytes()
-      {
-        return 0;
-      }
-
       @Override
       public double skipValueRangeIndexScale()
       {

@@ -1141,6 +1141,15 @@ Applies a regular expression to the string expression and returns the _n_th matc
 
 Returns true or false signifying whether the regular expression finds a match in the string expression.
 
+## REGEXP_REPLACE
+
+`REGEXP_REPLACE(<CHARACTER>, <CHARACTER>, <CHARACTER>)`
+
+**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+
+Replaces all occurrences of a regular expression in a string expression with a replacement string. The replacement
+string may refer to capture groups using `$1`, `$2`, etc.
+
 ## REPEAT
 
 `REPEAT(<CHARACTER>, [<INTEGER>])`

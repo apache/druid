@@ -180,7 +180,8 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
               stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator()),
               rightPrefix,
               keyColumns,
-              joinType
+              joinType,
+              frameContext.memoryParameters().getSortMergeJoinMemory()
           );
         }
     );

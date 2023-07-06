@@ -1613,4 +1613,34 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .verify();
   }
+
+  @Test
+  public void testErrorWithUnableToConstructColumnSignatureWithExtern()
+  {
+    final String sqlString = "insert into dst \n"
+                             + "select time_parse(\"time\") as __time, * \n"
+                             + "from table( \n"
+                             + "extern(\n"
+                             + "'{\"type\": \"s3\", \"uris\": [\\\"s3://imply-eng-datasets/qa/IngestionTest/wikipedia/files/wikiticker-2015-09-12-sampled.mini.json.gz\\\"]}',\n"
+                             + "'{\"type\": \"json\"}',\n"
+                             + "'[{\"name\": \"time\", \"type\": \"string\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"countryName\": \"string\"}]'\n"
+                             + ")\n"
+                             + ")\n"
+                             + "partitioned by DAY\n"
+                             + "clustered by channel";
+    HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
+    context.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 100);
+    testIngestionQuery().context(context).sql(sqlString)
+                        .expectValidationError(
+                            new DruidExceptionMatcher(
+                                DruidException.Persona.USER,
+                                DruidException.Category.INVALID_INPUT,
+                                "general"
+                            )
+                                .expectMessageContains(
+                                    "Cannot construct instance of `org.apache.druid.segment.column.ColumnSignature`, problem: `java.lang.NullPointerException`\n"
+                                )
+                        )
+                        .verify();
+  }
 }
