@@ -359,7 +359,7 @@ public class DruidSqlParserUtils
         // The node is an expression/operator.
         retClusteredByNames.add(getColumnNameFromSqlCall((SqlBasicCall) clusteredByNode));
       } else {
-        // The node is a simple SqlIdentifier, add the name.
+        // For everything else, just return the simple string representation of the node.
         retClusteredByNames.add(clusteredByNode.toString());
       }
     }
