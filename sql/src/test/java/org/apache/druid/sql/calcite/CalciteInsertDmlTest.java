@@ -50,6 +50,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.utils.JvmUtils;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -1638,6 +1639,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                                 "general"
                             )
                                 .expectMessageContains(
+                                    JvmUtils.majorVersion() >= 17
+                                    ? "Cannot construct instance of `org.apache.druid.segment.column.ColumnSignature`, problem: Cannot invoke \"String.length()\" because \"s\" is null"
+                                    :
                                     "Cannot construct instance of `org.apache.druid.segment.column.ColumnSignature`, problem: Column name must be provided and non-empty"
                                 )
                         )
