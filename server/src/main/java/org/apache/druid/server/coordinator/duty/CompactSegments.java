@@ -139,11 +139,10 @@ public class CompactSegments implements CoordinatorCustomDuty
     // Fetch currently running compaction tasks
     int busyCompactionTaskSlots = 0;
     final List<TaskStatusPlus> compactionTasks = filterNonCompactionTasks(
-        FutureUtils.getUnchecked(overlordClient.allActiveTasks(), true)
+        get(overlordClient.allActiveTasks())
     );
     for (TaskStatusPlus status : compactionTasks) {
-      final TaskPayloadResponse response =
-          FutureUtils.getUnchecked(overlordClient.taskPayload(status.getId()), true);
+      final TaskPayloadResponse response = get(overlordClient.taskPayload(status.getId()));
       if (response == null) {
         throw new ISE("Could not find payload for active compaction task[%s]", status.getId());
       } else if (!COMPACTION_TASK_TYPE.equals(response.getPayload().getType())) {
@@ -272,7 +271,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         )
     );
     final Map<String, List<Interval>> datasourceToLockedIntervals = Configs.valueOrDefault(
-        getFuture(overlordClient.lockedIntervals(datasourceToMinTaskPriority)),
+        get(overlordClient.lockedIntervals(datasourceToMinTaskPriority)),
         Collections.emptyMap()
     );
 
@@ -338,12 +337,12 @@ public class CompactSegments implements CoordinatorCustomDuty
     int totalWorkerCapacity;
     try {
       totalWorkerCapacity = dynamicConfig.isUseAutoScaleSlots()
-                            ? getFuture(overlordClient.totalWorkerCapacityWithAutoScale())
-                            : getFuture(overlordClient.totalWorkerCapacity());
+                            ? get(overlordClient.totalWorkerCapacityWithAutoScale())
+                            : get(overlordClient.totalWorkerCapacity());
     }
     catch (Exception e) {
       LOG.warn("Failed to get total worker capacity with auto scale slots. Falling back to current capacity count");
-      totalWorkerCapacity = getFuture(overlordClient.totalWorkerCapacity());
+      totalWorkerCapacity = get(overlordClient.totalWorkerCapacity());
     }
 
     return Math.min(
@@ -558,6 +557,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     FutureUtils.addCallback(
         taskSubmitFuture,
         Execs.directExecutor(),
+        // TODO: maybe log, definitely have some metrics
         v -> {},
         t -> {}
     );
@@ -690,7 +690,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     return autoCompactionSnapshotPerDataSource.get();
   }
 
-  private <T> T getFuture(ListenableFuture<T> future)
+  private <T> T get(ListenableFuture<T> future)
   {
     return FutureUtils.getUnchecked(future, true);
   }
