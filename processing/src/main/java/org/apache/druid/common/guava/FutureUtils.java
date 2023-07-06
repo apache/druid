@@ -32,6 +32,8 @@ import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class FutureUtils
@@ -204,5 +206,32 @@ public class FutureUtils
     );
 
     return retVal;
+  }
+
+  public static <V> void addCallback(
+      ListenableFuture<V> future,
+      Executor executor,
+      Consumer<V> onSuccess,
+      Consumer<Throwable> onFailure
+  )
+  {
+    Futures.addCallback(
+        future,
+        new FutureCallback<V>()
+        {
+          @Override
+          public void onSuccess(@Nullable V result)
+          {
+            onSuccess.accept(result);
+          }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            onFailure.accept(t);
+          }
+        },
+        executor
+    );
   }
 }

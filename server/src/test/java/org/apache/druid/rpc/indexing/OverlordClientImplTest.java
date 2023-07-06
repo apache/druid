@@ -37,7 +37,6 @@ import java.util.concurrent.ExecutionException;
 public class OverlordClientImplTest
 {
 
-
   @Test
   public void testTaskPayload() throws ExecutionException, InterruptedException, JsonProcessingException
   {

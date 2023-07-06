@@ -575,7 +575,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         throw new ISE("No segment is found?");
       }
     }
-    log.info("All segments look good! Nothing to compact");
+    log.info("All segments in datasource[%s] look good. Nothing to compact.", dataSourceName);
     return new SegmentsToCompact();
   }
 

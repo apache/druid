@@ -23,10 +23,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
+import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
@@ -36,8 +39,11 @@ import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -145,6 +151,57 @@ public class OverlordClientImpl implements OverlordClient
         holder -> deserialize(holder, new TypeReference<TaskPayloadResponse>()
         {
         })
+    );
+  }
+
+  @Override
+  public ListenableFuture<List<TaskStatusPlus>> allActiveTasks()
+  {
+    return null;
+  }
+
+  @Override
+  public ListenableFuture<Integer> totalWorkerCapacity()
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/workers"),
+            new BytesFullResponseHandler()
+        ),
+        holder ->
+            deserialize(holder, new TypeReference<Collection<IndexingWorkerInfo>>() {})
+                .stream()
+                .mapToInt(workerInfo -> workerInfo.getWorker().getCapacity())
+                .sum()
+    );
+  }
+
+  @Override
+  public ListenableFuture<Integer> totalWorkerCapacityWithAutoScale()
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/totalWorkerCapacity"),
+            new BytesFullResponseHandler()
+        ),
+        holder ->
+            deserialize(holder, new TypeReference<IndexingTotalWorkerCapacityInfo>() {})
+                .getMaximumCapacityWithAutoScale()
+    );
+  }
+
+  @Override
+  public ListenableFuture<Map<String, List<Interval>>> lockedIntervals(
+      Map<String, Integer> datasourceToMinTaskPriority
+  )
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals")
+                .jsonContent(jsonMapper, datasourceToMinTaskPriority),
+            new BytesFullResponseHandler()
+        ),
+        holder -> deserialize(holder, new TypeReference<Map<String, List<Interval>>>() {})
     );
   }
 

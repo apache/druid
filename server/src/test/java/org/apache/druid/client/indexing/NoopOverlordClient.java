@@ -21,9 +21,12 @@ package org.apache.druid.client.indexing;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.joda.time.Interval;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -61,6 +64,30 @@ public class NoopOverlordClient implements OverlordClient
 
   @Override
   public ListenableFuture<TaskPayloadResponse> taskPayload(String taskId)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<List<TaskStatusPlus>> allActiveTasks()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<Map<String, List<Interval>>> lockedIntervals(Map<String, Integer> datasourceToMinTaskPriority)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<Integer> totalWorkerCapacityWithAutoScale()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<Integer> totalWorkerCapacity()
   {
     throw new UnsupportedOperationException();
   }

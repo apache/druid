@@ -23,8 +23,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.joda.time.Interval;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -54,6 +57,14 @@ public interface OverlordClient
   ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId);
 
   ListenableFuture<TaskPayloadResponse> taskPayload(String taskId);
+
+  ListenableFuture<List<TaskStatusPlus>> allActiveTasks();
+
+  ListenableFuture<Integer> totalWorkerCapacity();
+
+  ListenableFuture<Integer> totalWorkerCapacityWithAutoScale();
+
+  ListenableFuture<Map<String, List<Interval>>> lockedIntervals(Map<String, Integer> datasourceToMinTaskPriority);
 
   OverlordClient withRetryPolicy(ServiceRetryPolicy retryPolicy);
 }

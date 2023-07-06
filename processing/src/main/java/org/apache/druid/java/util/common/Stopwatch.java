@@ -55,19 +55,22 @@ public class Stopwatch
     this.delegate = delegate;
   }
 
-  public synchronized void start()
+  public synchronized Stopwatch start()
   {
     delegate.start();
+    return this;
   }
 
-  public synchronized void stop()
+  public synchronized Stopwatch stop()
   {
     delegate.stop();
+    return this;
   }
 
-  public synchronized void reset()
+  public synchronized Stopwatch reset()
   {
     delegate.reset();
+    return this;
   }
 
   /**
