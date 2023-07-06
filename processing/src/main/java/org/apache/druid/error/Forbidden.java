@@ -19,8 +19,14 @@
 
 package org.apache.druid.error;
 
-public class InvalidInput extends DruidException.Failure
+public class Forbidden extends DruidException.Failure
 {
+
+  public static DruidException exception()
+  {
+    return exception("Unauthorize");
+  }
+
   public static DruidException exception(String msg, Object... args)
   {
     return exception(null, msg, args);
@@ -28,31 +34,30 @@ public class InvalidInput extends DruidException.Failure
 
   public static DruidException exception(Throwable t, String msg, Object... args)
   {
-    return DruidException.fromFailure(new InvalidInput(t, msg, args));
+    return DruidException.fromFailure(new Forbidden(t, msg, args));
   }
 
   private final Throwable t;
   private final String msg;
   private final Object[] args;
 
-  protected InvalidInput(
+  private Forbidden(
       Throwable t,
       String msg,
       Object... args
   )
   {
-    super("invalidInput");
+    super("forbidden");
     this.t = t;
     this.msg = msg;
     this.args = args;
   }
 
-
   @Override
   public DruidException makeException(DruidException.DruidExceptionBuilder bob)
   {
     bob = bob.forPersona(DruidException.Persona.USER)
-             .ofCategory(DruidException.Category.INVALID_INPUT);
+             .ofCategory(DruidException.Category.FORBIDDEN);
 
     if (t == null) {
       return bob.build(msg, args);

@@ -30,11 +30,10 @@ import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.InvalidSqlInput;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.querykit.QueryKitUtils;
@@ -62,6 +61,7 @@ public class MSQTaskSqlEngine implements SqlEngine
                   .addAll(NativeSqlEngine.SYSTEM_CONTEXT_PARAMETERS)
                   .add(MultiStageQueryContext.CTX_DESTINATION)
                   .add(QueryKitUtils.CTX_TIME_COLUMN_NAME)
+                  .add(MSQTaskQueryMaker.USER_KEY)
                   .build();
 
   public static final List<String> TASK_STRUCT_FIELD_NAMES = ImmutableList.of("TASK");
@@ -125,7 +125,10 @@ public class MSQTaskSqlEngine implements SqlEngine
       case SCAN_NEEDS_SIGNATURE:
         return true;
       default:
-        throw new IAE("Unrecognized feature: %s", feature);
+        throw DruidException
+            .forPersona(DruidException.Persona.DEVELOPER)
+            .ofCategory(DruidException.Category.DEFENSIVE)
+            .build("Unrecognized feature: %s", feature);
     }
   }
 
@@ -133,9 +136,9 @@ public class MSQTaskSqlEngine implements SqlEngine
   public QueryMaker buildQueryMakerForSelect(
       final RelRoot relRoot,
       final PlannerContext plannerContext
-  ) throws ValidationException
+  )
   {
-    validateSelect(relRoot.fields, plannerContext);
+    validateSelect(plannerContext);
 
     return new MSQTaskQueryMaker(
         null,
@@ -156,7 +159,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       final String targetDataSource,
       final RelRoot relRoot,
       final PlannerContext plannerContext
-  ) throws ValidationException
+  )
   {
     validateInsert(relRoot.rel, relRoot.fields, plannerContext);
 
@@ -169,15 +172,18 @@ public class MSQTaskSqlEngine implements SqlEngine
     );
   }
 
-  private static void validateSelect(
-      final List<Pair<Integer, String>> fieldMappings,
-      final PlannerContext plannerContext
-  ) throws ValidationException
+  /**
+   * Checks if the SELECT contains {@link DruidSqlInsert#SQL_INSERT_SEGMENT_GRANULARITY} in the context. This is a
+   * defensive cheeck because {@link org.apache.druid.sql.calcite.planner.DruidPlanner} should have called the
+   * {@link #validateContext}
+   */
+  private static void validateSelect(final PlannerContext plannerContext)
   {
     if (plannerContext.queryContext().containsKey(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)) {
-      throw new ValidationException(
-          StringUtils.format("Cannot use \"%s\" without INSERT", DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
-      );
+      throw DruidException
+          .forPersona(DruidException.Persona.DEVELOPER)
+          .ofCategory(DruidException.Category.DEFENSIVE)
+          .build("Cannot use \"%s\" without INSERT", DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY);
     }
   }
 
@@ -185,7 +191,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       final RelNode rootRel,
       final List<Pair<Integer, String>> fieldMappings,
       final PlannerContext plannerContext
-  ) throws ValidationException
+  )
   {
     validateNoDuplicateAliases(fieldMappings);
 
@@ -199,12 +205,10 @@ public class MSQTaskSqlEngine implements SqlEngine
         // Validate the __time field has the proper type.
         final SqlTypeName timeType = rootRel.getRowType().getFieldList().get(field.left).getType().getSqlTypeName();
         if (timeType != SqlTypeName.TIMESTAMP) {
-          throw new ValidationException(
-              StringUtils.format(
-                  "Field \"%s\" must be of type TIMESTAMP (was %s)",
-                  ColumnHolder.TIME_COLUMN_NAME,
-                  timeType
-              )
+          throw InvalidSqlInput.exception(
+              "Field \"%s\" must be of type TIMESTAMP (was %s)",
+              ColumnHolder.TIME_COLUMN_NAME,
+              timeType
           );
         }
       }
@@ -220,13 +224,18 @@ public class MSQTaskSqlEngine implements SqlEngine
       );
     }
     catch (Exception e) {
-      throw new ValidationException(
-          StringUtils.format(
-              "Invalid segmentGranularity: %s",
-              plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
-          ),
-          e
-      );
+      // This is a defensive check as the DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY in the query context is
+      // populated by Druid. If the user entered an incorrect granularity, that should have been flagged before reaching
+      // here
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.DEFENSIVE)
+                          .build(
+                              e,
+                              "Invalid %s: %s",
+                              DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
+                              plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
+                          );
+
     }
 
     final boolean hasSegmentGranularity = !Granularities.ALL.equals(segmentGranularity);
@@ -237,11 +246,9 @@ public class MSQTaskSqlEngine implements SqlEngine
     validateLimitAndOffset(rootRel, !hasSegmentGranularity);
 
     if (hasSegmentGranularity && timeFieldIndex < 0) {
-      throw new ValidationException(
-          StringUtils.format(
-              "INSERT queries with segment granularity other than \"all\" must have a \"%s\" field.",
-              ColumnHolder.TIME_COLUMN_NAME
-          )
+      throw InvalidInput.exception(
+          "INSERT queries with segment granularity other than \"all\" must have a \"%s\" field.",
+          ColumnHolder.TIME_COLUMN_NAME
       );
     }
   }

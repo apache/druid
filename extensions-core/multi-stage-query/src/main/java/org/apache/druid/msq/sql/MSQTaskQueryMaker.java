@@ -26,8 +26,8 @@ import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Pair;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -136,15 +136,24 @@ public class MSQTaskQueryMaker implements QueryMaker
                                    .orElse(jsonMapper.writeValueAsString(DEFAULT_SEGMENT_GRANULARITY));
     }
     catch (JsonProcessingException e) {
-      throw new IAE("Unable to deserialize the insert granularity. Please retry the query with a valid "
-                    + "segment graularity");
+      // This isn't populated by the user in the query context. If there was an issue with the query granularity
+      // entered by the user, it should have been flagged earlier
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.DEFENSIVE)
+                          .build(
+                              e,
+                              "Unable to deserialize the insert granularity. Please retry the query with a "
+                              + "valid segment graularity"
+                          );
     }
 
     final int maxNumTasks = MultiStageQueryContext.getMaxNumTasks(sqlQueryContext);
 
     if (maxNumTasks < 2) {
-      throw new IAE(MultiStageQueryContext.CTX_MAX_NUM_TASKS
-                    + " cannot be less than 2 since at least 1 controller and 1 worker is necessary.");
+      throw InvalidInput.exception(
+          "%s cannot be less than 2 since at least 1 controller and 1 worker is necessary.",
+          MultiStageQueryContext.CTX_MAX_NUM_TASKS
+      );
     }
 
     // This parameter is used internally for the number of worker tasks only, so we subtract 1
@@ -201,7 +210,9 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     if (targetDataSource != null) {
       if (ctxDestination != null && !DESTINATION_DATASOURCE.equals(ctxDestination)) {
-        throw new IAE("Cannot INSERT with destination [%s]", ctxDestination);
+        throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                            .ofCategory(DruidException.Category.DEFENSIVE)
+                            .build("Cannot INSERT with destination [%s]", ctxDestination);
       }
 
       Granularity segmentGranularityObject;
@@ -209,7 +220,9 @@ public class MSQTaskQueryMaker implements QueryMaker
         segmentGranularityObject = jsonMapper.readValue((String) segmentGranularity, Granularity.class);
       }
       catch (Exception e) {
-        throw new ISE("Unable to convert %s to a segment granularity", segmentGranularity);
+        throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                            .ofCategory(DruidException.Category.DEFENSIVE)
+                            .build("Unable to convert %s to a segment granularity", segmentGranularity);
       }
 
       final List<String> segmentSortOrder = MultiStageQueryContext.getSortOrder(sqlQueryContext);
@@ -227,7 +240,9 @@ public class MSQTaskQueryMaker implements QueryMaker
       );
     } else {
       if (ctxDestination != null && !DESTINATION_REPORT.equals(ctxDestination)) {
-        throw new IAE("Cannot SELECT with destination [%s]", ctxDestination);
+        throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                            .ofCategory(DruidException.Category.DEFENSIVE)
+                            .build("Cannot SELECT with destination [%s]", ctxDestination);
       }
 
       destination = TaskReportMSQDestination.instance();

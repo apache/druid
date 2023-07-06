@@ -31,6 +31,8 @@ import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
+import org.apache.druid.error.Forbidden;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.QueryExceptionCompat;
 import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -150,16 +152,12 @@ public class SqlStatementResource
       );
       if (ExecutionMode.ASYNC != executionMode) {
         return buildNonOkResponse(
-            DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              StringUtils.format(
-                                  "The statement sql api only supports sync mode[%s]. Please set context parameter [%s=%s] in the context payload",
-                                  ExecutionMode.ASYNC,
-                                  QueryContexts.CTX_EXECUTION_MODE,
-                                  ExecutionMode.ASYNC
-                              )
-                          )
+            InvalidInput.exception(
+                "The statement sql api only supports sync mode[%s]. Please set context parameter [%s=%s] in the context payload",
+                ExecutionMode.ASYNC,
+                QueryContexts.CTX_EXECUTION_MODE,
+                ExecutionMode.ASYNC
+            )
         );
       }
 
@@ -192,11 +190,7 @@ public class SqlStatementResource
     }
     catch (ForbiddenException e) {
       log.debug("Got forbidden request for reason [%s]", e.getErrorMessage());
-      return buildNonOkResponse(
-          DruidException.forPersona(DruidException.Persona.USER)
-                        .ofCategory(DruidException.Category.FORBIDDEN)
-                        .build(Access.DEFAULT_ERROR_MESSAGE)
-      );
+      return buildNonOkResponse(Forbidden.exception());
     }
     // Calcite throws java.lang.AssertionError at various points in planning/validation.
     catch (AssertionError | Exception e) {
@@ -251,11 +245,7 @@ public class SqlStatementResource
     }
     catch (ForbiddenException e) {
       log.debug("Got forbidden request for reason [%s]", e.getErrorMessage());
-      return buildNonOkResponse(
-          DruidException.forPersona(DruidException.Persona.USER)
-                        .ofCategory(DruidException.Category.FORBIDDEN)
-                        .build(Access.DEFAULT_ERROR_MESSAGE)
-      );
+      return buildNonOkResponse(Forbidden.exception());
     }
     catch (Exception e) {
       log.noStackTrace().warn(e, "Failed to handle query: %s", queryId);
@@ -381,11 +371,7 @@ public class SqlStatementResource
     }
     catch (ForbiddenException e) {
       log.debug("Got forbidden request for reason [%s]", e.getErrorMessage());
-      return buildNonOkResponse(
-          DruidException.forPersona(DruidException.Persona.USER)
-                        .ofCategory(DruidException.Category.FORBIDDEN)
-                        .build(Access.DEFAULT_ERROR_MESSAGE)
-      );
+      return buildNonOkResponse(Forbidden.exception());
     }
     catch (Exception e) {
       log.noStackTrace().warn(e, "Failed to handle query: %s", queryId);
@@ -448,11 +434,7 @@ public class SqlStatementResource
     }
     catch (ForbiddenException e) {
       log.debug("Got forbidden request for reason [%s]", e.getErrorMessage());
-      return buildNonOkResponse(
-          DruidException.forPersona(DruidException.Persona.USER)
-                        .ofCategory(DruidException.Category.FORBIDDEN)
-                        .build(Access.DEFAULT_ERROR_MESSAGE)
-      );
+      return buildNonOkResponse(Forbidden.exception());
     }
     catch (Exception e) {
       log.noStackTrace().warn(e, "Failed to handle query: %s", queryId);

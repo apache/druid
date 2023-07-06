@@ -29,7 +29,7 @@ import org.apache.druid.catalog.model.table.BaseTableFunction;
 import org.apache.druid.catalog.model.table.ExternalTableSpec;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.RowSignature;
@@ -106,25 +106,69 @@ public class ExternalOperatorConversion extends DruidExternTableMacroConversion
         }
         final RowSignature rowSignature;
         if (columns != null) {
-          rowSignature = Columns.convertSignature(columns);
+          try {
+            rowSignature = Columns.convertSignature(columns);
+          }
+          catch (IAE e) {
+            throw new ArgumentAndException("columns", e);
+          }
         } else {
-          rowSignature = jsonMapper.readValue(sigValue, RowSignature.class);
+          try {
+            rowSignature = jsonMapper.readValue(sigValue, RowSignature.class);
+          }
+          catch (JsonProcessingException e) {
+            throw new ArgumentAndException("rowSignature", e);
+          }
         }
 
         String inputSrcStr = CatalogUtils.getString(args, INPUT_SOURCE_PARAM);
-        InputSource inputSource = jsonMapper.readValue(inputSrcStr, InputSource.class);
+        InputSource inputSource;
+        try {
+          inputSource = jsonMapper.readValue(inputSrcStr, InputSource.class);
+        }
+        catch (JsonProcessingException e) {
+          throw new ArgumentAndException("rowSignature", e);
+        }
+        InputFormat inputFormat;
+        try {
+          inputFormat = jsonMapper.readValue(CatalogUtils.getString(args, INPUT_FORMAT_PARAM), InputFormat.class);
+        }
+        catch (JsonProcessingException e) {
+          throw new ArgumentAndException("inputFormat", e);
+        }
         return new ExternalTableSpec(
             inputSource,
-            jsonMapper.readValue(CatalogUtils.getString(args, INPUT_FORMAT_PARAM), InputFormat.class),
+            inputFormat,
             rowSignature,
             inputSource::getTypes
         );
       }
-      catch (JsonProcessingException e) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                            .build(e, e.getMessage());
+      catch (ArgumentAndException e) { // We can triage out the error to one of the argument passed to the EXTERN function
+        throw InvalidInput.exception(
+            e,
+            "Invalid value for the field [%s]. Error message: [%s]",
+            e.component,
+            e.exception
+        );
       }
+      catch (IAE e) {
+        throw InvalidInput.exception(
+            "Invalid parameters supplied to the EXTERN function. Error message: [%s]",
+            e.getMessage()
+        );
+      }
+    }
+  }
+
+  private static class ArgumentAndException extends Throwable
+  {
+    private final String component;
+    private final Exception exception;
+
+    public ArgumentAndException(String component, Exception exception)
+    {
+      this.component = component;
+      this.exception = exception;
     }
   }
 
