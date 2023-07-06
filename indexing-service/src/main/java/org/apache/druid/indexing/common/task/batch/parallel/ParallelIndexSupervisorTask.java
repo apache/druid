@@ -246,7 +246,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       checkPartitionsSpecForForceGuaranteedRollup(ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec());
     }
 
-    this.baseInputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
+    this.baseInputSource = ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
     this.missingIntervalsInOverwriteMode = (getIngestionMode()
                                             != IngestionMode.APPEND)
                                            && ingestionSchema.getDataSchema()

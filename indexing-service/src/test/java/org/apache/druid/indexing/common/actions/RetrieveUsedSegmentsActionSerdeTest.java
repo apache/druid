@@ -42,7 +42,7 @@ public class RetrieveUsedSegmentsActionSerdeTest
     Interval interval = Intervals.of("2014/2015");
 
     RetrieveUsedSegmentsAction expected =
-        new RetrieveUsedSegmentsAction("dataSource", interval, null, Segments.ONLY_VISIBLE, null);
+        new RetrieveUsedSegmentsAction("dataSource", interval, null, Segments.ONLY_VISIBLE);
 
     RetrieveUsedSegmentsAction actual =
         MAPPER.readValue(MAPPER.writeValueAsString(expected), RetrieveUsedSegmentsAction.class);
@@ -58,8 +58,7 @@ public class RetrieveUsedSegmentsActionSerdeTest
         "dataSource",
         null,
         intervals,
-        Segments.ONLY_VISIBLE,
-        true
+        Segments.ONLY_VISIBLE
     );
 
     RetrieveUsedSegmentsAction actual =
@@ -75,7 +74,7 @@ public class RetrieveUsedSegmentsActionSerdeTest
     RetrieveUsedSegmentsAction actual = (RetrieveUsedSegmentsAction) MAPPER.readValue(jsonStr, TaskAction.class);
 
     Assert.assertEquals(
-        new RetrieveUsedSegmentsAction("test", Intervals.of("2014/2015"), null, Segments.ONLY_VISIBLE, null),
+        new RetrieveUsedSegmentsAction("test", Intervals.of("2014/2015"), null, Segments.ONLY_VISIBLE),
         actual
     );
   }

@@ -110,7 +110,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   @Override
   public final TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-    InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
+    InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
     if (inputSource instanceof TaskInputSource) {
       inputSource = ((TaskInputSource) inputSource).withTaskToolbox(toolbox);
     }

@@ -73,9 +73,9 @@ import org.joda.time.Interval;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -326,11 +326,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (interval == null) {
       return getTimelineForSegmentIds(coordinatorClient, dataSource, segmentIds);
     } else {
-      if (toolbox != null) {
-        return getLockedTimelineForInterval(retryPolicyFactory, dataSource, interval);
-      }
-
-      return getTimelineForInterval(coordinatorClient, retryPolicyFactory, dataSource, interval);
+      return getTimelineForInterval(toolbox, coordinatorClient, retryPolicyFactory, dataSource, interval);
     }
   }
 
@@ -345,6 +341,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (segmentIds == null) {
       return Streams.sequentialStreamFrom(
           createSplits(
+              toolbox,
               coordinatorClient,
               retryPolicyFactory,
               dataSource,
@@ -365,6 +362,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (segmentIds == null) {
       return Iterators.size(
           createSplits(
+              toolbox,
               coordinatorClient,
               retryPolicyFactory,
               dataSource,
@@ -380,7 +378,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   @Override
   public SplittableInputSource<List<WindowedSegmentId>> withSplit(InputSplit<List<WindowedSegmentId>> split)
   {
-    return new DruidInputSource(
+    return (DruidInputSource) new DruidInputSource(
         dataSource,
         null,
         split.get(),
@@ -392,7 +390,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         segmentCacheManagerFactory,
         retryPolicyFactory,
         taskConfig
-    );
+    ).withTaskToolbox(toolbox);
   }
 
   @Override
@@ -439,6 +437,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   }
 
   public static Iterator<InputSplit<List<WindowedSegmentId>>> createSplits(
+      TaskToolbox toolbox,
       CoordinatorClient coordinatorClient,
       RetryPolicyFactory retryPolicyFactory,
       String dataSource,
@@ -458,6 +457,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     }
 
     final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = getTimelineForInterval(
+        toolbox,
         coordinatorClient,
         retryPolicyFactory,
         dataSource,
@@ -501,55 +501,33 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     return segmentSizeMap;
   }
 
-
-  public List<TimelineObjectHolder<String, DataSegment>> getLockedTimelineForInterval(
-      RetryPolicyFactory retryPolicyFactory,
+  private static Collection<DataSegment> fetchUsedSegmentsForInterval(
+      TaskToolbox toolbox,
+      CoordinatorClient coordinatorClient,
       String dataSource,
       Interval interval
-  )
+  ) throws IOException
   {
-    Preconditions.checkNotNull(interval);
-
-    // This call used to use the TaskActionClient, so for compatibility we use the same retry configuration
-    // as TaskActionClient.
-    final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
-    Collection<DataSegment> usedSegments;
-    while (true) {
-      try {
-        usedSegments = toolbox.getTaskActionClient()
-                              .submit(
-                                  new RetrieveUsedSegmentsAction(
-                                      dataSource,
-                                      null,
-                                      ImmutableList.of(interval),
-                                      Segments.ONLY_VISIBLE,
-                                      true
-                                  )
-                              );
-        break;
-      }
-      catch (Throwable e) {
-        LOG.warn(e, "Exception getting database segments");
-        final Duration delay = retryPolicy.getAndIncrementRetryDelay();
-        if (delay == null) {
-          throw new RuntimeException(e);
-        } else {
-          final long sleepTime = jitter(delay.getMillis());
-          LOG.info("Will try again in [%s].", new Duration(sleepTime).toString());
-          try {
-            Thread.sleep(sleepTime);
-          }
-          catch (InterruptedException e2) {
-            throw new RuntimeException(e2);
-          }
-        }
-      }
+    if (toolbox != null) {
+      return toolbox.getTaskActionClient()
+                    .submit(
+                        new RetrieveUsedSegmentsAction(
+                            dataSource,
+                            null,
+                            ImmutableList.of(interval),
+                            Segments.ONLY_VISIBLE
+                        )
+                    );
+    } else {
+      return coordinatorClient.fetchUsedSegmentsInDataSourceForIntervals(
+          dataSource,
+          ImmutableList.of(interval)
+      );
     }
-
-    return SegmentTimeline.forSegments(usedSegments).lookup(interval);
   }
 
   public static List<TimelineObjectHolder<String, DataSegment>> getTimelineForInterval(
+      TaskToolbox toolbox,
       CoordinatorClient coordinatorClient,
       RetryPolicyFactory retryPolicyFactory,
       String dataSource,
@@ -558,23 +536,18 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   {
     Preconditions.checkNotNull(interval);
 
-    // This call used to use the TaskActionClient, so for compatibility we use the same retry configuration
-    // as TaskActionClient.
     final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
     Collection<DataSegment> usedSegments;
     while (true) {
       try {
-        usedSegments = coordinatorClient.fetchUsedSegmentsInDataSourceForIntervals(
-            dataSource,
-            Collections.singletonList(interval)
-        );
+        usedSegments = fetchUsedSegmentsForInterval(toolbox, coordinatorClient, dataSource, interval);
         break;
       }
       catch (Throwable e) {
         LOG.warn(e, "Exception getting database segments");
         final Duration delay = retryPolicy.getAndIncrementRetryDelay();
         if (delay == null) {
-          throw e;
+          throw new RuntimeException(e);
         } else {
           final long sleepTime = jitter(delay.getMillis());
           LOG.info("Will try again in [%s].", new Duration(sleepTime).toString());

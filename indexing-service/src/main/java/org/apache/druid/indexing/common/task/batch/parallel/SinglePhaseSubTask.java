@@ -49,7 +49,6 @@ import org.apache.druid.indexing.common.task.SegmentAllocatorForBatch;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
-import org.apache.druid.indexing.input.TaskInputSource;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -271,10 +270,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
       );
 
-      InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
-      if (inputSource instanceof TaskInputSource) {
-        inputSource = ((TaskInputSource) inputSource).withTaskToolbox(toolbox);
-      }
+      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
 
       final ParallelIndexSupervisorTaskClient taskClient = toolbox.getSupervisorTaskClientProvider().build(
           supervisorTaskId,

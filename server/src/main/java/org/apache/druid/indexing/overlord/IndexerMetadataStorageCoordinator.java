@@ -97,36 +97,6 @@ public interface IndexerMetadataStorageCoordinator
 
   /**
    * Retrieve all published segments which may include any data in the given intervals and are marked as used from the
-   * metadata store and the segment creation date is less than the version of the REPLACE lock enclosing its interval
-   *
-   * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
-   * the collection only once.
-   *
-   * @param dataSource The data source to query
-   * @param intervals  The intervals for which all applicable and used segments are requested.
-   * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
-   *                   visibility is considered within the specified intervals: that is, a segment which is visible
-   *                   outside of the specified intervals, but overshadowed on the specified intervals will not be
-   *                   returned if {@link Segments#ONLY_VISIBLE} is passed. See more precise description in the doc for
-   *                   {@link Segments}.
-   * @param intervalToLockVersionMap Map from interval to the version of an active replace lock held over it
-   * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
-   *         requested intervals.
-   *
-   * @implNote This method doesn't return a {@link Set} because there may be an expectation that {@code Set.contains()}
-   * is O(1) operation, while it's not the case for the returned collection unless it copies all segments into a new
-   * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
-   * other use cases. So clients should perform such copy themselves if they need {@link Set} semantics.
-   */
-  Collection<DataSegment> retrieveLockedSegmentsForIntervals(
-      String dataSource,
-      List<Interval> intervals,
-      Segments visibility,
-      Map<Interval, String> intervalToLockVersionMap
-  );
-
-  /**
-   * Retrieve all published segments which may include any data in the given intervals and are marked as used from the
    * metadata store.
    *
    * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in

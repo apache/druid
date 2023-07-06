@@ -429,7 +429,7 @@ public class CompactionTask extends AbstractBatchIndexTask
       throws IOException
   {
     return ImmutableList.copyOf(
-        taskActionClient.submit(new RetrieveUsedSegmentsAction(getDataSource(), null, intervals, Segments.ONLY_VISIBLE, true))
+        taskActionClient.submit(new RetrieveUsedSegmentsAction(getDataSource(), null, intervals, Segments.ONLY_VISIBLE))
     );
   }
 
@@ -746,7 +746,7 @@ public class CompactionTask extends AbstractBatchIndexTask
             segmentCacheManagerFactory,
             retryPolicyFactory,
             toolbox.getConfig()
-        ),
+        ).withTaskToolbox(toolbox),
         null,
         false,
         compactionIOConfig.isDropExisting()
@@ -1152,7 +1152,7 @@ public class CompactionTask extends AbstractBatchIndexTask
     List<DataSegment> findSegments(TaskActionClient actionClient) throws IOException
     {
       return new ArrayList<>(
-          actionClient.submit(new RetrieveUsedSegmentsAction(dataSource, interval, null, Segments.ONLY_VISIBLE, true))
+          actionClient.submit(new RetrieveUsedSegmentsAction(dataSource, interval, null, Segments.ONLY_VISIBLE))
       );
     }
 

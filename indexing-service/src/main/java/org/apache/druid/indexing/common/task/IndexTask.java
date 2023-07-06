@@ -505,10 +505,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                                                         .inputIntervals()
                                                         .isEmpty();
 
-      InputSource inputSource = ingestionSchema.getIOConfig().getInputSource();
-      if (inputSource instanceof TaskInputSource) {
-        inputSource = ((TaskInputSource) inputSource).withTaskToolbox(toolbox);
-      }
+      final InputSource inputSource = ingestionSchema.getIOConfig()
+                                                     .getNonNullInputSource(toolbox);
 
       final File tmpDir = toolbox.getIndexingTmpDir();
 
@@ -1203,6 +1201,15 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return inputSource;
     }
 
+    public InputSource getNonNullInputSource(TaskToolbox toolbox)
+    {
+      Preconditions.checkNotNull(inputSource, "inputSource");
+      if (inputSource instanceof TaskInputSource && toolbox != null) {
+        return ((TaskInputSource) inputSource).withTaskToolbox(toolbox);
+      }
+      return inputSource;
+    }
+
     /**
      * Returns {@link InputFormat}. Can be null if {@link DataSchema#parserMap} is specified.
      * Also can be null in {@link InputSourceSampler}.
@@ -1213,11 +1220,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     public InputFormat getInputFormat()
     {
       return inputFormat;
-    }
-
-    public InputSource getNonNullInputSource()
-    {
-      return Preconditions.checkNotNull(inputSource, "inputSource");
     }
 
     public InputFormat getNonNullInputFormat()

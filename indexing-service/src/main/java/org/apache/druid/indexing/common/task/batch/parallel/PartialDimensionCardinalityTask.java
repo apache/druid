@@ -182,7 +182,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
     HashedPartitionsSpec partitionsSpec = (HashedPartitionsSpec) tuningConfig.getPartitionsSpec();
     Preconditions.checkNotNull(partitionsSpec, "partitionsSpec required in tuningConfig");
 
-    InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource();
+    InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
     if (inputSource instanceof TaskInputSource) {
       inputSource = ((TaskInputSource) inputSource).withTaskToolbox(toolbox);
     }

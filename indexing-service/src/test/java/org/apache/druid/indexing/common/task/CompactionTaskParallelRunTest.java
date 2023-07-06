@@ -756,6 +756,7 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
 
     List<InputSplit<List<WindowedSegmentId>>> splits = Lists.newArrayList(
         DruidInputSource.createSplits(
+            null,
             getCoordinatorClient(),
             RETRY_POLICY_FACTORY,
             DATA_SOURCE,

@@ -92,17 +92,6 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<DataSegment> retrieveLockedSegmentsForIntervals(
-      String dataSource,
-      List<Interval> intervals,
-      Segments visibility,
-      Map<Interval, String> intervalToLockVersionMap
-  )
-  {
-    return ImmutableList.of();
-  }
-
-  @Override
   public List<DataSegment> retrieveUsedSegmentsForIntervals(
       String dataSource,
       List<Interval> intervals,
