@@ -122,7 +122,7 @@
     https://github.com/FasterXML/jackson-databind/issues/3328
     -->
     <cve>CVE-2021-46877</cve>
-    <!-- according to jackson community, this is not a security issue, see https://github.com/FasterXML/jackson-databind/issues/3972#issuecomment-1596193098, https://github.com/jeremylong/DependencyCheck/issues/5779 -->
+    <!-- According to jackson community, this is not a security issue, see https://github.com/FasterXML/jackson-databind/issues/3972#issuecomment-1596193098, https://github.com/jeremylong/DependencyCheck/issues/5779 -->
     <cve>CVE-2023-35116</cve>
   </suppress>
 
@@ -855,9 +855,6 @@
     <cve>CVE-2021-4277</cve>
   </suppress>
 
-  <!--
-    ~ TODO: Update guava to any version after 29.0
-  -->
   <suppress>
     <notes><![CDATA[
       file name: guava-16.0.1.jar
