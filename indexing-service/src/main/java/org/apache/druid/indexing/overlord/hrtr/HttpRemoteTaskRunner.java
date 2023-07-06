@@ -96,6 +96,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -922,8 +923,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers)
+  public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxLazyWorkers)
   {
+    // skip the lock and bail early if we should not mark any workers lazy (e.g. number
+    // of current workers is at or below the minNumWorkers of autoscaler config)
+    if (maxLazyWorkers < 1) {
+      return Collections.emptyList();
+    }
+
     synchronized (statusLock) {
       for (Map.Entry<String, WorkerHolder> worker : workers.entrySet()) {
         final WorkerHolder workerHolder = worker.getValue();
@@ -931,7 +938,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           if (isWorkerOkForMarkingLazy(workerHolder.getWorker()) && isLazyWorker.apply(workerHolder.toImmutable())) {
             log.info("Adding Worker[%s] to lazySet!", workerHolder.getWorker().getHost());
             lazyWorkers.put(worker.getKey(), workerHolder);
-            if (lazyWorkers.size() == maxWorkers) {
+            if (lazyWorkers.size() == maxLazyWorkers) {
               // only mark excess workers as lazy and allow their cleanup
               break;
             }
