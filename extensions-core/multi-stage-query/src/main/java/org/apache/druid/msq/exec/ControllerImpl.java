@@ -94,7 +94,7 @@ import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.indexing.WorkerCount;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
-import org.apache.druid.msq.indexing.destination.DurableStorageDestination;
+import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.CanceledFault;
@@ -1538,7 +1538,7 @@ public class ControllerImpl implements Controller
     } else if (querySpec.getDestination() instanceof TaskReportMSQDestination) {
       shuffleSpecFactory = ShuffleSpecFactories.singlePartition();
       queryToPlan = querySpec.getQuery();
-    } else if (querySpec.getDestination() instanceof DurableStorageDestination) {
+    } else if (querySpec.getDestination() instanceof DurableStorageMSQDestination) {
       // we add a final stage which generates one partition per worker.
       shuffleSpecFactory = ShuffleSpecFactories.globalSortWithMaxPartitionCount(tuningConfig.getMaxNumWorkers());
       queryToPlan = querySpec.getQuery();
@@ -1616,7 +1616,7 @@ public class ControllerImpl implements Controller
       return builder.build();
     } else if (querySpec.getDestination() instanceof TaskReportMSQDestination) {
       return queryDef;
-    } else if (querySpec.getDestination() instanceof DurableStorageDestination) {
+    } else if (querySpec.getDestination() instanceof DurableStorageMSQDestination) {
 
       // attaching new query results stage always.
       StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
@@ -1744,7 +1744,7 @@ public class ControllerImpl implements Controller
   private static boolean isInlineResults(final MSQSpec querySpec)
   {
     return querySpec.getDestination() instanceof TaskReportMSQDestination
-           || querySpec.getDestination() instanceof DurableStorageDestination;
+           || querySpec.getDestination() instanceof DurableStorageMSQDestination;
   }
 
   private static boolean isTimeBucketedIngestion(final MSQSpec querySpec)

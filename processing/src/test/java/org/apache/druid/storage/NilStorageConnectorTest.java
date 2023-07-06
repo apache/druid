@@ -20,7 +20,7 @@
 package org.apache.druid.storage;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,14 +34,14 @@ public class NilStorageConnectorTest
   public void sanity()
   {
     NilStorageConnector nilStorageConnector = NilStorageConnector.getInstance();
-    Assert.assertThrows(ERROR_MESSAGE, UOE.class, () -> nilStorageConnector.pathExists("null"));
-    Assert.assertThrows(ERROR_MESSAGE, UOE.class, () -> nilStorageConnector.read("null"));
-    Assert.assertThrows(ERROR_MESSAGE, UOE.class, () -> nilStorageConnector.readRange("null", 0, 0));
-    Assert.assertThrows(ERROR_MESSAGE, UOE.class, () -> nilStorageConnector.deleteFile("null"));
-    Assert.assertThrows(ERROR_MESSAGE, UOE.class, () -> nilStorageConnector.deleteFiles(ImmutableList.of()));
-    Assert.assertThrows(ERROR_MESSAGE, UOE.class, () -> nilStorageConnector.deleteRecursively("null"));
-    Assert.assertThrows(ERROR_MESSAGE, UOE.class, () -> nilStorageConnector.listDir("null"));
-    Assert.assertThrows(ERROR_MESSAGE, UOE.class, () -> nilStorageConnector.pathExists("null"));
+    Assert.assertThrows(ERROR_MESSAGE, DruidException.class, () -> nilStorageConnector.pathExists("null"));
+    Assert.assertThrows(ERROR_MESSAGE, DruidException.class, () -> nilStorageConnector.read("null"));
+    Assert.assertThrows(ERROR_MESSAGE, DruidException.class, () -> nilStorageConnector.readRange("null", 0, 0));
+    Assert.assertThrows(ERROR_MESSAGE, DruidException.class, () -> nilStorageConnector.deleteFile("null"));
+    Assert.assertThrows(ERROR_MESSAGE, DruidException.class, () -> nilStorageConnector.deleteFiles(ImmutableList.of()));
+    Assert.assertThrows(ERROR_MESSAGE, DruidException.class, () -> nilStorageConnector.deleteRecursively("null"));
+    Assert.assertThrows(ERROR_MESSAGE, DruidException.class, () -> nilStorageConnector.listDir("null"));
+    Assert.assertThrows(ERROR_MESSAGE, DruidException.class, () -> nilStorageConnector.pathExists("null"));
   }
 
 }

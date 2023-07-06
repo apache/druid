@@ -19,31 +19,16 @@
 
 package org.apache.druid.msq.indexing.destination;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import org.apache.druid.msq.indexing.MSQDestination;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-public class DurableStorageDestination implements MSQDestination
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = DataSourceMSQDestination.TYPE, value = DataSourceMSQDestination.class),
+    @JsonSubTypes.Type(name = TaskReportMSQDestination.TYPE, value = TaskReportMSQDestination.class),
+    @JsonSubTypes.Type(name = DurableStorageMSQDestination.TYPE, value = DurableStorageMSQDestination.class)
+})
+public interface MSQDestination
 {
-  public static final String TYPE = "durableStorage";
-
-  public static final DurableStorageDestination INSTANCE = new DurableStorageDestination();
-
-
-  private DurableStorageDestination()
-  {
-    // Singleton.
-  }
-
-  @JsonCreator
-  public static DurableStorageDestination instance()
-  {
-    return INSTANCE;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "DurableStorageDestination{}";
-  }
-
+  // No methods. Just a marker interface for deserialization.
 }

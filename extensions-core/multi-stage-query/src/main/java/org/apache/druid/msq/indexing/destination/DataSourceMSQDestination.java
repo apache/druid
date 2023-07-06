@@ -26,7 +26,6 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.msq.indexing.MSQDestination;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;

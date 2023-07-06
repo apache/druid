@@ -21,18 +21,20 @@ package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
-public class TaskReportMSQDestination implements MSQDestination
+public class DurableStorageMSQDestination implements MSQDestination
 {
-  public static final TaskReportMSQDestination INSTANCE = new TaskReportMSQDestination();
-  public static final String TYPE = "taskReport";
+  public static final String TYPE = "durableStorage";
 
-  private TaskReportMSQDestination()
+  public static final DurableStorageMSQDestination INSTANCE = new DurableStorageMSQDestination();
+
+
+  private DurableStorageMSQDestination()
   {
     // Singleton.
   }
 
   @JsonCreator
-  public static TaskReportMSQDestination instance()
+  public static DurableStorageMSQDestination instance()
   {
     return INSTANCE;
   }
@@ -40,7 +42,7 @@ public class TaskReportMSQDestination implements MSQDestination
   @Override
   public String toString()
   {
-    return "TaskReportMSQDestination{}";
+    return "DurableStorageDestination{}";
   }
 
 }

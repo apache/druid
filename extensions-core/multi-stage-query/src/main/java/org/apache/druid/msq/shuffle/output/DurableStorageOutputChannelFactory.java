@@ -39,7 +39,7 @@ import java.util.concurrent.Executors;
 
 public abstract class DurableStorageOutputChannelFactory implements OutputChannelFactory
 {
-  private static final Logger LOG = new Logger(DurableStorageTaskOutputChannelFactoryImpl.class);
+  private static final Logger LOG = new Logger(DurableStorageOutputChannelFactory.class);
   protected final String controllerTaskId;
   protected final int workerNumber;
   protected final int stageNumber;
@@ -86,7 +86,7 @@ public abstract class DurableStorageOutputChannelFactory implements OutputChanne
   )
   {
     if (isQueryResults) {
-      return new DurableStorageResultsOutputChannelFactory(
+      return new DurableStorageQueryResultsOutputChannelFactory(
           controllerTaskId,
           workerNumber,
           stageNumber,
@@ -96,7 +96,7 @@ public abstract class DurableStorageOutputChannelFactory implements OutputChanne
           tmpDir
       );
     } else {
-      return new DurableStorageTaskOutputChannelFactoryImpl(
+      return new DurableStorageTaskOutputChannelFactory(
           controllerTaskId,
           workerNumber,
           stageNumber,
@@ -128,7 +128,7 @@ public abstract class DurableStorageOutputChannelFactory implements OutputChanne
     os.close();
   }
 
-  protected abstract String getSuccessFilePath();
+  public abstract String getSuccessFilePath();
 
   @Override
   public OutputChannel openNilChannel(int partitionNumber)

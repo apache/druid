@@ -35,11 +35,11 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQDestination;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
-import org.apache.druid.msq.indexing.destination.DurableStorageDestination;
+import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
@@ -231,10 +231,13 @@ public class MSQTaskQueryMaker implements QueryMaker
       if (ctxDestination != null && !DESTINATION_REPORT.equals(ctxDestination)) {
         throw new IAE("Cannot SELECT with destination [%s]", ctxDestination);
       }
-      if (MultiStageQueryContext.getSelectDestination(sqlQueryContext).equals(MSQSelectDestination.TASK_REPORT)) {
+      final MSQSelectDestination msqSelectDestination = MultiStageQueryContext.getSelectDestination(sqlQueryContext);
+      if (msqSelectDestination.equals(MSQSelectDestination.TASK_REPORT)) {
         destination = TaskReportMSQDestination.instance();
+      } else if (msqSelectDestination.equals(MSQSelectDestination.DURABLE_STORAGE)) {
+        destination = DurableStorageMSQDestination.instance();
       } else {
-        destination = DurableStorageDestination.instance();
+        throw new IAE("Cannot SELECT with destination [%s]", msqSelectDestination.name());
       }
     }
 

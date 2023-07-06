@@ -20,7 +20,7 @@
 package org.apache.druid.msq.shuffle;
 
 import org.apache.druid.frame.processor.OutputChannelFactoryTest;
-import org.apache.druid.msq.shuffle.output.DurableStorageTaskOutputChannelFactoryImpl;
+import org.apache.druid.msq.shuffle.output.DurableStorageTaskOutputChannelFactory;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.junit.ClassRule;
 import org.junit.rules.TemporaryFolder;
@@ -36,7 +36,7 @@ public class DurableStorageOutputChannelFactoryTest extends OutputChannelFactory
       throws IOException
   {
     super(
-        new DurableStorageTaskOutputChannelFactoryImpl(
+        new DurableStorageTaskOutputChannelFactory(
             "0",
             0,
             0,

@@ -1342,11 +1342,7 @@ public class WorkerImpl implements Worker
             e,
             "Unable to create the success file [%s] at the location [%s]",
             DurableStorageUtils.SUCCESS_MARKER_FILENAME,
-            DurableStorageUtils.getWorkerOutputSuccessFilePath(
-                task.getControllerTaskId(),
-                stageNumber,
-                task().getWorkerNumber()
-            )
+            durableStorageOutputChannelFactory.getSuccessFilePath()
         );
       }
     }

@@ -19,7 +19,7 @@
 
 package org.apache.druid.storage;
 
-import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.error.DruidException;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -42,48 +42,57 @@ public class NilStorageConnector implements StorageConnector
   @Override
   public boolean pathExists(String path)
   {
-    throw new UOE("Please configure durable storage.");
+    throw notConfiguredException();
   }
 
   @Override
   public InputStream read(String path)
   {
-    throw new UOE("Please configure durable storage.");
+    throw notConfiguredException();
+
   }
 
   @Override
   public InputStream readRange(String path, long from, long size)
   {
-    throw new UOE("Please configure durable storage.");
+    throw notConfiguredException();
+
   }
 
   @Override
   public OutputStream write(String path)
   {
-    throw new UOE("Please configure durable storage.");
+    throw notConfiguredException();
   }
 
   @Override
   public void deleteFile(String path)
   {
-    throw new UOE("Please configure durable storage.");
+    throw notConfiguredException();
   }
 
   @Override
   public void deleteFiles(Iterable<String> paths)
   {
-    throw new UOE("Please configure durable storage.");
+    throw notConfiguredException();
   }
 
   @Override
   public void deleteRecursively(String path)
   {
-    throw new UOE("Please configure durable storage.");
+    throw notConfiguredException();
   }
 
   @Override
   public Iterator<String> listDir(String dirName)
   {
-    throw new UOE("Please configure durable storage.");
+    throw notConfiguredException();
+  }
+
+  private DruidException notConfiguredException()
+  {
+    return DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                         .ofCategory(DruidException.Category.DEFENSIVE)
+                         .build("Please configure durable storage.");
   }
 }

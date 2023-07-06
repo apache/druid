@@ -34,11 +34,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.channels.Channels;
 
-public class DurableStorageResultsOutputChannelFactory extends DurableStorageOutputChannelFactory
+public class DurableStorageQueryResultsOutputChannelFactory extends DurableStorageOutputChannelFactory
 {
 
 
-  public DurableStorageResultsOutputChannelFactory(
+  public DurableStorageQueryResultsOutputChannelFactory(
       String controllerTaskId,
       int workerNumber,
       int stageNumber,
@@ -52,7 +52,7 @@ public class DurableStorageResultsOutputChannelFactory extends DurableStorageOut
   }
 
   @Override
-  protected String getSuccessFilePath()
+  public String getSuccessFilePath()
   {
     return DurableStorageUtils.getQueryResultsSuccessFilePath(
         controllerTaskId,
@@ -96,7 +96,7 @@ public class DurableStorageResultsOutputChannelFactory extends DurableStorageOut
   @Override
   public PartitionedOutputChannel openPartitionedChannel(String name, boolean deleteAfterRead)
   {
-    throw new UOE("%s does not support this call", DurableStorageResultsOutputChannelFactory.class.getSimpleName());
+    throw new UOE("%s does not support this call", DurableStorageQueryResultsOutputChannelFactory.class.getSimpleName());
   }
 
 }

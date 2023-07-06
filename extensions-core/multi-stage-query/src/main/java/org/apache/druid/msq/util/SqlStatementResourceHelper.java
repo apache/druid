@@ -32,19 +32,17 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
+import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.QueryCounterSnapshot;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQDestination;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
-import org.apache.druid.msq.indexing.destination.DurableStorageDestination;
+import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.report.MSQStagesReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -164,6 +162,17 @@ public class SqlStatementResourceHelper
     return last;
   }
 
+  /**
+   * Populates pages list from the {@link CounterSnapshotsTree}.
+   * <br>
+   * The number of pages changes with respect to the destination
+   * <ol>
+   *   <li>{@link DataSourceMSQDestination} a single page is returned which adds all the counters of {@link SegmentGenerationProgressCounter.Snapshot}</li>
+   *   <li>{@link TaskReportMSQDestination} a single page is returned which adds all the counters of {@link ChannelCounters}</li>
+   *   <li>{@link DurableStorageMSQDestination} a page is returned for each worker which has generated output rows.
+   *   If the worker generated 0 rows, we do no populated a page for it. {@link PageInformation#id} is equal to the worker number</li>
+   * </ol>
+   */
   public static Optional<List<PageInformation>> populatePageList(
       MSQTaskReportPayload msqTaskReportPayload,
       MSQDestination msqDestination
@@ -173,9 +182,7 @@ public class SqlStatementResourceHelper
       return Optional.empty();
     }
     int finalStage = msqTaskReportPayload.getStages().getStages().size() - 1;
-
     Map<Integer, CounterSnapshots> workerCounters = msqTaskReportPayload.getCounters().snapshotForStage(finalStage);
-
     if (workerCounters == null) {
       return Optional.empty();
     }
@@ -204,9 +211,13 @@ public class SqlStatementResourceHelper
           size += Arrays.stream(((ChannelCounters.Snapshot) queryCounterSnapshot).getBytes()).sum();
         }
       }
-      return Optional.of(ImmutableList.of(new PageInformation(rows, size, 0)));
+      if (rows != 0L) {
+        return Optional.of(ImmutableList.of(new PageInformation(rows, size, 0)));
+      } else {
+        return Optional.empty();
+      }
 
-    } else if (msqDestination instanceof DurableStorageDestination) {
+    } else if (msqDestination instanceof DurableStorageMSQDestination) {
       List<PageInformation> pageList = new ArrayList<>();
       for (Map.Entry<Integer, CounterSnapshots> counterSnapshots : workerCounters.entrySet()) {
         long rows = 0L;
@@ -216,56 +227,16 @@ public class SqlStatementResourceHelper
           rows += Arrays.stream(((ChannelCounters.Snapshot) queryCounterSnapshot).getRows()).sum();
           size += Arrays.stream(((ChannelCounters.Snapshot) queryCounterSnapshot).getBytes()).sum();
         }
-        pageList.add(new PageInformation(rows, size, counterSnapshots.getKey()));
+        // do not populate a page if the worker generated 0 rows.
+        if (rows != 0L) {
+          pageList.add(new PageInformation(rows, size, counterSnapshots.getKey()));
+        }
       }
       return Optional.of(pageList);
     } else {
       return Optional.empty();
     }
   }
-
-  public static Optional<Pair<Long, Long>> getRowsAndSizeFromPayload(Map<String, Object> payload, boolean isSelectQuery)
-  {
-    List stages = getList(payload, "stages");
-    if (stages == null || stages.isEmpty()) {
-      return Optional.empty();
-    } else {
-      int maxStage = stages.size() - 1; // Last stage output is the total number of rows returned to the end user.
-      Map<String, Object> counterMap = getMap(getMap(payload, "counters"), String.valueOf(maxStage));
-      long rows = -1L;
-      long sizeInBytes = -1L;
-      if (counterMap == null) {
-        return Optional.empty();
-      }
-      for (Map.Entry<String, Object> worker : counterMap.entrySet()) {
-        Object workerChannels = worker.getValue();
-        if (workerChannels == null || !(workerChannels instanceof Map)) {
-          return Optional.empty();
-        }
-        if (isSelectQuery) {
-          Object output = ((Map<?, ?>) workerChannels).get("output");
-          if (output != null && output instanceof Map) {
-            List<Integer> rowsPerChannel = (List<Integer>) ((Map<String, Object>) output).get("rows");
-            List<Integer> bytesPerChannel = (List<Integer>) ((Map<String, Object>) output).get("bytes");
-            for (Integer row : rowsPerChannel) {
-              rows = rows + row;
-            }
-            for (Integer bytes : bytesPerChannel) {
-              sizeInBytes = sizeInBytes + bytes;
-            }
-          }
-        } else {
-          Object output = ((Map<?, ?>) workerChannels).get("segmentGenerationProgress");
-          if (output != null && output instanceof Map) {
-            rows += (Integer) ((Map<String, Object>) output).get("rowsPushed");
-          }
-        }
-      }
-
-      return Optional.of(new Pair<>(rows == -1L ? null : rows + 1, sizeInBytes == -1L ? null : sizeInBytes + 1));
-    }
-  }
-
 
   public static Optional<SqlStatementResult> getExceptionPayload(
       String queryId,
@@ -400,35 +371,6 @@ public class SqlStatementResourceHelper
       return null;
     }
     return (Map<String, Object>) map.get(key);
-  }
-
-  @SuppressWarnings("rawtypes")
-  public static List getList(Map<String, Object> map, String key)
-  {
-    if (map == null) {
-      return null;
-    }
-    return (List) map.get(key);
-  }
-
-  /**
-   * Get results from report
-   */
-  @SuppressWarnings("unchecked")
-  public static Optional<Yielder<Object>> getResults(Map<String, Object> payload)
-  {
-    Map<String, Object> resultsHolder = getMap(payload, "results");
-
-    if (resultsHolder == null) {
-      return Optional.empty();
-    }
-
-    List<Object> data = (List<Object>) resultsHolder.get("results");
-    List<Object> rows = new ArrayList<>();
-    if (data != null) {
-      rows.addAll(data);
-    }
-    return Optional.of((Yielders.each(Sequences.simple(rows))));
   }
 
   public static Map<String, Object> getPayload(Map<String, Object> results)

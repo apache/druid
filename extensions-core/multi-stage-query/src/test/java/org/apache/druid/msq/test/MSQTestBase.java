@@ -1315,10 +1315,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
           } else {
             StageDefinition finalStage = Objects.requireNonNull(SqlStatementResourceHelper.getFinalStage(
                 payload)).getStageDefinition();
+            Closer closer = Closer.create();
             InputChannelFactory inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
                 controllerId,
                 localFileStorageConnector,
-                Closer.create(),
+                closer,
                 true
             );
             rows = new FrameChannelSequence(inputChannelFactory.openChannel(
@@ -1330,7 +1331,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 finalStage,
                 frame,
                 objectMapper
-            )).toList();
+            )).withBaggage(closer).toList();
 
           }
           if (rows == null) {

@@ -45,9 +45,8 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQDestination;
-import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
-import org.apache.druid.msq.indexing.destination.DurableStorageDestination;
+import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -325,102 +324,8 @@ public class SqlStatementResource
 
       // returning results
       final Closer closer = Closer.create();
-
       final Optional<Yielder<Object[]>> results;
-      if (msqControllerTask.getQuerySpec().getDestination() instanceof TaskReportMSQDestination) {
-        if (page != null && page > 0) {
-          // Results from task report are only present as one page.
-          throw DruidException.forPersona(DruidException.Persona.USER)
-                              .ofCategory(DruidException.Category.INVALID_INPUT)
-                              .build("Page number is out of range of the results.");
-        }
-
-        MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(SqlStatementResourceHelper.getPayload(
-            contactOverlord(overlordClient.taskReportAsMap(queryId))
-        ), MSQTaskReportPayload.class);
-
-        if (msqTaskReportPayload.getResults().getResultYielder() == null) {
-          results = Optional.empty();
-        } else {
-          results = Optional.of(msqTaskReportPayload.getResults().getResultYielder());
-        }
-
-      } else if (msqControllerTask.getQuerySpec().getDestination() instanceof DurableStorageDestination) {
-
-        MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(SqlStatementResourceHelper.getPayload(
-            contactOverlord(overlordClient.taskReportAsMap(queryId))
-        ), MSQTaskReportPayload.class);
-
-
-        List<PageInformation> pages = SqlStatementResourceHelper.populatePageList(
-                                                                    msqTaskReportPayload,
-                                                                    msqControllerTask.getQuerySpec()
-                                                                                     .getDestination()
-                                                                )
-                                                                .get();
-
-
-        final StageDefinition finalStage = Objects.requireNonNull(SqlStatementResourceHelper.getFinalStage(
-            msqTaskReportPayload)).getStageDefinition();
-
-        if (page == null) {
-          final DurableStorageInputChannelFactory standardImplementation = DurableStorageInputChannelFactory.createStandardImplementation(
-              msqControllerTask.getId(),
-              storageConnector,
-              closer,
-              true
-          );
-          results = Optional.of(Yielders.each(
-              Sequences.concat(pages.stream().map(pageInformation -> {
-                try {
-                  return new FrameChannelSequence(
-                      standardImplementation.openChannel(finalStage.getId(),
-                                                         (int) pageInformation.getId(), 0
-                      )
-                  );
-                }
-                catch (Exception e) {
-                  throw new RuntimeException(
-                      e);
-                }
-              }).collect(Collectors.toList())).flatMap(
-                  frame -> SqlStatementResourceHelper.getResultSequence(
-                      msqControllerTask,
-                      finalStage,
-                      frame,
-                      jsonMapper
-                  )
-
-              )));
-
-        } else {
-          PageInformation pageInformation = getPageInformationForPageId(pages, page);
-          final DurableStorageInputChannelFactory standardImplementation = DurableStorageInputChannelFactory.createStandardImplementation(
-              msqControllerTask.getId(),
-              storageConnector,
-              closer,
-              true
-          );
-          results = Optional.of(Yielders.each(new FrameChannelSequence(standardImplementation.openChannel(
-              finalStage.getId(),
-              (int) pageInformation.getId(),
-              0
-          )).flatMap(frame -> SqlStatementResourceHelper.getResultSequence(
-              msqControllerTask,
-              finalStage,
-              frame,
-              jsonMapper
-          ))));
-
-        }
-      } else {
-        throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
-                            .ofCategory(DruidException.Category.UNCATEGORIZED)
-                            .build(
-                                "MSQ select destination[%s] not supported. Please reach out to druid slack community for more help.",
-                                msqControllerTask.getQuerySpec().getDestination().toString()
-                            );
-      }
+      results = getResultYielder(queryId, page, msqControllerTask, closer);
       if (!results.isPresent()) {
         // no results, return empty
         return Response.ok().build();
@@ -452,83 +357,6 @@ public class SqlStatementResource
       return buildNonOkResponse(DruidException.forPersona(DruidException.Persona.DEVELOPER)
                                               .ofCategory(DruidException.Category.UNCATEGORIZED)
                                               .build(e, "Failed to handle query: [%s]", queryId));
-    }
-  }
-
-  private PageInformation getPageInformationForPageId(List<PageInformation> pages, Long pageId)
-  {
-    for (PageInformation pageInfo : pages) {
-      if (pageInfo.getId() == pageId) {
-        return pageInfo;
-      }
-    }
-    throw DruidException.forPersona(DruidException.Persona.USER)
-                        .ofCategory(DruidException.Category.INVALID_INPUT)
-                        .build("Invalid page id [%d] passed.", pageId);
-  }
-
-  private void resultPusher(
-      String queryId,
-      Optional<List<ColumnNameAndTypes>> signature,
-      Closer closer,
-      Optional<Yielder<Object[]>> results,
-      CountingOutputStream os
-  ) throws IOException
-  {
-    try {
-      try (final ResultFormat.Writer writer = ResultFormat.OBJECT.createFormatter(os, jsonMapper)) {
-        Yielder<Object[]> yielder = results.get();
-        List<ColumnNameAndTypes> rowSignature = signature.get();
-        writer.writeResponseStart();
-
-        while (!yielder.isDone()) {
-          writer.writeRowStart();
-          Object[] row = yielder.get();
-          for (int i = 0; i < Math.min(rowSignature.size(), row.length); i++) {
-            writer.writeRowField(
-                rowSignature.get(i).getColName(),
-                row[i]
-            );
-          }
-          writer.writeRowEnd();
-          yielder = yielder.next(null);
-        }
-        writer.writeResponseEnd();
-      }
-      catch (Exception e) {
-        log.error(e, "Unable to stream results back for query[%s]", queryId);
-        throw new ISE(e, "Unable to stream results back for query[%s]", queryId);
-      }
-    }
-    catch (Exception e) {
-      log.error(e, "Unable to stream results back for query[%s]", queryId);
-      throw new ISE(e, "Unable to stream results back for query[%s]", queryId);
-    }
-    finally {
-      closer.close();
-    }
-  }
-
-  private static void throwIfQueryIsNotSuccessful(String queryId, TaskStatusPlus statusPlus)
-  {
-    SqlStatementState sqlStatementState = SqlStatementResourceHelper.getSqlStatementState(statusPlus);
-    if (sqlStatementState == SqlStatementState.RUNNING || sqlStatementState == SqlStatementState.ACCEPTED) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "Query[%s] is currently in [%s] state. Please wait for it to complete.",
-                              queryId,
-                              sqlStatementState
-                          );
-    } else if (sqlStatementState == SqlStatementState.FAILED) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "Query[%s] failed. Hit status api for more details.",
-                              queryId
-                          );
-    } else {
-      // do nothing
     }
   }
 
@@ -701,7 +529,7 @@ public class SqlStatementResource
 
   @SuppressWarnings("ReassignedVariable")
   private Optional<ResultSetInformation> getSampleResults(
-      String asyncResultId,
+      String queryId,
       String dataSource,
       SqlStatementState sqlStatementState,
       MSQDestination msqDestination
@@ -709,60 +537,60 @@ public class SqlStatementResource
   {
     if (sqlStatementState == SqlStatementState.SUCCESS) {
       Map<String, Object> payload = SqlStatementResourceHelper.getPayload(contactOverlord(overlordClient.taskReportAsMap(
-          asyncResultId)));
+          queryId)));
       MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(payload, MSQTaskReportPayload.class);
-
-
       Optional<List<PageInformation>> pageList = SqlStatementResourceHelper.populatePageList(
           msqTaskReportPayload,
           msqDestination
       );
-      Long rows = null;
-      Long size = null;
-      boolean isSelectQuery = false;
+
+      // getting the total number of rows, size from page information.
+      Long rows = 0L;
+      Long size = 0L;
       if (pageList.isPresent()) {
-        if (msqDestination instanceof TaskReportMSQDestination) {
-          isSelectQuery = true;
-          if (pageList.get().size() == 1) {
-            rows = pageList.get().get(0).getNumRows();
-            size = pageList.get().get(0).getSizeInBytes();
-          }
-        } else if (msqDestination instanceof DataSourceMSQDestination) {
-          isSelectQuery = false;
-          if (pageList.get().size() == 1) {
-            rows = pageList.get().get(0).getNumRows();
-            size = pageList.get().get(0).getSizeInBytes();
-          }
-        } else {
-          isSelectQuery = true;
-          rows = 0L;
-          size = 0L;
-          for (PageInformation pageInformation : pageList.get()) {
-            rows += pageInformation.getNumRows();
-            size += pageInformation.getSizeInBytes();
-          }
+        for (PageInformation pageInformation : pageList.get()) {
+          rows += pageInformation.getNumRows();
+          size += pageInformation.getSizeInBytes();
         }
       }
+
+      boolean isSelectQuery = msqDestination instanceof TaskReportMSQDestination
+                              || msqDestination instanceof DurableStorageMSQDestination;
 
       List<Object[]> results = null;
       if (isSelectQuery) {
         results = new ArrayList<>();
-        Yielder<Object[]> yielder = msqTaskReportPayload.getResults().getResultYielder();
-        while (!yielder.isDone()) {
-          results.add(yielder.get());
-          yielder = yielder.next(null);
+        Yielder<Object[]> yielder = null;
+        if (msqTaskReportPayload.getResults() != null) {
+          yielder = msqTaskReportPayload.getResults().getResultYielder();
         }
+        try {
+          while (yielder != null && !yielder.isDone()) {
+            results.add(yielder.get());
+            yielder = yielder.next(null);
+          }
+        }
+        finally {
+          if (yielder != null) {
+            try {
+              yielder.close();
+            }
+            catch (IOException e) {
+              log.warn(e, StringUtils.format("Unable to close yielder for query[%s]", queryId));
+            }
+          }
+        }
+
       }
 
       return Optional.of(
           new ResultSetInformation(
-              // since the rows can be sampled, get the number of rows from counters
               rows,
               size,
               null,
               dataSource,
               results,
-              isSelectQuery ? pageList.get() : null
+              isSelectQuery ? pageList.orElse(null) : null
           )
       );
     } else {
@@ -838,18 +666,176 @@ public class SqlStatementResource
     return msqControllerTask;
   }
 
-  private <T> T contactOverlord(final ListenableFuture<T> future)
+  private Optional<Yielder<Object[]>> getResultYielder(
+      String queryId,
+      Long page,
+      MSQControllerTask msqControllerTask,
+      Closer closer
+  )
   {
-    try {
-      return FutureUtils.getUnchecked(future, true);
-    }
-    catch (RuntimeException e) {
+    final Optional<Yielder<Object[]>> results;
+
+    if (msqControllerTask.getQuerySpec().getDestination() instanceof TaskReportMSQDestination) {
+      // Results from task report are only present as one page.
+      if (page != null && page > 0) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build("Page number is out of range of the results.");
+      }
+
+      MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(SqlStatementResourceHelper.getPayload(
+          contactOverlord(overlordClient.taskReportAsMap(queryId))), MSQTaskReportPayload.class);
+
+      if (msqTaskReportPayload.getResults().getResultYielder() == null) {
+        results = Optional.empty();
+      } else {
+        results = Optional.of(msqTaskReportPayload.getResults().getResultYielder());
+      }
+
+    } else if (msqControllerTask.getQuerySpec().getDestination() instanceof DurableStorageMSQDestination) {
+
+      MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(SqlStatementResourceHelper.getPayload(
+          contactOverlord(overlordClient.taskReportAsMap(queryId))), MSQTaskReportPayload.class);
+
+      List<PageInformation> pages =
+          SqlStatementResourceHelper.populatePageList(
+              msqTaskReportPayload,
+              msqControllerTask.getQuerySpec().getDestination()
+          ).orElse(null);
+
+      if (pages == null || pages.isEmpty()) {
+        return Optional.empty();
+      }
+
+      final StageDefinition finalStage = Objects.requireNonNull(SqlStatementResourceHelper.getFinalStage(
+          msqTaskReportPayload)).getStageDefinition();
+
+      // get all results
+      final long selectedPage;
+      if (page != null) {
+        selectedPage = getPageInformationForPageId(pages, page).getId();
+      } else {
+        selectedPage = Long.MIN_VALUE;
+      }
+      final DurableStorageInputChannelFactory standardImplementation = DurableStorageInputChannelFactory.createStandardImplementation(
+          msqControllerTask.getId(),
+          storageConnector,
+          closer,
+          true
+      );
+      results = Optional.of(Yielders.each(
+          Sequences.concat(pages.stream()
+                                .filter(pageInformation -> pageInformation.getId() == selectedPage)
+                                .map(pageInformation -> {
+                                  try {
+                                    return new FrameChannelSequence(standardImplementation.openChannel(
+                                        finalStage.getId(),
+                                        (int) pageInformation.getId(),
+                                        0 // we would always have 0 partition on each worker
+                                    ));
+                                  }
+                                  catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                  }
+                                })
+                                .collect(Collectors.toList()))
+                   .flatMap(frame -> SqlStatementResourceHelper.getResultSequence(
+                                msqControllerTask,
+                                finalStage,
+                                frame,
+                                jsonMapper
+                            )
+                   )
+                   .withBaggage(closer)));
+
+    } else {
       throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
                           .ofCategory(DruidException.Category.UNCATEGORIZED)
-                          .build("Unable to contact overlord " + e.getMessage());
+                          .build(
+                              "MSQ select destination[%s] not supported. Please reach out to druid slack community for more help.",
+                              msqControllerTask.getQuerySpec().getDestination().toString()
+                          );
+    }
+    return results;
+  }
+
+  private PageInformation getPageInformationForPageId(List<PageInformation> pages, Long pageId)
+  {
+    for (PageInformation pageInfo : pages) {
+      if (pageInfo.getId() == pageId) {
+        return pageInfo;
+      }
+    }
+    throw DruidException.forPersona(DruidException.Persona.USER)
+                        .ofCategory(DruidException.Category.INVALID_INPUT)
+                        .build("Invalid page id [%d] passed.", pageId);
+  }
+
+  private void resultPusher(
+      String queryId,
+      Optional<List<ColumnNameAndTypes>> signature,
+      Closer closer,
+      Optional<Yielder<Object[]>> results,
+      CountingOutputStream os
+  ) throws IOException
+  {
+    try {
+      try (final ResultFormat.Writer writer = ResultFormat.OBJECT.createFormatter(os, jsonMapper)) {
+        Yielder<Object[]> yielder = results.get();
+        List<ColumnNameAndTypes> rowSignature = signature.get();
+        writer.writeResponseStart();
+
+        while (!yielder.isDone()) {
+          writer.writeRowStart();
+          Object[] row = yielder.get();
+          for (int i = 0; i < Math.min(rowSignature.size(), row.length); i++) {
+            writer.writeRowField(
+                rowSignature.get(i).getColName(),
+                row[i]
+            );
+          }
+          writer.writeRowEnd();
+          yielder = yielder.next(null);
+        }
+        writer.writeResponseEnd();
+        yielder.close();
+      }
+      catch (Exception e) {
+        log.error(e, "Unable to stream results back for query[%s]", queryId);
+        throw new ISE(e, "Unable to stream results back for query[%s]", queryId);
+      }
+    }
+    catch (Exception e) {
+      log.error(e, "Unable to stream results back for query[%s]", queryId);
+      throw new ISE(e, "Unable to stream results back for query[%s]", queryId);
+    }
+    finally {
+      closer.close();
     }
   }
 
+  private static void throwIfQueryIsNotSuccessful(String queryId, TaskStatusPlus statusPlus)
+  {
+    SqlStatementState sqlStatementState = SqlStatementResourceHelper.getSqlStatementState(statusPlus);
+    if (sqlStatementState == SqlStatementState.RUNNING || sqlStatementState == SqlStatementState.ACCEPTED) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "Query[%s] is currently in [%s] state. Please wait for it to complete.",
+                              queryId,
+                              sqlStatementState
+                          );
+    } else if (sqlStatementState == SqlStatementState.FAILED) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "Query[%s] failed. Hit status api for more details.",
+                              queryId
+                          );
+    } else {
+      // do nothing
+    }
+  }
 
   private void contextChecks(QueryContext queryContext)
   {
@@ -888,4 +874,18 @@ public class SqlStatementResource
                           );
     }
   }
+
+  private <T> T contactOverlord(final ListenableFuture<T> future)
+  {
+    try {
+      return FutureUtils.getUnchecked(future, true);
+    }
+    catch (RuntimeException e) {
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.UNCATEGORIZED)
+                          .build("Unable to contact overlord " + e.getMessage());
+    }
+  }
+
+
 }

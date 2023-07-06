@@ -51,10 +51,10 @@ import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.util.function.Supplier;
 
-public class DurableStorageTaskOutputChannelFactoryImpl
+public class DurableStorageTaskOutputChannelFactory
     extends DurableStorageOutputChannelFactory
 {
-  public DurableStorageTaskOutputChannelFactoryImpl(
+  public DurableStorageTaskOutputChannelFactory(
       String controllerTaskId,
       int workerNumber,
       int stageNumber,
@@ -68,7 +68,7 @@ public class DurableStorageTaskOutputChannelFactoryImpl
   }
 
   @Override
-  protected String getSuccessFilePath()
+  public String getSuccessFilePath()
   {
     return DurableStorageUtils.getWorkerOutputSuccessFilePath(controllerTaskId, stageNumber, workerNumber);
   }
