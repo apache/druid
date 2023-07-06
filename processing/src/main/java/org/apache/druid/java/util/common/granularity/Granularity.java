@@ -150,6 +150,11 @@ public abstract class Granularity implements Cacheable
    */
   public abstract boolean isAligned(Interval interval);
 
+  public DateTimeZone getTimeZone()
+  {
+    return DateTimeZone.UTC;
+  }
+
   public DateTime bucketEnd(DateTime time)
   {
     return increment(bucketStart(time));
@@ -278,7 +283,7 @@ public abstract class Granularity implements Cacheable
       if (!hasNext()) {
         throw new NoSuchElementException("There are no more intervals");
       }
-      Interval retVal = new Interval(currStart, currEnd);
+      Interval retVal = new Interval(currStart, currEnd, getTimeZone());
 
       currStart = currEnd;
       currEnd = increment(currStart);
