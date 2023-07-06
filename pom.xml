@@ -2016,6 +2016,7 @@
           <id>skip-static-checks</id>
           <properties>
             <animal.sniffer.skip>true</animal.sniffer.skip>
+            <cyclonedx.skip>true</cyclonedx.skip>
             <checkstyle.skip>true</checkstyle.skip>
             <enforcer.skip>true</enforcer.skip>
             <forbiddenapis.skip>true</forbiddenapis.skip>

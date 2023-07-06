@@ -54,8 +54,7 @@ not need to stray away from G1 with default settings.
 
 Java 9 and beyond (including Java 11 and 17) include the capability for
 [strong encapsulation](https://dev.java/learn/strong-encapsulation-\(of-jdk-internals\)/) of internal JDK APIs. Druid
-uses certain internal JDK APIs for functionality- and performance-related reasons. To enable this, certain packages must
-be added to `--add-exports` and `--add-opens` on the Java command line.
+uses certain internal JDK APIs, which must be added to `--add-exports` and `--add-opens` on the Java command line.
 
 On Java 11, if these parameters are not included, you will see warnings like the following:
 
@@ -71,10 +70,10 @@ On Java 17, if these parameters are not included, you will see errors on startup
 Exception in thread "main" java.lang.ExceptionInInitializerError
 ```
 
-Druid's out-of-box configuration does this transparently when you use the bundled `bin/start-druid` or similar commands.
-In this case, there is nothing special you need to do to run successfully on Java 11 or 17. However, if you have
-customized your Druid service launching system, you will need to ensure the required Java parameters are added. There
-are many ways of doing this. Choose the one that works best for you.
+Druid's out-of-box configuration adds these parameters transparently when you use the bundled `bin/start-druid` or
+similar commands. In this case, there is nothing special you need to do to run successfully on Java 11 or 17. However,
+if you have customized your Druid service launching system, you will need to ensure the required Java parameters are
+added. There are many ways of doing this. Choose the one that works best for you.
 
 1. The simplest approach: use Druid's bundled `bin/start-druid` script to launch Druid.
 
@@ -95,5 +94,5 @@ are many ways of doing this. Choose the one that works best for you.
 --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED \
 --add-opens=java.base/java.io=ALL-UNNAMED \
 --add-opens=java.base/java.lang=ALL-UNNAMED \
---add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED \
+--add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
 ```

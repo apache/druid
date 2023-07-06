@@ -108,7 +108,7 @@ In such cases, a workaround is to build the code first, then use the next sectio
 individual tests. To build:
 
 ```bash
-mvn clean package  -P integration-tests -Pskip-static-checks -Pskip-tests -Dmaven.javadoc.skip=true -T1.0C -nsu
+mvn clean package  -P integration-tests -Pskip-static-checks -Pskip-tests -T1.0C -nsu
 ```
 
 #### Keep the local Maven cache fresh
@@ -124,9 +124,8 @@ Maven to only look locally for snapshot jars.
 
    From the source root, run the following command:
    ```bash
-   mvn clean install -Pintegration-tests,skip-static-checks,skip-tests \
-     -Dcyclonedx.skip=true \
-     -Dmaven.javadoc.skip=true \
+   mvn clean install \
+     -Pintegration-tests,skip-static-checks,skip-tests \
      -Ddocker.run.skip=true \
      -Ddocker.build.hadoop=true
    ```
