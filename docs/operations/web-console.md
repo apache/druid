@@ -52,8 +52,8 @@ The **Home** view displays the following cards:
 * __Status__. Click this card for information on the Druid version and any extensions loaded on the cluster.
 * [Datasources](#datasources)
 * [Segments](#segments)
-* [Supervisors](#supervisors-and-tasks)
-* [Tasks](#supervisors-and-tasks)
+* [Supervisors](#supervisors)
+* [Tasks](#tasks)
 * [Services](#services)
 * [Lookups](#lookups)
 
