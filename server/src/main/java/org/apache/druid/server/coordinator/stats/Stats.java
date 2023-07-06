@@ -93,7 +93,7 @@ public class Stats
   public static class Compaction
   {
     public static final CoordinatorStat SUBMITTED_TASKS
-        = CoordinatorStat.toDebugAndEmit("compactTasks", "compact/task/count");
+        = CoordinatorStat.toLogAndEmit("compactTasks", "compact/task/count", CoordinatorStat.Level.INFO);
     public static final CoordinatorStat MAX_SLOTS
         = CoordinatorStat.toDebugAndEmit("compactMaxSlots", "compactTask/maxSlot/count");
     public static final CoordinatorStat AVAILABLE_SLOTS

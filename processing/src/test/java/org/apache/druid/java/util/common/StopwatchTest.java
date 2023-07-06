@@ -67,4 +67,22 @@ public class StopwatchTest
     Assert.assertTrue(stopwatch.hasNotElapsed(Duration.millis(101)));
     Assert.assertTrue(stopwatch.hasNotElapsed(Duration.millis(500)));
   }
+
+  @Test
+  public void testChainedMethods()
+  {
+    FakeTicker fakeTicker = new FakeTicker();
+    Stopwatch stopwatch = Stopwatch.createStarted(fakeTicker);
+
+    fakeTicker.advance(100, TimeUnit.MILLISECONDS);
+    Assert.assertEquals(100, stopwatch.millisElapsed());
+
+    stopwatch.stop().start();
+    Assert.assertTrue(stopwatch.isRunning());
+    Assert.assertEquals(100, stopwatch.millisElapsed());
+
+    stopwatch.stop().reset();
+    Assert.assertFalse(stopwatch.isRunning());
+    Assert.assertEquals(0, stopwatch.millisElapsed());
+  }
 }

@@ -208,6 +208,9 @@ public class FutureUtils
     return retVal;
   }
 
+  /**
+   * Adds success and failure callbacks to the given future.
+   */
   public static <V> void addCallback(
       ListenableFuture<V> future,
       Executor executor,

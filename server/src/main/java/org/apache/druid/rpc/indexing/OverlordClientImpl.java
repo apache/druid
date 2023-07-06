@@ -22,6 +22,7 @@ package org.apache.druid.rpc.indexing;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
@@ -46,6 +47,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Production implementation of {@link OverlordClient}.
@@ -157,7 +159,14 @@ public class OverlordClientImpl implements OverlordClient
   @Override
   public ListenableFuture<List<TaskStatusPlus>> allActiveTasks()
   {
-    return null;
+    return FutureUtils.transform(
+        Futures.allAsList(
+            getTasksOfType("waitingTasks"),
+            getTasksOfType("pendingTasks"),
+            getTasksOfType("runningTasks")
+        ),
+        listOfList -> listOfList.stream().flatMap(Collection::stream).collect(Collectors.toList())
+    );
   }
 
   @Override
@@ -209,6 +218,18 @@ public class OverlordClientImpl implements OverlordClient
   public OverlordClientImpl withRetryPolicy(ServiceRetryPolicy retryPolicy)
   {
     return new OverlordClientImpl(client.withRetryPolicy(retryPolicy), jsonMapper);
+  }
+
+  private ListenableFuture<List<TaskStatusPlus>> getTasksOfType(String type)
+  {
+    final String path = StringUtils.format("/druid/indexer/v1/%s", StringUtils.urlEncode(type));
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> deserialize(holder, new TypeReference<List<TaskStatusPlus>>() {})
+    );
   }
 
   private <T> T deserialize(final BytesFullResponseHolder bytesHolder, final Class<T> clazz)

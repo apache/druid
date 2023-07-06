@@ -40,10 +40,11 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -77,7 +78,7 @@ public class CompactSegments implements CoordinatorCustomDuty
   /** Must be the same as org.apache.druid.indexing.common.task.Tasks.STORE_COMPACTION_STATE_KEY */
   public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
 
-  private static final Logger LOG = new Logger(CompactSegments.class);
+  private static final EmittingLogger LOG = new EmittingLogger(CompactSegments.class);
 
   private final CompactionSegmentSearchPolicy policy;
   private final boolean skipLockedIntervals;
@@ -237,7 +238,10 @@ public class CompactSegments implements CoordinatorCustomDuty
         "Cancelling task [%s] as task segmentGranularity is [%s] but compaction config segmentGranularity is [%s]",
         compactionTaskQuery.getId(), taskSegmentGranularity, configuredSegmentGranularity
     );
-    overlordClient.cancelTask(compactionTaskQuery.getId());
+
+    // Cancel task synchronously as it is a rare operation and doing it async
+    // may break assumptions in the subsequent flow of submitting fresh compact tasks
+    get(overlordClient.cancelTask(compactionTaskQuery.getId()));
     return true;
   }
 
@@ -501,7 +505,7 @@ public class CompactSegments implements CoordinatorCustomDuty
           newAutoCompactionContext(config.getTaskContext())
       );
 
-      LOG.info("Submitted a compactionTask[%s] for [%d] segments", taskId, segmentsToCompact.size());
+      LOG.info("Sent request to submit a compactionTask[%s] for [%d] segments", taskId, segmentsToCompact.size());
       LOG.infoSegments(segmentsToCompact, "Compacting segments");
       // Count the compaction task itself + its sub tasks
       numSubmittedTasks++;
@@ -554,12 +558,15 @@ public class CompactSegments implements CoordinatorCustomDuty
     );
 
     ListenableFuture<Void> taskSubmitFuture = overlordClient.runTask(taskId, taskQuery);
+    final Stopwatch timeToSubmit = Stopwatch.createStarted();
     FutureUtils.addCallback(
         taskSubmitFuture,
         Execs.directExecutor(),
-        // TODO: maybe log, definitely have some metrics
-        v -> {},
-        t -> {}
+        v -> LOG.debug(
+            "Submitted compaction task[%s] to overlord in [%d]ms",
+            taskId, timeToSubmit.stop().millisElapsed()
+        ),
+        t -> LOG.noStackTrace().makeAlert(t, "Error while submitting compaction task [%s]", taskId)
     );
 
     return taskId;

@@ -334,4 +334,61 @@ public class FutureUtilsTest
     MatcherAssert.assertThat(e.getCause(), ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("error!")));
     Assert.assertEquals(1, baggageHandled.get());
   }
+
+  @Test
+  public void test_addCallback_success()
+  {
+    final SettableFuture<Long> future = SettableFuture.create();
+
+    final AtomicLong observedValue = new AtomicLong(0);
+    final AtomicReference<Throwable> observedError = new AtomicReference<>();
+    FutureUtils.addCallback(
+        future,
+        Execs.directExecutor(),
+        observedValue::set,
+        observedError::set
+    );
+
+    future.set(101L);
+    Assert.assertEquals(101L, observedValue.get());
+    Assert.assertNull(observedError.get());
+  }
+
+  @Test
+  public void test_addCallback_failure()
+  {
+    final SettableFuture<String> future = SettableFuture.create();
+
+    final AtomicReference<String> observedValue = new AtomicReference<>();
+    final AtomicReference<Throwable> observedError = new AtomicReference<>();
+    FutureUtils.addCallback(
+        future,
+        Execs.directExecutor(),
+        observedValue::set,
+        observedError::set
+    );
+
+    future.setException(new ISE("an error occurred"));
+    Assert.assertNull(observedValue.get());
+    Assert.assertTrue(observedError.get() instanceof ISE);
+  }
+
+  @Test
+  public void test_addCallback_cancelled()
+  {
+    final SettableFuture<String> future = SettableFuture.create();
+
+    final AtomicReference<String> observedValue = new AtomicReference<>();
+    final AtomicReference<Throwable> observedError = new AtomicReference<>();
+    FutureUtils.addCallback(
+        future,
+        Execs.directExecutor(),
+        observedValue::set,
+        observedError::set
+    );
+
+    future.cancel(true);
+    Assert.assertNull(observedValue.get());
+    Assert.assertTrue(observedError.get() instanceof CancellationException);
+  }
 }
