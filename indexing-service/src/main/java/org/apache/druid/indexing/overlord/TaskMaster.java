@@ -366,7 +366,12 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   @Override
   public CoordinatorRunStats getStats()
   {
-    return taskQueue.getQueueStats();
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getQueueStats();
+    } else {
+      return CoordinatorRunStats.empty();
+    }
   }
 
   private void gracefulStopLeaderLifecycle()

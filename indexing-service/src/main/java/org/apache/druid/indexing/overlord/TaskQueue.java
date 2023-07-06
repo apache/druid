@@ -706,6 +706,12 @@ public class TaskQueue
    * Attaches callbacks to the task status future to update application state when
    * the task completes. Submits a job to handle the status on the dedicated
    * {@link #taskCompleteCallbackExecutor}.
+   * <p>
+   * The {@code onSuccess} and {@code onFailure} methods will however run on the
+   * executor providing the {@code statusFuture} itself (typically the worker sync executor).
+   * This has been done in order to track metrics for in-flight status updates
+   * immediately. Thus, care must be taken to ensure that the success/failure
+   * methods remain lightweight enough to keep the sync executor unblocked.
    */
   private void attachCallbacks(final Task task, final ListenableFuture<TaskStatus> statusFuture)
   {
@@ -783,8 +789,7 @@ public class TaskQueue
             }
           }
         },
-        // The onSuccess and onFailure should be lightweight enough
-        // so that the executor giving the statusFuture is not blocked
+        // Use direct executor to track metrics for in-flight updates immediately
         Execs.directExecutor()
     );
   }
