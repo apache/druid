@@ -21,6 +21,7 @@ package org.apache.druid.server.metrics;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -64,6 +65,12 @@ public class TaskCountStatsMonitorTest
       public Map<String, Long> getWaitingTaskCount()
       {
         return ImmutableMap.of("d1", 1L);
+      }
+
+      @Override
+      public CoordinatorRunStats getStats()
+      {
+        return new CoordinatorRunStats();
       }
     };
   }
