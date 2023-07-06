@@ -54,6 +54,7 @@ import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.indexing.report.MSQTaskReportTest;
 import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
+import org.apache.druid.msq.sql.entity.PageInformation;
 import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.sql.resources.SqlStatementResource;
@@ -650,7 +651,7 @@ public class SqlStatementResourceTest extends MSQTestBase
     );
 
     assertExceptionMessage(
-        resource.doGetResults(ACCEPTED_SELECT_MSQ_QUERY, null, null, makeOkRequest()),
+        resource.doGetResults(ACCEPTED_SELECT_MSQ_QUERY, 0L, makeOkRequest()),
         StringUtils.format(
             "Query[%s] is currently in [%s] state. Please wait for it to complete.",
             ACCEPTED_SELECT_MSQ_QUERY,
@@ -665,7 +666,6 @@ public class SqlStatementResourceTest extends MSQTestBase
   }
 
   @Test
-
   public void testMSQSelectRunningQuery()
   {
 
@@ -685,7 +685,7 @@ public class SqlStatementResourceTest extends MSQTestBase
     );
 
     assertExceptionMessage(
-        resource.doGetResults(RUNNING_SELECT_MSQ_QUERY, null, null, makeOkRequest()),
+        resource.doGetResults(RUNNING_SELECT_MSQ_QUERY, 0L, makeOkRequest()),
         StringUtils.format(
             "Query[%s] is currently in [%s] state. Please wait for it to complete.",
             RUNNING_SELECT_MSQ_QUERY,
@@ -717,12 +717,13 @@ public class SqlStatementResourceTest extends MSQTestBase
             MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT,
             RESULT_ROWS.stream()
                        .map(Arrays::asList)
-                       .collect(Collectors.toList())
+                       .collect(Collectors.toList()),
+            ImmutableList.of(new PageInformation(null, null, 0L))
         ),
         null
     ), response.getEntity());
 
-    Response resultsResponse = resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, null, null, makeOkRequest());
+    Response resultsResponse = resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, 0L, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse.getStatus());
 
     List<Map<String, Object>> rows = new ArrayList<>();
@@ -737,42 +738,27 @@ public class SqlStatementResourceTest extends MSQTestBase
     );
 
     Assert.assertEquals(
-        rows.subList(1, 2),
-        getResultRowsFromResponse(resource.doGetResults(
-            FINISHED_SELECT_MSQ_QUERY,
-            1L,
-            null,
-            makeOkRequest()
-        ))
-    );
-    Assert.assertEquals(
-        rows.subList(0, 1),
-        getResultRowsFromResponse(resource.doGetResults(
-            FINISHED_SELECT_MSQ_QUERY,
-            0L,
-            1L,
-            makeOkRequest()
-        ))
-    );
-    Assert.assertEquals(
         rows,
         getResultRowsFromResponse(resource.doGetResults(
             FINISHED_SELECT_MSQ_QUERY,
             0L,
-            3L,
+            makeOkRequest()
+        ))
+    );
+
+    Assert.assertEquals(
+        rows,
+        getResultRowsFromResponse(resource.doGetResults(
+            FINISHED_SELECT_MSQ_QUERY,
+            null,
             makeOkRequest()
         ))
     );
 
     Assert.assertEquals(
         Response.Status.BAD_REQUEST.getStatusCode(),
-        resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, -1L, 3L, makeOkRequest()).getStatus()
+        resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, -1L, makeOkRequest()).getStatus()
     );
-    Assert.assertEquals(
-        Response.Status.BAD_REQUEST.getStatusCode(),
-        resource.doGetResults(FINISHED_SELECT_MSQ_QUERY, null, -1L, makeOkRequest()).getStatus()
-    );
-
   }
 
   @Test
@@ -781,7 +767,7 @@ public class SqlStatementResourceTest extends MSQTestBase
     for (String queryID : ImmutableList.of(ERRORED_SELECT_MSQ_QUERY, ERRORED_INSERT_MSQ_QUERY)) {
       assertExceptionMessage(resource.doGetStatus(queryID, makeOkRequest()), FAILURE_MSG, Response.Status.OK);
       assertExceptionMessage(
-          resource.doGetResults(queryID, null, null, makeOkRequest()),
+          resource.doGetResults(queryID, 0L, makeOkRequest()),
           StringUtils.format(
               "Query[%s] failed. Hit status api for more details.",
               queryID
@@ -797,7 +783,7 @@ public class SqlStatementResourceTest extends MSQTestBase
   }
 
   @Test
-  public void testFinishedInsertMSQQuery() throws Exception
+  public void testFinishedInsertMSQQuery()
   {
     Response response = resource.doGetStatus(FINISHED_INSERT_MSQ_QUERY, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
@@ -807,42 +793,17 @@ public class SqlStatementResourceTest extends MSQTestBase
         CREATED_TIME,
         null,
         100L,
-        new ResultSetInformation(null, null, null, "test", null),
+        new ResultSetInformation(null, null, null, "test", null, ImmutableList.of(new PageInformation(null, null, 0))),
         null
     ), response.getEntity());
 
-    Response resultsResponse = resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, null, null, makeOkRequest());
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse.getStatus());
-
-
-    Assert.assertNull(getResultRowsFromResponse(resource.doGetResults(
-        FINISHED_INSERT_MSQ_QUERY,
-        1L,
-        null,
-        makeOkRequest()
-    )));
-    Assert.assertNull(getResultRowsFromResponse(resource.doGetResults(
-        FINISHED_INSERT_MSQ_QUERY,
-        0L,
-        1L,
-        makeOkRequest()
-    )));
-    Assert.assertNull(getResultRowsFromResponse(resource.doGetResults(
-        FINISHED_INSERT_MSQ_QUERY,
-        0L,
-        3L,
-        makeOkRequest()
-    )));
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, 0L, makeOkRequest()).getStatus());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, null, makeOkRequest()).getStatus());
 
     Assert.assertEquals(
         Response.Status.BAD_REQUEST.getStatusCode(),
-        resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, -1L, 3L, makeOkRequest()).getStatus()
+        resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, -1L, makeOkRequest()).getStatus()
     );
-    Assert.assertEquals(
-        Response.Status.BAD_REQUEST.getStatusCode(),
-        resource.doGetResults(FINISHED_INSERT_MSQ_QUERY, null, -1L, makeOkRequest()).getStatus()
-    );
-
   }
 
   @Test
@@ -850,7 +811,7 @@ public class SqlStatementResourceTest extends MSQTestBase
   {
     for (String queryID : ImmutableList.of(RUNNING_NON_MSQ_TASK, FAILED_NON_MSQ_TASK, FINISHED_NON_MSQ_TASK)) {
       assertNullResponse(resource.doGetStatus(queryID, makeOkRequest()), Response.Status.NOT_FOUND);
-      assertNullResponse(resource.doGetResults(queryID, null, null, makeOkRequest()), Response.Status.NOT_FOUND);
+      assertNullResponse(resource.doGetResults(queryID, 0L, makeOkRequest()), Response.Status.NOT_FOUND);
       assertNullResponse(resource.deleteQuery(queryID, makeOkRequest()), Response.Status.NOT_FOUND);
     }
   }
@@ -874,7 +835,7 @@ public class SqlStatementResourceTest extends MSQTestBase
     );
 
     assertExceptionMessage(
-        resource.doGetResults(ACCEPTED_INSERT_MSQ_TASK, null, null, makeOkRequest()),
+        resource.doGetResults(ACCEPTED_INSERT_MSQ_TASK, 0L, makeOkRequest()),
         StringUtils.format(
             "Query[%s] is currently in [%s] state. Please wait for it to complete.",
             ACCEPTED_INSERT_MSQ_TASK,
@@ -907,7 +868,7 @@ public class SqlStatementResourceTest extends MSQTestBase
     );
 
     assertExceptionMessage(
-        resource.doGetResults(RUNNING_INSERT_MSQ_QUERY, null, null, makeOkRequest()),
+        resource.doGetResults(RUNNING_INSERT_MSQ_QUERY, 0L, makeOkRequest()),
         StringUtils.format(
             "Query[%s] is currently in [%s] state. Please wait for it to complete.",
             RUNNING_INSERT_MSQ_QUERY,
@@ -924,15 +885,12 @@ public class SqlStatementResourceTest extends MSQTestBase
   @Test
   public void forbiddenTests()
   {
-
     Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(),
                         resource.doGetStatus(RUNNING_SELECT_MSQ_QUERY,
                                              makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT)).getStatus());
-
     Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(),
                         resource.doGetResults(RUNNING_SELECT_MSQ_QUERY,
-                                              null,
-                                              null,
+                                              1L,
                                               makeExpectedReq(CalciteTests.SUPER_USER_AUTH_RESULT)).getStatus());
     Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(),
                         resource.deleteQuery(RUNNING_SELECT_MSQ_QUERY,
