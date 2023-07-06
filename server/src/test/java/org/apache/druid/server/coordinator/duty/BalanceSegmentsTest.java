@@ -339,8 +339,6 @@ public class BalanceSegmentsTest
                 CoordinatorDynamicConfig.builder()
                                         .withSmartSegmentLoading(false)
                                         .withMaxSegmentsToMove(1)
-                                        .withUseBatchedSegmentSampler(true)
-                                        .withPercentOfSegmentsToConsiderPerMove(40)
                                         .build()
             )
             .withBalancerStrategy(balancerStrategy)
@@ -355,7 +353,7 @@ public class BalanceSegmentsTest
   }
 
   @Test
-  public void testUseBatchedSegmentSampler()
+  public void testMoveForMultipleDatasources()
   {
     DruidCoordinatorRuntimeParams params = defaultRuntimeParamsBuilder(
         createHolder(server1, allSegments),
@@ -367,7 +365,6 @@ public class BalanceSegmentsTest
             CoordinatorDynamicConfig.builder()
                                     .withSmartSegmentLoading(false)
                                     .withMaxSegmentsToMove(2)
-                                    .withUseBatchedSegmentSampler(true)
                                     .build()
         )
         .withBroadcastDatasources(broadcastDatasources)
