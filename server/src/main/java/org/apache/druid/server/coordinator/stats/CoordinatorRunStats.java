@@ -89,7 +89,7 @@ public class CoordinatorRunStats
 
   /**
    * Builds a printable table of all the collected error, info and debug level
-   * stats (if applicable) with non-zero values.
+   * stats (if there are qualifying debugDimensions) with non-zero values.
    */
   public String buildStatsTable()
   {
@@ -183,13 +183,6 @@ public class CoordinatorRunStats
 
   public void add(CoordinatorStat stat, RowKey rowKey, long value)
   {
-    // Do not add a stat which will neither be emitted nor logged
-    if (!stat.shouldEmit()
-        && stat.getLevel() == CoordinatorStat.Level.DEBUG
-        && !hasDebugDimension(rowKey)) {
-      return;
-    }
-
     allStats.computeIfAbsent(rowKey, d -> new Object2LongOpenHashMap<>())
             .addTo(stat, value);
   }

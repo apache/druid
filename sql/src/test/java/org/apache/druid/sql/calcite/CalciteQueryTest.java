@@ -7512,6 +7512,27 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testRegexpExtractWithBadRegexPattern()
+  {
+    // Cannot vectorize due to extractionFn in dimension spec.
+    cannotVectorize();
+
+    expectedException.expect(DruidException.class);
+    expectedException.expectMessage(
+        "An invalid pattern [^(.))] was provided for the REGEXP_EXTRACT function, " +
+        "error: [Unmatched closing ')' near index 3\n^(.))\n   ^]"
+    );
+
+    testQuery(
+        "SELECT DISTINCT\n"
+        + "  REGEXP_EXTRACT(dim1, '^(.))', 1)\n"
+        + "FROM foo",
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
   public void testRegexpExtractFilterViaNotNullCheck()
   {
     // Cannot vectorize due to extractionFn in dimension spec.

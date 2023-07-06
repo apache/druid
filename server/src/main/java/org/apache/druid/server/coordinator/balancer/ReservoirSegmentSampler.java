@@ -43,6 +43,8 @@ public final class ReservoirSegmentSampler
    *
    * @param serverHolders        Set of historicals to consider for picking segments
    * @param maxSegmentsToPick    Maximum number of segments to pick
+   * @param segmentProvider      Function to extract all movable segments from a
+   *                             {@link ServerHolder}.
    * @param broadcastDatasources Segments belonging to these datasources will not
    *                             be picked for balancing, since they should be
    *                             loaded on all servers anyway.

@@ -73,4 +73,5 @@ The links that follow are the raw GitHub URLs, so you can use them to download t
   https://github.com/apache/druid/blob/master/examples/quickstart/jupyter-notebooks/notebooks/01-introduction/01-druidapi-package-intro.ipynb)
   walks you through some of the basics related to the Druid API using the Python wrapper API.
 - [Learn the basics of Druid SQL](https://github.com/apache/druid/blob/master/examples/quickstart/jupyter-notebooks/notebooks/03-query/00-using-sql-with-druidapi.ipynb) covers the basics of Druid SQL.
+- [Ingest and query data from Apache Kafka](https://raw.githubusercontent.com/apache/druid/master/examples/quickstart/jupyter-notebooks/notebooks/02-ingestion/01-streaming-from-kafka.ipynb) walks you through ingesting an event stream from Kafka.
 - [Working with nested columns](https://github.com/apache/druid/tree/master/examples/quickstart/jupyter-notebooks/notebooks/02-ingestion/02-working-with-nested-columns.ipynb) demonstrates how to work with nested data in Druid.

@@ -21,6 +21,7 @@ package org.apache.druid.msq.sql.resources;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -46,6 +47,7 @@ import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.sql.SqlStatementState;
 import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
+import org.apache.druid.msq.sql.entity.PageInformation;
 import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
@@ -268,8 +270,7 @@ public class SqlStatementResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response doGetResults(
       @PathParam("id") final String queryId,
-      @QueryParam("offset") Long offset,
-      @QueryParam("numRows") Long numberOfRows,
+      @QueryParam("page") Long page,
       @Context final HttpServletRequest req
   )
   {
@@ -284,27 +285,15 @@ public class SqlStatementResource
       }
       final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
-      if (offset != null && offset < 0) {
+      if (page != null && page < 0) {
         return buildNonOkResponse(
             DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
-                              "offset cannot be negative. Please pass a positive number."
+                              "Page cannot be negative. Please pass a positive number."
                           )
         );
       }
-      if (numberOfRows != null && numberOfRows < 0) {
-        return buildNonOkResponse(
-            DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "numRows cannot be negative. Please pass a positive number."
-                          )
-        );
-      }
-
-      final long start = offset == null ? 0 : offset;
-      final long last = SqlStatementResourceHelper.getLastIndex(numberOfRows, start);
 
       TaskStatusResponse taskResponse = contactOverlord(overlordClient.taskStatus(queryId));
       if (taskResponse == null) {
@@ -343,8 +332,21 @@ public class SqlStatementResource
         if (!signature.isPresent()) {
           return Response.ok().build();
         }
-        Optional<List<Object>> results = SqlStatementResourceHelper.getResults(SqlStatementResourceHelper.getPayload(
-            contactOverlord(overlordClient.taskReportAsMap(queryId))));
+
+        if (page != null && page > 0) {
+          // Results from task report are only present as one page.
+          return buildNonOkResponse(
+              DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build("Page number is out of range of the results.")
+          );
+        }
+
+        Optional<List<Object>> results = SqlStatementResourceHelper.getResults(
+            SqlStatementResourceHelper.getPayload(
+                contactOverlord(overlordClient.taskReportAsMap(queryId))
+            )
+        );
 
         return Response.ok((StreamingOutput) outputStream -> {
           CountingOutputStream os = new CountingOutputStream(outputStream);
@@ -353,7 +355,7 @@ public class SqlStatementResource
             List<ColumnNameAndTypes> rowSignature = signature.get();
             writer.writeResponseStart();
 
-            for (long k = start; k < Math.min(last, results.get().size()); k++) {
+            for (long k = 0; k < results.get().size(); k++) {
               writer.writeRowStart();
               for (int i = 0; i < rowSignature.size(); i++) {
                 writer.writeRowField(
@@ -575,13 +577,19 @@ public class SqlStatementResource
           isSelectQuery
       );
       return Optional.of(new ResultSetInformation(
-          null,
-          // since the rows can be sampled, get the number of rows from counters
           rowsAndSize.orElse(new Pair<>(null, null)).lhs,
           rowsAndSize.orElse(new Pair<>(null, null)).rhs,
+          null,
           dataSource,
           // only populate sample results in case a select query is successful
-          isSelectQuery ? SqlStatementResourceHelper.getResults(payload).orElse(null) : null
+          isSelectQuery ? SqlStatementResourceHelper.getResults(payload).orElse(null) : null,
+          ImmutableList.of(
+              new PageInformation(
+                  rowsAndSize.orElse(new Pair<>(null, null)).lhs,
+                  rowsAndSize.orElse(new Pair<>(null, null)).rhs,
+                  0
+              )
+          )
       ));
     } else {
       return Optional.empty();
