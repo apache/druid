@@ -691,7 +691,7 @@ public class TaskQueue
       if (removeTaskInternal(task.getId())) {
         taskFutures.remove(task.getId());
       } else {
-        log.warn("Unknown task completed: %s", task.getId());
+        log.warn("Unknown task[%s] completed", task.getId());
       }
 
       recentlyCompletedTasks.remove(task.getId());
@@ -765,9 +765,7 @@ public class TaskQueue
 
                 log.info(
                     "Completed task[%s] with status[%s] in [%d]ms.",
-                    status.getStatusCode(),
-                    task.getId(),
-                    status.getDuration()
+                    task.getId(), status.getStatusCode(), status.getDuration()
                 );
 
                 if (status.isSuccess()) {
