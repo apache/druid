@@ -174,11 +174,6 @@ public class GroupByBenchmark
         ),
         new ColumnConfig()
         {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
         }
     );
     INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, OffHeapMemorySegmentWriteOutMediumFactory.instance());

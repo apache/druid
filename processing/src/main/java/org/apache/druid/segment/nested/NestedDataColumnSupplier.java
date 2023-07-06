@@ -47,6 +47,7 @@ import java.nio.ByteOrder;
 public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColumn>
 {
   public static NestedDataColumnSupplier read(
+      ColumnType logicalType,
       boolean hasNulls,
       ByteBuffer bb,
       ColumnBuilder columnBuilder,
@@ -72,19 +73,8 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
         final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
         final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
 
-        ColumnType simpleType;
         fields = GenericIndexed.read(bb, GenericIndexed.STRING_STRATEGY, mapper);
         fieldInfo = FieldTypeInfo.read(bb, fields.size());
-
-        if (fields.size() == 0) {
-          // all nulls, in the future we'll deal with this better... but for now lets just call it a string because
-          // it is the most permissive (besides json)
-          simpleType = ColumnType.STRING;
-        } else if (fields.size() == 1 && NestedPathFinder.JSON_PATH_ROOT.equals(fields.get(0))) {
-          simpleType = fieldInfo.getTypes(0).getSingleType();
-        } else {
-          simpleType = null;
-        }
 
         final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
@@ -192,7 +182,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
             mapper,
             bitmapSerdeFactory,
             byteOrder,
-            simpleType
+            logicalType
         );
       }
       catch (IOException ex) {

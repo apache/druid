@@ -48,8 +48,11 @@ public interface WorkerTaskRunner extends TaskRunner
 
   /**
    * Check which workers can be marked as lazy
+   *
+   * @param isLazyWorker   predicate that checks if a worker is lazy
+   * @param maxLazyWorkers maximum number of lazy workers to return
    */
-  Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers);
+  Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxLazyWorkers);
 
   WorkerTaskRunnerConfig getConfig();
 

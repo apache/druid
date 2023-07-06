@@ -174,6 +174,17 @@ source_paths:
 
 ---
 
+name: Test Framework for Apache Drill
+version:
+url: https://github.com/apache/drill-test-framework
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+source_paths:
+  - sql/src/test/resources/drill/window
+
+---
+
 name: AWS SDK for Java
 license_category: binary
 module: java-core
@@ -1591,7 +1602,7 @@ name: Java Native Access (JNA)
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.5.1
+version: 5.13.0
 libraries:
   - net.java.dev.jna: jna
 
@@ -2341,6 +2352,17 @@ notices:
 
 ---
 
+name: OSHI
+license_category: binary
+module: java-core
+license_name: MIT License
+version: 6.4.2
+libraries:
+  - com.github.oshi: oshi-core
+license_file_path: licenses/bin/oshi.MIT
+
+---
+
 name: JBoss Logging 3
 license_category: binary
 module: java-core
@@ -2913,7 +2935,7 @@ name: Apache Hadoop
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 3.3.5
+version: 3.3.6
 libraries:
   - org.apache.hadoop: hadoop-auth
   - org.apache.hadoop: hadoop-common
@@ -3634,7 +3656,7 @@ libraries:
 ---
 
 name: Apache Velocity Engine
-version: 2.2
+version: 2.3
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3652,7 +3674,7 @@ name: Apache Avro
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 1.9.2
+version: 1.11.1
 libraries:
   - org.apache.avro: avro
   - org.apache.avro: avro-mapred
@@ -3784,7 +3806,7 @@ name: DataSketches
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.0.0
+version: 4.1.0
 libraries:
   - org.apache.datasketches: datasketches-java
 
@@ -3815,7 +3837,7 @@ name: Hadoop Client API
 license_category: binary
 module: extensions/druid-hdfs-storage
 license_name: Apache License version 2.0
-version: 3.3.5
+version: 3.3.6
 libraries:
   - org.apache.hadoop: hadoop-client-api
 
@@ -3882,7 +3904,7 @@ name: Apache Parquet
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: 1.12.0
+version: 1.13.0
 libraries:
   - org.apache.parquet: parquet-avro
   - org.apache.parquet: parquet-column
@@ -4914,7 +4936,7 @@ libraries:
 
 name: net.java.dev.jna jna-platform
 license_category: binary
-version: 5.2.0
+version: 5.13.0
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5433,7 +5455,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Microsoft Corporation.
-version: 16.14.35
+version: 18.2.8
 license_file_path: licenses/bin/@types-react.MIT
 
 ---
@@ -5453,7 +5475,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Ajax.org B.V.
-version: 1.4.13
+version: 1.4.14
 license_file_path: licenses/bin/ace-builds.BSD3
 
 ---
@@ -6091,7 +6113,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jordan Harband
-version: 1.0.4
+version: 1.1.1
 license_file_path: licenses/bin/is-arguments.MIT
 
 ---
@@ -6121,7 +6143,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jordan Harband
-version: 1.0.1
+version: 1.0.5
 license_file_path: licenses/bin/is-date-object.MIT
 
 ---
@@ -6266,16 +6288,6 @@ license_file_path: licenses/bin/memoize-one.MIT
 
 ---
 
-name: "mini-create-react-context"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: StringEpsilon
-version: 0.3.2
-license_file_path: licenses/bin/mini-create-react-context.MIT
-
----
-
 name: "no-case"
 license_category: binary
 module: web-console
@@ -6321,7 +6333,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jordan Harband
-version: 1.0.1
+version: 1.1.5
 license_file_path: licenses/bin/object-is.MIT
 
 ---
@@ -6450,7 +6462,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: James Hrisho
-version: 9.5.0
+version: 10.1.0
 license_file_path: licenses/bin/react-ace.MIT
 
 ---
@@ -6480,7 +6492,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
-version: 16.14.0
+version: 18.2.0
 license_file_path: licenses/bin/react-dom.MIT
 
 ---
@@ -6490,7 +6502,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Chris Bolin
-version: 3.2.0
+version: 3.2.2
 license_file_path: licenses/bin/react-fast-compare.MIT
 
 ---
@@ -6519,8 +6531,8 @@ name: "react-router-dom"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: React Training
-version: 5.1.2
+copyright: Remix Software
+version: 5.3.4
 license_file_path: licenses/bin/react-router-dom.MIT
 
 ---
@@ -6529,8 +6541,8 @@ name: "react-router"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: React Training
-version: 5.1.2
+copyright: Remix Software
+version: 5.3.4
 license_file_path: licenses/bin/react-router.MIT
 
 ---
@@ -6570,7 +6582,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
-version: 16.14.0
+version: 18.2.0
 license_file_path: licenses/bin/react.MIT
 
 ---
@@ -6590,7 +6602,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jordan Harband
-version: 1.4.3
+version: 1.5.0
 license_file_path: licenses/bin/regexp.prototype.flags.MIT
 
 ---
@@ -6640,7 +6652,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
-version: 0.19.1
+version: 0.23.0
 license_file_path: licenses/bin/scheduler.MIT
 
 ---

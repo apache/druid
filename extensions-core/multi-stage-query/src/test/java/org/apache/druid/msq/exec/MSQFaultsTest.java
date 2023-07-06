@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
-import org.apache.druid.msq.indexing.error.InsertCannotOrderByDescendingFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.InsertTimeOutOfBoundsFault;
 import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
@@ -37,6 +36,8 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -52,7 +53,7 @@ import static org.mockito.ArgumentMatchers.isA;
 public class MSQFaultsTest extends MSQTestBase
 {
   @Test
-  public void testInsertCannotAllocateSegmentFault()
+  public void testInsertCannotAllocateSegmentFaultWhenNullAllocation()
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -63,17 +64,63 @@ public class MSQFaultsTest extends MSQTestBase
     Mockito.doReturn(null).when(testTaskActionClient).submit(isA(SegmentAllocateAction.class));
 
     testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time >= TIMESTAMP '2000-01-02 00:00:00' and __time < TIMESTAMP '2000-01-03 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1")
+                         "insert into foo1"
+                         + " select  __time, dim1 , count(*) as cnt"
+                         + " from foo"
+                         + " where dim1 is not null and __time >= TIMESTAMP '2000-01-02 00:00:00' and __time < TIMESTAMP '2000-01-03 00:00:00'"
+                         + " group by 1, 2"
+                         + " PARTITIONED by day"
+                         + " clustered by dim1"
+                     )
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedMSQFault(
                          new InsertCannotAllocateSegmentFault(
                              "foo1",
-                             Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")
+                             Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z"),
+                             null
                          )
                      )
                      .verifyResults();
   }
+
+  @Test
+  public void testInsertCannotAllocateSegmentFaultWhenInvalidAllocation()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("cnt", ColumnType.LONG).build();
+
+    // If there is some problem allocating the segment,task action client will return a null value.
+    Mockito.doReturn(new SegmentIdWithShardSpec(
+        "foo1",
+        Intervals.of("2000-01-01/2000-02-01"),
+        "test",
+        new LinearShardSpec(2)
+    )).when(testTaskActionClient).submit(isA(SegmentAllocateAction.class));
+
+    testIngestQuery().setSql(
+                         "insert into foo1"
+                         + " select  __time, dim1 , count(*) as cnt"
+                         + " from foo"
+                         + " where dim1 is not null and __time >= TIMESTAMP '2000-01-02 00:00:00' and __time < TIMESTAMP '2000-01-03 00:00:00'"
+                         + " group by 1, 2"
+                         + " PARTITIONED by day"
+                         + " clustered by dim1"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedMSQFault(
+                         new InsertCannotAllocateSegmentFault(
+                             "foo1",
+                             Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z"),
+                             Intervals.of("2000-01-01T00:00:00.000Z/2000-02-01T00:00:00.000Z")
+                         )
+                     )
+                     .verifyResults();
+  }
+
 
   @Test
   public void testInsertCannotBeEmptyFault()
@@ -93,23 +140,6 @@ public class MSQFaultsTest extends MSQTestBase
   }
 
   @Test
-  public void testInsertCannotOrderByDescendingFault()
-  {
-    RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
-                                            .add("dim1", ColumnType.STRING)
-                                            .add("cnt", ColumnType.LONG).build();
-
-    // Add an DESC clustered by column, which should not be allowed
-    testIngestQuery().setSql(
-                         "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null and __time < TIMESTAMP '2000-01-02 00:00:00' group by 1, 2 PARTITIONED by day clustered by dim1 DESC")
-                     .setExpectedDataSource("foo1")
-                     .setExpectedRowSignature(rowSignature)
-                     .setExpectedMSQFault(new InsertCannotOrderByDescendingFault("d1"))
-                     .verifyResults();
-  }
-
-  @Test
   public void testInsertTimeOutOfBoundsFault()
   {
     RowSignature rowSignature = RowSignature.builder()
@@ -123,7 +153,12 @@ public class MSQFaultsTest extends MSQTestBase
                          "replace into foo1 overwrite where __time >= TIMESTAMP '2002-01-02 00:00:00' and __time < TIMESTAMP '2002-01-03 00:00:00' select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
-                     .setExpectedMSQFault(new InsertTimeOutOfBoundsFault(Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")))
+                     .setExpectedMSQFault(
+                         new InsertTimeOutOfBoundsFault(
+                             Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z"),
+                             Collections.singletonList(Intervals.of("2002-01-02/2002-01-03"))
+                         )
+                     )
                      .verifyResults();
   }
 

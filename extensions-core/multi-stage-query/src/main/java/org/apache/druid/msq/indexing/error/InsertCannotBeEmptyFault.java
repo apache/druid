@@ -29,7 +29,7 @@ import java.util.Objects;
 @JsonTypeName(InsertCannotBeEmptyFault.CODE)
 public class InsertCannotBeEmptyFault extends BaseMSQFault
 {
-  static final String CODE = "InsertCannotBeEmpty";
+  public static final String CODE = "InsertCannotBeEmpty";
 
   private final String dataSource;
 

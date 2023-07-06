@@ -102,7 +102,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
 
     final URL systemResource = ClassLoader.getSystemResource("calcite/tests/window/" + filename);
 
-    final Object objectFromYaml = YAML_JACKSON.readValue(systemResource.openStream(), Object.class);
+    final Object objectFromYaml = YAML_JACKSON.readValue(systemResource, Object.class);
 
     final ObjectMapper queryJackson = queryFramework().queryJsonMapper();
     final WindowQueryTestInputClass input = queryJackson.convertValue(objectFromYaml, WindowQueryTestInputClass.class);

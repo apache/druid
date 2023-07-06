@@ -54,7 +54,6 @@ import java.util.Map;
 @RunWith(JUnitParamsRunner.class)
 public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
 {
-
   @Test
   @Parameters(source = QueryContextForJoinProvider.class)
   public void testCorrelatedSubquery(Map<String, Object> queryContext)

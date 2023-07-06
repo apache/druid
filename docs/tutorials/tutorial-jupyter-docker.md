@@ -25,7 +25,7 @@ sidebar_label: "Docker for tutorials"
 
 
 Apache Druid provides a custom Jupyter container that contains the prerequisites
-for all Jupyter-based Druid tutorials, as well as all of the tutorials themselves.
+for all [Jupyter-based Druid tutorials](tutorial-jupyter-index.md), as well as all of the tutorials themselves.
 You can run the Jupyter container, as well as containers for Druid and Apache Kafka,
 using the Docker Compose file provided in the Druid GitHub repository.
 
