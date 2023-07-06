@@ -53,7 +53,6 @@ public class DurableStorageUtils
   }
 
 
-
   public static String getWorkerOutputSuccessFilePath(
       final String controllerTaskId,
       final int stageNumber,
