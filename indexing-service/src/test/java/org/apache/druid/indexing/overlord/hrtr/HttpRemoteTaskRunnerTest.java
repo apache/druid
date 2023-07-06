@@ -1106,6 +1106,17 @@ public class HttpRemoteTaskRunnerTest
     Assert.assertEquals(task2.getId(), Iterables.getOnlyElement(taskRunner.getPendingTasks()).getTaskId());
 
     Assert.assertEquals(
+        Collections.emptyList(),
+        taskRunner.markWorkersLazy(Predicates.alwaysTrue(), 0)
+    );
+
+    Assert.assertEquals(
+        "host3:8080",
+        Iterables.getOnlyElement(taskRunner.markWorkersLazy(Predicates.alwaysTrue(), 1))
+                 .getHost()
+    );
+
+    Assert.assertEquals(
         "host3:8080",
         Iterables.getOnlyElement(taskRunner.markWorkersLazy(Predicates.alwaysTrue(), Integer.MAX_VALUE))
                  .getHost()
