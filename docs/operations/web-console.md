@@ -146,11 +146,13 @@ The Segment ID is also conveniently broken down into Datasource, Start, End, Ver
 From this view, you can check the status of existing supervisors as well as suspend, resume, and reset them.
 The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that the scalability and replication requirements are maintained. Submit a supervisor manually by clicking the ellipsis icon and selecting **Submit JSON supervisor**.
 
+![Supervisors](../assets/web-console-07-supervisors.png)
+
 The tasks table allows you to see the currently running and recently completed tasks.
 To navigate your tasks more easily, you can group them by their **Type**, **Datasource**, or **Status**.
 Submit a task manually by clicking the ellipsis icon and selecting **Submit JSON task**.
 
-![Supervisors and tasks](../assets/web-console-07-supervisors.png)
+![Tasks](../assets/web-console-0.7-tasks.png)
 
 Click on the magnifying glass for any supervisor to see detailed reports of its progress.
 
