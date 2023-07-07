@@ -101,7 +101,8 @@ public class RemoteTaskRunnerTest
   private Worker worker;
 
   @Rule
-  public TestRule watcher = new TestWatcher() {
+  public TestRule watcher = new TestWatcher()
+  {
     @Override
     protected void starting(Description description)
     {
@@ -621,7 +622,7 @@ public class RemoteTaskRunnerTest
 
   private boolean taskAnnounced(final String taskId)
   {
-    return rtrTestUtils.taskAnnounced(WORKER_HOST, taskId);
+    return rtrTestUtils.taskAssigned(WORKER_HOST, taskId);
   }
 
   private boolean workerRunningTask(final String taskId)
@@ -890,8 +891,8 @@ public class RemoteTaskRunnerTest
   }
 
   /**
-   * With 2 workers and maxPercentageBlacklistWorkers(25), neither worker should ever be blacklisted even after
-   * exceeding maxRetriesBeforeBlacklist.
+   * With 2 workers and maxPercentageBlacklistWorkers(25), no worker should be blacklisted even after exceeding
+   * maxRetriesBeforeBlacklist.
    */
   @Test
   public void testBlacklistZKWorkers25Percent() throws Exception
@@ -904,8 +905,7 @@ public class RemoteTaskRunnerTest
 
     makeRemoteTaskRunner(rtrConfig);
 
-    String firstWorker = null;
-    String secondWorker = null;
+    String assignedWorker = null;
 
     for (int i = 1; i < 13; i++) {
       String taskId = StringUtils.format("rt-%d", i);
@@ -920,26 +920,23 @@ public class RemoteTaskRunnerTest
       Future<TaskStatus> taskFuture = remoteTaskRunner.run(task);
 
       if (i == 1) {
-        if (rtrTestUtils.taskAnnounced("worker2", task.getId())) {
-          firstWorker = "worker2";
-          secondWorker = "worker";
+        if (rtrTestUtils.taskAssigned("worker2", task.getId())) {
+          assignedWorker = "worker2";
         } else {
-          firstWorker = "worker";
-          secondWorker = "worker2";
+          assignedWorker = "worker";
         }
       }
 
-      final String expectedWorker = i % 2 == 0 ? secondWorker : firstWorker;
-
-      Assert.assertTrue(rtrTestUtils.taskAnnounced(expectedWorker, task.getId()));
-      rtrTestUtils.mockWorkerRunningTask(expectedWorker, task);
-      rtrTestUtils.mockWorkerCompleteFailedTask(expectedWorker, task);
+      Assert.assertTrue(rtrTestUtils.taskAssigned(assignedWorker, task.getId()));
+      rtrTestUtils.mockWorkerRunningTask(assignedWorker, task);
+      rtrTestUtils.mockWorkerCompleteFailedTask(assignedWorker, task);
 
       Assert.assertTrue(taskFuture.get().isFailure());
       Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
       Assert.assertEquals(
-          ((i + 1) / 2),
-          remoteTaskRunner.findWorkerRunningTask(task.getId()).getContinuouslyFailedTasksCount()
+          i,
+          remoteTaskRunner.findWorkerId("worker").getContinuouslyFailedTasksCount()
+          + remoteTaskRunner.findWorkerId("worker2").getContinuouslyFailedTasksCount()
       );
     }
   }
@@ -975,7 +972,7 @@ public class RemoteTaskRunnerTest
       Future<TaskStatus> taskFuture = remoteTaskRunner.run(task);
 
       if (i == 1) {
-        if (rtrTestUtils.taskAnnounced("worker2", task.getId())) {
+        if (rtrTestUtils.taskAssigned("worker2", task.getId())) {
           firstWorker = "worker2";
           secondWorker = "worker";
         } else {
@@ -986,7 +983,7 @@ public class RemoteTaskRunnerTest
 
       final String expectedWorker = i % 2 == 0 || i > 4 ? secondWorker : firstWorker;
 
-      Assert.assertTrue(rtrTestUtils.taskAnnounced(expectedWorker, task.getId()));
+      Assert.assertTrue(rtrTestUtils.taskAssigned(expectedWorker, task.getId()));
       rtrTestUtils.mockWorkerRunningTask(expectedWorker, task);
       rtrTestUtils.mockWorkerCompleteFailedTask(expectedWorker, task);
 

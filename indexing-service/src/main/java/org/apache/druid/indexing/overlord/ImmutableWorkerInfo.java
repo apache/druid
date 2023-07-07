@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.guice.annotations.PublicApi;
@@ -47,6 +48,8 @@ public class ImmutableWorkerInfo
   private final ImmutableSet<String> availabilityGroups;
   private final ImmutableSet<String> runningTasks;
   private final DateTime lastCompletedTaskTime;
+
+  @Nullable
   private final DateTime blacklistedUntil;
 
   @JsonCreator
@@ -94,6 +97,9 @@ public class ImmutableWorkerInfo
     this(worker, currCapacityUsed, 0, availabilityGroups, runningTasks, lastCompletedTaskTime, null);
   }
 
+  /**
+   * Helper used by {@link ZkWorker} and {@link org.apache.druid.indexing.overlord.hrtr.WorkerHolder}.
+   */
   public static ImmutableWorkerInfo fromWorkerAnnouncements(
       final Worker worker,
       final Map<String, TaskAnnouncement> announcements,
@@ -178,6 +184,7 @@ public class ImmutableWorkerInfo
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public DateTime getBlacklistedUntil()
   {
     return blacklistedUntil;

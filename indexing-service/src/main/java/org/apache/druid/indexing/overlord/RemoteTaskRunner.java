@@ -523,6 +523,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     return Optional.fromNullable(provisioningService.getStats());
   }
 
+  @Nullable
   public ZkWorker findWorkerRunningTask(String taskId)
   {
     for (ZkWorker zkWorker : zkWorkers.values()) {
@@ -531,6 +532,15 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       }
     }
     return null;
+  }
+
+  /**
+   * Retrieve {@link ZkWorker} based on an ID (host), or null if the ID doesn't exist.
+   */
+  @Nullable
+  ZkWorker findWorkerId(String workerId)
+  {
+    return zkWorkers.get(workerId);
   }
 
   public boolean isWorkerRunningTask(ZkWorker worker, String taskId)
