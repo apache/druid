@@ -1431,11 +1431,10 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
+  @SuppressWarnings("GuardedBy") // Read on tasks is safe
   public Collection<? extends TaskRunnerWorkItem> getKnownTasks()
   {
-    synchronized (statusLock) {
-      return ImmutableList.copyOf(tasks.values());
-    }
+    return ImmutableList.copyOf(tasks.values());
   }
 
   @SuppressWarnings("GuardedBy") // Read on tasks is safe
