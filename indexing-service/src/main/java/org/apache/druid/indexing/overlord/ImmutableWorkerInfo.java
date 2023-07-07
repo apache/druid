@@ -107,19 +107,22 @@ public class ImmutableWorkerInfo
     ImmutableSet.Builder<String> availabilityGroups = ImmutableSet.builder();
 
     for (final Map.Entry<String, TaskAnnouncement> entry : announcements.entrySet()) {
-      final String taskId = entry.getKey();
       final TaskAnnouncement announcement = entry.getValue();
-      final TaskResource taskResource = announcement.getTaskResource();
-      final int requiredCapacity = taskResource.getRequiredCapacity();
 
-      currCapacityUsed += requiredCapacity;
+      if (announcement.getStatus().isRunnable()) {
+        final String taskId = entry.getKey();
+        final TaskResource taskResource = announcement.getTaskResource();
+        final int requiredCapacity = taskResource.getRequiredCapacity();
 
-      if (ParallelIndexSupervisorTask.TYPE.equals(announcement.getTaskType())) {
-        currParallelIndexCapacityUsed += requiredCapacity;
+        currCapacityUsed += requiredCapacity;
+
+        if (ParallelIndexSupervisorTask.TYPE.equals(announcement.getTaskType())) {
+          currParallelIndexCapacityUsed += requiredCapacity;
+        }
+
+        taskIds.add(taskId);
+        availabilityGroups.add(taskResource.getAvailabilityGroup());
       }
-
-      taskIds.add(taskId);
-      availabilityGroups.add(taskResource.getAvailabilityGroup());
     }
 
     return new ImmutableWorkerInfo(
