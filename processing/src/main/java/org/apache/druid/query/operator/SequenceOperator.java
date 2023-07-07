@@ -22,7 +22,7 @@ package org.apache.druid.query.operator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.YieldingAccumulator;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
@@ -46,92 +46,72 @@ public class SequenceOperator implements Operator
   @Override
   public Closeable goOrContinue(Closeable continuation, Receiver receiver)
   {
-    Yielder<Signal> yielder = null;
-    final Signal theSignal;
-    if (continuation == null) {
-      yielder = child.toYielder(Signal.GO, new YieldingAccumulator<Signal, RowsAndColumns>()
-      {
-        @Override
-        public Signal accumulate(Signal accumulated, RowsAndColumns in)
-        {
-          final Signal pushSignal = receiver.push(in);
-          switch (pushSignal) {
-            case PAUSE:
-              this.yield();
-              return Signal.PAUSE;
-            case GO:
-              return Signal.GO;
-            case STOP:
-              this.yield();
-              return Signal.STOP;
-            default:
-              throw new ISE("How can this be happening? signal[%s]", pushSignal);
+    Yielder<RowsAndColumns> yielder = null;
+    try {
+      if (continuation == null) {
+        yielder = Yielders.each(child);
+      } else {
+        yielder = (Yielder<RowsAndColumns>) continuation;
+      }
+
+      while (true) {
+        Signal signal;
+        if (yielder.isDone()) {
+          if (yielder.get() != null) {
+            throw new ISE("Got a non-null get()[%s] even though we were already done.", yielder.get().getClass());
+          }
+          signal = Signal.STOP;
+        } else {
+          signal = receiver.push(yielder.get());
+        }
+
+        if (signal != Signal.STOP) {
+          yielder = yielder.next(null);
+          if (yielder.isDone()) {
+            signal = Signal.STOP;
           }
         }
-      });
-      theSignal = yielder.get();
-    } else {
+
+        switch (signal) {
+          case STOP:
+            receiver.completed();
+
+            try {
+              yielder.close();
+            }
+            catch (IOException e) {
+              // We got an exception when closing after we received a STOP signal and successfully called completed().
+              // This means that the Receiver has already done what it needs, so instead of throw the exception and
+              // potentially impact processing, we log instead and allow processing to continue.
+              log.warn(
+                  e,
+                  "Exception thrown when closing yielder.  Logging and ignoring because results should be fine."
+              );
+            }
+            return null;
+          case PAUSE:
+            return yielder;
+          case GO:
+            continue;
+          default:
+            throw new ISE("Unknown signal[%s]", signal);
+        }
+      }
+    }
+    catch (RuntimeException re) {
       try {
-        final Yielder<Signal> castedYielder = (Yielder<Signal>) continuation;
-        if (castedYielder.isDone()) {
-          throw new ISE(
-              "The yielder is done!  The previous go call should've resulted in completion instead of continuation"
-          );
-        }
-        yielder = castedYielder.next(Signal.GO);
-        theSignal = yielder.get();
-      }
-      catch (ClassCastException e) {
-        try {
-          if (yielder == null) {
-            // Got the exception when casting the continuation, close the continuation and move on.
-            continuation.close();
-          } else {
-            // Got the exception when reading the result from the continuation, close the yielder and move on.
-            yielder.close();
-          }
-        }
-        catch (IOException ex) {
-          e.addSuppressed(
-              new ISE("Unable to close continuation[%s] of type[%s]", continuation, continuation.getClass())
-          );
-        }
-        throw e;
-      }
-    }
-
-    switch (theSignal) {
-      // We get GO from the yielder if the last push created a GO and there was nothing left in the sequence.
-      // I.e. we are done
-      case GO:
-      case STOP:
-        try {
-          receiver.completed();
-        }
-        catch (RuntimeException e) {
-          try {
-            yielder.close();
-          }
-          catch (IOException ioException) {
-            e.addSuppressed(ioException);
-            throw e;
-          }
-        }
-
-        try {
+        if (yielder != null) {
           yielder.close();
+        } else if (continuation != null) {
+          // The yielder will be non-null in most cases, this can likely only happen if the continuation that we
+          // received was not able to be cast to a yielder.
+          continuation.close();
         }
-        catch (IOException e) {
-          // We got an exception when closing after we received a STOP signal and successfully called completed().
-          // This means that the Receiver has already done what it needs, so instead of throw the exception and
-          // potentially impact processing, we log instead and allow processing to continue.
-          log.warn(e, "Exception thrown when closing yielder.  Logging and ignoring because results should be fine.");
-        }
-        return null;
-      case PAUSE:
-        return yielder;
+      }
+      catch (IOException ioEx) {
+        re.addSuppressed(ioEx);
+      }
+      throw re;
     }
-    throw new ISE("How can this happen!? signal[%s]", theSignal);
   }
-
 }

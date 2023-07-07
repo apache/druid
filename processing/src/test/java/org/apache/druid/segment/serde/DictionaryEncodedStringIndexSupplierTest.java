@@ -52,7 +52,7 @@ public class DictionaryEncodedStringIndexSupplierTest extends InitializedNullHan
   @Test
   public void testStringColumnWithNullValueSetIndex() throws IOException
   {
-    DictionaryEncodedStringIndexSupplier indexSupplier = makeStringWithNullsSupplier();
+    StringUtf8ColumnIndexSupplier<?> indexSupplier = makeStringWithNullsSupplier();
     StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
     Assert.assertNotNull(valueSetIndex);
 
@@ -102,7 +102,7 @@ public class DictionaryEncodedStringIndexSupplierTest extends InitializedNullHan
     checkBitmap(bitmap);
   }
 
-  private DictionaryEncodedStringIndexSupplier makeStringWithNullsSupplier() throws IOException
+  private StringUtf8ColumnIndexSupplier<?> makeStringWithNullsSupplier() throws IOException
   {
     ByteBuffer stringBuffer = ByteBuffer.allocate(1 << 12);
     ByteBuffer byteBuffer = ByteBuffer.allocate(1 << 12);
@@ -164,10 +164,9 @@ public class DictionaryEncodedStringIndexSupplierTest extends InitializedNullHan
     writeToBuffer(bitmapsBuffer, bitmapWriter);
 
     GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.read(bitmapsBuffer, roaringFactory.getObjectStrategy());
-    return new DictionaryEncodedStringIndexSupplier(
+    return new StringUtf8ColumnIndexSupplier<>(
         roaringFactory.getBitmapFactory(),
-        GenericIndexed.read(stringBuffer, GenericIndexed.STRING_STRATEGY),
-        GenericIndexed.read(byteBuffer, GenericIndexed.UTF8_STRATEGY),
+        GenericIndexed.read(byteBuffer, GenericIndexed.UTF8_STRATEGY)::singleThreaded,
         bitmaps,
         null
     );

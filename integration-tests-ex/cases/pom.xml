@@ -316,6 +316,7 @@
             <artifactId>curator-client</artifactId>
             <version>5.4.0</version>
         </dependency>
+
     </dependencies>
 
     <!-- Exclude ITs from surefire. Required because they end with "Test". -->
@@ -340,6 +341,7 @@
                       -->
                      <ignoredUsedUndeclaredDependencies>
                          <ignoredUsedUndeclaredDependency>org.glassfish.hk2.external:jakarta.inject</ignoredUsedUndeclaredDependency>
+                         <ignoredUsedUndeclaredDependency>jakarta.inject:jakarta.inject-api</ignoredUsedUndeclaredDependency>
                     </ignoredUsedUndeclaredDependencies>
                     <!-- Dynamically loaded. -->
                     <ignoredUnusedDeclaredDependencies>

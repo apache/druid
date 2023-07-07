@@ -168,11 +168,6 @@ public class AggregationTestHelper implements Closeable
         mapper,
         new ColumnConfig()
         {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
         }
     );
 
@@ -208,11 +203,6 @@ public class AggregationTestHelper implements Closeable
         mapper,
         new ColumnConfig()
         {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
         }
     );
 
@@ -260,11 +250,6 @@ public class AggregationTestHelper implements Closeable
         mapper,
         new ColumnConfig()
         {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
         }
     );
 
@@ -304,11 +289,6 @@ public class AggregationTestHelper implements Closeable
         mapper,
         new ColumnConfig()
         {
-          @Override
-          public int columnCacheSizeBytes()
-          {
-            return 0;
-          }
         }
     );
 

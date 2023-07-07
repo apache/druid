@@ -1474,6 +1474,7 @@ nvl
 parse_long
 regexp_extract
 regexp_like
+regexp_replace
 contains_string
 icontains_string
 result1

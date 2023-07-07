@@ -277,7 +277,7 @@ public class StageDefinition
 
   @JsonProperty("shuffleCheckHasMultipleValues")
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  boolean getShuffleCheckHasMultipleValues()
+  public boolean getShuffleCheckHasMultipleValues()
   {
     return shuffleCheckHasMultipleValues;
   }
