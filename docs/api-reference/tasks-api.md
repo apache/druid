@@ -23,7 +23,7 @@ sidebar_label: Tasks
   ~ under the License.
   -->
 
-This document describes the API endpoints for task retrieval, submission, and deletion for Apache Druid. Tasks are individual jobs performed by Druid to complete data-related operations such as ingestion and compaction.  
+This document describes the API endpoints for task retrieval, submission, and deletion for Apache Druid. Tasks are individual jobs performed by Druid to complete operations such as ingestion and compaction.  
 
 In this document, `{domain}` is a placeholder for the server address of deployment. For example, on the quickstart configuration, replace `{domain}` with `http://localhost:8888`.
 
@@ -34,7 +34,7 @@ In this document, `{domain}` is a placeholder for the server address of deployme
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/tasks`
 
-Retrieves an array of all tasks in the Druid cluster. Each task object includes information on its ID, status, associated datasource, and other metadata.
+Retrieves an array of all tasks in the Druid cluster. Each task object includes information on its ID, status, associated datasource, and other metadata. For definitions of the response properties, see the [Tasks table](../querying/sql-metadata-tables.md#tasks-table).
 
 #### Query parameters
 
@@ -159,7 +159,7 @@ Host: {domain}
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/completeTasks`
 
-Retrieves an array of completed tasks in the Druid cluster. This is functionally equivalent to `/druid/indexer/v1/tasks?state=complete`.
+Retrieves an array of completed tasks in the Druid cluster. This is functionally equivalent to `/druid/indexer/v1/tasks?state=complete`. For definitions of the response properties, see the [Tasks table](../querying/sql-metadata-tables.md#tasks-table).
 
 #### Query parameters
 
@@ -254,7 +254,7 @@ Host: {domain}
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/runningTasks`
 
-Retrieves an array of running task objects in the Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=running`.
+Retrieves an array of running task objects in the Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=running`. For definitions of the response properties, see the [Tasks table](../querying/sql-metadata-tables.md#tasks-table).
 
 #### Query parameters
 
@@ -330,7 +330,7 @@ Host: {domain}
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/waitingTasks`
 
-Retrieves an array of waiting tasks in the Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=waiting`.
+Retrieves an array of waiting tasks in the Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=waiting`. For definitions of the response properties, see the [Tasks table](../querying/sql-metadata-tables.md#tasks-table).
 
 #### Query parameters
 
@@ -442,7 +442,7 @@ Host: {domain}
 
 <code class="getAPI">GET</code> `/druid/indexer/v1/pendingTasks`
 
-Retrieves an array of pending tasks in the Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=pending`. 
+Retrieves an array of pending tasks in the Druid cluster. It is functionally equivalent to `/druid/indexer/v1/tasks?state=pending`. For definitions of the response properties, see the [Tasks table](../querying/sql-metadata-tables.md#tasks-table).
 
 #### Query parameters
 
@@ -730,7 +730,7 @@ Host: {domain}
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/status`
 
-Retrieves the status of a task given the task ID. It returns a JSON object with the task's current state, task type, datasource, and other relevant metadata.
+Retrieves the status of a task given the task ID. It returns a JSON object with the task's status code, runner status, task type, datasource, and other relevant metadata.
 
 #### Responses 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -840,7 +840,7 @@ A successful request returns a `200 OK` response and an array of the task segmen
 
 Retrieves the event log associated with a task. It returns a list of logged events during the lifecycle of the task. The endpoint is useful for providing information about the execution of the task, including any errors or warnings raised. 
 
-Task logs are automatically retrieved from the MiddleManager/Indexer or in long-term storage. For reference, see [Task logs](../ingestion/tasks.md#task-logs).
+Task logs are automatically retrieved from the Middle Manager/Indexer or in long-term storage. For reference, see [Task logs](../ingestion/tasks.md#task-logs).
 
 #### Query parameters
 * `offset` (optional)
