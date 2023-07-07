@@ -25,11 +25,13 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
+import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -76,7 +78,8 @@ public class ImmutableWorkerInfo
   )
   {
     this(worker, currCapacityUsed, currParallelIndexCapacityUsed, availabilityGroups,
-         runningTasks, lastCompletedTaskTime, null);
+         runningTasks, lastCompletedTaskTime, null
+    );
   }
 
   public ImmutableWorkerInfo(
@@ -88,6 +91,38 @@ public class ImmutableWorkerInfo
   )
   {
     this(worker, currCapacityUsed, 0, availabilityGroups, runningTasks, lastCompletedTaskTime, null);
+  }
+
+  public static ImmutableWorkerInfo fromWorkerAnnouncements(
+      final Worker worker,
+      final Map<String, TaskAnnouncement> announcements,
+      final DateTime lastCompletedTaskTime,
+      @Nullable final DateTime blacklistedUntil
+  )
+  {
+    int currCapacity = 0;
+    int currParallelIndexCapacity = 0;
+    ImmutableSet.Builder<String> availabilityGroups = ImmutableSet.builder();
+
+    for (final TaskAnnouncement announcement : announcements.values()) {
+      currCapacity += announcement.getTaskResource().getRequiredCapacity();
+
+      if (ParallelIndexSupervisorTask.TYPE.equals(announcement.getTaskType())) {
+        currParallelIndexCapacity += announcement.getTaskResource().getRequiredCapacity();
+      }
+
+      availabilityGroups.add(announcement.getTaskResource().getAvailabilityGroup());
+    }
+
+    return new ImmutableWorkerInfo(
+        worker,
+        currCapacity,
+        currParallelIndexCapacity,
+        availabilityGroups.build(),
+        ImmutableSet.copyOf(announcements.keySet()),
+        lastCompletedTaskTime,
+        blacklistedUntil
+    );
   }
 
   @JsonProperty("worker")
