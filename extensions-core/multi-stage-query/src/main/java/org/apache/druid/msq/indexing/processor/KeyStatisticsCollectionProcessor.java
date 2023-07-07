@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.indexing.processor;
 
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntSet;

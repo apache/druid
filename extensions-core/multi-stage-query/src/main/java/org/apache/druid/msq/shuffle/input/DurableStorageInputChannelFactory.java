@@ -17,13 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.msq.shuffle;
+package org.apache.druid.msq.shuffle.input;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableInputStreamFrameChannel;
-import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -31,6 +30,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.kernel.StageId;
+import org.apache.druid.msq.shuffle.output.DurableStorageOutputChannelFactory;
 import org.apache.druid.storage.StorageConnector;
 
 import java.io.IOException;
@@ -42,7 +42,7 @@ import java.util.concurrent.Executors;
 /**
  * Provides input channels connected to durable storage.
  */
-public class DurableStorageInputChannelFactory implements InputChannelFactory
+public abstract class DurableStorageInputChannelFactory implements InputChannelFactory
 {
 
   private static final Logger LOG = new Logger(DurableStorageInputChannelFactory.class);
@@ -69,14 +69,23 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
   public static DurableStorageInputChannelFactory createStandardImplementation(
       final String controllerTaskId,
       final StorageConnector storageConnector,
-      final Closer closer
+      final Closer closer,
+      final boolean isQueryResults
   )
   {
     final ExecutorService remoteInputStreamPool =
         Executors.newCachedThreadPool(Execs.makeThreadFactory(controllerTaskId + "-remote-fetcher-%d"));
     closer.register(remoteInputStreamPool::shutdownNow);
-    return new DurableStorageInputChannelFactory(controllerTaskId, storageConnector, remoteInputStreamPool);
+    if (isQueryResults) {
+      return new DurableStorageQueryResultsInputChannelFactory(
+          controllerTaskId,
+          storageConnector,
+          remoteInputStreamPool
+      );
+    }
+    return new DurableStorageStageInputChannelFactory(controllerTaskId, storageConnector, remoteInputStreamPool);
   }
+
 
   @Override
   public ReadableFrameChannel openChannel(StageId stageId, int workerNumber, int partitionNumber) throws IOException
@@ -138,11 +147,7 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
       final int partitionNumber
   ) throws IOException
   {
-    String successfulFilePath = DurableStorageUtils.getSuccessFilePath(
-        controllerTaskId,
-        stageNumber,
-        workerNo
-    );
+    String successfulFilePath = getWorkerOutputSuccessFilePath(controllerTaskId, stageNumber, workerNo);
 
     if (!storageConnector.pathExists(successfulFilePath)) {
       throw new ISE(
@@ -169,12 +174,30 @@ public class DurableStorageInputChannelFactory implements InputChannelFactory
         successfulTaskId
     );
 
-    return DurableStorageUtils.getPartitionOutputsFileNameForPartition(
+    return getPartitionOutputsFileNameWithPathForPartition(
         controllerTaskId,
         stageNumber,
         workerNo,
-        successfulTaskId,
-        partitionNumber
+        partitionNumber,
+        successfulTaskId
     );
   }
+
+  /**
+   * Get the filePath with filename for the partitioned output of the controller, stage, worker
+   */
+  public abstract String getPartitionOutputsFileNameWithPathForPartition(
+      String controllerTaskId,
+      int stageNumber,
+      int workerNo,
+      int partitionNumber,
+      String successfulTaskId
+  );
+
+  /**
+   * Get the filepath for the success file .
+   */
+
+  public abstract String getWorkerOutputSuccessFilePath(String controllerTaskId, int stageNumber, int workerNumber);
+
 }

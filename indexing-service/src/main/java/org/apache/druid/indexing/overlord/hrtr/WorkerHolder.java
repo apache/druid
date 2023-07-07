@@ -303,13 +303,7 @@ public class WorkerHolder
 
   public boolean isInitialized()
   {
-    try {
-      return syncer.isInitialized();
-    }
-    catch (InterruptedException ignored) {
-      Thread.currentThread().interrupt();
-      return false;
-    }
+    return syncer.isInitialized();
   }
 
   public boolean isEnabled()

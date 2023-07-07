@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -35,7 +35,7 @@ import java.util.Objects;
 
 public class DataSourceMSQDestination implements MSQDestination
 {
-  static final String TYPE = "dataSource";
+  public static final String TYPE = "dataSource";
 
   private final String dataSource;
   private final Granularity segmentGranularity;
