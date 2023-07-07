@@ -80,7 +80,6 @@ public class QueryResultFrameProcessorFactory extends BaseFrameProcessorFactory
     final Int2ObjectSortedMap<OutputChannel> outputChannels = new Int2ObjectAVLTreeMap<>();
 
     for (final ReadablePartition partition : slice.getPartitions()) {
-      System.out.println("partitionId   " + partition.getPartitionNumber());
       outputChannels.computeIfAbsent(
           partition.getPartitionNumber(),
           i -> {
