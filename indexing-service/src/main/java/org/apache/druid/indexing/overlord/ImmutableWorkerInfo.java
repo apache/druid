@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
@@ -100,26 +101,33 @@ public class ImmutableWorkerInfo
       @Nullable final DateTime blacklistedUntil
   )
   {
-    int currCapacity = 0;
-    int currParallelIndexCapacity = 0;
+    int currCapacityUsed = 0;
+    int currParallelIndexCapacityUsed = 0;
+    ImmutableSet.Builder<String> taskIds = ImmutableSet.builder();
     ImmutableSet.Builder<String> availabilityGroups = ImmutableSet.builder();
 
-    for (final TaskAnnouncement announcement : announcements.values()) {
-      currCapacity += announcement.getTaskResource().getRequiredCapacity();
+    for (final Map.Entry<String, TaskAnnouncement> entry : announcements.entrySet()) {
+      final String taskId = entry.getKey();
+      final TaskAnnouncement announcement = entry.getValue();
+      final TaskResource taskResource = announcement.getTaskResource();
+      final int requiredCapacity = taskResource.getRequiredCapacity();
+
+      currCapacityUsed += requiredCapacity;
 
       if (ParallelIndexSupervisorTask.TYPE.equals(announcement.getTaskType())) {
-        currParallelIndexCapacity += announcement.getTaskResource().getRequiredCapacity();
+        currParallelIndexCapacityUsed += requiredCapacity;
       }
 
-      availabilityGroups.add(announcement.getTaskResource().getAvailabilityGroup());
+      taskIds.add(taskId);
+      availabilityGroups.add(taskResource.getAvailabilityGroup());
     }
 
     return new ImmutableWorkerInfo(
         worker,
-        currCapacity,
-        currParallelIndexCapacity,
+        currCapacityUsed,
+        currParallelIndexCapacityUsed,
         availabilityGroups.build(),
-        ImmutableSet.copyOf(announcements.keySet()),
+        taskIds.build(),
         lastCompletedTaskTime,
         blacklistedUntil
     );
