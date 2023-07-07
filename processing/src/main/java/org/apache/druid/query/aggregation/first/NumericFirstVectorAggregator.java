@@ -145,7 +145,7 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
   }
 
   /**
-   *Updates the time only to the appropriate position in buffer as the value is null
+   * Updates the time only to the appropriate position in buffer as the value is null
    *
    * @param buf         byte buffer storing the byte array representation of the aggregate
    * @param position    offset within the byte buffer at which the current aggregate value is stored
@@ -163,7 +163,7 @@ public abstract class NumericFirstVectorAggregator implements VectorAggregator
   abstract void initValue(ByteBuffer buf, int position);
 
   /**
-   *Abstract function which needs to be overridden by subclasses to set the
+   * Abstract function which needs to be overridden by subclasses to set the
    * latest value in the buffer depending on the datatype
    */
   abstract void putValue(ByteBuffer buf, int position, int index);

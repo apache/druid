@@ -27,12 +27,9 @@ import java.nio.ByteBuffer;
 
 public class LongFirstVectorAggregator extends NumericFirstVectorAggregator
 {
-  long firstValue;
-
   public LongFirstVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
   {
     super(timeSelector, valueSelector);
-    firstValue = 0;
   }
 
   @Override
@@ -45,13 +42,13 @@ public class LongFirstVectorAggregator extends NumericFirstVectorAggregator
   @Override
   void putValue(ByteBuffer buf, int position, int index)
   {
-    firstValue = valueSelector.getLongVector()[index];
+    long firstValue = valueSelector.getLongVector()[index];
     buf.putLong(position, firstValue);
   }
 
 
   /**
-   * @return The primitive object stored at the position in the buffer.
+   * @return The object as a pair with the position and the value stored at the position in the buffer.
    */
   @Nullable
   @Override

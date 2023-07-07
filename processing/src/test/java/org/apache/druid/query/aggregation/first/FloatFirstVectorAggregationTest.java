@@ -22,44 +22,49 @@ package org.apache.druid.query.aggregation.first;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.vector.BaseFloatVectorValueSelector;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.NoFilterVectorOffset;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Answers;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 
-@RunWith(MockitoJUnitRunner.class)
 public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
 {
   private static final double EPSILON = 1e-5;
   private static final float[] VALUES = new float[]{7.2f, 15.6f, 2.1f, 150.0f};
-  private static final boolean[] NULLS = new boolean[]{true, false, true, false};
+  private static final boolean[] NULLS = new boolean[]{false, false, true, false};
   private long[] times = {2436, 6879, 7888, 8224};
 
   private static final String NAME = "NAME";
   private static final String FIELD_NAME = "FIELD_NAME";
   private static final String TIME_COL = "__time";
 
-  @Mock
+
   private VectorValueSelector selector;
-  @Mock
+
   private BaseLongVectorValueSelector timeSelector;
   private ByteBuffer buf;
 
   private FloatFirstVectorAggregator target;
 
   private FloatFirstAggregatorFactory floatFirstAggregatorFactory;
-  @Mock(answer = Answers.RETURNS_DEEP_STUBS)
+
   private VectorColumnSelectorFactory selectorFactory;
 
   @Before
@@ -68,14 +73,97 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
     byte[] randomBytes = new byte[1024];
     ThreadLocalRandom.current().nextBytes(randomBytes);
     buf = ByteBuffer.wrap(randomBytes);
-    Mockito.doReturn(VALUES).when(selector).getFloatVector();
-    Mockito.doReturn(times).when(timeSelector).getLongVector();
+    timeSelector = new BaseLongVectorValueSelector(new NoFilterVectorOffset(times.length, 0, times.length)
+    {
+    })
+    {
+      @Override
+      public long[] getLongVector()
+      {
+        return times;
+      }
+
+      @Nullable
+      @Override
+      public boolean[] getNullVector()
+      {
+        return NULLS;
+      }
+    };
+    selector = new BaseFloatVectorValueSelector(new NoFilterVectorOffset(VALUES.length, 0, VALUES.length)
+    {
+
+    })
+    {
+
+      @Override
+      public float[] getFloatVector()
+      {
+        return VALUES;
+      }
+
+      @Nullable
+      @Override
+      public boolean[] getNullVector()
+      {
+        if (!NullHandling.replaceWithDefault()) {
+          return NULLS;
+        }
+        return null;
+      }
+    };
+
     target = new FloatFirstVectorAggregator(timeSelector, selector);
     clearBufferForPositions(0, 0);
 
-    Mockito.doReturn(null).when(selectorFactory).getColumnCapabilities(FIELD_NAME);
-    Mockito.doReturn(selector).when(selectorFactory).makeValueSelector(FIELD_NAME);
-    Mockito.doReturn(timeSelector).when(selectorFactory).makeValueSelector(TIME_COL);
+    selectorFactory = new VectorColumnSelectorFactory()
+    {
+      @Override
+      public ReadableVectorInspector getReadableVectorInspector()
+      {
+        return null;
+      }
+
+      @Override
+      public SingleValueDimensionVectorSelector makeSingleValueDimensionSelector(DimensionSpec dimensionSpec)
+      {
+        return null;
+      }
+
+      @Override
+      public MultiValueDimensionVectorSelector makeMultiValueDimensionSelector(DimensionSpec dimensionSpec)
+      {
+        return null;
+      }
+
+      @Override
+      public VectorValueSelector makeValueSelector(String column)
+      {
+        if (TIME_COL.equals(column)) {
+          return timeSelector;
+        } else if (FIELD_NAME.equals(column)) {
+          return selector;
+        } else {
+          return null;
+        }
+      }
+
+      @Override
+      public VectorObjectSelector makeObjectSelector(String column)
+      {
+        return null;
+      }
+
+      @Nullable
+      @Override
+      public ColumnCapabilities getColumnCapabilities(String column)
+      {
+        if (FIELD_NAME.equals(column)) {
+          return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT);
+        }
+        return null;
+      }
+    };
     floatFirstAggregatorFactory = new FloatFirstAggregatorFactory(NAME, FIELD_NAME, TIME_COL);
 
   }
@@ -110,16 +198,10 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
   @Test
   public void aggregateWithNulls()
   {
-    mockNullsVector();
     target.aggregate(buf, 0, 0, VALUES.length);
     Pair<Long, Float> result = (Pair<Long, Float>) target.get(buf, 0);
-    if (!NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(times[1], result.lhs.longValue());
-      Assert.assertEquals(VALUES[1], result.rhs, EPSILON);
-    } else {
-      Assert.assertEquals(times[0], result.lhs.longValue());
-      Assert.assertEquals(VALUES[0], result.rhs, EPSILON);
-    }
+    Assert.assertEquals(times[0], result.lhs.longValue());
+    Assert.assertEquals(VALUES[0], result.rhs, EPSILON);
   }
 
   @Test
@@ -132,7 +214,11 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
     for (int i = 0; i < positions.length; i++) {
       Pair<Long, Float> result = (Pair<Long, Float>) target.get(buf, positions[i] + positionOffset);
       Assert.assertEquals(times[i], result.lhs.longValue());
-      Assert.assertEquals(VALUES[i], result.rhs, EPSILON);
+      if (!NullHandling.replaceWithDefault() && NULLS[i]) {
+        Assert.assertNull(result.rhs);
+      } else {
+        Assert.assertEquals(VALUES[i], result.rhs, EPSILON);
+      }
     }
   }
 
@@ -147,7 +233,11 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
     for (int i = 0; i < positions.length; i++) {
       Pair<Long, Float> result = (Pair<Long, Float>) target.get(buf, positions[i] + positionOffset);
       Assert.assertEquals(times[rows[i]], result.lhs.longValue());
-      Assert.assertEquals(VALUES[rows[i]], result.rhs, EPSILON);
+      if (!NullHandling.replaceWithDefault() && NULLS[rows[i]]) {
+        Assert.assertNull(result.rhs);
+      } else {
+        Assert.assertEquals(VALUES[rows[i]], result.rhs, EPSILON);
+      }
     }
   }
 
@@ -155,13 +245,6 @@ public class FloatFirstVectorAggregationTest extends InitializedNullHandlingTest
   {
     for (int position : positions) {
       target.init(buf, offset + position);
-    }
-  }
-
-  private void mockNullsVector()
-  {
-    if (!NullHandling.replaceWithDefault()) {
-      Mockito.doReturn(NULLS).when(selector).getNullVector();
     }
   }
 }

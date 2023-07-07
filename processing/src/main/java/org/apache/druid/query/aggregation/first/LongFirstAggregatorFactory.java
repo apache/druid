@@ -41,7 +41,6 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -133,14 +132,13 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory columnSelectorFactory)
   {
     ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
-    VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
-    BaseLongVectorValueSelector timeSelector = (BaseLongVectorValueSelector) columnSelectorFactory.makeValueSelector(
-        timeColumn);
-    if (capabilities == null || capabilities.isNumeric()) {
+    if (capabilities.isNumeric()) {
+      VectorValueSelector valueSelector = columnSelectorFactory.makeValueSelector(fieldName);
+      VectorValueSelector timeSelector = columnSelectorFactory.makeValueSelector(
+          timeColumn);
       return new LongFirstVectorAggregator(timeSelector, valueSelector);
-    } else {
-      return NumericNilVectorAggregator.longNilVectorAggregator();
     }
+    return NumericNilVectorAggregator.longNilVectorAggregator();
   }
 
   @Override

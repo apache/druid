@@ -27,12 +27,10 @@ import java.nio.ByteBuffer;
 
 public class DoubleFirstVectorAggregator extends NumericFirstVectorAggregator
 {
-  double firstValue;
 
   public DoubleFirstVectorAggregator(VectorValueSelector timeSelector, VectorValueSelector valueSelector)
   {
     super(timeSelector, valueSelector);
-    firstValue = 0;
   }
 
   @Override
@@ -45,13 +43,13 @@ public class DoubleFirstVectorAggregator extends NumericFirstVectorAggregator
   @Override
   void putValue(ByteBuffer buf, int position, int index)
   {
-    firstValue = valueSelector.getDoubleVector()[index];
+    double firstValue = valueSelector.getDoubleVector()[index];
     buf.putDouble(position, firstValue);
   }
 
 
   /**
-   * @return The primitive object stored at the position in the buffer.
+   * @return The object as a pair with the position and the value stored at the position in the buffer.
    */
   @Nullable
   @Override
