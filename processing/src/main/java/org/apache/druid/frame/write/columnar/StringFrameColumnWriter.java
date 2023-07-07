@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -42,7 +43,11 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
   public static final long DATA_OFFSET = 1 /* type code */ + 1 /* single or multi-value? */;
 
   private final T selector;
-  protected final boolean multiValue;
+
+  // If the selector can return multi value results. This should be false, if and only if we are sure that the selector
+  // will always return a single string from the selector. In such cases, we optimize the storage by not storing the
+  // cumulativeRowLength as each row has a single value
+  protected final boolean maybeMultiValue;
 
   // Row lengths: one int per row with the number of values contained by that row and all previous rows.
   // Only written for multi-value columns.
@@ -62,13 +67,13 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
   StringFrameColumnWriter(
       final T selector,
       final MemoryAllocator allocator,
-      final boolean multiValue
+      final boolean maybeMultiValue
   )
   {
     this.selector = selector;
-    this.multiValue = multiValue;
+    this.maybeMultiValue = maybeMultiValue;
 
-    if (multiValue) {
+    if (maybeMultiValue) {
       this.cumulativeRowLengths = AppendableMemory.create(allocator, INITIAL_ALLOCATION_SIZE);
     } else {
       this.cumulativeRowLengths = null;
@@ -82,9 +87,20 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
   public boolean addSelection()
   {
     final List<ByteBuffer> utf8Data = getUtf8ByteBuffersFromSelector(selector);
-    final int utf8DataByteLength = countBytes(utf8Data);
 
-    if ((long) lastCumulativeRowLength + utf8Data.size() > Integer.MAX_VALUE) {
+    int utf8DataSize;
+    int utf8DataByteLength;
+
+    if (utf8Data == null) {
+      utf8DataSize = -1;
+      utf8DataByteLength = -1;
+    } else {
+      utf8DataSize = utf8Data.size();
+      utf8DataByteLength = countBytes(utf8Data);
+    }
+
+
+    if ((long) lastCumulativeRowLength + utf8DataSize > Integer.MAX_VALUE) {
       // Column is full because cumulative row length has exceeded the max capacity of an integer.
       return false;
     }
@@ -94,37 +110,42 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
       return false;
     }
 
-    if (multiValue && !cumulativeRowLengths.reserveAdditional(Integer.BYTES)) {
+    assert maybeMultiValue || (utf8Data != null && utf8DataSize == 1);
+
+    if (maybeMultiValue && !cumulativeRowLengths.reserveAdditional(Integer.BYTES)) {
       return false;
     }
 
-    if (!cumulativeStringLengths.reserveAdditional(Integer.BYTES * utf8Data.size())) {
+    int cumulativeStringLengthsReserve = utf8DataSize != -1 ? Integer.BYTES * utf8DataSize : 0;
+
+    if (!cumulativeStringLengths.reserveAdditional(cumulativeStringLengthsReserve)) {
       return false;
     }
 
-    if (!stringData.reserveAdditional(utf8DataByteLength)) {
+    int stringDataReserve = utf8DataByteLength != -1 ? utf8DataByteLength : 0;
+    if (!stringData.reserveAdditional(stringDataReserve)) {
       return false;
     }
 
     // Enough space has been reserved to write what we need to write; let's start.
-    if (multiValue) {
+    if (maybeMultiValue) {
       final MemoryRange<WritableMemory> rowLengthsCursor = cumulativeRowLengths.cursor();
-      rowLengthsCursor.memory().putInt(rowLengthsCursor.start(), lastCumulativeRowLength + utf8Data.size());
+      rowLengthsCursor.memory().putInt(rowLengthsCursor.start(), lastCumulativeRowLength + utf8DataSize);
       cumulativeRowLengths.advanceCursor(Integer.BYTES);
-      lastRowLength = utf8Data.size();
-      lastCumulativeRowLength += utf8Data.size();
+      lastRowLength = utf8DataSize;
+      lastCumulativeRowLength += utf8DataSize;
     }
 
     // The utf8Data.size and utf8DataByteLength checks are necessary to avoid acquiring cursors with zero bytes
     // reserved. Otherwise, if a zero-byte-reserved cursor was acquired in the first row, it would be an error since no
     // bytes would have been allocated yet.
     final MemoryRange<WritableMemory> stringLengthsCursor =
-        utf8Data.size() > 0 ? cumulativeStringLengths.cursor() : null;
+        utf8DataSize > 0 ? cumulativeStringLengths.cursor() : null;
     final MemoryRange<WritableMemory> stringDataCursor =
         utf8DataByteLength > 0 ? stringData.cursor() : null;
 
     lastStringLength = 0;
-    for (int i = 0; i < utf8Data.size(); i++) {
+    for (int i = 0; i < utf8DataSize; i++) {
       final ByteBuffer utf8Datum = utf8Data.get(i);
       final int len = utf8Datum.remaining();
 
@@ -149,8 +170,8 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
                          .putInt(stringLengthsCursor.start() + (long) Integer.BYTES * i, lastCumulativeStringLength);
     }
 
-    if (utf8Data.size() > 0) {
-      cumulativeStringLengths.advanceCursor(Integer.BYTES * utf8Data.size());
+    if (utf8DataSize > 0) {
+      cumulativeStringLengths.advanceCursor(Integer.BYTES * utf8DataSize);
     }
 
     if (utf8DataByteLength > 0) {
@@ -167,9 +188,11 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
       throw new ISE("Cannot undo");
     }
 
-    if (multiValue) {
+    if (maybeMultiValue) {
       cumulativeRowLengths.rewindCursor(Integer.BYTES);
-      cumulativeStringLengths.rewindCursor(Integer.BYTES * lastRowLength);
+      if (lastRowLength >= 0) {
+        cumulativeStringLengths.rewindCursor(Integer.BYTES * lastRowLength);
+      }
       lastCumulativeRowLength -= lastRowLength;
       lastRowLength = 0;
     } else {
@@ -178,6 +201,7 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
 
     stringData.rewindCursor(lastStringLength);
     lastCumulativeStringLength -= lastStringLength;
+
     lastStringLength = -1; // Sigil value that allows detection of incorrect "undo" calls
   }
 
@@ -185,7 +209,7 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
   public long size()
   {
     return DATA_OFFSET
-           + (multiValue ? cumulativeRowLengths.size() : 0)
+           + (maybeMultiValue ? cumulativeRowLengths.size() : 0)
            + cumulativeStringLengths.size()
            + stringData.size();
   }
@@ -196,10 +220,10 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
     long currentPosition = startPosition;
 
     memory.putByte(currentPosition, FrameColumnWriters.TYPE_STRING);
-    memory.putByte(currentPosition + 1, multiValue ? (byte) 1 : (byte) 0);
+    memory.putByte(currentPosition + 1, maybeMultiValue ? (byte) 1 : (byte) 0);
     currentPosition += 2;
 
-    if (multiValue) {
+    if (maybeMultiValue) {
       currentPosition += cumulativeRowLengths.writeTo(memory, currentPosition);
     }
 
@@ -212,7 +236,7 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
   @Override
   public void close()
   {
-    if (multiValue) {
+    if (maybeMultiValue) {
       cumulativeRowLengths.close();
     }
 
@@ -224,6 +248,7 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
    * Extracts a list of ByteBuffers from the selector. Null values are returned as
    * {@link FrameWriterUtils#NULL_STRING_MARKER_ARRAY}.
    */
+  @Nullable
   public abstract List<ByteBuffer> getUtf8ByteBuffersFromSelector(T selector);
 
   /**
@@ -237,7 +262,7 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
       count += buffer.remaining();
     }
 
-    // Hopefully there's never more than 2GB of string per row!
+    // Hopefully there's never more than 2 GB of string per row!
     return Ints.checkedCast(count);
   }
 }
@@ -254,9 +279,10 @@ class StringFrameColumnWriterImpl extends StringFrameColumnWriter<DimensionSelec
   }
 
   @Override
+  @Nullable
   public List<ByteBuffer> getUtf8ByteBuffersFromSelector(final DimensionSelector selector)
   {
-    return FrameWriterUtils.getUtf8ByteBuffersFromStringSelector(selector, multiValue);
+    return FrameWriterUtils.getUtf8ByteBuffersFromStringSelector(selector, maybeMultiValue);
   }
 }
 
@@ -277,6 +303,7 @@ class StringArrayFrameColumnWriter extends StringFrameColumnWriter<ColumnValueSe
   }
 
   @Override
+  @Nullable
   public List<ByteBuffer> getUtf8ByteBuffersFromSelector(final ColumnValueSelector selector)
   {
     return FrameWriterUtils.getUtf8ByteBuffersFromStringArraySelector(selector);

@@ -174,7 +174,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
         new StringFieldReader(true).makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
 
     Assert.assertNull(readSelector.getObject());
-    Assert.assertEquals(null, readSelectorAsArray.getObject());
+    Assert.assertEquals(Collections.emptyList(), readSelectorAsArray.getObject());
   }
 
   @Test

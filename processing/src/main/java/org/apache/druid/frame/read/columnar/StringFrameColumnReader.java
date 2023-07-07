@@ -162,6 +162,8 @@ public class StringFrameColumnReader implements FrameColumnReader
     final int totalNumValues;
 
     if (multiValue) {
+      // TODO: This would fail in case the cumulative row length is negative.
+      //  Either add the max row length at the beginning, and then add versions in the StringFrameColumnWriter
       totalNumValues = getCumulativeRowLength(memory, numRows - 1);
     } else {
       totalNumValues = numRows;
@@ -511,7 +513,9 @@ public class StringFrameColumnReader implements FrameColumnReader
                               ? cumulativeRowLength
                               : cumulativeRowLength - getCumulativeRowLength(memory, physicalRow - 1);
 
-        if (rowLength == 0) {
+        if (rowLength == -1) {
+          return null;
+        } else if (rowLength == 0) {
           return Collections.emptyList();
         } else if (rowLength == 1) {
           final int index = cumulativeRowLength - 1;

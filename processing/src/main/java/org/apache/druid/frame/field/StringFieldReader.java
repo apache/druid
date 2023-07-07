@@ -300,6 +300,7 @@ public class StringFieldReader implements FieldReader
       while (position < limit && !rowTerminatorSeen) {
 
         final byte kind = memory.getByte(position);
+        long curPosition = position;
         position++;
 
         switch (kind) {
@@ -314,13 +315,13 @@ public class StringFieldReader implements FieldReader
 
           case StringFieldWriter.NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NULL:
           case StringFieldWriter.NULL_BYTE:
-            assert kind != StringFieldWriter.NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NULL || position == fieldPosition;
+            assert kind != StringFieldWriter.NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NULL || curPosition == fieldPosition;
             currentUtf8Strings.add(null);
             break;
 
           case StringFieldWriter.NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NON_NULL:
           case StringFieldWriter.NOT_NULL_BYTE:
-            assert kind != StringFieldWriter.NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NON_NULL || position == fieldPosition;
+            assert kind != StringFieldWriter.NON_NULL_ARRAY_BYTE_FIRST_ELEMENT_NON_NULL || curPosition == fieldPosition;
 
             for (long i = position; ; i++) {
               if (i >= limit) {
@@ -346,14 +347,17 @@ public class StringFieldReader implements FieldReader
               }
             }
 
-          case StringFieldWriter.NULL_ARRAY_BYTE:
-            assert position == fieldPosition;
-            currentUtf8StringsIsNullArray = true;
-            assert position + 1 < limit && memory.getByte(position + 1) == StringFieldWriter.ROW_TERMINATOR;
             break;
+            
+          case StringFieldWriter.NULL_ARRAY_BYTE:
+            assert curPosition == fieldPosition;
+            currentUtf8StringsIsNullArray = true;
+            assert curPosition + 1 < limit && memory.getByte(curPosition + 1) == StringFieldWriter.ROW_TERMINATOR;
+            break;
+
           case StringFieldWriter.EMPTY_ARRAY_BYTE:
-            assert position == fieldPosition;
-            assert position + 1 < limit && memory.getByte(position + 1) == StringFieldWriter.ROW_TERMINATOR;
+            assert curPosition == fieldPosition;
+            assert curPosition + 1 < limit && memory.getByte(curPosition + 1) == StringFieldWriter.ROW_TERMINATOR;
             break;
 
           default:
