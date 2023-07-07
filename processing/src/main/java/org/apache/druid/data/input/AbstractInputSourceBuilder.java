@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
@@ -56,7 +55,7 @@ public abstract class AbstractInputSourceBuilder
     }
   }
 
-  /*
+  /**
    * This input source is used in place of a delegate input source if there are no input file paths.
    * Certain input sources cannot be instantiated with an empty input file list and so composing input sources such as IcebergInputSource
    * may use this input source as delegate in such cases.
@@ -104,13 +103,13 @@ public abstract class AbstractInputSourceBuilder
     public Stream<InputSplit> createSplits(
         InputFormat inputFormat,
         @Nullable SplitHintSpec splitHintSpec
-    ) throws IOException
+    )
     {
       return Stream.empty();
     }
 
     @Override
-    public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException
+    public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
     {
       return 0;
     }
