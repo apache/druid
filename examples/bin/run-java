@@ -29,10 +29,11 @@ JAVA_MAJOR="$("$JAVA_BIN" -version 2>&1 | sed -n -E 's/.* version "([^."]*).*/\1
 if [ "$JAVA_MAJOR" != "" ] && [ "$JAVA_MAJOR" -ge "11" ]
 then
   # Disable strong encapsulation for certain packages on Java 11+.
-  # The first 4 parameters below are required to use datasketches-memory as a library.
-  # And the last one is required for metric emit, see https://github.com/apache/druid/issues/12312
-  #
-  # When updating this list, also update ForkingTaskRunner#STRONG_ENCAPSULATION_PROPERTIES and docs/operations/java.md.
+  # When updating this list, update all four:
+  #  1) ForkingTaskRunner#STRONG_ENCAPSULATION_PROPERTIES
+  #  2) docs/operations/java.md, "Strong encapsulation" section
+  #  3) pom.xml, jdk.strong.encapsulation.argLine
+  #  4) examples/bin/run-java script (here)
   exec "$JAVA_BIN" \
     --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
     --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED \

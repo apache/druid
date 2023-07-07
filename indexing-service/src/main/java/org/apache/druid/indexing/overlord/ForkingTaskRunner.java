@@ -99,8 +99,11 @@ public class ForkingTaskRunner
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
 
   /**
-   * Properties to add on Java 11+. When updating this list, also update the "bin/run-java" script and the
-   * doc page "docs/operations/java.md".
+   * Properties to add on Java 11+. When updating this list, update all four:
+   *  1) ForkingTaskRunner#STRONG_ENCAPSULATION_PROPERTIES (here) -->
+   *  2) docs/operations/java.md, "Strong encapsulation" section -->
+   *  3) pom.xml, jdk.strong.encapsulation.argLine -->
+   *  4) examples/bin/run-java script
    */
   private static final List<String> STRONG_ENCAPSULATION_PROPERTIES = ImmutableList.of(
       "--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED",
