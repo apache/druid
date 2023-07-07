@@ -171,7 +171,7 @@ public class TaskQueue
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
     this.taskCompleteCallbackExecutor = Execs.multiThreaded(
         config.getTaskCompleteHandlerNumThreads(),
-        "TaskQueue-OnComplete"
+        "TaskQueue-OnComplete-%d"
     );
   }
 
