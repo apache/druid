@@ -17,12 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index;
 
 import com.google.common.base.Predicate;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;

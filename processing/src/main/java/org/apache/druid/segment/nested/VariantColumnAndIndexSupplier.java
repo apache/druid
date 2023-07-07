@@ -26,13 +26,10 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.NullValueIndex;
-import org.apache.druid.segment.column.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ColumnarInts;
@@ -43,6 +40,9 @@ import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.NullValueIndex;
+import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 import javax.annotation.Nullable;
@@ -237,6 +237,12 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     this.encodedValueColumnSupplier = encodedValueColumnSupplier;
     this.valueIndexes = valueIndexes;
     this.nullValueBitmap = valueIndexes.get(0) == null ? bitmapFactory.makeEmptyImmutableBitmap() : valueIndexes.get(0);
+  }
+
+  @Nullable
+  public Byte getVariantTypeSetByte()
+  {
+    return variantTypeSetByte;
   }
 
   @Override

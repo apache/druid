@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;

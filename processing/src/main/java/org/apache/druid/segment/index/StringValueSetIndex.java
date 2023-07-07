@@ -17,23 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index;
 
-import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
 
 import javax.annotation.Nullable;
+import java.util.SortedSet;
 
 /**
- * Uses a {@link DruidPredicateFactory} to construct a {@link BitmapColumnIndex}
+ * Index on individual values, and provides bitmaps for the rows which contain these values
  */
-public interface DruidPredicateIndex
+public interface StringValueSetIndex
 {
   /**
-   * Get a {@link BitmapColumnIndex} corresponding to all the rows that match the supplied {@link DruidPredicateFactory}
-   * <p>
-   * If this method returns null it indicates that there was no index that matched the respective values and a
-   * {@link org.apache.druid.query.filter.ValueMatcher} must be used instead.
+   * Get the {@link ImmutableBitmap} corresponding to the supplied value.  Generates an empty bitmap when passed a
+   * value that doesn't exist.  Never returns null.
    */
-  @Nullable
-  BitmapColumnIndex forPredicate(DruidPredicateFactory matcherFactory);
+  BitmapColumnIndex forValue(@Nullable String value);
+
+  /**
+   * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the specified set of values (if they are
+   * contained in the underlying column). The set must be sorted using
+   * {@link org.apache.druid.java.util.common.guava.Comparators#naturalNullsFirst()}.
+   */
+  BitmapColumnIndex forSortedValues(SortedSet<String> values);
 }

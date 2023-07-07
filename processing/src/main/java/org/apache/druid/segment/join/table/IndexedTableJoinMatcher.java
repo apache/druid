@@ -492,6 +492,14 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     }
 
     @Override
+    public ConditionMatcher makeArrayProcessor(BaseObjectColumnValueSelector<?> selector)
+    {
+      return () -> {
+        throw new QueryUnsupportedException("Joining against ARRAY columns is not supported.");
+      };
+    }
+
+    @Override
     public ConditionMatcher makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
     {
       return new ConditionMatcher()

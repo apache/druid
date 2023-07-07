@@ -22,6 +22,7 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Rows;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
@@ -46,7 +47,7 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
 {
   private final DruidPredicateFactory predicateFactory;
 
-  PredicateValueMatcherFactory(DruidPredicateFactory predicateFactory)
+  public PredicateValueMatcherFactory(DruidPredicateFactory predicateFactory)
   {
     this.predicateFactory = predicateFactory;
   }
@@ -84,6 +85,42 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
   }
 
   @Override
+  public ValueMatcher makeArrayProcessor(BaseObjectColumnValueSelector<?> selector)
+  {
+    if (selector instanceof NilColumnValueSelector) {
+      // Column does not exist, or is unfilterable. Treat it as all nulls.
+      return BooleanValueMatcher.of(predicateFactory.makeArrayPredicate().apply(null));
+    } else {
+      // use the object predicate
+      final Predicate<Object[]> predicate = predicateFactory.makeArrayPredicate();
+      return new ValueMatcher()
+      {
+        @Override
+        public boolean matches()
+        {
+          Object o = selector.getObject();
+          if (o == null || o instanceof Object[]) {
+            return predicate.apply((Object[]) o);
+          }
+          if (o instanceof List) {
+            ExprEval oEval = ExprEval.bestEffortArray((List<?>) o);
+            return predicate.apply(oEval.asArray());
+          }
+          // upcast non-array to a single element array to behave consistently with expressions.. idk if this is cool
+          return predicate.apply(new Object[]{o});
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("selector", selector);
+          inspector.visit("predicate", predicate);
+        }
+      };
+    }
+  }
+
+  @Override
   public ValueMatcher makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
   {
     if (selector instanceof NilColumnValueSelector) {
@@ -117,6 +154,7 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
         private DruidLongPredicate longPredicate;
         private DruidFloatPredicate floatPredicate;
         private DruidDoublePredicate doublePredicate;
+        private Predicate<Object[]> arrayPredicate;
 
         @Override
         public boolean matches()
@@ -134,6 +172,8 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
           } else if (rowValue instanceof Number) {
             // Double or some other non-int, non-long, non-float number.
             return getDoublePredicate().applyDouble((double) rowValue);
+          } else if (rowValue instanceof Object[]) {
+            return getArrayPredicate().apply((Object[]) rowValue);
           } else {
             // Other types. Cast to list of strings and evaluate them as strings.
             // Boolean values are handled here as well since it is not a known type in Druid.
@@ -195,6 +235,14 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
           }
 
           return doublePredicate;
+        }
+
+        private Predicate<Object[]> getArrayPredicate()
+        {
+          if (arrayPredicate == null) {
+            arrayPredicate = predicateFactory.makeArrayPredicate();
+          }
+          return arrayPredicate;
         }
       };
     }

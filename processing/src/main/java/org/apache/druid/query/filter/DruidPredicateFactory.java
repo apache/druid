@@ -21,6 +21,7 @@ package org.apache.druid.query.filter;
 
 import com.google.common.base.Predicate;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
+import org.apache.druid.java.util.common.UOE;
 
 @SubclassesMustOverrideEqualsAndHashCode
 public interface DruidPredicateFactory
@@ -32,6 +33,11 @@ public interface DruidPredicateFactory
   DruidFloatPredicate makeFloatPredicate();
 
   DruidDoublePredicate makeDoublePredicate();
+
+  default Predicate<Object[]> makeArrayPredicate()
+  {
+    throw new UOE("Predicate does not support ARRAY types");
+  }
 
   /**
    * Object predicate is currently only used by vectorized matchers for non-string object selectors. This currently

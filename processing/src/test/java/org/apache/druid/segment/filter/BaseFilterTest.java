@@ -79,7 +79,6 @@ import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.StringEncodingStrategy;
@@ -92,6 +91,7 @@ import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -489,6 +489,14 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     }
 
     return constructors;
+  }
+
+  protected boolean isAutoSchema()
+  {
+    if (testName.contains("AutoTypes")) {
+      return true;
+    }
+    return false;
   }
 
   private Filter makeFilter(final DimFilter dimFilter)
@@ -900,6 +908,31 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     assertFilterMatches(filter, expectedRows, testVectorized);
   }
 
+  protected void assertFilterMatchesSkipArrays(
+      final DimFilter filter,
+      final List<String> expectedRows
+  )
+  {
+    // IncrementalIndex, RowBasedSegment cannot vectorize.
+    // Columnar FrameStorageAdapter *can* vectorize, but the tests won't pass, because the vectorizable cases
+    // differ from QueryableIndexStorageAdapter due to frames not having indexes. So, skip these too.
+    final boolean testVectorized =
+        !(adapter instanceof IncrementalIndexStorageAdapter)
+        && !(adapter instanceof RowBasedStorageAdapter)
+        && !(adapter instanceof FrameStorageAdapter);
+
+    if (isAutoSchema()) {
+      Throwable t = Assert.assertThrows(
+          Throwable.class,
+          () -> assertFilterMatches(filter, expectedRows, testVectorized)
+      );
+      // todo (clint): maybe better?
+      Assert.assertTrue(t.getMessage().contains("ARRAY"));
+    } else {
+      assertFilterMatches(filter, expectedRows, testVectorized);
+    }
+  }
+
   protected void assertFilterMatchesSkipVectorize(
       final DimFilter filter,
       final List<String> expectedRows
@@ -914,66 +947,58 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final boolean testVectorized
   )
   {
-    try {
+    Assert.assertEquals(
+        "Cursor: " + filter,
+        expectedRows,
+        selectColumnValuesMatchingFilter(filter, "dim0")
+    );
+
+    if (testVectorized) {
       Assert.assertEquals(
-          "Cursor: " + filter,
+          "Cursor (vectorized): " + filter,
           expectedRows,
-          selectColumnValuesMatchingFilter(filter, "dim0")
+          selectColumnValuesMatchingFilterUsingVectorCursor(filter, "dim0")
       );
 
-      if (testVectorized) {
-        Assert.assertEquals(
-            "Cursor (vectorized): " + filter,
-            expectedRows,
-            selectColumnValuesMatchingFilterUsingVectorCursor(filter, "dim0")
-        );
-
-        Assert.assertEquals(
-            "Cursor Virtual Column (vectorized): " + filter,
-            expectedRows,
-            selectColumnValuesMatchingFilterUsingVectorVirtualColumnCursor(filter, "vdim0", "dim0")
-        );
-      }
-
       Assert.assertEquals(
-          "Cursor with postFiltering: " + filter,
+          "Cursor Virtual Column (vectorized): " + filter,
           expectedRows,
-          selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0")
+          selectColumnValuesMatchingFilterUsingVectorVirtualColumnCursor(filter, "vdim0", "dim0")
       );
+    }
 
-      if (testVectorized) {
-        Assert.assertEquals(
-            "Cursor with postFiltering (vectorized): " + filter,
-            expectedRows,
-            selectColumnValuesMatchingFilterUsingVectorizedPostFiltering(filter, "dim0")
-        );
-      }
+    Assert.assertEquals(
+        "Cursor with postFiltering: " + filter,
+        expectedRows,
+        selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0")
+    );
 
+    if (testVectorized) {
       Assert.assertEquals(
-          "Filtered aggregator: " + filter,
+          "Cursor with postFiltering (vectorized): " + filter,
+          expectedRows,
+          selectColumnValuesMatchingFilterUsingVectorizedPostFiltering(filter, "dim0")
+      );
+    }
+
+    Assert.assertEquals(
+        "Filtered aggregator: " + filter,
+        expectedRows.size(),
+        selectCountUsingFilteredAggregator(filter)
+    );
+
+    if (testVectorized) {
+      Assert.assertEquals(
+          "Filtered aggregator (vectorized): " + filter,
           expectedRows.size(),
-          selectCountUsingFilteredAggregator(filter)
-      );
-
-      if (testVectorized) {
-        Assert.assertEquals(
-            "Filtered aggregator (vectorized): " + filter,
-            expectedRows.size(),
-            selectCountUsingVectorizedFilteredAggregator(filter)
-        );
-      }
-
-      Assert.assertEquals(
-          "RowBasedColumnSelectorFactory: " + filter,
-          expectedRows,
-          selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(filter, "dim0")
+          selectCountUsingVectorizedFilteredAggregator(filter)
       );
     }
-    catch (ISE ise) {
-      // ignore failures resulting from 'auto'
-      if (!(testName.contains("AutoTypes") && "Unsupported type[ARRAY<STRING>]".equals(ise.getMessage()))) {
-        throw ise;
-      }
-    }
+
+    Assert.assertEquals(
+        "RowBasedColumnSelectorFactory: " + filter,
+        expectedRows,
+        selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(filter, "dim0")
+    );
   }
 }

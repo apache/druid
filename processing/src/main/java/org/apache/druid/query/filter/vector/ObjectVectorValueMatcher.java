@@ -21,6 +21,7 @@ package org.apache.druid.query.filter.vector;
 
 import com.google.common.base.Predicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
@@ -49,6 +50,13 @@ public class ObjectVectorValueMatcher implements VectorValueMatcherFactory
   public VectorValueMatcher makeMatcher(@Nullable String value)
   {
     // return a traditional nil matcher, as is the custom of our people
+    return BooleanVectorValueMatcher.of(selector, value == null);
+  }
+
+  @Override
+  public VectorValueMatcher makeMatcher(Object value, ColumnType type)
+  {
+    // todo (clint): something cooler...
     return BooleanVectorValueMatcher.of(selector, value == null);
   }
 

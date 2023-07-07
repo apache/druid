@@ -17,15 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index;
 
-import org.apache.druid.query.BitmapResultFactory;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 
-public interface BitmapColumnIndex
+/**
+ * {@link BitmapColumnIndex} with Druids "default" {@link ColumnIndexCapabilities}.
+ */
+public abstract class SimpleBitmapColumnIndex implements BitmapColumnIndex
 {
-  ColumnIndexCapabilities getIndexCapabilities();
+  public static final ColumnIndexCapabilities CAPABILITIES = new SimpleColumnIndexCapabilities(true, true);
 
-  double estimateSelectivity(int totalRows);
-
-  <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory);
+  @Override
+  public ColumnIndexCapabilities getIndexCapabilities()
+  {
+    return CAPABILITIES;
+  }
 }

@@ -17,12 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index;
+
+import org.apache.druid.collections.spatial.ImmutableRTree;
 
 /**
- * Provides index for all null rows in a column, to use with IS/IS NOT NULL filters
  */
-public interface NullValueIndex
+public interface SpatialIndex
 {
-  BitmapColumnIndex forNull();
+  ImmutableRTree getRTree();
 }

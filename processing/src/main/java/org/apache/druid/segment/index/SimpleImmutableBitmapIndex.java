@@ -17,18 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index;
+
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.query.BitmapResultFactory;
 
 /**
- * {@link BitmapColumnIndex} with Druids "default" {@link ColumnIndexCapabilities}.
+ * {@link SimpleBitmapColumnIndex} which wraps a single {@link ImmutableBitmap}
  */
-public abstract class SimpleBitmapColumnIndex implements BitmapColumnIndex
+public final class SimpleImmutableBitmapIndex extends SimpleBitmapColumnIndex
 {
-  public static final ColumnIndexCapabilities CAPABILITIES = new SimpleColumnIndexCapabilities(true, true);
+  private final ImmutableBitmap bitmap;
+
+  public SimpleImmutableBitmapIndex(ImmutableBitmap bitmap)
+  {
+    this.bitmap = bitmap;
+  }
 
   @Override
-  public ColumnIndexCapabilities getIndexCapabilities()
+  public double estimateSelectivity(int totalRows)
   {
-    return CAPABILITIES;
+    return Math.min(1, (double) bitmap.size() / totalRows);
+  }
+
+  @Override
+  public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+  {
+    return bitmapResultFactory.wrapDimensionValue(bitmap);
   }
 }

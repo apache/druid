@@ -21,8 +21,11 @@ package org.apache.druid.query.filter.vector;
 
 import com.google.common.base.Predicate;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.IdLookup;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 
@@ -104,6 +107,14 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
     } else {
       return makeMatcher(s -> Objects.equals(s, etnValue));
     }
+  }
+
+  @Override
+  public VectorValueMatcher makeMatcher(Object value, ColumnType type)
+  {
+    ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(type), value);
+    ExprEval<?> cast = eval.castTo(ExpressionType.STRING);
+    return makeMatcher(cast.asString());
   }
 
   @Override

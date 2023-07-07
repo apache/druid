@@ -162,8 +162,8 @@ public class ExpressionFilterTest extends BaseFilterTest
   @Test
   public void testOneMultiValuedStringColumn()
   {
-    // auto type columns don't support mvds, bail out
-    if (testName.contains("AutoTypes")) {
+    // auto type columns ingest arrays instead of mvds, bail out
+    if (isAutoSchema()) {
       return;
     }
     if (NullHandling.replaceWithDefault()) {
@@ -252,8 +252,8 @@ public class ExpressionFilterTest extends BaseFilterTest
       assertFilterMatches(edf("dim2 == dim3"), ImmutableList.of("2", "5", "8"));
     }
 
-    // auto type columns don't support mvds, bail out
-    if (testName.contains("AutoTypes")) {
+    // auto type columns ingest arrays instead of mvds
+    if (isAutoSchema()) {
       return;
     }
     // String vs. multi-value string

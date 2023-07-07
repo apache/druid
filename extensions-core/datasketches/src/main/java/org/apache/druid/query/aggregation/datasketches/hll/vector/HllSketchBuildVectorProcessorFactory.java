@@ -84,6 +84,15 @@ public class HllSketchBuildVectorProcessorFactory implements VectorColumnProcess
   }
 
   @Override
+  public HllSketchBuildVectorProcessor makeArrayProcessor(
+      ColumnCapabilities capabilities,
+      VectorObjectSelector selector
+  )
+  {
+    return null;
+  }
+
+  @Override
   public HllSketchBuildVectorProcessor makeObjectProcessor(
       ColumnCapabilities capabilities,
       VectorObjectSelector selector

@@ -53,11 +53,11 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.DruidPredicateIndex;
-import org.apache.druid.segment.column.NullValueIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.index.DruidPredicateIndex;
+import org.apache.druid.segment.index.NullValueIndex;
+import org.apache.druid.segment.index.StringValueSetIndex;
 import org.apache.druid.segment.serde.ColumnPartSerde;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 import org.apache.druid.segment.vector.BitmapVectorOffset;
@@ -263,7 +263,6 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     final ColumnHolder holder = bob.build();
     final ColumnCapabilities capabilities = holder.getCapabilities();
     Assert.assertEquals(ColumnType.NESTED_DATA, capabilities.toColumnType());
-    Assert.assertTrue(capabilities.isFilterable());
     Assert.assertTrue(holder.getColumnFormat() instanceof NestedCommonFormatColumn.Format);
     try (NestedDataComplexColumn column = (NestedDataComplexColumn) holder.getColumn()) {
       smokeTest(column);
@@ -287,7 +286,6 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     final ColumnHolder holder = bob.build();
     final ColumnCapabilities capabilities = holder.getCapabilities();
     Assert.assertEquals(ColumnType.NESTED_DATA, capabilities.toColumnType());
-    Assert.assertTrue(capabilities.isFilterable());
     Assert.assertTrue(holder.getColumnFormat() instanceof NestedCommonFormatColumn.Format);
     try (NestedDataComplexColumn column = (NestedDataComplexColumn) holder.getColumn()) {
       smokeTestArrays(column);

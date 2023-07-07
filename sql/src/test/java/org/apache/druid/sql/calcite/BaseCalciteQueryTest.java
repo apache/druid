@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
@@ -55,10 +56,13 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
@@ -119,6 +123,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -343,9 +348,50 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new NotDimFilter(filter);
   }
 
-  public static InDimFilter in(String dimension, List<String> values, ExtractionFn extractionFn)
+  public static InDimFilter in(String dimension, Collection<String> values, ExtractionFn extractionFn)
   {
     return new InDimFilter(dimension, values, extractionFn);
+  }
+
+  public static DimFilter isNull(final String fieldName)
+  {
+    return isNull(fieldName, null);
+  }
+
+  public static DimFilter isNull(final String fieldName, final ExtractionFn extractionFn)
+  {
+    if (NullHandling.sqlCompatible()) {
+      return new NullFilter(fieldName, extractionFn, null);
+    }
+    return selector(fieldName, NullHandling.defaultStringValue(), extractionFn);
+  }
+
+  public static DimFilter notNull(final String fieldName)
+  {
+    return not(isNull(fieldName));
+  }
+
+  public static DimFilter equality(final String fieldName, final Object matchValue, final ColumnType matchValueType)
+  {
+    return equality(fieldName, matchValue, null, matchValueType);
+  }
+
+  public static DimFilter equality(
+      final String fieldName,
+      final Object matchValue,
+      final ExtractionFn extractionFn,
+      final ColumnType matchValueType
+  )
+  {
+    if (NullHandling.sqlCompatible()) {
+      return new EqualityFilter(fieldName, matchValueType, matchValue, extractionFn, null);
+    }
+    return selector(fieldName, Evals.asString(matchValue), extractionFn);
+  }
+
+  public static SelectorDimFilter selector(final String fieldName, final String value)
+  {
+    return selector(fieldName, value, null);
   }
 
   public static SelectorDimFilter selector(final String fieldName, final String value, final ExtractionFn extractionFn)
@@ -394,6 +440,59 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         null,
         StringComparators.NUMERIC
     );
+  }
+
+  public static DimFilter range(
+      final String fieldName,
+      final ColumnType matchValueType,
+      final Object lower,
+      final Object upper,
+      final boolean lowerStrict,
+      final boolean upperStrict
+  )
+  {
+    return range(fieldName, matchValueType, lower, upper, lowerStrict, upperStrict, null);
+  }
+
+  public static DimFilter range(
+      final String fieldName,
+      final ColumnType matchValueType,
+      final Object lower,
+      final Object upper,
+      final boolean lowerStrict,
+      final boolean upperStrict,
+      final ExtractionFn extractionFn
+  )
+  {
+    if (NullHandling.sqlCompatible()) {
+      return new RangeFilter(fieldName, matchValueType, lower, upper, lowerStrict, upperStrict, extractionFn, null);
+    }
+    return new BoundDimFilter(
+        fieldName,
+        Evals.asString(lower),
+        Evals.asString(upper),
+        lowerStrict,
+        upperStrict,
+        false,
+        extractionFn,
+        matchValueType.isNumeric() ? StringComparators.NUMERIC : StringComparators.LEXICOGRAPHIC
+    );
+  }
+
+  public static DimFilter timeRange(final Object intervalObj)
+  {
+    final Interval interval = new Interval(intervalObj, ISOChronology.getInstanceUTC());
+    if (NullHandling.sqlCompatible()) {
+      return range(
+          ColumnHolder.TIME_COLUMN_NAME,
+          ColumnType.LONG,
+          interval.getStartMillis(),
+          interval.getEndMillis(),
+          false,
+          true
+      );
+    }
+    return timeBound(intervalObj);
   }
 
   public static CascadeExtractionFn cascade(final ExtractionFn... fns)

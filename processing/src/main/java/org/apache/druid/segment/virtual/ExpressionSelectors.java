@@ -300,7 +300,7 @@ public class ExpressionSelectors
    */
   public static boolean canMapOverDictionary(
       final Expr.BindingAnalysis bindingAnalysis,
-      final ColumnCapabilities columnCapabilities
+      @Nullable final ColumnCapabilities columnCapabilities
   )
   {
     Preconditions.checkState(bindingAnalysis.getRequiredBindings().size() == 1, "requiredBindings.size == 1");

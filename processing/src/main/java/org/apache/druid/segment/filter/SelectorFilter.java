@@ -33,10 +33,10 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.NullValueIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.NullValueIndex;
+import org.apache.druid.segment.index.StringValueSetIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -108,7 +108,11 @@ public class SelectorFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
   {
-    return Filters.makeValueMatcher(factory, dimension, value);
+    return ColumnProcessors.makeProcessor(
+        dimension,
+        new StringConstantValueMatcherFactory(value),
+        factory
+    );
   }
 
   @Override

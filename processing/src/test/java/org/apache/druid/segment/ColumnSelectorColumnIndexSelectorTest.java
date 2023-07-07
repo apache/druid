@@ -22,14 +22,14 @@ package org.apache.druid.segment;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.DefaultBitmapResultFactory;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
-import org.apache.druid.segment.column.StringValueSetIndex;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.index.StringValueSetIndex;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -94,7 +94,6 @@ public class ColumnSelectorColumnIndexSelectorTest
                               .setDictionaryValuesUnique(true)
                               .setDictionaryValuesSorted(true)
                               .setHasBitmapIndexes(true)
-                              .setFilterable(true)
     ).anyTimes();
 
     EasyMock.replay(bitmapFactory, virtualColumns, index, indexSupplier, holder, stringColumn, nonStringHolder, someIndex, columnIndex, valueIndex, someBitmap);

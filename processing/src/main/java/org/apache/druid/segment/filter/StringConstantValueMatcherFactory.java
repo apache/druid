@@ -35,12 +35,12 @@ import javax.annotation.Nullable;
 /**
  * Creates {@link ValueMatcher} that match constants.
  */
-public class ConstantValueMatcherFactory implements ColumnProcessorFactory<ValueMatcher>
+public class StringConstantValueMatcherFactory implements ColumnProcessorFactory<ValueMatcher>
 {
   @Nullable
   private final String matchValue;
 
-  ConstantValueMatcherFactory(@Nullable String matchValue)
+  StringConstantValueMatcherFactory(@Nullable String matchValue)
   {
     this.matchValue = NullHandling.emptyToNullIfNeeded(matchValue);
   }
@@ -74,6 +74,12 @@ public class ConstantValueMatcherFactory implements ColumnProcessorFactory<Value
   public ValueMatcher makeLongProcessor(BaseLongColumnValueSelector selector)
   {
     return ValueMatchers.makeLongValueMatcher(selector, matchValue);
+  }
+
+  @Override
+  public ValueMatcher makeArrayProcessor(BaseObjectColumnValueSelector<?> selector)
+  {
+    return new PredicateValueMatcherFactory(new SelectorPredicateFactory(matchValue)).makeArrayProcessor(selector);
   }
 
   @Override

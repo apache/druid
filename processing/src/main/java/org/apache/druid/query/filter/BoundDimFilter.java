@@ -610,13 +610,14 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
     return Suppliers.memoize(doublePredicate);
   }
 
-  private static DruidLongPredicate makeLongPredicateFromBounds(
+  static DruidLongPredicate makeLongPredicateFromBounds(
       final boolean hasLowerLongBound,
       final boolean hasUpperLongBound,
       final boolean lowerStrict,
       final boolean upperStrict,
       final long lowerLongBound,
-      final long upperLongBound)
+      final long upperLongBound
+  )
   {
     if (hasLowerLongBound && hasUpperLongBound) {
       if (upperStrict && lowerStrict) {
@@ -645,13 +646,14 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
     }
   }
 
-  private static DruidDoublePredicate makeDoublePredicateFromBounds(
+  static DruidDoublePredicate makeDoublePredicateFromBounds(
       final boolean hasLowerDoubleBound,
       final boolean hasUpperDoubleBound,
       final boolean lowerStrict,
       final boolean upperStrict,
       final double lowerDoubleBound,
-      final double upperDoubleBound)
+      final double upperDoubleBound
+  )
   {
     if (hasLowerDoubleBound && hasUpperDoubleBound) {
       if (upperStrict && lowerStrict) {

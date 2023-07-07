@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.java.util.common.StringEncoding;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
@@ -94,6 +95,13 @@ public class HllSketchBuildColumnProcessorFactory implements ColumnProcessorFact
         sketch.get().update(selector.getLong());
       }
     };
+  }
+
+  @Override
+  public Consumer<Supplier<HllSketch>> makeArrayProcessor(BaseObjectColumnValueSelector<?> selector)
+  {
+    // todo (clint): pass in type info so we can convert these arrays to byte arrays
+    throw new UOE("HLL sketch does not support ARRAY inputs");
   }
 
   @Override

@@ -277,6 +277,12 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     }
 
     @Override
+    public Supplier<Object> makeArrayProcessor(BaseObjectColumnValueSelector<?> selector)
+    {
+      return selector::getObject;
+    }
+
+    @Override
     public Supplier<Object> makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
     {
       return selector::getObject;

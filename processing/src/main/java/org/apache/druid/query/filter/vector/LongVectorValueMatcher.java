@@ -19,9 +19,12 @@
 
 package org.apache.druid.query.filter.vector;
 
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
@@ -50,6 +53,22 @@ public class LongVectorValueMatcher implements VectorValueMatcherFactory
 
     final long matchValLong = matchVal;
 
+    return makeLongMatcher(matchValLong);
+  }
+
+  @Override
+  public VectorValueMatcher makeMatcher(Object value, ColumnType type)
+  {
+    ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(type), value);
+    ExprEval<?> cast = eval.castTo(ExpressionType.LONG);
+    if (cast.isNumericNull()) {
+      return makeNullValueMatcher(selector);
+    }
+    return makeLongMatcher(cast.asLong());
+  }
+
+  private BaseVectorValueMatcher makeLongMatcher(long matchValLong)
+  {
     return new BaseVectorValueMatcher(selector)
     {
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);

@@ -19,9 +19,16 @@
 
 package org.apache.druid.segment.column;
 
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.DruidPredicateIndex;
+import org.apache.druid.segment.index.LexicographicalRangeIndex;
+import org.apache.druid.segment.index.NumericRangeIndex;
+
 public interface ColumnConfig
 {
-  ColumnConfig DEFAULT = new ColumnConfig() {};
+  ColumnConfig DEFAULT = new ColumnConfig()
+  {
+  };
 
   ColumnConfig ALWAYS_USE_INDEXES = new ColumnConfig()
   {

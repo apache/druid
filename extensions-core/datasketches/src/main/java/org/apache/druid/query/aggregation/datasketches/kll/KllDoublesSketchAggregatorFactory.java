@@ -179,7 +179,7 @@ public class KllDoublesSketchAggregatorFactory extends KllSketchAggregatorFactor
               SingleValueDimensionVectorSelector selector
           )
           {
-            return new KllSketchNoOpBufferAggregator<KllDoublesSketch>(getEmptySketch());
+            return new KllSketchNoOpBufferAggregator<>(getEmptySketch());
           }
 
           @Override
@@ -188,7 +188,7 @@ public class KllDoublesSketchAggregatorFactory extends KllSketchAggregatorFactor
               MultiValueDimensionVectorSelector selector
           )
           {
-            return new KllSketchNoOpBufferAggregator<KllDoublesSketch>(getEmptySketch());
+            return new KllSketchNoOpBufferAggregator<>(getEmptySketch());
           }
 
           @Override
@@ -207,6 +207,19 @@ public class KllDoublesSketchAggregatorFactory extends KllSketchAggregatorFactor
           public VectorAggregator makeLongProcessor(ColumnCapabilities capabilities, VectorValueSelector selector)
           {
             return new KllDoublesSketchBuildVectorAggregator(selector, getK(), getMaxIntermediateSizeWithNulls());
+          }
+
+          @Override
+          public VectorAggregator makeArrayProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
+          {
+            // todo (clint): y tho? shouldn't this (and string inputs) be an error?
+            /*
+            throw new UOE(
+                "KLL Doubles sketch does not support[%s] inputs",
+                capabilities.toColumnType()
+            );
+             */
+            return new KllSketchNoOpBufferAggregator<>(getEmptySketch());
           }
 
           @Override

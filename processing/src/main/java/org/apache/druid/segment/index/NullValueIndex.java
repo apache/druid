@@ -17,28 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
-
-import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.segment.filter.Filters;
+package org.apache.druid.segment.index;
 
 /**
- * {@link SimpleBitmapColumnIndex} for anything which can compute an {@link Iterable<ImmutableBitmap>} in some manner
+ * Provides index for all null rows in a column, to use with IS/IS NOT NULL filters
  */
-public abstract class SimpleImmutableBitmapIterableIndex extends SimpleBitmapColumnIndex
+public interface NullValueIndex
 {
-  @Override
-  public double estimateSelectivity(int totalRows)
-  {
-    return Filters.estimateSelectivity(getBitmapIterable().iterator(), totalRows);
-  }
-
-  @Override
-  public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
-  {
-    return bitmapResultFactory.unionDimensionValueBitmaps(getBitmapIterable());
-  }
-
-  protected abstract Iterable<ImmutableBitmap> getBitmapIterable();
+  BitmapColumnIndex forNull();
 }

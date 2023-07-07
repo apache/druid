@@ -76,6 +76,8 @@ public interface ColumnProcessorFactory<T>
    */
   T makeLongProcessor(BaseLongColumnValueSelector selector);
 
+  T makeArrayProcessor(BaseObjectColumnValueSelector<?> selector);
+
   /**
    * Create a processor for a complex column.
    *

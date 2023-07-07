@@ -175,7 +175,10 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   private static final List<AggregatorFactory> EXPECTED_FILTERED_AGGREGATORS =
       EXPECTED_PA_AGGREGATORS.stream()
                              .limit(5)
-                             .map(factory -> new FilteredAggregatorFactory(factory, selector("dim2", "a", null)))
+                             .map(factory -> new FilteredAggregatorFactory(
+                                 factory,
+                                 equality("dim2", "a", ColumnType.STRING)
+                             ))
                              .collect(Collectors.toList());
 
   /**
@@ -344,7 +347,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           new HllSketchBuildAggregatorFactory("a1", "dim2", null, null, null, null, ROUND),
                           new FilteredAggregatorFactory(
                               new HllSketchBuildAggregatorFactory("a2", "dim2", null, null, null, null, ROUND),
-                              BaseCalciteQueryTest.not(BaseCalciteQueryTest.selector("dim2", "", null))
+                              not(equality("dim2", "", null))
                           ),
                           new HllSketchBuildAggregatorFactory("a3", "v0", null, null, null, null, ROUND),
                           new HllSketchBuildAggregatorFactory("a4", "v1", null, null, null, null, ROUND),
@@ -436,7 +439,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                 new LongSumAggregatorFactory("_a0:sum", "a0"),
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a0:count"),
-                                    BaseCalciteQueryTest.not(BaseCalciteQueryTest.selector("a0", null, null))
+                                    notNull("a0")
                                 )
                             )
                         )
@@ -480,7 +483,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                 new HllSketchBuildAggregatorFactory("a0", "m1", null, null, null, true, true)
                             )
                         )
-                        .setHavingSpec(having(selector("a0", "2", null)))
+                        .setHavingSpec(having(equality("a0", 2L, ColumnType.LONG)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -895,7 +898,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setDimFilter(selector("dim2", "a", null))
+                        .setDimFilter(equality("dim2", "a", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
                         .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
@@ -911,7 +914,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         true
                                     ),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new HllSketchBuildAggregatorFactory(
@@ -923,7 +926,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         false,
                                         true
                                     ),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 )
                             )
                         )
@@ -954,7 +957,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
-                        .setDimFilter(selector("dim2", "a", null))
+                        .setDimFilter(equality("dim2", "a", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
                         .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
@@ -962,11 +965,11 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                             aggregators(
                                 new FilteredAggregatorFactory(
                                     new HllSketchBuildAggregatorFactory("a0", "v0", null, null, null, null, true),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
                                     new HllSketchBuildAggregatorFactory("a1", "v0", null, null, null, null, true),
-                                    selector("dim1", "nonexistent", null)
+                                    equality("dim1", "nonexistent", ColumnType.STRING)
                                 )
                             )
                         )

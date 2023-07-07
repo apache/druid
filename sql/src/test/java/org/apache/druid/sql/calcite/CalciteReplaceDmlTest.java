@@ -328,7 +328,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING))
-                .filters(selector("dim2", "a", null))
+                .filters(equality("dim2", "a", ColumnType.STRING))
                 .columns("v0")
                 .context(REPLACE_ALL_TIME_CHUNKS)
                 .build()

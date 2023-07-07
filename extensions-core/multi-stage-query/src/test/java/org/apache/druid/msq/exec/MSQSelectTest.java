@@ -375,7 +375,7 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Intervals.ETERNITY))
                            .columns("cnt", "dim1")
-                           .filters(selector("dim2", "nonexistent", null))
+                           .filters(equality("dim2", "nonexistent", ColumnType.STRING))
                            .context(defaultScanQueryContext(context, resultSignature))
                            .build()
                    )
@@ -406,7 +406,7 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Intervals.ETERNITY))
                            .columns("cnt", "dim1")
-                           .filters(selector("dim2", "nonexistent", null))
+                           .filters(equality("dim2", "nonexistent", ColumnType.STRING))
                            .context(defaultScanQueryContext(context, resultSignature))
                            .orderBy(ImmutableList.of(new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)))
                            .build()
@@ -704,7 +704,7 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                    )
                                    .setInterval(querySegmentSpec(Filtration.eternity()))
-                                   .setDimFilter(not(selector("j0.v", "xa", null)))
+                                   .setDimFilter(not(equality("j0.v", "xa", ColumnType.STRING)))
                                    .setGranularity(Granularities.ALL)
                                    .setDimensions(dimensions(new DefaultDimensionSpec("j0.v", "d0")))
                                    .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
@@ -885,7 +885,7 @@ public class MSQSelectTest extends MSQTestBase
                             new DoubleSumAggregatorFactory("a0:sum", "m2"),
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("a0:count"),
-                                not(selector("m2", null, null)),
+                                notNull("m2"),
 
                                 // Not sure why the name is only set in SQL-compatible null mode. Seems strange.
                                 // May be due to JSON serialization: name is set on the serialized aggregator even

@@ -153,6 +153,12 @@ public class JoinTestHelper
         }
 
         @Override
+        public Supplier<Object> makeArrayProcessor(BaseObjectColumnValueSelector<?> selector)
+        {
+          return selector::getObject;
+        }
+
+        @Override
         public Supplier<Object> makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
         {
           return selector::getObject;

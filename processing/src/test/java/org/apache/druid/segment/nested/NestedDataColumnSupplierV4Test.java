@@ -46,16 +46,16 @@ import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.DruidPredicateIndex;
-import org.apache.druid.segment.column.NullValueIndex;
-import org.apache.druid.segment.column.StringValueSetIndex;
 import org.apache.druid.segment.column.TypeStrategy;
+import org.apache.druid.segment.index.BitmapColumnIndex;
+import org.apache.druid.segment.index.DruidPredicateIndex;
+import org.apache.druid.segment.index.NullValueIndex;
+import org.apache.druid.segment.index.StringValueSetIndex;
 import org.apache.druid.segment.serde.ColumnPartSerde;
 import org.apache.druid.segment.serde.ComplexColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -229,7 +229,6 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     final ColumnHolder holder = bob.build();
     final ColumnCapabilities capabilities = holder.getCapabilities();
     Assert.assertEquals(ColumnType.NESTED_DATA, capabilities.toColumnType());
-    Assert.assertTrue(capabilities.isFilterable());
     Assert.assertTrue(holder.getColumnFormat() instanceof NestedDataComplexTypeSerde.NestedColumnFormatV4);
     try (NestedDataComplexColumn column = (NestedDataComplexColumn) holder.getColumn()) {
       smokeTest(column);

@@ -17,13 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.segment.column;
+package org.apache.druid.segment.index;
 
-import org.apache.druid.collections.spatial.ImmutableRTree;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
 
-/**
- */
-public interface SpatialIndex
+import java.nio.ByteBuffer;
+import java.util.SortedSet;
+
+public interface Utf8ValueSetIndex
 {
-  ImmutableRTree getRTree();
+  /**
+   * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the specified set of values (if they are
+   * contained in the underlying column). The set must be sorted using
+   * {@link org.apache.druid.java.util.common.ByteBufferUtils#utf8Comparator()}.
+   */
+  BitmapColumnIndex forSortedValuesUtf8(SortedSet<ByteBuffer> valuesUtf8);
 }

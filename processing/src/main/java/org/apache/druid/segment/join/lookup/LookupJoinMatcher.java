@@ -113,6 +113,12 @@ public class LookupJoinMatcher implements JoinMatcher
         }
 
         @Override
+        public Supplier<String> makeArrayProcessor(BaseObjectColumnValueSelector<?> selector)
+        {
+          throw new QueryUnsupportedException("Joining against a ARRAY columns is not supported.");
+        }
+
+        @Override
         public Supplier<String> makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)
         {
           return () -> null;
