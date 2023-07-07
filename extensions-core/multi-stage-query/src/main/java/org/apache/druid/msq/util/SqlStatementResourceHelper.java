@@ -61,6 +61,7 @@ import org.apache.druid.sql.calcite.run.SqlResults;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -232,6 +233,7 @@ public class SqlStatementResourceHelper
           pageList.add(new PageInformation(rows, size, counterSnapshots.getKey()));
         }
       }
+      Collections.sort(pageList, PageInformation.getIDComparator());
       return Optional.of(pageList);
     } else {
       return Optional.empty();

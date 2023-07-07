@@ -268,7 +268,7 @@ public class SqlStatementResource
       );
     }
     catch (Exception e) {
-      log.noStackTrace().warn(e, "Failed to handle query: %s", queryId);
+      log.warn(e, "Failed to handle query: %s", queryId);
       return buildNonOkResponse(DruidException.forPersona(DruidException.Persona.DEVELOPER)
                                               .ofCategory(DruidException.Category.UNCATEGORIZED)
                                               .build(e, "Failed to handle query: [%s]", queryId));
@@ -353,7 +353,7 @@ public class SqlStatementResource
       );
     }
     catch (Exception e) {
-      log.noStackTrace().warn(e, "Failed to handle query: %s", queryId);
+      log.warn(e, "Failed to handle query: %s", queryId);
       return buildNonOkResponse(DruidException.forPersona(DruidException.Persona.DEVELOPER)
                                               .ofCategory(DruidException.Category.UNCATEGORIZED)
                                               .build(e, "Failed to handle query: [%s]", queryId));
@@ -420,7 +420,7 @@ public class SqlStatementResource
       );
     }
     catch (Exception e) {
-      log.noStackTrace().warn(e, "Failed to handle query: %s", queryId);
+      log.warn(e, "Failed to handle query: %s", queryId);
       return buildNonOkResponse(DruidException.forPersona(DruidException.Persona.DEVELOPER)
                                               .ofCategory(DruidException.Category.UNCATEGORIZED)
                                               .build(e, "Failed to handle query: [%s]", queryId));
@@ -713,12 +713,13 @@ public class SqlStatementResource
           msqTaskReportPayload)).getStageDefinition();
 
       // get all results
-      final long selectedPage;
+      final Long selectedPage;
       if (page != null) {
         selectedPage = getPageInformationForPageId(pages, page).getId();
       } else {
-        selectedPage = Long.MIN_VALUE;
+        selectedPage = null;
       }
+      checkForDurableStorageConnectorImpl();
       final DurableStorageInputChannelFactory standardImplementation = DurableStorageInputChannelFactory.createStandardImplementation(
           msqControllerTask.getId(),
           storageConnector,
@@ -727,13 +728,13 @@ public class SqlStatementResource
       );
       results = Optional.of(Yielders.each(
           Sequences.concat(pages.stream()
-                                .filter(pageInformation -> pageInformation.getId() == selectedPage)
+                                .filter(pageInformation -> selectedPage == null || selectedPage.equals(page))
                                 .map(pageInformation -> {
                                   try {
                                     return new FrameChannelSequence(standardImplementation.openChannel(
                                         finalStage.getId(),
                                         (int) pageInformation.getId(),
-                                        0 // we would always have 0 partition on each worker
+                                        (int) pageInformation.getId()// we would always have partition number == worker number
                                     ));
                                   }
                                   catch (Exception e) {
@@ -859,19 +860,24 @@ public class SqlStatementResource
                           );
     }
 
-
     MSQSelectDestination selectDestination = MultiStageQueryContext.getSelectDestination(queryContext);
-    if (selectDestination == MSQSelectDestination.DURABLE_STORAGE
-        && storageConnector instanceof NilStorageConnector) {
+    if (selectDestination == MSQSelectDestination.DURABLE_STORAGE) {
+      checkForDurableStorageConnectorImpl();
+    }
+  }
+
+  private void checkForDurableStorageConnectorImpl()
+  {
+    if (storageConnector instanceof NilStorageConnector) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
                               StringUtils.format(
-                                  "The statement sql api only supports select destination [%s=%s]. "
+                                  "The statement sql api cannot read from select destination [%s=%s] since its not configured. "
                                   + "Its recommended to configure durable storage as it allows the user to fetch big results. "
                                   + "Please contact your cluster admin to configure durable storage.",
                                   MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                                  selectDestination.name()
+                                  MSQSelectDestination.DURABLE_STORAGE.name()
                               )
                           );
     }
