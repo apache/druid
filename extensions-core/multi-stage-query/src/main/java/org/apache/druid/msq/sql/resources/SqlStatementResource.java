@@ -545,9 +545,11 @@ public class SqlStatementResource
       );
 
       // getting the total number of rows, size from page information.
-      Long rows = 0L;
-      Long size = 0L;
+      Long rows = null;
+      Long size = null;
       if (pageList.isPresent()) {
+        rows = 0L;
+        size = 0L;
         for (PageInformation pageInformation : pageList.get()) {
           rows += pageInformation.getNumRows();
           size += pageInformation.getSizeInBytes();
