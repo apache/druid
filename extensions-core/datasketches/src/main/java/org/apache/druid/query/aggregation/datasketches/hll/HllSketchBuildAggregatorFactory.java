@@ -30,22 +30,25 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import java.nio.ByteBuffer;
 
 /**
  * This aggregator factory is for building sketches from raw data.
  * The input column can contain identifiers of type string, char[], byte[] or any numeric type.
  */
+@SuppressWarnings("NullableProblems")
 public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
 {
   public static final ColumnType TYPE = ColumnType.ofComplex(HllSketchModule.BUILD_TYPE_NAME);
@@ -80,16 +83,8 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnSelectorFactory)
   {
-    validateInputs(columnSelectorFactory.getColumnCapabilities(getFieldName()));
-
-    final Consumer<Supplier<HllSketch>> processor = ColumnProcessors.makeProcessor(
-        getFieldName(),
-        new HllSketchBuildColumnProcessorFactory(getStringEncoding()),
-        columnSelectorFactory
-    );
-
     return new HllSketchBuildAggregator(
-        processor,
+        formulateSketchUpdater(columnSelectorFactory),
         getLgK(),
         TgtHllType.valueOf(getTgtHllType())
     );
@@ -98,16 +93,8 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
-    validateInputs(columnSelectorFactory.getColumnCapabilities(getFieldName()));
-
-    final Consumer<Supplier<HllSketch>> processor = ColumnProcessors.makeProcessor(
-        getFieldName(),
-        new HllSketchBuildColumnProcessorFactory(getStringEncoding()),
-        columnSelectorFactory
-    );
-
     return new HllSketchBuildBufferAggregator(
-        processor,
+        formulateSketchUpdater(columnSelectorFactory),
         getLgK(),
         TgtHllType.valueOf(getTgtHllType()),
         getStringEncoding(),
@@ -175,4 +162,70 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
     }
   }
 
+  private HllSketchUpdater formulateSketchUpdater(ColumnSelectorFactory columnSelectorFactory)
+  {
+    final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(getFieldName());
+    if (capabilities == null) {
+      return sketch -> {};
+    }
+
+    validateInputs(capabilities);
+
+    HllSketchUpdater updater = null;
+    if (StringEncoding.UTF8.equals(getStringEncoding()) && ValueType.STRING.equals(capabilities.getType())) {
+      final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
+          DefaultDimensionSpec.of(getFieldName())
+      );
+
+      if (selector.supportsLookupNameUtf8()) {
+        updater = sketch -> {
+          final IndexedInts row = selector.getRow();
+          final int sz = row.size();
+
+          for (int i = 0; i < sz; i++) {
+            final ByteBuffer buf = selector.lookupNameUtf8(row.get(i));
+
+            if (buf != null) {
+              sketch.update(buf);
+            }
+          }
+        };
+      }
+    }
+
+    if (updater == null) {
+      @SuppressWarnings("unchecked")
+      final ColumnValueSelector<Object> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
+      switch (capabilities.getType()) {
+        case LONG:
+          updater = sketch -> {
+            if (!selector.isNull()) {
+              sketch.update(selector.getLong());
+            }
+          };
+          break;
+        case FLOAT:
+          updater = sketch -> {
+            if (!selector.isNull()) {
+              sketch.update(selector.getFloat());
+            }
+          };
+          break;
+        case DOUBLE:
+          updater = sketch -> {
+            if (!selector.isNull()) {
+              sketch.update(selector.getDouble());
+            }
+          };
+          break;
+        default:
+          updater = sketch -> {
+            if (!selector.isNull()) {
+              HllSketchBuildUtil.updateSketch(sketch, getStringEncoding(), selector.getObject());
+            }
+          };
+      }
+    }
+    return updater;
+  }
 }
