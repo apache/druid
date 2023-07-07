@@ -670,7 +670,7 @@ public class Expressions
         }
       }
 
-      if (plannerContext.isUseBoundsAndSelectors()) {
+      if (plannerContext.isUseBoundsAndSelectors() && rhs instanceof RexLiteral) {
         final String val;
         final RexLiteral rhsLiteral = (RexLiteral) rhs;
         if (SqlTypeName.NUMERIC_TYPES.contains(rhsLiteral.getTypeName())) {

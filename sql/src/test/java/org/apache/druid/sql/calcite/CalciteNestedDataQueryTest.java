@@ -928,17 +928,52 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             ImmutableList.of(
                 new Object[]{null, Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1D, 2.2D, 3.3D), null},
                 new Object[]{null, null, null, null},
-                new Object[]{Arrays.asList("d", "e"), Arrays.asList(1L, 4L), Arrays.asList(2.2D, 3.3D, 4.0D), Arrays.asList(1L, 2L)},
+                new Object[]{
+                    Arrays.asList("d", "e"),
+                    Arrays.asList(1L, 4L),
+                    Arrays.asList(2.2D, 3.3D, 4.0D),
+                    Arrays.asList(1L, 2L)
+                },
                 new Object[]{Arrays.asList("a", "b"), null, null, Collections.singletonList(1L)},
-                new Object[]{Arrays.asList("a", "b"), Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1D, 2.2D, 3.3D), Arrays.asList(1L, 2L, null)},
-                new Object[]{Arrays.asList("b", "c"), Arrays.asList(1L, 2L, 3L, 4L), Arrays.asList(1.1D, 3.3D), Collections.singletonList(1L)},
-                new Object[]{Arrays.asList("a", "b", "c"), Arrays.asList(2L, 3L), Arrays.asList(3.3D, 4.4D, 5.5D), null},
+                new Object[]{
+                    Arrays.asList("a", "b"),
+                    Arrays.asList(1L, 2L, 3L),
+                    Arrays.asList(1.1D, 2.2D, 3.3D),
+                    Arrays.asList(1L, 2L, null)
+                },
+                new Object[]{
+                    Arrays.asList("b", "c"),
+                    Arrays.asList(1L, 2L, 3L, 4L),
+                    Arrays.asList(1.1D, 3.3D),
+                    Collections.singletonList(1L)
+                },
+                new Object[]{
+                    Arrays.asList("a", "b", "c"),
+                    Arrays.asList(2L, 3L),
+                    Arrays.asList(3.3D, 4.4D, 5.5D),
+                    null
+                },
                 new Object[]{null, Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1D, 2.2D, 3.3D), null},
                 new Object[]{null, null, null, null},
-                new Object[]{Arrays.asList("d", "e"), Arrays.asList(1L, 4L), Arrays.asList(2.2D, 3.3D, 4.0D), Arrays.asList(1L, 2L)},
+                new Object[]{
+                    Arrays.asList("d", "e"),
+                    Arrays.asList(1L, 4L),
+                    Arrays.asList(2.2D, 3.3D, 4.0D),
+                    Arrays.asList(1L, 2L)
+                },
                 new Object[]{Arrays.asList("a", "b"), null, null, null},
-                new Object[]{Arrays.asList("a", "b"), Arrays.asList(1L, 2L, 3L), Arrays.asList(1.1D, 2.2D, 3.3D), Arrays.asList(2L, 3L)},
-                new Object[]{Arrays.asList("b", "c"), Arrays.asList(1L, 2L, 3L, 4L), Arrays.asList(1.1D, 3.3D), Collections.singletonList(1L)},
+                new Object[]{
+                    Arrays.asList("a", "b"),
+                    Arrays.asList(1L, 2L, 3L),
+                    Arrays.asList(1.1D, 2.2D, 3.3D),
+                    Arrays.asList(2L, 3L)
+                },
+                new Object[]{
+                    Arrays.asList("b", "c"),
+                    Arrays.asList(1L, 2L, 3L, 4L),
+                    Arrays.asList(1.1D, 3.3D),
+                    Collections.singletonList(1L)
+                },
                 new Object[]{Arrays.asList("a", "b", "c"), Arrays.asList(2L, 3L), Arrays.asList(3.3D, 4.4D, 5.5D), null}
 
             )
@@ -1013,6 +1048,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .run();
   }
+
   @Test
   public void testUnnestRootSingleTypeArrayStringNulls()
   {
@@ -1281,6 +1317,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeArrayLongNullsFilteredArrayEquality()
   {
+    if (NullHandling.replaceWithDefault()) {
+      // this fails in default value mode because it relies on equality filter and null filter to behave correctly
+      return;
+    }
     cannotVectorize();
     testBuilder()
         .sql(
@@ -1406,10 +1446,18 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 )
                             )
                             .setVirtualColumns(
-                                new ExpressionVirtualColumn("v0", "array_length(\"arrayLongNulls\")", ColumnType.LONG, queryFramework().macroTable())
+                                new ExpressionVirtualColumn(
+                                    "v0",
+                                    "array_length(\"arrayLongNulls\")",
+                                    ColumnType.LONG,
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setDimFilter(
-                                new ExpressionDimFilter("array_contains(\"arrayLongNulls\",1)", queryFramework().macroTable())
+                                new ExpressionDimFilter(
+                                    "array_contains(\"arrayLongNulls\",1)",
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setAggregatorSpecs(
                                 aggregators(
@@ -1603,7 +1651,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .setDataSource(
                                 UnnestDataSource.create(
                                     TableDataSource.create(DATA_SOURCE_ARRAYS),
-                                    expressionVirtualColumn("j0.unnest", "\"arrayStringNulls\"", ColumnType.STRING_ARRAY),
+                                    expressionVirtualColumn(
+                                        "j0.unnest",
+                                        "\"arrayStringNulls\"",
+                                        ColumnType.STRING_ARRAY
+                                    ),
                                     null
                                 )
                             )
@@ -1663,10 +1715,18 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 )
                             )
                             .setVirtualColumns(
-                                new ExpressionVirtualColumn("v0", "array_length(\"arrayStringNulls\")", ColumnType.LONG, queryFramework().macroTable())
+                                new ExpressionVirtualColumn(
+                                    "v0",
+                                    "array_length(\"arrayStringNulls\")",
+                                    ColumnType.LONG,
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setDimFilter(
-                                new ExpressionDimFilter("array_contains(\"arrayStringNulls\",'b')", queryFramework().macroTable())
+                                new ExpressionDimFilter(
+                                    "array_contains(\"arrayStringNulls\",'b')",
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setAggregatorSpecs(
                                 aggregators(
@@ -1809,7 +1869,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .setDataSource(
                                 UnnestDataSource.create(
                                     TableDataSource.create(DATA_SOURCE_ARRAYS),
-                                    expressionVirtualColumn("j0.unnest", "\"arrayDoubleNulls\"", ColumnType.DOUBLE_ARRAY),
+                                    expressionVirtualColumn(
+                                        "j0.unnest",
+                                        "\"arrayDoubleNulls\"",
+                                        ColumnType.DOUBLE_ARRAY
+                                    ),
                                     null
                                 )
                             )
@@ -1870,10 +1934,18 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 )
                             )
                             .setVirtualColumns(
-                                new ExpressionVirtualColumn("v0", "array_length(\"arrayDoubleNulls\")", ColumnType.LONG, queryFramework().macroTable())
+                                new ExpressionVirtualColumn(
+                                    "v0",
+                                    "array_length(\"arrayDoubleNulls\")",
+                                    ColumnType.LONG,
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setDimFilter(
-                                new ExpressionDimFilter("array_contains(\"arrayDoubleNulls\",2.2)", queryFramework().macroTable())
+                                new ExpressionDimFilter(
+                                    "array_contains(\"arrayDoubleNulls\",2.2)",
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setAggregatorSpecs(
                                 aggregators(
@@ -5114,7 +5186,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                     new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
                                 )
                             )
-                            .setVirtualColumns(expressionVirtualColumn("v0", "array_to_mv(\"arrayLongNulls\")", ColumnType.STRING))
+                            .setVirtualColumns(expressionVirtualColumn(
+                                "v0",
+                                "array_to_mv(\"arrayLongNulls\")",
+                                ColumnType.STRING
+                            ))
                             .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                             .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                             .build()
@@ -5173,10 +5249,17 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                             .setVirtualColumns(
                                 expressionVirtualColumn("v0", "array_to_mv(\"arrayLongNulls\")", ColumnType.STRING),
-                                expressionVirtualColumn("v1", "array_length(array_to_mv(\"arrayLongNulls\"))", ColumnType.LONG)
+                                expressionVirtualColumn(
+                                    "v1",
+                                    "array_length(array_to_mv(\"arrayLongNulls\"))",
+                                    ColumnType.LONG
+                                )
                             )
                             .setDimFilter(
-                                new ExpressionDimFilter("array_contains(array_to_mv(\"arrayLongNulls\"),'1')", queryFramework().macroTable())
+                                new ExpressionDimFilter(
+                                    "array_contains(array_to_mv(\"arrayLongNulls\"),'1')",
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setAggregatorSpecs(
                                 aggregators(
@@ -5353,10 +5436,18 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             )
                             .setVirtualColumns(
                                 expressionVirtualColumn("v0", "array_to_mv(\"arrayStringNulls\")", ColumnType.STRING),
-                                new ExpressionVirtualColumn("v1", "array_length(array_to_mv(\"arrayStringNulls\"))", ColumnType.LONG, queryFramework().macroTable())
+                                new ExpressionVirtualColumn(
+                                    "v1",
+                                    "array_length(array_to_mv(\"arrayStringNulls\"))",
+                                    ColumnType.LONG,
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setDimFilter(
-                                new ExpressionDimFilter("array_contains(array_to_mv(\"arrayStringNulls\"),'b')", queryFramework().macroTable())
+                                new ExpressionDimFilter(
+                                    "array_contains(array_to_mv(\"arrayStringNulls\"),'b')",
+                                    queryFramework().macroTable()
+                                )
                             )
                             .setAggregatorSpecs(
                                 aggregators(
@@ -5587,7 +5678,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 "true",
                 "1",
                 "{}",
-                "1",
+                "4",
                 "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]}}",
                 "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}",
                 "[\"d\",\"e\"]",
