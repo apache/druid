@@ -94,7 +94,7 @@ jobs:
           for v in broker router ${{ inputs.use_indexer }} historical coordinator overlord; do
             echo "/=======================druid-"$v"========================\";
             echo "|-----------------------docker logs-----------------------|";
-            sudo docker logs druid-"$v" | tail -1000 ||:;
+            sudo docker logs druid-"$v" 2>&1 | tail -1000 ||:;
             echo "|-----------------------service logs----------------------|";
-            sudo docker exec druid-"$v" tail -1000 /shared/logs/"$v".log ||:;
+            sudo docker exec druid-"$v" tail -1000 /shared/logs/"$v".log 2>&1 ||:;
           done
