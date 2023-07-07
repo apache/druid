@@ -211,13 +211,6 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
           @Override
           public VectorAggregator makeArrayProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
           {
-            /*
-            throw new UOE(
-                "Doubles sketch does not support[%s] inputs",
-                capabilities.toColumnType()
-            );
-             */
-            // todo (clint): y tho? shouldn't this (and string inputs) be an error?
             return new NoopDoublesSketchBufferAggregator();
           }
 

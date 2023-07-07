@@ -53,6 +53,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -153,7 +154,10 @@ public class JoinTestHelper
         }
 
         @Override
-        public Supplier<Object> makeArrayProcessor(BaseObjectColumnValueSelector<?> selector)
+        public Supplier<Object> makeArrayProcessor(
+            BaseObjectColumnValueSelector<?> selector,
+            ColumnCapabilities columnCapabilities
+        )
         {
           return selector::getObject;
         }

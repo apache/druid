@@ -287,7 +287,10 @@ public class ColumnProcessors
       case DOUBLE:
         return processorFactory.makeDoubleProcessor(valueSelectorFunction.apply(selectorFactory));
       case ARRAY:
-        return processorFactory.makeArrayProcessor(valueSelectorFunction.apply(selectorFactory));
+        return processorFactory.makeArrayProcessor(
+            valueSelectorFunction.apply(selectorFactory),
+            capabilities != null ? capabilities : ColumnCapabilitiesImpl.createDefault().setType(effectiveType)
+        );
       case COMPLEX:
         return processorFactory.makeComplexProcessor(valueSelectorFunction.apply(selectorFactory));
       default:

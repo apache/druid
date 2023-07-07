@@ -926,7 +926,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           Throwable.class,
           () -> assertFilterMatches(filter, expectedRows, testVectorized)
       );
-      // todo (clint): maybe better?
       Assert.assertTrue(t.getMessage().contains("ARRAY"));
     } else {
       assertFilterMatches(filter, expectedRows, testVectorized);

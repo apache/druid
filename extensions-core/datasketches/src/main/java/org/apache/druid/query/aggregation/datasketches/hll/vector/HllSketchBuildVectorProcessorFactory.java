@@ -19,14 +19,21 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll.vector;
 
+import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.java.util.common.StringEncoding;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildBufferAggregatorHelper;
 import org.apache.druid.segment.VectorColumnProcessorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
+
+import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
 public class HllSketchBuildVectorProcessorFactory implements VectorColumnProcessorFactory<HllSketchBuildVectorProcessor>
 {
@@ -89,7 +96,41 @@ public class HllSketchBuildVectorProcessorFactory implements VectorColumnProcess
       VectorObjectSelector selector
   )
   {
-    return null;
+    final ExpressionType expressionType = ExpressionType.fromColumnType(capabilities);
+    final NullableTypeStrategy<Object> typeStrategy = expressionType.getNullableStrategy();
+    return new HllSketchBuildVectorProcessor()
+    {
+      @Override
+      public void aggregate(ByteBuffer buf, int position, int startRow, int endRow)
+      {
+        final Object[] vector = selector.getObjectVector();
+        final HllSketch sketch = helper.getSketchAtPosition(buf, position);
+
+        for (int i = startRow; i < endRow; i++) {
+          if (vector[i] != null) {
+            byte[] bytes = ExprEval.toBytes(expressionType, typeStrategy, vector[i]);
+            sketch.update(bytes);
+          }
+        }
+      }
+
+      @Override
+      public void aggregate(ByteBuffer buf, int numRows, int[] positions, @Nullable int[] rows, int positionOffset)
+      {
+        final Object[] vector = selector.getObjectVector();
+
+        for (int i = 0; i < numRows; i++) {
+          final int idx = rows != null ? rows[i] : i;
+          final int position = positions[i] + positionOffset;
+          final HllSketch sketch = helper.getSketchAtPosition(buf, position);
+
+          if (vector[idx] != null) {
+            byte[] bytes = ExprEval.toBytes(expressionType, typeStrategy, vector[idx]);
+            sketch.update(bytes);
+          }
+        }
+      }
+    };
   }
 
   @Override

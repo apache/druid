@@ -52,6 +52,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
@@ -277,7 +278,10 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     }
 
     @Override
-    public Supplier<Object> makeArrayProcessor(BaseObjectColumnValueSelector<?> selector)
+    public Supplier<Object> makeArrayProcessor(
+        BaseObjectColumnValueSelector<?> selector,
+        ColumnCapabilities columnCapabilities
+    )
     {
       return selector::getObject;
     }

@@ -28,6 +28,7 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
@@ -77,9 +78,15 @@ public class StringConstantValueMatcherFactory implements ColumnProcessorFactory
   }
 
   @Override
-  public ValueMatcher makeArrayProcessor(BaseObjectColumnValueSelector<?> selector)
+  public ValueMatcher makeArrayProcessor(
+      BaseObjectColumnValueSelector<?> selector,
+      ColumnCapabilities columnCapabilities
+  )
   {
-    return new PredicateValueMatcherFactory(new SelectorPredicateFactory(matchValue)).makeArrayProcessor(selector);
+    // this is gonna fail because SelectorPredicateFactory does not implement array predicate...
+    return new PredicateValueMatcherFactory(
+        new SelectorPredicateFactory(matchValue)
+    ).makeArrayProcessor(selector, columnCapabilities);
   }
 
   @Override

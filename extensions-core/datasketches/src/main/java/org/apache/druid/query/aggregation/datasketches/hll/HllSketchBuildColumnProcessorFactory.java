@@ -21,14 +21,17 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.java.util.common.StringEncoding;
-import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.data.IndexedInts;
 
 import java.util.function.Consumer;
@@ -98,11 +101,23 @@ public class HllSketchBuildColumnProcessorFactory implements ColumnProcessorFact
   }
 
   @Override
-  public Consumer<Supplier<HllSketch>> makeArrayProcessor(BaseObjectColumnValueSelector<?> selector)
+  public Consumer<Supplier<HllSketch>> makeArrayProcessor(
+      BaseObjectColumnValueSelector<?> selector,
+      ColumnCapabilities columnCapabilities
+  )
   {
-    // todo (clint): pass in type info so we can convert these arrays to byte arrays
-    throw new UOE("HLL sketch does not support ARRAY inputs");
+    final ExpressionType expressionType = ExpressionType.fromColumnType(columnCapabilities);
+    final NullableTypeStrategy<Object> strategy = expressionType.getNullableStrategy();
+    return sketch -> {
+      final Object o = selector.getObject();
+      if (o != null) {
+        byte[] bytes = ExprEval.toBytes(expressionType, strategy, o);
+        sketch.get().update(bytes);
+      }
+    };
   }
+
+
 
   @Override
   public Consumer<Supplier<HllSketch>> makeComplexProcessor(BaseObjectColumnValueSelector<?> selector)

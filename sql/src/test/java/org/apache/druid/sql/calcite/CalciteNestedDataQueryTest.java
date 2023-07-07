@@ -2653,8 +2653,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            // todo (clint): this is a bit wonky, we get extra matches for numeric 1 matcher because the virtual column
-            //  is defined as long typed, which makes a long processor which will convert the 1.1 to a 1L
+            // this is a bit wonky, we get extra matches for numeric 1 matcher because the virtual column is defined
+            // as long typed, which makes a long processor which will convert the 1.1 to a 1L
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
         ),
@@ -2699,8 +2699,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            // todo (clint): this is a bit wonky, we get 2 matches for numeric 1 matcher because the virtual column
-            //  is defined as long typed, which makes a long processor which will convert the 1.1 to a 1L
+            // this is a bit wonky, we get 2 matches for numeric 1 matcher because the virtual column is defined as
+            // long typed, which makes a long processor which will convert the 1.1 to a 1L
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
         ),

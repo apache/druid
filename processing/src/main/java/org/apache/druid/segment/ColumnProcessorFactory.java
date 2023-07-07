@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 
 /**
@@ -76,7 +77,7 @@ public interface ColumnProcessorFactory<T>
    */
   T makeLongProcessor(BaseLongColumnValueSelector selector);
 
-  T makeArrayProcessor(BaseObjectColumnValueSelector<?> selector);
+  T makeArrayProcessor(BaseObjectColumnValueSelector<?> selector, ColumnCapabilities columnCapabilities);
 
   /**
    * Create a processor for a complex column.

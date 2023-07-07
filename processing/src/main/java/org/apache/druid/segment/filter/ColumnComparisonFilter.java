@@ -35,6 +35,7 @@ import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.index.BitmapColumnIndex;
@@ -235,7 +236,10 @@ public class ColumnComparisonFilter implements Filter
     }
 
     @Override
-    public Supplier<String[]> makeArrayProcessor(BaseObjectColumnValueSelector<?> selector)
+    public Supplier<String[]> makeArrayProcessor(
+        BaseObjectColumnValueSelector<?> selector,
+        ColumnCapabilities columnCapabilities
+    )
     {
       return () -> {
         final Object o = selector.getObject();

@@ -212,13 +212,6 @@ public class KllDoublesSketchAggregatorFactory extends KllSketchAggregatorFactor
           @Override
           public VectorAggregator makeArrayProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
           {
-            // todo (clint): y tho? shouldn't this (and string inputs) be an error?
-            /*
-            throw new UOE(
-                "KLL Doubles sketch does not support[%s] inputs",
-                capabilities.toColumnType()
-            );
-             */
             return new KllSketchNoOpBufferAggregator<>(getEmptySketch());
           }
 

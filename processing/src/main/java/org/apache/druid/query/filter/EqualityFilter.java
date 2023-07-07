@@ -217,7 +217,6 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       return null;
     }
     RangeSet<String> retSet = TreeRangeSet.create();
-    // todo (clint): this is lame.. but matches how range partitioning currently works i think
     retSet.add(Range.singleton(String.valueOf(matchValue)));
     return retSet;
   }
@@ -234,8 +233,6 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     if (indexSupplier == null) {
       return Filters.makeNullIndex(false, selector);
     }
-
-    // todo (clint): do it for reals, i think we can do better than string value set ...
 
     final StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
     if (valueSetIndex == null) {
@@ -519,11 +516,14 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     }
 
     @Override
-    public ValueMatcher makeArrayProcessor(BaseObjectColumnValueSelector<?> selector)
+    public ValueMatcher makeArrayProcessor(
+        BaseObjectColumnValueSelector<?> selector,
+        ColumnCapabilities columnCapabilities
+    )
     {
       return new PredicateValueMatcherFactory(
           new EqualityPredicateFactory(matchValue.valueOrDefault(), matchValueType)
-      ).makeArrayProcessor(selector);
+      ).makeArrayProcessor(selector, columnCapabilities);
     }
 
     @Override

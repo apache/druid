@@ -48,6 +48,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleDescendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -492,7 +493,10 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     }
 
     @Override
-    public ConditionMatcher makeArrayProcessor(BaseObjectColumnValueSelector<?> selector)
+    public ConditionMatcher makeArrayProcessor(
+        BaseObjectColumnValueSelector<?> selector,
+        ColumnCapabilities columnCapabilities
+    )
     {
       return () -> {
         throw new QueryUnsupportedException("Joining against ARRAY columns is not supported.");

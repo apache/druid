@@ -142,6 +142,16 @@ public abstract class ExprEval<T>
     }
   }
 
+  public static byte[] toBytes(ExpressionType expressionType, NullableTypeStrategy<Object> strategy, Object o)
+  {
+    // convert the array to byte[] form so that we take a hash of the whole array
+    final ExprEval<?> eval = ExprEval.ofType(expressionType, o);
+    final int size = strategy.estimateSizeBytes(eval.valueOrDefault());
+    final ByteBuffer buffer = ByteBuffer.allocate(size);
+    strategy.write(buffer, eval.valueOrDefault(), size);
+    return buffer.array();
+  }
+
   /**
    * Converts a List to an appropriate array type, optionally doing some conversion to make multi-valued strings
    * consistent across selector types, which are not consistent in treatment of null, [], and [null].

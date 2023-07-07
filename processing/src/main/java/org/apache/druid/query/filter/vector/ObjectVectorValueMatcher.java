@@ -56,7 +56,6 @@ public class ObjectVectorValueMatcher implements VectorValueMatcherFactory
   @Override
   public VectorValueMatcher makeMatcher(Object value, ColumnType type)
   {
-    // todo (clint): something cooler...
     return BooleanVectorValueMatcher.of(selector, value == null);
   }
 

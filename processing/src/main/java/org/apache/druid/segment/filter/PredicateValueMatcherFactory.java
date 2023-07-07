@@ -36,6 +36,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 
 import java.util.List;
@@ -85,7 +86,10 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
   }
 
   @Override
-  public ValueMatcher makeArrayProcessor(BaseObjectColumnValueSelector<?> selector)
+  public ValueMatcher makeArrayProcessor(
+      BaseObjectColumnValueSelector<?> selector,
+      ColumnCapabilities columnCapabilities
+  )
   {
     if (selector instanceof NilColumnValueSelector) {
       // Column does not exist, or is unfilterable. Treat it as all nulls.
@@ -103,7 +107,7 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
             return predicate.apply((Object[]) o);
           }
           if (o instanceof List) {
-            ExprEval oEval = ExprEval.bestEffortArray((List<?>) o);
+            ExprEval<?> oEval = ExprEval.bestEffortArray((List<?>) o);
             return predicate.apply(oEval.asArray());
           }
           // upcast non-array to a single element array to behave consistently with expressions.. idk if this is cool
