@@ -1,12 +1,9 @@
 package org.apache.druid.storage.remote;
 
-import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import org.apache.commons.io.input.NullInputStream;
 import org.apache.druid.data.input.impl.RetryingInputStream;
-import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -22,7 +19,6 @@ import java.util.Enumeration;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Supplier;
 
 public abstract class ChunkingStorageConnector<T> implements StorageConnector
 {
@@ -40,19 +36,19 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
   }
 
   @Override
-  public InputStream readRange(String path, long from, long size) throws IOException
+  public InputStream readRange(String path, long from, long size)
   {
     return buildInputStream(buildInputParams(path, from, size));
   }
 
-  public abstract BuildInputStreamParams<T> buildInputParams(String path);
+  public abstract ChunkingStorageConnectorParameters<T> buildInputParams(String path);
 
-  public abstract BuildInputStreamParams<T> buildInputParams(String path, long from, long size);
+  public abstract ChunkingStorageConnectorParameters<T> buildInputParams(String path, long from, long size);
 
-  private InputStream buildInputStream(BuildInputStreamParams<T> params)
+  private InputStream buildInputStream(ChunkingStorageConnectorParameters<T> params)
   {
-    AtomicLong currentReadStartPosition = new AtomicLong(params.start);
-    long readEnd = params.end;
+    AtomicLong currentReadStartPosition = new AtomicLong(params.getStart());
+    long readEnd = params.getEnd();
 
     AtomicBoolean isSequenceStreamClosed = new AtomicBoolean(false);
 
@@ -84,7 +80,7 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
             }
 
             File outFile = new File(
-                params.tempDirSupplier.get().getAbsolutePath(),
+                params.getTempDirSupplier().get().getAbsolutePath(),
                 UUID.randomUUID().toString()
             );
 
@@ -100,17 +96,17 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
                     StringUtils.format(
                         "Could not create temporary file [%s] for copying [%s]",
                         outFile.getAbsolutePath(),
-                        params.cloudStoragePath
+                        params.getCloudStoragePath()
                     )
                 );
               }
 
               FileUtils.copyLarge(
-                  () -> new RetryingInputStream<T>(
-                      params.objectSupplier.getObject(currentReadStartPosition.get(), currentReadEndPosition),
-                      params.objectOpenFunction,
-                      params.retryCondition,
-                      params.maxRetry
+                  () -> new RetryingInputStream<>(
+                      params.getObjectSupplier().getObject(currentReadStartPosition.get(), currentReadEndPosition),
+                      params.getObjectOpenFunction(),
+                      params.getRetryCondition(),
+                      params.getMaxRetry()
                   ),
                   outFile,
                   new byte[8 * 1024],
@@ -118,13 +114,13 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
                   1,
                   StringUtils.format(
                       "Retrying copying of [%s] to [%s]",
-                      params.cloudStoragePath,
+                      params.getCloudStoragePath(),
                       outFile.getAbsolutePath()
                   )
               );
             }
             catch (IOException e) {
-              throw new RE(e, StringUtils.format("Unable to copy [%s] to [%s]", params.cloudStoragePath, outFile));
+              throw new RE(e, StringUtils.format("Unable to copy [%s] to [%s]", params.getCloudStoragePath(), outFile));
             }
 
             try {
@@ -163,19 +159,6 @@ public abstract class ChunkingStorageConnector<T> implements StorageConnector
         super.close();
       }
     };
-  }
-
-  // Start inclusive, end exclusive
-  public static class BuildInputStreamParams<T>
-  {
-    public long start;
-    public long end;
-    public String cloudStoragePath;
-    public GetObjectFromRangeFunction<T> objectSupplier;
-    public ObjectOpenFunction<T> objectOpenFunction;
-    public Predicate<Throwable> retryCondition;
-    public int maxRetry;
-    public Supplier<File> tempDirSupplier;
   }
 
   public interface GetObjectFromRangeFunction<T>
