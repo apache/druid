@@ -170,7 +170,6 @@ public class SqlStatementResource
       isDebug = queryContext.isDebug();
       contextChecks(queryContext);
 
-
       Thread.currentThread().setName(StringUtils.format("statement_sql[%s]", sqlQueryId));
 
       final DirectStatement.ResultSet plan = stmt.plan();

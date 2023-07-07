@@ -336,6 +336,9 @@ public class SqlStatementResourceTest extends MSQTestBase
   @Mock
   private OverlordClient overlordClient;
 
+  final ObjectMapper mapper = TestHelper.makeJsonMapper()
+                                        .registerModules(new MSQIndexingModule().getJacksonModules());
+
   private void setupMocks(OverlordClient indexingServiceClient) throws JsonProcessingException
   {
 
@@ -402,10 +405,6 @@ public class SqlStatementResourceTest extends MSQTestBase
                FINISHED_SELECT_MSQ_QUERY,
                MSQ_CONTROLLER_SELECT_PAYLOAD
            )));
-
-
-    final ObjectMapper mapper = TestHelper.makeJsonMapper()
-                                          .registerModules(new MSQIndexingModule().getJacksonModules());
 
 
     Mockito.when(indexingServiceClient.taskReportAsMap(FINISHED_SELECT_MSQ_QUERY))
