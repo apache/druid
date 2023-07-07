@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
+import { Button, Classes, Code, Dialog, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
@@ -32,18 +32,21 @@ interface CompactionDynamicConfig {
   maxCompactionTaskSlots: number;
 }
 
+const DEFAULT_RATIO = 0.1;
+const DEFAULT_MAX = 2147483647;
 const COMPACTION_DYNAMIC_CONFIG_FIELDS: Field<CompactionDynamicConfig>[] = [
   {
     name: 'compactionTaskSlotRatio',
     type: 'ratio',
-    defaultValue: 0.1,
+    defaultValue: DEFAULT_RATIO,
     info: <>The ratio of the total task slots to the compaction task slots.</>,
   },
   {
     name: 'maxCompactionTaskSlots',
     type: 'number',
-    defaultValue: 2147483647,
+    defaultValue: DEFAULT_MAX,
     info: <>The maximum number of task slots for compaction tasks</>,
+    min: 1,
   },
 ];
 
@@ -65,8 +68,8 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
       try {
         const c = (await Api.instance.get('/druid/coordinator/v1/config/compaction')).data;
         setDynamicConfig({
-          compactionTaskSlotRatio: c.compactionTaskSlotRatio ?? 0.1,
-          maxCompactionTaskSlots: c.maxCompactionTaskSlots ?? 2147483647,
+          compactionTaskSlotRatio: c.compactionTaskSlotRatio ?? DEFAULT_RATIO,
+          maxCompactionTaskSlots: c.maxCompactionTaskSlots ?? DEFAULT_MAX,
         });
       } catch (e) {
         AppToaster.show({
@@ -85,7 +88,9 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
     try {
       // This API is terrible. https://druid.apache.org/docs/latest/operations/api-reference.html#automatic-compaction-configuration
       await Api.instance.post(
-        `/druid/coordinator/v1/config/compaction/taskslots?ratio=${dynamicConfig.compactionTaskSlotRatio}&max=${dynamicConfig.maxCompactionTaskSlots}`,
+        `/druid/coordinator/v1/config/compaction/taskslots?ratio=${
+          dynamicConfig.compactionTaskSlotRatio ?? DEFAULT_RATIO
+        }&max=${dynamicConfig.maxCompactionTaskSlots ?? DEFAULT_MAX}`,
         {},
       );
     } catch (e) {
@@ -125,6 +130,15 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
               </ExternalLink>
               .
             </p>
+            <p>
+              The maximum number of task slots used for compaction will be{' '}
+              <Code>{`clamp(floor(${
+                dynamicConfig.compactionTaskSlotRatio ?? DEFAULT_RATIO
+              } * total_task_slots), 1, ${
+                dynamicConfig.maxCompactionTaskSlots ?? DEFAULT_MAX
+              })`}</Code>
+              .
+            </p>
             <AutoForm
               fields={COMPACTION_DYNAMIC_CONFIG_FIELDS}
               model={dynamicConfig}
@@ -135,7 +149,7 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
             <div className={Classes.DIALOG_FOOTER_ACTIONS}>
               <Button
                 text="Save"
-                onClick={saveConfig}
+                onClick={() => void saveConfig()}
                 intent={Intent.PRIMARY}
                 rightIcon={IconNames.TICK}
               />

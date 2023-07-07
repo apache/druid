@@ -83,6 +83,11 @@ export interface Field<M> {
   }) => JSX.Element;
 }
 
+function toNumberOrUndefined(n: unknown): number | undefined {
+  const r = Number(n);
+  return isNaN(r) ? undefined : r;
+}
+
 interface ComputedFieldValues {
   required: boolean;
   defaultValue?: any;
@@ -137,7 +142,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   ): R {
     if (!model || functor == null) return defaultValue;
     if (typeof functor === 'function') {
-      return (functor as any)(model);
+      return (functor as any)(model) ?? defaultValue;
     } else {
       return functor;
     }
@@ -252,8 +257,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
     return (
       <FancyNumericInput
-        value={Number(modelValue)}
-        defaultValue={Number(defaultValue)}
+        value={toNumberOrUndefined(modelValue)}
+        defaultValue={toNumberOrUndefined(defaultValue)}
         onValueChange={valueAsNumber => {
           this.fieldChange(
             field,
@@ -283,8 +288,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
     return (
       <FancyNumericInput
-        value={Number(modelValue)}
-        defaultValue={Number(defaultValue)}
+        value={toNumberOrUndefined(modelValue)}
+        defaultValue={toNumberOrUndefined(defaultValue)}
         onValueChange={valueAsNumber => {
           this.fieldChange(
             field,

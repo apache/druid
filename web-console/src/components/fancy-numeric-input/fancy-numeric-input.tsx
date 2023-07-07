@@ -48,7 +48,8 @@ function evaluateSqlSimple(sql: SqlExpression): number | undefined {
   }
 }
 
-function numberToShown(n: number): string {
+function numberToShown(n: number | undefined): string {
+  if (typeof n === 'undefined') return '';
   return String(n);
 }
 
@@ -69,8 +70,8 @@ export interface FancyNumericInputProps {
   placeholder?: string;
   onBlur?: InputGroupProps2['onBlur'];
 
-  value: number;
-  defaultValue: number;
+  value: number | undefined;
+  defaultValue?: number;
   onValueChange(value: number): void;
 
   min?: number;
@@ -130,8 +131,8 @@ export const FancyNumericInput = React.memo(function FancyNumericInput(
   );
 
   const effectiveDisabled = disabled || readOnly;
-  const isIncrementDisabled = max !== undefined && +value >= max;
-  const isDecrementDisabled = min !== undefined && +value <= min;
+  const isIncrementDisabled = max !== undefined && value !== undefined && +value >= max;
+  const isDecrementDisabled = min !== undefined && value !== undefined && +value <= min;
 
   function changeValue(newValue: number): void {
     onValueChange(roundAndClamp(newValue));
