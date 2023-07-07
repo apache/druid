@@ -28,7 +28,7 @@ COPY ./target/apache-druid-${VERSION}-bin.tar.gz .
 RUN tar -zxf /src/apache-druid-${VERSION}-bin.tar.gz -C /opt \
  && ln -s /opt/apache-druid-${VERSION} /opt/druid
 
-FROM busybox:1.35.0-glibc as busybox
+FROM busybox:1.34.1-glibc as busybox
 
 FROM gcr.io/distroless/java$JDK_VERSION-debian11
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
