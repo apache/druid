@@ -713,11 +713,11 @@ public class SqlStatementResource
           msqTaskReportPayload)).getStageDefinition();
 
       // get all results
-      final Long selectedPage;
+      final Long selectedPageId;
       if (page != null) {
-        selectedPage = getPageInformationForPageId(pages, page).getId();
+        selectedPageId = getPageInformationForPageId(pages, page).getId();
       } else {
-        selectedPage = null;
+        selectedPageId = null;
       }
       checkForDurableStorageConnectorImpl();
       final DurableStorageInputChannelFactory standardImplementation = DurableStorageInputChannelFactory.createStandardImplementation(
@@ -728,7 +728,8 @@ public class SqlStatementResource
       );
       results = Optional.of(Yielders.each(
           Sequences.concat(pages.stream()
-                                .filter(pageInformation -> selectedPage == null || selectedPage.equals(page))
+                                .filter(pageInformation -> selectedPageId == null
+                                                           || selectedPageId.equals(pageInformation.getId()))
                                 .map(pageInformation -> {
                                   try {
                                     return new FrameChannelSequence(standardImplementation.openChannel(
