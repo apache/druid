@@ -182,10 +182,8 @@ public class DurableStorageTaskOutputChannelFactory
                  storageConnector.readRange(fileName, channelSize - footerLength, footerLength)) {
           IOUtils.copy(footerInputStream, footerFileStream);
         }
-        Memory footerMemory;
-        try (MappedByteBufferHandler mapHandle = FileUtils.map(footerFile)) {
-          footerMemory = Memory.wrap(mapHandle.get(), ByteOrder.LITTLE_ENDIAN);
-        }
+        MappedByteBufferHandler mapHandle = FileUtils.map(footerFile);
+        Memory footerMemory = Memory.wrap(mapHandle.get(), ByteOrder.LITTLE_ENDIAN);
 
         // create a frame file footer from the mapper memory
         return new FrameFileFooter(footerMemory, channelSize);
