@@ -17,44 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.indexing.destination;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonCreator;
 
-import javax.validation.constraints.Min;
-
-public class DurableStorageCleanerConfig
+public class DurableStorageMSQDestination implements MSQDestination
 {
+  public static final String TYPE = "durableStorage";
 
-  /**
-   * Whether the {@link DurableStorageCleaner} helper should be enabled or not
-   */
-  @JsonProperty
-  public boolean enabled = false;
+  public static final DurableStorageMSQDestination INSTANCE = new DurableStorageMSQDestination();
 
-  /**
-   * The delay (in seconds) after the last run post which the durable storage cleaner would clean the outputs
-   */
-  @JsonProperty
-  @Min(1)
-  public long delaySeconds = 86400L;
 
-  public boolean isEnabled()
+  private DurableStorageMSQDestination()
   {
-    return enabled;
+    // Singleton.
   }
 
-  public long getDelaySeconds()
+  @JsonCreator
+  public static DurableStorageMSQDestination instance()
   {
-    return delaySeconds;
+    return INSTANCE;
   }
 
   @Override
   public String toString()
   {
-    return "DurableStorageCleanerConfig{" +
-           "enabled=" + enabled +
-           ", delaySeconds=" + delaySeconds +
-           '}';
+    return "DurableStorageDestination{}";
   }
+
 }

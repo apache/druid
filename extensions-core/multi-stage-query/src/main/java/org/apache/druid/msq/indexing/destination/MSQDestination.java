@@ -17,29 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.indexing.destination;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-public class TaskReportMSQDestination implements MSQDestination
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = DataSourceMSQDestination.TYPE, value = DataSourceMSQDestination.class),
+    @JsonSubTypes.Type(name = TaskReportMSQDestination.TYPE, value = TaskReportMSQDestination.class),
+    @JsonSubTypes.Type(name = DurableStorageMSQDestination.TYPE, value = DurableStorageMSQDestination.class)
+})
+public interface MSQDestination
 {
-  public static final TaskReportMSQDestination INSTANCE = new TaskReportMSQDestination();
-  static final String TYPE = "taskReport";
-
-  private TaskReportMSQDestination()
-  {
-    // Singleton.
-  }
-
-  @JsonCreator
-  public static TaskReportMSQDestination instance()
-  {
-    return INSTANCE;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "TaskReportMSQDestination{}";
-  }
+  // No methods. Just a marker interface for deserialization.
 }

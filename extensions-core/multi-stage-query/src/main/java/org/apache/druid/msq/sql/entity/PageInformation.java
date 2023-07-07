@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
+import java.util.Comparator;
 import java.util.Objects;
 
 /**
@@ -99,5 +100,19 @@ public class PageInformation
            ", sizeInBytes=" + sizeInBytes +
            ", id=" + id +
            '}';
+  }
+
+  public static Comparator<PageInformation> getIDComparator()
+  {
+    return new PageComparator();
+  }
+
+  public static class PageComparator implements Comparator<PageInformation>
+  {
+    @Override
+    public int compare(PageInformation s1, PageInformation s2)
+    {
+      return Long.compare(s1.getId(), s2.getId());
+    }
   }
 }

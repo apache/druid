@@ -17,17 +17,31 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.indexing.destination;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = DataSourceMSQDestination.TYPE, value = DataSourceMSQDestination.class),
-    @JsonSubTypes.Type(name = TaskReportMSQDestination.TYPE, value = TaskReportMSQDestination.class)
-})
-public interface MSQDestination
+/**
+ * Determines the destination for results of select queries.
+ */
+public enum MSQSelectDestination
 {
-  // No methods. Just a marker interface for deserialization.
+  /**
+   * Writes all the results directly to the report.
+   */
+  TASK_REPORT(false),
+  /**
+   * Writes the results as frame files to durable storage. Task report can be truncated to a preview.
+   */
+  DURABLE_STORAGE(true);
+
+  private final boolean shouldTruncateResultsInTaskReport;
+
+  public boolean shouldTruncateResultsInTaskReport()
+  {
+    return shouldTruncateResultsInTaskReport;
+  }
+
+  MSQSelectDestination(boolean shouldTruncateResultsInTaskReport)
+  {
+    this.shouldTruncateResultsInTaskReport = shouldTruncateResultsInTaskReport;
+  }
 }
