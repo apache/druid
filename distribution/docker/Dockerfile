@@ -50,7 +50,7 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     echo "Downloading bash-static from ${BASH_URL}" \
     && wget ${BASH_URL} -O /bin/bash
 
-FROM busybox:1.35.0-glibc as busybox
+FROM busybox:1.34.1-glibc as busybox
 
 FROM gcr.io/distroless/java$JDK_VERSION-debian12
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
