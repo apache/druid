@@ -42,10 +42,10 @@ describe('Execution', () => {
                 "useLineageBasedSegmentAllocation": true,
               },
               "dataSource": "kttm_simple",
-              "groupId": "query-b55f3432-7810-4529-80ed-780a926a6f03",
-              "id": "query-b55f3432-7810-4529-80ed-780a926a6f03",
+              "groupId": "query-5aa683e2-a6ee-4655-a834-a643e91055b1",
+              "id": "query-5aa683e2-a6ee-4655-a834-a643e91055b1",
               "resource": Object {
-                "availabilityGroup": "query-b55f3432-7810-4529-80ed-780a926a6f03",
+                "availabilityGroup": "query-5aa683e2-a6ee-4655-a834-a643e91055b1",
                 "requiredCapacity": 1,
               },
               "spec": Object {
@@ -76,14 +76,16 @@ describe('Execution', () => {
                     "v0",
                   ],
                   "context": Object {
+                    "__user": "allowAll",
                     "finalize": false,
                     "finalizeAggregations": false,
                     "groupByEnableMultiValueUnnesting": false,
                     "maxNumTasks": 2,
-                    "queryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+                    "maxParseExceptions": 0,
+                    "queryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
                     "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                     "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                    "sqlQueryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+                    "sqlQueryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
                     "sqlReplaceTimeChunks": "all",
                   },
                   "dataSource": Object {
@@ -153,11 +155,15 @@ describe('Execution', () => {
                 "finalizeAggregations": false,
                 "groupByEnableMultiValueUnnesting": false,
                 "maxNumTasks": 2,
-                "maxParseExceptions": 0,
-                "queryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+                "queryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
                 "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                "sqlQueryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+                "sqlQueryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
                 "sqlReplaceTimeChunks": "all",
+              },
+              "sqlResultsContext": Object {
+                "serializeComplexValues": true,
+                "stringifyArrays": true,
+                "timeZone": "UTC",
               },
               "sqlTypeNames": Array [
                 "TIMESTAMP",
@@ -165,7 +171,7 @@ describe('Execution', () => {
               ],
               "type": "query_controller",
             },
-            "task": "query-b55f3432-7810-4529-80ed-780a926a6f03",
+            "task": "query-5aa683e2-a6ee-4655-a834-a643e91055b1",
           },
           "capacityInfo": undefined,
           "destination": Object {
@@ -178,24 +184,26 @@ describe('Execution', () => {
             },
             "type": "dataSource",
           },
-          "duration": 28854,
+          "duration": 23170,
           "engine": "sql-msq-task",
           "error": undefined,
-          "id": "query-b55f3432-7810-4529-80ed-780a926a6f03",
+          "id": "query-5aa683e2-a6ee-4655-a834-a643e91055b1",
           "nativeQuery": Object {
             "columns": Array [
               "agent_type",
               "v0",
             ],
             "context": Object {
+              "__user": "allowAll",
               "finalize": false,
               "finalizeAggregations": false,
               "groupByEnableMultiValueUnnesting": false,
               "maxNumTasks": 2,
-              "queryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+              "maxParseExceptions": 0,
+              "queryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
               "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
               "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-              "sqlQueryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+              "sqlQueryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
               "sqlReplaceTimeChunks": "all",
             },
             "dataSource": Object {
@@ -248,7 +256,6 @@ describe('Execution', () => {
             "finalizeAggregations": false,
             "groupByEnableMultiValueUnnesting": false,
             "maxNumTasks": 2,
-            "maxParseExceptions": 0,
           },
           "result": undefined,
           "sqlQuery": "REPLACE INTO \\"kttm_simple\\" OVERWRITE ALL
@@ -350,7 +357,7 @@ describe('Execution', () => {
             "stages": Array [
               Object {
                 "definition": Object {
-                  "id": "8984a4c0-89a0-4a0a-9eaa-bf03088da3e3_0",
+                  "id": "8af42220-2724-4a76-b39f-c2f98df2de69_0",
                   "input": Array [
                     Object {
                       "inputFormat": Object {
@@ -378,7 +385,6 @@ describe('Execution', () => {
                       "type": "external",
                     },
                   ],
-                  "maxInputBytesPerWorker": 10737418240,
                   "maxWorkerCount": 1,
                   "processor": Object {
                     "query": Object {
@@ -388,19 +394,42 @@ describe('Execution', () => {
                       ],
                       "context": Object {
                         "__timeColumn": "v0",
+                        "__user": "allowAll",
                         "finalize": false,
                         "finalizeAggregations": false,
                         "groupByEnableMultiValueUnnesting": false,
                         "maxNumTasks": 2,
-                        "queryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+                        "maxParseExceptions": 0,
+                        "queryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
                         "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
                         "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                        "sqlQueryId": "b55f3432-7810-4529-80ed-780a926a6f03",
+                        "sqlQueryId": "5aa683e2-a6ee-4655-a834-a643e91055b1",
                         "sqlReplaceTimeChunks": "all",
                       },
                       "dataSource": Object {
-                        "inputNumber": 0,
-                        "type": "inputNumber",
+                        "inputFormat": Object {
+                          "assumeNewlineDelimited": false,
+                          "keepNullColumns": false,
+                          "type": "json",
+                          "useJsonNodeReader": false,
+                        },
+                        "inputSource": Object {
+                          "type": "http",
+                          "uris": Array [
+                            "https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz",
+                          ],
+                        },
+                        "signature": Array [
+                          Object {
+                            "name": "timestamp",
+                            "type": "STRING",
+                          },
+                          Object {
+                            "name": "agent_type",
+                            "type": "STRING",
+                          },
+                        ],
+                        "type": "external",
                       },
                       "granularity": Object {
                         "type": "all",
@@ -453,24 +482,23 @@ describe('Execution', () => {
                     },
                   ],
                 },
-                "duration": 24236,
+                "duration": 20483,
                 "partitionCount": 1,
                 "phase": "FINISHED",
                 "sort": true,
                 "stageNumber": 0,
-                "startTime": "2023-03-27T22:17:02.792Z",
+                "startTime": "2023-06-19T05:39:26.711Z",
                 "workerCount": 1,
               },
               Object {
                 "definition": Object {
-                  "id": "8984a4c0-89a0-4a0a-9eaa-bf03088da3e3_1",
+                  "id": "8af42220-2724-4a76-b39f-c2f98df2de69_1",
                   "input": Array [
                     Object {
                       "stage": 0,
                       "type": "stage",
                     },
                   ],
-                  "maxInputBytesPerWorker": 10737418240,
                   "maxWorkerCount": 1,
                   "processor": Object {
                     "columnMappings": Array [
@@ -530,16 +558,16 @@ describe('Execution', () => {
                   },
                   "signature": Array [],
                 },
-                "duration": 4276,
+                "duration": 2381,
                 "partitionCount": 1,
                 "phase": "FINISHED",
                 "stageNumber": 1,
-                "startTime": "2023-03-27T22:17:26.978Z",
+                "startTime": "2023-06-19T05:39:47.166Z",
                 "workerCount": 1,
               },
             ],
           },
-          "startTime": 2023-03-27T22:17:02.401Z,
+          "startTime": 2023-06-19T05:39:26.377Z,
           "status": "SUCCESS",
           "usageInfo": Object {
             "pendingTasks": 0,

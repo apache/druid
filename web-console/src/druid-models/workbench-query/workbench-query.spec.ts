@@ -420,9 +420,11 @@ describe('WorkbenchQuery', () => {
 
       const apiQuery = workbenchQuery.getApiQuery(makeQueryId);
       expect(apiQuery).toEqual({
+        cancelQueryId: undefined,
         engine: 'sql-msq-task',
         query: {
           context: {
+            executionMode: 'async',
             finalizeAggregations: false,
             groupByEnableMultiValueUnnesting: false,
             useCache: false,
