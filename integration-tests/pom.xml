@@ -649,6 +649,7 @@
                                 </property>
                             </properties>
                             <argLine>
+                                ${jdk.strong.encapsulation.argLine}
                                 -Xmx128m
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8
