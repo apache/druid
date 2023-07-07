@@ -190,7 +190,7 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    boolean valuesMatch = false;
+    boolean valuesMatch;
     EqualityFilter that = (EqualityFilter) o;
     if (matchValue instanceof Object[] && that.matchValue instanceof Object[]) {
       valuesMatch = Arrays.deepEquals((Object[]) matchValue, (Object[]) that.matchValue);

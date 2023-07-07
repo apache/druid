@@ -518,7 +518,11 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE3)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
+                  .filters(
+                      NullHandling.replaceWithDefault()
+                      ? numericSelector("dim2", "0", null)
+                      : equality("dim2", 0L, ColumnType.LONG)
+                  )
                   .aggregators(
                       new VarianceAggregatorFactory("a0:agg", "d1", "population", "double"),
                       new VarianceAggregatorFactory("a1:agg", "d1", "sample", "double"),

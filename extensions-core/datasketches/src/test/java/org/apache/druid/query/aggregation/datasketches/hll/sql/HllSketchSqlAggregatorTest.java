@@ -347,7 +347,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           new HllSketchBuildAggregatorFactory("a1", "dim2", null, null, null, null, ROUND),
                           new FilteredAggregatorFactory(
                               new HllSketchBuildAggregatorFactory("a2", "dim2", null, null, null, null, ROUND),
-                              not(equality("dim2", "", null))
+                              not(equality("dim2", "", ColumnType.STRING))
                           ),
                           new HllSketchBuildAggregatorFactory("a3", "v0", null, null, null, null, ROUND),
                           new HllSketchBuildAggregatorFactory("a4", "v1", null, null, null, null, ROUND),
@@ -855,7 +855,11 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
                                .dataSource(CalciteTests.DATASOURCE1)
                                .intervals(querySegmentSpec(Filtration.eternity()))
-                               .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
+                               .filters(
+                                   NullHandling.replaceWithDefault()
+                                   ? bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC)
+                                   : equality("dim2", 0L, ColumnType.LONG)
+                               )
                                .granularity(Granularities.ALL)
                                .aggregators(
                                    aggregators(

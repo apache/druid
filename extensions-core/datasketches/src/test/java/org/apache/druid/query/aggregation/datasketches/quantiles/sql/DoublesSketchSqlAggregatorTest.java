@@ -48,10 +48,7 @@ import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.filter.NotDimFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
@@ -161,11 +158,11 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       new DoublesSketchAggregatorFactory("a4:agg", "v0", null),
                       new FilteredAggregatorFactory(
                           new DoublesSketchAggregatorFactory("a5:agg", "m1", null),
-                          new SelectorDimFilter("dim1", "abc", null)
+                          equality("dim1", "abc", ColumnType.STRING)
                       ),
                       new FilteredAggregatorFactory(
                           new DoublesSketchAggregatorFactory("a6:agg", "m1", null),
-                          new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
+                          not(equality("dim1", "abc", ColumnType.STRING))
                       ),
                       new DoublesSketchAggregatorFactory("a8:agg", "cnt", null)
                   ))
@@ -223,11 +220,11 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       new DoublesSketchAggregatorFactory("a2:agg", "qsketch_m1", 256),
                       new FilteredAggregatorFactory(
                           new DoublesSketchAggregatorFactory("a4:agg", "qsketch_m1", null),
-                          new SelectorDimFilter("dim1", "abc", null)
+                          equality("dim1", "abc", ColumnType.STRING)
                       ),
                       new FilteredAggregatorFactory(
                           new DoublesSketchAggregatorFactory("a5:agg", "qsketch_m1", null),
-                          new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
+                          not(equality("dim1", "abc", ColumnType.STRING))
                       )
                   ))
                   .postAggregators(
@@ -325,11 +322,11 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       new DoublesSketchAggregatorFactory("a4:agg", "v1", 128),
                       new FilteredAggregatorFactory(
                           new DoublesSketchAggregatorFactory("a5:agg", "v0", 128),
-                          new SelectorDimFilter("dim2", "abc", null)
+                          equality("dim2", "abc", ColumnType.STRING)
                       ),
                       new FilteredAggregatorFactory(
                           new DoublesSketchAggregatorFactory("a6:agg", "v0", 128),
-                          new NotDimFilter(new SelectorDimFilter("dim2", "abc", null))
+                          not(equality("dim2", "abc", ColumnType.STRING))
                       )
                   ))
                   .postAggregators(
@@ -728,7 +725,11 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
+                  .filters(
+                      NullHandling.replaceWithDefault()
+                      ? numericSelector("dim2", "0", null)
+                      : equality("dim2", 0L, ColumnType.LONG)
+                  )
                   .aggregators(ImmutableList.of(
                       new DoublesSketchAggregatorFactory("a0:agg", "m1", null),
                       new DoublesSketchAggregatorFactory("a1:agg", "qsketch_m1", null),
@@ -775,7 +776,11 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
+                  .filters(
+                      NullHandling.replaceWithDefault()
+                      ? numericSelector("dim2", "0", null)
+                      : equality("dim2", 0L, ColumnType.LONG)
+                  )
                   .aggregators(ImmutableList.of(
                       new DoublesSketchAggregatorFactory("a0:agg", "m1", null),
                       new DoublesSketchAggregatorFactory("a1:agg", "qsketch_m1", null),

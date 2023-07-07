@@ -22,23 +22,18 @@ package org.apache.druid.query.filter.vector;
 import com.google.common.base.Predicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.TypeSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
 
 public class ArrayVectorValueMatcher implements VectorValueMatcherFactory
 {
-  protected final TypeSignature<ValueType> columnType;
   protected final VectorObjectSelector selector;
 
   public ArrayVectorValueMatcher(
-      TypeSignature<ValueType> columnType,
       VectorObjectSelector selector
   )
   {
-    this.columnType = columnType;
     this.selector = selector;
   }
 

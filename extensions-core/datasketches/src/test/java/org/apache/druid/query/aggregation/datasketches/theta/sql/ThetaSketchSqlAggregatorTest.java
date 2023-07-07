@@ -831,7 +831,11 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .filters(bound("dim2", "0", "0", false, false, null, StringComparators.NUMERIC))
+                  .filters(
+                      NullHandling.replaceWithDefault()
+                      ? numericSelector("dim2", "0", null)
+                      : equality("dim2", 0L, ColumnType.LONG)
+                  )
                   .aggregators(
                       ImmutableList.of(
                           new SketchMergeAggregatorFactory(
