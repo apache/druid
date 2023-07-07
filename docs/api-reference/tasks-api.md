@@ -23,11 +23,9 @@ sidebar_label: Tasks
   ~ under the License.
   -->
 
-This document describes the API endpoints for task retrieval, submission, and deletion for Apache Druid.
+This document describes the API endpoints for task retrieval, submission, and deletion for Apache Druid. Tasks are individual jobs performed by Druid to complete data-related operations such as ingestion and compaction.  
 
 In this document, `{domain}` is a placeholder for the server address of deployment. For example, on the quickstart configuration, replace `{domain}` with `http://localhost:8888`.
-
-For query parameters that take an interval, provide ISO 8601 strings delimited by `_` instead of `/`. For example, `2023-06-27_2023-06-28`.
 
 ## Task information and retrieval 
 
@@ -36,7 +34,7 @@ For query parameters that take an interval, provide ISO 8601 strings delimited b
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/tasks`
 
-Retrieves an array of all tasks in the Druid cluster. Each task object includes information on its ID, status, associated datasource, and other metadata. 
+Retrieves an array of all tasks in the Druid cluster. Each task object includes information on its ID, status, associated datasource, and other metadata.
 
 #### Query parameters
 
@@ -46,7 +44,7 @@ The endpoint supports a set of optional query parameters to filter results.
 |---|---|---|
 |`state`|String|Filter list of tasks by task state, valid options are `running`, `complete`, `waiting`, and `pending`.|
 | `datasource`|String| Return tasks filtered by Druid datasource.|
-| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. |
+| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. The interval string should be delimited by `_` instead of `/`. For example, `2023-06-27_2023-06-28`.|
 | `max`|Integer|Maximum number of `complete` tasks to return. Only applies when `state` is set to `complete`.|
 | `type`|String|Filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
@@ -80,11 +78,11 @@ The following example shows how to retrieve a list of tasks filtered with the fo
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/tasks/?state=complete&datasource=wikipedia_api&createdTimeInterval=2015-09-12T00%3A00%3A00Z%2F2015-09-13T23%3A59%3A59Z&max=10&type=query_worker"
+curl "{domain}/druid/indexer/v1/tasks/?state=complete&datasource=wikipedia_api&createdTimeInterval=2015-09-12_2015-09-13&max=10&type=query_worker"
 ```
 <!--HTTP-->
 ```HTTP
-GET /druid/indexer/v1/tasks/?state=complete&datasource=wikipedia_api&createdTimeInterval=2015-09-12T00%3A00%3A00Z%2F2015-09-13T23%3A59%3A59Z&max=10&type=query_worker HTTP/1.1
+GET /druid/indexer/v1/tasks/?state=complete&datasource=wikipedia_api&createdTimeInterval=2015-09-12_2015-09-13&max=10&type=query_worker HTTP/1.1
 Host: {domain}
 ```
 
@@ -170,7 +168,7 @@ The endpoint supports a set of optional query parameters to filter results.
 |Parameter|Type|Description|
 |---|---|---|
 | `datasource`|String| Return tasks filtered by Druid datasource.|
-| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. |
+| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. The interval string should be delimited by `_` instead of `/`. For example, `2023-06-27_2023-06-28`.|
 | `max`|Integer|Maximum number of `complete` tasks to return. Only applies when `state` is set to `complete`.|
 | `type`|String|Filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
@@ -265,7 +263,7 @@ The endpoint supports a set of optional query parameters to filter results.
 |Parameter|Type|Description|
 |---|---|---|
 | `datasource`|String| Return tasks filtered by Druid datasource.|
-| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. |
+| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. The interval string should be delimited by `_` instead of `/`. For example, `2023-06-27_2023-06-28`.|
 | `max`|Integer|Maximum number of `complete` tasks to return. Only applies when `state` is set to `complete`.|
 | `type`|String|Filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
@@ -341,7 +339,7 @@ The endpoint supports a set of optional query parameters to filter results.
 |Parameter|Type|Description|
 |---|---|---|
 | `datasource`|String| Return tasks filtered by Druid datasource.|
-| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. |
+| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. The interval string should be delimited by `_` instead of `/`. For example, `2023-06-27_2023-06-28`.|
 | `max`|Integer|Maximum number of `complete` tasks to return. Only applies when `state` is set to `complete`.|
 | `type`|String|Filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
@@ -453,7 +451,7 @@ The endpoint supports a set of optional query parameters to filter results.
 |Parameter|Type|Description|
 |---|---|---|
 | `datasource`|String| Return tasks filtered by Druid datasource.|
-| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. |
+| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. The interval string should be delimited by `_` instead of `/`. For example, `2023-06-27_2023-06-28`.|
 | `max`|Integer|Maximum number of `complete` tasks to return. Only applies when `state` is set to `complete`.|
 | `type`|String|Filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
@@ -554,17 +552,17 @@ Retrieves the payload of a task given the task ID. It returns a JSON object with
 
 #### Sample request
 
-The following examples shows how to retrieve the task payload of a task with the specified ID `query-32663269-ead9-405a-8eb6-0817a952ef47`.
+The following examples shows how to retrieve the task payload of a task with the specified ID `index_parallel_wikipedia_short_iajoonnd_2023-07-07T17:53:12.174Z`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/task/query-32663269-ead9-405a-8eb6-0817a952ef47"
+curl "{domain}/druid/indexer/v1/task/index_parallel_wikipedia_short_iajoonnd_2023-07-07T17:53:12.174Z"
 ```
 <!--HTTP-->
 ```HTTP
-GET /druid/indexer/v1/task/query-32663269-ead9-405a-8eb6-0817a952ef47 HTTP/1.1
+GET /druid/indexer/v1/task/index_parallel_wikipedia_short_iajoonnd_2023-07-07T17:53:12.174Z HTTP/1.1
 Host: {domain}
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -577,347 +575,152 @@ Host: {domain}
   
   ```json
   {
-    "task": "query-32663269-ead9-405a-8eb6-0817a952ef47",
+    "task": "index_parallel_wikipedia_short_iajoonnd_2023-07-07T17:53:12.174Z",
     "payload": {
-        "type": "query_controller",
-        "id": "query-32663269-ead9-405a-8eb6-0817a952ef47",
+        "type": "index_parallel",
+        "id": "index_parallel_wikipedia_short_iajoonnd_2023-07-07T17:53:12.174Z",
+        "groupId": "index_parallel_wikipedia_short_iajoonnd_2023-07-07T17:53:12.174Z",
+        "resource": {
+            "availabilityGroup": "index_parallel_wikipedia_short_iajoonnd_2023-07-07T17:53:12.174Z",
+            "requiredCapacity": 1
+        },
         "spec": {
-            "query": {
-                "queryType": "scan",
-                "dataSource": {
-                    "type": "external",
-                    "inputSource": {
-                        "type": "http",
-                        "uris": [
-                            "https://druid.apache.org/data/wikipedia.json.gz"
-                        ]
-                    },
-                    "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
-                    },
-                    "signature": [
+            "dataSchema": {
+                "dataSource": "wikipedia_short",
+                "timestampSpec": {
+                    "column": "time",
+                    "format": "iso",
+                    "missingValue": null
+                },
+                "dimensionsSpec": {
+                    "dimensions": [
                         {
-                            "name": "added",
-                            "type": "LONG"
-                        },
-                        {
-                            "name": "channel",
-                            "type": "STRING"
-                        },
-                        {
+                            "type": "string",
                             "name": "cityName",
-                            "type": "STRING"
+                            "multiValueHandling": "SORTED_ARRAY",
+                            "createBitmapIndex": true
                         },
                         {
-                            "name": "comment",
-                            "type": "STRING"
-                        },
-                        {
-                            "name": "commentLength",
-                            "type": "LONG"
-                        },
-                        {
-                            "name": "countryIsoCode",
-                            "type": "STRING"
-                        },
-                        {
+                            "type": "string",
                             "name": "countryName",
-                            "type": "STRING"
+                            "multiValueHandling": "SORTED_ARRAY",
+                            "createBitmapIndex": true
                         },
                         {
-                            "name": "deleted",
-                            "type": "LONG"
-                        },
-                        {
-                            "name": "delta",
-                            "type": "LONG"
-                        },
-                        {
-                            "name": "deltaBucket",
-                            "type": "STRING"
-                        },
-                        {
-                            "name": "diffUrl",
-                            "type": "STRING"
-                        },
-                        {
-                            "name": "flags",
-                            "type": "STRING"
-                        },
-                        {
-                            "name": "isAnonymous",
-                            "type": "STRING"
-                        },
-                        {
-                            "name": "isMinor",
-                            "type": "STRING"
-                        },
-                        {
-                            "name": "isNew",
-                            "type": "STRING"
-                        },
-                        {
-                            "name": "isRobot",
-                            "type": "STRING"
-                        },
-                        {
-                            "name": "isUnpatrolled",
-                            "type": "STRING"
-                        },
-                        {
-                            "name": "metroCode",
-                            "type": "STRING"
-                        },
-                        {
-                            "name": "namespace",
-                            "type": "STRING"
-                        },
-                        {
-                            "name": "page",
-                            "type": "STRING"
-                        },
-                        {
-                            "name": "regionIsoCode",
-                            "type": "STRING"
-                        },
-                        {
+                            "type": "string",
                             "name": "regionName",
-                            "type": "STRING"
-                        },
-                        {
-                            "name": "timestamp",
-                            "type": "STRING"
-                        },
-                        {
-                            "name": "user",
-                            "type": "STRING"
+                            "multiValueHandling": "SORTED_ARRAY",
+                            "createBitmapIndex": true
                         }
-                    ]
+                    ],
+                    "dimensionExclusions": [
+                        "__time",
+                        "time"
+                    ],
+                    "includeAllDimensions": false,
+                    "useSchemaDiscovery": false
                 },
-                "intervals": {
-                    "type": "intervals",
+                "metricsSpec": [],
+                "granularitySpec": {
+                    "type": "uniform",
+                    "segmentGranularity": "DAY",
+                    "queryGranularity": {
+                        "type": "none"
+                    },
+                    "rollup": false,
                     "intervals": [
-                        "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+                        "2015-09-12T00:00:00.000Z/2015-09-13T00:00:00.000Z"
                     ]
                 },
-                "virtualColumns": [
-                    {
-                        "type": "expression",
-                        "name": "v0",
-                        "expression": "timestamp_parse(\"timestamp\",null,'UTC')",
-                        "outputType": "LONG"
-                    }
-                ],
-                "resultFormat": "compactedList",
-                "columns": [
-                    "added",
-                    "channel",
-                    "cityName",
-                    "comment",
-                    "commentLength",
-                    "countryIsoCode",
-                    "countryName",
-                    "deleted",
-                    "delta",
-                    "deltaBucket",
-                    "diffUrl",
-                    "flags",
-                    "isAnonymous",
-                    "isMinor",
-                    "isNew",
-                    "isRobot",
-                    "isUnpatrolled",
-                    "metroCode",
-                    "namespace",
-                    "page",
-                    "regionIsoCode",
-                    "regionName",
-                    "timestamp",
-                    "user",
-                    "v0"
-                ],
-                "legacy": false,
-                "context": {
-                    "finalize": true,
-                    "maxNumTasks": 3,
-                    "maxParseExceptions": 0,
-                    "queryId": "32663269-ead9-405a-8eb6-0817a952ef47",
-                    "scanSignature": "[{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"channel\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"comment\",\"type\":\"STRING\"},{\"name\":\"commentLength\",\"type\":\"LONG\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"},{\"name\":\"deleted\",\"type\":\"LONG\"},{\"name\":\"delta\",\"type\":\"LONG\"},{\"name\":\"deltaBucket\",\"type\":\"STRING\"},{\"name\":\"diffUrl\",\"type\":\"STRING\"},{\"name\":\"flags\",\"type\":\"STRING\"},{\"name\":\"isAnonymous\",\"type\":\"STRING\"},{\"name\":\"isMinor\",\"type\":\"STRING\"},{\"name\":\"isNew\",\"type\":\"STRING\"},{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"isUnpatrolled\",\"type\":\"STRING\"},{\"name\":\"metroCode\",\"type\":\"STRING\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"page\",\"type\":\"STRING\"},{\"name\":\"regionIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"},{\"name\":\"timestamp\",\"type\":\"STRING\"},{\"name\":\"user\",\"type\":\"STRING\"},{\"name\":\"v0\",\"type\":\"LONG\"}]",
-                    "sqlInsertSegmentGranularity": "\"DAY\"",
-                    "sqlQueryId": "32663269-ead9-405a-8eb6-0817a952ef47"
-                },
-                "granularity": {
-                    "type": "all"
+                "transformSpec": {
+                    "filter": null,
+                    "transforms": []
                 }
             },
-            "columnMappings": [
-                {
-                    "queryColumn": "v0",
-                    "outputColumn": "__time"
+            "ioConfig": {
+                "type": "index_parallel",
+                "inputSource": {
+                    "type": "local",
+                    "baseDir": "quickstart/tutorial",
+                    "filter": "wikiticker-2015-09-12-sampled.json.gz"
                 },
-                {
-                    "queryColumn": "added",
-                    "outputColumn": "added"
+                "inputFormat": {
+                    "type": "json",
+                    "keepNullColumns": false,
+                    "assumeNewlineDelimited": false,
+                    "useJsonNodeReader": false
                 },
-                {
-                    "queryColumn": "channel",
-                    "outputColumn": "channel"
-                },
-                {
-                    "queryColumn": "cityName",
-                    "outputColumn": "cityName"
-                },
-                {
-                    "queryColumn": "comment",
-                    "outputColumn": "comment"
-                },
-                {
-                    "queryColumn": "commentLength",
-                    "outputColumn": "commentLength"
-                },
-                {
-                    "queryColumn": "countryIsoCode",
-                    "outputColumn": "countryIsoCode"
-                },
-                {
-                    "queryColumn": "countryName",
-                    "outputColumn": "countryName"
-                },
-                {
-                    "queryColumn": "deleted",
-                    "outputColumn": "deleted"
-                },
-                {
-                    "queryColumn": "delta",
-                    "outputColumn": "delta"
-                },
-                {
-                    "queryColumn": "deltaBucket",
-                    "outputColumn": "deltaBucket"
-                },
-                {
-                    "queryColumn": "diffUrl",
-                    "outputColumn": "diffUrl"
-                },
-                {
-                    "queryColumn": "flags",
-                    "outputColumn": "flags"
-                },
-                {
-                    "queryColumn": "isAnonymous",
-                    "outputColumn": "isAnonymous"
-                },
-                {
-                    "queryColumn": "isMinor",
-                    "outputColumn": "isMinor"
-                },
-                {
-                    "queryColumn": "isNew",
-                    "outputColumn": "isNew"
-                },
-                {
-                    "queryColumn": "isRobot",
-                    "outputColumn": "isRobot"
-                },
-                {
-                    "queryColumn": "isUnpatrolled",
-                    "outputColumn": "isUnpatrolled"
-                },
-                {
-                    "queryColumn": "metroCode",
-                    "outputColumn": "metroCode"
-                },
-                {
-                    "queryColumn": "namespace",
-                    "outputColumn": "namespace"
-                },
-                {
-                    "queryColumn": "page",
-                    "outputColumn": "page"
-                },
-                {
-                    "queryColumn": "regionIsoCode",
-                    "outputColumn": "regionIsoCode"
-                },
-                {
-                    "queryColumn": "regionName",
-                    "outputColumn": "regionName"
-                },
-                {
-                    "queryColumn": "timestamp",
-                    "outputColumn": "timestamp"
-                },
-                {
-                    "queryColumn": "user",
-                    "outputColumn": "user"
-                }
-            ],
-            "destination": {
-                "type": "dataSource",
-                "dataSource": "wikipedia_api",
-                "segmentGranularity": "DAY"
+                "appendToExisting": false,
+                "dropExisting": false
             },
-            "assignmentStrategy": "max",
             "tuningConfig": {
-                "maxNumWorkers": 2,
-                "maxRowsInMemory": 100000,
-                "rowsPerSegment": 3000000
+                "type": "index_parallel",
+                "maxRowsPerSegment": 5000000,
+                "appendableIndexSpec": {
+                    "type": "onheap",
+                    "preserveExistingMetrics": false
+                },
+                "maxRowsInMemory": 25000,
+                "maxBytesInMemory": 0,
+                "skipBytesInMemoryOverheadCheck": false,
+                "maxTotalRows": null,
+                "numShards": null,
+                "splitHintSpec": null,
+                "partitionsSpec": {
+                    "type": "dynamic",
+                    "maxRowsPerSegment": 5000000,
+                    "maxTotalRows": null
+                },
+                "indexSpec": {
+                    "bitmap": {
+                        "type": "roaring"
+                    },
+                    "dimensionCompression": "lz4",
+                    "stringDictionaryEncoding": {
+                        "type": "utf8"
+                    },
+                    "metricCompression": "lz4",
+                    "longEncoding": "longs"
+                },
+                "indexSpecForIntermediatePersists": {
+                    "bitmap": {
+                        "type": "roaring"
+                    },
+                    "dimensionCompression": "lz4",
+                    "stringDictionaryEncoding": {
+                        "type": "utf8"
+                    },
+                    "metricCompression": "lz4",
+                    "longEncoding": "longs"
+                },
+                "maxPendingPersists": 0,
+                "forceGuaranteedRollup": false,
+                "reportParseExceptions": false,
+                "pushTimeout": 0,
+                "segmentWriteOutMediumFactory": null,
+                "maxNumConcurrentSubTasks": 1,
+                "maxRetry": 3,
+                "taskStatusCheckPeriodMs": 1000,
+                "chatHandlerTimeout": "PT10S",
+                "chatHandlerNumRetries": 5,
+                "maxNumSegmentsToMerge": 100,
+                "totalNumMergeTasks": 10,
+                "logParseExceptions": false,
+                "maxParseExceptions": 2147483647,
+                "maxSavedParseExceptions": 0,
+                "maxColumnsToMerge": -1,
+                "awaitSegmentAvailabilityTimeoutMillis": 0,
+                "maxAllowedLockCount": -1,
+                "partitionDimensions": []
             }
         },
-        "sqlQuery": "\nINSERT INTO wikipedia_api \nSELECT \n  TIME_PARSE(\"timestamp\") AS __time,\n  * \nFROM TABLE(EXTERN(\n  '{\"type\": \"http\", \"uris\": [\"https://druid.apache.org/data/wikipedia.json.gz\"]}', \n  '{\"type\": \"json\"}', \n  '[{\"name\": \"added\", \"type\": \"long\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"name\": \"cityName\", \"type\": \"string\"}, {\"name\": \"comment\", \"type\": \"string\"}, {\"name\": \"commentLength\", \"type\": \"long\"}, {\"name\": \"countryIsoCode\", \"type\": \"string\"}, {\"name\": \"countryName\", \"type\": \"string\"}, {\"name\": \"deleted\", \"type\": \"long\"}, {\"name\": \"delta\", \"type\": \"long\"}, {\"name\": \"deltaBucket\", \"type\": \"string\"}, {\"name\": \"diffUrl\", \"type\": \"string\"}, {\"name\": \"flags\", \"type\": \"string\"}, {\"name\": \"isAnonymous\", \"type\": \"string\"}, {\"name\": \"isMinor\", \"type\": \"string\"}, {\"name\": \"isNew\", \"type\": \"string\"}, {\"name\": \"isRobot\", \"type\": \"string\"}, {\"name\": \"isUnpatrolled\", \"type\": \"string\"}, {\"name\": \"metroCode\", \"type\": \"string\"}, {\"name\": \"namespace\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"regionIsoCode\", \"type\": \"string\"}, {\"name\": \"regionName\", \"type\": \"string\"}, {\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n  ))\nPARTITIONED BY DAY\n",
-        "sqlQueryContext": {
-            "sqlQueryId": "32663269-ead9-405a-8eb6-0817a952ef47",
-            "sqlInsertSegmentGranularity": "\"DAY\"",
-            "maxNumTasks": 3,
-            "queryId": "32663269-ead9-405a-8eb6-0817a952ef47"
-        },
-        "sqlResultsContext": {
-            "timeZone": "UTC",
-            "serializeComplexValues": true,
-            "stringifyArrays": true
-        },
-        "sqlTypeNames": [
-            "TIMESTAMP",
-            "BIGINT",
-            "VARCHAR",
-            "VARCHAR",
-            "VARCHAR",
-            "BIGINT",
-            "VARCHAR",
-            "VARCHAR",
-            "BIGINT",
-            "BIGINT",
-            "VARCHAR",
-            "VARCHAR",
-            "VARCHAR",
-            "VARCHAR",
-            "VARCHAR",
-            "VARCHAR",
-            "VARCHAR",
-            "VARCHAR",
-            "VARCHAR",
-            "VARCHAR",
-            "VARCHAR",
-            "VARCHAR",
-            "VARCHAR",
-            "VARCHAR",
-            "VARCHAR"
-        ],
         "context": {
             "forceTimeChunkLock": true,
             "useLineageBasedSegmentAllocation": true
         },
-        "groupId": "query-32663269-ead9-405a-8eb6-0817a952ef47",
-        "dataSource": "wikipedia_api",
-        "resource": {
-            "availabilityGroup": "query-32663269-ead9-405a-8eb6-0817a952ef47",
-            "requiredCapacity": 1
-        }
+        "dataSource": "wikipedia_short"
     }
-  }
+}
   ```
 
 </details>
@@ -1036,6 +839,8 @@ A successful request returns a `200 OK` response and an array of the task segmen
 <code class="getAPI">GET</code> `/druid/indexer/v1/task/{taskId}/log`
 
 Retrieves the event log associated with a task. It returns a list of logged events during the lifecycle of the task. The endpoint is useful for providing information about the execution of the task, including any errors or warnings raised. 
+
+Task logs are automatically retrieved from the MiddleManager/Indexer or in long-term storage. For reference, see [Task logs](../ingestion/tasks.md#task-logs).
 
 #### Query parameters
 * `offset` (optional)
@@ -1221,7 +1026,9 @@ Host: {domain}
 
 <code class="postAPI">POST</code> `/druid/indexer/v1/task`
 
-Submits a task or supervisor spec to the Overlord. It returns the task ID of the submitted task.
+Submits a JSON-based ingestion spec or supervisor spec to the Overlord. It returns the task ID of the submitted task. For information on creating an ingestion spec, refer to the [ingestion spec reference](../ingestion/ingestion-spec.md).
+
+Note that for most batch ingestion use cases, you should prefer to use [SQL-ingestion API](./sql-ingestion-api.md).
 
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
