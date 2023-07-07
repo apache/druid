@@ -128,12 +128,15 @@ public abstract class DurableStorageOutputChannelFactory implements OutputChanne
     os.close();
   }
 
+  /**
+   * Get filepath to write success file in.
+   */
   public abstract String getSuccessFilePath();
 
   @Override
   public OutputChannel openNilChannel(int partitionNumber)
   {
-    final String fileName = getFileNameForPartition(partitionNumber);
+    final String fileName = getFileNameWithPathForPartition(partitionNumber);
     // As tasks dependent on output of this partition will forever block if no file is present in RemoteStorage. Hence, writing a dummy frame.
     try {
       FrameFileWriter.open(Channels.newChannel(storageConnector.write(fileName)), null, ByteTracker.unboundedTracker())
@@ -151,5 +154,8 @@ public abstract class DurableStorageOutputChannelFactory implements OutputChanne
     }
   }
 
-  protected abstract String getFileNameForPartition(int partitionNumber);
+  /**
+   * Get fileName with path for partition
+   */
+  protected abstract String getFileNameWithPathForPartition(int partitionNumber);
 }

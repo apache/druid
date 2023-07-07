@@ -113,7 +113,7 @@ public class DurableStorageUtilsTest
 
     Assert.assertEquals(
         baseString + "taskId_" + TASK_ID + "/part_3",
-        DurableStorageUtils.getPartitionOutputsFileNameForPartition(
+        DurableStorageUtils.getPartitionOutputsFileNameWithPathForPartition(
             CONTROLLER_ID,
             STAGE_NUMBER,
             WORKER_NUMBER,
@@ -123,7 +123,7 @@ public class DurableStorageUtilsTest
     );
     Assert.assertEquals(
         DurableStorageUtils.QUERY_RESULTS_DIR + "/" + baseString + "taskId_" + TASK_ID + "/part_3",
-        DurableStorageUtils.getQueryResultsFileNameForPartition(
+        DurableStorageUtils.getQueryResultsFileNameWithPathForPartition(
             CONTROLLER_ID,
             STAGE_NUMBER,
             WORKER_NUMBER,

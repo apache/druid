@@ -24,6 +24,10 @@ import org.apache.druid.storage.StorageConnector;
 
 import java.util.concurrent.ExecutorService;
 
+/**
+ * Used for reading stage results when the output of each stage is written out to durable storage.
+ * If the user want's to read the output of a select query, please use {@link DurableStorageQueryResultsInputChannelFactory}
+ */
 public class DurableStorageStageInputChannelFactory extends DurableStorageInputChannelFactory
 {
   public DurableStorageStageInputChannelFactory(
@@ -36,7 +40,7 @@ public class DurableStorageStageInputChannelFactory extends DurableStorageInputC
   }
 
   @Override
-  public String getPartitionOutputsFileNameForPartition(
+  public String getPartitionOutputsFileNameWithPathForPartition(
       String controllerTaskId,
       int stageNumber,
       int workerNo,
@@ -44,7 +48,7 @@ public class DurableStorageStageInputChannelFactory extends DurableStorageInputC
       String successfulTaskId
   )
   {
-    return DurableStorageUtils.getPartitionOutputsFileNameForPartition(
+    return DurableStorageUtils.getPartitionOutputsFileNameWithPathForPartition(
         controllerTaskId,
         stageNumber,
         workerNo,

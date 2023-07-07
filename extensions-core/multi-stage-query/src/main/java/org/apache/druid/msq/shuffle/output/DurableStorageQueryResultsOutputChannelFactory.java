@@ -34,9 +34,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.channels.Channels;
 
+/**
+ * Used to write out select query results to durable storage.
+ */
 public class DurableStorageQueryResultsOutputChannelFactory extends DurableStorageOutputChannelFactory
 {
-
 
   public DurableStorageQueryResultsOutputChannelFactory(
       String controllerTaskId,
@@ -62,19 +64,19 @@ public class DurableStorageQueryResultsOutputChannelFactory extends DurableStora
   }
 
   @Override
-  protected String getFileNameForPartition(int partitionNumber)
+  protected String getFileNameWithPathForPartition(int partitionNumber)
   {
-    return DurableStorageUtils.getQueryResultsFileNameForPartition(controllerTaskId,
-                                                                   stageNumber,
-                                                                   workerNumber,
-                                                                   taskId,
-                                                                   partitionNumber);
+    return DurableStorageUtils.getQueryResultsFileNameWithPathForPartition(controllerTaskId,
+                                                                           stageNumber,
+                                                                           workerNumber,
+                                                                           taskId,
+                                                                           partitionNumber);
   }
 
   @Override
   public OutputChannel openChannel(int partitionNumber) throws IOException
   {
-    final String fileName = getFileNameForPartition(partitionNumber);
+    final String fileName = getFileNameWithPathForPartition(partitionNumber);
 
     final WritableFrameFileChannel writableChannel =
         new WritableFrameFileChannel(

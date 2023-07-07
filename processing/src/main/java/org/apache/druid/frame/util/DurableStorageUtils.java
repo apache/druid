@@ -149,7 +149,7 @@ public class DurableStorageUtils
    * Fetches the file location where a particular worker writes the data corresponding to a particular stage
    * and partition
    */
-  public static String getPartitionOutputsFileNameForPartition(
+  public static String getPartitionOutputsFileNameWithPathForPartition(
       final String controllerTaskId,
       final int stageNumber,
       final int workerNumber,
@@ -164,7 +164,7 @@ public class DurableStorageUtils
     );
   }
 
-  public static String getQueryResultsFileNameForPartition(
+  public static String getQueryResultsFileNameWithPathForPartition(
       final String controllerTaskId,
       final int stageNumber,
       final int workerNumber,

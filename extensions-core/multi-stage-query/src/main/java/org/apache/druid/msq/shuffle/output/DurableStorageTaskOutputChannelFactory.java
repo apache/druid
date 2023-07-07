@@ -51,6 +51,10 @@ import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.util.function.Supplier;
 
+/**
+ * Used to write out intermediate task output files to durable storage. To write final stage output files for select queries use
+ * {@link DurableStorageQueryResultsOutputChannelFactory}
+ */
 public class DurableStorageTaskOutputChannelFactory
     extends DurableStorageOutputChannelFactory
 {
@@ -74,9 +78,9 @@ public class DurableStorageTaskOutputChannelFactory
   }
 
   @Override
-  protected String getFileNameForPartition(int partitionNumber)
+  protected String getFileNameWithPathForPartition(int partitionNumber)
   {
-    return DurableStorageUtils.getPartitionOutputsFileNameForPartition(
+    return DurableStorageUtils.getPartitionOutputsFileNameWithPathForPartition(
         controllerTaskId,
         stageNumber,
         workerNumber,
@@ -89,7 +93,7 @@ public class DurableStorageTaskOutputChannelFactory
   @Override
   public OutputChannel openChannel(int partitionNumber) throws IOException
   {
-    final String fileName = getFileNameForPartition(partitionNumber);
+    final String fileName = getFileNameWithPathForPartition(partitionNumber);
     final WritableFrameFileChannel writableChannel =
         new WritableFrameFileChannel(
             FrameFileWriter.open(
@@ -178,8 +182,10 @@ public class DurableStorageTaskOutputChannelFactory
                  storageConnector.readRange(fileName, channelSize - footerLength, footerLength)) {
           IOUtils.copy(footerInputStream, footerFileStream);
         }
-        MappedByteBufferHandler mapHandle = FileUtils.map(footerFile);
-        Memory footerMemory = Memory.wrap(mapHandle.get(), ByteOrder.LITTLE_ENDIAN);
+        Memory footerMemory;
+        try (MappedByteBufferHandler mapHandle = FileUtils.map(footerFile)) {
+          footerMemory = Memory.wrap(mapHandle.get(), ByteOrder.LITTLE_ENDIAN);
+        }
 
         // create a frame file footer from the mapper memory
         return new FrameFileFooter(footerMemory, channelSize);

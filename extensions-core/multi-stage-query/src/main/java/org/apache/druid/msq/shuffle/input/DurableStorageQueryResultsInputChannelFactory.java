@@ -24,6 +24,9 @@ import org.apache.druid.storage.StorageConnector;
 
 import java.util.concurrent.ExecutorService;
 
+/**
+ * Used for reading results when select destination is {@link org.apache.druid.msq.indexing.destination.MSQSelectDestination#DURABLE_STORAGE}
+ */
 public class DurableStorageQueryResultsInputChannelFactory extends DurableStorageInputChannelFactory
 {
 
@@ -37,7 +40,7 @@ public class DurableStorageQueryResultsInputChannelFactory extends DurableStorag
   }
 
   @Override
-  public String getPartitionOutputsFileNameForPartition(
+  public String getPartitionOutputsFileNameWithPathForPartition(
       String controllerTaskId,
       int stageNumber,
       int workerNo,
@@ -45,11 +48,11 @@ public class DurableStorageQueryResultsInputChannelFactory extends DurableStorag
       String successfulTaskId
   )
   {
-    return DurableStorageUtils.getQueryResultsFileNameForPartition(controllerTaskId,
-                                                                   stageNumber,
-                                                                   workerNo,
-                                                                   successfulTaskId,
-                                                                   partitionNumber);
+    return DurableStorageUtils.getQueryResultsFileNameWithPathForPartition(controllerTaskId,
+                                                                           stageNumber,
+                                                                           workerNo,
+                                                                           successfulTaskId,
+                                                                           partitionNumber);
   }
 
   @Override

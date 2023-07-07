@@ -174,7 +174,7 @@ public abstract class DurableStorageInputChannelFactory implements InputChannelF
         successfulTaskId
     );
 
-    return getPartitionOutputsFileNameForPartition(
+    return getPartitionOutputsFileNameWithPathForPartition(
         controllerTaskId,
         stageNumber,
         workerNo,
@@ -183,13 +183,20 @@ public abstract class DurableStorageInputChannelFactory implements InputChannelF
     );
   }
 
-  public abstract String getPartitionOutputsFileNameForPartition(
+  /**
+   * Get the filePath with filename for the partitioned output of the controller, stage, worker
+   */
+  public abstract String getPartitionOutputsFileNameWithPathForPartition(
       String controllerTaskId,
       int stageNumber,
       int workerNo,
       int partitionNumber,
       String successfulTaskId
   );
+
+  /**
+   * Get the filepath for the success file .
+   */
 
   public abstract String getWorkerOutputSuccessFilePath(String controllerTaskId, int stageNumber, int workerNumber);
 
