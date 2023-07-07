@@ -148,7 +148,7 @@ The supervisor oversees the state of the indexing tasks to coordinate handoffs, 
 
 ![Supervisors](../assets/web-console-07-supervisors.png)
 
-Click on the magnifying glass for any supervisor to see detailed reports of its progress.
+Click the magnifying glass icon for any supervisor to see detailed reports of its progress.
 
 ![Supervisors status](../assets/web-console-08-supervisor-status.png)
 
@@ -160,7 +160,7 @@ Submit a task manually by clicking the ellipsis icon and selecting **Submit JSON
 
 ![Tasks](../assets/web-console-0.7-tasks.png)
 
-Click on the magnifying glass for any task to see more detail about it.
+Click the magnifying glass icon for any task to see more detail about it.
 
 ![Tasks status](../assets/web-console-09-task-status.png)
 
@@ -174,7 +174,7 @@ You can group the nodes by **Type** or by **Tier** to get meaningful summary sta
 
 ## Lookups
 
-Access the **Lookups** view from the **Lookups** card in the home view or by clicking on the ellipsis icon in the top-level navigation.
+Access the **Lookups** view from the **Lookups** card in the home view or by clicking the ellipsis icon in the top-level navigation.
 Here you can create and edit query time [lookups](../querying/lookups.md).
 
 ![Lookups](../assets/web-console-13-lookups.png)
