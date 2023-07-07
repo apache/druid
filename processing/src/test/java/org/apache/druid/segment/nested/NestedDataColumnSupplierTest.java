@@ -100,11 +100,6 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
 
   private static final ColumnConfig ALWAYS_USE_INDEXES = new ColumnConfig()
   {
-    @Override
-    public int columnCacheSizeBytes()
-    {
-      return 0;
-    }
 
     @Override
     public double skipValueRangeIndexScale()

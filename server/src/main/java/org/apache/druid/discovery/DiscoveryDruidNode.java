@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
+import org.apache.druid.client.DruidServer;
 import org.apache.druid.jackson.StringObjectPairList;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -197,6 +198,29 @@ public class DiscoveryDruidNode
       return (T) o;
     }
     return null;
+  }
+
+  public DruidServer toDruidServer()
+  {
+    final DataNodeService dataNodeService = getService(
+        DataNodeService.DISCOVERY_SERVICE_KEY,
+        DataNodeService.class
+    );
+
+    final DruidNode druidNode = getDruidNode();
+    if (dataNodeService == null || druidNode == null) {
+      return null;
+    }
+
+    return new DruidServer(
+        druidNode.getHostAndPortToUse(),
+        druidNode.getHostAndPort(),
+        druidNode.getHostAndTlsPort(),
+        dataNodeService.getMaxSize(),
+        dataNodeService.getServerType(),
+        dataNodeService.getTier(),
+        dataNodeService.getPriority()
+    );
   }
 
   @Override

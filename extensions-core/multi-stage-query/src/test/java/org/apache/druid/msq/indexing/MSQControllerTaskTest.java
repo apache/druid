@@ -65,6 +65,7 @@ public class MSQControllerTaskTest
         null,
         null,
         null,
+        null,
         null);
     Assert.assertTrue(msqWorkerTask.getInputSourceResources().isEmpty());
   }

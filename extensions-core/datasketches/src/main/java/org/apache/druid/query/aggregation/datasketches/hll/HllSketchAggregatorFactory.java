@@ -25,6 +25,8 @@ import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
 import org.apache.druid.jackson.DefaultTrueJsonIncludeFilter;
+import org.apache.druid.java.util.common.StringEncoding;
+import org.apache.druid.java.util.common.StringEncodingDefaultUTF16LEJsonIncludeFilter;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
@@ -47,6 +49,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   public static final boolean DEFAULT_SHOULD_FINALIZE = true;
   public static final int DEFAULT_LG_K = 12;
   public static final TgtHllType DEFAULT_TGT_HLL_TYPE = TgtHllType.HLL_4;
+  public static final StringEncoding DEFAULT_STRING_ENCODING = StringEncoding.UTF16LE;
 
   static final Comparator<HllSketchHolder> COMPARATOR =
       Comparator.nullsFirst(Comparator.comparingDouble(HllSketchHolder::getEstimate));
@@ -55,6 +58,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   private final String fieldName;
   private final int lgK;
   private final TgtHllType tgtHllType;
+  private final StringEncoding stringEncoding;
   private final boolean shouldFinalize;
   private final boolean round;
 
@@ -63,6 +67,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
       final String fieldName,
       @Nullable final Integer lgK,
       @Nullable final String tgtHllType,
+      @Nullable final StringEncoding stringEncoding,
       final Boolean shouldFinalize,
       final boolean round
   )
@@ -71,6 +76,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
     this.fieldName = Objects.requireNonNull(fieldName);
     this.lgK = lgK == null ? DEFAULT_LG_K : lgK;
     this.tgtHllType = tgtHllType == null ? DEFAULT_TGT_HLL_TYPE : TgtHllType.valueOf(tgtHllType);
+    this.stringEncoding = stringEncoding == null ? DEFAULT_STRING_ENCODING : stringEncoding;
     this.shouldFinalize = shouldFinalize == null ? DEFAULT_SHOULD_FINALIZE : shouldFinalize;
     this.round = round;
   }
@@ -101,6 +107,13 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   }
 
   @JsonProperty
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = StringEncodingDefaultUTF16LEJsonIncludeFilter.class)
+  public StringEncoding getStringEncoding()
+  {
+    return stringEncoding;
+  }
+
+  @JsonProperty
   @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = DefaultTrueJsonIncludeFilter.class)
   public boolean isShouldFinalize()
   {
@@ -121,14 +134,23 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   }
 
   /**
-   * This is a convoluted way to return a list of input field names this aggregator needs.
-   * Currently the returned factories are only used to obtain a field name by calling getName() method.
+   * Used by groupBy v1 to create a "transfer aggregator".
+   *
+   * {@inheritDoc}
    */
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
     return Collections.singletonList(
-        new HllSketchBuildAggregatorFactory(fieldName, fieldName, lgK, tgtHllType.toString(), shouldFinalize, round)
+        new HllSketchBuildAggregatorFactory(
+            fieldName,
+            fieldName,
+            lgK,
+            tgtHllType.toString(),
+            stringEncoding,
+            shouldFinalize,
+            round
+        )
     );
   }
 
@@ -228,6 +250,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
         getName(),
         getLgK(),
         getTgtHllType(),
+        getStringEncoding(),
         isShouldFinalize(),
         isRound()
     );
@@ -236,8 +259,13 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(getCacheTypeId()).appendString(name).appendString(fieldName)
-                                                .appendInt(lgK).appendInt(tgtHllType.ordinal()).build();
+    return new CacheKeyBuilder(getCacheTypeId())
+        .appendString(name)
+        .appendString(fieldName)
+        .appendInt(lgK)
+        .appendInt(tgtHllType.ordinal())
+        .appendCacheable(stringEncoding)
+        .build();
   }
 
   @Override
@@ -255,13 +283,14 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
            && round == that.round
            && Objects.equals(name, that.name)
            && Objects.equals(fieldName, that.fieldName)
-           && tgtHllType == that.tgtHllType;
+           && tgtHllType == that.tgtHllType
+           && stringEncoding == that.stringEncoding;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName, lgK, tgtHllType, shouldFinalize, round);
+    return Objects.hash(name, fieldName, lgK, tgtHllType, stringEncoding, shouldFinalize, round);
   }
 
   @Override
@@ -272,6 +301,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
            ", fieldName='" + fieldName + '\'' +
            ", lgK=" + lgK +
            ", tgtHllType=" + tgtHllType +
+           (stringEncoding != DEFAULT_STRING_ENCODING ? ", stringEncoding=" + stringEncoding : "") +
            (shouldFinalize != DEFAULT_SHOULD_FINALIZE ? ", shouldFinalize=" + shouldFinalize : "") +
            (round != DEFAULT_ROUND ? ", round=" + round : "") +
            '}';

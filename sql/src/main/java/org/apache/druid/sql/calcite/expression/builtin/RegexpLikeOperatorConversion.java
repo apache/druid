@@ -44,7 +44,7 @@ public class RegexpLikeOperatorConversion implements SqlOperatorConversion
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder("REGEXP_LIKE")
       .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
-      .requiredOperands(2)
+      .requiredOperandCount(2)
       .literalOperands(1)
       .returnTypeNonNull(SqlTypeName.BOOLEAN)
       .functionCategory(SqlFunctionCategory.STRING)

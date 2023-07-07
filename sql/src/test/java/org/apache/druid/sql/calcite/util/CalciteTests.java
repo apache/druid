@@ -135,6 +135,40 @@ public class CalciteTests
       };
     }
   };
+
+  public static final AuthorizerMapper TEST_EXTERNAL_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
+  {
+    @Override
+    public Authorizer getAuthorizer(String name)
+    {
+      return (authenticationResult, resource, action) -> {
+        if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
+          return Access.OK;
+        }
+
+        switch (resource.getType()) {
+          case ResourceType.DATASOURCE:
+            if (FORBIDDEN_DATASOURCE.equals(resource.getName())) {
+              return new Access(false);
+            } else {
+              return Access.OK;
+            }
+          case ResourceType.VIEW:
+            if ("forbiddenView".equals(resource.getName())) {
+              return new Access(false);
+            } else {
+              return Access.OK;
+            }
+          case ResourceType.QUERY_CONTEXT:
+          case ResourceType.EXTERNAL:
+            return Access.OK;
+          default:
+            return new Access(false);
+        }
+      };
+    }
+  };
+
   public static final AuthenticatorMapper TEST_AUTHENTICATOR_MAPPER;
 
   static {
@@ -293,7 +327,6 @@ public class CalciteTests
   public static SystemSchema createMockSystemSchema(
       final DruidSchema druidSchema,
       final SpecificSegmentsQuerySegmentWalker walker,
-      final PlannerConfig plannerConfig,
       final AuthorizerMapper authorizerMapper
   )
   {

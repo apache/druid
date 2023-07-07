@@ -21,6 +21,7 @@ package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.rvesse.airline.annotations.Command;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
@@ -32,6 +33,7 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
+import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
@@ -134,7 +136,9 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -353,6 +357,19 @@ public class CliOverlord extends ServerRunnable
               public TaskStorageDirTracker getTaskStorageDirTracker(WorkerConfig workerConfig, TaskConfig taskConfig)
               {
                 return TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig);
+              }
+
+              @Provides
+              @LazySingleton
+              @Named("heartbeat")
+              public Supplier<Map<String, Object>> getHeartbeatSupplier(TaskMaster taskMaster)
+              {
+                return () -> {
+                  Map<String, Object> heartbeatTags = new HashMap<>();
+                  heartbeatTags.put("leader", taskMaster.isLeader() ? 1 : 0);
+
+                  return heartbeatTags;
+                };
               }
             };
           }

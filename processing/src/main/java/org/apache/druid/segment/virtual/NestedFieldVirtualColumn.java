@@ -169,7 +169,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       String columnName,
       String path,
       String outputName,
-      ColumnType expectedType
+      @Nullable ColumnType expectedType
   )
   {
     this(columnName, outputName, expectedType, null, null, path, false);
@@ -1266,8 +1266,8 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   }
 
   /**
-   * Process the "raw" data to extract literals with {@link NestedPathFinder#findLiteral(Object, List)}. Like
-   * {@link RawFieldColumnSelector} but only literals and does not wrap the results in {@link StructuredData}.
+   * Process the "raw" data to extract non-complex values. Like {@link RawFieldColumnSelector} but does not return
+   * complex nested objects and does not wrap the results in {@link StructuredData}.
    * <p>
    * This is used as a selector on realtime data when the native field columns are not available.
    */
@@ -1312,7 +1312,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     @Override
     public boolean isNull()
     {
-      Object o = getObject();
+      final Object o = getObject();
       return !(o instanceof Number || (o instanceof String && Doubles.tryParse((String) o) != null));
     }
 
@@ -1320,8 +1320,18 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     @Override
     public Object getObject()
     {
-      StructuredData data = StructuredData.wrap(baseSelector.getObject());
-      return NestedPathFinder.findLiteral(data == null ? null : data.getValue(), parts);
+      final StructuredData data = StructuredData.wrap(baseSelector.getObject());
+      if (data == null) {
+        return null;
+      }
+
+      final Object valAtPath = NestedPathFinder.find(data.getValue(), parts);
+      final ExprEval eval = ExprEval.bestEffortOf(valAtPath);
+      if (eval.type().isPrimitive() || eval.type().isPrimitiveArray()) {
+        return eval.valueOrDefault();
+      }
+      // not a primitive value, return null;
+      return null;
     }
 
     @Override

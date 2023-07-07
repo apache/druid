@@ -21,28 +21,24 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.DruidServer;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  */
 public class ForeverLoadRule extends LoadRule
 {
-  private final Map<String, Integer> tieredReplicants;
-
   @JsonCreator
   public ForeverLoadRule(
-      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants
+      @JsonProperty("tieredReplicants") Map<String, Integer> tieredReplicants,
+      @JsonProperty("useDefaultTierForNull") @Nullable Boolean useDefaultTierForNull
   )
   {
-    this.tieredReplicants = tieredReplicants == null ? ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS) : tieredReplicants;
-    validateTieredReplicants(this.tieredReplicants);
+    super(tieredReplicants, useDefaultTierForNull);
   }
 
   @Override
@@ -50,20 +46,6 @@ public class ForeverLoadRule extends LoadRule
   public String getType()
   {
     return "loadForever";
-  }
-
-  @Override
-  @JsonProperty
-  public Map<String, Integer> getTieredReplicants()
-  {
-    return tieredReplicants;
-  }
-
-  @Override
-  public int getNumReplicants(String tier)
-  {
-    Integer retVal = tieredReplicants.get(tier);
-    return (retVal == null) ? 0 : retVal;
   }
 
   @Override
@@ -78,22 +60,4 @@ public class ForeverLoadRule extends LoadRule
     return true;
   }
 
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    ForeverLoadRule that = (ForeverLoadRule) o;
-    return Objects.equals(tieredReplicants, that.tieredReplicants);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(tieredReplicants);
-  }
 }

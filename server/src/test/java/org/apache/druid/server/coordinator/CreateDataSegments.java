@@ -28,6 +28,8 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,10 +41,12 @@ import java.util.Objects;
  */
 public class CreateDataSegments
 {
+  private static final DateTime DEFAULT_START = DateTimes.of("2012-10-24");
+
   private final String datasource;
 
-  private DateTime startTime;
-  private Granularity granularity;
+  private DateTime startTime = DEFAULT_START;
+  private Granularity granularity = Granularities.DAY;
   private int numPartitions = 1;
   private int numIntervals = 1;
 
@@ -103,7 +107,7 @@ public class CreateDataSegments
                 nextInterval,
                 new NumberedShardSpec(numPartition, numPartitions),
                 ++uniqueIdInInterval,
-                sizeMb
+                sizeMb << 20
             )
         );
       }
@@ -118,6 +122,7 @@ public class CreateDataSegments
    */
   private static class NumberedDataSegment extends DataSegment
   {
+    private static final DateTimeFormatter FORMATTER = DateTimeFormat.forPattern("yyyyMMdd");
     private final int uniqueId;
 
     private NumberedDataSegment(
@@ -145,7 +150,9 @@ public class CreateDataSegments
     @Override
     public String toString()
     {
-      return "{" + getDataSource() + "::" + uniqueId + "}";
+      return "{" + getDataSource()
+             + "::" + getInterval().getStart().toString(FORMATTER)
+             + "::" + uniqueId + "}";
     }
   }
 }

@@ -23,7 +23,10 @@ import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
@@ -45,6 +48,11 @@ import java.util.List;
  */
 public abstract class SimpleSqlAggregator implements SqlAggregator
 {
+  public static DruidException badTypeException(String columnName, String agg, ColumnType type)
+  {
+    return InvalidSqlInput.exception("Aggregation [%s] does not support type [%s], column [%s]", agg, type, columnName);
+  }
+
   @Nullable
   @Override
   public Aggregation toDruidAggregation(
@@ -76,7 +84,7 @@ public abstract class SimpleSqlAggregator implements SqlAggregator
     }
 
     final DruidExpression arg = Iterables.getOnlyElement(arguments);
-    final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
+    final ExprMacroTable macroTable = plannerContext.getPlannerToolbox().exprMacroTable();
 
     final String fieldName;
 
