@@ -55,7 +55,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -340,7 +339,7 @@ public class WorkerHolder
 
   public void waitForInitialization() throws InterruptedException
   {
-    if (!syncer.awaitInitialization(3 * syncer.getServerHttpTimeout(), TimeUnit.MILLISECONDS)) {
+    if (!syncer.awaitInitialization()) {
       throw new RE("Failed to sync with worker[%s].", worker.getHost());
     }
   }
@@ -348,7 +347,7 @@ public class WorkerHolder
   public boolean isInitialized()
   {
     try {
-      return syncer.awaitInitialization(1, TimeUnit.MILLISECONDS);
+      return syncer.isInitialized();
     }
     catch (InterruptedException ignored) {
       Thread.currentThread().interrupt();

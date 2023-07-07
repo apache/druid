@@ -86,6 +86,7 @@ public class WorkerHolderTest
     ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> syncListener = workerHolder.createSyncListener();
 
     Assert.assertTrue(workerHolder.disabled.get());
+    Assert.assertFalse(workerHolder.isInitialized());
 
     syncListener.fullSync(
         ImmutableList.of(
