@@ -22,6 +22,9 @@ package org.apache.druid.indexing.input;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexing.common.TaskToolbox;
 
+/**
+ * An InputSource which may require a TaskToolbox to interact with the Overlord
+ */
 public interface TaskInputSource extends InputSource
 {
   InputSource withTaskToolbox(TaskToolbox toolbox);

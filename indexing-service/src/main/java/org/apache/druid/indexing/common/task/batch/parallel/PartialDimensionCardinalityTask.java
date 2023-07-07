@@ -39,7 +39,6 @@ import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
-import org.apache.druid.indexing.input.TaskInputSource;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -183,9 +182,6 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
     Preconditions.checkNotNull(partitionsSpec, "partitionsSpec required in tuningConfig");
 
     InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
-    if (inputSource instanceof TaskInputSource) {
-      inputSource = ((TaskInputSource) inputSource).withTaskToolbox(toolbox);
-    }
     InputFormat inputFormat = inputSource.needsFormat()
                               ? ParallelIndexSupervisorTask.getInputFormat(ingestionSchema)
                               : null;

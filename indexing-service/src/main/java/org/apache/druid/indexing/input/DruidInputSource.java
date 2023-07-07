@@ -86,6 +86,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 /**
@@ -155,7 +156,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
    */
   private final List<String> metrics;
 
-  private TaskToolbox toolbox;
+  private final AtomicReference<TaskToolbox> toolboxRef = new AtomicReference<>();
 
   @JsonCreator
   public DruidInputSource(
@@ -246,8 +247,15 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   @Override
   public InputSource withTaskToolbox(TaskToolbox toolbox)
   {
-    this.toolbox = toolbox;
+    if (toolbox != null) {
+      toolboxRef.compareAndSet(null, toolbox);
+    }
     return this;
+  }
+
+  private TaskToolbox getToolbox()
+  {
+    return toolboxRef.get();
   }
 
   @Override
@@ -326,7 +334,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (interval == null) {
       return getTimelineForSegmentIds(coordinatorClient, dataSource, segmentIds);
     } else {
-      return getTimelineForInterval(toolbox, coordinatorClient, retryPolicyFactory, dataSource, interval);
+      return getTimelineForInterval(getToolbox(), coordinatorClient, retryPolicyFactory, dataSource, interval);
     }
   }
 
@@ -341,7 +349,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (segmentIds == null) {
       return Streams.sequentialStreamFrom(
           createSplits(
-              toolbox,
+              getToolbox(),
               coordinatorClient,
               retryPolicyFactory,
               dataSource,
@@ -362,7 +370,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     if (segmentIds == null) {
       return Iterators.size(
           createSplits(
-              toolbox,
+              getToolbox(),
               coordinatorClient,
               retryPolicyFactory,
               dataSource,
@@ -390,7 +398,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         segmentCacheManagerFactory,
         retryPolicyFactory,
         taskConfig
-    ).withTaskToolbox(toolbox);
+    ).withTaskToolbox(getToolbox());
   }
 
   @Override

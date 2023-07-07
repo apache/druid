@@ -122,6 +122,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -157,7 +158,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
    * Only the compaction task can have a special base name.
    */
   private final String baseSubtaskSpecName;
-  private InputSource baseInputSource;
+
+  private final AtomicReference<InputSource> inputSourceRef = new AtomicReference<>();
 
   /**
    * If intervals are missing in the granularitySpec, parallel index task runs in "dynamic locking mode".
@@ -246,7 +248,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
       checkPartitionsSpecForForceGuaranteedRollup(ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec());
     }
 
-    this.baseInputSource = ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
+    this.inputSourceRef.compareAndSet(null, ingestionSchema.getIOConfig().getInputSource());
     this.missingIntervalsInOverwriteMode = (getIngestionMode()
                                             != IngestionMode.APPEND)
                                            && ingestionSchema.getDataSchema()
@@ -522,8 +524,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         emitMetric(toolbox.getEmitter(), "ingest/count", 1);
 
         this.toolbox = toolbox;
-        if (baseInputSource instanceof TaskInputSource) {
-          baseInputSource = ((TaskInputSource) baseInputSource).withTaskToolbox(toolbox);
+        if (getInputSource() instanceof TaskInputSource) {
+          inputSourceRef.set(((TaskInputSource) getInputSource()).withTaskToolbox(toolbox));
         }
 
         if (isGuaranteedRollup(
@@ -535,10 +537,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
           return runSinglePhaseParallel(toolbox);
         }
       } else {
-        if (!baseInputSource.isSplittable()) {
+        if (!getInputSource().isSplittable()) {
           LOG.warn(
               "firehoseFactory[%s] is not splittable. Running sequentially.",
-              baseInputSource.getClass().getSimpleName()
+              getInputSource().getClass().getSimpleName()
           );
         } else if (ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() <= 1) {
           LOG.warn(
@@ -598,7 +600,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
 
   private boolean isParallelMode()
   {
-    return isParallelMode(baseInputSource, ingestionSchema.getTuningConfig());
+    return isParallelMode(getInputSource(), ingestionSchema.getTuningConfig());
   }
 
   /**
@@ -1820,6 +1822,11 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask implemen
         throw e;
       }
     }
+  }
+
+  private InputSource getInputSource()
+  {
+    return inputSourceRef.get();
   }
 
   /**
