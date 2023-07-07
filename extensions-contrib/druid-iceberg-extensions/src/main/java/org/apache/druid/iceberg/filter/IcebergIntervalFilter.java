@@ -46,8 +46,8 @@ public class IcebergIntervalFilter implements IcebergFilter
       @JsonProperty("intervals") List<Interval> intervals
   )
   {
-    Preconditions.checkNotNull(filterColumn, "filterColumn can not be null");
-    Preconditions.checkNotNull(intervals, "intervals can not be null");
+    Preconditions.checkNotNull(filterColumn, "You must specify a filter column on the interval filter");
+    Preconditions.checkArgument(intervals != null && intervals.size() > 0, "You must specify intervals on the interval filter");
     this.filterColumn = filterColumn;
     this.intervals = intervals;
   }

@@ -22,11 +22,14 @@ package org.apache.druid.iceberg.input;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.iceberg.guice.HiveConf;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.DynamicConfigProviderUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.iceberg.BaseMetastoreCatalog;
@@ -34,7 +37,6 @@ import org.apache.iceberg.hive.HiveCatalog;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -43,6 +45,7 @@ import java.util.Map;
  */
 public class HiveIcebergCatalog extends IcebergCatalog
 {
+  public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
   public static final String TYPE_KEY = "hive";
 
   @JsonProperty
@@ -65,13 +68,14 @@ public class HiveIcebergCatalog extends IcebergCatalog
       @JsonProperty("warehousePath") String warehousePath,
       @JsonProperty("catalogUri") String catalogUri,
       @JsonProperty("catalogProperties") @Nullable
-          Map<String, String> catalogProperties,
+          Map<String, Object> catalogProperties,
+      @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject @HiveConf Configuration configuration
   )
   {
     this.warehousePath = Preconditions.checkNotNull(warehousePath, "warehousePath cannot be null");
     this.catalogUri = Preconditions.checkNotNull(catalogUri, "catalogUri cannot be null");
-    this.catalogProperties = catalogProperties != null ? catalogProperties : new HashMap<>();
+    this.catalogProperties = DynamicConfigProviderUtils.extraConfigAndSetStringMap(catalogProperties, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, mapper);
     this.configuration = configuration;
     this.catalogProperties
         .forEach(this.configuration::set);

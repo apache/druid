@@ -22,7 +22,7 @@ package org.apache.druid.iceberg.input;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.data.input.AbstractInputSourceAdapter;
+import org.apache.druid.data.input.AbstractInputSourceBuilder;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
@@ -60,9 +60,11 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   private IcebergFilter icebergFilter;
 
   @JsonProperty
-  private AbstractInputSourceAdapter warehouseSource;
+  private AbstractInputSourceBuilder warehouseSource;
 
   private boolean isLoaded = false;
+
+  private SplittableInputSource delegateInputSource;
 
   @JsonCreator
   public IcebergInputSource(
@@ -70,7 +72,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       @JsonProperty("namespace") String namespace,
       @JsonProperty("icebergFilter") @Nullable IcebergFilter icebergFilter,
       @JsonProperty("icebergCatalog") IcebergCatalog icebergCatalog,
-      @JsonProperty("warehouseSource") AbstractInputSourceAdapter warehouseSource
+      @JsonProperty("warehouseSource") AbstractInputSourceBuilder warehouseSource
   )
   {
     this.tableName = Preconditions.checkNotNull(tableName, "tableName cannot be null");
@@ -96,7 +98,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     if (!isLoaded) {
       retrieveIcebergDatafiles();
     }
-    return warehouseSource.getInputSource().reader(inputRowSchema, inputFormat, temporaryDirectory);
+    return getDelegateInputSource().reader(inputRowSchema, inputFormat, temporaryDirectory);
   }
 
   @Override
@@ -108,7 +110,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     if (!isLoaded) {
       retrieveIcebergDatafiles();
     }
-    return warehouseSource.getInputSource().createSplits(inputFormat, splitHintSpec);
+    return getDelegateInputSource().createSplits(inputFormat, splitHintSpec);
   }
 
   @Override
@@ -117,19 +119,19 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     if (!isLoaded) {
       retrieveIcebergDatafiles();
     }
-    return warehouseSource.getInputSource().estimateNumSplits(inputFormat, splitHintSpec);
+    return getDelegateInputSource().estimateNumSplits(inputFormat, splitHintSpec);
   }
 
   @Override
   public InputSource withSplit(InputSplit<List<String>> inputSplit)
   {
-    return warehouseSource.getInputSource().withSplit(inputSplit);
+    return getDelegateInputSource().withSplit(inputSplit);
   }
 
   @Override
   public SplitHintSpec getSplitHintSpecOrDefault(@Nullable SplitHintSpec splitHintSpec)
   {
-    return warehouseSource.getInputSource().getSplitHintSpecOrDefault(splitHintSpec);
+    return getDelegateInputSource().getSplitHintSpecOrDefault(splitHintSpec);
   }
 
   @JsonProperty
@@ -156,6 +158,11 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     return icebergFilter;
   }
 
+  public SplittableInputSource getDelegateInputSource()
+  {
+    return delegateInputSource;
+  }
+
   protected void retrieveIcebergDatafiles()
   {
     List<String> snapshotDataFiles = icebergCatalog.extractSnapshotDataFiles(
@@ -163,7 +170,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
         getTableName(),
         getIcebergFilter()
     );
-    warehouseSource.setupInputSource(snapshotDataFiles);
+    delegateInputSource = warehouseSource.setupInputSource(snapshotDataFiles);
     isLoaded = true;
   }
 }

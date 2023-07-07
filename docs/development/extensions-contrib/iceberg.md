@@ -33,7 +33,7 @@ These metastores are defined as Iceberg catalogs and this extension supports con
 
 Support for AWS Glue and REST based catalogs are not available yet.
 
-For a given catalog, iceberg table name and filters, The IcebergInputSource works by reading the table from the catalog, applying the filters and extracting all the underlying live data files up to the latest snapshot.
+For a given catalog, iceberg table name and filters, the IcebergInputSource works by reading the table from the catalog, applying the filters and extracting all the underlying live data files up to the latest snapshot.
 The data files are in either Parquet, ORC or Avro formats and all of these have InputFormat support in Druid. The data files typically reside in a warehouse location which could be in HDFS, S3 or the local filesystem.
 This extension relies on the existing InputSource connectors in Druid to read the data files from the warehouse. Therefore, the IcebergInputSource can be considered as an intermediate InputSource which provides the file paths for other InputSource implementations.
 
@@ -105,7 +105,7 @@ The following properties will be required in the `catalogProperties`:
   "fs.s3a.endpoint" : "S3_API_ENDPOINT"
 }
 ```
-Since the AWS connector uses the `s3a` filesystem based client, the warehouse path should be specified with the `s3a://` protocol instead of `s3://`.
+Since the Hadoop AWS connector uses the `s3a` filesystem based client, the warehouse path should be specified with the `s3a://` protocol instead of `s3://`.
 
 ### Local Catalog
 

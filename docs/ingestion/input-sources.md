@@ -957,7 +957,7 @@ This input source provides filters: `and` , `equals` , `interval` and `or`. Thes
 |--------|-----------|---------|
 |type|Set this value to `interval`.|yes|
 |filterColumn|The column name from the iceberg table schema based on which filtering needs to happen|yes|
-|intervals|A JSON array containing ISO-8601 interval strings. This defines the time ranges to filter on|yes|
+|intervals|A JSON array containing ISO-8601 interval strings. This defines the time ranges to filter on. The start interval is inclusive and the end interval is exclusive. |yes|
 
 `and` Filter:
 

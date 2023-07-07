@@ -21,9 +21,9 @@ package org.apache.druid.data.input.impl;
 
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
-import org.apache.druid.java.util.common.ISE;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -44,7 +44,7 @@ public class LocalInputSourceAdapterTest
   @Test
   public void testAdapterGet()
   {
-    LocalInputSourceAdapter localInputSourceAdapter = new LocalInputSourceAdapter();
+    LocalInputSourceBuilder localInputSourceAdapter = new LocalInputSourceBuilder();
     Assert.assertTrue(localInputSourceAdapter.generateInputSource(Arrays.asList(
         "foo.parquet",
         "bar.parquet"
@@ -54,12 +54,12 @@ public class LocalInputSourceAdapterTest
   @Test
   public void testAdapterSetup()
   {
-    LocalInputSourceAdapter localInputSourceAdapter = new LocalInputSourceAdapter();
-    localInputSourceAdapter.setupInputSource(Arrays.asList(
+    LocalInputSourceBuilder localInputSourceAdapter = new LocalInputSourceBuilder();
+    InputSource delegateInputSource = localInputSourceAdapter.setupInputSource(Arrays.asList(
         "foo.parquet",
         "bar.parquet"
     ));
-    Assert.assertTrue(localInputSourceAdapter.getInputSource() instanceof LocalInputSource);
+    Assert.assertTrue(delegateInputSource instanceof LocalInputSource);
   }
 
   @Test
@@ -67,10 +67,9 @@ public class LocalInputSourceAdapterTest
   {
     InputFormat mockFormat = EasyMock.createMock(InputFormat.class);
     SplitHintSpec mockSplitHint = EasyMock.createMock(SplitHintSpec.class);
-    LocalInputSourceAdapter localInputSourceAdapter = new LocalInputSourceAdapter();
-    localInputSourceAdapter.setupInputSource(Collections.emptyList());
+    LocalInputSourceBuilder localInputSourceAdapter = new LocalInputSourceBuilder();
     SplittableInputSource<Object> emptyInputSource =
-        (SplittableInputSource<Object>) localInputSourceAdapter.getInputSource();
+        (SplittableInputSource<Object>) localInputSourceAdapter.setupInputSource(Collections.emptyList());
     List<InputSplit<Object>> splitList = emptyInputSource
         .createSplits(mockFormat, mockSplitHint)
         .collect(Collectors.toList());
@@ -84,28 +83,5 @@ public class LocalInputSourceAdapterTest
         mockFormat,
         temporaryFolder.newFolder()
     ).read().hasNext());
-  }
-
-  @Test
-  public void testIllegalInputSourceGet()
-  {
-    LocalInputSourceAdapter localInputSourceAdapter = new LocalInputSourceAdapter();
-    Assert.assertThrows(
-        "Inputsource is not initialized yet!",
-        ISE.class,
-        () -> localInputSourceAdapter.getInputSource()
-    );
-  }
-
-  @Test
-  public void testIllegalInputSourceSetup()
-  {
-    LocalInputSourceAdapter localInputSourceAdapter = new LocalInputSourceAdapter();
-    localInputSourceAdapter.setupInputSource(Collections.emptyList());
-    Assert.assertThrows(
-        "Inputsource is already initialized!",
-        ISE.class,
-        () -> localInputSourceAdapter.setupInputSource(Collections.emptyList())
-    );
   }
 }

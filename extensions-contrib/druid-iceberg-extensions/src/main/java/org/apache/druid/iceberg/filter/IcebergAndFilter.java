@@ -65,12 +65,8 @@ public class IcebergAndFilter implements IcebergFilter
   {
     List<Expression> expressions = new ArrayList<>();
     LinkedHashSet<IcebergFilter> flatFilters = flattenAndChildren(filters);
-    if (!flatFilters.isEmpty()) {
-      for (IcebergFilter filter : flatFilters) {
-        expressions.add(filter.getFilterExpression());
-      }
-    } else {
-      log.error("Empty filter set, running iceberg table scan without filters");
+    for (IcebergFilter filter : flatFilters) {
+      expressions.add(filter.getFilterExpression());
     }
     Expression finalExpr = Expressions.alwaysTrue();
     for (Expression expr : expressions) {

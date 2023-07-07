@@ -75,7 +75,7 @@ public abstract class IcebergCatalog
                                                       .filter(tableId -> tableId.toString().equals(tableIdentifier))
                                                       .findFirst()
                                                       .orElseThrow(() -> new IAE(
-                                                          " Couldn't retrieve table identifier for '%s'",
+                                                          " Couldn't retrieve table identifier for '%s'. Please verify that the table exists in the given catalog",
                                                           tableIdentifier
                                                       ));
 
@@ -91,7 +91,7 @@ public abstract class IcebergCatalog
                        .forEach(dataFile -> dataFilePaths.add(dataFile.path().toString()));
 
       long duration = System.currentTimeMillis() - start;
-      log.info("Data file scan and fetch took %d ms for %d paths", duration, dataFilePaths.size());
+      log.info("Data file scan and fetch took [%d ms] time for [%d] paths", duration, dataFilePaths.size());
     }
     catch (Exception e) {
       throw new RE(e, "Failed to load iceberg table with identifier [%s]", tableIdentifier);

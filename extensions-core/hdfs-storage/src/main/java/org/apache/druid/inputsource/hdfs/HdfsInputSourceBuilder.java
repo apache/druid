@@ -21,20 +21,20 @@ package org.apache.druid.inputsource.hdfs;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import org.apache.druid.data.input.AbstractInputSourceAdapter;
+import org.apache.druid.data.input.AbstractInputSourceBuilder;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.Hdfs;
 import org.apache.hadoop.conf.Configuration;
 
 import java.util.List;
 
-public class HdfsInputSourceAdapter extends AbstractInputSourceAdapter
+public class HdfsInputSourceBuilder extends AbstractInputSourceBuilder
 {
   private final Configuration configuration;
   private final HdfsInputSourceConfig inputSourceConfig;
 
   @JsonCreator
-  public HdfsInputSourceAdapter(
+  public HdfsInputSourceBuilder(
       @JacksonInject @Hdfs Configuration configuration,
       @JacksonInject HdfsInputSourceConfig inputSourceConfig
   )

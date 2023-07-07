@@ -19,6 +19,8 @@
 
 package org.apache.druid.iceberg.input;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -30,6 +32,8 @@ import java.util.HashMap;
 
 public class HiveIcebergCatalogTest
 {
+  private final ObjectMapper mapper = new DefaultObjectMapper();
+
   @Test
   public void testCatalogCreate()
   {
@@ -38,12 +42,14 @@ public class HiveIcebergCatalogTest
         warehouseDir.getPath(),
         "hdfs://testuri",
         new HashMap<>(),
+        mapper,
         new Configuration()
     );
     HiveIcebergCatalog hiveCatalogNullProps = new HiveIcebergCatalog(
         warehouseDir.getPath(),
         "hdfs://testuri",
         null,
+        mapper,
         new Configuration()
     );
     Assert.assertEquals("hive", hiveCatalog.retrieveCatalog().name());
@@ -55,13 +61,14 @@ public class HiveIcebergCatalogTest
   {
     UserGroupInformation.setLoginUser(UserGroupInformation.createUserForTesting("test", new String[]{"testGroup"}));
     final File warehouseDir = FileUtils.createTempDir();
-    HashMap<String, String> catalogMap = new HashMap<>();
+    HashMap<String, Object> catalogMap = new HashMap<>();
     catalogMap.put("principal", "test");
     catalogMap.put("keytab", "test");
     HiveIcebergCatalog hiveCatalog = new HiveIcebergCatalog(
         warehouseDir.getPath(),
         "hdfs://testuri",
         catalogMap,
+        mapper,
         new Configuration()
     );
     Assert.assertEquals("hdfs://testuri", hiveCatalog.getCatalogUri());

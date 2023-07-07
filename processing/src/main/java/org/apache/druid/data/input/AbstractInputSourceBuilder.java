@@ -21,10 +21,9 @@ package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.data.input.impl.LocalInputSourceAdapter;
+import org.apache.druid.data.input.impl.LocalInputSourceBuilder;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.java.util.common.CloseableIterators;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 
 import javax.annotation.Nullable;
@@ -42,34 +41,26 @@ import java.util.stream.Stream;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = LocalInputSourceAdapter.TYPE_KEY, value = LocalInputSourceAdapter.class)
+    @JsonSubTypes.Type(name = LocalInputSourceBuilder.TYPE_KEY, value = LocalInputSourceBuilder.class)
 })
-public abstract class AbstractInputSourceAdapter
+public abstract class AbstractInputSourceBuilder
 {
-  private SplittableInputSource inputSource;
-
   public abstract SplittableInputSource generateInputSource(List<String> inputFilePaths);
 
-  public void setupInputSource(List<String> inputFilePaths)
+  public SplittableInputSource setupInputSource(List<String> inputFilePaths)
   {
-    if (inputSource != null) {
-      throw new ISE("Inputsource is already initialized!");
-    }
     if (inputFilePaths.isEmpty()) {
-      inputSource = new EmptyInputSource();
+      return new EmptyInputSource();
     } else {
-      inputSource = generateInputSource(inputFilePaths);
+      return generateInputSource(inputFilePaths);
     }
   }
 
-  public SplittableInputSource getInputSource()
-  {
-    if (inputSource == null) {
-      throw new ISE("Inputsource is not initialized yet!");
-    }
-    return inputSource;
-  }
-
+  /*
+   * This input source is used in place of a delegate input source if there are no input file paths.
+   * Certain input sources cannot be instantiated with an empty input file list and so composing input sources such as IcebergInputSource
+   * may use this input source as delegate in such cases.
+   */
   private static class EmptyInputSource implements SplittableInputSource
   {
     @Override

@@ -36,7 +36,7 @@ public class IcebergNotFilter implements IcebergFilter
       @JsonProperty("filter") IcebergFilter filter
   )
   {
-    Preconditions.checkNotNull(filter, "filter cannot be null");
+    Preconditions.checkNotNull(filter, "You must specify an iceberg filter");
     this.filter = filter;
   }
 

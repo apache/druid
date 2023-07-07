@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.guice.HiveConf;
 import org.apache.druid.iceberg.input.HiveIcebergCatalog;
 import org.apache.druid.iceberg.input.IcebergInputSource;
@@ -62,7 +63,9 @@ public class IcebergDruidModule implements DruidModule
       FileSystem.get(conf);
     }
     catch (Exception ex) {
-      throw new RuntimeException(ex);
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.UNCATEGORIZED)
+                          .build(ex, "Problem during fileSystem class level initialization");
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

@@ -43,7 +43,7 @@ public class S3InputSourceAdapterTest
         "s3://bar/foo/file3.txt"
     );
 
-    S3InputSourceAdapter s3Adapter = new S3InputSourceAdapter(
+    S3InputSourceBuilder s3Adapter = new S3InputSourceBuilder(
         service,
         serverSides3Builder,
         dataConfig,
