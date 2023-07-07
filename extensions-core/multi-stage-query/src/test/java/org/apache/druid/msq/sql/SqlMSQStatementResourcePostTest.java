@@ -20,13 +20,13 @@
 package org.apache.druid.msq.sql;
 
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.MSQControllerTask;
+import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
@@ -36,24 +36,28 @@ import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.sql.resources.SqlStatementResource;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlQuery;
+import org.apache.druid.storage.NilStorageConnector;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class SqlMsqStatementResourcePostTest extends MSQTestBase
+public class SqlMSQStatementResourcePostTest extends MSQTestBase
 {
   private SqlStatementResource resource;
+
 
   @Before
   public void init()
@@ -62,14 +66,15 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
         sqlStatementFactory,
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         objectMapper,
-        indexingServiceClient
+        indexingServiceClient,
+        localFileStorageConnector
     );
   }
 
   @Test
   public void testMSQSelectQueryTest() throws IOException
   {
-    List<Object> results = ImmutableList.of(
+    List<Object[]> results = ImmutableList.of(
         new Object[]{1L, ""},
         new Object[]{
             1L,
@@ -117,19 +122,16 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
                                    316L,
                                    null,
                                    MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT,
-                                   objectMapper.readValue(
-                                       objectMapper.writeValueAsString(
-                                           results),
-                                       new TypeReference<List<Object>>()
-                                       {
-                                       }
-                                   ),
+                                   results,
                                    ImmutableList.of(new PageInformation(6L, 316L, 0))
                                ),
                                null
         );
 
-    Assert.assertEquals(expected, response.getEntity());
+    Assert.assertEquals(
+        objectMapper.writeValueAsString(expected),
+        objectMapper.writeValueAsString(response.getEntity())
+    );
   }
 
 
@@ -247,6 +249,83 @@ public class SqlMsqStatementResourcePostTest extends MSQTestBase
     ).getStatus());
   }
 
+  @Test
+  public void durableStorageDisabledTest()
+  {
+    SqlStatementResource resourceWithDurableStorage = new SqlStatementResource(
+        sqlStatementFactory,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        objectMapper,
+        indexingServiceClient,
+        NilStorageConnector.getInstance()
+    );
+
+    String errorMessage = StringUtils.format(
+        "The statement sql api cannot read from select destination [%s=%s] since its not configured. "
+        + "Its recommended to configure durable storage as it allows the user to fetch big results. "
+        + "Please contact your cluster admin to configure durable storage.",
+        MultiStageQueryContext.CTX_SELECT_DESTINATION,
+        MSQSelectDestination.DURABLE_STORAGE.name()
+    );
+    Map<String, Object> context = defaultAsyncContext();
+    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLE_STORAGE.name());
+
+    SqlStatementResourceTest.assertExceptionMessage(resourceWithDurableStorage.doPost(
+                                                        new SqlQuery(
+                                                            "select * from foo",
+                                                            null,
+                                                            false,
+                                                            false,
+                                                            false,
+                                                            context,
+                                                            null
+                                                        ),
+                                                        SqlStatementResourceTest.makeOkRequest()
+                                                    ), errorMessage,
+                                                    Response.Status.BAD_REQUEST
+    );
+  }
+
+  @Test
+  public void testWithDurableStorage() throws IOException
+  {
+    Map<String, Object> context = defaultAsyncContext();
+    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLE_STORAGE.name());
+
+    SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
+        new SqlQuery(
+            "select cnt,dim1 from foo",
+            null,
+            false,
+            false,
+            false,
+            context,
+            null
+        ),
+        SqlStatementResourceTest.makeOkRequest()
+    ).getEntity();
+
+
+    List<Map<String, Object>> rows = new ArrayList<>();
+    rows.add(ImmutableMap.of("cnt", 1, "dim1", ""));
+    rows.add(ImmutableMap.of("cnt", 1, "dim1", "10.1"));
+    rows.add(ImmutableMap.of("cnt", 1, "dim1", "2"));
+    rows.add(ImmutableMap.of("cnt", 1, "dim1", "1"));
+    rows.add(ImmutableMap.of("cnt", 1, "dim1", "def"));
+    rows.add(ImmutableMap.of("cnt", 1, "dim1", "abc"));
+
+    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+        sqlStatementResult.getQueryId(),
+        null,
+        SqlStatementResourceTest.makeOkRequest()
+    )));
+
+    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+        sqlStatementResult.getQueryId(),
+        0L,
+        SqlStatementResourceTest.makeOkRequest()
+    )));
+  }
 
   private static Map<String, Object> defaultAsyncContext()
   {

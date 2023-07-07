@@ -17,13 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.indexing.client;
 
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.msq.exec.WorkerManagerClient;
+import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.rpc.indexing.OverlordClient;
 
 import java.util.Map;

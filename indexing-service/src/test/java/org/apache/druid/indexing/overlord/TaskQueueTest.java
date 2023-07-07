@@ -28,6 +28,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.common.guava.DSuppliers;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.WorkerNodeService;
+import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -64,17 +65,15 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
@@ -84,7 +83,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 public class TaskQueueTest extends IngestionTestBase
 {
@@ -105,7 +103,7 @@ public class TaskQueueTest extends IngestionTestBase
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null),
         new DefaultTaskConfig(),
         getTaskStorage(),
         new SimpleTaskRunner(actionClientFactory),
@@ -150,7 +148,7 @@ public class TaskQueueTest extends IngestionTestBase
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null),
         new DefaultTaskConfig(),
         getTaskStorage(),
         new SimpleTaskRunner(actionClientFactory),
@@ -190,7 +188,7 @@ public class TaskQueueTest extends IngestionTestBase
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null),
         new DefaultTaskConfig(),
         getTaskStorage(),
         new SimpleTaskRunner(actionClientFactory),
@@ -215,7 +213,7 @@ public class TaskQueueTest extends IngestionTestBase
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null),
         new DefaultTaskConfig()
         {
           @Override
@@ -250,7 +248,7 @@ public class TaskQueueTest extends IngestionTestBase
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null),
         new DefaultTaskConfig(),
         getTaskStorage(),
         new SimpleTaskRunner(actionClientFactory),
@@ -282,7 +280,7 @@ public class TaskQueueTest extends IngestionTestBase
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null),
         new DefaultTaskConfig()
         {
           @Override
@@ -315,7 +313,7 @@ public class TaskQueueTest extends IngestionTestBase
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null),
         new DefaultTaskConfig(),
         getTaskStorage(),
         new SimpleTaskRunner(actionClientFactory),
@@ -345,7 +343,7 @@ public class TaskQueueTest extends IngestionTestBase
     final TaskActionClientFactory actionClientFactory = createActionClientFactory();
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null),
         new DefaultTaskConfig(),
         getTaskStorage(),
         new SimpleTaskRunner(actionClientFactory),
@@ -392,7 +390,7 @@ public class TaskQueueTest extends IngestionTestBase
     EasyMock.replay(workerHolder);
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null),
         new DefaultTaskConfig(),
         getTaskStorage(),
         taskRunner,
@@ -404,63 +402,36 @@ public class TaskQueueTest extends IngestionTestBase
     final Task task = new TestTask(
         "t1",
         Intervals.of("2021-01-01/P1D"),
-        ImmutableMap.of(
-            Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
-            false
-        )
+        ImmutableMap.of(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, false)
     );
     taskQueue.add(task);
     taskQueue.manageInternal();
-    taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
-        task,
-        TaskStatus.running(task.getId()),
-        TaskLocation.create("worker", 1, 2)
-    ), workerHolder);
-    while (!taskRunner.getRunningTasks()
-                      .stream()
-                      .map(TaskRunnerWorkItem::getTaskId)
-                      .collect(Collectors.toList())
-                      .contains(task.getId())) {
+
+    // Announce the task and wait for it to start running
+    final String taskId = task.getId();
+    final TaskLocation taskLocation = TaskLocation.create("worker", 1, 2);
+    taskRunner.taskAddedOrUpdated(
+        TaskAnnouncement.create(task, TaskStatus.running(taskId), taskLocation),
+        workerHolder
+    );
+    while (taskRunner.getRunnerTaskState(taskId) != RunnerTaskState.RUNNING) {
       Thread.sleep(100);
     }
-    taskQueue.shutdown(task.getId(), "shutdown");
-    taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
-        task,
-        TaskStatus.failure(task.getId(), "shutdown"),
-        TaskLocation.create("worker", 1, 2)
-    ), workerHolder);
+
+    // Kill the task, send announcement and wait for TaskQueue to handle update
+    taskQueue.shutdown(taskId, "shutdown");
+    taskRunner.taskAddedOrUpdated(
+        TaskAnnouncement.create(task, TaskStatus.failure(taskId, "shutdown"), taskLocation),
+        workerHolder
+    );
     taskQueue.manageInternal();
+    Thread.sleep(100);
 
-    metricsVerifier.getEvents();
+    // Verify that metrics are emitted on receiving announcement
     metricsVerifier.verifyEmitted("task/run/time", 1);
-    EasyMock.verify(workerHolder);
-  }
-
-  @Test
-  public void testAddBeyondLimit() throws EntryExistsException
-  {
-    final TaskActionClientFactory actionClientFactory = createActionClientFactory();
-    final HttpRemoteTaskRunner taskRunner = createHttpRemoteTaskRunner(ImmutableList.of("t1"));
-    final StubServiceEmitter metricsVerifier = new StubServiceEmitter("druid/overlord", "testHost");
-    final TaskQueue taskQueue = new TaskQueue(
-        new TaskLockConfig(),
-        new TaskQueueConfig(0, null, null, null),
-        new DefaultTaskConfig(),
-        getTaskStorage(),
-        taskRunner,
-        actionClientFactory,
-        getLockbox(),
-        metricsVerifier
-    );
-    final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
-
-    taskQueue.setActive(true);
-    final IllegalStateException e = Assert.assertThrows(
-        IllegalStateException.class,
-        () -> taskQueue.add(task)
-    );
-
-    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Too many tasks")));
+    CoordinatorRunStats stats = taskQueue.getQueueStats();
+    Assert.assertEquals(0L, stats.get(Stats.TaskQueue.STATUS_UPDATES_IN_QUEUE));
+    Assert.assertEquals(1L, stats.get(Stats.TaskQueue.HANDLED_STATUS_UPDATES));
   }
 
   private HttpRemoteTaskRunner createHttpRemoteTaskRunner(List<String> runningTasks)

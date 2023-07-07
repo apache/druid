@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.indexing.client;
 
 import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
@@ -28,6 +28,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.Worker;
+import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;

@@ -571,12 +571,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
     boolean isSyncedSuccessfullyAtleastOnce()
     {
-      try {
-        return syncer.isInitialized();
-      }
-      catch (InterruptedException ex) {
-        throw new ISE(ex, "Interrupted while waiting for first sync with server[%s].", druidServer.getName());
-      }
+      return syncer.isInitialized();
     }
 
     private ChangeRequestHttpSyncer.Listener<DataSegmentChangeRequest> createSyncListener()

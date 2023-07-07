@@ -17,29 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.indexing.overlord;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 
-public class TaskReportMSQDestination implements MSQDestination
+/**
+ * Task-level stats emitted as metrics.
+ */
+public class Stats
 {
-  public static final TaskReportMSQDestination INSTANCE = new TaskReportMSQDestination();
-  static final String TYPE = "taskReport";
-
-  private TaskReportMSQDestination()
+  public static class TaskQueue
   {
-    // Singleton.
-  }
-
-  @JsonCreator
-  public static TaskReportMSQDestination instance()
-  {
-    return INSTANCE;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "TaskReportMSQDestination{}";
+    public static final CoordinatorStat STATUS_UPDATES_IN_QUEUE
+        = CoordinatorStat.toDebugAndEmit("queuedStatusUpdates", "task/status/queue/count");
+    public static final CoordinatorStat HANDLED_STATUS_UPDATES
+        = CoordinatorStat.toDebugAndEmit("handledStatusUpdates", "task/status/updated/count");
   }
 }

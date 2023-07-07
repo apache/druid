@@ -199,6 +199,28 @@ public class CoordinatorRunStatsTest
     Assert.assertEquals(expectedTable, debugStats.buildStatsTable());
   }
 
+  @Test
+  public void testAddToEmptyThrowsException()
+  {
+    CoordinatorRunStats runStats = CoordinatorRunStats.empty();
+    Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> runStats.add(Stat.ERROR_1, 10)
+    );
+    Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> runStats.add(Stat.ERROR_1, Key.DUTY_1, 10)
+    );
+    Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> runStats.addToSegmentStat(Stat.ERROR_1, "t", "ds", 10)
+    );
+    Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> runStats.updateMax(Stat.INFO_1, Key.TIER_1, 10)
+    );
+  }
+
   /**
    * Dimension keys for reporting stats.
    */
