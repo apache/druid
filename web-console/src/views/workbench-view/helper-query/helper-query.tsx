@@ -314,8 +314,8 @@ export const HelperQuery = React.memo(function HelperQuery(props: HelperQueryPro
     } catch {}
   }
 
-  const onUserCancel = () => {
-    queryManager.cancelCurrent();
+  const onUserCancel = (message?: string) => {
+    queryManager.cancelCurrent(message);
     nativeQueryCancelFnRef.current?.();
   };
 

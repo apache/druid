@@ -330,8 +330,8 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   const queryPrefixes = query.getPrefixQueries();
   const extractedCtes = query.extractCteHelpers();
 
-  const onUserCancel = () => {
-    queryManager.cancelCurrent();
+  const onUserCancel = (message?: string) => {
+    queryManager.cancelCurrent(message);
     nativeQueryCancelFnRef.current?.();
   };
 

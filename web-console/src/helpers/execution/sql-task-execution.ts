@@ -262,15 +262,10 @@ export async function updateExecutionWithDatasourceLoadedIfNeeded(
     return execution.markDestinationDatasourceLoaded();
   }
 
-  // Ideally we would have a more accurate query here, instead of
-  //   COUNT(*) FILTER (WHERE is_published = 1 AND is_available = 0)
-  // we want to filter on something like
-  //   COUNT(*) FILTER (WHERE is_should_be_available = 1 AND is_available = 0)
-  // `is_published` does not quite capture what we want but this is the best we have for now.
   const segmentCheck = await queryDruidSql({
     query: `SELECT
   COUNT(*) AS num_segments,
-  COUNT(*) FILTER (WHERE is_published = 1 AND is_available = 0) AS loading_segments
+  COUNT(*) FILTER (WHERE is_published = 1 AND is_available = 0 AND replication_factor <> 0) AS loading_segments
 FROM sys.segments
 WHERE datasource = ${L(execution.destination.dataSource)} AND is_overshadowed = 0`,
   });
