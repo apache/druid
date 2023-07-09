@@ -47,6 +47,9 @@ import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerImpl;
 import org.apache.druid.msq.exec.MSQTasks;
+import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
+import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -262,5 +265,10 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery
   public static boolean isIngestion(final MSQSpec querySpec)
   {
     return querySpec.getDestination() instanceof DataSourceMSQDestination;
+  }
+
+  public static boolean writeResultsToDurableStorage(final MSQSpec querySpec)
+  {
+    return querySpec.getDestination() instanceof DurableStorageMSQDestination;
   }
 }

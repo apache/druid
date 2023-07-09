@@ -172,11 +172,11 @@ public class ChangeRequestHttpSyncer<T>
   }
 
   /**
-   * Waits upto 1 millisecond for the first successful sync with this server.
+   * Whether this server has been synced successfully at least once.
    */
-  public boolean isInitialized() throws InterruptedException
+  public boolean isInitialized()
   {
-    return initializationLatch.await(1, TimeUnit.MILLISECONDS);
+    return initializationLatch.getCount() == 0;
   }
 
   /**
