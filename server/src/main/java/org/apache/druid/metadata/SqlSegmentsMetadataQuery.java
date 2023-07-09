@@ -125,21 +125,41 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Marks the provided segments as either used or unused.
+   * Marks the given segments as used. All segments must belong to the same
+   * datasource.
    *
-   * Returns the number of segments actually modified.
+   * @return Number of updated segments.
    */
-  public int markSegments(final Collection<SegmentId> segmentIds, final boolean used)
+  public int markSegmentsAsUsed(Collection<SegmentId> segmentIds)
   {
-    final String dataSource;
+    return updateUsedStatusOfSegmentsTo(segmentIds, true);
+  }
 
+  /**
+   * Marks the given segments as unused. All segments must belong to the same
+   * datasource.
+   *
+   * @return Number of updated segments.
+   */
+  public int markSegmentsAsUnused(Collection<SegmentId> segmentIds)
+  {
+    return updateUsedStatusOfSegmentsTo(segmentIds, false);
+  }
+
+  /**
+   * Updates the "used" status of segments to the given value of {@code used}.
+   *
+   * @return Number of updated segments.
+   */
+  private int updateUsedStatusOfSegmentsTo(final Collection<SegmentId> segmentIds, final boolean used)
+  {
     if (segmentIds.isEmpty()) {
       return 0;
-    } else {
-      dataSource = segmentIds.iterator().next().getDataSource();
-      if (segmentIds.stream().anyMatch(segment -> !dataSource.equals(segment.getDataSource()))) {
-        throw new IAE("Segments to drop must all be part of the same datasource");
-      }
+    }
+
+    final String dataSource = segmentIds.iterator().next().getDataSource();
+    if (!segmentIds.stream().allMatch(segment -> dataSource.equals(segment.getDataSource()))) {
+      throw new IAE("Segments to drop must all be part of the same datasource");
     }
 
     final PreparedBatch batch =
@@ -205,7 +225,7 @@ public class SqlSegmentsMetadataQuery
               DataSegment::getId
           )
       );
-      return markSegments(segments, false);
+      return updateUsedStatusOfSegmentsTo(segments, false);
     }
   }
 

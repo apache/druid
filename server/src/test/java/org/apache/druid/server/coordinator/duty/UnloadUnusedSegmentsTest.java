@@ -84,7 +84,7 @@ public class UnloadUnusedSegmentsTest
     brokerServer = EasyMock.createMock(ImmutableDruidServer.class);
     indexerServer = EasyMock.createMock(ImmutableDruidServer.class);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
-    loadQueueManager = new SegmentLoadQueueManager(null, null, null);
+    loadQueueManager = new SegmentLoadQueueManager(null, null);
 
     DateTime start1 = DateTimes.of("2012-01-01");
     DateTime start2 = DateTimes.of("2012-02-01");

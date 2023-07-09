@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.curator.framework.CuratorFramework;
@@ -179,7 +178,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         loadQueueTaskMaster,
-        new SegmentLoadQueueManager(serverInventoryView, segmentsMetadataManager, loadQueueTaskMaster),
+        new SegmentLoadQueueManager(serverInventoryView, loadQueueTaskMaster),
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         new HashSet<>(),
@@ -583,73 +582,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
   }
 
   @Test
-  public void testBalancerThreadNumber()
-  {
-    CoordinatorDynamicConfig dynamicConfig = EasyMock.createNiceMock(CoordinatorDynamicConfig.class);
-    EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(5).times(2);
-    EasyMock.expect(dynamicConfig.getBalancerComputeThreads()).andReturn(10).once();
-
-    JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
-    EasyMock.expect(
-        configManager.watch(
-            EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY),
-            EasyMock.anyObject(Class.class),
-            EasyMock.anyObject()
-        )
-    ).andReturn(new AtomicReference<>(dynamicConfig)).anyTimes();
-
-    ScheduledExecutorFactory scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
-    EasyMock.replay(configManager, dynamicConfig, scheduledExecutorFactory);
-
-    DruidCoordinator c = new DruidCoordinator(
-        druidCoordinatorConfig,
-        configManager,
-        null,
-        null,
-        null,
-        null,
-        scheduledExecutorFactory,
-        null,
-        loadQueueTaskMaster,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new CoordinatorCustomDutyGroups(ImmutableSet.of()),
-        null,
-        null,
-        null,
-        null
-    );
-
-    // before initialization
-    Assert.assertEquals(0, c.getCachedBalancerThreadNumber());
-    Assert.assertNull(c.getBalancerExec());
-
-    // first initialization
-    c.initBalancerExecutor();
-    Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
-    ListeningExecutorService firstExec = c.getBalancerExec();
-    Assert.assertNotNull(firstExec);
-
-    // second initialization, expect no changes as cachedBalancerThreadNumber is not changed
-    c.initBalancerExecutor();
-    Assert.assertEquals(5, c.getCachedBalancerThreadNumber());
-    ListeningExecutorService secondExec = c.getBalancerExec();
-    Assert.assertNotNull(secondExec);
-    Assert.assertSame(firstExec, secondExec);
-
-    // third initialization, expect executor recreated as cachedBalancerThreadNumber is changed to 10
-    c.initBalancerExecutor();
-    Assert.assertEquals(10, c.getCachedBalancerThreadNumber());
-    ListeningExecutorService thirdExec = c.getBalancerExec();
-    Assert.assertNotNull(thirdExec);
-    Assert.assertNotSame(secondExec, thirdExec);
-    Assert.assertNotSame(firstExec, thirdExec);
-  }
-
-  @Test
   public void testCompactSegmentsDutyWhenCustomDutyGroupEmpty()
   {
     CoordinatorCustomDutyGroups emptyCustomDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of());
@@ -860,7 +792,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         scheduledExecutorFactory,
         null,
         loadQueueTaskMaster,
-        new SegmentLoadQueueManager(serverInventoryView, segmentsMetadataManager, loadQueueTaskMaster),
+        new SegmentLoadQueueManager(serverInventoryView, loadQueueTaskMaster),
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
         druidNode,
         new HashSet<>(),

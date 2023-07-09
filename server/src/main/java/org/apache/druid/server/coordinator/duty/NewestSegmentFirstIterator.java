@@ -50,7 +50,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedPartitionChunk;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -116,7 +115,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
       Granularity configuredSegmentGranularity = null;
       if (config != null && !timeline.isEmpty()) {
-        VersionedIntervalTimeline<String, DataSegment> originalTimeline = null;
+        SegmentTimeline originalTimeline = null;
         if (config.getGranularitySpec() != null && config.getGranularitySpec().getSegmentGranularity() != null) {
           String temporaryVersion = DateTimes.nowUtc().toString();
           Map<Interval, Set<DataSegment>> intervalToPartitionMap = new HashMap<>();
@@ -253,20 +252,20 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   }
 
   /**
-   * Iterates the given {@link VersionedIntervalTimeline}. Only compactible {@link TimelineObjectHolder}s are returned,
+   * Iterates the given {@link SegmentTimeline}. Only compactible {@link TimelineObjectHolder}s are returned,
    * which means the holder always has at least one {@link DataSegment}.
    */
   private static class CompactibleTimelineObjectHolderCursor implements Iterator<List<DataSegment>>
   {
     private final List<TimelineObjectHolder<String, DataSegment>> holders;
     @Nullable
-    private final VersionedIntervalTimeline<String, DataSegment> originalTimeline;
+    private final SegmentTimeline originalTimeline;
 
     CompactibleTimelineObjectHolderCursor(
-        VersionedIntervalTimeline<String, DataSegment> timeline,
+        SegmentTimeline timeline,
         List<Interval> totalIntervalsToSearch,
         // originalTimeline can be nullable if timeline was not modified
-        @Nullable VersionedIntervalTimeline<String, DataSegment> originalTimeline
+        @Nullable SegmentTimeline originalTimeline
     )
     {
       this.holders = totalIntervalsToSearch
@@ -603,7 +602,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
    */
   private List<Interval> findInitialSearchInterval(
       String dataSourceName,
-      VersionedIntervalTimeline<String, DataSegment> timeline,
+      SegmentTimeline timeline,
       Period skipOffset,
       Granularity configuredSegmentGranularity,
       @Nullable List<Interval> skipIntervals

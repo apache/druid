@@ -23,16 +23,12 @@ import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCluster;
-import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
-import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
-import org.apache.druid.server.coordinator.stats.Stats;
-import org.apache.druid.timeline.DataSegment;
 
 import java.util.Map;
 import java.util.Set;
@@ -46,77 +42,28 @@ public class CollectSegmentAndServerStats implements CoordinatorDuty
 {
   private static final Logger log = new Logger(CollectSegmentAndServerStats.class);
 
-  private final DruidCoordinator coordinator;
-
-  public CollectSegmentAndServerStats(DruidCoordinator coordinator)
-  {
-    this.coordinator = coordinator;
-  }
-
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     params.getDruidCluster().getHistoricals()
           .forEach(this::logHistoricalTierStats);
-    collectSegmentStats(params);
-
-    StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
-    segmentAssigner.makeAlerts();
+    collectLoadQueueStats(params);
 
     return params;
   }
 
-  private void collectSegmentStats(DruidCoordinatorRuntimeParams params)
+  private void collectLoadQueueStats(DruidCoordinatorRuntimeParams params)
   {
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-
     final DruidCluster cluster = params.getDruidCluster();
-    cluster.getHistoricals().forEach((tier, historicals) -> {
-      final RowKey rowKey = RowKey.of(Dimension.TIER, tier);
-      stats.add(Stats.Tier.HISTORICAL_COUNT, rowKey, historicals.size());
-      long totalCapacity = historicals.stream().map(ServerHolder::getMaxSize).reduce(0L, Long::sum);
-      stats.add(Stats.Tier.TOTAL_CAPACITY, rowKey, totalCapacity);
-    });
 
-    // Collect load queue stats
-    coordinator.getLoadManagementPeons().forEach((serverName, queuePeon) -> {
-      final RowKey rowKey = RowKey.of(Dimension.SERVER, serverName);
-      stats.add(Stats.SegmentQueue.BYTES_TO_LOAD, rowKey, queuePeon.getSizeOfSegmentsToLoad());
-      stats.add(Stats.SegmentQueue.NUM_TO_LOAD, rowKey, queuePeon.getSegmentsToLoad().size());
-      stats.add(Stats.SegmentQueue.NUM_TO_DROP, rowKey, queuePeon.getSegmentsToDrop().size());
-
-      queuePeon.getAndResetStats().forEachStat(
+    cluster.getAllServers().forEach(server -> {
+      final String serverName = server.getServer().getName();
+      server.getPeon().getAndResetStats().forEachStat(
           (stat, key, statValue) ->
               stats.add(stat, createRowKeyForServer(serverName, key.getValues()), statValue)
       );
     });
-
-    coordinator.getDatasourceToUnavailableSegmentCount().forEach(
-        (dataSource, numUnavailable) -> stats.add(
-            Stats.Segments.UNAVAILABLE,
-            RowKey.of(Dimension.DATASOURCE, dataSource),
-            numUnavailable
-        )
-    );
-
-    coordinator.getTierToDatasourceToUnderReplicatedCount(false).forEach(
-        (tier, countsPerDatasource) -> countsPerDatasource.forEach(
-            (dataSource, underReplicatedCount) ->
-                stats.addToSegmentStat(Stats.Segments.UNDER_REPLICATED, tier, dataSource, underReplicatedCount)
-        )
-    );
-
-    // Collect total segment stats
-    params.getUsedSegmentsTimelinesPerDataSource().forEach(
-        (dataSource, timeline) -> {
-          long totalSizeOfUsedSegments = timeline.iterateAllObjects().stream()
-                                                 .mapToLong(DataSegment::getSize).sum();
-
-          RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, dataSource);
-          stats.add(Stats.Segments.USED_BYTES, datasourceKey, totalSizeOfUsedSegments);
-          stats.add(Stats.Segments.USED, datasourceKey, timeline.getNumObjects());
-        }
-    );
   }
 
   private RowKey createRowKeyForServer(String serverName, Map<Dimension, String> dimensionValues)

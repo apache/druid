@@ -719,7 +719,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     return connector.getDBI().withHandle(
         handle ->
             SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                    .markSegments(segmentIds, true)
+                                    .markSegmentsAsUsed(segmentIds)
     );
   }
 
@@ -750,7 +750,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       final int numSegments = connector.getDBI().withHandle(
           handle ->
               SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                      .markSegments(Collections.singletonList(segmentId), false)
+                                      .markSegmentsAsUnused(Collections.singletonList(segmentId))
       );
 
       return numSegments > 0;
@@ -767,7 +767,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     return connector.getDBI().withHandle(
         handle ->
             SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                    .markSegments(segmentIds, false)
+                                    .markSegmentsAsUnused(segmentIds)
     );
   }
 
@@ -933,7 +933,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     if (segments.isEmpty()) {
       log.info("No segments found in the database!");
     } else {
-      log.info("Polled and found %,d segments in the database", segments.size());
+      log.info("Polled and found [%,d] segments in the database", segments.size());
     }
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).

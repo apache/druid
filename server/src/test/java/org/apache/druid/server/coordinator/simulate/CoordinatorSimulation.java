@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.simulate;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.List;
@@ -58,6 +59,11 @@ public interface CoordinatorSimulation
 
   interface CoordinatorState
   {
+    /**
+     * @return The underlying coordinator for verification of state.
+     */
+    DruidCoordinator druidCoordinator();
+
     /**
      * Runs a single coordinator cycle.
      */

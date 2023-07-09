@@ -25,6 +25,7 @@ import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
+import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
@@ -80,6 +81,12 @@ public abstract class CoordinatorSimulationBaseTest implements
     this.sim = simulation;
     simulation.start();
     this.metricsVerifier = this.sim.coordinator().getMetricsVerifier();
+  }
+
+  @Override
+  public DruidCoordinator druidCoordinator()
+  {
+    return sim.coordinator().druidCoordinator();
   }
 
   @Override
@@ -214,6 +221,9 @@ public abstract class CoordinatorSimulationBaseTest implements
     static final String LOAD_QUEUE_COUNT = "segment/loadQueue/count";
     static final String DROP_QUEUE_COUNT = "segment/dropQueue/count";
     static final String CANCELLED_ACTIONS = "segment/loadQueue/cancelled";
+
+    static final String DUTY_GROUP_RUN_TIME = "coordinator/global/time";
+    static final String DUTY_RUN_TIME = "coordinator/time";
   }
 
   static class Segments

@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
@@ -227,6 +228,37 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     loadQueuedSegments();
     runCoordinatorCycle();
     Assert.assertTrue(getValue(Metric.MOVED_COUNT, null).intValue() > 0);
+  }
+
+  @Test
+  public void testServerRemovalCancelsSegmentMove()
+  {
+    CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(segments)
+                             .withServers(historicalT11, historicalT12)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .build();
+
+    startSimulation(sim);
+
+    // Pre-load the segments on histT11
+    segments.forEach(historicalT11::addDataSegment);
+
+    // Run 1: Segments are moved to histT12
+    runCoordinatorCycle();
+    verifyValue(Metric.MOVED_COUNT, 5L);
+
+    final LoadQueuePeon loadQueuePeonT11 = druidCoordinator().getLoadManagementPeons()
+                                                             .get(historicalT11.getName());
+    Assert.assertEquals(5, loadQueuePeonT11.getSegmentsMarkedToDrop().size());
+
+    // Run 2: Remove histT12 and verify that moves are cancelled
+    removeServer(historicalT12);
+    runCoordinatorCycle();
+    loadQueuedSegments();
+
+    Assert.assertTrue(loadQueuePeonT11.getSegmentsMarkedToDrop().isEmpty());
   }
 
 }

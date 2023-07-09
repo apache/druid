@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.DirectExecutorService;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -85,7 +86,7 @@ public class CoordinatorSimulationBuilder
       new NewestSegmentFirstPolicy(OBJECT_MAPPER);
   private String balancerStrategy;
   private CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig.builder().build();
-  private List<DruidServer> servers;
+  private final List<DruidServer> servers = new ArrayList<>();
   private List<DataSegment> segments;
   private final Map<String, List<Rule>> datasourceRules = new HashMap<>();
   private boolean loadImmediately = false;
@@ -104,7 +105,7 @@ public class CoordinatorSimulationBuilder
 
   public CoordinatorSimulationBuilder withServers(List<DruidServer> servers)
   {
-    this.servers = servers;
+    this.servers.addAll(servers);
     return this;
   }
 
@@ -166,11 +167,6 @@ public class CoordinatorSimulationBuilder
 
   public CoordinatorSimulation build()
   {
-    Preconditions.checkArgument(
-        servers != null && !servers.isEmpty(),
-        "Cannot run simulation for an empty cluster"
-    );
-
     // Prepare the environment
     final TestServerInventoryView serverInventoryView = new TestServerInventoryView();
     servers.forEach(serverInventoryView::addServer);
@@ -301,6 +297,12 @@ public class CoordinatorSimulationBuilder
     public ClusterState cluster()
     {
       return this;
+    }
+
+    @Override
+    public DruidCoordinator druidCoordinator()
+    {
+      return coordinator;
     }
 
     @Override
@@ -477,8 +479,7 @@ public class CoordinatorSimulationBuilder
           httpClient,
           null
       );
-      this.loadQueueManager =
-          new SegmentLoadQueueManager(coordinatorInventoryView, segmentManager, loadQueueTaskMaster);
+      this.loadQueueManager = new SegmentLoadQueueManager(coordinatorInventoryView, loadQueueTaskMaster);
 
       this.jacksonConfigManager = mockConfigManager();
       setDynamicConfig(dynamicConfig);
@@ -544,6 +545,7 @@ public class CoordinatorSimulationBuilder
     static final String HISTORICAL_LOADER = "historical-loader-%d";
     static final String LOAD_QUEUE_EXECUTOR = "load-queue-%d";
     static final String LOAD_CALLBACK_EXECUTOR = "load-callback-%d";
+    static final String BALANCER_EXECUTOR = "coordinator-cost-balancer-%s";
     static final String COORDINATOR_RUNNER = "Coordinator-Exec--%d";
 
     private final Map<String, BlockingExecutorService> blockingExecutors = new HashMap<>();
@@ -562,6 +564,10 @@ public class CoordinatorSimulationBuilder
     @Override
     public ScheduledExecutorService create(int corePoolSize, String nameFormat)
     {
+      if (BALANCER_EXECUTOR.equals(nameFormat)) {
+        return ScheduledExecutors.fixed(corePoolSize, nameFormat);
+      }
+
       boolean isCoordinatorRunner = COORDINATOR_RUNNER.equals(nameFormat);
 
       // Coordinator running executor must always be blocked

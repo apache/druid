@@ -1418,13 +1418,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       for (List<DataSegment> partition : partitionedSegments) {
         for (DataSegment segment : partition) {
+          boolean isPartitioned = !(segment.getShardSpec() instanceof NoneShardSpec);
           preparedBatch.add()
               .bind("id", segment.getId().toString())
               .bind("dataSource", segment.getDataSource())
               .bind("created_date", DateTimes.nowUtc().toString())
               .bind("start", segment.getInterval().getStart().toString())
               .bind("end", segment.getInterval().getEnd().toString())
-              .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
+              .bind("partitioned", isPartitioned)
               .bind("version", segment.getVersion())
               .bind("used", usedSegments.contains(segment))
               .bind("payload", jsonMapper.writeValueAsBytes(segment));
@@ -1679,9 +1680,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     final int numChangedSegments =
-        SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper).markSegments(
-            segmentsToDrop.stream().map(DataSegment::getId).collect(Collectors.toList()),
-            false
+        SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper).markSegmentsAsUnused(
+            segmentsToDrop.stream().map(DataSegment::getId).collect(Collectors.toList())
         );
 
     if (numChangedSegments != segmentsToDrop.size()) {
