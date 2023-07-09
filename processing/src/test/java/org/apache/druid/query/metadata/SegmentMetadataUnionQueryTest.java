@@ -21,7 +21,6 @@ package org.apache.druid.query.metadata;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
@@ -50,9 +49,6 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
 
   private static final QueryRunnerFactory FACTORY = new SegmentMetadataQueryRunnerFactory(
       new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()),
