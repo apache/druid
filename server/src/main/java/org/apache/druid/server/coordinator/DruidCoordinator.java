@@ -545,7 +545,7 @@ public class DruidCoordinator
       balancerExec = createNewBalancerExecutor(currentNumber);
     } else if (cachedBalancerThreadNumber != currentNumber) {
       log.info(
-          "Updating thread pool size of balancerExec from [%d] to [%d].",
+          "balancerComputeThreads has changed from [%d] to [%d], recreating the thread pool.",
           cachedBalancerThreadNumber, currentNumber
       );
       balancerExec.shutdownNow();
@@ -555,7 +555,7 @@ public class DruidCoordinator
     // Create BalancerStrategy
     final BalancerStrategy balancerStrategy = balancerStrategyFactory.createBalancerStrategy(balancerExec);
     log.info(
-        "Using balancer strategy [%s] with debug dimensions [%s].",
+        "Using balancer strategy[%s] with debug dimensions[%s].",
         balancerStrategy.getClass().getSimpleName(), dynamicConfig.getDebugDimensions()
     );
     return balancerStrategy;

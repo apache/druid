@@ -52,13 +52,11 @@ public class MarkOvershadowedSegmentsAsUnusedTest
 {
   private final DateTime start = DateTimes.of("2012-01-01");
 
-  private final DataSegment segmentV0
-      = DataSegment.builder()
-                   .dataSource("test")
-                   .interval(new Interval(start, start.plusHours(1)))
-                   .version("0")
-                   .size(0)
-                   .build();
+  private final DataSegment segmentV0 = DataSegment.builder().dataSource("test")
+                                                   .interval(new Interval(start, start.plusHours(1)))
+                                                   .version("0")
+                                                   .size(0)
+                                                   .build();
   private final DataSegment segmentV1 = segmentV0.withVersion("1");
   private final DataSegment segmentV2 = segmentV0.withVersion("2");
 
@@ -100,22 +98,21 @@ public class MarkOvershadowedSegmentsAsUnusedTest
         )
         .build();
 
-    // Run the duty
-    params = new MarkOvershadowedSegmentsAsUnused(segmentsMetadataManager::markSegmentsAsUnused).run(params);
-
     SegmentTimeline timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
                                                       .getUsedSegmentsTimelinesPerDataSource()
                                                       .get("test");
 
-    // Verify that the overshadowed segments have been marked as unused
+    // Verify that the segments V0 and V1 are overshadowed
     Assert.assertTrue(timeline.isOvershadowed(segmentV0));
     Assert.assertTrue(timeline.isOvershadowed(segmentV1));
+
+    // Run the duty and verify that the overshadowed segments are marked unused
+    params = new MarkOvershadowedSegmentsAsUnused(segmentsMetadataManager::markSegmentsAsUnused).run(params);
 
     Set<DataSegment> updatedUsedSegments = Sets.newHashSet(segmentsMetadataManager.iterateAllUsedSegments());
     Assert.assertEquals(1, updatedUsedSegments.size());
     Assert.assertTrue(updatedUsedSegments.contains(segmentV2));
 
-    // Verify metrics
     CoordinatorRunStats runStats = params.getCoordinatorStats();
     Assert.assertEquals(
         2L,

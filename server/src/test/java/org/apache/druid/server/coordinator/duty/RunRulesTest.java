@@ -82,7 +82,6 @@ public class RunRulesTest
   private RunRules ruleRunner;
   private StubServiceEmitter emitter;
   private MetadataRuleManager databaseRuleManager;
-  private SegmentsMetadataManager segmentsMetadataManager;
   private SegmentLoadQueueManager loadQueueManager;
   private final List<DataSegment> usedSegments =
       CreateDataSegments.ofDatasource(DATASOURCE)
@@ -100,18 +99,9 @@ public class RunRulesTest
     emitter = new StubServiceEmitter("coordinator", "host");
     EmittingLogger.registerEmitter(emitter);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
-    segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
-    ruleRunner = new RunRules(segmentsMetadataManager::markSegmentsAsUnused);
+    ruleRunner = new RunRules(Set::size);
     loadQueueManager = new SegmentLoadQueueManager(null, null);
     balancerExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
-
-    EasyMock.expect(segmentsMetadataManager.markSegmentsAsUnused(EasyMock.anyObject())).andAnswer(
-        () -> {
-          Set<SegmentId> segmentIds = EasyMock.getCurrentArgument(0);
-          return segmentIds.size();
-        }
-    ).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
   }
 
   @After
@@ -527,7 +517,10 @@ public class RunRulesTest
 
     AlertEvent alertEvent = events.get(0);
     EventMap eventMap = alertEvent.toMap();
-    Assert.assertEquals("No matching retention rule for segments in datasources[{test=>24}]", eventMap.get("description"));
+    Assert.assertEquals(
+        "No matching retention rule for segments in datasources[{test=>24}]",
+        eventMap.get("description")
+    );
 
     EasyMock.verify(mockPeon);
   }
@@ -1003,7 +996,8 @@ public class RunRulesTest
     mockEmptyPeon();
 
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
-        Collections.singletonList(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1), null))).atLeastOnce();
+        Collections.singletonList(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1), null))
+    ).atLeastOnce();
     EasyMock.replay(databaseRuleManager);
 
     DruidCluster druidCluster = DruidCluster.builder().add(

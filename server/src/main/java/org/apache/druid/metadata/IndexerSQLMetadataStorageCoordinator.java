@@ -52,6 +52,7 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -1418,14 +1419,13 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       for (List<DataSegment> partition : partitionedSegments) {
         for (DataSegment segment : partition) {
-          boolean isPartitioned = !(segment.getShardSpec() instanceof NoneShardSpec);
           preparedBatch.add()
               .bind("id", segment.getId().toString())
               .bind("dataSource", segment.getDataSource())
               .bind("created_date", DateTimes.nowUtc().toString())
               .bind("start", segment.getInterval().getStart().toString())
               .bind("end", segment.getInterval().getEnd().toString())
-              .bind("partitioned", isPartitioned)
+              .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
               .bind("version", segment.getVersion())
               .bind("used", usedSegments.contains(segment))
               .bind("payload", jsonMapper.writeValueAsBytes(segment));
@@ -1679,10 +1679,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           dataSource);
     }
 
-    final int numChangedSegments =
-        SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper).markSegmentsAsUnused(
-            segmentsToDrop.stream().map(DataSegment::getId).collect(Collectors.toList())
-        );
+    List<SegmentId> segmentIds = segmentsToDrop.stream().map(DataSegment::getId).collect(Collectors.toList());
+    final int numChangedSegments = SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                                           .markSegmentsAsUnused(segmentIds);
 
     if (numChangedSegments != segmentsToDrop.size()) {
       return new DataStoreMetadataUpdateResult(

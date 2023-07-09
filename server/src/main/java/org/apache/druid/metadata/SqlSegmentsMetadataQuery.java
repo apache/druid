@@ -225,7 +225,7 @@ public class SqlSegmentsMetadataQuery
               DataSegment::getId
           )
       );
-      return updateUsedStatusOfSegmentsTo(segments, false);
+      return markSegmentsAsUnused(segments);
     }
   }
 
