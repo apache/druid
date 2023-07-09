@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.simulate;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.client.DruidServer;
-import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorTest;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -106,7 +105,7 @@ public class CoordinatorRunTest extends CoordinatorSimulationBaseTest
     Object2LongMap<String> datasourceToUnderReplicatedCounts = tierToUnderReplicatedCounts.get(Tier.T1);
     Assert.assertNotNull(datasourceToUnderReplicatedCounts);
     Assert.assertEquals(1, datasourceToUnderReplicatedCounts.size());
-    Assert.assertNotNull(datasourceToUnderReplicatedCounts.get(datasource));
+    Assert.assertTrue(datasourceToUnderReplicatedCounts.containsKey(datasource));
     Assert.assertEquals(0L, datasourceToUnderReplicatedCounts.getLong(datasource));
 
     Map<String, Object2LongMap<String>> tierToUnderReplicatedUsingClusterView
@@ -118,44 +117,8 @@ public class CoordinatorRunTest extends CoordinatorSimulationBaseTest
         = tierToUnderReplicatedUsingClusterView.get(Tier.T1);
     Assert.assertNotNull(datasourceToUnderReplicatedUsingClusterView);
     Assert.assertEquals(1, datasourceToUnderReplicatedUsingClusterView.size());
-    Assert.assertNotNull(datasourceToUnderReplicatedUsingClusterView.get(datasource));
+    Assert.assertTrue(datasourceToUnderReplicatedUsingClusterView.containsKey(datasource));
     Assert.assertEquals(0L, datasourceToUnderReplicatedUsingClusterView.getLong(datasource));
-  }
-
-  @Test
-  public void testBalancerThreadNumber()
-  {
-    CoordinatorDynamicConfig dynamicConfig
-        = CoordinatorDynamicConfig.builder()
-                                  .withBalancerComputeThreads(1)
-                                  .build();
-
-    CoordinatorSimulation sim
-        = CoordinatorSimulation.builder()
-                               .withDynamicConfig(dynamicConfig)
-                               .build();
-    startSimulation(sim);
-
-    // before initialization
-    // dynamicConfig.set(CoordinatorDynamicConfig.builder().withBalancerComputeThreads(5).build());
-    // Assert.assertNull(createdBalancerThreadPoolSize.get());
-
-    // Run 1: Thread pool is freshly created with 5 threads
-    runCoordinatorCycle();
-    // Assert.assertNotNull(createdBalancerThreadPoolSize.get());
-    // Assert.assertEquals(5, createdBalancerThreadPoolSize.get().intValue());
-
-    // Run 2: Thread pool is not created again as balancerComputeThreads is unchanged
-    runCoordinatorCycle();
-    // Assert.assertNull(createdBalancerThreadPoolSize.get());
-
-    // Run 3: Thread pool is created again as balancerComputeThreads has changed
-    setDynamicConfig(
-        CoordinatorDynamicConfig.builder().withBalancerComputeThreads(10).build()
-    );
-    runCoordinatorCycle();
-    // Assert.assertNotNull(createdBalancerThreadPoolSize.get());
-    // Assert.assertEquals(10, createdBalancerThreadPoolSize.get().intValue());
   }
 
 }

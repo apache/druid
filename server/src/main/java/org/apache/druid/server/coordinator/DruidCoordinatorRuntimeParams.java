@@ -333,13 +333,13 @@ public class DruidCoordinatorRuntimeParams
      * Sets the {@link SegmentLoadQueueManager} which is used to construct the
      * {@link StrategicSegmentAssigner} for this run.
      */
-    public Builder withSegmentAssignerUsing(SegmentLoadQueueManager loadQueueManager)
+    public Builder withSegmentLoadQueueManager(SegmentLoadQueueManager loadQueueManager)
     {
       this.loadQueueManager = loadQueueManager;
       return this;
     }
 
-    public Builder withSnapshotOfDataSourcesWithAllUsedSegments(DataSourcesSnapshot snapshot)
+    public Builder withDataSourcesSnapshot(DataSourcesSnapshot snapshot)
     {
       this.usedSegments = createUsedSegmentsSet(snapshot.iterateAllUsedSegmentsInSnapshot());
       this.dataSourcesSnapshot = snapshot;

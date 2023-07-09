@@ -696,7 +696,7 @@ public class DruidCoordinator
             DruidCoordinatorRuntimeParams
                 .newBuilder(coordinatorStartTime)
                 .withDatabaseRuleManager(metadataRuleManager)
-                .withSnapshotOfDataSourcesWithAllUsedSegments(dataSourcesSnapshot)
+                .withDataSourcesSnapshot(dataSourcesSnapshot)
                 .withDynamicConfigs(getDynamicConfigs())
                 .withCompactionConfig(getCompactionConfig())
                 .withEmitter(emitter)
@@ -826,7 +826,7 @@ public class DruidCoordinator
       return params.buildFromExisting()
                    .withDruidCluster(cluster)
                    .withBalancerStrategy(createBalancerStrategy(dynamicConfig))
-                   .withSegmentAssignerUsing(loadQueueManager)
+                   .withSegmentLoadQueueManager(loadQueueManager)
                    .build();
     }
 

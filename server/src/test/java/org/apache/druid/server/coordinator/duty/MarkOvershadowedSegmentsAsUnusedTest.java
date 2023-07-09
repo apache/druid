@@ -89,7 +89,7 @@ public class MarkOvershadowedSegmentsAsUnusedTest
 
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .newBuilder(DateTimes.nowUtc())
-        .withSnapshotOfDataSourcesWithAllUsedSegments(
+        .withDataSourcesSnapshot(
             segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
         )
         .withDruidCluster(druidCluster)

@@ -52,7 +52,7 @@ public class CollectSegmentAndServerStatsTest
                                      .withDruidCluster(cluster)
                                      .withUsedSegmentsInTest()
                                      .withBalancerStrategy(new RandomBalancerStrategy())
-                                     .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null))
+                                     .withSegmentLoadQueueManager(new SegmentLoadQueueManager(null, null))
                                      .build();
 
     CoordinatorDuty duty = new CollectSegmentAndServerStats();
