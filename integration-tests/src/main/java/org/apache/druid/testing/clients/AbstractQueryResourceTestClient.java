@@ -158,27 +158,23 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
 
       ITRetryUtil.retryUntil(() -> {
         try {
-          final BytesFullResponseHolder response = httpClient.go(
+          responseRef.set(httpClient.go(
               request,
               new BytesFullResponseHandler()
-          ).get();
-          responseRef.set(response);
-          LOG.info("%s %s", response.getStatus(), StringUtils.fromUtf8(response.getContent()));
-          return response.getStatus().equals(HttpResponseStatus.OK);
+          ).get());
         }
         catch (Throwable t) {
           ChannelException ce = Throwables.getCauseOfType(t, ChannelException.class);
           if (ce != null) {
             LOG.info(ce, "Encountered a channel exception. Retrying the query request");
-          } else {
-            LOG.error(t, "Encountered a unknown exception. Retrying the query request");
+            return false;
           }
-          return false;
         }
+        return true;
       },
           true,
           1000,
-          30,
+          3,
           "waiting for queries to complete");
 
       BytesFullResponseHolder response = responseRef.get();
