@@ -29,6 +29,7 @@ import org.apache.druid.catalog.model.table.BaseTableFunction;
 import org.apache.druid.catalog.model.table.ExternalTableSpec;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
@@ -90,86 +91,71 @@ public class ExternalOperatorConversion extends DruidExternTableMacroConversion
         final ObjectMapper jsonMapper
     )
     {
-      try {
-        final String sigValue = CatalogUtils.getString(args, SIGNATURE_PARAM);
-        if (sigValue == null && columns == null) {
-          throw new IAE(
-              "EXTERN requires either a %s value or an EXTEND clause",
-              SIGNATURE_PARAM
-          );
+      final String sigValue = CatalogUtils.getString(args, SIGNATURE_PARAM);
+      if (sigValue == null && columns == null) {
+        throw InvalidInput.exception(
+            "EXTERN requires either a %s value or an EXTEND clause",
+            SIGNATURE_PARAM
+        );
+      }
+      if (sigValue != null && columns != null) {
+        throw InvalidInput.exception(
+            "EXTERN requires either a %s value or an EXTEND clause, but not both",
+            SIGNATURE_PARAM
+        );
+      }
+      final RowSignature rowSignature;
+      if (columns != null) {
+        try {
+          rowSignature = Columns.convertSignature(columns);
         }
-        if (sigValue != null && columns != null) {
-          throw new IAE(
-              "EXTERN requires either a %s value or an EXTEND clause, but not both",
-              SIGNATURE_PARAM
-          );
+        catch (IAE e) {
+          throw badArgumentException(e, "columns");
         }
-        final RowSignature rowSignature;
-        if (columns != null) {
-          try {
-            rowSignature = Columns.convertSignature(columns);
-          }
-          catch (IAE e) {
-            throw new ArgumentAndException("columns", e);
-          }
-        } else {
-          try {
-            rowSignature = jsonMapper.readValue(sigValue, RowSignature.class);
-          }
-          catch (JsonProcessingException e) {
-            throw new ArgumentAndException("rowSignature", e);
-          }
+      } else {
+        try {
+          rowSignature = jsonMapper.readValue(sigValue, RowSignature.class);
         }
+        catch (JsonProcessingException e) {
+          throw badArgumentException(e, "rowSignature");
+        }
+      }
 
-        String inputSrcStr = CatalogUtils.getString(args, INPUT_SOURCE_PARAM);
-        InputSource inputSource;
-        try {
-          inputSource = jsonMapper.readValue(inputSrcStr, InputSource.class);
-        }
-        catch (JsonProcessingException e) {
-          throw new ArgumentAndException("rowSignature", e);
-        }
-        InputFormat inputFormat;
-        try {
-          inputFormat = jsonMapper.readValue(CatalogUtils.getString(args, INPUT_FORMAT_PARAM), InputFormat.class);
-        }
-        catch (JsonProcessingException e) {
-          throw new ArgumentAndException("inputFormat", e);
-        }
-        return new ExternalTableSpec(
-            inputSource,
-            inputFormat,
-            rowSignature,
-            inputSource::getTypes
-        );
+      String inputSrcStr = CatalogUtils.getString(args, INPUT_SOURCE_PARAM);
+      InputSource inputSource;
+      try {
+        inputSource = jsonMapper.readValue(inputSrcStr, InputSource.class);
       }
-      catch (ArgumentAndException e) { // We can triage out the error to one of the argument passed to the EXTERN function
-        throw InvalidInput.exception(
-            e,
-            "Invalid value for the field [%s]. Error message: [%s]",
-            e.component,
-            e.exception
-        );
+      catch (JsonProcessingException e) {
+        throw badArgumentException(e, "inputSource");
       }
-      catch (IAE e) {
-        throw InvalidInput.exception(
-            "Invalid parameters supplied to the EXTERN function. Error message: [%s]",
-            e.getMessage()
-        );
+      InputFormat inputFormat;
+      try {
+        inputFormat = jsonMapper.readValue(CatalogUtils.getString(args, INPUT_FORMAT_PARAM), InputFormat.class);
       }
+      catch (JsonProcessingException e) {
+        throw badArgumentException(e, "inputFormat");
+      }
+      return new ExternalTableSpec(
+          inputSource,
+          inputFormat,
+          rowSignature,
+          inputSource::getTypes
+      );
     }
   }
 
-  private static class ArgumentAndException extends Throwable
+  private static DruidException badArgumentException(
+      Throwable cause,
+      String fieldName
+  )
   {
-    private final String component;
-    private final Exception exception;
-
-    public ArgumentAndException(String component, Exception exception)
-    {
-      this.component = component;
-      this.exception = exception;
-    }
+    return InvalidInput.exception(
+        cause,
+        "Invalid value for the field [%s]. Reason: [%s]",
+        fieldName,
+        cause.getMessage()
+    );
   }
 
   @Inject

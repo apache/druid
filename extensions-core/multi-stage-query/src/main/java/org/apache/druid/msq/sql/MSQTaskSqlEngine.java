@@ -125,10 +125,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       case SCAN_NEEDS_SIGNATURE:
         return true;
       default:
-        throw DruidException
-            .forPersona(DruidException.Persona.DEVELOPER)
-            .ofCategory(DruidException.Category.DEFENSIVE)
-            .build("Unrecognized feature: %s", feature);
+        throw SqlEngines.generateUnrecognizedFeatureException(MSQTaskSqlEngine.class.getSimpleName(), feature);
     }
   }
 
@@ -183,7 +180,12 @@ public class MSQTaskSqlEngine implements SqlEngine
       throw DruidException
           .forPersona(DruidException.Persona.DEVELOPER)
           .ofCategory(DruidException.Category.DEFENSIVE)
-          .build("Cannot use \"%s\" without INSERT", DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY);
+          .build(
+              "The SELECT query's context contains invalid parameter [%s] which is supposed to be populated "
+              + "by Druid for INSERT queries. If the user is seeing this exception, that means there's a bug in Druid "
+              + "that is populating the query context with the segment's granularity.",
+              DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY
+          );
     }
   }
 
@@ -206,7 +208,7 @@ public class MSQTaskSqlEngine implements SqlEngine
         final SqlTypeName timeType = rootRel.getRowType().getFieldList().get(field.left).getType().getSqlTypeName();
         if (timeType != SqlTypeName.TIMESTAMP) {
           throw InvalidSqlInput.exception(
-              "Field \"%s\" must be of type TIMESTAMP (was %s)",
+              "Field [%s] was the wrong type [%s], expected TIMESTAMP",
               ColumnHolder.TIME_COLUMN_NAME,
               timeType
           );
@@ -247,8 +249,9 @@ public class MSQTaskSqlEngine implements SqlEngine
 
     if (hasSegmentGranularity && timeFieldIndex < 0) {
       throw InvalidInput.exception(
-          "INSERT queries with segment granularity other than \"all\" must have a \"%s\" field.",
-          ColumnHolder.TIME_COLUMN_NAME
+          "The granularity [%s] specified in the PARTITIONED BY clause of the INSERT query is different from ALL."
+          + "Therefore, the query must specify a time column (named __time).",
+          segmentGranularity
       );
     }
   }

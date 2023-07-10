@@ -136,14 +136,15 @@ public class MSQTaskQueryMaker implements QueryMaker
                                    .orElse(jsonMapper.writeValueAsString(DEFAULT_SEGMENT_GRANULARITY));
     }
     catch (JsonProcessingException e) {
-      // This isn't populated by the user in the query context. If there was an issue with the query granularity
-      // entered by the user, it should have been flagged earlier
+      // This would only be thrown if we are unable to serialize the DEFAULT_SEGMENT_GRANULARITY, which we don't expect
+      // to happen
       throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
                           .ofCategory(DruidException.Category.DEFENSIVE)
                           .build(
                               e,
-                              "Unable to deserialize the insert granularity. Please retry the query with a "
-                              + "valid segment graularity"
+                              "Unable to deserialize the DEFAULT_SEGMENT_GRANULARITY in MSQTaskQueryMaker. "
+                              + "This shouldn't have happened since the DEFAULT_SEGMENT_GRANULARITY object is guaranteed to be "
+                              + "serializable. Please raise an issue in case you are seeing this message while executing a query."
                           );
     }
 
@@ -151,7 +152,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     if (maxNumTasks < 2) {
       throw InvalidInput.exception(
-          "%s cannot be less than 2 since at least 1 controller and 1 worker is necessary.",
+          "MSQ context maxNumTasks [%,d] cannot be less than 2, since at least 1 controller and 1 worker is necessary",
           MultiStageQueryContext.CTX_MAX_NUM_TASKS
       );
     }
@@ -222,7 +223,13 @@ public class MSQTaskQueryMaker implements QueryMaker
       catch (Exception e) {
         throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
                             .ofCategory(DruidException.Category.DEFENSIVE)
-                            .build("Unable to convert %s to a segment granularity", segmentGranularity);
+                            .build(
+                                e,
+                                "Unable to deserialize the provided segmentGranularity [%s]. "
+                                + "This is populated internally by Druid and therefore should not occur. "
+                                + "Please contact the developers if you are seeing this error message.",
+                                segmentGranularity
+                            );
       }
 
       final List<String> segmentSortOrder = MultiStageQueryContext.getSortOrder(sqlQueryContext);

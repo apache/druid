@@ -35,7 +35,7 @@ public class InvalidInput extends DruidException.Failure
   private final String msg;
   private final Object[] args;
 
-  protected InvalidInput(
+  public InvalidInput(
       Throwable t,
       String msg,
       Object... args
