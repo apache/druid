@@ -1221,10 +1221,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeArrayLongFilteredArrayEquality()
   {
-    if (NullHandling.replaceWithDefault()) {
-      // this fails in default value mode because it relies on equality filter
-      return;
-    }
     cannotVectorize();
     testBuilder()
         .sql(
@@ -1233,7 +1229,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             + "SUM(cnt) "
             + "FROM druid.arrays WHERE arrayLong = ARRAY[1, 2, 3] GROUP BY 1"
         )
-        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY_USE_EQUALITY)
         .expectedQueries(
             ImmutableList.of(
                 GroupByQuery.builder()
@@ -1247,7 +1243,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 )
                             )
                             .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY_USE_EQUALITY)
                             .build()
             )
         )

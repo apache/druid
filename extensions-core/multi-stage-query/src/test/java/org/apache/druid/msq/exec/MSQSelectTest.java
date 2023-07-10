@@ -56,8 +56,6 @@ import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.filter.NotDimFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -1446,14 +1444,13 @@ public class MSQSelectTest extends MSQTestBase
                                      )
                                      .setHavingSpec(
                                          having(
-                                             bound(
+                                             range(
                                                  "a0",
-                                                 "1",
+                                                 ColumnType.LONG,
+                                                 1L,
                                                  null,
                                                  true,
-                                                 false,
-                                                 null,
-                                                 StringComparators.NUMERIC
+                                                 false
                                              )
                                          )
                                      )
@@ -1753,7 +1750,7 @@ public class MSQSelectTest extends MSQTestBase
                         aggregators(
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("a0"),
-                                new NotDimFilter(new SelectorDimFilter("dim3", null, null)),
+                                notNull("dim3"),
                                 "a0"
                             )
                         )
