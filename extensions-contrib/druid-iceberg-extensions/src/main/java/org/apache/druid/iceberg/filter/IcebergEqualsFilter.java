@@ -42,8 +42,8 @@ public class IcebergEqualsFilter implements IcebergFilter
       @JsonProperty("filterValue") String filterValue
   )
   {
-    Preconditions.checkNotNull(filterColumn, "filterColumn can not be null");
-    Preconditions.checkNotNull(filterValue, "filterValue can not be null");
+    Preconditions.checkNotNull(filterColumn, "You must specify a filter column on the equals filter");
+    Preconditions.checkNotNull(filterValue, "You must specify a filter value on the equals filter");
     this.filterColumn = filterColumn;
     this.filterValue = filterValue;
   }

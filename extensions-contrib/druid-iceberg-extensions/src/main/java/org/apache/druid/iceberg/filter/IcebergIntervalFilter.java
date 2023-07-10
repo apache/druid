@@ -63,6 +63,8 @@ public class IcebergIntervalFilter implements IcebergFilter
   {
     List<Expression> expressions = new ArrayList<>();
     for (Interval filterInterval : intervals) {
+      //  Converts the input timestamp string into iceberg TimestampType because TimestampType supports microsecond precision.
+      // This is to ensure that there are no precision mismatches when doing the comparison.
       Long dateStart = (long) Literal.of(filterInterval.getStart().toString())
                                      .to(Types.TimestampType.withZone())
                                      .value();
