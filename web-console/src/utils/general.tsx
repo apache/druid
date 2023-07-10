@@ -90,14 +90,41 @@ export function caseInsensitiveContains(testString: string, searchString: string
   return testString.toLowerCase().includes(searchString.toLowerCase());
 }
 
-export function oneOf<T>(thing: T, ...options: T[]): boolean {
-  return options.includes(thing);
+function validateKnown<T>(allKnownValues: T[], options: T[]): void {
+  options.forEach(o => {
+    if (!allKnownValues.includes(o)) {
+      throw new Error(`allKnownValues (${allKnownValues.join(', ')}) must include '${o}'`);
+    }
+  });
+}
+
+export function oneOf<T>(value: T, ...options: T[]): boolean {
+  return options.includes(value);
+}
+
+export function oneOfKnown<T>(value: T, allKnownValues: T[], ...options: T[]): boolean | undefined {
+  validateKnown(allKnownValues, options);
+  if (options.includes(value)) return true;
+  return allKnownValues.includes(value) ? false : undefined;
 }
 
 export function typeIs<T extends { type?: S }, S = string>(...options: S[]): (x: T) => boolean {
   return x => {
     if (x.type == null) return false;
     return options.includes(x.type);
+  };
+}
+
+export function typeIsKnown<T extends { type?: S }, S = string>(
+  allKnownValues: S[],
+  ...options: S[]
+): (x: T) => boolean | undefined {
+  validateKnown(allKnownValues, options);
+  return x => {
+    const value = x.type;
+    if (value == null) return;
+    if (options.includes(value)) return true;
+    return allKnownValues.includes(value) ? false : undefined;
   };
 }
 

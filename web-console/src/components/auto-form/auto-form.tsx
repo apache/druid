@@ -66,7 +66,7 @@ export interface Field<M> {
   zeroMeansUndefined?: boolean;
   height?: string;
   disabled?: Functor<M, boolean>;
-  defined?: Functor<M, boolean>;
+  defined?: Functor<M, boolean | undefined>;
   required?: Functor<M, boolean>;
   multiline?: Functor<M, boolean>;
   hide?: Functor<M, boolean>;
@@ -142,7 +142,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
   ): R {
     if (!model || functor == null) return defaultValue;
     if (typeof functor === 'function') {
-      return (functor as any)(model) ?? defaultValue;
+      return (functor as any)(model);
     } else {
       return functor;
     }
@@ -162,10 +162,13 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
 
     // Precompute which fields are defined because fields could be defined twice and only one should do the checking
     const definedFields: Record<string, Field<M>> = {};
+    const notDefinedFields: Record<string, Field<M>> = {};
     for (const field of fields) {
       const fieldDefined = AutoForm.evaluateFunctor(field.defined, model, true);
       if (fieldDefined) {
         definedFields[field.name] = field;
+      } else if (fieldDefined === false) {
+        notDefinedFields[field.name] = field;
       }
     }
 
@@ -187,7 +190,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
             if (valueIssue) return `field ${field.name} has issue ${valueIssue}`;
           }
         }
-      } else {
+      } else if (notDefinedFields[field.name]) {
         // The field is undefined
         if (fieldValueDefined) {
           return `field ${field.name} is defined but it should not be`;

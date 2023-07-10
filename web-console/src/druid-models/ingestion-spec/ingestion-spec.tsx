@@ -39,7 +39,7 @@ import {
   isSimpleArray,
   oneOf,
   parseCsvLine,
-  typeIs,
+  typeIsKnown,
 } from '../../utils';
 import type { SampleResponse } from '../../utils/sampler';
 import type { DimensionsSpec } from '../dimension-spec/dimension-spec';
@@ -83,6 +83,7 @@ export function isEmptyIngestionSpec(spec: Partial<IngestionSpec>) {
 }
 
 export type IngestionType = 'kafka' | 'kinesis' | 'index_parallel';
+const KNOWN_TYPES = ['kafka', 'kinesis', 'index_parallel'];
 
 // A combination of IngestionType and inputSourceType
 export type IngestionComboType =
@@ -922,7 +923,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'topic',
           type: 'string',
           required: true,
-          defined: typeIs('kafka'),
+          defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
           placeholder: 'topic_name',
         },
         {
@@ -1103,7 +1104,7 @@ export function getIoConfigTuningFormFields(
         {
           name: 'useEarliestOffset',
           type: 'boolean',
-          defined: typeIs('kafka'),
+          defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
           required: true,
           info: (
             <>
@@ -1119,7 +1120,7 @@ export function getIoConfigTuningFormFields(
         {
           name: 'useEarliestSequenceNumber',
           type: 'boolean',
-          defined: typeIs('kinesis'),
+          defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
           required: true,
           info: (
             <>
@@ -1190,14 +1191,14 @@ export function getIoConfigTuningFormFields(
           name: 'recordsPerFetch',
           type: 'number',
           defaultValue: 4000,
-          defined: typeIs('kinesis'),
+          defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
           info: <>The number of records to request per GetRecords call to Kinesis.</>,
         },
         {
           name: 'pollTimeout',
           type: 'number',
           defaultValue: 100,
-          defined: typeIs('kafka'),
+          defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
           info: (
             <>
               <p>
@@ -1210,14 +1211,14 @@ export function getIoConfigTuningFormFields(
           name: 'fetchDelayMillis',
           type: 'number',
           defaultValue: 0,
-          defined: typeIs('kinesis'),
+          defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
           info: <>Time in milliseconds to wait between subsequent GetRecords calls to Kinesis.</>,
         },
         {
           name: 'deaggregate',
           type: 'boolean',
           defaultValue: false,
-          defined: typeIs('kinesis'),
+          defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
           info: <>Whether to use the de-aggregate function of the KCL.</>,
         },
         {
@@ -1285,7 +1286,7 @@ export function getIoConfigTuningFormFields(
           name: 'skipOffsetGaps',
           type: 'boolean',
           defaultValue: false,
-          defined: typeIs('kafka'),
+          defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
           info: (
             <>
               <p>
@@ -1723,7 +1724,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     type: 'number',
     defaultValue: 1,
     min: 1,
-    defined: typeIs('index_parallel'),
+    defined: typeIsKnown(KNOWN_TYPES, 'index_parallel'),
     info: (
       <>
         Maximum number of tasks which can be run at the same time. The supervisor task would spawn
@@ -1738,7 +1739,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.maxRetry',
     type: 'number',
     defaultValue: 3,
-    defined: typeIs('index_parallel'),
+    defined: typeIsKnown(KNOWN_TYPES, 'index_parallel'),
     hideInMore: true,
     info: <>Maximum number of retries on task failures.</>,
   },
@@ -1746,7 +1747,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.taskStatusCheckPeriodMs',
     type: 'number',
     defaultValue: 1000,
-    defined: typeIs('index_parallel'),
+    defined: typeIsKnown(KNOWN_TYPES, 'index_parallel'),
     hideInMore: true,
     info: <>Polling period in milliseconds to check running task statuses.</>,
   },
@@ -1807,7 +1808,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.resetOffsetAutomatically',
     type: 'boolean',
     defaultValue: false,
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     info: (
       <>
         Whether to reset the consumer offset if the next offset that it is trying to fetch is less
@@ -1819,7 +1820,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.skipSequenceNumberAvailabilityCheck',
     type: 'boolean',
     defaultValue: false,
-    defined: typeIs('kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     info: (
       <>
         Whether to enable checking if the current sequence number is still available in a particular
@@ -1832,14 +1833,14 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.intermediatePersistPeriod',
     type: 'duration',
     defaultValue: 'PT10M',
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     info: <>The period that determines the rate at which intermediate persists occur.</>,
   },
   {
     name: 'spec.tuningConfig.intermediateHandoffPeriod',
     type: 'duration',
     defaultValue: 'P2147483647D',
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     info: (
       <>
         How often the tasks should hand off segments. Handoff will happen either if
@@ -1876,7 +1877,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.handoffConditionTimeout',
     type: 'number',
     defaultValue: 0,
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     hideInMore: true,
     info: <>Milliseconds to wait for segment handoff. 0 means to wait forever.</>,
   },
@@ -1936,7 +1937,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     type: 'number',
     defaultValue: 1000,
     min: 1,
-    defined: typeIs('index_parallel'),
+    defined: typeIsKnown(KNOWN_TYPES, 'index_parallel'),
     hideInMore: true,
     adjustment: s => deepSet(s, 'spec.tuningConfig.splitHintSpec.type', 'maxSize'),
     info: (
@@ -1954,7 +1955,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.chatHandlerTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
-    defined: typeIs('index_parallel'),
+    defined: typeIsKnown(KNOWN_TYPES, 'index_parallel'),
     hideInMore: true,
     info: <>Timeout for reporting the pushed segments in worker tasks.</>,
   },
@@ -1962,7 +1963,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.chatHandlerNumRetries',
     type: 'number',
     defaultValue: 5,
-    defined: typeIs('index_parallel'),
+    defined: typeIsKnown(KNOWN_TYPES, 'index_parallel'),
     hideInMore: true,
     info: <>Retries for reporting the pushed segments in worker tasks.</>,
   },
@@ -1970,7 +1971,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.workerThreads',
     type: 'number',
     placeholder: 'min(10, taskCount)',
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     info: (
       <>The number of threads that will be used by the supervisor for asynchronous operations.</>
     ),
@@ -1979,7 +1980,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.chatThreads',
     type: 'number',
     placeholder: 'min(10, taskCount * replicas)',
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     hideInMore: true,
     info: <>The number of threads that will be used for communicating with indexing tasks.</>,
   },
@@ -1987,7 +1988,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.chatRetries',
     type: 'number',
     defaultValue: 8,
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -2000,14 +2001,14 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.httpTimeout',
     type: 'duration',
     defaultValue: 'PT10S',
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     info: <>How long to wait for a HTTP response from an indexing task.</>,
   },
   {
     name: 'spec.tuningConfig.shutdownTimeout',
     type: 'duration',
     defaultValue: 'PT80S',
-    defined: typeIs('kafka', 'kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka', 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -2019,7 +2020,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.offsetFetchPeriod',
     type: 'duration',
     defaultValue: 'PT30S',
-    defined: typeIs('kafka'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
     info: (
       <>
         How often the supervisor queries Kafka and the indexing tasks to fetch current offsets and
@@ -2031,7 +2032,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.recordBufferSize',
     type: 'number',
     defaultValue: 10000,
-    defined: typeIs('kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     info: (
       <>
         Size of the buffer (number of events) used between the Kinesis fetch threads and the main
@@ -2043,7 +2044,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.recordBufferOfferTimeout',
     type: 'number',
     defaultValue: 5000,
-    defined: typeIs('kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -2057,7 +2058,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     hideInMore: true,
     type: 'number',
     defaultValue: 5000,
-    defined: typeIs('kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     info: (
       <>
         Length of time in milliseconds to wait for the buffer to drain before attempting to fetch
@@ -2069,7 +2070,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.fetchThreads',
     type: 'number',
     placeholder: 'max(1, {numProcessors} - 1)',
-    defined: typeIs('kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -2082,7 +2083,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.maxRecordsPerPoll',
     type: 'number',
     defaultValue: 100,
-    defined: typeIs('kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     hideInMore: true,
     info: (
       <>
@@ -2095,7 +2096,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
     name: 'spec.tuningConfig.repartitionTransitionDuration',
     type: 'duration',
     defaultValue: 'PT2M',
-    defined: typeIs('kinesis'),
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
     hideInMore: true,
     info: (
       <>
