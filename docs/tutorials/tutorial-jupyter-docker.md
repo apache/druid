@@ -103,9 +103,10 @@ In the same directory as `docker-compose.yaml` and `environment`, start the appl
 DRUID_VERSION={{DRUIDVERSION}} docker compose --profile kafka-jupyter up -d
 ```
 
-Please note that if you have an external Druid instance running on a different machine than the one hosting the Docker Compose environment, you will need to change the `host` variable in the notebook tutorial to the hostname or address of the machine where Druid is running. This will establish a connection with the external Druid cluster. 
+If you have an external Druid instance running on a different machine than the one hosting the Docker Compose environment, change the `host` variable in the notebook tutorial to the hostname or address of the machine where Druid is running.
 
 If Druid is running local to the same machine as Jupyter, open the tutorial and set the `host` variable to `host.docker.internal` before starting. For example:
+
 ```python
 host = "host.docker.internal"
 ```
@@ -226,14 +227,14 @@ For ARM-based devices, follow this setup to start Druid externally, while keepin
 
 1. Start Druid using the `start-druid` script. You can follow [Quickstart (local)](./index.md) instructions. The tutorials
    assume that you are using the quickstart, so no authentication or authorization is expected unless explicitly mentioned.
-2. Start either Kafka and Jupyter or only Jupyter using the following commands in the same directory as `docker-compose.yaml` and `environment`:
+2. Start either Jupyter only or Jupyter and Kafka using the following commands in the same directory as `docker-compose.yaml` and `environment`:
    
    ```bash
-   # Start Kafka and Jupyter
-   DRUID_VERSION={{DRUIDVERSION}} docker compose --profile kafka-jupyter up -d
-
    # Start only Jupyter
    docker compose --profile jupyter up -d
+   
+   # Start Kafka and Jupyter
+   DRUID_VERSION={{DRUIDVERSION}} docker compose --profile kafka-jupyter up -d
    ```
 
 3. If Druid is running local to the same machine as Jupyter, open the tutorial and set the `host` variable to `host.docker.internal` before starting. For example:
