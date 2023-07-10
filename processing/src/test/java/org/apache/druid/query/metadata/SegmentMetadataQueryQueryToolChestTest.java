@@ -76,8 +76,8 @@ public class SegmentMetadataQueryQueryToolChestTest
         null,
         null,
         false,
-        false,
-        null
+        null,
+        AggregatorMergeStrategy.STRICT
     );
 
     CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery> strategy =
@@ -595,8 +595,6 @@ public class SegmentMetadataQueryQueryToolChestTest
     );
   }
 
-// For the latest strategy:
-// Test the tie-breaker case where intervals are the same, but partiion numbers are different.
   @Test
   public void testMergeAggregatorsConflictWithDifferentOrder()
   {

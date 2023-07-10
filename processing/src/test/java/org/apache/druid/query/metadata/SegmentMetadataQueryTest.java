@@ -873,7 +873,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         .toInclude(new ListColumnIncluderator(Collections.singletonList("placement")))
         .analysisTypes(SegmentMetadataQuery.AnalysisType.AGGREGATORS)
         .merge(true)
-        .aggregatorMergeStrategy(AggregatorMergeStrategy.LENIENT) // explicitly specify the strategy.
+        .aggregatorMergeStrategy(AggregatorMergeStrategy.LENIENT)
         .build();
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
@@ -1556,7 +1556,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                 null,
                 null,
                 false,
-                false,
+                null,
                 null
             )
         ),
@@ -1577,7 +1577,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                 null,
                 null,
                 false,
-                false,
+                null,
                 null
             )
         ),
@@ -1607,7 +1607,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                 null,
                 null,
                 false,
-                false,
+                null,
                 null
             )
         ),

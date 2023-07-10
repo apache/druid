@@ -48,7 +48,6 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import org.apache.druid.query.metadata.metadata.AggregatorMergeStrategy;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
@@ -1311,7 +1310,7 @@ public class SegmentMetadataCacheTest extends SegmentMetadataCacheCommon
         EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         null,
-        AggregatorMergeStrategy.STRICT
+        null
     );
 
     QueryLifecycleFactory factoryMock = EasyMock.createMock(QueryLifecycleFactory.class);
