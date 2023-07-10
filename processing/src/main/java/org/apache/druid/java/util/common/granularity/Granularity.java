@@ -150,6 +150,11 @@ public abstract class Granularity implements Cacheable
    */
   public abstract boolean isAligned(Interval interval);
 
+  public DateTimeZone getTimeZone()
+  {
+    return DateTimeZone.UTC;
+  }
+
   public DateTime bucketEnd(DateTime time)
   {
     return increment(bucketStart(time));
@@ -255,21 +260,21 @@ public abstract class Granularity implements Cacheable
   {
     private final Interval inputInterval;
 
-    private DateTime currStart;
-    private DateTime currEnd;
+    private long currStart;
+    private long currEnd;
 
     private IntervalIterator(Interval inputInterval)
     {
       this.inputInterval = inputInterval;
 
-      currStart = bucketStart(inputInterval.getStart());
+      currStart = bucketStart(inputInterval.getStartMillis());
       currEnd = increment(currStart);
     }
 
     @Override
     public boolean hasNext()
     {
-      return currStart.isBefore(inputInterval.getEnd());
+      return currStart < inputInterval.getEndMillis();
     }
 
     @Override
@@ -278,7 +283,7 @@ public abstract class Granularity implements Cacheable
       if (!hasNext()) {
         throw new NoSuchElementException("There are no more intervals");
       }
-      Interval retVal = new Interval(currStart, currEnd);
+      Interval retVal = new Interval(currStart, currEnd, getTimeZone());
 
       currStart = currEnd;
       currEnd = increment(currStart);

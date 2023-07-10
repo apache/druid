@@ -38,7 +38,7 @@ public class ResultSetInformation
   @Nullable
   private final ResultFormat resultFormat;
   @Nullable
-  private final List<Object> records;
+  private final List<Object[]> records;
   @Nullable
   private final String dataSource;
   @Nullable
@@ -50,7 +50,7 @@ public class ResultSetInformation
       @JsonProperty("totalSizeInBytes") @Nullable Long totalSizeInBytes,
       @JsonProperty("resultFormat") @Nullable ResultFormat resultFormat,
       @JsonProperty("dataSource") @Nullable String dataSource,
-      @JsonProperty("sampleRecords") @Nullable List<Object> records,
+      @JsonProperty("sampleRecords") @Nullable List<Object[]> records,
       @JsonProperty("pages") @Nullable List<PageInformation> pages
   )
   {
@@ -97,7 +97,7 @@ public class ResultSetInformation
   @JsonProperty("sampleRecords")
   @Nullable
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public List<Object> getRecords()
+  public List<Object[]> getRecords()
   {
     return records;
   }

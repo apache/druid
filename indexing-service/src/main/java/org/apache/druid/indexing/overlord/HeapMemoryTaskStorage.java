@@ -321,12 +321,14 @@ public class HeapMemoryTaskStorage implements TaskStorage
     List<String> taskIds = tasks.entrySet().stream()
         .filter(entry -> entry.getValue().getStatus().isComplete()
                           && entry.getValue().getCreatedDate().isBefore(timestamp))
-        .map(entry -> entry.getKey())
+        .map(Map.Entry::getKey)
         .collect(Collectors.toList());
 
     taskIds.forEach(tasks::remove);
     synchronized (taskActions) {
-      taskIds.forEach(taskActions::removeAll);
+      for (String taskId : taskIds) {
+        taskActions.removeAll(taskId);
+      }
     }
   }
 
