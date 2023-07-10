@@ -23,25 +23,22 @@ import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.query.aggregation.Aggregator;
 
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
 /**
  * This aggregator builds sketches from raw data.
  * The input column can contain identifiers of type string, char[], byte[] or any numeric type.
  */
 public class HllSketchBuildAggregator implements Aggregator
 {
-  private final Consumer<Supplier<HllSketch>> processor;
+  private final HllSketchUpdater updater;
   private HllSketch sketch;
 
   public HllSketchBuildAggregator(
-      final Consumer<Supplier<HllSketch>> processor,
+      final HllSketchUpdater updater,
       final int lgK,
       final TgtHllType tgtHllType
   )
   {
-    this.processor = processor;
+    this.updater = updater;
     this.sketch = new HllSketch(lgK, tgtHllType);
   }
 
@@ -53,7 +50,7 @@ public class HllSketchBuildAggregator implements Aggregator
   @Override
   public synchronized void aggregate()
   {
-    processor.accept(() -> sketch);
+    updater.update(() -> sketch);
   }
 
   /*
