@@ -33,6 +33,7 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprEval;
@@ -111,11 +112,25 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     this.upperEval = ExprEval.ofType(expressionType, upper);
     this.lowerEval = ExprEval.ofType(expressionType, lower);
     if (expressionType.isNumeric()) {
-      if (upper != null && upperEval.isNumericNull()) {
-        throw new IAE("Match value is specified as [%s] but [%s] cannot be parsed", expressionType, upper);
+      if (lower != null && lowerEval.value() == null) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                "Invalid range filter on column [%s], lower bound [%s] cannot be parsed as specified match value type [%s]",
+                                column,
+                                lower,
+                                expressionType
+                            );
       }
-      if (lower != null && lowerEval.isNumericNull()) {
-        throw new IAE("Match value is specified as [%s] but [%s] cannot be parsed", expressionType, lower);
+      if (upper != null && upperEval.value() == null) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                "Invalid range filter on column [%s], upper bound [%s] cannot be parsed as specified match value type [%s]",
+                                column,
+                                upper,
+                                expressionType
+                            );
       }
     }
     this.lowerStrict = lowerStrict != null && lowerStrict;
@@ -251,6 +266,9 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   @Override
   public DimFilter optimize()
   {
+//    if (isEquality()) {
+//      return new EqualityFilter(column, matchValueType, lower, extractionFn, filterTuning);
+//    }
     return this;
   }
 
@@ -302,10 +320,15 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       }
       final LexicographicalRangeIndex rangeIndex = indexSupplier.as(LexicographicalRangeIndex.class);
       if (rangeIndex != null) {
+        final String lower = hasLowerBound() ? lowerEval.asString() : null;
+        final String upper = hasUpperBound() ? upperEval.asString() : null;
+        if (NullHandling.isNullOrEquivalent(lower) && NullHandling.isNullOrEquivalent(upper)) {
+          return Filters.makeNullIndex(false, selector);
+        }
         final BitmapColumnIndex rangeBitmaps = rangeIndex.forRange(
-            hasLowerBound() ? lowerEval.asString() : null,
+            lower,
             lowerStrict,
-            hasUpperBound() ? upperEval.asString() : null,
+            upper,
             upperStrict
         );
         if (rangeBitmaps != null) {
@@ -320,8 +343,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       }
       final NumericRangeIndex rangeIndex = indexSupplier.as(NumericRangeIndex.class);
       if (rangeIndex != null) {
-        final Number lower = (Number) lowerEval.valueOrDefault();
-        final Number upper = (Number) upperEval.valueOrDefault();
+        final Number lower = (Number) lowerEval.value();
+        final Number upper = (Number) upperEval.value();
         final BitmapColumnIndex rangeBitmaps = rangeIndex.forRange(
             lower,
             isLowerStrict(),
@@ -610,11 +633,11 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   private Supplier<Predicate<String>> makeStringPredicateSupplier()
   {
     return Suppliers.memoize(() -> {
-      Comparator<String> stringComparator = matchValueType.isNumeric()
+      final Comparator<String> stringComparator = matchValueType.isNumeric()
                                             ? StringComparators.NUMERIC
                                             : StringComparators.LEXICOGRAPHIC;
-      String lowerBound = lowerEval.castTo(ExpressionType.STRING).asString();
-      String upperBound = upperEval.castTo(ExpressionType.STRING).asString();
+      final String lowerBound = lowerEval.castTo(ExpressionType.STRING).asString();
+      final String upperBound = upperEval.castTo(ExpressionType.STRING).asString();
 
       if (hasLowerBound() && hasUpperBound()) {
         if (upperStrict && lowerStrict) {

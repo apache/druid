@@ -443,7 +443,11 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                  .filters(equality("dim2", 0L, ColumnType.LONG))
+                  .filters(
+                      NullHandling.replaceWithDefault()
+                      ? numericSelector("dim2", "0", null)
+                      : equality("dim2", 0L, ColumnType.LONG)
+                  )
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
                       new TDigestSketchAggregatorFactory("a0:agg", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION),

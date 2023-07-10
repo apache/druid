@@ -571,8 +571,9 @@ public class ListFilteredVirtualColumn implements VirtualColumn
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
           int startIndex, endIndex;
+          final int firstValue = NullHandling.isNullOrEquivalent(delegate.getValue(idMapping.getReverseId(0))) ? 1 : 0;
           if (startValue == null) {
-            startIndex = 0;
+            startIndex = firstValue;
           } else {
             final int found = getReverseIndex(NullHandling.emptyToNullIfNeeded(startValue));
             if (found >= 0) {

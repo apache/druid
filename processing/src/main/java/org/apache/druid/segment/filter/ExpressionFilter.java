@@ -49,6 +49,8 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
@@ -417,7 +419,7 @@ public class ExpressionFilter implements Filter
       }
 
       @Override
-      public Predicate<Object[]> makeArrayPredicate()
+      public Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
       {
         if (inputCapabilites == null) {
           return input -> expr.get()

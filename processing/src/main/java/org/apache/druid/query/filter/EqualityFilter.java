@@ -49,7 +49,9 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.TypeStrategy;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.PredicateValueMatcherFactory;
@@ -362,9 +364,11 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     }
 
     @Override
-    public Predicate<Object[]> makeArrayPredicate()
+    public Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
     {
-      final Object[] arrayValue = matchValue.asArray();
+      final Object[] arrayValue = arrayType != null
+                                  ? matchValue.castTo(ExpressionType.fromColumnType(arrayType)).asArray()
+                                  : matchValue.asArray();
       return input -> Arrays.deepEquals(input, arrayValue);
     }
 

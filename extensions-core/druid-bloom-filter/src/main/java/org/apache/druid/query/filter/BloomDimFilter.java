@@ -29,8 +29,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
 import com.google.common.hash.HashCode;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
 
 import javax.annotation.Nullable;
@@ -168,13 +171,18 @@ public class BloomDimFilter extends AbstractOptimizableDimFilter implements DimF
           }
 
           @Override
-          public Predicate<Object[]> makeArrayPredicate()
+          public Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
           {
+            final ExpressionType expressionType = arrayType == null || !arrayType.isArray()
+                                                  ? null
+                                                  : ExpressionType.fromColumnType(arrayType);
             return input -> {
               if (input == null) {
                 return bloomKFilter.testBytes(null, 0, 0);
               }
-              final byte[] bytes = ExprEval.toBytesBestEffort(input);
+              final byte[] bytes = expressionType != null
+                                   ? ExprEval.toBytes(expressionType, expressionType.getNullableStrategy(), input)
+                                   : ExprEval.toBytesBestEffort(input);
               return bloomKFilter.testBytes(bytes);
             };
           }

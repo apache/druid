@@ -89,7 +89,7 @@ public class VectorValueMatcherColumnProcessorFactory implements VectorColumnPro
   @Override
   public VectorValueMatcherFactory makeArrayProcessor(ColumnCapabilities capabilities, VectorObjectSelector selector)
   {
-    return new ArrayVectorValueMatcher(selector);
+    return new ArrayVectorValueMatcher(capabilities, selector);
   }
 
   @Override

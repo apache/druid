@@ -93,10 +93,10 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
   {
     if (selector instanceof NilColumnValueSelector) {
       // Column does not exist, or is unfilterable. Treat it as all nulls.
-      return BooleanValueMatcher.of(predicateFactory.makeArrayPredicate().apply(null));
+      return BooleanValueMatcher.of(predicateFactory.makeArrayPredicate(columnCapabilities).apply(null));
     } else {
       // use the object predicate
-      final Predicate<Object[]> predicate = predicateFactory.makeArrayPredicate();
+      final Predicate<Object[]> predicate = predicateFactory.makeArrayPredicate(columnCapabilities);
       return new ValueMatcher()
       {
         @Override
@@ -244,7 +244,7 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
         private Predicate<Object[]> getArrayPredicate()
         {
           if (arrayPredicate == null) {
-            arrayPredicate = predicateFactory.makeArrayPredicate();
+            arrayPredicate = predicateFactory.makeArrayPredicate(null);
           }
           return arrayPredicate;
         }

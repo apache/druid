@@ -96,6 +96,8 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
     final DruidExpression leftExpr = druidExpressions.get(0);
     final DruidExpression rightExpr = druidExpressions.get(1);
 
+    // if the input column is not actually an ARRAY type, but rather an MVD, we can optimize this into
+    // selector/equality filters on the individual array elements
     if (leftExpr.isSimpleExtraction() && !(leftExpr.isDirectColumnAccess() && leftExpr.getDruidType() != null && leftExpr.getDruidType().isArray())) {
       Expr expr = plannerContext.parseExpression(rightExpr.getExpression());
       // To convert this expression filter into an And of Selector filters, we need to extract all array elements.
@@ -119,7 +121,7 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
           } else {
             return new EqualityFilter(
                 leftExpr.getSimpleExtraction().getColumn(),
-                ExpressionType.toColumnType(exprEval.type()),
+                ExpressionType.toColumnType((ExpressionType) exprEval.type().getElementType()),
                 arrayElements[0],
                 leftExpr.getSimpleExtraction().getExtractionFn(),
                 null
@@ -134,7 +136,7 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
                 } else {
                   return new EqualityFilter(
                       leftExpr.getSimpleExtraction().getColumn(),
-                      ExpressionType.toColumnType(exprEval.type()),
+                      ExpressionType.toColumnType((ExpressionType) exprEval.type().getElementType()),
                       val,
                       leftExpr.getSimpleExtraction().getExtractionFn(),
                       null
