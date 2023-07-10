@@ -2272,7 +2272,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             + "WHERE JSON_VALUE(arrayDoubleNulls, '$[2]' RETURNING DOUBLE) = 5.5"
             + "GROUP BY 1"
         )
-        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+        .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY_USE_EQUALITY)
         .expectedQueries(
             ImmutableList.of(
                 GroupByQuery.builder()
@@ -2284,12 +2284,15 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                     new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE)
                                 )
                             )
-                            .setDimFilter(equality("v0", 5.5, ColumnType.DOUBLE))
+                            .setDimFilter(
+                                // dont use static function since context flag indicates to always use equality
+                                new EqualityFilter("v0", ColumnType.DOUBLE, 5.5, null, null)
+                            )
                             .setVirtualColumns(
                                 new NestedFieldVirtualColumn("arrayDoubleNulls", "$[2]", "v0", ColumnType.DOUBLE)
                             )
                             .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY_USE_EQUALITY)
                             .build()
             )
         )
