@@ -5659,7 +5659,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
 
-    Query expectedQuery;
+    Query<?> expectedQuery;
 
     if (!NullHandling.sqlCompatible()) {
       expectedQuery = Druids.newTimeseriesQueryBuilder()

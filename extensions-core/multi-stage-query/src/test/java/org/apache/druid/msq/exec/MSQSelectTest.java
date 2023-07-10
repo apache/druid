@@ -39,12 +39,14 @@ import org.apache.druid.msq.indexing.MSQSelectDestination;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
+import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -1961,6 +1963,91 @@ public class MSQSelectTest extends MSQTestBase
                 .build())
         .setQueryContext(context)
         .setExpectedResultRows(result)
+        .verifyResults();
+  }
+
+  @Test
+  public void testJoinUsesDifferentAlgorithm()
+  {
+    RowSignature rowSignature = RowSignature.builder().add("cnt", ColumnType.LONG).build();
+
+    Map<String, Object> queryContext = new HashMap<>(context);
+    queryContext.put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, JoinAlgorithm.SORT_MERGE.toString());
+
+    Query<?> expectedQuery;
+
+    expectedQuery = GroupByQuery
+        .builder()
+        .setDataSource(
+            join(
+                new QueryDataSource(
+                    newScanQueryBuilder()
+                        .dataSource("foo")
+                        .virtualColumns(expressionVirtualColumn("v0", "0", ColumnType.LONG))
+                        .columns("v0")
+                        .context(defaultScanQueryContext(
+                            queryContext,
+                            RowSignature.builder().add("v0", ColumnType.LONG).build()
+                        ))
+                        .intervals(querySegmentSpec(Intervals.ETERNITY))
+                        .build()
+                ),
+                new QueryDataSource(
+                    GroupByQuery.builder()
+                                .setDataSource("foo")
+                                .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
+                                .setDimensions(
+                                    new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT),
+                                    new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                )
+                                .setContext(queryContext)
+                                .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                                .setGranularity(Granularities.ALL)
+                                .build()
+
+                ),
+                "j0.",
+                "(floor(100) == \"j0.d0\")",
+                JoinType.LEFT
+            )
+        )
+        .setAggregatorSpecs(
+            new FilteredAggregatorFactory(
+                new CountAggregatorFactory("a0"),
+                new SelectorDimFilter("j0.d1", null, null),
+                "a0"
+            )
+        )
+        .setContext(queryContext)
+        .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+        .setGranularity(Granularities.ALL)
+        .build();
+
+    testSelectQuery()
+        .setSql(
+            "SELECT COUNT(*) FILTER (WHERE FLOOR(100) NOT IN (SELECT m1 FROM foo)) AS cnt "
+            + "FROM foo"
+        )
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedMSQSpec(
+            MSQSpec
+                .builder()
+                .query(expectedQuery)
+                .columnMappings(new ColumnMappings(
+                    ImmutableList.of(
+                        new ColumnMapping("a0", "cnt")
+                    )
+                ))
+                .tuningConfig(MSQTuningConfig.defaultConfig())
+                .build())
+        .setQueryContext(queryContext)
+        .addAdhocReportAssertions(
+            msqTaskReportPayload -> msqTaskReportPayload.getStages().getStages().stream().noneMatch(
+                stage -> stage.getStageDefinition().getProcessorFactory().getClass().equals(SortMergeJoinFrameProcessorFactory.class)
+            ),
+            "assert the query didn't use sort merge"
+        )
+        .setExpectedResultRows(ImmutableList.of(new Object[]{6L}))
         .verifyResults();
   }
 
