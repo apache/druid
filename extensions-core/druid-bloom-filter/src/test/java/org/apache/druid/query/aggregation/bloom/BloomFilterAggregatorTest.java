@@ -281,7 +281,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
     TestLongColumnSelector selector = new TestLongColumnSelector(Arrays.asList(LONG_VALUES1));
     LongBloomFilterAggregator agg = new LongBloomFilterAggregator(selector, MAX_NUM_VALUES, true);
 
-    for (Long ignored : LONG_VALUES1) {
+    for (int i = 0; i < LONG_VALUES1.length; i++) {
       aggregateColumn(Collections.singletonList(selector), agg);
     }
 
@@ -298,7 +298,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
     TestFloatColumnSelector selector = new TestFloatColumnSelector(Arrays.asList(FLOAT_VALUES1));
     FloatBloomFilterAggregator agg = new FloatBloomFilterAggregator(selector, MAX_NUM_VALUES, true);
 
-    for (Float ignored : FLOAT_VALUES1) {
+    for (int i = 0; i < FLOAT_VALUES1.length; i++) {
       aggregateColumn(Collections.singletonList(selector), agg);
     }
 
@@ -315,7 +315,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
     TestDoubleColumnSelector selector = new TestDoubleColumnSelector(Arrays.asList(DOUBLE_VALUES1));
     DoubleBloomFilterAggregator agg = new DoubleBloomFilterAggregator(selector, MAX_NUM_VALUES, true);
 
-    for (Double ignored : DOUBLE_VALUES1) {
+    for (int i = 0; i < DOUBLE_VALUES1.length; i++) {
       aggregateColumn(Collections.singletonList(selector), agg);
     }
 
@@ -423,7 +423,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
     );
     ObjectBloomFilterAggregator agg = new ObjectBloomFilterAggregator(selector, MAX_NUM_VALUES, true);
 
-    for (Object ignored : ARRAY_VALUES) {
+    for (int i = 0; i < ARRAY_VALUES.length; i++) {
       aggregateColumn(Collections.singletonList(selector), agg);
     }
 
