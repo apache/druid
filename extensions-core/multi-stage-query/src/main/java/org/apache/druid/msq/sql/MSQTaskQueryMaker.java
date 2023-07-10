@@ -140,8 +140,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     catch (JsonProcessingException e) {
       // This would only be thrown if we are unable to serialize the DEFAULT_SEGMENT_GRANULARITY, which we don't expect
       // to happen
-      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
-                          .ofCategory(DruidException.Category.DEFENSIVE)
+      throw DruidException.defensive()
                           .build(
                               e,
                               "Unable to deserialize the DEFAULT_SEGMENT_GRANULARITY in MSQTaskQueryMaker. "
@@ -223,8 +222,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         segmentGranularityObject = jsonMapper.readValue((String) segmentGranularity, Granularity.class);
       }
       catch (Exception e) {
-        throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
-                            .ofCategory(DruidException.Category.DEFENSIVE)
+        throw DruidException.defensive()
                             .build(
                                 e,
                                 "Unable to deserialize the provided segmentGranularity [%s]. "
