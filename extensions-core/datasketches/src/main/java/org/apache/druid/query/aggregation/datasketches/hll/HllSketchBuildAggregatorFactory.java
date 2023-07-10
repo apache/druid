@@ -168,7 +168,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
     validateInputs(capabilities);
 
     HllSketchUpdater updater = null;
-    if (capabilities!= null &&
+    if (capabilities != null &&
         StringEncoding.UTF8.equals(getStringEncoding()) && ValueType.STRING.equals(capabilities.getType())) {
       final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
           DefaultDimensionSpec.of(getFieldName())

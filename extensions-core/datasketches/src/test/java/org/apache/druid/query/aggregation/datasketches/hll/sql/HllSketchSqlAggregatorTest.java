@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll.sql;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
@@ -110,26 +111,36 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           "[2.000000004967054,2.0,2.000099863468538]",
           "\"AgEHDAMIBgC1EYgH1mlHBwsKPwu5SK8MIiUxB7iZVwU=\"",
           2L,
-          "### HLL SKETCH SUMMARY: \n"
-          + "  Log Config K   : 12\n"
-          + "  Hll Target     : HLL_4\n"
-          + "  Current Mode   : LIST\n"
-          + "  Memory         : false\n"
-          + "  LB             : 2.0\n"
-          + "  Estimate       : 2.000000004967054\n"
-          + "  UB             : 2.000099863468538\n"
-          + "  OutOfOrder Flag: false\n"
-          + "  Coupon Count   : 2\n",
-          "### HLL SKETCH SUMMARY: \n"
-          + "  LOG CONFIG K   : 12\n"
-          + "  HLL TARGET     : HLL_4\n"
-          + "  CURRENT MODE   : LIST\n"
-          + "  MEMORY         : FALSE\n"
-          + "  LB             : 2.0\n"
-          + "  ESTIMATE       : 2.000000004967054\n"
-          + "  UB             : 2.000099863468538\n"
-          + "  OUTOFORDER FLAG: FALSE\n"
-          + "  COUPON COUNT   : 2\n",
+          Joiner.on("\n").join(
+              new Object[]{
+                  "### HLL SKETCH SUMMARY: ",
+                  "  Log Config K   : 12",
+                  "  Hll Target     : HLL_4",
+                  "  Current Mode   : LIST",
+                  "  Memory         : false",
+                  "  LB             : 2.0",
+                  "  Estimate       : 2.000000004967054",
+                  "  UB             : 2.000099863468538",
+                  "  OutOfOrder Flag: false",
+                  "  Coupon Count   : 2",
+                  ""
+              }
+          ),
+          Joiner.on("\n").join(
+              new Object[]{
+                  "### HLL SKETCH SUMMARY: ",
+                  "  LOG CONFIG K   : 12",
+                  "  HLL TARGET     : HLL_4",
+                  "  CURRENT MODE   : LIST",
+                  "  MEMORY         : FALSE",
+                  "  LB             : 2.0",
+                  "  ESTIMATE       : 2.000000004967054",
+                  "  UB             : 2.000099863468538",
+                  "  OUTOFORDER FLAG: FALSE",
+                  "  COUPON COUNT   : 2",
+                  ""
+              }
+          ),
           2.0,
           2L
       };
@@ -997,7 +1008,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
             new Object[]{1.0D, 1.0D, 1.0D, 1.0D},
             new Object[]{1.0D, 0.0D, 0.0D, 0.0D},
             new Object[]{1.0D, 0.0D, 0.0D, 0.0D},
-            new Object[]{1.0D, 0.0D, 0.0D, 0.0D}        )
+            new Object[]{1.0D, 0.0D, 0.0D, 0.0D}
+        )
     );
   }
 
@@ -1201,10 +1213,10 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   /**
    * This is a test in a similar vein to {@link #testEstimateStringAndDoubleAreDifferent()} except here we are
    * ensuring that float values and doubles values are considered equivalent.  The expected initial inputs were
-   *
+   * <p>
    * 1. d1 -> [1.0, 1.7, 0.0]
    * 2. f1 -> [1.0f, 0.1f, 0.0f]
-   *
+   * <p>
    * If we assume that doubles and floats are the same, that means that there are 4 unique values, not 6
    */
   @Test
