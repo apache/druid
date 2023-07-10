@@ -400,11 +400,25 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return selector(fieldName, Evals.asString(matchValue), extractionFn);
   }
 
+  /**
+   * Callers should use {@link #equality(String, Object, ColumnType)} or
+   * {@link #equality(String, Object, ExtractionFn, ColumnType)} instead of this method, since they will correctly use
+   * either a {@link EqualityFilter} or {@link SelectorDimFilter} depending on the value of
+   * {@link NullHandling#sqlCompatible()}, which determines the default of
+   * {@link PlannerContext#CTX_SQL_USE_BOUNDS_AND_SELECTORS}
+   */
   public static SelectorDimFilter selector(final String fieldName, final String value)
   {
     return selector(fieldName, value, null);
   }
 
+  /**
+   * Callers should use {@link #equality(String, Object, ColumnType)} or
+   * {@link #equality(String, Object, ExtractionFn, ColumnType)} instead of this method, since they will correctly use
+   * either a {@link EqualityFilter} or {@link SelectorDimFilter} depending on the value of
+   * {@link NullHandling#sqlCompatible()}, which determines the default of
+   * {@link PlannerContext#CTX_SQL_USE_BOUNDS_AND_SELECTORS}
+   */
   public static SelectorDimFilter selector(final String fieldName, final String value, final ExtractionFn extractionFn)
   {
     return new SelectorDimFilter(fieldName, value, extractionFn);
@@ -425,6 +439,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return bound(fieldName, value, value, false, false, extractionFn, StringComparators.NUMERIC);
   }
 
+  /**
+   * Callers should use {@link #range(String, ColumnType, Object, Object, boolean, boolean)} or
+   * {@link #range(String, ColumnType, Object, Object, boolean, boolean, ExtractionFn)} instead of this method, since
+   * they will correctly use either a {@link RangeFilter} or {@link BoundDimFilter} depending on the value of
+   * {@link NullHandling#sqlCompatible()}, which determines the default of
+   * {@link PlannerContext#CTX_SQL_USE_BOUNDS_AND_SELECTORS}
+   */
   public static BoundDimFilter bound(
       final String fieldName,
       final String lower,
@@ -438,6 +459,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new BoundDimFilter(fieldName, lower, upper, lowerStrict, upperStrict, null, extractionFn, comparator);
   }
 
+  /**
+   * Callers should use {@link #timeRange(Object)} instead of this method, since it will correctly use either a
+   * {@link RangeFilter} or {@link BoundDimFilter} depending on the value of {@link NullHandling#sqlCompatible()},
+   * which determines the default of {@link PlannerContext#CTX_SQL_USE_BOUNDS_AND_SELECTORS}
+   */
   public static BoundDimFilter timeBound(final Object intervalObj)
   {
     final Interval interval = new Interval(intervalObj, ISOChronology.getInstanceUTC());
