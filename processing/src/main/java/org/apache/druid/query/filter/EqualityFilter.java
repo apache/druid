@@ -417,13 +417,13 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
           floatPredicate = DruidFloatPredicate.MATCH_NULL_ONLY;
           return;
         }
-        final Float valueAsFloat = ((Number) matchValue.castTo(ExpressionType.DOUBLE).valueOrDefault()).floatValue();
+        final Double doubleValue = (Double) matchValue.castTo(ExpressionType.DOUBLE).valueOrDefault();
 
-        if (valueAsFloat == null) {
+        if (doubleValue == null) {
           floatPredicate = DruidFloatPredicate.ALWAYS_FALSE;
         } else {
           // Compare with floatToIntBits instead of == to canonicalize NaNs.
-          final int floatBits = Float.floatToIntBits(valueAsFloat);
+          final int floatBits = Float.floatToIntBits(doubleValue.floatValue());
           floatPredicate = input -> Float.floatToIntBits(input) == floatBits;
         }
       }
