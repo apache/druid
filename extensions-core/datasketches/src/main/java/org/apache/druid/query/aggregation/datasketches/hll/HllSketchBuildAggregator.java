@@ -50,7 +50,7 @@ public class HllSketchBuildAggregator implements Aggregator
   @Override
   public synchronized void aggregate()
   {
-    updater.update(sketch);
+    updater.update(() -> sketch);
   }
 
   /*

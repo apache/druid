@@ -21,7 +21,9 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.hll.HllSketch;
 
+import java.util.function.Supplier;
+
 public interface HllSketchUpdater
 {
-  void update(HllSketch sketch);
+  void update(Supplier<HllSketch> sketch);
 }

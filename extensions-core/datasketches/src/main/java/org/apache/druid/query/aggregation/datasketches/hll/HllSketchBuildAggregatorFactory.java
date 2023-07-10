@@ -183,7 +183,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
             final ByteBuffer buf = selector.lookupNameUtf8(row.get(i));
 
             if (buf != null) {
-              sketch.update(buf);
+              sketch.get().update(buf);
             }
           }
         };
@@ -209,21 +209,21 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
         case LONG:
           updater = sketch -> {
             if (!selector.isNull()) {
-              sketch.update(selector.getLong());
+              sketch.get().update(selector.getLong());
             }
           };
           break;
         case FLOAT:
           updater = sketch -> {
             if (!selector.isNull()) {
-              sketch.update(selector.getFloat());
+              sketch.get().update(selector.getFloat());
             }
           };
           break;
         case DOUBLE:
           updater = sketch -> {
             if (!selector.isNull()) {
-              sketch.update(selector.getDouble());
+              sketch.get().update(selector.getDouble());
             }
           };
           break;
@@ -231,7 +231,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
           updater = sketch -> {
             Object obj = selector.getObject();
             if (obj != null) {
-              HllSketchBuildUtil.updateSketch(sketch, getStringEncoding(), obj);
+              HllSketchBuildUtil.updateSketch(sketch.get(), getStringEncoding(), obj);
             }
           };
       }

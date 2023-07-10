@@ -59,7 +59,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
   {
-    updater.update(helper.getSketchAtPosition(buf, position));
+    updater.update(() -> helper.getSketchAtPosition(buf, position));
   }
 
   @Override
