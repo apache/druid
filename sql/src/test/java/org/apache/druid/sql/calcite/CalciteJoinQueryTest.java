@@ -5095,7 +5095,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .context(queryContext)
         .build();
 
-    assert query.context().getEnableJoinFilterPushDown(); // filter pushdown must be enabled
+    Assert.assertTrue("filter pushdown must be enabled", query.context().getEnableJoinFilterPushDown());
+
     // no results will be produced since the filter values aren't in the table
     testQuery(
         "SELECT f1.m1, f2.m1\n"
@@ -5217,7 +5218,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .context(queryContext)
         .build();
 
-    assert query.context().getEnableJoinFilterPushDown(); // filter pushdown must be enabled
+    Assert.assertTrue("filter pushdown must be enabled", query.context().getEnableJoinFilterPushDown());
+
     // (dim1, dim2, m1) in foo look like
     // [, a, 1.0]
     // [10.1, , 2.0]

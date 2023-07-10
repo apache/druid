@@ -287,7 +287,7 @@ public class DruidJoinRule extends RelOptRule
         }
       } else if (subCondition.isA(SqlKind.EQUALS)) {
         final List<RexNode> operands = ((RexCall) subCondition).getOperands();
-        Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%,d]", operands.size());
+        Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%s]", operands.size());
         firstOperand = operands.get(0);
         secondOperand = operands.get(1);
       } else {

@@ -4220,6 +4220,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           return;
         }
 
+        // Try emitting lag even with stale metrics provided that none of the partitions has negative lag
+        final long staleMillis = sequenceLastUpdated == null
+            ? 0
+            : DateTimes.nowUtc().getMillis()
+              - (tuningConfig.getOffsetFetchPeriod().getMillis() + sequenceLastUpdated.getMillis());
+        if (staleMillis > 0 && partitionLags.values().stream().anyMatch(x -> x < 0)) {
+          // Log at most once every twenty supervisor runs to reduce noise in the logs
+          if ((staleMillis / getIoConfig().getPeriod().getMillis()) % 20 == 0) {
+            log.warn("Lag is negative and will not be emitted because topic offsets have become stale. "
+                     + "This will not impact data processing. "
+                     + "Offsets may become stale because of connectivity issues.");
+          }
+          return;
+        }
+
         LagStats lagStats = computeLags(partitionLags);
         Map<String, Object> metricTags = spec.getContextValue(DruidMetrics.TAGS);
         for (Map.Entry<PartitionIdType, Long> entry : partitionLags.entrySet()) {

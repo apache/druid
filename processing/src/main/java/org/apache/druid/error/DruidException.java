@@ -154,6 +154,28 @@ public class DruidException extends RuntimeException
     return failure.makeException(new DruidExceptionBuilder(failure.getErrorCode()));
   }
 
+  /**
+   * Build a "defensive" exception, this is an exception that should never actually be triggered, but we are
+   * throwing it inside of a defensive check.
+   *
+   * @return A builder for a defensive exception.
+   */
+  public static DruidExceptionBuilder defensive()
+  {
+    return forPersona(Persona.DEVELOPER).ofCategory(Category.DEFENSIVE);
+  }
+
+  /**
+   * Build a "defensive" exception, this is an exception that should never actually be triggered, but we are
+   * throwing it inside of a defensive check.
+   *
+   * @return A builder for a defensive exception.
+   */
+  public static DruidException defensive(String format, Object... args)
+  {
+    return defensive().build(format, args);
+  }
+
   private final Persona targetPersona;
   private final Category category;
   private final String errorCode;
@@ -340,7 +362,7 @@ public class DruidException extends RuntimeException
     UNSUPPORTED(501),
     /**
      * A catch-all for any time when we cannot come up with a meaningful categorization.  This is hopefully only
-     * used when converting generic exceptions from frameworks and libraries that we do not control into DruidExcpetions
+     * used when converting generic exceptions from frameworks and libraries that we do not control into DruidExceptions
      */
     UNCATEGORIZED(500);
 
