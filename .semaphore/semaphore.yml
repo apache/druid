@@ -33,11 +33,9 @@ blocks:
       jobs:
         - name: "Install"
           commands:
-            - cache restore
             - >
               MAVEN_OPTS="${MAVEN_OPTS} -Xmx3000m" ${MVN} clean install
               -q -ff ${MAVEN_SKIP} ${MAVEN_SKIP_TESTS} -T1C
-            - cache store
 
   - name: "Tests"
     task:
@@ -47,7 +45,6 @@ blocks:
           - echo $SEMAPHORE_WORKFLOW_ID
           - sem-version java 17
           - checkout
-          - cache restore
       jobs:
         - name: "animal sniffer checks"
           commands:
