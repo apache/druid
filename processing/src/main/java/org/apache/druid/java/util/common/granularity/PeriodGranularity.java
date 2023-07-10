@@ -79,6 +79,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
     return period;
   }
 
+  @Override
   @JsonProperty("timeZone")
   public DateTimeZone getTimeZone()
   {

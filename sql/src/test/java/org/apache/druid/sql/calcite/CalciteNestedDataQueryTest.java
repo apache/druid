@@ -49,6 +49,7 @@ import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
@@ -1236,7 +1237,16 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .setDataSource(DATA_SOURCE_ARRAYS)
                             .setInterval(querySegmentSpec(Filtration.eternity()))
                             .setGranularity(Granularities.ALL)
-                            .setDimFilter(equality("arrayLong", new Object[]{1L, 2L, 3L}, ColumnType.LONG_ARRAY))
+                            .setDimFilter(
+                                // don't use static functions since context flag indicates to always use equality filter
+                                new EqualityFilter(
+                                    "arrayLong",
+                                    ColumnType.LONG_ARRAY,
+                                    new Object[]{1L, 2L, 3L},
+                                    null,
+                                    null
+                                )
+                            )
                             .setDimensions(
                                 dimensions(
                                     new DefaultDimensionSpec("arrayLong", "d0", ColumnType.LONG_ARRAY)

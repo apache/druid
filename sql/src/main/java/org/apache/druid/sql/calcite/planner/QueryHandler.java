@@ -162,6 +162,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     final RelDataType returnedRowType;
 
     if (explain != null) {
+      handlerContext.plannerContext().setExplainAttributes(explainAttributes());
       returnedRowType = getExplainStructType(typeFactory);
     } else {
       returnedRowType = returnedRowType();

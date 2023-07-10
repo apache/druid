@@ -759,15 +759,12 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals("yes", response.getHeader("X-Druid-SQL-Header-Included"));
     Assert.assertEquals(
-        new ArrayList<Object>()
-        {
-          {
-            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
-            add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS);
-            add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS);
-            addAll(Arrays.asList(expectedQueryResults));
-          }
-        },
+        ImmutableList.builder()
+                     .add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS)
+                     .add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS)
+                     .add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS)
+                     .addAll(Arrays.asList(expectedQueryResults))
+                     .build(),
         JSON_MAPPER.readValue(response.baos.toByteArray(), Object.class)
     );
 
@@ -779,14 +776,11 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(200, responseNoSqlTypesHeader.getStatus());
     Assert.assertEquals("yes", responseNoSqlTypesHeader.getHeader("X-Druid-SQL-Header-Included"));
     Assert.assertEquals(
-        new ArrayList<Object>()
-        {
-          {
-            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
-            add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS);
-            addAll(Arrays.asList(expectedQueryResults));
-          }
-        },
+        ImmutableList.builder()
+                     .add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS)
+                     .add(EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS)
+                     .addAll(Arrays.asList(expectedQueryResults))
+                     .build(),
         JSON_MAPPER.readValue(responseNoSqlTypesHeader.baos.toByteArray(), Object.class)
     );
 
@@ -798,14 +792,11 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(200, responseNoTypesHeader.getStatus());
     Assert.assertEquals("yes", responseNoTypesHeader.getHeader("X-Druid-SQL-Header-Included"));
     Assert.assertEquals(
-        new ArrayList<Object>()
-        {
-          {
-            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
-            add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS);
-            addAll(Arrays.asList(expectedQueryResults));
-          }
-        },
+        ImmutableList.builder()
+                     .add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS)
+                     .add(EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS)
+                     .addAll(Arrays.asList(expectedQueryResults))
+                     .build(),
         JSON_MAPPER.readValue(responseNoTypesHeader.baos.toByteArray(), Object.class)
     );
 
@@ -817,13 +808,10 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(200, responseNoTypes.getStatus());
     Assert.assertEquals("yes", responseNoTypes.getHeader("X-Druid-SQL-Header-Included"));
     Assert.assertEquals(
-        new ArrayList<Object>()
-        {
-          {
-            add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS);
-            addAll(Arrays.asList(expectedQueryResults));
-          }
-        },
+        ImmutableList.builder()
+                     .add(EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS)
+                     .addAll(Arrays.asList(expectedQueryResults))
+                     .build(),
         JSON_MAPPER.readValue(responseNoTypes.baos.toByteArray(), Object.class)
     );
 

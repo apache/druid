@@ -32,13 +32,17 @@ import org.apache.datasketches.theta.Union;
 import org.apache.datasketches.theta.UpdateSketch;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -48,6 +52,9 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByTestColumnSelectorFactory;
 import org.apache.druid.query.groupby.epinephelinae.GrouperTestUtil;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -78,6 +85,8 @@ public class SketchAggregationTest
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
+  private final Closer closer;
+
   public SketchAggregationTest(final GroupByQueryConfig config, final String vectorize)
   {
     SketchModule.registerSerde();
@@ -87,6 +96,7 @@ public class SketchAggregationTest
         tempFolder
     );
     this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
+    this.closer = Closer.create();
   }
 
   @Parameterized.Parameters(name = "config = {0}, vectorize = {1}")
@@ -104,6 +114,7 @@ public class SketchAggregationTest
   @After
   public void teardown() throws IOException
   {
+    closer.close();
     helper.close();
   }
 
@@ -326,6 +337,108 @@ public class SketchAggregationTest
     Assert.assertEquals(0.0, est.getLowBound(), 0.0001);
     Assert.assertEquals(2, est.getNumStdDev());
 
+  }
+
+  @Test
+  public void testArrays() throws Exception
+  {
+    List<Segment> realtimeSegs = ImmutableList.of(
+        NestedDataTestUtils.createIncrementalIndex(
+            tempFolder,
+            NestedDataTestUtils.ARRAY_TYPES_DATA_FILE,
+            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            NestedDataTestUtils.TIMESTAMP_SPEC,
+            NestedDataTestUtils.AUTO_DISCOVERY,
+            TransformSpec.NONE,
+            new AggregatorFactory[0],
+            Granularities.NONE,
+            true
+        )
+    );
+    List<Segment> segs = NestedDataTestUtils.createSegments(
+        tempFolder,
+        closer,
+        NestedDataTestUtils.ARRAY_TYPES_DATA_FILE,
+        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        NestedDataTestUtils.TIMESTAMP_SPEC,
+        NestedDataTestUtils.AUTO_DISCOVERY,
+        TransformSpec.NONE,
+        new AggregatorFactory[0],
+        Granularities.NONE,
+        true,
+        IndexSpec.DEFAULT
+    );
+
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource("test_datasource")
+                                     .setGranularity(Granularities.ALL)
+                                     .setInterval(Intervals.ETERNITY)
+                                     .setAggregatorSpecs(
+                                         new SketchMergeAggregatorFactory(
+                                             "a0",
+                                             "arrayString",
+                                             null,
+                                             null,
+                                             null,
+                                             null
+                                         )
+                                         {
+                                         },
+                                         new SketchMergeAggregatorFactory(
+                                             "a1",
+                                             "arrayLong",
+                                             null,
+                                             null,
+                                             null,
+                                             null
+                                         ),
+                                         new SketchMergeAggregatorFactory(
+                                             "a2",
+                                             "arrayDouble",
+                                             null,
+                                             null,
+                                             null,
+                                             null
+                                         ),
+                                         new CountAggregatorFactory("a3")
+                                     )
+                                     .setPostAggregatorSpecs(
+                                         ImmutableList.of(
+                                             new SketchEstimatePostAggregator(
+                                                 "p0",
+                                                 new FieldAccessPostAggregator("f0", "a0"),
+                                                 null
+                                             ),
+                                             new SketchEstimatePostAggregator(
+                                                 "p1",
+                                                 new FieldAccessPostAggregator("f1", "a1"),
+                                                 null
+                                             ),
+                                             new SketchEstimatePostAggregator(
+                                                 "p2",
+                                                 new FieldAccessPostAggregator("f2", "a2"),
+                                                 null
+                                             )
+                                         )
+                                     )
+                                     .build();
+
+    Sequence<ResultRow> realtimeSeq = helper.runQueryOnSegmentsObjs(realtimeSegs, query);
+    Sequence<ResultRow> seq = helper.runQueryOnSegmentsObjs(segs, query);
+    List<ResultRow> realtimeList = realtimeSeq.toList();
+    List<ResultRow> list = seq.toList();
+
+    // expect 4 distinct arrays for each of these columns from 14 rows
+    Assert.assertEquals(1, realtimeList.size());
+    Assert.assertEquals(14L, realtimeList.get(0).get(3));
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(4), 0.01);
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(5), 0.01);
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(6), 0.01);
+    Assert.assertEquals(1, list.size());
+    Assert.assertEquals(14L, list.get(0).get(3));
+    Assert.assertEquals(4.0, (Double) list.get(0).get(4), 0.01);
+    Assert.assertEquals(4.0, (Double) list.get(0).get(5), 0.01);
+    Assert.assertEquals(4.0, (Double) list.get(0).get(6), 0.01);
   }
 
   private void assertAggregatorFactorySerde(AggregatorFactory agg) throws Exception

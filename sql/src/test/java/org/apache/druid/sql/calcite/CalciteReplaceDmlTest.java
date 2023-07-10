@@ -937,6 +937,44 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
+  public void testReplaceWithNonExistentOrdinalInClusteredBy()
+  {
+    skipVectorize();
+
+    final String sql = "REPLACE INTO dst"
+                       + " OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' "
+                       + " SELECT * FROM foo"
+                       + " PARTITIONED BY DAY"
+                       + " CLUSTERED BY 1, 2, 100";
+
+    testIngestionQuery()
+        .sql(sql)
+        .expectValidationError(
+            invalidSqlContains("Ordinal out of range")
+        )
+        .verify();
+  }
+
+  @Test
+  public void testReplaceWithNegativeOrdinalInClusteredBy()
+  {
+    skipVectorize();
+
+    final String sql = "REPLACE INTO dst"
+                       + " OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' "
+                       + " SELECT * FROM foo"
+                       + " PARTITIONED BY DAY"
+                       + " CLUSTERED BY 1, -2, 3 DESC";
+
+    testIngestionQuery()
+        .sql(sql)
+        .expectValidationError(
+            invalidSqlIs("Ordinal [-2] specified in the CLUSTERED BY clause is invalid. It must be a positive integer.")
+        )
+        .verify();
+  }
+
+  @Test
   public void testReplaceFromExternalProjectSort()
   {
     testIngestionQuery()

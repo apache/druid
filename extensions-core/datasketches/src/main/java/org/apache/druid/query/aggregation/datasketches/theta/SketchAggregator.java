@@ -24,6 +24,7 @@ import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 
@@ -148,6 +149,9 @@ public class SketchAggregator implements Aggregator
       union.update((int[]) update);
     } else if (update instanceof long[]) {
       union.update((long[]) update);
+    } else if (update instanceof Object[]) {
+      byte[] arrayBytes = ExprEval.toBytesBestEffort(update);
+      union.update(arrayBytes);
     } else if (update instanceof List) {
       for (Object entry : (List) update) {
         if (entry != null) {
