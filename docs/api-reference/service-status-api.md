@@ -24,20 +24,31 @@ sidebar_label: Service status
   -->
 
 
-This document describes the API endpoints to retrieve service (process) status, cluster information for Apache Druid.
+This document describes the API endpoints to retrieve service status, cluster information for Apache Druid.
 
 In this document, `{domain}` is a placeholder for the server address of deployment. For example, on the quickstart configuration, replace `{domain}` with `http://localhost:8888`.
 
 ## Common
 
-All processes support the following endpoints.
+All services support the following endpoints.
 
-### Get process information
+Each endpoint can be used with the ports for each type of service.  The following table contains port addresses for a local configuration:
+
+|Service|Port address|
+| ----------- | ----------- |
+| Coordinator|8081|
+| Overlord   |8081|
+| Router   |8888|
+| Broker   |8082|
+| Historical|8083|
+| MiddleManager|8091|
+
+### Get service information
 
 #### URL
 <code class="getAPI">GET</code> `/status`
 
-Retrieves the Druid version, loaded extensions, memory used, total memory, and other useful information about the process.
+Retrieves the Druid version, loaded extensions, memory used, total memory, and other useful information about the individual service. 
 
 #### Responses
 
@@ -45,7 +56,7 @@ Retrieves the Druid version, loaded extensions, memory used, total memory, and o
 
 <!--200 SUCCESS-->
 <br/>
-*Successfully retrieved process information*  
+*Successfully retrieved service information*  
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
@@ -56,12 +67,12 @@ Retrieves the Druid version, loaded extensions, memory used, total memory, and o
 
 <!--cURL-->
 ```shell
-curl "{domain}/status"
+curl "{coordinator_domain}/status"
 ```
 <!--HTTP-->
 ```http
 GET /status HTTP/1.1
-Host: {domain}
+Host: {coordinator_domain}
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -166,13 +177,13 @@ Host: {domain}
   ```
 </details>
 
-### Get process health
+### Get service health
 
 #### URL
 
 <code class="getAPI">GET</code> `/status/health`
 
-Retrieves the health of the Druid service. If online, it will always return a JSON object with the boolean `true` value, indicating that the service can receive API calls. This endpoint is suitable for automated health checks.
+Retrieves the health of the individual Druid service. If online, it will always return a boolean `true` value, indicating that the service can receive API calls. This endpoint is suitable for automated health checks.
 
 #### Responses
 
@@ -180,7 +191,7 @@ Retrieves the health of the Druid service. If online, it will always return a JS
 
 <!--200 SUCCESS-->
 <br/>
-*Successfully retrieved process health*  
+*Successfully retrieved service health*  
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample request
@@ -189,12 +200,12 @@ Retrieves the health of the Druid service. If online, it will always return a JS
 
 <!--cURL-->
 ```shell
-curl "{domain}/status/health"
+curl "{router_domain}/status/health"
 ```
 <!--HTTP-->
 ```http
 GET /status/health HTTP/1.1
-Host: {domain}
+Host: {router_domain}
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -213,7 +224,7 @@ Host: {domain}
 #### URL
 <code class="getAPI">GET</code> `/status/properties`
 
-Retrieves the current configuration properties of the process.
+Retrieves the current configuration properties of the individual service queried. 
 
 #### Responses
 
@@ -221,7 +232,7 @@ Retrieves the current configuration properties of the process.
 
 <!--200 SUCCESS-->
 <br/>
-*Successfully retrieved process configuration properties*  
+*Successfully retrieved service configuration properties*  
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 #### Sample request
@@ -230,12 +241,12 @@ Retrieves the current configuration properties of the process.
 
 <!--cURL-->
 ```shell
-curl "{domain}/status/properties"
+curl "{coordinator_domain}/status/properties"
 ```
 <!--HTTP-->
 ```http
 GET /status/properties HTTP/1.1
-Host: {domain}
+Host: {coordinator_domain}
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -350,7 +361,8 @@ Host: {domain}
 Retrieves a JSON map of the form `{"selfDiscovered": true/false}`, indicating whether the node has received a confirmation from the central node discovery mechanism (currently ZooKeeper) of the Druid cluster that the node has been added to the
 cluster. 
 
-It is recommended to only consider a Druid node "healthy" or "ready" in automated deployment/container management systems when it returns `{"selfDiscovered": true}` from this endpoint. Nodes experiencing network issues may become isolated and should not be considered "healthy." Nodes utilizing Zookeeper segment discovery may be unusable until the Zookeeper client is fully initialized and receives data from the Zookeeper cluster. The presence of `{"selfDiscovered": true}` indicates that the node's Zookeeper client has started receiving data, enabling timely discovery of segments and other nodes.
+Only consider a Druid node "healthy" or "ready" in automated deployment/container management systems when this endpoint returns `{"selfDiscovered": true}`. Nodes experiencing network issues may become isolated and are not healthy.
+For nodes that use Zookeeper segment discovery, a response of `{"selfDiscovered": true}` indicates that the node's Zookeeper client has started receiving data from the Zookeeper cluster, enabling timely discovery of segments and other nodes.
 
 #### Responses
 
@@ -367,12 +379,12 @@ It is recommended to only consider a Druid node "healthy" or "ready" in automate
 
 <!--cURL-->
 ```shell
-curl "{domain}/status/selfDiscovered/status"
+curl "{router_domain}/status/selfDiscovered/status"
 ```
 <!--HTTP-->
 ```http
 GET /status/selfDiscovered/status HTTP/1.1
-Host: {domain}
+Host: {router_domain}
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -393,7 +405,8 @@ Host: {domain}
 #### URL
 <code class="getAPI">GET</code> `/status/selfDiscovered`
 
-Retrieves a status code to indicate if a node discovered itself within the Druid cluster. This is similar to the `status/selfDiscovered/status` endpoint but relies on HTTP status codes alone. This is useful for certain monitoring checks such as AWS load balancer health checks that are unable to examine the response body.
+Returns an HTTP status code to indicate node discovery within the Druid cluster. This endpoint is similar to the `status/selfDiscovered/status` endpoint, but relies on HTTP status codes alone.
+Use this endpoint for monitoring checks that are unable to examine the response body. For example, AWS load balancer health checks.
 
 #### Responses
 
@@ -414,12 +427,12 @@ Retrieves a status code to indicate if a node discovered itself within the Druid
 
 <!--cURL-->
 ```shell
-curl "{domain}/status/selfDiscovered"
+curl "{router_domain}/status/selfDiscovered"
 ```
 <!--HTTP-->
 ```http
 GET /status/selfDiscovered HTTP/1.1
-Host: {domain}
+Host: {router_domain}
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -475,7 +488,9 @@ Host: {domain}
 #### URL
 <code class="getAPI">GET</code> `/druid/coordinator/v1/isLeader`
 
-Retrieves a JSON object with a `leader` key. The value can be `true` or `false`, indicating if this server is the current leader Coordinator of the cluster. This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service at the load balancer.
+Retrieves a JSON object with a `leader` key. Returns `true` if this server is the current leader Coordinator of the cluster. To get the individual address of the leader Coordinator node, see the [leader endpoint](#get-leader-address).
+
+Use this endpoint as a load balancer status check when you only want the active leader to be considered in-service at the load balancer.
 
 #### Responses
 
@@ -944,7 +959,7 @@ A successful response to this endpoint results in an empty response body.
 
 <code class="getAPI">GET</code> `/druid/broker/v1/loadstatus`
 
-Retrieves a flag indicating if the Broker knows about all segments in the cluster. This can be used to know when a Broker process is ready to be queried after a restart.
+Retrieves a flag indicating if the Broker knows about all segments in the cluster. This can be used to know when a Broker service is ready to be queried after a restart.
 
 To use this endpoint, `{domain}` should be the address of the Historical service. For example, on the quickstart configuration, `{domain}` should be replaced with `http://localhost:8092`.
 
