@@ -214,12 +214,6 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
           };
           break;
         case FLOAT:
-          updater = sketch -> {
-            if (!selector.isNull()) {
-              sketch.get().update(selector.getFloat());
-            }
-          };
-          break;
         case DOUBLE:
           updater = sketch -> {
             if (!selector.isNull()) {

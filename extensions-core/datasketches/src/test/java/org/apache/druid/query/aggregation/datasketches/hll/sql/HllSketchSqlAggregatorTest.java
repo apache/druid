@@ -1147,18 +1147,20 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     );
   }
 
+  /**
+   * This is an extremely subtle test, so we explain with a comment.  The `m1` column in the input data looks like
+   * `["1.0", "2.0", "3.0", "4.0", "5.0", "6.0"]` while the `d1` column looks like
+   * `[1.0, 1.7, 0.0]`.  That is, "m1" is numbers-as-strings, while d1 is numbers-as-numbers.  If you take the
+   * uniques across both columns, you expect no overlap, so 9 entries.  However, if the `1.0` from `d1` gets
+   * converted into `"1.0"` or vice-versa, the result can become 8 because then the sketch will hash the same
+   * value multiple times considering them duplicates.  This test validates that the aggregator properly builds
+   * the sketches preserving the initial type of the data as it came in.  Specifically, the test was added when
+   * a code change caused the 1.0 to get converted to a String such that the resulting value of the query was 8
+   * instead of 9.
+   */
   @Test
   public void testEstimateStringAndDoubleAreDifferent()
   {
-    // This is an extremely subtle test, so we explain with a comment.  The `m1` column in the input data looks like
-    // `["1.0", "2.0", "3.0", "4.0", "5.0", "6.0"]` while the `d1` column looks like
-    // `[1.0, 1.7, 0.0]`.  That is, "m1" is numbers-as-strings, while d1 is numbers-as-numbers.  If you take the
-    // uniques across both columns, you expect no overlap, so 9 entries.  However, if the `1.0` from `d1` gets
-    // converted into `"1.0"` or vice-versa, the result can become 8 because then the sketch will hash the same
-    // value multiple times considering them duplicates.  This test validates that the aggregator properly builds
-    // the sketches preserving the initial type of the data as it came in.  Specifically, the test was added when
-    // a code change caused the 1.0 to get converted to a String such that the resulting value of the query was 8
-    // instead of 9.
     testQuery(
         "SELECT"
         + " HLL_SKETCH_ESTIMATE(HLL_SKETCH_UNION(DS_HLL(hllsketch_d1), DS_HLL(hllsketch_m1)), true)"
@@ -1192,6 +1194,56 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{9.0D}
+        )
+    );
+  }
+
+  /**
+   * This is a test in a similar vein to {@link #testEstimateStringAndDoubleAreDifferent()} except here we are
+   * ensuring that float values and doubles values are considered equivalent.  The expected initial inputs were
+   *
+   * 1. d1 -> [1.0, 1.7, 0.0]
+   * 2. f1 -> [1.0f, 0.1f, 0.0f]
+   *
+   * If we assume that doubles and floats are the same, that means that there are 4 unique values, not 6
+   */
+  @Test
+  public void testFloatAndDoubleAreConsideredTheSame()
+  {
+    // This is a test in a similar vein to testEstimateStringAndDoubleAreDifferent above
+    testQuery(
+        "SELECT"
+        + " HLL_SKETCH_ESTIMATE(HLL_SKETCH_UNION(DS_HLL(hllsketch_d1), DS_HLL(hllsketch_f1)), true)"
+        + " FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      new HllSketchMergeAggregatorFactory("a0", "hllsketch_d1", null, null, null, false, true),
+                      new HllSketchMergeAggregatorFactory("a1", "hllsketch_f1", null, null, null, false, true)
+                  )
+                  .postAggregators(
+                      new HllSketchToEstimatePostAggregator(
+                          "p3",
+                          new HllSketchUnionPostAggregator(
+                              "p2",
+                              Arrays.asList(
+                                  new FieldAccessPostAggregator("p0", "a0"),
+                                  new FieldAccessPostAggregator("p1", "a1")
+                              ),
+                              null,
+                              null
+                          ),
+                          true
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{4.0D}
         )
     );
   }
