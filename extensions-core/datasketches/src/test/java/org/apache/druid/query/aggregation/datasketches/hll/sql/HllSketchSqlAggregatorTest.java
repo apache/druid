@@ -46,6 +46,7 @@ import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchToEstimatePostAggregator;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchToEstimateWithBoundsPostAggregator;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchToStringPostAggregator;
+import org.apache.druid.query.aggregation.datasketches.hll.HllSketchUnionPostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -110,25 +111,25 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           "\"AgEHDAMIBgC1EYgH1mlHBwsKPwu5SK8MIiUxB7iZVwU=\"",
           2L,
           "### HLL SKETCH SUMMARY: \n"
-            + "  Log Config K   : 12\n"
-            + "  Hll Target     : HLL_4\n"
-            + "  Current Mode   : LIST\n"
-            + "  Memory         : false\n"
-            + "  LB             : 2.0\n"
-            + "  Estimate       : 2.000000004967054\n"
-            + "  UB             : 2.000099863468538\n"
-            + "  OutOfOrder Flag: false\n"
-            + "  Coupon Count   : 2\n",
+          + "  Log Config K   : 12\n"
+          + "  Hll Target     : HLL_4\n"
+          + "  Current Mode   : LIST\n"
+          + "  Memory         : false\n"
+          + "  LB             : 2.0\n"
+          + "  Estimate       : 2.000000004967054\n"
+          + "  UB             : 2.000099863468538\n"
+          + "  OutOfOrder Flag: false\n"
+          + "  Coupon Count   : 2\n",
           "### HLL SKETCH SUMMARY: \n"
-            + "  LOG CONFIG K   : 12\n"
-            + "  HLL TARGET     : HLL_4\n"
-            + "  CURRENT MODE   : LIST\n"
-            + "  MEMORY         : FALSE\n"
-            + "  LB             : 2.0\n"
-            + "  ESTIMATE       : 2.000000004967054\n"
-            + "  UB             : 2.000099863468538\n"
-            + "  OUTOFORDER FLAG: FALSE\n"
-            + "  COUPON COUNT   : 2\n",
+          + "  LOG CONFIG K   : 12\n"
+          + "  HLL TARGET     : HLL_4\n"
+          + "  CURRENT MODE   : LIST\n"
+          + "  MEMORY         : FALSE\n"
+          + "  LB             : 2.0\n"
+          + "  ESTIMATE       : 2.000000004967054\n"
+          + "  UB             : 2.000099863468538\n"
+          + "  OUTOFORDER FLAG: FALSE\n"
+          + "  COUPON COUNT   : 2\n",
           2.0,
           2L
       };
@@ -253,6 +254,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                     new DoubleSumAggregatorFactory("m1", "m1"),
                     new HllSketchBuildAggregatorFactory("hllsketch_dim1", "dim1", null, null, null, false, ROUND),
                     new HllSketchBuildAggregatorFactory("hllsketch_dim3", "dim3", null, null, null, false, false),
+                    new HllSketchBuildAggregatorFactory("hllsketch_m1", "m1", null, null, null, false, ROUND),
                     new HllSketchBuildAggregatorFactory("hllsketch_f1", "f1", null, null, null, false, ROUND),
                     new HllSketchBuildAggregatorFactory("hllsketch_l1", "l1", null, null, null, false, ROUND),
                     new HllSketchBuildAggregatorFactory("hllsketch_d1", "d1", null, null, null, false, ROUND)
@@ -1141,6 +1143,55 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{0.0D, 1L},
             new Object[]{1.0D, 5L}
+        )
+    );
+  }
+
+  @Test
+  public void testEstimateStringAndDoubleAreDifferent()
+  {
+    // This is an extremely subtle test, so we explain with a comment.  The `m1` column in the input data looks like
+    // `["1.0", "2.0", "3.0", "4.0", "5.0", "6.0"]` while the `d1` column looks like
+    // `[1.0, 1.7, 0.0]`.  That is, "m1" is numbers-as-strings, while d1 is numbers-as-numbers.  If you take the
+    // uniques across both columns, you expect no overlap, so 9 entries.  However, if the `1.0` from `d1` gets
+    // converted into `"1.0"` or vice-versa, the result can become 8 because then the sketch will hash the same
+    // value multiple times considering them duplicates.  This test validates that the aggregator properly builds
+    // the sketches preserving the initial type of the data as it came in.  Specifically, the test was added when
+    // a code change caused the 1.0 to get converted to a String such that the resulting value of the query was 8
+    // instead of 9.
+    testQuery(
+        "SELECT"
+        + " HLL_SKETCH_ESTIMATE(HLL_SKETCH_UNION(DS_HLL(hllsketch_d1), DS_HLL(hllsketch_m1)), true)"
+        + " FROM druid.foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      new HllSketchMergeAggregatorFactory("a0", "hllsketch_d1", null, null, null, false, true),
+                      new HllSketchMergeAggregatorFactory("a1", "hllsketch_m1", null, null, null, false, true)
+                  )
+                  .postAggregators(
+                      new HllSketchToEstimatePostAggregator(
+                          "p3",
+                          new HllSketchUnionPostAggregator(
+                              "p2",
+                              Arrays.asList(
+                                  new FieldAccessPostAggregator("p0", "a0"),
+                                  new FieldAccessPostAggregator("p1", "a1")
+                              ),
+                              null,
+                              null
+                          ),
+                          true
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{9.0D}
         )
     );
   }
