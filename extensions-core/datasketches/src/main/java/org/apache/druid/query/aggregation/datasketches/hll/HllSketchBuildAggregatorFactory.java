@@ -165,14 +165,11 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   private HllSketchUpdater formulateSketchUpdater(ColumnSelectorFactory columnSelectorFactory)
   {
     final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(getFieldName());
-    if (capabilities == null) {
-      return sketch -> {};
-    }
-
     validateInputs(capabilities);
 
     HllSketchUpdater updater = null;
-    if (StringEncoding.UTF8.equals(getStringEncoding()) && ValueType.STRING.equals(capabilities.getType())) {
+    if (capabilities!= null &&
+        StringEncoding.UTF8.equals(getStringEncoding()) && ValueType.STRING.equals(capabilities.getType())) {
       final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
           DefaultDimensionSpec.of(getFieldName())
       );
@@ -196,7 +193,19 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
     if (updater == null) {
       @SuppressWarnings("unchecked")
       final ColumnValueSelector<Object> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
-      switch (capabilities.getType()) {
+      final ValueType type;
+
+      if (capabilities == null) {
+        // When ingesting data, the columnSelectorFactory returns null for column capabilities, so this doesn't
+        // necessarily mean that the column doesn't exist.  We thus need to be prepared to accept anything in this
+        // case.  As such, we pretend like the input is COMPLEX to get the logic to use the object-based aggregation
+        type = ValueType.COMPLEX;
+      } else {
+        type = capabilities.getType();
+      }
+
+
+      switch (type) {
         case LONG:
           updater = sketch -> {
             if (!selector.isNull()) {
@@ -220,8 +229,9 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
           break;
         default:
           updater = sketch -> {
-            if (!selector.isNull()) {
-              HllSketchBuildUtil.updateSketch(sketch, getStringEncoding(), selector.getObject());
+            Object obj = selector.getObject();
+            if (obj != null) {
+              HllSketchBuildUtil.updateSketch(sketch, getStringEncoding(), obj);
             }
           };
       }

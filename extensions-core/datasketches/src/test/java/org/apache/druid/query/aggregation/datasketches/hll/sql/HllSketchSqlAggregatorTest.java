@@ -242,39 +242,26 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   ) throws IOException
   {
     HllSketchModule.registerSerde();
-    final QueryableIndex index = IndexBuilder.create()
-                                             .tmpDir(temporaryFolder.newFolder())
-                                             .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                                             .schema(
-                                                 new IncrementalIndexSchema.Builder()
-                                                     .withMetrics(
-                                                         new CountAggregatorFactory("cnt"),
-                                                         new DoubleSumAggregatorFactory("m1", "m1"),
-                                                         new HllSketchBuildAggregatorFactory(
-                                                             "hllsketch_dim1",
-                                                             "dim1",
-                                                             null,
-                                                             null,
-                                                             null,
-                                                             false,
-                                                             ROUND
-                                                         ),
-                                                         new HllSketchBuildAggregatorFactory(
-                                                             "hllsketch_dim3",
-                                                             "dim3",
-                                                             null,
-                                                             null,
-                                                             null,
-                                                             false,
-                                                             false
-                                                         )
-                                                     )
-                                                     .withRollup(false)
-                                                     .build()
-                                             )
-                                             .rows(TestDataBuilder.ROWS1)
-                                             .buildMMappedIndex();
-
+    final QueryableIndex index = IndexBuilder
+        .create()
+        .tmpDir(temporaryFolder.newFolder())
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(
+            new IncrementalIndexSchema.Builder()
+                .withMetrics(
+                    new CountAggregatorFactory("cnt"),
+                    new DoubleSumAggregatorFactory("m1", "m1"),
+                    new HllSketchBuildAggregatorFactory("hllsketch_dim1", "dim1", null, null, null, false, ROUND),
+                    new HllSketchBuildAggregatorFactory("hllsketch_dim3", "dim3", null, null, null, false, false),
+                    new HllSketchBuildAggregatorFactory("hllsketch_f1", "f1", null, null, null, false, ROUND),
+                    new HllSketchBuildAggregatorFactory("hllsketch_l1", "l1", null, null, null, false, ROUND),
+                    new HllSketchBuildAggregatorFactory("hllsketch_d1", "d1", null, null, null, false, ROUND)
+                )
+                .withRollup(false)
+                .build()
+        )
+        .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
+        .buildMMappedIndex();
 
     return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
@@ -473,7 +460,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setDataSource(CalciteTests.DATASOURCE1)
-                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "_d0")))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
                             aggregators(
@@ -518,7 +505,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setInterval(new MultipleIntervalSegmentSpec(Collections.singletonList(Filtration.eternity())))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(VirtualColumns.create(EXPECTED_PA_VIRTUAL_COLUMNS))
-                        .setDimensions(new DefaultDimensionSpec("cnt", "d0", ColumnType.LONG))
+                        .setDimensions(new DefaultDimensionSpec("cnt", "_d0", ColumnType.LONG))
                         .setAggregatorSpecs(EXPECTED_FILTERED_AGGREGATORS)
                         .setPostAggregatorSpecs(EXPECTED_FILTERED_POST_AGGREGATORS)
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -613,7 +600,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setInterval(new MultipleIntervalSegmentSpec(Collections.singletonList(Filtration.eternity())))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(VirtualColumns.create(EXPECTED_PA_VIRTUAL_COLUMNS))
-                        .setDimensions(new DefaultDimensionSpec("cnt", "d0", ColumnType.LONG))
+                        .setDimensions(new DefaultDimensionSpec("cnt", "_d0", ColumnType.LONG))
                         .setAggregatorSpecs(EXPECTED_PA_AGGREGATORS)
                         .setPostAggregatorSpecs(EXPECTED_PA_POST_AGGREGATORS)
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -898,7 +885,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setDimFilter(selector("dim2", "a", null))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
-                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING))
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(
@@ -957,7 +944,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setDimFilter(selector("dim2", "a", null))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
-                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING))
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(
@@ -982,31 +969,33 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT"
-        + " HLL_SKETCH_ESTIMATE(hllsketch_dim1)"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_dim1),"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_d1),"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_l1),"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_f1)"
         + " FROM druid.foo",
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(new ExpressionVirtualColumn(
-                    "v0",
-                    "hll_sketch_estimate(\"hllsketch_dim1\")",
-                    ColumnType.DOUBLE,
-                    MACRO_TABLE
-                ))
+                .virtualColumns(
+                    makeSketchEstimateExpression("v0", "hllsketch_dim1"),
+                    makeSketchEstimateExpression("v1", "hllsketch_d1"),
+                    makeSketchEstimateExpression("v2", "hllsketch_l1"),
+                    makeSketchEstimateExpression("v3", "hllsketch_f1")
+                )
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .columns("v0")
+                .columns("v0", "v1", "v2", "v3")
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{0.0D},
-            new Object[]{1.0D},
-            new Object[]{1.0D},
-            new Object[]{1.0D},
-            new Object[]{1.0D},
-            new Object[]{1.0D}
-        )
+            new Object[]{0.0D, 1.0D, 1.0D, 1.0D},
+            new Object[]{1.0D, 1.0D, 1.0D, 1.0D},
+            new Object[]{1.0D, 1.0D, 1.0D, 1.0D},
+            new Object[]{1.0D, 0.0D, 0.0D, 0.0D},
+            new Object[]{1.0D, 0.0D, 0.0D, 0.0D},
+            new Object[]{1.0D, 0.0D, 0.0D, 0.0D}        )
     );
   }
 
@@ -1097,14 +1086,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(new ExpressionVirtualColumn(
-                            "v0",
-                            "hll_sketch_estimate(\"hllsketch_dim1\")",
-                            ColumnType.DOUBLE,
-                            MACRO_TABLE
-                        ))
+                        .setVirtualColumns(makeSketchEstimateExpression("v0", "hllsketch_dim1"))
                         .setDimensions(
-                            new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE))
+                            new DefaultDimensionSpec("v0", "_d0", ColumnType.DOUBLE))
                         .setAggregatorSpecs(
                             aggregators(
                                 new CountAggregatorFactory("a0")
@@ -1146,13 +1130,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
-                .dimension(new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE))
-                .virtualColumns(new ExpressionVirtualColumn(
-                    "v0",
-                    "hll_sketch_estimate(\"hllsketch_dim1\")",
-                    ColumnType.DOUBLE,
-                    MACRO_TABLE
-                ))
+                .dimension(new DefaultDimensionSpec("v0", "_d0", ColumnType.DOUBLE))
+                .virtualColumns(makeSketchEstimateExpression("v0", "hllsketch_dim1"))
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
                 .threshold(2)
                 .aggregators(new CountAggregatorFactory("a0"))
@@ -1163,6 +1142,16 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
             new Object[]{0.0D, 1L},
             new Object[]{1.0D, 5L}
         )
+    );
+  }
+
+  private ExpressionVirtualColumn makeSketchEstimateExpression(String outputName, String field)
+  {
+    return new ExpressionVirtualColumn(
+        outputName,
+        StringUtils.format("hll_sketch_estimate(\"%s\")", field),
+        ColumnType.DOUBLE,
+        MACRO_TABLE
     );
   }
 }
