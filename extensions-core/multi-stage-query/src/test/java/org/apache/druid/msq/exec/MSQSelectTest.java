@@ -2088,6 +2088,9 @@ public class MSQSelectTest extends MSQTestBase
                         new ColumnMapping("a0", "cnt")
                     )
                 ))
+                .destination(isDurableStorageDestination()
+                             ? DurableStorageMSQDestination.INSTANCE
+                             : TaskReportMSQDestination.INSTANCE)
                 .tuningConfig(MSQTuningConfig.defaultConfig())
                 .build())
         .setQueryContext(queryContext)
