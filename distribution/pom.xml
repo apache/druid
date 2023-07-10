@@ -51,6 +51,7 @@
         <!-- the default value is a repeated flag from the command line, since blank value is not allowed -->
         <druid.distribution.pulldeps.opts>--clean</druid.distribution.pulldeps.opts>
         <docker.jdk.version>17</docker.jdk.version>
+        <targetarch>amd64</targetarch>
     </properties>
 
     <build>
@@ -795,6 +796,7 @@
                   <buildArgs>
                     <VERSION>${project.version}</VERSION>
                     <JDK_VERSION>${docker.jdk.version}</JDK_VERSION>
+                    <TARGETARCH>${targetarch}</TARGETARCH>
                   </buildArgs>
                 </configuration>
               </plugin>
