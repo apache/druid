@@ -276,7 +276,7 @@ public class DruidJoinRule extends RelOptRule
       }
 
       final List<RexNode> operands = ((RexCall) subCondition).getOperands();
-      Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%,d]", operands.size());
+      Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%s]", operands.size());
 
       if (isLeftExpression(operands.get(0), numLeftFields) && isRightInputRef(operands.get(1), numLeftFields)) {
         equalitySubConditions.add(Pair.of(operands.get(0), (RexInputRef) operands.get(1)));

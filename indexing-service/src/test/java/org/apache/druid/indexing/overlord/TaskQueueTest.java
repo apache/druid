@@ -439,7 +439,7 @@ public class TaskQueueTest extends IngestionTestBase
     HttpRemoteTaskRunnerTest.TestDruidNodeDiscovery druidNodeDiscovery = new HttpRemoteTaskRunnerTest.TestDruidNodeDiscovery();
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     EasyMock.expect(druidNodeDiscoveryProvider.getForService(WorkerNodeService.DISCOVERY_SERVICE_KEY))
-        .andReturn(druidNodeDiscovery);
+            .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
     TaskStorage taskStorageMock = EasyMock.createStrictMock(TaskStorage.class);
     for (String taskId : runningTasks) {

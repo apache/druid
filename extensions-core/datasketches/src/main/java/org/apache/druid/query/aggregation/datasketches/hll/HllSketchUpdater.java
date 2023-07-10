@@ -17,29 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.metadata;
+package org.apache.druid.query.aggregation.datasketches.hll;
 
-import java.util.Collection;
+import org.apache.datasketches.hll.HllSketch;
 
-/**
- * Exception thrown by {@link SegmentsMetadataManager} when a segment id is unknown.
- *
- * @deprecated Usages of this exception will be replaced by the new
- * {@link org.apache.druid.error.DruidException} in a future release.
- */
-@Deprecated
-public class UnknownSegmentIdsException extends Exception
+import java.util.function.Supplier;
+
+public interface HllSketchUpdater
 {
-  private final Collection<String> unknownSegmentIds;
-
-  UnknownSegmentIdsException(Collection<String> segmentIds)
-  {
-    super("Cannot find segment ids " + segmentIds);
-    this.unknownSegmentIds = segmentIds;
-  }
-
-  public Collection<String> getUnknownSegmentIds()
-  {
-    return unknownSegmentIds;
-  }
+  void update(Supplier<HllSketch> sketch);
 }
