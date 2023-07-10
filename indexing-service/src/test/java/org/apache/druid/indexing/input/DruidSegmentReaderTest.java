@@ -734,7 +734,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
                     .buildIncrementalIndex();
 
     File segmentDirectory = temporaryFolder.newFolder();
-    long segmentSize = 0;
+    long segmentSize;
     try {
       TestHelper.getTestIndexMergerV9(
           OnHeapMemorySegmentWriteOutMediumFactory.instance()

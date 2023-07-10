@@ -266,9 +266,6 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   @Override
   public DimFilter optimize()
   {
-//    if (isEquality()) {
-//      return new EqualityFilter(column, matchValueType, lower, extractionFn, filterTuning);
-//    }
     return this;
   }
 

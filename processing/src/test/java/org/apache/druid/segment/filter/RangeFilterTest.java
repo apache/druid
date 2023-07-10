@@ -279,7 +279,9 @@ public class RangeFilterTest extends BaseFilterTest
   {
     assertFilterMatches(
         new RangeFilter("dim1", ColumnType.STRING, null, "abd", true, true, null, null),
-        NullHandling.replaceWithDefault() ? ImmutableList.of("1", "2", "3", "5", "6", "7") : ImmutableList.of("0", "1", "2", "3", "5", "6", "7")
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of("1", "2", "3", "5", "6", "7")
+        : ImmutableList.of("0", "1", "2", "3", "5", "6", "7")
     );
   }
 
@@ -497,19 +499,19 @@ public class RangeFilterTest extends BaseFilterTest
   public void testNumericMatchNoUpperLimit()
   {
     assertFilterMatches(
-        new RangeFilter("dim1", ColumnType.LONG,1L, null, true, true, null, null),
+        new RangeFilter("dim1", ColumnType.LONG, 1L, null, true, true, null, null),
         ImmutableList.of("1", "2")
     );
     assertFilterMatches(
-        new RangeFilter("d0", ColumnType.DOUBLE,1.0, null, true, true, null, null),
+        new RangeFilter("d0", ColumnType.DOUBLE, 1.0, null, true, true, null, null),
         ImmutableList.of("1", "3", "4", "5", "6")
     );
     assertFilterMatches(
-        new RangeFilter("f0", ColumnType.FLOAT,1.0f, null, true, true, null, null),
+        new RangeFilter("f0", ColumnType.FLOAT, 1.0f, null, true, true, null, null),
         ImmutableList.of("1", "2", "3", "5", "7")
     );
     assertFilterMatches(
-        new RangeFilter("l0", ColumnType.LONG,1L, null, true, true, null, null),
+        new RangeFilter("l0", ColumnType.LONG, 1L, null, true, true, null, null),
         ImmutableList.of("1", "2", "4", "5", "6")
     );
   }
@@ -520,16 +522,20 @@ public class RangeFilterTest extends BaseFilterTest
     // strings are wierd...
     assertFilterMatches(
         new RangeFilter("dim1", ColumnType.LONG, null, 2L, false, true, null, null),
-        NullHandling.replaceWithDefault() ? ImmutableList.of("3", "4", "5", "6", "7") : ImmutableList.of("0", "3", "4", "5", "6", "7")
+        NullHandling.replaceWithDefault()
+        ? ImmutableList.of("3", "4", "5", "6", "7")
+        : ImmutableList.of("0", "3", "4", "5", "6", "7")
     );
     // numbers are sane though
     assertFilterMatches(
         new RangeFilter("d0", ColumnType.DOUBLE, null, 10.0, false, true, null, null),
-        canTestNumericNullsAsDefaultValues ? ImmutableList.of("0", "2", "6", "7") : ImmutableList.of("0","6")
+        canTestNumericNullsAsDefaultValues ? ImmutableList.of("0", "2", "6", "7") : ImmutableList.of("0", "6")
     );
     assertFilterMatches(
         new RangeFilter("f0", ColumnType.FLOAT, null, 50.5, false, true, null, null),
-        canTestNumericNullsAsDefaultValues ? ImmutableList.of("0", "1", "2", "4", "6", "7") : ImmutableList.of("0", "1", "2", "7")
+        canTestNumericNullsAsDefaultValues
+        ? ImmutableList.of("0", "1", "2", "4", "6", "7")
+        : ImmutableList.of("0", "1", "2", "7")
     );
     assertFilterMatches(
         new RangeFilter("l0", ColumnType.LONG, null, 100L, false, true, null, null),

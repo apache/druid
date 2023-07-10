@@ -121,7 +121,7 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
           } else {
             return new EqualityFilter(
                 leftExpr.getSimpleExtraction().getColumn(),
-                ExpressionType.toColumnType((ExpressionType) exprEval.type().getElementType()),
+                ExpressionType.toColumnType(ExpressionType.elementType(exprEval.type())),
                 arrayElements[0],
                 leftExpr.getSimpleExtraction().getExtractionFn(),
                 null
@@ -136,7 +136,7 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
                 } else {
                   return new EqualityFilter(
                       leftExpr.getSimpleExtraction().getColumn(),
-                      ExpressionType.toColumnType((ExpressionType) exprEval.type().getElementType()),
+                      ExpressionType.toColumnType(ExpressionType.elementType(exprEval.type())),
                       val,
                       leftExpr.getSimpleExtraction().getExtractionFn(),
                       null
