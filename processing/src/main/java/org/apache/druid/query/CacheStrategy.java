@@ -37,6 +37,23 @@ import java.util.List;
 public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 {
   /**
+   * This method is deprecated and retained for backward incompatibility.
+   * Returns whether the given query is cacheable or not.
+   * The {@code willMergeRunners} parameter can be used for distinguishing the caller is a broker or a data node.
+   *
+   * @param ignoredQuery            the query to be cached
+   * @param ignoredWillMergeRunners indicates that {@link QueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)} will be
+   *                         called on the cached by-segment results
+   *
+   * @return true if the query is cacheable, otherwise false.
+   */
+  @Deprecated
+  default boolean isCacheable(QueryType ignoredQuery, boolean ignoredWillMergeRunners)
+  {
+    return false;
+  }
+
+  /**
    * Returns whether the given query is cacheable or not.
    * The {@code willMergeRunners} parameter can be used for distinguishing the caller is a broker or a data node.
    *
