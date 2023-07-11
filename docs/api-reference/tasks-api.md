@@ -25,7 +25,7 @@ sidebar_label: Tasks
 
 This document describes the API endpoints for task retrieval, submission, and deletion for Apache Druid. Tasks are individual jobs performed by Druid to complete operations such as ingestion, querying, and compaction.  
 
-In this document, `{domain}` is a placeholder for the server address of deployment. For example, on the quickstart configuration, replace `{domain}` with `http://localhost:8888`.
+In this document, `http://<SERVICE_IP>:<SERVICE_PORT>` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://<ROUTER_IP>:<ROUTER_PORT>` with `http://localhost:8888`.
 
 ## Task information and retrieval 
 
@@ -78,12 +78,12 @@ The following example shows how to retrieve a list of tasks filtered with the fo
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/tasks/?state=complete&datasource=wikipedia_api&createdTimeInterval=2015-09-12_2015-09-13&max=10&type=query_worker"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/tasks/?state=complete&datasource=wikipedia_api&createdTimeInterval=2015-09-12_2015-09-13&max=10&type=query_worker"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/tasks/?state=complete&datasource=wikipedia_api&createdTimeInterval=2015-09-12_2015-09-13&max=10&type=query_worker HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -192,12 +192,12 @@ The endpoint supports a set of optional query parameters to filter results.
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/completeTasks"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/completeTasks"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/completeTasks HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -285,12 +285,12 @@ The endpoint supports a set of optional query parameters to filter results.
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/runningTasks"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/runningTasks"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/runningTasks HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -361,12 +361,12 @@ The endpoint supports a set of optional query parameters to filter results.
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/waitingTasks"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/waitingTasks"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/waitingTasks HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -472,12 +472,12 @@ The endpoint supports a set of optional query parameters to filter results.
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/pendingTasks"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/pendingTasks"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/pendingTasks HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -558,12 +558,12 @@ The following examples shows how to retrieve the task payload of a task with the
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/task/index_parallel_wikipedia_short_iajoonnd_2023-07-07T17:53:12.174Z"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/task/index_parallel_wikipedia_short_iajoonnd_2023-07-07T17:53:12.174Z"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/task/index_parallel_wikipedia_short_iajoonnd_2023-07-07T17:53:12.174Z HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -753,12 +753,12 @@ The following examples shows how to retrieve the status of a task with the speci
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/task/query-223549f8-b993-4483-b028-1b0d54713cad/status"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/task/query-223549f8-b993-4483-b028-1b0d54713cad/status"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/task/query-223549f8-b993-4483-b028-1b0d54713cad/status HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -819,12 +819,12 @@ The following examples shows how to retrieve the task segment of the task with t
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -866,12 +866,12 @@ The following examples shows how to retrieve the task log of a task with the spe
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/task/index_kafka_social_media_0e905aa31037879_nommnaeg/log"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/task/index_kafka_social_media_0e905aa31037879_nommnaeg/log"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/task/index_kafka_social_media_0e905aa31037879_nommnaeg/log HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -971,12 +971,12 @@ The following examples shows how to retrieve the completion report of a task wit
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/task/query-52a8aafe-7265-4427-89fe-dc51275cc470/reports HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -1057,7 +1057,7 @@ The following request is an example of submitting a task to create a datasource 
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/task" \
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/task" \
 --header "Content-Type: application/json" \
 --data "{
   \"type\" : \"index_parallel\",
@@ -1103,7 +1103,7 @@ curl "{domain}/druid/indexer/v1/task" \
 <!--HTTP-->
 ```HTTP
 POST /druid/indexer/v1/task HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 Content-Type: application/json
 Content-Length: 952
 
@@ -1177,7 +1177,7 @@ Shuts down a task if it not already complete. Returns a JSON object with the ID 
 *Successfully shut down task* 
 <!--404 NOT FOUND-->
 <br/>
-*Cannot find task with ID* 
+*Cannot find task with ID or task is no longer running* 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
@@ -1190,12 +1190,12 @@ The following request shows how to shut down a task with the ID `query-52as 8aaf
 
 <!--cURL-->
 ```shell
-curl --request POST "{domain}/druid/indexer/v1/task/query-52as 8aafe-7265-4427-89fe-dc51275cc470/shutdown"
+curl --request POST "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/task/query-52as 8aafe-7265-4427-89fe-dc51275cc470/shutdown"
 ```
 <!--HTTP-->
 ```HTTP
 POST /druid/indexer/v1/task/query-52as 8aafe-7265-4427-89fe-dc51275cc470/shutdown HTTP/1.1
-Host: (domain)
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -1241,12 +1241,12 @@ The following request is an example of shutting down all tasks for datasource `w
 
 <!--cURL-->
 ```shell
-curl --request POST "{domain}/druid/indexer/v1/datasources/wikipedia_auto/shutdownAllTasks"
+curl --request POST "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/datasources/wikipedia_auto/shutdownAllTasks"
 ```
 <!--HTTP-->
 ```HTTP
 POST /druid/indexer/v1/datasources/wikipedia_auto/shutdownAllTasks HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -1294,14 +1294,14 @@ The following request is an example of retrieving status objects for task ID `in
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/taskStatus" \
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/taskStatus" \
 --header "Content-Type: application/json" \
 --data "[\"index_parallel_wikipedia_auto_jndhkpbo_2023-06-26T17:23:05.308Z\", \"index_parallel_wikipedia_auto_jbgiianh_2023-06-26T23:17:56.769Z\"]"
 ```
 <!--HTTP-->
 ```HTTP
 POST /druid/indexer/v1/taskStatus HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 Content-Type: application/json
 Content-Length: 134
 
@@ -1373,12 +1373,12 @@ The following request is an example of cleaning up pending segments for the `wik
 
 <!--cURL-->
 ```shell
-curl --request DELETE "{domain}/druid/indexer/v1/pendingSegments/wikipedia_api"
+curl --request DELETE "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/pendingSegments/wikipedia_api"
 ```
 <!--HTTP-->
 ```HTTP
 DELETE /druid/indexer/v1/pendingSegments/wikipedia_api HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
