@@ -293,8 +293,7 @@ public class SqlStatementResourceTest extends MSQTestBase
           new MSQStatusReport(
               TaskState.SUCCESS,
               null,
-              new
-                  ArrayDeque<>(),
+              new ArrayDeque<>(),
               null,
               0,
               1,
