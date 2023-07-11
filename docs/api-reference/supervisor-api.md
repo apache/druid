@@ -33,7 +33,9 @@ This document describes the API endpoints to manage and monitor supervisors for 
 
 <code className="getAPI">GET</code> `/druid/indexer/v1/supervisor`
 
-Retrieves a list of active supervisors. The response object is a list of strings containing the names of the supervisors.
+Retrieves a list of active supervisors. The response object is a list of strings containing the names of the supervisors. 
+
+This endpoint can be queried with the Coordinator service or the Router service.
 
 #### Responses
 
@@ -53,12 +55,12 @@ Retrieves a list of active supervisors. The response object is a list of strings
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/supervisor"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/supervisor"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/supervisor HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -83,7 +85,9 @@ Host: {domain}
 
 Retrieves a list of active supervisor objects. Each object has properties relevant to the supervisor: `id`, `state`, `detailedState`, `healthy`, and `spec`. 
 
-See the following table for details on properties within the response object.
+This endpoint can be queried with the Coordinator service or the Router service.
+
+See the following table for details on properties within the response object:
 
 |Field|Type|Description|
 |---|---|---|
@@ -111,12 +115,12 @@ See the following table for details on properties within the response object.
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/supervisor?full=null"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/supervisor?full=null"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/supervisor?full=null HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -753,7 +757,9 @@ Host: {domain}
 
 Retrieves a list of objects of the currently active supervisors and their current state.
 
-See the following table for details on properties within the response object.
+This endpoint can be queried with the Coordinator service or the Router service.
+
+See the following table for details on properties within the response object:
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|Supervisor unique identifier|
@@ -780,12 +786,12 @@ See the following table for details on properties within the response object.
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/supervisor?state=true"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/supervisor?state=true"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/supervisor?state=true HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -844,12 +850,12 @@ Retrieves the current spec for the supervisor with the provided ID.
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/supervisor/wikipedia_stream"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/supervisor/wikipedia_stream"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/supervisor/wikipedia_stream HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -1187,16 +1193,18 @@ Retrieves the current status of the supervisor with the provided ID.
 
 #### Sample request
 
+The following example shows retrieving the status of the `social_media` supervisor. 
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/supervisor/social_media/status"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/supervisor/social_media/status"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/supervisor/social_media/status HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -1277,12 +1285,12 @@ Retrieve an audit history of specs for all supervisors (current and past).
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/supervisor/history"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/supervisor/history"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/supervisor/history HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -1627,16 +1635,18 @@ Retrieve an audit history of specs for the supervisor with the provided ID.
 
 #### Sample request
 
+The following example shows how to retrieve the audit history of the `wikipedia_stream` supervisor.
+
 <!--DOCUSAURUS_CODE_TABS-->
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/supervisor/wikipedia_stream/history"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/supervisor/wikipedia_stream/history"
 ```
 <!--HTTP-->
 ```HTTP
 GET /druid/indexer/v1/supervisor/wikipedia_stream/history HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -1964,6 +1974,10 @@ Host: {domain}
 
 Creates a new supervisor or updates an existing one. 
 
+To create a supervisor spec using Kafka streaming ingestion, refer to [Apache Kafka ingestion](../development/extensions-core/kafka-ingestion.md#define-a-supervisor-spec).
+
+To create a supervisor spec using Kinesis ingestion, refer to [Amazon Kinesis ingestion](../development/extensions-core/kinesis-ingestion.md#submitting-a-supervisor-spec). 
+
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -1985,7 +1999,7 @@ Creates a new supervisor or updates an existing one.
 
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/supervisor" \
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/supervisor" \
 --header "Content-Type: application/json" \
 --data "{
     \"type\": \"kafka\",
@@ -2041,7 +2055,7 @@ curl "{domain}/druid/indexer/v1/supervisor" \
 <!--HTTP-->
 ```HTTP
 POST /druid/indexer/v1/supervisor HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 Content-Type: application/json
 Content-Length: 1359
 
@@ -2110,9 +2124,44 @@ Content-Length: 1359
   ```
 </details>
 
-`POST /druid/indexer/v1/supervisor/<supervisorId>/suspend`
+### Suspend a running supervisor
+
+#### URL
+`POST /druid/indexer/v1/supervisor/{supervisorId}/suspend`
 
 Suspend the current running supervisor of the provided ID. Responds with updated SupervisorSpec.
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully shut down supervisor* 
+<!--404 NOT FOUND-->
+<br/>
+*Invalid supervisor ID* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+#### Sample request
+
+The following example shows how to suspend a running supervisor with task ID `social_media`.
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl --request POST "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/supervisor/social_media/suspend"
+```
+<!--HTTP-->
+```HTTP
+POST /druid/indexer/v1/supervisor/social_media/suspend HTTP/1.1
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
 
 `POST /druid/indexer/v1/supervisor/suspendAll`
 
