@@ -519,7 +519,7 @@ public class Expressions
       // column instead for filtering to ensure that results are correct
       if (druidExpression.isSimpleExtraction() &&
           !(isOutputNumeric && !rowSignature.isNumeric(druidExpression.getDirectColumn()))) {
-        if (NullHandling.sqlCompatible() && !plannerContext.isUseBoundsAndSelectors()) {
+        if (!plannerContext.isUseBoundsAndSelectors()) {
           equalFilter = new NullFilter(
               druidExpression.getSimpleExtraction().getColumn(),
               druidExpression.getSimpleExtraction().getExtractionFn(),
@@ -538,7 +538,7 @@ public class Expressions
             operand.getType()
         );
 
-        if (NullHandling.sqlCompatible() && !plannerContext.isUseBoundsAndSelectors()) {
+        if (!plannerContext.isUseBoundsAndSelectors()) {
           equalFilter = new NullFilter(virtualColumn, null, null);
         } else {
           equalFilter = new SelectorDimFilter(

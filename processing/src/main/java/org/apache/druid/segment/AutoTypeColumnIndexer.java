@@ -225,7 +225,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
   {
     final int dimIndex = desc.getIndex();
     if (fieldIndexers.size() == 0 && isConstant && !hasNestedData) {
-      return DimensionSelector.constant(null, spec.getExtractionFn());
+      return spec.decorate(DimensionSelector.nilSelector());
     }
     final ColumnValueSelector<?> rootLiteralSelector = getRootLiteralValueSelector(currEntry, dimIndex);
     if (rootLiteralSelector != null) {
@@ -238,17 +238,13 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
             rootType
         );
       }
-      return new BaseSingleValueDimensionSelector()
+      return spec.decorate(new BaseSingleValueDimensionSelector()
       {
         @Nullable
         @Override
         protected String getValue()
         {
-          final String o = Evals.asString(rootLiteralSelector.getObject());
-          if (spec.getExtractionFn() != null) {
-            return spec.getExtractionFn().apply(o);
-          }
-          return o;
+          return Evals.asString(rootLiteralSelector.getObject());
         }
 
         @Override
@@ -256,7 +252,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         {
 
         }
-      };
+      });
     }
     // column has nested data or is of mixed root type, cannot use
     throw new UOE(
