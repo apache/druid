@@ -20,29 +20,55 @@
 package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.sql.http.ResultFormat;
+
+import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class DurableStorageMSQDestination implements MSQDestination
 {
   public static final String TYPE = "durableStorage";
 
-  public static final DurableStorageMSQDestination INSTANCE = new DurableStorageMSQDestination();
-
-
-  private DurableStorageMSQDestination()
-  {
-    // Singleton.
-  }
+  private final ResultFormat resultFormat;
 
   @JsonCreator
-  public static DurableStorageMSQDestination instance()
+  public DurableStorageMSQDestination(@JsonProperty("resultFormat") @Nullable ResultFormat resultFormat)
   {
-    return INSTANCE;
+    this.resultFormat = resultFormat == null ? ResultFormat.DEFAULT_RESULT_FORMAT : resultFormat;
+  }
+
+  @Override
+  @JsonProperty
+  public ResultFormat getResultFormat()
+  {
+    return resultFormat;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DurableStorageMSQDestination that = (DurableStorageMSQDestination) o;
+    return resultFormat == that.resultFormat;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(resultFormat);
   }
 
   @Override
   public String toString()
   {
-    return "DurableStorageDestination{}";
+    return "DurableStorageMSQDestination{" +
+           "resultFormat=" + resultFormat +
+           '}';
   }
-
 }

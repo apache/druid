@@ -20,12 +20,15 @@
 package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.sql.http.ResultFormat;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -159,5 +162,12 @@ public class DataSourceMSQDestination implements MSQDestination
            ", segmentSortOrder=" + segmentSortOrder +
            ", replaceTimeChunks=" + replaceTimeChunks +
            '}';
+  }
+
+  @Override
+  @JsonIgnore
+  public ResultFormat getResultFormat()
+  {
+    throw DruidException.defensive("Datasource destination does not support fetching results.");
   }
 }

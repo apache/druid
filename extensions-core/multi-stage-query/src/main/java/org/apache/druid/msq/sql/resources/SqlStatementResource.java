@@ -161,6 +161,7 @@ public class SqlStatementResource
   @Consumes(MediaType.APPLICATION_JSON)
   public Response doPost(final SqlQuery sqlQuery, @Context final HttpServletRequest req)
   {
+    sqlQuery.getContext().put(MSQTaskQueryMaker.RESULT_FORMAT, sqlQuery.getResultFormat().toString());
     final HttpStatement stmt = msqSqlStatementFactory.httpStatement(sqlQuery, req);
     final String sqlQueryId = stmt.sqlQueryId();
     final String currThreadName = Thread.currentThread().getName();
@@ -280,6 +281,7 @@ public class SqlStatementResource
   public Response doGetResults(
       @PathParam("id") final String queryId,
       @QueryParam("page") Long page,
+      @QueryParam("resultFormat") String resultFormat,
       @Context final HttpServletRequest req
   )
   {
@@ -330,12 +332,14 @@ public class SqlStatementResource
         return Response.ok().build();
       }
 
+      ResultFormat preferredFormat = getPreferredResultFormat(resultFormat, msqControllerTask.getQuerySpec().getDestination());
       return Response.ok((StreamingOutput) outputStream -> resultPusher(
           queryId,
           signature,
           closer,
           results,
-          new CountingOutputStream(outputStream)
+          new CountingOutputStream(outputStream),
+          preferredFormat
       )).build();
     }
 
@@ -667,6 +671,19 @@ public class SqlStatementResource
     return msqControllerTask;
   }
 
+  private ResultFormat getPreferredResultFormat(String resultFormatParam, MSQDestination destination)
+  {
+    if (resultFormatParam == null) {
+      return destination.getResultFormat();
+    }
+
+    return QueryContexts.getAsEnum(
+        "resultFormat",
+        resultFormatParam,
+        ResultFormat.class
+    );
+  }
+
   private Optional<Yielder<Object[]>> getResultYielder(
       String queryId,
       Long page,
@@ -779,11 +796,12 @@ public class SqlStatementResource
       Optional<List<ColumnNameAndTypes>> signature,
       Closer closer,
       Optional<Yielder<Object[]>> results,
-      CountingOutputStream os
+      CountingOutputStream os,
+      ResultFormat resultFormat
   ) throws IOException
   {
     try {
-      try (final ResultFormat.Writer writer = ResultFormat.OBJECT.createFormatter(os, jsonMapper)) {
+      try (final ResultFormat.Writer writer = resultFormat.createFormatter(os, jsonMapper)) {
         Yielder<Object[]> yielder = results.get();
         List<ColumnNameAndTypes> rowSignature = signature.get();
         writer.writeResponseStart();

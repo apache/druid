@@ -20,27 +20,55 @@
 package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.sql.http.ResultFormat;
+
+import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class TaskReportMSQDestination implements MSQDestination
 {
-  public static final TaskReportMSQDestination INSTANCE = new TaskReportMSQDestination();
   public static final String TYPE = "taskReport";
 
-  private TaskReportMSQDestination()
-  {
-    // Singleton.
-  }
+  private final ResultFormat resultFormat;
 
   @JsonCreator
-  public static TaskReportMSQDestination instance()
+  public TaskReportMSQDestination(@JsonProperty("resultFormat") @Nullable ResultFormat resultFormat)
   {
-    return INSTANCE;
+    this.resultFormat = resultFormat == null ? ResultFormat.DEFAULT_RESULT_FORMAT : resultFormat;
+  }
+
+  @Override
+  @JsonProperty
+  public ResultFormat getResultFormat()
+  {
+    return resultFormat;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    TaskReportMSQDestination that = (TaskReportMSQDestination) o;
+    return resultFormat == that.resultFormat;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(resultFormat);
   }
 
   @Override
   public String toString()
   {
-    return "TaskReportMSQDestination{}";
+    return "TaskReportMSQDestination{" +
+           "resultFormat=" + resultFormat +
+           '}';
   }
-
 }

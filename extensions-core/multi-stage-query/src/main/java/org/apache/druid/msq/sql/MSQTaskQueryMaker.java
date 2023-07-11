@@ -63,6 +63,7 @@ import org.apache.druid.sql.calcite.rel.Grouping;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlResults;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.sql.http.ResultFormat;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -80,6 +81,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   private static final String DESTINATION_DATASOURCE = "dataSource";
   private static final String DESTINATION_REPORT = "taskReport";
 
+  public static final String RESULT_FORMAT = "resultFormat";
   public static final String USER_KEY = "__user";
 
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
@@ -233,9 +235,21 @@ public class MSQTaskQueryMaker implements QueryMaker
       }
       final MSQSelectDestination msqSelectDestination = MultiStageQueryContext.getSelectDestination(sqlQueryContext);
       if (msqSelectDestination.equals(MSQSelectDestination.TASK_REPORT)) {
-        destination = TaskReportMSQDestination.instance();
+        ResultFormat resultFormat = QueryContexts.getAsEnum(
+            RESULT_FORMAT,
+            druidQuery.getQuery().context().get(RESULT_FORMAT),
+            ResultFormat.class,
+            ResultFormat.DEFAULT_RESULT_FORMAT
+        );
+        destination = new TaskReportMSQDestination(resultFormat);
       } else if (msqSelectDestination.equals(MSQSelectDestination.DURABLE_STORAGE)) {
-        destination = DurableStorageMSQDestination.instance();
+        ResultFormat resultFormat = QueryContexts.getAsEnum(
+            RESULT_FORMAT,
+            druidQuery.getQuery().context().get(RESULT_FORMAT),
+            ResultFormat.class,
+            ResultFormat.DEFAULT_RESULT_FORMAT
+        );
+        destination = new DurableStorageMSQDestination(resultFormat);
       } else {
         throw new IAE("Cannot SELECT with destination [%s]", msqSelectDestination.name());
       }

@@ -317,12 +317,14 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
         sqlStatementResult.getQueryId(),
         null,
+        null,
         SqlStatementResourceTest.makeOkRequest()
     )));
 
     Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
         sqlStatementResult.getQueryId(),
         0L,
+        null,
         SqlStatementResourceTest.makeOkRequest()
     )));
   }

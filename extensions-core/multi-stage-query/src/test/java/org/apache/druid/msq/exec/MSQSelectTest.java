@@ -77,6 +77,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.http.ResultFormat;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
@@ -171,8 +172,8 @@ public class MSQSelectTest extends MSQTestBase
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build()
         )
         .setExpectedRowSignature(resultSignature)
@@ -203,8 +204,8 @@ public class MSQSelectTest extends MSQTestBase
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build()
         )
         .setQueryContext(context)
@@ -261,8 +262,8 @@ public class MSQSelectTest extends MSQTestBase
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build()
         )
         .setExpectedRowSignature(resultSignature)
@@ -329,8 +330,8 @@ public class MSQSelectTest extends MSQTestBase
                    .columnMappings(expectedColumnMappings)
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build()
         )
         .setQueryContext(context)
@@ -391,8 +392,8 @@ public class MSQSelectTest extends MSQTestBase
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build()
         )
         .setQueryContext(context)
@@ -425,8 +426,8 @@ public class MSQSelectTest extends MSQTestBase
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build()
         )
         .setQueryContext(context)
@@ -460,8 +461,8 @@ public class MSQSelectTest extends MSQTestBase
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build()
         )
         .setQueryContext(context)
@@ -505,8 +506,8 @@ public class MSQSelectTest extends MSQTestBase
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
                                    .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
+                                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
@@ -572,8 +573,8 @@ public class MSQSelectTest extends MSQTestBase
                        ))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build())
         .setExpectedRowSignature(rowSignature)
         .setQueryContext(context)
@@ -629,8 +630,8 @@ public class MSQSelectTest extends MSQTestBase
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build()
         )
         .setQueryContext(context)
@@ -698,8 +699,8 @@ public class MSQSelectTest extends MSQTestBase
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
                                    .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
+                                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
@@ -728,8 +729,8 @@ public class MSQSelectTest extends MSQTestBase
                    .columnMappings(new ColumnMappings(ImmutableList.of(new ColumnMapping("a0", "EXPR$0"))))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{4L}))
@@ -784,8 +785,8 @@ public class MSQSelectTest extends MSQTestBase
                    )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(
@@ -829,8 +830,8 @@ public class MSQSelectTest extends MSQTestBase
                    .columnMappings(new ColumnMappings(ImmutableList.of(new ColumnMapping("a0", "cnt"))))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build()
         )
         .setExpectedRowSignature(resultSignature)
@@ -1000,8 +1001,8 @@ public class MSQSelectTest extends MSQTestBase
                    )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build()
         )
         .setExpectedRowSignature(resultSignature)
@@ -1058,8 +1059,8 @@ public class MSQSelectTest extends MSQTestBase
                    )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build()
         )
         .setExpectedRowSignature(rowSignature)
@@ -1137,8 +1138,8 @@ public class MSQSelectTest extends MSQTestBase
                    )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build()
         )
         .setExpectedRowSignature(rowSignature)
@@ -1214,8 +1215,8 @@ public class MSQSelectTest extends MSQTestBase
                    )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build()
         )
         .setExpectedRowSignature(rowSignature)
@@ -1309,8 +1310,8 @@ public class MSQSelectTest extends MSQTestBase
                 ))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
                 .destination(isDurableStorageDestination()
-                             ? DurableStorageMSQDestination.INSTANCE
-                             : TaskReportMSQDestination.INSTANCE)
+                             ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                             : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                 .build()
         )
         .setExpectedCountersForStageWorkerChannel(
@@ -1422,8 +1423,8 @@ public class MSQSelectTest extends MSQTestBase
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build()
         )
         .setExpectedRowSignature(resultSignature)
@@ -1490,8 +1491,8 @@ public class MSQSelectTest extends MSQTestBase
                                    )
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
                                    .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
+                                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                                    .build())
         .setExpectedRowSignature(expectedResultSignature)
         .setQueryContext(context)
@@ -1561,8 +1562,8 @@ public class MSQSelectTest extends MSQTestBase
                                    )))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
                                    .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
+                                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                                    .build())
         .setQueryContext(context)
         .setExpectedRowSignature(resultSignature)
@@ -1615,8 +1616,8 @@ public class MSQSelectTest extends MSQTestBase
                        ))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
                    .destination(isDurableStorageDestination()
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
+                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(expectedMultiValueFooRowsGroup())
@@ -1688,8 +1689,8 @@ public class MSQSelectTest extends MSQTestBase
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
                                    .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
+                                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(
@@ -1758,8 +1759,8 @@ public class MSQSelectTest extends MSQTestBase
                                    )
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
                                    .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
+                                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(expected)
@@ -1877,8 +1878,8 @@ public class MSQSelectTest extends MSQTestBase
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
                                    .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
+                                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(
@@ -1931,8 +1932,8 @@ public class MSQSelectTest extends MSQTestBase
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
                                    .destination(isDurableStorageDestination()
-                                                ? DurableStorageMSQDestination.INSTANCE
-                                                : TaskReportMSQDestination.INSTANCE)
+                                                ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                                                : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
@@ -2005,8 +2006,8 @@ public class MSQSelectTest extends MSQTestBase
                 ))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
                 .destination(isDurableStorageDestination()
-                             ? DurableStorageMSQDestination.INSTANCE
-                             : TaskReportMSQDestination.INSTANCE)
+                             ? new DurableStorageMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT)
+                             : new TaskReportMSQDestination(ResultFormat.DEFAULT_RESULT_FORMAT))
                 .build())
         .setQueryContext(context)
         .setExpectedResultRows(result)
