@@ -5654,4 +5654,128 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testJoinWithInputRefCondition()
+  {
+    cannotVectorize();
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+
+    Query<?> expectedQuery;
+
+    if (!NullHandling.sqlCompatible()) {
+      expectedQuery = Druids.newTimeseriesQueryBuilder()
+                            .dataSource(
+                                join(
+                                    new TableDataSource(CalciteTests.DATASOURCE1),
+                                    new QueryDataSource(
+                                        GroupByQuery.builder()
+                                                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                                                    .setGranularity(Granularities.ALL)
+                                                    .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                                    .setVirtualColumns(expressionVirtualColumn(
+                                                        "v0",
+                                                        "1",
+                                                        ColumnType.LONG
+                                                    ))
+                                                    .setDimensions(
+                                                        new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT),
+                                                        new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                                    )
+                                                    .build()
+                                    ),
+                                    "j0.",
+                                    "(floor(100) == \"j0.d0\")",
+                                    JoinType.LEFT
+                                )
+                            )
+                            .granularity(Granularities.ALL)
+                            .aggregators(aggregators(
+                                new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a0"),
+                                    new SelectorDimFilter("j0.d1", null, null)
+                                )
+                            ))
+                            .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
+                            .intervals(querySegmentSpec(Filtration.eternity()))
+                            .context(context)
+                            .build();
+
+    } else {
+      expectedQuery = Druids.newTimeseriesQueryBuilder()
+                            .dataSource(
+                                join(
+                                    join(
+                                        new TableDataSource("foo"),
+                                        new QueryDataSource(
+                                            Druids.newTimeseriesQueryBuilder()
+                                                  .dataSource("foo")
+                                                  .aggregators(
+                                                      new CountAggregatorFactory("a0"),
+                                                      new FilteredAggregatorFactory(
+                                                          new CountAggregatorFactory("a1"),
+                                                          not(selector("m1", null, null)),
+                                                          "a1"
+                                                      )
+                                                  )
+                                                  .intervals(querySegmentSpec(Filtration.eternity()))
+                                                  .context(context)
+                                                  .build()
+                                        ),
+                                        "j0.",
+                                        "1",
+                                        JoinType.INNER
+                                    ),
+                                    new QueryDataSource(
+                                        GroupByQuery.builder()
+                                                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                                                    .setGranularity(Granularities.ALL)
+                                                    .setDataSource(new TableDataSource(CalciteTests.DATASOURCE1))
+                                                    .setVirtualColumns(expressionVirtualColumn(
+                                                        "v0",
+                                                        "1",
+                                                        ColumnType.LONG
+                                                    ))
+                                                    .setDimensions(
+                                                        new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT),
+                                                        new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                                    )
+                                                    .build()
+                                    ),
+                                    "_j0.",
+                                    "(floor(100) == \"_j0.d0\")",
+                                    JoinType.LEFT
+                                )
+                            )
+                            .granularity(Granularities.ALL)
+                            .aggregators(aggregators(
+                                new FilteredAggregatorFactory(
+                                    new CountAggregatorFactory("a0"),
+                                    or(
+                                        new SelectorDimFilter("j0.a0", "0", null),
+                                        and(
+                                            selector("_j0.d1", null, null),
+                                            expressionFilter("(\"j0.a1\" >= \"j0.a0\")")
+                                        )
+
+                                    )
+                                )
+                            ))
+                            .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
+                            .intervals(querySegmentSpec(Filtration.eternity()))
+                            .context(context)
+                            .build();
+
+    }
+
+    testQuery(
+        "SELECT COUNT(*) FILTER (WHERE FLOOR(100) NOT IN (SELECT m1 FROM foo)) "
+        + "FROM foo",
+        context,
+        ImmutableList.of(expectedQuery),
+        ImmutableList.of(
+            new Object[]{6L}
+        )
+    );
+  }
 }
