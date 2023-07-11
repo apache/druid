@@ -41,6 +41,7 @@ import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.storage.NilStorageConnector;
 import org.junit.Assert;
@@ -330,6 +331,92 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         sqlStatementResult.getQueryId(),
         0L,
         null,
+        SqlStatementResourceTest.makeOkRequest()
+    )));
+  }
+
+  @Test
+  public void testResultFormat() throws IOException
+  {
+    Map<String, Object> context = defaultAsyncContext();
+    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLE_STORAGE.name());
+
+    SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
+        new SqlQuery(
+            "select cnt,dim1 from foo",
+            ResultFormat.ARRAY,
+            false,
+            false,
+            false,
+            context,
+            null
+        ),
+        SqlStatementResourceTest.makeOkRequest()
+    ).getEntity();
+
+
+    List<List<Object>> rows = new ArrayList<>();
+    rows.add(ImmutableList.of(1, ""));
+    rows.add(ImmutableList.of(1, "10.1"));
+    rows.add(ImmutableList.of(1, "2"));
+    rows.add(ImmutableList.of(1, "1"));
+    rows.add(ImmutableList.of(1, "def"));
+    rows.add(ImmutableList.of(1, "abc"));
+
+    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+        sqlStatementResult.getQueryId(),
+        null,
+        null,
+        SqlStatementResourceTest.makeOkRequest()
+    )));
+
+    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+        sqlStatementResult.getQueryId(),
+        0L,
+        null,
+        SqlStatementResourceTest.makeOkRequest()
+    )));
+  }
+
+  @Test
+  public void testResultFormatWithParamInSelect() throws IOException
+  {
+    Map<String, Object> context = defaultAsyncContext();
+    context.put(MultiStageQueryContext.CTX_SELECT_DESTINATION, MSQSelectDestination.DURABLE_STORAGE.name());
+
+    SqlStatementResult sqlStatementResult = (SqlStatementResult) resource.doPost(
+        new SqlQuery(
+            "select cnt,dim1 from foo",
+            ResultFormat.OBJECTLINES,
+            false,
+            false,
+            false,
+            context,
+            null
+        ),
+        SqlStatementResourceTest.makeOkRequest()
+    ).getEntity();
+
+
+    List<List<Object>> rows = new ArrayList<>();
+    rows.add(ImmutableList.of(1, ""));
+    rows.add(ImmutableList.of(1, "10.1"));
+    rows.add(ImmutableList.of(1, "2"));
+    rows.add(ImmutableList.of(1, "1"));
+    rows.add(ImmutableList.of(1, "def"));
+    rows.add(ImmutableList.of(1, "abc"));
+
+    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+        sqlStatementResult.getQueryId(),
+        null,
+        ResultFormat.ARRAY.name(),
+        SqlStatementResourceTest.makeOkRequest()
+    )));
+
+    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+        sqlStatementResult.getQueryId(),
+        0L,
+        ResultFormat.ARRAY.name(),
         SqlStatementResourceTest.makeOkRequest()
     )));
   }

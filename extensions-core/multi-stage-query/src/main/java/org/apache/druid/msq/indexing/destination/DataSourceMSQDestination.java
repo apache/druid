@@ -168,6 +168,6 @@ public class DataSourceMSQDestination implements MSQDestination
   @JsonIgnore
   public ResultFormat getResultFormat()
   {
-    throw DruidException.defensive("Datasource destination does not support fetching results.");
+    throw DruidException.defensive("DataSourceMSQDestination does not support fetching results.");
   }
 }
