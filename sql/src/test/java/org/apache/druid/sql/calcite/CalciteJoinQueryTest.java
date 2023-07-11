@@ -5744,7 +5744,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                             .aggregators(aggregators(
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("a0"),
-                                    new SelectorDimFilter("j0.d1", null, null)
+                                    isNull("j0.d1")
                                 )
                             ))
                             .context(getTimeseriesContextWithFloorTime(TIMESERIES_CONTEXT_BY_GRAN, "d0"))
@@ -5803,9 +5803,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("a0"),
                                     or(
-                                        new SelectorDimFilter("j0.a0", "0", null),
+                                        equality("j0.a0", 0L, ColumnType.LONG),
                                         and(
-                                            selector("_j0.d1", null, null),
+                                            isNull("_j0.d1"),
                                             expressionFilter("(\"j0.a1\" >= \"j0.a0\")")
                                         )
 
