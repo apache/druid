@@ -39,7 +39,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -157,13 +156,10 @@ public class MultiStageQueryContext
 
   public static ClusterStatisticsMergeMode getClusterStatisticsMergeMode(QueryContext queryContext)
   {
-    return ClusterStatisticsMergeMode.valueOf(
-        String.valueOf(
-            queryContext.getString(
-                CTX_CLUSTER_STATISTICS_MERGE_MODE,
-                DEFAULT_CLUSTER_STATISTICS_MERGE_MODE
-            )
-        )
+    return QueryContexts.getAsEnum(
+        CTX_CLUSTER_STATISTICS_MERGE_MODE,
+        queryContext.getString(CTX_CLUSTER_STATISTICS_MERGE_MODE, DEFAULT_CLUSTER_STATISTICS_MERGE_MODE),
+        ClusterStatisticsMergeMode.class
     );
   }
 
@@ -177,12 +173,11 @@ public class MultiStageQueryContext
 
   public static WorkerAssignmentStrategy getAssignmentStrategy(final QueryContext queryContext)
   {
-    String assignmentStrategyString = queryContext.getString(
+    return QueryContexts.getAsEnum(
         CTX_TASK_ASSIGNMENT_STRATEGY,
-        DEFAULT_TASK_ASSIGNMENT_STRATEGY
+        queryContext.getString(CTX_TASK_ASSIGNMENT_STRATEGY, DEFAULT_TASK_ASSIGNMENT_STRATEGY),
+        WorkerAssignmentStrategy.class
     );
-
-    return WorkerAssignmentStrategy.fromString(assignmentStrategyString);
   }
 
   public static int getMaxNumTasks(final QueryContext queryContext)
@@ -203,22 +198,21 @@ public class MultiStageQueryContext
 
   public static MSQSelectDestination getSelectDestination(final QueryContext queryContext)
   {
-    return MSQSelectDestination.valueOf(
-        queryContext.getString(
-            CTX_SELECT_DESTINATION,
-            DEFAULT_SELECT_DESTINATION
-        ).toUpperCase(Locale.ENGLISH)
+    return QueryContexts.getAsEnum(
+        CTX_SELECT_DESTINATION,
+        queryContext.getString(CTX_SELECT_DESTINATION, DEFAULT_SELECT_DESTINATION),
+        MSQSelectDestination.class
     );
   }
 
   @Nullable
   public static MSQSelectDestination getSelectDestinationOrNull(final QueryContext queryContext)
   {
-    String selectDestination = queryContext.getString(CTX_SELECT_DESTINATION);
-    if (selectDestination == null) {
-      return null;
-    }
-    return MSQSelectDestination.valueOf(selectDestination.toUpperCase(Locale.ENGLISH));
+    return QueryContexts.getAsEnum(
+        CTX_SELECT_DESTINATION,
+        queryContext.getString(CTX_SELECT_DESTINATION),
+        MSQSelectDestination.class
+    );
   }
 
   public static int getRowsInMemory(final QueryContext queryContext)
