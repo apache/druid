@@ -17,16 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.msq.indexing;
+package org.apache.druid.msq.indexing.destination;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.segment.TestHelper;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class DataSourceMSQDestinationTest
 {
-
   @Test
   public void testEquals()
   {
@@ -34,5 +36,26 @@ public class DataSourceMSQDestinationTest
                   .withNonnullFields("dataSource", "segmentGranularity", "segmentSortOrder")
                   .usingGetClass()
                   .verify();
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+
+    DataSourceMSQDestination msqDestination = new DataSourceMSQDestination(
+        "datasource",
+        Granularities.DAY,
+        null,
+        null
+    );
+
+    final DataSourceMSQDestination msqDestination2 = mapper.readValue(
+        mapper.writeValueAsString(msqDestination),
+        DataSourceMSQDestination.class
+    );
+
+
+    Assert.assertEquals(msqDestination, msqDestination2);
   }
 }
