@@ -2570,7 +2570,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                 NullHandling.sqlCompatible()
                                                 ? new FilteredAggregatorFactory(
                                                     new CountAggregatorFactory("_a1"),
-                                                    not(isNull("a0"))
+                                                    notNull("a0")
                                                 )
                                                 : new CountAggregatorFactory("_a1")
                                             )
@@ -5765,7 +5765,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                       new CountAggregatorFactory("a0"),
                                                       new FilteredAggregatorFactory(
                                                           new CountAggregatorFactory("a1"),
-                                                          not(isNull("m1")),
+                                                          notNull("m1"),
                                                           "a1"
                                                       )
                                                   )
