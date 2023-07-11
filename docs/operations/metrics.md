@@ -350,7 +350,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 
 ### JVM
 
-These metrics are only available if the `JvmMonitor` module is included.
+These metrics are only available if the `JvmMonitor` module is included in `druid.monitoring.monitors`.
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
