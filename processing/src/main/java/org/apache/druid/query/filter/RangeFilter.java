@@ -114,11 +114,14 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
                           .build("Invalid range filter on column [%s], matchValueType cannot be null", column);
     }
     this.matchValueType = matchValueType;
-    if(lower == null && upper == null) {
+    if (lower == null && upper == null) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("Invalid range filter on column [%s], lower and upper cannot be null at the same time", column);
-    };
+                          .build(
+                              "Invalid range filter on column [%s], lower and upper cannot be null at the same time",
+                              column
+                          );
+    }
     final ExpressionType expressionType = ExpressionType.fromColumnType(matchValueType);
     this.upper = upper;
     this.lower = lower;
@@ -644,8 +647,8 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   {
     return Suppliers.memoize(() -> {
       final Comparator<String> stringComparator = matchValueType.isNumeric()
-                                            ? StringComparators.NUMERIC
-                                            : StringComparators.LEXICOGRAPHIC;
+                                                  ? StringComparators.NUMERIC
+                                                  : StringComparators.LEXICOGRAPHIC;
       final String lowerBound = lowerEval.castTo(ExpressionType.STRING).asString();
       final String upperBound = upperEval.castTo(ExpressionType.STRING).asString();
 
@@ -728,6 +731,7 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       }
     });
   }
+
   private Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
   {
     if (hasLowerBound() && hasUpperBound()) {

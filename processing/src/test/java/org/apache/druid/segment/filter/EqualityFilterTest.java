@@ -636,7 +636,8 @@ public class EqualityFilterTest extends BaseFilterTest
               null
           ),
           ImmutableList.of("3")
-      );assertFilterMatches(
+      );
+      assertFilterMatches(
           new EqualityFilter(
               "arrayDouble",
               ColumnType.DOUBLE_ARRAY,
@@ -656,7 +657,6 @@ public class EqualityFilterTest extends BaseFilterTest
           ),
           ImmutableList.of()
       );
-
     }
   }
 
@@ -664,7 +664,13 @@ public class EqualityFilterTest extends BaseFilterTest
   public void test_equals()
   {
     EqualsVerifier.forClass(EqualityFilter.class).usingGetClass()
-                  .withNonnullFields("column", "matchValueType", "matchValue", "predicateFactory", "cachedOptimizedFilter")
+                  .withNonnullFields(
+                      "column",
+                      "matchValueType",
+                      "matchValue",
+                      "predicateFactory",
+                      "cachedOptimizedFilter"
+                  )
                   .withPrefabValues(ColumnType.class, ColumnType.STRING, ColumnType.DOUBLE)
                   .withIgnoredFields("predicateFactory", "cachedOptimizedFilter")
                   .verify();
