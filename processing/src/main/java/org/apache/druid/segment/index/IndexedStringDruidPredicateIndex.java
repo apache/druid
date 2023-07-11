@@ -26,6 +26,7 @@ import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndex;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;

@@ -32,6 +32,7 @@ import org.apache.druid.segment.IntListUtils;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndex;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;

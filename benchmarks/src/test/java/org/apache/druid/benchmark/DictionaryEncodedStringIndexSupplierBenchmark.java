@@ -31,7 +31,7 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.IndexedUtf8ValueSetIndex;
-import org.apache.druid.segment.index.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndex;
 import org.apache.druid.segment.serde.StringUtf8ColumnIndexSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;

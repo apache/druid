@@ -2070,7 +2070,7 @@ public class MSQSelectTest extends MSQTestBase
         .setAggregatorSpecs(
             new FilteredAggregatorFactory(
                 new CountAggregatorFactory("a0"),
-                new SelectorDimFilter("j0.d1", null, null),
+                isNull("j0.d1"),
                 "a0"
             )
         )

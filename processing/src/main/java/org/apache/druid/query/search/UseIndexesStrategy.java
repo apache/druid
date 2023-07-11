@@ -44,7 +44,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.virtual.VirtualizedColumnInspector;
 import org.joda.time.Interval;
 

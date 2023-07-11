@@ -20,9 +20,9 @@
 package org.apache.druid.segment.column;
 
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.DruidPredicateIndex;
-import org.apache.druid.segment.index.LexicographicalRangeIndex;
-import org.apache.druid.segment.index.NumericRangeIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndex;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndex;
+import org.apache.druid.segment.index.semantic.NumericRangeIndex;
 
 public interface ColumnConfig
 {

@@ -29,7 +29,7 @@ import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndex;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;

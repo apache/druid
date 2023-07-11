@@ -34,7 +34,7 @@ import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.ImmutableBitmapValues;
 import org.apache.druid.segment.data.IndexedIterable;
-import org.apache.druid.segment.index.DictionaryEncodedValueIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.SortedValueDictionary;

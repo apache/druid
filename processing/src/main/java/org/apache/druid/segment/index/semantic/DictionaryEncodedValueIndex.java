@@ -17,34 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.segment.index;
+package org.apache.druid.segment.index.semantic;
 
-import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 
-import javax.annotation.Nullable;
-
 /**
- * This exposes a 'raw' view into bitmap value indexes of a string {@link DictionaryEncodedColumn}. This allows callers
- * to directly retrieve bitmaps via dictionary ids, as well as access to lower level details of such a column like
- * value lookup and value cardinality.
+ * This exposes a 'raw' view into bitmap value indexes for {@link DictionaryEncodedColumn}. This allows callers
+ * to directly retrieve bitmaps via dictionary ids.
+ *
+ * This interface should only be used when it is beneficial to operate in such a manner; callers of this class must
+ * either already know what value the dictionary id represents, not care at all, or have some other means to know
+ * exactly which bitmaps to retrieve.
  *
  * Most filter implementations should likely be using higher level index instead, such as {@link StringValueSetIndex},
- * {@link LexicographicalRangeIndex}, {@link NumericRangeIndex}, or {@link DruidPredicateIndex}
+ * {@link LexicographicalRangeIndex}, {@link NumericRangeIndex}, or {@link DruidPredicateIndex}.
  */
-public interface DictionaryEncodedStringValueIndex extends DictionaryEncodedValueIndex
+public interface DictionaryEncodedValueIndex
 {
   /**
-   * Get the cardinality of the underlying value dictionary
+   * Get the {@link ImmutableBitmap} for dictionary id of the underlying dictionary
    */
-  int getCardinality();
-
-  /**
-   * Get the value in the underlying value dictionary of the specified dictionary id
-   */
-  @Nullable
-  String getValue(int index);
-
-  @SuppressWarnings({"unreachable", "unused"})
-  BitmapFactory getBitmapFactory();
+  ImmutableBitmap getBitmap(int idx);
 }

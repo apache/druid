@@ -47,9 +47,9 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.LexicographicalRangeIndex;
-import org.apache.druid.segment.index.NullValueIndex;
-import org.apache.druid.segment.index.NumericRangeIndex;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndex;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
+import org.apache.druid.segment.index.semantic.NumericRangeIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;

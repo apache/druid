@@ -41,7 +41,7 @@ import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.NullValueIndex;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 

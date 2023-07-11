@@ -42,7 +42,7 @@ import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.incremental.SpatialDimensionRowTransformer;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.SpatialIndex;
+import org.apache.druid.segment.index.semantic.SpatialIndex;
 
 import javax.annotation.Nullable;
 import java.util.Objects;

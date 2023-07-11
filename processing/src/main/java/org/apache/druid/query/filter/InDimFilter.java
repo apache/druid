@@ -60,8 +60,8 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.StringValueSetIndex;
-import org.apache.druid.segment.index.Utf8ValueSetIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.Utf8ValueSetIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;

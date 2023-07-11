@@ -38,8 +38,8 @@ import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.LexicographicalRangeIndex;
-import org.apache.druid.segment.index.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.LexicographicalRangeIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;

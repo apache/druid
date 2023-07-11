@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.index;
+package org.apache.druid.segment.index.semantic;
 
 import org.apache.druid.collections.spatial.ImmutableRTree;
 

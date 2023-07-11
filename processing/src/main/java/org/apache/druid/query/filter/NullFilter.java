@@ -44,7 +44,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.NullValueIndex;
+import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;

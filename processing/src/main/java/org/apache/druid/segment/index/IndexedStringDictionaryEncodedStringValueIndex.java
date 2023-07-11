@@ -22,6 +22,7 @@ package org.apache.druid.segment.index;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 
 import javax.annotation.Nullable;
 

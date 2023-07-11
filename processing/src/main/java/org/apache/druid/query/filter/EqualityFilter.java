@@ -57,7 +57,7 @@ import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.PredicateValueMatcherFactory;
 import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.StringValueSetIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;

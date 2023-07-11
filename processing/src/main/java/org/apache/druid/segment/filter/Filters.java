@@ -43,8 +43,8 @@ import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.apache.druid.segment.index.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.index.DruidPredicateIndex;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
+import org.apache.druid.segment.index.semantic.DruidPredicateIndex;
 import org.apache.druid.segment.join.filter.AllNullColumnSelectorFactory;
 
 import javax.annotation.Nullable;

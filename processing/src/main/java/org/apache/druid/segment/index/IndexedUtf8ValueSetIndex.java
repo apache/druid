@@ -29,6 +29,8 @@ import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.index.semantic.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.Utf8ValueSetIndex;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;

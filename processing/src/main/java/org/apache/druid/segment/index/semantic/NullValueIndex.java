@@ -17,7 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.segment.index;
+package org.apache.druid.segment.index.semantic;
+
+import org.apache.druid.segment.index.BitmapColumnIndex;
 
 /**
  * Provides index for all null rows in a column, to use with IS/IS NOT NULL filters
