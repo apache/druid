@@ -44,7 +44,7 @@ The endpoint supports a set of optional query parameters to filter results.
 |---|---|---|
 |`state`|String|Filter list of tasks by task state, valid options are `running`, `complete`, `waiting`, and `pending`.|
 | `datasource`|String| Return tasks filtered by Druid datasource.|
-| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. The interval string should be delimited by `_` instead of `/`. For example, `2023-06-27_2023-06-28`.|
+| `createdTimeInterval`|String (ISO-8601)| Return tasks created within the specified interval. Use `_` as the delimiter for the interval string. Do not use `/`. For example, `2023-06-27_2023-06-28`.|
 | `max`|Integer|Maximum number of `complete` tasks to return. Only applies when `state` is set to `complete`.|
 | `type`|String|Filter tasks by task type. See [task documentation](../ingestion/tasks.md) for more details.|
 
@@ -1028,7 +1028,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 Submits a JSON-based ingestion spec or supervisor spec to the Overlord. It returns the task ID of the submitted task. For information on creating an ingestion spec, refer to the [ingestion spec reference](../ingestion/ingestion-spec.md).
 
-Note that for most batch ingestion use cases, you should prefer to use [SQL-ingestion API](./sql-ingestion-api.md).
+Note that for most batch ingestion use cases, you should use the [SQL-ingestion API](./sql-ingestion-api.md) instead of JSON-based batch ingestion.
 
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
