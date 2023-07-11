@@ -22,13 +22,13 @@ package org.apache.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
@@ -62,7 +62,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -87,11 +87,23 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
-    Preconditions.checkArgument(column != null, "column must not be null");
-    Preconditions.checkArgument(matchValue != null, "value must not be null");
-
+    if (column == null) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Invalid equality filter, column cannot be null");
+    }
     this.column = column;
+    if (matchValueType == null) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Invalid equality filter on column [%s], matchValueType cannot be null", column);
+    }
     this.matchValueType = matchValueType;
+    if (matchValue == null) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Invalid equality filter on column [%s], matchValue cannot be null", column);
+    }
     this.matchValue = matchValue;
     this.extractionFn = extractionFn;
     this.filterTuning = filterTuning;
@@ -192,18 +204,30 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    boolean valuesMatch;
     EqualityFilter that = (EqualityFilter) o;
-    if (matchValue instanceof Object[] && that.matchValue instanceof Object[]) {
-      valuesMatch = Arrays.deepEquals((Object[]) matchValue, (Object[]) that.matchValue);
-    } else {
-      valuesMatch = Objects.equals(matchValue, that.matchValue);
+    if (!column.equals(that.column)) {
+      return false;
     }
-    return column.equals(that.column) &&
-           Objects.equals(matchValueType, that.matchValueType) &&
-           valuesMatch &&
-           Objects.equals(extractionFn, that.extractionFn) &&
-           Objects.equals(filterTuning, that.filterTuning);
+    if (!Objects.equals(matchValueType, that.matchValueType)) {
+      return false;
+    }
+    if (!Objects.equals(extractionFn, that.extractionFn)) {
+      return false;
+    }
+    if (!Objects.equals(filterTuning, that.filterTuning)) {
+      return false;
+    }
+    if (matchValueType.isArray()) {
+      // just use predicate to see if the values are the same
+      final ExprEval<?> thatValue = ExprEval.ofType(
+          ExpressionType.fromColumnType(that.matchValueType),
+          that.matchValue
+      );
+      final Predicate<Object[]> arrayPredicate = predicateFactory.makeArrayPredicate(matchValueType);
+      return arrayPredicate.apply(thatValue.asArray());
+    } else {
+      return Objects.equals(matchValue, that.matchValue);
+    }
   }
 
   @Override
@@ -366,10 +390,19 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     @Override
     public Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
     {
-      final Object[] arrayValue = arrayType != null
-                                  ? matchValue.castTo(ExpressionType.fromColumnType(arrayType)).asArray()
-                                  : matchValue.asArray();
-      return input -> Arrays.deepEquals(input, arrayValue);
+      if (arrayType != null) {
+        final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
+        final Object[] matchArray = matchValue.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
+        return input -> arrayComparator.compare(input, matchArray) == 0;
+      } else {
+        // fall back to per row detection if input array type is unknown
+        return input -> {
+          final ExprEval<?> eval = ExprEval.bestEffortOf(input);
+          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
+          final Object[] matchArray = matchValue.castTo(eval.type()).asArray();
+          return arrayComparator.compare(input, matchArray) == 0;
+        };
+      }
     }
 
     @Override

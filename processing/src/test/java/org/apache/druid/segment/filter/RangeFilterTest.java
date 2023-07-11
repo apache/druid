@@ -51,12 +51,30 @@ public class RangeFilterTest extends BaseFilterTest
   private static final List<InputRow> ROWS =
       ImmutableList.<InputRow>builder()
                    .addAll(DEFAULT_ROWS)
-                   .add(
-                       makeDefaultSchemaRow("6", "-1000", ImmutableList.of("a"), null, 6.6, null, 10L)
-                   )
-                   .add(
-                       makeDefaultSchemaRow("7", "-10.012", ImmutableList.of("d"), null, null, 3.0f, null)
-                   )
+                   .add(makeDefaultSchemaRow(
+                       "6",
+                       "-1000",
+                       ImmutableList.of("a"),
+                       null,
+                       6.6,
+                       null,
+                       10L,
+                       new Object[]{"x", "y"},
+                       new Object[]{100, 200},
+                       new Object[]{1.1, null, 3.3}
+                   ))
+                   .add(makeDefaultSchemaRow(
+                       "7",
+                       "-10.012",
+                       ImmutableList.of("d"),
+                       null,
+                       null,
+                       3.0f,
+                       null,
+                       new Object[]{null, "hello", "world"},
+                       new Object[]{1234, 3456L, null},
+                       new Object[]{1.23, 4.56, 6.78}
+                   ))
                    .build();
 
   public RangeFilterTest(
@@ -184,14 +202,15 @@ public class RangeFilterTest extends BaseFilterTest
         NullHandling.replaceWithDefault() ? ImmutableList.of() : ImmutableList.of("0")
     );
     if (NullHandling.replaceWithDefault()) {
-      assertFilterMatchesSkipArrays(
+      assertFilterMatches(
           new RangeFilter("dim2", ColumnType.STRING, "", "", false, false, null, null),
           ImmutableList.of()
       );
     } else {
-      assertFilterMatchesSkipArrays(
+      // still matches even with auto-schema because match-values are upcast to array types
+      assertFilterMatches(
           new RangeFilter("dim2", ColumnType.STRING, "", "", false, false, null, null),
-          isAutoSchema() ? ImmutableList.of() : ImmutableList.of("2")
+          ImmutableList.of("2")
       );
     }
   }
@@ -307,6 +326,40 @@ public class RangeFilterTest extends BaseFilterTest
   public void testNumericMatchBadParameters()
   {
     Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> assertFilterMatches(
+            new RangeFilter(null, ColumnType.DOUBLE, "1234", "", false, false, null, null),
+            ImmutableList.of()
+        )
+    );
+    Assert.assertEquals(
+        "Invalid range filter, column cannot be null",
+        t.getMessage()
+    );
+    t = Assert.assertThrows(
+        DruidException.class,
+        () -> assertFilterMatches(
+            new RangeFilter("dim0", null, "1234", "", false, false, null, null),
+            ImmutableList.of()
+        )
+    );
+    Assert.assertEquals(
+        "Invalid range filter on column [dim0], matchValueType cannot be null",
+        t.getMessage()
+    );
+    t = Assert.assertThrows(
+        DruidException.class,
+        () -> assertFilterMatches(
+            new RangeFilter("dim0", ColumnType.DOUBLE, null, null, false, false, null, null),
+            ImmutableList.of()
+        )
+    );
+    Assert.assertEquals(
+        "Invalid range filter on column [dim0], lower and upper cannot be null at the same time",
+        t.getMessage()
+    );
+
+    t = Assert.assertThrows(
         DruidException.class,
         () -> assertFilterMatches(
             new RangeFilter("dim0", ColumnType.DOUBLE, "1234", "", false, false, null, null),
@@ -725,82 +778,85 @@ public class RangeFilterTest extends BaseFilterTest
         ImmutableList.of("1", "3")
     );
 
-    assertFilterMatchesSkipArrays(
-        new RangeFilter(
-            "dim2",
-            ColumnType.STRING,
-            "super-",
-            "super-zzzzzz",
-            false,
-            false,
-            superFn,
-            null
-        ),
-        ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
-    );
+    // auto schema ingests arrays instead of MVDs which aren't compatible with list filtered virtual column
+    if (!isAutoSchema()) {
+      assertFilterMatches(
+          new RangeFilter(
+              "dim2",
+              ColumnType.STRING,
+              "super-",
+              "super-zzzzzz",
+              false,
+              false,
+              superFn,
+              null
+          ),
+          ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7")
+      );
 
-    if (NullHandling.replaceWithDefault()) {
-      assertFilterMatchesSkipArrays(
-          new RangeFilter(
-              "dim2",
-              ColumnType.STRING,
-              "super-null",
-              "super-null",
-              false,
-              false,
-              superFn,
-              null
-          ),
-          ImmutableList.of("1", "2", "5")
-      );
-      assertFilterMatchesSkipArrays(
-          new RangeFilter(
-              "dim2",
-              ColumnType.STRING,
-              "super-null",
-              "super-null",
-              false,
-              false,
-              superFn,
-              null
-          ),
-          ImmutableList.of("1", "2", "5")
-      );
-    } else {
-      assertFilterMatchesSkipArrays(
-          new RangeFilter(
-              "dim2",
-              ColumnType.STRING,
-              "super-null",
-              "super-null",
-              false,
-              false,
-              superFn,
-              null
-          ),
-          ImmutableList.of("1", "5")
-      );
-      assertFilterMatchesSkipArrays(
-          new RangeFilter("dim2", ColumnType.STRING, "super-", "super-", false, false, superFn, null),
-          ImmutableList.of("2")
-      );
-      assertFilterMatchesSkipArrays(
-          new RangeFilter(
-              "dim2",
-              ColumnType.STRING,
-              "super-null",
-              "super-null",
-              false,
-              false,
-              superFn,
-              null
-          ),
-          ImmutableList.of("1", "5")
-      );
-      assertFilterMatchesSkipArrays(
-          new RangeFilter("dim2", ColumnType.STRING, "super-", "super-", false, false, superFn, null),
-          ImmutableList.of("2")
-      );
+      if (NullHandling.replaceWithDefault()) {
+        assertFilterMatches(
+            new RangeFilter(
+                "dim2",
+                ColumnType.STRING,
+                "super-null",
+                "super-null",
+                false,
+                false,
+                superFn,
+                null
+            ),
+            ImmutableList.of("1", "2", "5")
+        );
+        assertFilterMatches(
+            new RangeFilter(
+                "dim2",
+                ColumnType.STRING,
+                "super-null",
+                "super-null",
+                false,
+                false,
+                superFn,
+                null
+            ),
+            ImmutableList.of("1", "2", "5")
+        );
+      } else {
+        assertFilterMatches(
+            new RangeFilter(
+                "dim2",
+                ColumnType.STRING,
+                "super-null",
+                "super-null",
+                false,
+                false,
+                superFn,
+                null
+            ),
+            ImmutableList.of("1", "5")
+        );
+        assertFilterMatches(
+            new RangeFilter("dim2", ColumnType.STRING, "super-", "super-", false, false, superFn, null),
+            ImmutableList.of("2")
+        );
+        assertFilterMatches(
+            new RangeFilter(
+                "dim2",
+                ColumnType.STRING,
+                "super-null",
+                "super-null",
+                false,
+                false,
+                superFn,
+                null
+            ),
+            ImmutableList.of("1", "5")
+        );
+        assertFilterMatches(
+            new RangeFilter("dim2", ColumnType.STRING, "super-", "super-", false, false, superFn, null),
+            ImmutableList.of("2")
+        );
+      }
     }
 
     assertFilterMatches(
@@ -871,20 +927,6 @@ public class RangeFilterTest extends BaseFilterTest
       return;
     }
 
-
-    /*
-      makeDefaultSchemaRow("0", "", ImmutableList.of("a", "b"), "2017-07-25", 0.0, 0.0f, 0L),
-      makeDefaultSchemaRow("1", "10", ImmutableList.of(), "2017-07-25", 10.1, 10.1f, 100L),
-      makeDefaultSchemaRow("2", "2", ImmutableList.of(""), "2017-05-25", null, 5.5f, 40L),
-      makeDefaultSchemaRow("3", "1", ImmutableList.of("a"), "2020-01-25", 120.0245, 110.0f, null),
-      makeDefaultSchemaRow("4", "abdef", ImmutableList.of("c"), null, 60.0, null, 9001L),
-      makeDefaultSchemaRow("5", "abc", null, "2020-01-25", 765.432, 123.45f, 12345L)
-      makeDefaultSchemaRow("6", "-1000", ImmutableList.of("a"), null, 6.6, null, 10L)
-      makeDefaultSchemaRow("7", "-10.012", ImmutableList.of("d"), null, null, 3.0f, null)
-
-      // allow 'a'
-      // deny 'a'
-     */
     assertFilterMatchesSkipVectorize(
         new RangeFilter("allow-dim2", ColumnType.STRING, "a", "c", false, false, null, null),
         ImmutableList.of("0", "3", "6")
@@ -933,6 +975,334 @@ public class RangeFilterTest extends BaseFilterTest
         "Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0",
         t.getMessage()
     );
+  }
+
+  @Test
+  public void testArrayRanges()
+  {
+    if (isAutoSchema()) {
+      // only auto schema supports array columns currently, this means the match value will need to be coerceable to
+      // the column value type...
+
+      /*  dim0 .. arrayString               arrayLong             arrayDouble
+          "0", .. ["a", "b", "c"],          [1L, 2L, 3L],         [1.1, 2.2, 3.3]
+          "1", .. [],                       [],                   [1.1, 2.2, 3.3]
+          "2", .. null,                     [1L, 2L, 3L],         [null]
+          "3", .. ["a", "b", "c"],          null,                 []
+          "4", .. ["c", "d"],               [null],               [-1.1, -333.3]
+          "5", .. [null],                   [123L, 345L],         null
+          "6", .. ["x", "y"],               [100, 200],           [1.1, null, 3.3]
+          "7", .. [null, "hello", "world"], [1234, 3456L, null],  [1.23, 4.56, 6.78]
+       */
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              new Object[]{"a", "b", "c"},
+              new Object[]{"a", "b", "c"},
+              false,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("0", "3")
+      );
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              null,
+              new Object[]{"a", "b", "c"},
+              false,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("0", "1", "3", "5", "7")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              new Object[]{"a", "b", "c"},
+              null,
+              true,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("4", "6")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              null,
+              new Object[]{"a", "b", "c"},
+              false,
+              true,
+              null,
+              null
+          ),
+          ImmutableList.of("1", "5", "7")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              new Object[]{"a", "b"},
+              new Object[]{"a", "b", "c", "d"},
+              true,
+              true,
+              null,
+              null
+          ),
+          ImmutableList.of("0", "3")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              new Object[]{"c", "d"},
+              new Object[]{"c", "d", "e"},
+              false,
+              true,
+              null,
+              null
+          ),
+          ImmutableList.of("4")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              null,
+              new Object[]{},
+              false,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("1")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              null,
+              new Object[]{null},
+              false,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("1", "5")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              null,
+              new Object[]{},
+              false,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("1")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              new Object[]{},
+              null,
+              true,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("0", "2", "4", "5", "6", "7")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              null,
+              new Object[]{null},
+              false,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("1", "4")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              new Object[]{1L, 2L, 3L},
+              new Object[]{1L, 2L, 3L},
+              false,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              null,
+              new Object[]{1L, 2L, 3L},
+              false,
+              true,
+              null,
+              null
+          ),
+          ImmutableList.of("1", "4")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              new Object[]{1L, 2L, 3L},
+              null,
+              true,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("5", "6", "7")
+      );
+
+      // empties and nulls still sort before numbers
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              null,
+              new Object[]{-1L},
+              false,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("1", "4")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              null,
+              new Object[]{},
+              false,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("3")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{},
+              null,
+              true,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("0", "1", "2", "4", "6", "7")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              null,
+              new Object[]{null},
+              false,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("2", "3")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{1.1, 2.2, 3.3},
+              new Object[]{1.1, 2.2, 3.3},
+              false,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("0", "1")
+      );
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{1.1, 2.2, 3.3},
+              null,
+              true,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("7")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              null,
+              new Object[]{1.1, 2.2, 3.3},
+              true,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("0", "1", "2", "3", "4", "6")
+      );
+
+      // empties and nulls sort before numbers
+      assertFilterMatches(
+          new RangeFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              null,
+              new Object[]{0.0},
+              true,
+              false,
+              null,
+              null
+          ),
+          ImmutableList.of("2", "3", "4")
+      );
+    }
   }
 
   @Test

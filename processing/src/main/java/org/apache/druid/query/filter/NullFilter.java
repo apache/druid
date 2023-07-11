@@ -22,13 +22,13 @@ package org.apache.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -72,7 +72,11 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
       @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
-    Preconditions.checkArgument(column != null, "column must not be null");
+    if (column == null) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Invalid null filter, column cannot be null");
+    }
     this.column = column;
     this.extractionFn = extractionFn;
     this.filterTuning = filterTuning;

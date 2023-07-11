@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.extraction.TimeDimExtractionFn;
@@ -63,15 +64,29 @@ public class EqualityFilterTest extends BaseFilterTest
   }
 
   @Test
-  public void testMatchNullThrowsError()
+  public void testInvalidParameters()
   {
     Throwable t = Assert.assertThrows(
-        IllegalArgumentException.class,
+        DruidException.class,
+        () -> assertFilterMatches(
+            new EqualityFilter(null, ColumnType.STRING, null, null, null), ImmutableList.of()
+        )
+    );
+    Assert.assertEquals("Invalid equality filter, column cannot be null", t.getMessage());
+    t = Assert.assertThrows(
+        DruidException.class,
+        () -> assertFilterMatches(
+            new EqualityFilter("dim0", null, null, null, null), ImmutableList.of()
+        )
+    );
+    Assert.assertEquals("Invalid equality filter on column [dim0], matchValueType cannot be null", t.getMessage());
+    t = Assert.assertThrows(
+        DruidException.class,
         () -> assertFilterMatches(
             new EqualityFilter("dim0", ColumnType.STRING, null, null, null), ImmutableList.of()
         )
     );
-    Assert.assertEquals("value must not be null", t.getMessage());
+    Assert.assertEquals("Invalid equality filter on column [dim0], matchValue cannot be null", t.getMessage());
   }
 
   @Test
@@ -428,10 +443,230 @@ public class EqualityFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testNumeric()
+  {
+    /*
+        dim0   d0         f0        l0
+        "0" .. 0.0,       0.0f,     0L
+        "1" .. 10.1,      10.1f,    100L
+        "2" .. null,      5.5f,     40L
+        "3" .. 120.0245,  110.0f,   null
+        "4" .. 60.0,      null,     9001L
+        "5" .. 765.432,   123.45f,  12345L
+     */
+
+    assertFilterMatches(new EqualityFilter("d0", ColumnType.DOUBLE, 10.1, null, null), ImmutableList.of("1"));
+    assertFilterMatches(new EqualityFilter("d0", ColumnType.DOUBLE, 120.0245, null, null), ImmutableList.of("3"));
+    assertFilterMatches(new EqualityFilter("d0", ColumnType.DOUBLE, 765.432, null, null), ImmutableList.of("5"));
+    assertFilterMatches(new EqualityFilter("d0", ColumnType.DOUBLE, 765.431, null, null), ImmutableList.of());
+
+    assertFilterMatches(new EqualityFilter("l0", ColumnType.LONG, 100L, null, null), ImmutableList.of("1"));
+    assertFilterMatches(new EqualityFilter("l0", ColumnType.LONG, 40L, null, null), ImmutableList.of("2"));
+    assertFilterMatches(new EqualityFilter("l0", ColumnType.LONG, 9001L, null, null), ImmutableList.of("4"));
+    assertFilterMatches(new EqualityFilter("l0", ColumnType.LONG, 9000L, null, null), ImmutableList.of());
+    if (!isAutoSchema()) {
+      // auto schema doesn't store float columns as floats, rather they are stored as doubles... the predicate matcher
+      // matches fine, but the string value set index does not match correctly if we expect the input float values
+      assertFilterMatches(new EqualityFilter("f0", ColumnType.FLOAT, 10.1f, null, null), ImmutableList.of("1"));
+      assertFilterMatches(new EqualityFilter("f0", ColumnType.FLOAT, 110.0f, null, null), ImmutableList.of("3"));
+      assertFilterMatches(new EqualityFilter("f0", ColumnType.FLOAT, 123.45f, null, null), ImmutableList.of("5"));
+      assertFilterMatches(new EqualityFilter("f0", ColumnType.FLOAT, 123.46f, null, null), ImmutableList.of());
+    } else {
+      // .. so we need to cast them instead
+      assertFilterMatches(
+          new EqualityFilter("f0", ColumnType.DOUBLE, (double) 10.1f, null, null),
+          ImmutableList.of("1")
+      );
+      assertFilterMatches(
+          new EqualityFilter("f0", ColumnType.DOUBLE, (double) 110.0f, null, null),
+          ImmutableList.of("3")
+      );
+      assertFilterMatches(
+          new EqualityFilter("f0", ColumnType.DOUBLE, (double) 123.45f, null, null),
+          ImmutableList.of("5")
+      );
+      assertFilterMatches(
+          new EqualityFilter("f0", ColumnType.DOUBLE, (double) 123.46f, null, null),
+          ImmutableList.of()
+      );
+    }
+  }
+
+  @Test
+  public void testArrays()
+  {
+    if (isAutoSchema()) {
+      // only auto schema supports array columns... skip other segment types
+    /*
+        dim0 .. arrayString               arrayLong             arrayDouble
+        "0", .. ["a", "b", "c"],          [1L, 2L, 3L],         [1.1, 2.2, 3.3]
+        "1", .. [],                       [],                   [1.1, 2.2, 3.3]
+        "2", .. null,                     [1L, 2L, 3L],         [null]
+        "3", .. ["a", "b", "c"],          null,                 []
+        "4", .. ["c", "d"],               [null],               [-1.1, -333.3]
+        "5", .. [null],                   [123L, 345L],         null
+     */
+
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              ImmutableList.of("a", "b", "c"),
+              null,
+              null
+          ),
+          ImmutableList.of("0", "3")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              new Object[]{"a", "b", "c"},
+              null,
+              null
+          ),
+          ImmutableList.of("0", "3")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              ImmutableList.of(),
+              null,
+              null
+          ),
+          ImmutableList.of("1")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              new Object[]{null},
+              null,
+              null
+          ),
+          ImmutableList.of("5")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayString",
+              ColumnType.STRING_ARRAY,
+              new Object[]{null, null},
+              null,
+              null
+          ),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              ImmutableList.of(1L, 2L, 3L),
+              null,
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              new Object[]{1L, 2L, 3L},
+              null,
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              ImmutableList.of(),
+              null,
+              null
+          ),
+          ImmutableList.of("1")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              new Object[]{null},
+              null,
+              null
+          ),
+          ImmutableList.of("4")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayLong",
+              ColumnType.LONG_ARRAY,
+              new Object[]{null, null},
+              null,
+              null
+          ),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              ImmutableList.of(1.1, 2.2, 3.3),
+              null,
+              null
+          ),
+          ImmutableList.of("0", "1")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{1.1, 2.2, 3.3},
+              null,
+              null
+          ),
+          ImmutableList.of("0", "1")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              ImmutableList.of(),
+              null,
+              null
+          ),
+          ImmutableList.of("3")
+      );assertFilterMatches(
+          new EqualityFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              new Object[]{null},
+              null,
+              null
+          ),
+          ImmutableList.of("2")
+      );
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayDouble",
+              ColumnType.DOUBLE_ARRAY,
+              ImmutableList.of(1.1, 2.2, 3.4),
+              null,
+              null
+          ),
+          ImmutableList.of()
+      );
+
+    }
+  }
+
+  @Test
   public void test_equals()
   {
     EqualsVerifier.forClass(EqualityFilter.class).usingGetClass()
-                  .withNonnullFields("column", "matchValueType", "matchValue")
-                  .withIgnoredFields("predicateFactory", "cachedOptimizedFilter").verify();
+                  .withNonnullFields("column", "matchValueType", "matchValue", "predicateFactory", "cachedOptimizedFilter")
+                  .withPrefabValues(ColumnType.class, ColumnType.STRING, ColumnType.DOUBLE)
+                  .withIgnoredFields("predicateFactory", "cachedOptimizedFilter")
+                  .verify();
   }
 }

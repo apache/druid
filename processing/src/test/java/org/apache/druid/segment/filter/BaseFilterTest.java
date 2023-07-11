@@ -159,6 +159,9 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                    .add(new DoubleDimensionSchema("d0"))
                    .add(new FloatDimensionSchema("f0"))
                    .add(new LongDimensionSchema("l0"))
+                   .add(new AutoTypeColumnSchema("arrayString"))
+                   .add(new AutoTypeColumnSchema("arrayLong"))
+                   .add(new AutoTypeColumnSchema("arrayDouble"))
                    .build()
   );
 
@@ -179,15 +182,84 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                   .add("d0", ColumnType.DOUBLE)
                   .add("f0", ColumnType.FLOAT)
                   .add("l0", ColumnType.LONG)
+                  .add("arrayString", ColumnType.STRING_ARRAY)
+                  .add("arrayLong", ColumnType.LONG_ARRAY)
+                  .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
                   .build();
 
   static final List<InputRow> DEFAULT_ROWS = ImmutableList.of(
-      makeDefaultSchemaRow("0", "", ImmutableList.of("a", "b"), "2017-07-25", 0.0, 0.0f, 0L),
-      makeDefaultSchemaRow("1", "10", ImmutableList.of(), "2017-07-25", 10.1, 10.1f, 100L),
-      makeDefaultSchemaRow("2", "2", ImmutableList.of(""), "2017-05-25", null, 5.5f, 40L),
-      makeDefaultSchemaRow("3", "1", ImmutableList.of("a"), "2020-01-25", 120.0245, 110.0f, null),
-      makeDefaultSchemaRow("4", "abdef", ImmutableList.of("c"), null, 60.0, null, 9001L),
-      makeDefaultSchemaRow("5", "abc", null, "2020-01-25", 765.432, 123.45f, 12345L)
+      makeDefaultSchemaRow(
+          "0",
+          "",
+          ImmutableList.of("a", "b"),
+          "2017-07-25",
+          0.0,
+          0.0f,
+          0L,
+          ImmutableList.of("a", "b", "c"),
+          ImmutableList.of(1L, 2L, 3L),
+          ImmutableList.of(1.1, 2.2, 3.3)
+      ),
+      makeDefaultSchemaRow(
+          "1",
+          "10",
+          ImmutableList.of(),
+          "2017-07-25",
+          10.1,
+          10.1f,
+          100L,
+          ImmutableList.of(),
+          ImmutableList.of(),
+          new Object[]{1.1, 2.2, 3.3}
+      ),
+      makeDefaultSchemaRow(
+          "2",
+          "2",
+          ImmutableList.of(""),
+          "2017-05-25",
+          null,
+          5.5f,
+          40L,
+          null,
+          new Object[]{1L, 2L, 3L},
+          Collections.singletonList(null)
+      ),
+      makeDefaultSchemaRow(
+          "3",
+          "1",
+          ImmutableList.of("a"),
+          "2020-01-25",
+          120.0245,
+          110.0f,
+          null,
+          new Object[]{"a", "b", "c"},
+          null,
+          ImmutableList.of()
+      ),
+      makeDefaultSchemaRow(
+          "4",
+          "abdef",
+          ImmutableList.of("c"),
+          null,
+          60.0,
+          null,
+          9001L,
+          ImmutableList.of("c", "d"),
+          Collections.singletonList(null),
+          new Object[]{-1.1, -333.3}
+      ),
+      makeDefaultSchemaRow(
+          "5",
+          "abc",
+          null,
+          "2020-01-25",
+          765.432,
+          123.45f,
+          12345L,
+          Collections.singletonList(null),
+          new Object[]{123L, 345L},
+          null
+      )
   );
 
   static final IncrementalIndexSchema DEFAULT_INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
@@ -209,12 +281,15 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       @Nullable Object... elements
   )
   {
-    Preconditions.checkArgument(signature.size() == elements.length);
     Map<String, Object> mapRow = Maps.newHashMapWithExpectedSize(signature.size());
     for (int i = 0; i < signature.size(); i++) {
       final String columnName = signature.getColumnName(i);
-      final Object value = elements[i];
-      mapRow.put(columnName, value);
+      if (elements != null && i < elements.length) {
+        final Object value = elements[i];
+        mapRow.put(columnName, value);
+      } else {
+        mapRow.put(columnName, null);
+      }
     }
     return parser.parseBatch(mapRow).get(0);
   }
@@ -324,6 +399,34 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                     .put(
                         "incremental",
                         input -> {
+                          final IncrementalIndex index = input.buildIncrementalIndex();
+                          return Pair.of(new IncrementalIndexStorageAdapter(index), index);
+                        }
+                    )
+                    .put(
+                        "incrementalAutoTypes",
+                        input -> {
+                          input.indexSpec(IndexSpec.builder().build());
+                          input.mapSchema(
+                              schema ->
+                                  new IncrementalIndexSchema(
+                                      schema.getMinTimestamp(),
+                                      schema.getTimestampSpec(),
+                                      schema.getGran(),
+                                      schema.getVirtualColumns(),
+                                      schema.getDimensionsSpec().withDimensions(
+                                          schema.getDimensionsSpec()
+                                                .getDimensions()
+                                                .stream()
+                                                .map(
+                                                    dimensionSchema -> new AutoTypeColumnSchema(dimensionSchema.getName())
+                                                )
+                                                .collect(Collectors.toList())
+                                      ),
+                                      schema.getMetrics(),
+                                      schema.isRollup()
+                                  )
+                          );
                           final IncrementalIndex index = input.buildIncrementalIndex();
                           return Pair.of(new IncrementalIndexStorageAdapter(index), index);
                         }
@@ -439,10 +542,48 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                         input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asStorageAdapter(), () -> {})
                     )
                     .put("frame (row-based)", input -> {
+                      // remove array type columns from frames since they aren't currently supported other than string
+                      input.mapSchema(
+                          schema ->
+                              new IncrementalIndexSchema(
+                                  schema.getMinTimestamp(),
+                                  schema.getTimestampSpec(),
+                                  schema.getGran(),
+                                  schema.getVirtualColumns(),
+                                  schema.getDimensionsSpec().withDimensions(
+                                      schema.getDimensionsSpec()
+                                            .getDimensions()
+                                            .stream()
+                                            .filter(dimensionSchema -> !(dimensionSchema instanceof AutoTypeColumnSchema))
+                                            .collect(Collectors.toList())
+                                  ),
+                                  schema.getMetrics(),
+                                  schema.isRollup()
+                              )
+                      );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
                       return Pair.of(segment.asStorageAdapter(), segment);
                     })
                     .put("frame (columnar)", input -> {
+                      // remove array type columns from frames since they aren't currently supported other than string
+                      input.mapSchema(
+                          schema ->
+                              new IncrementalIndexSchema(
+                                  schema.getMinTimestamp(),
+                                  schema.getTimestampSpec(),
+                                  schema.getGran(),
+                                  schema.getVirtualColumns(),
+                                  schema.getDimensionsSpec().withDimensions(
+                                      schema.getDimensionsSpec()
+                                            .getDimensions()
+                                            .stream()
+                                            .filter(dimensionSchema -> !(dimensionSchema instanceof AutoTypeColumnSchema))
+                                            .collect(Collectors.toList())
+                                  ),
+                                  schema.getMetrics(),
+                                  schema.isRollup()
+                              )
+                      );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.COLUMNAR);
                       return Pair.of(segment.asStorageAdapter(), segment);
                     })

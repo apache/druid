@@ -22,7 +22,6 @@ package org.apache.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -49,6 +48,7 @@ import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
@@ -83,13 +83,12 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   private final boolean upperStrict;
   @Nullable
   private final ExtractionFn extractionFn;
-
+  @Nullable
+  private final FilterTuning filterTuning;
   private final Supplier<Predicate<String>> stringPredicateSupplier;
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
   private final Supplier<DruidFloatPredicate> floatPredicateSupplier;
   private final Supplier<DruidDoublePredicate> doublePredicateSupplier;
-  @Nullable
-  private final FilterTuning filterTuning;
 
   @JsonCreator
   public RangeFilter(
@@ -103,9 +102,23 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       @JsonProperty("filterTuning") @Nullable FilterTuning filterTuning
   )
   {
-    this.column = Preconditions.checkNotNull(column, "column can not be null");
-    this.matchValueType = Preconditions.checkNotNull(matchValueType, "matchValueType can not be null");
-    Preconditions.checkState((lower != null) || (upper != null), "lower and upper can not be null at the same time");
+    if (column == null) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Invalid range filter, column cannot be null");
+    }
+    this.column = column;
+    if (matchValueType == null) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Invalid range filter on column [%s], matchValueType cannot be null", column);
+    }
+    this.matchValueType = matchValueType;
+    if(lower == null && upper == null) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Invalid range filter on column [%s], lower and upper cannot be null at the same time", column);
+    };
     final ExpressionType expressionType = ExpressionType.fromColumnType(matchValueType);
     this.upper = upper;
     this.lower = lower;
@@ -715,6 +728,226 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       }
     });
   }
+  private Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
+  {
+    if (hasLowerBound() && hasUpperBound()) {
+      if (upperStrict && lowerStrict) {
+        if (arrayType != null) {
+          final Object[] lowerBound = lowerEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
+          final Object[] upperBound = upperEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
+          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            final int lowerComparing = arrayComparator.compare(input, lowerBound);
+            final int upperComparing = arrayComparator.compare(upperBound, input);
+            return ((lowerComparing > 0)) && (upperComparing > 0);
+          };
+        } else {
+          // fall back to per row type detection
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            ExprEval<?> val = ExprEval.bestEffortOf(input);
+            final Object[] lowerBound = lowerEval.castTo(val.type()).asArray();
+            final Object[] upperBound = upperEval.castTo(val.type()).asArray();
+            final Comparator<Object[]> comparator = val.type().getNullableStrategy();
+            final int lowerComparing = comparator.compare(val.asArray(), lowerBound);
+            final int upperComparing = comparator.compare(upperBound, val.asArray());
+            return ((lowerComparing > 0)) && (upperComparing > 0);
+          };
+        }
+      } else if (lowerStrict) {
+        if (arrayType != null) {
+          final Object[] lowerBound = lowerEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
+          final Object[] upperBound = upperEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
+          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            final int lowerComparing = arrayComparator.compare(input, lowerBound);
+            final int upperComparing = arrayComparator.compare(upperBound, input);
+            return (lowerComparing > 0) && (upperComparing >= 0);
+          };
+        } else {
+          // fall back to per row type detection
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            ExprEval<?> val = ExprEval.bestEffortOf(input);
+            final Object[] lowerBound = lowerEval.castTo(val.type()).asArray();
+            final Object[] upperBound = upperEval.castTo(val.type()).asArray();
+            final Comparator<Object[]> arrayComparator = val.type().getNullableStrategy();
+            final int lowerComparing = arrayComparator.compare(val.asArray(), lowerBound);
+            final int upperComparing = arrayComparator.compare(upperBound, val.asArray());
+            return (lowerComparing > 0) && (upperComparing >= 0);
+          };
+        }
+      } else if (upperStrict) {
+        if (arrayType != null) {
+          final Object[] lowerBound = lowerEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
+          final Object[] upperBound = upperEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
+          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            final int lowerComparing = arrayComparator.compare(input, lowerBound);
+            final int upperComparing = arrayComparator.compare(upperBound, input);
+            return (lowerComparing >= 0) && (upperComparing > 0);
+          };
+        } else {
+          // fall back to per row type detection
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            ExprEval<?> val = ExprEval.bestEffortOf(input);
+            final Object[] lowerBound = lowerEval.castTo(val.type()).asArray();
+            final Object[] upperBound = upperEval.castTo(val.type()).asArray();
+            final Comparator<Object[]> arrayComparator = val.type().getNullableStrategy();
+            final int lowerComparing = arrayComparator.compare(val.asArray(), lowerBound);
+            final int upperComparing = arrayComparator.compare(upperBound, val.asArray());
+            return (lowerComparing >= 0) && (upperComparing > 0);
+          };
+        }
+      } else {
+        if (arrayType != null) {
+          final Object[] lowerBound = lowerEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
+          final Object[] upperBound = upperEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
+          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            final int lowerComparing = arrayComparator.compare(input, lowerBound);
+            final int upperComparing = arrayComparator.compare(upperBound, input);
+            return (lowerComparing >= 0) && (upperComparing >= 0);
+          };
+        } else {
+          // fall back to per row type detection
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            ExprEval<?> val = ExprEval.bestEffortOf(input);
+            final Object[] lowerBound = lowerEval.castTo(val.type()).asArray();
+            final Object[] upperBound = upperEval.castTo(val.type()).asArray();
+            final Comparator<Object[]> arrayComparator = val.type().getNullableStrategy();
+            final int lowerComparing = arrayComparator.compare(val.asArray(), lowerBound);
+            final int upperComparing = arrayComparator.compare(upperBound, val.asArray());
+            return (lowerComparing >= 0) && (upperComparing >= 0);
+          };
+        }
+      }
+    } else if (hasUpperBound()) {
+      if (upperStrict) {
+        if (arrayType != null) {
+          final Object[] upperBound = upperEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
+          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            final int upperComparing = arrayComparator.compare(upperBound, input);
+            return upperComparing > 0;
+          };
+        } else {
+          // fall back to per row type detection
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            ExprEval<?> val = ExprEval.bestEffortOf(input);
+            final Object[] upperBound = upperEval.castTo(val.type()).asArray();
+            final Comparator<Object[]> arrayComparator = val.type().getNullableStrategy();
+            final int upperComparing = arrayComparator.compare(upperBound, val.asArray());
+            return upperComparing > 0;
+          };
+        }
+      } else {
+        if (arrayType != null) {
+          final Object[] upperBound = upperEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
+          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            final int upperComparing = arrayComparator.compare(upperBound, input);
+            return upperComparing >= 0;
+          };
+        } else {
+          // fall back to per row type detection
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            ExprEval<?> val = ExprEval.bestEffortOf(input);
+            final Object[] upperBound = upperEval.castTo(val.type()).asArray();
+            final Comparator<Object[]> arrayComparator = val.type().getNullableStrategy();
+            final int upperComparing = arrayComparator.compare(upperBound, val.asArray());
+            return upperComparing >= 0;
+          };
+        }
+      }
+    } else if (hasLowerBound()) {
+      if (lowerStrict) {
+        if (arrayType != null) {
+          final Object[] lowerBound = lowerEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
+          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            final int lowerComparing = arrayComparator.compare(input, lowerBound);
+            return lowerComparing > 0;
+          };
+        } else {
+          // fall back to per row type detection
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            ExprEval<?> val = ExprEval.bestEffortOf(input);
+            final Object[] lowerBound = lowerEval.castTo(val.type()).asArray();
+            final Comparator<Object[]> arrayComparator = val.type().getNullableStrategy();
+            final int lowerComparing = arrayComparator.compare(lowerBound, val.asArray());
+            return lowerComparing > 0;
+          };
+        }
+      } else {
+        if (arrayType != null) {
+          final Object[] lowerBound = lowerEval.castTo(ExpressionType.fromColumnType(arrayType)).asArray();
+          final Comparator<Object[]> arrayComparator = arrayType.getNullableStrategy();
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            final int lowerComparing = arrayComparator.compare(input, lowerBound);
+            return lowerComparing >= 0;
+          };
+        } else {
+          // fall back to per row type detection
+          return input -> {
+            if (input == null) {
+              return false;
+            }
+            ExprEval<?> val = ExprEval.bestEffortOf(input);
+            final Object[] lowerBound = lowerEval.castTo(val.type()).asArray();
+            final Comparator<Object[]> arrayComparator = val.type().getNullableStrategy();
+            final int lowerComparing = arrayComparator.compare(lowerBound, val.asArray());
+            return lowerComparing >= 0;
+          };
+        }
+      }
+    } else {
+      return Predicates.notNull();
+    }
+  }
 
   private class RangePredicateFactory implements DruidPredicateFactory
   {
@@ -759,6 +992,12 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
       }
       Predicate<String> stringPredicate = stringPredicateSupplier.get();
       return input -> stringPredicate.apply(String.valueOf(input));
+    }
+
+    @Override
+    public Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> inputType)
+    {
+      return RangeFilter.this.makeArrayPredicate(inputType);
     }
 
     @Override

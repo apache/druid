@@ -230,6 +230,35 @@ public class NullFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testArrays()
+  {
+    if (isAutoSchema()) {
+      // only auto schema ingests arrays
+    /*
+        dim0 .. arrayString               arrayLong             arrayDouble
+        "0", .. ["a", "b", "c"],          [1L, 2L, 3L],         [1.1, 2.2, 3.3]
+        "1", .. [],                       [],                   [1.1, 2.2, 3.3]
+        "2", .. null,                     [1L, 2L, 3L],         [null]
+        "3", .. ["a", "b", "c"],          null,                 []
+        "4", .. ["c", "d"],               [null],               [-1.1, -333.3]
+        "5", .. [null],                   [123L, 345L],         null
+     */
+      assertFilterMatches(
+          new NullFilter("arrayString", null, null),
+          ImmutableList.of("2")
+      );
+      assertFilterMatches(
+          new NullFilter("arrayLong", null, null),
+          ImmutableList.of("3")
+      );
+      assertFilterMatches(
+          new NullFilter("arrayDouble", null, null),
+          ImmutableList.of("5")
+      );
+    }
+  }
+
+  @Test
   public void test_equals()
   {
     EqualsVerifier.forClass(NullFilter.class).usingGetClass()

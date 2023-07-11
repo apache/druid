@@ -140,6 +140,10 @@ public class ExpressionFilterTest extends BaseFilterTest
   @Test
   public void testOneSingleValuedStringColumn()
   {
+    if (testName.contains("incrementalAutoTypes")) {
+      // dim 3 is mixed type in auto incrementalIndex, so presents as complex<json>
+      return;
+    }
     assertFilterMatches(edf("dim3 == ''"), ImmutableList.of("0"));
     assertFilterMatches(edf("dim3 == '1'"), ImmutableList.of("3", "4", "6"));
     assertFilterMatches(edf("dim3 == 'a'"), ImmutableList.of("7"));
