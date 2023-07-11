@@ -5,6 +5,7 @@ module.exports={
   "tagline": "A fast analytical database",
   "url": "https://druid.apache.org",
   "baseUrl": "/",
+  
   "organizationName": "Apache",
   "projectName": "ApacheDruid",
   "scripts": [
@@ -20,7 +21,7 @@ module.exports={
     "disableHeaderTitle": true
   },
   "onBrokenLinks": "log",
-  "onBrokenMarkdownLinks": "log",
+  "onBrokenMarkdownLinks": "throw",
   "presets": [
     [
       "@docusaurus/preset-classic",
