@@ -58,6 +58,7 @@ import org.apache.druid.segment.filter.PredicateValueMatcherFactory;
 import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndex;
+import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -408,6 +409,9 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     @Override
     public Predicate<Object> makeObjectPredicate()
     {
+      if (matchValueType.equals(ColumnType.NESTED_DATA)) {
+        return input -> Objects.equals(StructuredData.unwrap(input), StructuredData.unwrap(matchValue.value()));
+      }
       return Predicates.equalTo(matchValue.valueOrDefault());
     }
 
