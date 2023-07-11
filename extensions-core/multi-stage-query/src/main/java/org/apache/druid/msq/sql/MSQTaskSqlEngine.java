@@ -247,7 +247,7 @@ public class MSQTaskSqlEngine implements SqlEngine
 
     if (hasSegmentGranularity && timeFieldIndex < 0) {
       throw InvalidInput.exception(
-          "The granularity [%s] specified in the PARTITIONED BY clause of the INSERT query is different from ALL."
+          "The granularity [%s] specified in the PARTITIONED BY clause of the INSERT query is different from ALL. "
           + "Therefore, the query must specify a time column (named __time).",
           segmentGranularity
       );

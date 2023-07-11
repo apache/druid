@@ -1635,7 +1635,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                             new DruidExceptionMatcher(
                                 DruidException.Persona.USER,
                                 DruidException.Category.INVALID_INPUT,
-                                "general"
+                                "invalidInput"
                             )
                                 .expectMessageContains(
                                     "Cannot construct instance of `org.apache.druid.segment.column.ColumnSignature`, problem: Column name must be provided and non-empty"
