@@ -20,6 +20,7 @@
 package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -1184,15 +1185,15 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         new GroupByStrategyV1(
             queryConfigSupplier,
             new GroupByQueryEngine(queryConfigSupplier, bufferPool),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-            bufferPool
+            QueryRunnerTestHelper.NOOP_QUERYWATCHER
         ),
         new GroupByStrategyV2(
             processingConfig,
             queryConfigSupplier,
             bufferPool,
             mergeBufferPool,
-            GroupByQueryRunnerTest.DEFAULT_MAPPER,
+            TestHelper.makeJsonMapper(),
+            new ObjectMapper(new SmileFactory()),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         )
     );
