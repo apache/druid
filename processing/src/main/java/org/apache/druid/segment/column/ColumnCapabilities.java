@@ -29,21 +29,12 @@ import javax.annotation.Nullable;
  * This interface is used to expose information about columns that is interesting to know for all matters dealing with
  * reading from columns, including query planning and optimization, creating readers to merge segments at ingestion
  * time, and probably nearly anything else you can imagine.
+ *
+ * @see ColumnType
+ * @see TypeSignature
  */
-public interface ColumnCapabilities
+public interface ColumnCapabilities extends TypeSignature<ValueType>
 {
-  /**
-   * Column type, good to know so caller can know what to expect and which optimal selector to use
-   */
-  ValueType getType();
-
-  /**
-   *
-   * If ValueType is COMPLEX, then the typeName associated with it.
-   */
-  @Nullable
-  String getComplexTypeName();
-
   /**
    * Is the column dictionary encoded? If so, a DimensionDictionarySelector may be used instead of using a value
    * selector, allowing algorithms to operate on primitive integer dictionary ids rather than the looked up dictionary
@@ -94,6 +85,17 @@ public interface ColumnCapabilities
    * for null value rows and act accordingly
    */
   Capable hasNulls();
+
+  default ColumnType toColumnType()
+  {
+    return ColumnTypeFactory.ofType(this);
+  }
+
+  @Override
+  default <T> TypeStrategy<T> getStrategy()
+  {
+    return ColumnTypeFactory.getInstance().getTypeStrategy(toColumnType());
+  }
 
   enum Capable
   {
@@ -168,7 +170,7 @@ public interface ColumnCapabilities
   }
 
   /**
-   * This interface define the shape of a mechnism to allow for bespoke coercion of {@link Capable#UNKNOWN} into
+   * This interface defines the shape of a mechnism to allow for bespoke coercion of {@link Capable#UNKNOWN} into
    * {@link Capable#TRUE} or {@link Capable#FALSE} for each {@link Capable} of a {@link ColumnCapabilities}, as is
    * appropriate for the situation of the caller.
    */

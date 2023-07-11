@@ -81,7 +81,8 @@ public class TimeChunkLockTryAcquireAction implements TaskAction<TaskLock>
         task,
         new TimeChunkLockRequest(type, task, interval, null)
     );
-    return result.isOk() ? result.getTaskLock() : null;
+
+    return result.getTaskLock();
   }
 
   @Override

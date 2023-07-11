@@ -28,7 +28,7 @@ import './snitch-dialog.scss';
 export interface SnitchDialogProps {
   title: string;
   className?: string;
-  onSave: (comment: string) => void;
+  onSave: (comment: string) => void | Promise<void>;
   saveDisabled?: boolean;
   onReset?: () => void;
   onClose: () => void;
@@ -37,8 +37,8 @@ export interface SnitchDialogProps {
 
 export interface SnitchDialogState {
   comment: string;
-  showFinalStep?: boolean;
-  showHistory?: boolean;
+  showFinalStep: boolean;
+  showHistory: boolean;
 }
 
 export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchDialogState> {
@@ -47,6 +47,8 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
 
     this.state = {
       comment: '',
+      showFinalStep: false,
+      showHistory: false,
     };
   }
 
@@ -54,11 +56,11 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
     const { onSave, onClose } = this.props;
     const { comment } = this.state;
 
-    onSave(comment);
+    void onSave(comment);
     if (onClose) onClose();
   };
 
-  changeComment(newComment: string) {
+  handleCommentChange(newComment: string) {
     this.setState({
       comment: newComment,
     });
@@ -100,7 +102,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
               large
               value={comment}
               placeholder="Enter description here"
-              onChange={(e: any) => this.changeComment(e.target.value)}
+              onChange={(e: any) => this.handleCommentChange(e.target.value)}
             />
           </FormGroup>
         </div>
@@ -110,18 +112,14 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
   }
 
   renderHistoryDialog(): JSX.Element | null {
-    const { historyRecords } = this.props;
+    const { title, historyRecords } = this.props;
     if (!historyRecords) return null;
 
     return (
       <HistoryDialog
-        {...this.props}
+        title={title + ' history'}
         historyRecords={historyRecords}
-        buttons={
-          <Button onClick={this.back} icon={IconNames.ARROW_LEFT}>
-            Back
-          </Button>
-        }
+        onBack={this.back}
       />
     );
   }

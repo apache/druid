@@ -17,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-if [ "$#" -gt 2 ] || [ "$#" -eq 0 ]
+if [ "$#" -gt 4 ] || [ "$#" -eq 0 ]
 then
   >&2 echo "usage: $0 <service> [conf-dir]"
   exit 1
@@ -34,14 +34,58 @@ else
   CONFDIR="$2"
 fi
 
-CONFDIR="$(cd "$CONFDIR" && pwd)"
-WHEREAMI="$(cd "$WHEREAMI" && pwd)"
-JAVA_BIN="$(source "$WHEREAMI"/java-util && get_java_bin_dir)"
-if [ -z "$JAVA_BIN" ]; then
-  >&2 echo "Could not find java - please run $WHEREAMI/verify-java to confirm it is installed."
-  exit 1
+CONFDIR="$(cd "$CONFDIR">/dev/null && pwd)"
+WHEREAMI="$(cd "$WHEREAMI">/dev/null && pwd)"
+
+LOG_DIR="${DRUID_LOG_DIR:=${WHEREAMI}/../log}"
+# Remove possible ending slash
+if [[ $LOG_DIR == */ ]];
+then
+  LOG_DIR=${LOG_DIR%?}
 fi
+if [ ! -d "$LOG_DIR" ]; then mkdir -p $LOG_DIR; fi
+
+echo "Running [$1], logging to [$LOG_DIR/$1.log] if no changes made to log4j2.xml"
+
+if [ "$WHATAMI" = 'coordinator-overlord' ]
+then
+    SERVER_NAME=coordinator
+else
+    SERVER_NAME="$WHATAMI"
+fi
+
+
+if [ ! -f "$CONFDIR"/$WHATAMI/main.config ];
+  then
+    MAIN_CLASS="org.apache.druid.cli.Main server $SERVER_NAME"
+  else
+    MAIN_CLASS=`cat "$CONFDIR"/$WHATAMI/main.config | xargs`
+fi
+
 cd "$WHEREAMI/.."
-exec "$JAVA_BIN"/java `cat "$CONFDIR"/"$WHATAMI"/jvm.config | xargs` \
-  -cp "$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*" \
-  `cat "$CONFDIR"/$WHATAMI/main.config | xargs`
+
+CLASS_PATH="$CONFDIR"/"$WHATAMI":"$CONFDIR"/_common:"$CONFDIR"/_common/hadoop-xml:"$CONFDIR"/../_common:"$CONFDIR"/../_common/hadoop-xml:"$WHEREAMI/../lib/*"
+
+if [ "$#" -eq 3 ] || [ "$#" -eq 4 ]
+then
+  # args: <service> <conf_path> <jvm_args> or <service> <conf_path> <jvm_args> <mm_task_count mm_task_java_props>
+  JVMARGS=`cat "$CONFDIR/_common/common.jvm.config" | xargs`
+  JVMARGS+=' '
+  JVMARGS+=$3
+
+  if [ "$#" -eq 3 ]
+  then
+    # args: <service> <conf_path> <jvm_args>
+    exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" $JVMARGS \
+      -cp $CLASS_PATH $MAIN_CLASS
+  else
+    # args: <service> <conf_path> <jvm_args> <mm_task_count mm_task_java_props>
+    exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 $4 "-Ddruid.log.path=$LOG_DIR"  $JVMARGS \
+      -cp $CLASS_PATH $MAIN_CLASS
+  fi
+else
+  # args: <service> <conf_path>
+  exec "$WHEREAMI"/run-java -Ddruid.node.type=$1 "-Ddruid.log.path=$LOG_DIR" \
+    `cat "$CONFDIR"/"$WHATAMI"/jvm.config | xargs` \
+    -cp  $CLASS_PATH $MAIN_CLASS
+fi

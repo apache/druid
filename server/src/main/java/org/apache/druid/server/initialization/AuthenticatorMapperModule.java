@@ -19,28 +19,23 @@
 
 package org.apache.druid.server.initialization;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
 import com.google.inject.Provider;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +45,6 @@ import java.util.Set;
 public class AuthenticatorMapperModule implements DruidModule
 {
   private static final String AUTHENTICATOR_PROPERTIES_FORMAT_STRING = "druid.auth.authenticator.%s";
-  private static Logger log = new Logger(AuthenticatorMapperModule.class);
 
   @Override
   public void configure(Binder binder)
@@ -58,28 +52,18 @@ public class AuthenticatorMapperModule implements DruidModule
     binder.bind(AuthenticatorMapper.class)
           .toProvider(new AuthenticatorMapperProvider())
           .in(LazySingleton.class);
-
-    LifecycleModule.register(binder, AuthenticatorMapper.class);
-  }
-
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Collections.emptyList();
   }
 
   private static class AuthenticatorMapperProvider implements Provider<AuthenticatorMapper>
   {
     private AuthConfig authConfig;
-    private Injector injector;
     private Properties props;
     private JsonConfigurator configurator;
 
     @Inject
-    public void inject(Injector injector, Properties props, JsonConfigurator configurator)
+    public void inject(AuthConfig authConfig, Properties props, JsonConfigurator configurator)
     {
-      this.authConfig = injector.getInstance(AuthConfig.class);
-      this.injector = injector;
+      this.authConfig = authConfig;
       this.props = props;
       this.configurator = configurator;
     }
@@ -101,7 +85,10 @@ public class AuthenticatorMapperModule implements DruidModule
       }
 
       for (String authenticatorName : authenticators) {
-        final String authenticatorPropertyBase = StringUtils.format(AUTHENTICATOR_PROPERTIES_FORMAT_STRING, authenticatorName);
+        final String authenticatorPropertyBase = StringUtils.format(
+            AUTHENTICATOR_PROPERTIES_FORMAT_STRING,
+            authenticatorName
+        );
         final JsonConfigProvider<Authenticator> authenticatorProvider = JsonConfigProvider.of(
             authenticatorPropertyBase,
             Authenticator.class

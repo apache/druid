@@ -19,16 +19,18 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
+import org.apache.druid.jackson.DefaultTrueJsonIncludeFilter;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -42,16 +44,18 @@ import java.util.Objects;
 public abstract class HllSketchAggregatorFactory extends AggregatorFactory
 {
   public static final boolean DEFAULT_ROUND = false;
+  public static final boolean DEFAULT_SHOULD_FINALIZE = true;
   public static final int DEFAULT_LG_K = 12;
   public static final TgtHllType DEFAULT_TGT_HLL_TYPE = TgtHllType.HLL_4;
 
-  static final Comparator<HllSketch> COMPARATOR =
-      Comparator.nullsFirst(Comparator.comparingDouble(HllSketch::getEstimate));
+  static final Comparator<HllSketchHolder> COMPARATOR =
+      Comparator.nullsFirst(Comparator.comparingDouble(HllSketchHolder::getEstimate));
 
   private final String name;
   private final String fieldName;
   private final int lgK;
   private final TgtHllType tgtHllType;
+  private final boolean shouldFinalize;
   private final boolean round;
 
   HllSketchAggregatorFactory(
@@ -59,6 +63,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
       final String fieldName,
       @Nullable final Integer lgK,
       @Nullable final String tgtHllType,
+      final Boolean shouldFinalize,
       final boolean round
   )
   {
@@ -66,6 +71,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
     this.fieldName = Objects.requireNonNull(fieldName);
     this.lgK = lgK == null ? DEFAULT_LG_K : lgK;
     this.tgtHllType = tgtHllType == null ? DEFAULT_TGT_HLL_TYPE : TgtHllType.valueOf(tgtHllType);
+    this.shouldFinalize = shouldFinalize == null ? DEFAULT_SHOULD_FINALIZE : shouldFinalize;
     this.round = round;
   }
 
@@ -95,6 +101,14 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   }
 
   @JsonProperty
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = DefaultTrueJsonIncludeFilter.class)
+  public boolean isShouldFinalize()
+  {
+    return shouldFinalize;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean isRound()
   {
     return round;
@@ -114,29 +128,36 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   public List<AggregatorFactory> getRequiredColumns()
   {
     return Collections.singletonList(
-        new HllSketchBuildAggregatorFactory(fieldName, fieldName, lgK, tgtHllType.toString(), round)
+        new HllSketchBuildAggregatorFactory(fieldName, fieldName, lgK, tgtHllType.toString(), shouldFinalize, round)
     );
   }
 
   @Override
-  public HllSketch deserialize(final Object object)
+  public HllSketchHolder deserialize(final Object object)
   {
-    return HllSketchMergeComplexMetricSerde.deserializeSketch(object);
+    if (object == null) {
+      return HllSketchHolder.of(new HllSketch(lgK, tgtHllType));
+    }
+    return HllSketchHolder.fromObj(object);
   }
 
   @Override
-  public HllSketch combine(final Object objectA, final Object objectB)
+  public Object combine(final Object lhs, final Object rhs)
   {
-    final Union union = new Union(lgK);
-    union.update((HllSketch) objectA);
-    union.update((HllSketch) objectB);
-    return union.getResult(tgtHllType);
+    if (lhs == null) {
+      return rhs;
+    }
+
+    if (rhs == null) {
+      return lhs;
+    }
+    return ((HllSketchHolder) lhs).merge((HllSketchHolder) rhs);
   }
 
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    return new ObjectAggregateCombiner<HllSketch>()
+    return new ObjectAggregateCombiner<HllSketchHolder>()
     {
       private final Union union = new Union(lgK);
 
@@ -150,48 +171,40 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
       @Override
       public void fold(final ColumnValueSelector selector)
       {
-        final HllSketch sketch = (HllSketch) selector.getObject();
-        union.update(sketch);
+        final HllSketchHolder sketch = (HllSketchHolder) selector.getObject();
+        union.update(sketch.getSketch());
       }
 
       @Nullable
       @Override
-      public HllSketch getObject()
+      public HllSketchHolder getObject()
       {
-        return union.getResult(tgtHllType);
+        return HllSketchHolder.of(union.getResult(tgtHllType));
       }
 
       @Override
-      public Class<HllSketch> classOfObject()
+      public Class<HllSketchHolder> classOfObject()
       {
-        return HllSketch.class;
+        return HllSketchHolder.class;
       }
     };
   }
 
-  /**
-   * actual type is {@link HllSketch}
-   */
   @Override
-  public ValueType getType()
+  public ColumnType getResultType()
   {
-    return ValueType.COMPLEX;
-  }
-
-  @Override
-  public ValueType getFinalizedType()
-  {
-    return round ? ValueType.LONG : ValueType.DOUBLE;
+    return round ? ColumnType.LONG : ColumnType.DOUBLE;
   }
 
   @Nullable
   @Override
   public Object finalizeComputation(@Nullable final Object object)
   {
-    if (object == null) {
-      return null;
+    if (!shouldFinalize || object == null) {
+      return object;
     }
-    final HllSketch sketch = (HllSketch) object;
+
+    final HllSketchHolder sketch = HllSketchHolder.fromObj(object);
     final double estimate = sketch.getEstimate();
 
     if (round) {
@@ -202,7 +215,7 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Comparator<HllSketch> getComparator()
+  public Comparator<HllSketchHolder> getComparator()
   {
     return COMPARATOR;
   }
@@ -210,7 +223,14 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new HllSketchMergeAggregatorFactory(getName(), getName(), getLgK(), getTgtHllType(), isRound());
+    return new HllSketchMergeAggregatorFactory(
+        getName(),
+        getName(),
+        getLgK(),
+        getTgtHllType(),
+        isShouldFinalize(),
+        isRound()
+    );
   }
 
   @Override
@@ -221,51 +241,41 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public boolean equals(final Object object)
+  public boolean equals(Object o)
   {
-    if (this == object) {
+    if (this == o) {
       return true;
     }
-    if (object == null || !getClass().equals(object.getClass())) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final HllSketchAggregatorFactory that = (HllSketchAggregatorFactory) object;
-    if (!name.equals(that.getName())) {
-      return false;
-    }
-    if (!fieldName.equals(that.getFieldName())) {
-      return false;
-    }
-    if (lgK != that.getLgK()) {
-      return false;
-    }
-    if (!tgtHllType.equals(that.tgtHllType)) {
-      return false;
-    }
-    if (round != that.round) {
-      return false;
-    }
-    return true;
+    HllSketchAggregatorFactory that = (HllSketchAggregatorFactory) o;
+    return lgK == that.lgK
+           && shouldFinalize == that.shouldFinalize
+           && round == that.round
+           && Objects.equals(name, that.name)
+           && Objects.equals(fieldName, that.fieldName)
+           && tgtHllType == that.tgtHllType;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName, lgK, tgtHllType);
+    return Objects.hash(name, fieldName, lgK, tgtHllType, shouldFinalize, round);
   }
 
   @Override
   public String toString()
   {
-    return getClass().getSimpleName() + " {"
-           + " name=" + name
-           + ", fieldName=" + fieldName
-           + ", lgK=" + lgK
-           + ", tgtHllType=" + tgtHllType
-           + ", round=" + round
-           + " }";
+    return getClass().getSimpleName() + "{" +
+           "name='" + name + '\'' +
+           ", fieldName='" + fieldName + '\'' +
+           ", lgK=" + lgK +
+           ", tgtHllType=" + tgtHllType +
+           (shouldFinalize != DEFAULT_SHOULD_FINALIZE ? ", shouldFinalize=" + shouldFinalize : "") +
+           (round != DEFAULT_ROUND ? ", round=" + round : "") +
+           '}';
   }
 
   protected abstract byte getCacheTypeId();
-
 }

@@ -31,6 +31,7 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.guice.TestClient;
+import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
@@ -60,6 +61,9 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
   SqlTestQueryHelper queryHelper;
 
   @Inject
+  DataLoaderHelper dataLoaderHelper;
+
+  @Inject
   @TestClient
   HttpClient httpClient;
 
@@ -80,7 +84,8 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
               ImmutableList.of()
           );
         }
-        catch (Exception ignored) {
+        catch (Exception e) {
+          LOG.error(e, "Failed to post load rules");
         }
       });
 
@@ -94,9 +99,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
       String taskJson = replaceJoinTemplate(getResourceAsString(BROADCAST_JOIN_TASK), BROADCAST_JOIN_DATASOURCE);
       indexer.submitTask(taskJson);
 
-      ITRetryUtil.retryUntilTrue(
-          () -> coordinatorClient.areSegmentsLoaded(BROADCAST_JOIN_DATASOURCE), "broadcast segment load"
-      );
+      dataLoaderHelper.waitUntilDatasourceIsReady(BROADCAST_JOIN_DATASOURCE);
 
       // query metadata until druid schema is refreshed and datasource is available joinable
       ITRetryUtil.retryUntilTrue(
@@ -125,6 +128,7 @@ public class ITBroadcastJoinQueryTest extends AbstractIndexerTest
           replaceJoinTemplate(getResourceAsString(BROADCAST_JOIN_QUERIES_RESOURCE), BROADCAST_JOIN_DATASOURCE)
       );
     }
+
     finally {
       closer.close();
 

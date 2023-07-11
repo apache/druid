@@ -91,10 +91,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   @Override
   public String getStorageDir(DataSegment dataSegment, boolean useUniquePath)
   {
-    String prefix = segmentConfig.getPrefix();
-    boolean prefixIsNullOrEmpty = org.apache.commons.lang.StringUtils.isEmpty(prefix);
     String seg = JOINER.join(
-        prefixIsNullOrEmpty ? null : StringUtils.maybeRemoveTrailingSlash(prefix),
         dataSegment.getDataSource(),
         StringUtils.format(
             "%s_%s",
@@ -107,7 +104,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
         useUniquePath ? DataSegmentPusher.generateUniquePath() : null
     );
 
-    log.info("DataSegment: [%s]", seg);
+    log.info("DataSegment Suffix: [%s]", seg);
 
     // Replace colons with underscores, since they are not supported through wasb:// prefix
     return seg;
@@ -124,6 +121,19 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
       throws IOException
   {
     log.info("Uploading [%s] to Azure.", indexFilesDir);
+    final String azurePathSuffix = getAzurePath(segment, useUniquePath);
+    return pushToPath(indexFilesDir, segment, azurePathSuffix);
+  }
+
+  @Override
+  public DataSegment pushToPath(File indexFilesDir, DataSegment segment, String storageDirSuffix) throws IOException
+  {
+    String prefix = segmentConfig.getPrefix();
+    boolean prefixIsNullOrEmpty = org.apache.commons.lang.StringUtils.isEmpty(prefix);
+    final String azurePath = JOINER.join(
+        prefixIsNullOrEmpty ? null : StringUtils.maybeRemoveTrailingSlash(prefix),
+        storageDirSuffix
+    );
 
     final int binaryVersion = SegmentUtils.getVersionFromDir(indexFilesDir);
     File zipOutFile = null;
@@ -131,8 +141,6 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     try {
       final File outFile = zipOutFile = File.createTempFile("index", ".zip");
       final long size = CompressionUtils.zip(indexFilesDir, zipOutFile);
-
-      final String azurePath = getAzurePath(segment, useUniquePath);
 
       return AzureUtils.retryAzureOperation(
           () -> uploadDataSegment(segment, binaryVersion, size, outFile, azurePath),

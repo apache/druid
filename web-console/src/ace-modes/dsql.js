@@ -27,13 +27,13 @@ var druidFunctions = require('../../lib/sql-docs');
 ace.define(
   'ace/mode/dsql_highlight_rules',
   ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text_highlight_rules'],
-  function(acequire, exports, module) {
+  function (acequire, exports, module) {
     'use strict';
 
     var oop = acequire('../lib/oop');
     var TextHighlightRules = acequire('./text_highlight_rules').TextHighlightRules;
 
-    var SqlHighlightRules = function() {
+    var SqlHighlightRules = function () {
       // Stuff like: 'with|select|from|where|and|or|group|by|order|limit|having|as|case|'
       var keywords = druidKeywords.SQL_KEYWORDS.concat(druidKeywords.SQL_EXPRESSION_PARTS)
         .join('|')
@@ -44,20 +44,16 @@ ace.define(
 
       // Stuff like: 'avg|count|first|last|max|min'
       var builtinFunctions = druidKeywords.SQL_DYNAMICS.concat(
-        druidFunctions.SQL_FUNCTIONS.map(function(f) {
-          return f.name;
-        }),
+        Object.keys(druidFunctions.SQL_FUNCTIONS),
       ).join('|');
 
       // Stuff like: 'int|numeric|decimal|date|varchar|char|bigint|float|double|bit|binary|text|set|timestamp'
-      var dataTypes = druidFunctions.SQL_DATA_TYPES.map(function(f) {
-        return f.name;
-      }).join('|');
+      var dataTypes = Object.keys(druidFunctions.SQL_DATA_TYPES).join('|');
 
       var keywordMapper = this.createKeywordMapper(
         {
           'support.function': builtinFunctions,
-          keyword: keywords,
+          'keyword': keywords,
           'constant.language': builtinConstants,
           'storage.type': dataTypes,
         },
@@ -68,6 +64,10 @@ ace.define(
       this.$rules = {
         start: [
           {
+            token: 'comment.issue',
+            regex: '--:ISSUE:.*$',
+          },
+          {
             token: 'comment',
             regex: '--.*$',
           },
@@ -77,16 +77,12 @@ ace.define(
             end: '\\*/',
           },
           {
-            token: 'string', // " string
+            token: 'variable.column', // " quoted reference
             regex: '".*?"',
           },
           {
-            token: 'string', // ' string
+            token: 'string', // ' string literal
             regex: "'.*?'",
-          },
-          {
-            token: 'string', // ` string (apache drill)
-            regex: '`.*?`',
           },
           {
             token: 'constant.numeric', // float
@@ -126,20 +122,20 @@ ace.define(
 ace.define(
   'ace/mode/dsql',
   ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text', 'ace/mode/dsql_highlight_rules'],
-  function(acequire, exports, module) {
+  function (acequire, exports, module) {
     'use strict';
 
     var oop = acequire('../lib/oop');
     var TextMode = acequire('./text').Mode;
     var SqlHighlightRules = acequire('./dsql_highlight_rules').SqlHighlightRules;
 
-    var Mode = function() {
+    var Mode = function () {
       this.HighlightRules = SqlHighlightRules;
       this.$behaviour = this.$defaultBehaviour;
     };
     oop.inherits(Mode, TextMode);
 
-    (function() {
+    (function () {
       this.lineCommentStart = '--';
 
       this.$id = 'ace/mode/dsql';

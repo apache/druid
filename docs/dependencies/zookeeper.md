@@ -43,7 +43,7 @@ The operations that happen over ZK are
 
 ## Coordinator Leader Election
 
-We use the Curator LeadershipLatch recipe to do leader election at path
+We use the Curator [LeaderLatch](https://curator.apache.org/curator-recipes/leader-latch.html) recipe to perform leader election at path
 
 ```
 ${druid.zk.paths.coordinatorPath}/_COORDINATOR

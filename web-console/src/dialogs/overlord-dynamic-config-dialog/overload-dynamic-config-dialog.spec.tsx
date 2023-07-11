@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
 import React from 'react';
+
+import { shallow } from '../../utils/shallow-renderer';
 
 import { OverlordDynamicConfigDialog } from './overlord-dynamic-config-dialog';
 
-describe('overload dynamic config', () => {
+describe('OverlordDynamicConfigDialog', () => {
   it('matches snapshot', () => {
     const lookupEditDialog = shallow(<OverlordDynamicConfigDialog onClose={() => {}} />);
 

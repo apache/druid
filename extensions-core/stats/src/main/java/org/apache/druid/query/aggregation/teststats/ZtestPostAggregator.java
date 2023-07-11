@@ -30,7 +30,8 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -123,9 +124,9 @@ public class ZtestPostAggregator implements PostAggregator
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
-    return ValueType.DOUBLE;
+    return ColumnType.DOUBLE;
   }
 
   @Override

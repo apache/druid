@@ -111,7 +111,7 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
   public boolean canVectorize(ColumnInspector columnInspector)
   {
     ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
-    return (capabilities != null) && (capabilities.getType() == ValueType.COMPLEX);
+    return capabilities != null && capabilities.is(ValueType.COMPLEX);
   }
 
   @Override
@@ -140,6 +140,20 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
         .appendBoolean(finalizeAsBase64Binary);
 
     return builder.build();
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new ApproximateHistogramFoldingAggregatorFactory(
+        newName,
+        getFieldName(),
+        getResolution(),
+        getNumBuckets(),
+        getLowerLimit(),
+        getUpperLimit(),
+        finalizeAsBase64Binary
+    );
   }
 
   @Override

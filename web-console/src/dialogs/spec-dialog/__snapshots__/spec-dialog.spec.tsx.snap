@@ -1,50 +1,56 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`spec dialog matches snapshot no initSpec 1`] = `
+exports[`SpecDialog matches snapshot no initSpec 1`] = `
 <div
-  class="bp3-portal"
+  class="bp4-portal"
 >
   <div
-    class="bp3-overlay bp3-overlay-open bp3-overlay-scroll-container"
+    aria-live="polite"
+    class="bp4-overlay bp4-overlay-open bp4-overlay-scroll-container"
   >
     <div
-      class="bp3-overlay-backdrop bp3-overlay-appear bp3-overlay-appear-active"
+      class="bp4-overlay-start-focus-trap bp4-overlay-appear bp4-overlay-appear-active"
+      tabindex="0"
     />
     <div
-      class="bp3-dialog-container bp3-overlay-content bp3-overlay-appear bp3-overlay-appear-active"
-      tabindex="0"
+      class="bp4-overlay-backdrop bp4-overlay-appear bp4-overlay-appear-active"
+    />
+    <div
+      class="bp4-dialog-container bp4-overlay-content bp4-overlay-appear bp4-overlay-appear-active"
     >
       <div
-        class="bp3-dialog spec-dialog"
+        aria-labelledby="title-bp-dialog-0"
+        class="bp4-dialog spec-dialog"
+        role="dialog"
       >
         <div
-          class="bp3-dialog-header"
+          class="bp4-dialog-header"
         >
-          <h4
-            class="bp3-heading"
+          <h6
+            class="bp4-heading"
+            id="title-bp-dialog-0"
           >
             test
-          </h4>
+          </h6>
           <button
             aria-label="Close"
-            class="bp3-button bp3-minimal bp3-dialog-close-button"
+            class="bp4-button bp4-minimal bp4-dialog-close-button"
             type="button"
           >
             <span
-              class="bp3-icon bp3-icon-small-cross"
-              icon="small-cross"
+              aria-hidden="true"
+              class="bp4-icon bp4-icon-cross"
+              icon="cross"
             >
               <svg
-                data-icon="small-cross"
-                height="20"
-                viewBox="0 0 20 20"
-                width="20"
+                data-icon="cross"
+                height="16"
+                role="img"
+                viewBox="0 0 16 16"
+                width="16"
               >
-                <desc>
-                  small-cross
-                </desc>
                 <path
-                  d="M11.41 10l3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 00-1.71-.71L10 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42L8.59 10 5.3 13.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71l3.29-3.3 3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71L11.41 10z"
+                  d="M9.41 8l3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 00-1.71-.71L8 6.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42L6.59 8 3.3 11.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71L8 9.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71L9.41 8z"
                   fill-rule="evenodd"
                 />
               </svg>
@@ -52,16 +58,16 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
           </button>
         </div>
         <div
-          class=" ace_editor ace-tm spec-dialog-textarea"
-          id="brace-editor"
-          style="width: 100%; height: 500px;"
+          class=" ace_editor ace_hidpi ace-tm spec-dialog-textarea placeholder-padding"
+          id="ace-editor"
+          style="width: 100%; height: 500px; font-size: 12px;"
         >
           <textarea
             autocapitalize="off"
             autocorrect="off"
             class="ace_text-input"
             spellcheck="false"
-            style="opacity: 0;"
+            style="opacity: 0; font-size: 1px;"
             wrap="off"
           />
           <div
@@ -70,13 +76,12 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
           >
             <div
               class="ace_layer ace_gutter-layer ace_folding-enabled"
-            />
-            <div
-              class="ace_gutter-active-line"
+              style="height: 1000000px;"
             />
           </div>
           <div
             class="ace_scroller"
+            style="line-height: 0px;"
           >
             <div
               class="ace_content"
@@ -86,7 +91,7 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
               >
                 <div
                   class="ace_print-margin"
-                  style="left: 4px; visibility: hidden;"
+                  style="left: 10px; visibility: hidden;"
                 />
               </div>
               <div
@@ -94,7 +99,7 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
               />
               <div
                 class="ace_layer ace_text-layer"
-                style="padding: 0px 4px;"
+                style="height: 1000000px; margin: 0px 10px;"
               />
               <div
                 class="ace_layer ace_marker-layer"
@@ -121,7 +126,9 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
             <div
               class="ace_scrollbar-inner"
               style="width: 20px;"
-            />
+            >
+               
+            </div>
           </div>
           <div
             class="ace_scrollbar ace_scrollbar-h"
@@ -130,7 +137,9 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
             <div
               class="ace_scrollbar-inner"
               style="height: 20px;"
-            />
+            >
+               
+            </div>
           </div>
           <div
             style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: hidden;"
@@ -141,34 +150,34 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
             <div
               style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
             >
-              XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+              XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
             </div>
           </div>
         </div>
         <div
-          class="bp3-dialog-footer"
+          class="bp4-dialog-footer"
         >
           <div
-            class="bp3-dialog-footer-actions"
+            class="bp4-dialog-footer-actions"
           >
             <button
-              class="bp3-button"
+              class="bp4-button"
               type="button"
             >
               <span
-                class="bp3-button-text"
+                class="bp4-button-text"
               >
                 Close
               </span>
             </button>
             <button
-              class="bp3-button bp3-disabled bp3-intent-primary"
+              class="bp4-button bp4-disabled bp4-intent-primary"
               disabled=""
               tabindex="-1"
               type="button"
             >
               <span
-                class="bp3-button-text"
+                class="bp4-button-text"
               >
                 Submit
               </span>
@@ -177,55 +186,65 @@ exports[`spec dialog matches snapshot no initSpec 1`] = `
         </div>
       </div>
     </div>
+    <div
+      class="bp4-overlay-end-focus-trap bp4-overlay-appear bp4-overlay-appear-active"
+      tabindex="0"
+    />
   </div>
 </div>
 `;
 
-exports[`spec dialog matches snapshot with initSpec 1`] = `
+exports[`SpecDialog matches snapshot with initSpec 1`] = `
 <div
-  class="bp3-portal"
+  class="bp4-portal"
 >
   <div
-    class="bp3-overlay bp3-overlay-open bp3-overlay-scroll-container"
+    aria-live="polite"
+    class="bp4-overlay bp4-overlay-open bp4-overlay-scroll-container"
   >
     <div
-      class="bp3-overlay-backdrop bp3-overlay-appear bp3-overlay-appear-active"
+      class="bp4-overlay-start-focus-trap bp4-overlay-appear bp4-overlay-appear-active"
+      tabindex="0"
     />
     <div
-      class="bp3-dialog-container bp3-overlay-content bp3-overlay-appear bp3-overlay-appear-active"
-      tabindex="0"
+      class="bp4-overlay-backdrop bp4-overlay-appear bp4-overlay-appear-active"
+    />
+    <div
+      class="bp4-dialog-container bp4-overlay-content bp4-overlay-appear bp4-overlay-appear-active"
     >
       <div
-        class="bp3-dialog spec-dialog"
+        aria-labelledby="title-bp-dialog-1"
+        class="bp4-dialog spec-dialog"
+        role="dialog"
       >
         <div
-          class="bp3-dialog-header"
+          class="bp4-dialog-header"
         >
-          <h4
-            class="bp3-heading"
+          <h6
+            class="bp4-heading"
+            id="title-bp-dialog-1"
           >
             test
-          </h4>
+          </h6>
           <button
             aria-label="Close"
-            class="bp3-button bp3-minimal bp3-dialog-close-button"
+            class="bp4-button bp4-minimal bp4-dialog-close-button"
             type="button"
           >
             <span
-              class="bp3-icon bp3-icon-small-cross"
-              icon="small-cross"
+              aria-hidden="true"
+              class="bp4-icon bp4-icon-cross"
+              icon="cross"
             >
               <svg
-                data-icon="small-cross"
-                height="20"
-                viewBox="0 0 20 20"
-                width="20"
+                data-icon="cross"
+                height="16"
+                role="img"
+                viewBox="0 0 16 16"
+                width="16"
               >
-                <desc>
-                  small-cross
-                </desc>
                 <path
-                  d="M11.41 10l3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 00-1.71-.71L10 8.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42L8.59 10 5.3 13.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71l3.29-3.3 3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71L11.41 10z"
+                  d="M9.41 8l3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 00-1.71-.71L8 6.59l-3.29-3.3a1.003 1.003 0 00-1.42 1.42L6.59 8 3.3 11.29c-.19.18-.3.43-.3.71a1.003 1.003 0 001.71.71L8 9.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 00.71-1.71L9.41 8z"
                   fill-rule="evenodd"
                 />
               </svg>
@@ -233,16 +252,16 @@ exports[`spec dialog matches snapshot with initSpec 1`] = `
           </button>
         </div>
         <div
-          class=" ace_editor ace-tm spec-dialog-textarea"
-          id="brace-editor"
-          style="width: 100%; height: 500px;"
+          class=" ace_editor ace_hidpi ace-tm spec-dialog-textarea placeholder-padding"
+          id="ace-editor"
+          style="width: 100%; height: 500px; font-size: 12px;"
         >
           <textarea
             autocapitalize="off"
             autocorrect="off"
             class="ace_text-input"
             spellcheck="false"
-            style="opacity: 0;"
+            style="opacity: 0; font-size: 1px;"
             wrap="off"
           />
           <div
@@ -251,13 +270,12 @@ exports[`spec dialog matches snapshot with initSpec 1`] = `
           >
             <div
               class="ace_layer ace_gutter-layer ace_folding-enabled"
-            />
-            <div
-              class="ace_gutter-active-line"
+              style="height: 1000000px;"
             />
           </div>
           <div
             class="ace_scroller"
+            style="line-height: 0px;"
           >
             <div
               class="ace_content"
@@ -267,7 +285,7 @@ exports[`spec dialog matches snapshot with initSpec 1`] = `
               >
                 <div
                   class="ace_print-margin"
-                  style="left: 4px; visibility: hidden;"
+                  style="left: 10px; visibility: hidden;"
                 />
               </div>
               <div
@@ -275,7 +293,7 @@ exports[`spec dialog matches snapshot with initSpec 1`] = `
               />
               <div
                 class="ace_layer ace_text-layer"
-                style="padding: 0px 4px;"
+                style="height: 1000000px; margin: 0px 10px;"
               />
               <div
                 class="ace_layer ace_marker-layer"
@@ -296,7 +314,9 @@ exports[`spec dialog matches snapshot with initSpec 1`] = `
             <div
               class="ace_scrollbar-inner"
               style="width: 20px;"
-            />
+            >
+               
+            </div>
           </div>
           <div
             class="ace_scrollbar ace_scrollbar-h"
@@ -305,7 +325,9 @@ exports[`spec dialog matches snapshot with initSpec 1`] = `
             <div
               class="ace_scrollbar-inner"
               style="height: 20px;"
-            />
+            >
+               
+            </div>
           </div>
           <div
             style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: hidden;"
@@ -316,32 +338,32 @@ exports[`spec dialog matches snapshot with initSpec 1`] = `
             <div
               style="height: auto; width: auto; top: 0px; left: 0px; visibility: hidden; position: absolute; white-space: pre; overflow: visible;"
             >
-              XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+              XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
             </div>
           </div>
         </div>
         <div
-          class="bp3-dialog-footer"
+          class="bp4-dialog-footer"
         >
           <div
-            class="bp3-dialog-footer-actions"
+            class="bp4-dialog-footer-actions"
           >
             <button
-              class="bp3-button"
+              class="bp4-button"
               type="button"
             >
               <span
-                class="bp3-button-text"
+                class="bp4-button-text"
               >
                 Close
               </span>
             </button>
             <button
-              class="bp3-button bp3-intent-primary"
+              class="bp4-button bp4-intent-primary"
               type="button"
             >
               <span
-                class="bp3-button-text"
+                class="bp4-button-text"
               >
                 Submit
               </span>
@@ -350,6 +372,10 @@ exports[`spec dialog matches snapshot with initSpec 1`] = `
         </div>
       </div>
     </div>
+    <div
+      class="bp4-overlay-end-focus-trap bp4-overlay-appear bp4-overlay-appear-active"
+      tabindex="0"
+    />
   </div>
 </div>
 `;

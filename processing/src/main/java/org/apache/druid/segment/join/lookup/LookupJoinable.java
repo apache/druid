@@ -28,7 +28,7 @@ import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinMatcher;
 import org.apache.druid.segment.join.Joinable;
@@ -77,7 +77,7 @@ public class LookupJoinable implements Joinable
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     if (ALL_COLUMNS.contains(columnName)) {
-      return new ColumnCapabilitiesImpl().setType(ValueType.STRING);
+      return new ColumnCapabilitiesImpl().setType(ColumnType.STRING);
     } else {
       return null;
     }
@@ -96,7 +96,7 @@ public class LookupJoinable implements Joinable
   }
 
   @Override
-  public Optional<Set<String>> getNonNullColumnValuesIfAllUnique(String columnName, int maxNumValues)
+  public ColumnValuesWithUniqueFlag getNonNullColumnValues(String columnName, int maxNumValues)
   {
     if (LookupColumnSelectorFactory.KEY_COLUMN.equals(columnName) && extractor.canGetKeySet()) {
       final Set<String> keys = extractor.keySet();
@@ -117,14 +117,14 @@ public class LookupJoinable implements Joinable
       }
 
       if (nonNullKeys > maxNumValues) {
-        return Optional.empty();
+        return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
       } else if (nonNullKeys == keys.size()) {
-        return Optional.of(keys);
+        return new ColumnValuesWithUniqueFlag(keys, true);
       } else {
-        return Optional.of(Sets.difference(keys, nullEquivalentValues));
+        return new ColumnValuesWithUniqueFlag(Sets.difference(keys, nullEquivalentValues), true);
       }
     } else {
-      return Optional.empty();
+      return new ColumnValuesWithUniqueFlag(ImmutableSet.of(), false);
     }
   }
 

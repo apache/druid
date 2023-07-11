@@ -72,7 +72,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -181,7 +180,8 @@ public class BatchServerInventoryViewTest
         },
         cf,
         jsonMapper,
-        Predicates.alwaysTrue()
+        Predicates.alwaysTrue(),
+        "test"
     );
 
     batchServerInventoryView.start();
@@ -204,7 +204,8 @@ public class BatchServerInventoryViewTest
           {
             return input.rhs.getInterval().getStart().isBefore(SEGMENT_INTERVAL_START.plusDays(INITIAL_SEGMENTS));
           }
-        }
+        },
+        "test"
     )
     {
       @Override
@@ -424,7 +425,7 @@ public class BatchServerInventoryViewTest
   public void testSameTimeZnode() throws Exception
   {
     final int numThreads = INITIAL_SEGMENTS / 10;
-    final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(numThreads));
+    final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(numThreads, "BatchServerInventoryViewTest-%d"));
 
     segmentAnnouncer.announceSegments(testSegments);
 

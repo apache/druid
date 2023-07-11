@@ -33,7 +33,7 @@ import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -114,10 +114,10 @@ public class LookupDimensionSpec implements DimensionSpec
   }
 
   @Override
-  public ValueType getOutputType()
+  public ColumnType getOutputType()
   {
     // Extraction functions always output String
-    return ValueType.STRING;
+    return ColumnType.STRING;
   }
 
   @JsonProperty

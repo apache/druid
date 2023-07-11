@@ -22,6 +22,7 @@ package org.apache.druid.storage.s3;
 import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
@@ -74,7 +75,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
 
       EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
 
-      segmentKiller = new S3DataSegmentKiller(s3Client, segmentPusherConfig, inputDataConfig);
+      segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
       segmentKiller.killAll();
     }
     catch (ISE e) {
@@ -123,7 +124,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
 
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
 
-    segmentKiller = new S3DataSegmentKiller(s3Client, segmentPusherConfig, inputDataConfig);
+    segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
     segmentKiller.killAll();
     EasyMock.verify(s3Client, segmentPusherConfig, inputDataConfig);
   }
@@ -161,7 +162,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
 
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
 
-    segmentKiller = new S3DataSegmentKiller(s3Client, segmentPusherConfig, inputDataConfig);
+    segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
     segmentKiller.killAll();
     EasyMock.verify(s3Client, segmentPusherConfig, inputDataConfig);
   }
@@ -202,7 +203,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
 
       EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
 
-      segmentKiller = new S3DataSegmentKiller(s3Client, segmentPusherConfig, inputDataConfig);
+      segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
       segmentKiller.killAll();
     }
     catch (IOException e) {

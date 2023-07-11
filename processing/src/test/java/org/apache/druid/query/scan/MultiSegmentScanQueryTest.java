@@ -211,7 +211,6 @@ public class MultiSegmentScanQueryTest extends NullHandlingTest
         .toList();
     int totalCount = 0;
     for (ScanResultValue result : results) {
-      System.out.println(((List) result.getEvents()).size());
       totalCount += ((List) result.getEvents()).size();
     }
     Assert.assertEquals(

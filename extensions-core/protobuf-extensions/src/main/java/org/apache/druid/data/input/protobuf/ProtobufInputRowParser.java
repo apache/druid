@@ -107,7 +107,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
         timestamp = this.timestampSpec.extractTimestamp(record);
       }
       catch (Exception ex) {
-        throw new ParseException(ex, "Protobuf message could not be parsed");
+        throw new ParseException(null, ex, "Protobuf message could not be parsed");
       }
     } else {
       try {
@@ -117,7 +117,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
         timestamp = this.timestampSpec.extractTimestamp(record);
       }
       catch (InvalidProtocolBufferException e) {
-        throw new ParseException(e, "Protobuf message could not be parsed");
+        throw new ParseException(null, e, "Protobuf message could not be parsed");
       }
     }
 

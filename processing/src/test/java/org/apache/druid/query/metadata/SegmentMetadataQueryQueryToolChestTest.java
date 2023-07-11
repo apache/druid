@@ -37,6 +37,7 @@ import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.timeline.LogicalSegment;
 import org.joda.time.Interval;
@@ -45,6 +46,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -69,26 +71,30 @@ public class SegmentMetadataQueryQueryToolChestTest
         new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()).getCacheStrategy(query);
 
     // Test cache key generation
-    byte[] expectedKey = {0x04, 0x01, (byte) 0xFF, 0x00, 0x02, 0x04};
+    byte[] expectedKey = {0x04, 0x09, 0x01, 0x0A, 0x00, 0x00, 0x00, 0x03, 0x00, 0x02, 0x04};
     byte[] actualKey = strategy.computeCacheKey(query);
     Assert.assertArrayEquals(expectedKey, actualKey);
 
     SegmentAnalysis result = new SegmentAnalysis(
         "testSegment",
         ImmutableList.of(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
-        ImmutableMap.of(
-            "placement",
-            new ColumnAnalysis(
-                ValueType.STRING.toString(),
-                true,
-                false,
-                10881,
-                1,
-                "preferred",
-                "preferred",
-                null
+        new LinkedHashMap<>(
+            ImmutableMap.of(
+                "placement",
+                new ColumnAnalysis(
+                    ColumnType.STRING,
+                    ValueType.STRING.name(),
+                    true,
+                    false,
+                    10881,
+                    1,
+                    "preferred",
+                    "preferred",
+                    null
+                )
             )
-        ), 71982,
+        ),
+        71982,
         100,
         null,
         null,
@@ -115,7 +121,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         ImmutableMap.of(
@@ -129,7 +135,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         ImmutableMap.of(
@@ -165,7 +171,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -176,7 +182,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         ImmutableMap.of(
@@ -204,7 +210,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -215,7 +221,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -234,7 +240,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         ImmutableMap.of(
@@ -248,7 +254,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         ImmutableMap.of(
@@ -329,7 +335,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -340,7 +346,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -351,7 +357,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis3 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -362,7 +368,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis4 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -373,7 +379,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis5 = new SegmentAnalysis(
         "id",
         null,
-        new HashMap<>(),
+        new LinkedHashMap<>(),
         0,
         0,
         null,
@@ -393,6 +399,7 @@ public class SegmentMetadataQueryQueryToolChestTest
   {
     return SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
         SegmentMetadataQueryQueryToolChest.mergeAnalyses(
+            null,
             analysis1,
             analysis2,
             false
@@ -404,6 +411,7 @@ public class SegmentMetadataQueryQueryToolChestTest
   {
     return SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
         SegmentMetadataQueryQueryToolChest.mergeAnalyses(
+            null,
             analysis1,
             analysis2,
             true

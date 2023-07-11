@@ -23,7 +23,6 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
 
 public class CardinalityAggregatorColumnSelectorStrategyFactory
     implements ColumnSelectorStrategyFactory<CardinalityAggregatorColumnSelectorStrategy>
@@ -34,8 +33,7 @@ public class CardinalityAggregatorColumnSelectorStrategyFactory
       ColumnValueSelector selector
   )
   {
-    ValueType type = capabilities.getType();
-    switch (type) {
+    switch (capabilities.getType()) {
       case STRING:
         return new StringCardinalityAggregatorColumnSelectorStrategy();
       case LONG:
@@ -45,7 +43,7 @@ public class CardinalityAggregatorColumnSelectorStrategyFactory
       case DOUBLE:
         return new DoubleCardinalityAggregatorColumnSelectorStrategy();
       default:
-        throw new IAE("Cannot create query type helper from invalid type [%s]", type);
+        throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
     }
   }
 }

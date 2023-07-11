@@ -30,10 +30,11 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.initialization.jetty.StandardResponseHeaderFilterHolder;
 import org.apache.druid.server.security.AuthConfig;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.client.api.Response;
 import org.eclipse.jetty.proxy.AsyncProxyServlet;
 
 import javax.servlet.ServletException;
@@ -44,8 +45,6 @@ import java.util.concurrent.TimeUnit;
 
 public class AsyncManagementForwardingServlet extends AsyncProxyServlet
 {
-  private static final EmittingLogger log = new EmittingLogger(AsyncManagementForwardingServlet.class);
-
   private static final String BASE_URI_ATTRIBUTE = "org.apache.druid.proxy.to.base.uri";
   private static final String MODIFIED_PATH_ATTRIBUTE = "org.apache.druid.proxy.to.path";
 
@@ -167,6 +166,17 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
     HttpClient client = super.createHttpClient();
     setTimeout(httpClientConfig.getReadTimeout().getMillis()); // override timeout set in ProxyServlet.createHttpClient
     return client;
+  }
+
+  @Override
+  protected void onServerResponseHeaders(
+      HttpServletRequest clientRequest,
+      HttpServletResponse proxyResponse,
+      Response serverResponse
+  )
+  {
+    StandardResponseHeaderFilterHolder.deduplicateHeadersInProxyServlet(proxyResponse, serverResponse);
+    super.onServerResponseHeaders(clientRequest, proxyResponse, serverResponse);
   }
 
   private void handleBadRequest(HttpServletResponse response, String errorMessage) throws IOException

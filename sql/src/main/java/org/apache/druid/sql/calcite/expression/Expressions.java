@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexLiteral;
@@ -50,8 +51,8 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
@@ -65,6 +66,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A collection of functions for translating from Calcite expressions into Druid objects.
@@ -77,7 +79,11 @@ public class Expressions
   }
 
   /**
-   * Translate a field access, possibly through a projection, to an underlying Druid dataSource.
+   * Old method used to translate a field access, possibly through a projection, to an underlying Druid dataSource.
+   *
+   * This exists to provide API compatibility to extensions, but is deprecated because there is a 4 argument version
+   * that should be used instead.  Call sites should have access to a RexBuilder instance that they can get the
+   * typeFactory from.
    *
    * @param rowSignature row signature of underlying Druid dataSource
    * @param project      projection, or null
@@ -85,17 +91,38 @@ public class Expressions
    *
    * @return row expression
    */
+  @Deprecated
   public static RexNode fromFieldAccess(
       final RowSignature rowSignature,
       @Nullable final Project project,
       final int fieldNumber
   )
   {
+    //noinspection VariableNotUsedInsideIf
+    return fromFieldAccess(project == null ? new JavaTypeFactoryImpl() : null, rowSignature, project, fieldNumber);
+  }
+
+  /**
+   * Translate a field access, possibly through a projection, to an underlying Druid dataSource.
+   *
+   * @param typeFactory  factory for creating SQL types
+   * @param rowSignature row signature of underlying Druid dataSource
+   * @param project      projection, or null
+   * @param fieldNumber  number of the field to access
+   *
+   * @return row expression
+   */
+  public static RexNode fromFieldAccess(
+      final RelDataTypeFactory typeFactory,
+      final RowSignature rowSignature,
+      @Nullable final Project project,
+      final int fieldNumber
+  )
+  {
     if (project == null) {
-      // I don't think the factory impl matters here.
-      return RexInputRef.of(fieldNumber, RowSignatures.toRelDataType(rowSignature, new JavaTypeFactoryImpl()));
+      return RexInputRef.of(fieldNumber, RowSignatures.toRelDataType(rowSignature, typeFactory));
     } else {
-      return project.getChildExps().get(fieldNumber);
+      return project.getProjects().get(fieldNumber);
     }
   }
 
@@ -222,11 +249,12 @@ public class Expressions
     // Translate field references.
     final RexInputRef ref = (RexInputRef) rexNode;
     final String columnName = rowSignature.getColumnName(ref.getIndex());
+    final Optional<ColumnType> columnType = rowSignature.getColumnType(ref.getIndex());
     if (columnName == null) {
       throw new ISE("Expression referred to nonexistent index[%d]", ref.getIndex());
     }
 
-    return DruidExpression.fromColumn(columnName);
+    return DruidExpression.ofColumn(columnType.orElse(null), columnName);
   }
 
   private static DruidExpression rexCallToDruidExpression(
@@ -238,10 +266,11 @@ public class Expressions
   {
     final SqlOperator operator = ((RexCall) rexNode).getOperator();
 
-    final SqlOperatorConversion conversion = plannerContext.getOperatorTable()
+    final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox().operatorTable()
                                                            .lookupOperatorConversion(operator);
 
     if (conversion == null) {
+      plannerContext.setPlanningError("SQL query requires '%s' operator that is not supported.", operator.getName());
       return null;
     } else {
 
@@ -257,7 +286,7 @@ public class Expressions
         if (postAggregator != null) {
           postAggregatorVisitor.addPostAgg(postAggregator);
           String exprName = postAggregator.getName();
-          return DruidExpression.of(SimpleExtraction.of(exprName, null), exprName);
+          return DruidExpression.ofColumn(postAggregator.getType(rowSignature), exprName);
         }
       }
 
@@ -271,7 +300,8 @@ public class Expressions
     }
   }
 
-  private static DruidExpression literalToDruidExpression(
+  @Nullable
+  static DruidExpression literalToDruidExpression(
       final PlannerContext plannerContext,
       final RexNode rexNode
   )
@@ -279,32 +309,48 @@ public class Expressions
     final SqlTypeName sqlTypeName = rexNode.getType().getSqlTypeName();
 
     // Translate literal.
+    final ColumnType columnType = Calcites.getColumnTypeForRelDataType(rexNode.getType());
     if (RexLiteral.isNullLiteral(rexNode)) {
-      return DruidExpression.fromExpression(DruidExpression.nullLiteral());
+      return DruidExpression.ofLiteral(columnType, DruidExpression.nullLiteral());
+    } else if (SqlTypeName.INT_TYPES.contains(sqlTypeName)) {
+      final Number number = (Number) RexLiteral.value(rexNode);
+      return DruidExpression.ofLiteral(
+          columnType,
+          number == null ? DruidExpression.nullLiteral() : DruidExpression.longLiteral(number.longValue())
+      );
     } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral((Number) RexLiteral.value(rexNode)));
+      // Numeric, non-INT, means we represent it as a double.
+      final Number number = (Number) RexLiteral.value(rexNode);
+      return DruidExpression.ofLiteral(
+          columnType,
+          number == null ? DruidExpression.nullLiteral() : DruidExpression.doubleLiteral(number.doubleValue())
+      );
     } else if (SqlTypeFamily.INTERVAL_DAY_TIME == sqlTypeName.getFamily()) {
       // Calcite represents DAY-TIME intervals in milliseconds.
       final long milliseconds = ((Number) RexLiteral.value(rexNode)).longValue();
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral(milliseconds));
+      return DruidExpression.ofLiteral(columnType, DruidExpression.longLiteral(milliseconds));
     } else if (SqlTypeFamily.INTERVAL_YEAR_MONTH == sqlTypeName.getFamily()) {
       // Calcite represents YEAR-MONTH intervals in months.
       final long months = ((Number) RexLiteral.value(rexNode)).longValue();
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral(months));
+      return DruidExpression.ofLiteral(columnType, DruidExpression.longLiteral(months));
     } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
-      return DruidExpression.fromExpression(DruidExpression.stringLiteral(RexLiteral.stringValue(rexNode)));
+      return DruidExpression.ofStringLiteral(RexLiteral.stringValue(rexNode));
     } else if (SqlTypeName.TIMESTAMP == sqlTypeName || SqlTypeName.DATE == sqlTypeName) {
       if (RexLiteral.isNullLiteral(rexNode)) {
-        return DruidExpression.fromExpression(DruidExpression.nullLiteral());
+        return DruidExpression.ofLiteral(columnType, DruidExpression.nullLiteral());
       } else {
-        return DruidExpression.fromExpression(
-            DruidExpression.numberLiteral(
+        return DruidExpression.ofLiteral(
+            columnType,
+            DruidExpression.longLiteral(
                 Calcites.calciteDateTimeLiteralToJoda(rexNode, plannerContext.getTimeZone()).getMillis()
             )
         );
       }
     } else if (SqlTypeName.BOOLEAN == sqlTypeName) {
-      return DruidExpression.fromExpression(DruidExpression.numberLiteral(RexLiteral.booleanValue(rexNode) ? 1 : 0));
+      return DruidExpression.ofLiteral(
+          columnType,
+          DruidExpression.longLiteral(RexLiteral.booleanValue(rexNode) ? 1 : 0)
+      );
     } else {
       // Can't translate other literals.
       return null;
@@ -469,14 +515,13 @@ public class Expressions
             druidExpression.getSimpleExtraction().getExtractionFn()
         );
       } else if (virtualColumnRegistry != null) {
-        final VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            plannerContext,
+        final String virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             druidExpression,
             operand.getType()
         );
 
         equalFilter = new SelectorDimFilter(
-            virtualColumn.getOutputName(),
+            virtualColumn,
             NullHandling.defaultStringValue(),
             null
         );
@@ -558,13 +603,10 @@ public class Expressions
         column = lhsExpression.getSimpleExtraction().getColumn();
         extractionFn = lhsExpression.getSimpleExtraction().getExtractionFn();
       } else if (virtualColumnRegistry != null) {
-        VirtualColumn virtualLhs = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            plannerContext,
+        column = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             lhsExpression,
             lhs.getType()
         );
-
-        column = virtualLhs.getOutputName();
         extractionFn = null;
       } else {
         return null;
@@ -640,7 +682,7 @@ public class Expressions
       return filter;
     } else if (rexNode instanceof RexCall) {
       final SqlOperator operator = ((RexCall) rexNode).getOperator();
-      final SqlOperatorConversion conversion = plannerContext.getOperatorTable().lookupOperatorConversion(operator);
+      final SqlOperatorConversion conversion = plannerContext.getPlannerToolbox().operatorTable().lookupOperatorConversion(operator);
 
       if (conversion == null) {
         return null;

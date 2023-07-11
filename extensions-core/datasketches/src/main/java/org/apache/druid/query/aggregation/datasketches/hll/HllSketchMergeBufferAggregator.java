@@ -36,11 +36,11 @@ import java.nio.ByteOrder;
  */
 public class HllSketchMergeBufferAggregator implements BufferAggregator
 {
-  private final ColumnValueSelector<HllSketch> selector;
+  private final ColumnValueSelector<HllSketchHolder> selector;
   private final HllSketchMergeBufferAggregatorHelper helper;
 
   public HllSketchMergeBufferAggregator(
-      final ColumnValueSelector<HllSketch> selector,
+      final ColumnValueSelector<HllSketchHolder> selector,
       final int lgK,
       final TgtHllType tgtHllType,
       final int size
@@ -59,22 +59,22 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(final ByteBuffer buf, final int position)
   {
-    final HllSketch sketch = selector.getObject();
+    final HllSketchHolder sketch = selector.getObject();
     if (sketch == null) {
       return;
     }
 
-    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN)
+    final WritableMemory mem = WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN)
                                              .writableRegion(position, helper.getSize());
 
     final Union union = Union.writableWrap(mem);
-    union.update(sketch);
+    union.update(sketch.getSketch());
   }
 
   @Override
   public Object get(final ByteBuffer buf, final int position)
   {
-    return helper.get(buf, position);
+    return HllSketchHolder.of(helper.get(buf, position));
   }
 
   @Override

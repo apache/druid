@@ -34,8 +34,8 @@ import java.util.stream.IntStream;
  * "greater" than the previous, in terms of {@link TimeAndDimsPointer#compareTo}). Equivalent points from different
  * input iterators are _not_ deduplicated.
  *
- * Conceptually MergingRowIterator is an equivalent to {@link com.google.common.collect.Iterators#mergeSorted}, but for
- * {@link RowIterator}s rather than simple {@link java.util.Iterator}s.
+ * Conceptually MergingRowIterator is an equivalent to {@link org.apache.druid.java.util.common.guava.MergeIterator},
+ * but for {@link RowIterator}s rather than simple {@link java.util.Iterator}s.
  *
  * Implementation detail: this class uses binary heap priority queue algorithm to sort pointers, but it also memoizes
  * and keeps some extra info along the heap slots (see javadoc of {@link #equalToChild} field), that is essential for

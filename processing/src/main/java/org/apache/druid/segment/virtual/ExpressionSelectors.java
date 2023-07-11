@@ -24,11 +24,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionProcessing;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
@@ -37,8 +40,10 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantExprEvalSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
+import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 
@@ -104,7 +109,66 @@ public class ExpressionSelectors
       {
         // No need for null check on getObject() since baseSelector impls will never return null.
         ExprEval eval = baseSelector.getObject();
-        return coerceEvalToSelectorObject(eval);
+        return eval.valueOrDefault();
+      }
+
+      @Override
+      public Class classOfObject()
+      {
+        return Object.class;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("baseSelector", baseSelector);
+      }
+    };
+  }
+
+  public static ColumnValueSelector makeStringColumnValueSelector(
+      ColumnSelectorFactory columnSelectorFactory,
+      Expr expression
+  )
+  {
+    final ColumnValueSelector<ExprEval> baseSelector = makeExprEvalSelector(columnSelectorFactory, expression);
+
+    return new ColumnValueSelector()
+    {
+      @Override
+      public double getDouble()
+      {
+        // No Assert for null handling as baseSelector already have it.
+        return baseSelector.getDouble();
+      }
+
+      @Override
+      public float getFloat()
+      {
+        // No Assert for null handling as baseSelector already have it.
+        return baseSelector.getFloat();
+      }
+
+      @Override
+      public long getLong()
+      {
+        // No Assert for null handling as baseSelector already have it.
+        return baseSelector.getLong();
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return baseSelector.isNull();
+      }
+
+      @Nullable
+      @Override
+      public Object getObject()
+      {
+        // No need for null check on getObject() since baseSelector impls will never return null.
+        ExprEval eval = baseSelector.getObject();
+        return coerceEvalToObjectOrList(eval);
       }
 
       @Override
@@ -131,45 +195,42 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    return makeExprEvalSelector(columnSelectorFactory, ExpressionPlanner.plan(columnSelectorFactory, expression));
-  }
+    ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression);
+    final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
 
-  public static ColumnValueSelector<ExprEval> makeExprEvalSelector(
-      ColumnSelectorFactory columnSelectorFactory,
-      ExpressionPlan plan
-  )
-  {
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
       final String column = plan.getSingleInputName();
-      final ValueType inputType = plan.getSingleInputType();
-      if (inputType == ValueType.LONG) {
+      final ColumnType inputType = plan.getSingleInputType();
+      if (inputType.is(ValueType.LONG)) {
         return new SingleLongInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeColumnValueSelector(column),
             plan.getExpression(),
-            !ColumnHolder.TIME_COLUMN_NAME.equals(column) // __time doesn't need an LRU cache since it is sorted.
+            !ColumnHolder.TIME_COLUMN_NAME.equals(column), // __time doesn't need an LRU cache since it is sorted.
+            rowIdSupplier
         );
-      } else if (inputType == ValueType.STRING) {
+      } else if (inputType.is(ValueType.STRING)) {
         return new SingleStringInputCachingExpressionColumnValueSelector(
-            columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ValueType.STRING)),
-            plan.getExpression()
+            columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(column, column, ColumnType.STRING)),
+            plan.getExpression(),
+            rowIdSupplier
         );
       }
     }
-    final Expr.ObjectBinding bindings = createBindings(plan.getAnalysis(), columnSelectorFactory);
+    final Expr.ObjectBinding bindings = createBindings(columnSelectorFactory, plan);
 
     // Optimization for constant expressions
-    if (bindings.equals(ExprUtils.nilBindings())) {
+    if (bindings.equals(InputBindings.nilBindings())) {
       return new ConstantExprEvalSelector(plan.getExpression().eval(bindings));
     }
 
     // if any unknown column input types, fall back to an expression selector that examines input bindings on a
     // per row basis
     if (plan.any(ExpressionPlan.Trait.UNKNOWN_INPUTS, ExpressionPlan.Trait.INCOMPLETE_INPUTS)) {
-      return new RowBasedExpressionColumnValueSelector(plan, bindings);
+      return new RowBasedExpressionColumnValueSelector(plan, bindings, rowIdSupplier);
     }
 
     // generic expression value selector for fully known input types
-    return new ExpressionColumnValueSelector(plan.getAppliedExpression(), bindings);
+    return new ExpressionColumnValueSelector(plan.getAppliedExpression(), bindings, rowIdSupplier);
   }
 
   /**
@@ -186,7 +247,7 @@ public class ExpressionSelectors
 
     if (plan.any(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR, ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
       final String column = plan.getSingleInputName();
-      if (plan.getSingleInputType() == ValueType.STRING) {
+      if (plan.getSingleInputType().is(ValueType.STRING)) {
         return new SingleStringInputDeferredEvaluationExpressionDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of(column)),
             expression
@@ -198,6 +259,16 @@ public class ExpressionSelectors
 
     if (baseSelector instanceof ConstantExprEvalSelector) {
       // Optimization for dimension selectors on constants.
+      if (plan.is(ExpressionPlan.Trait.NON_SCALAR_OUTPUT)) {
+        final Object[] value = baseSelector.getObject().asArray();
+        final List<String> stringList;
+        if (value != null) {
+          stringList = Arrays.stream(value).map(Evals::asString).collect(Collectors.toList());
+        } else {
+          stringList = null;
+        }
+        return DimensionSelector.multiConstant(stringList, extractionFn);
+      }
       return DimensionSelector.constant(baseSelector.getObject().asString(), extractionFn);
     } else if (baseSelector instanceof NilColumnValueSelector) {
       // Optimization for null dimension selector.
@@ -225,90 +296,100 @@ public class ExpressionSelectors
    * and that single column has a dictionary.
    *
    * @param bindingAnalysis       result of calling {@link Expr#analyzeInputs()} on an expression
-   * @param hasMultipleValues result of calling {@link ColumnCapabilities#hasMultipleValues()}
+   * @param columnCapabilities    {@link ColumnCapabilities} for the input binding
    */
   public static boolean canMapOverDictionary(
       final Expr.BindingAnalysis bindingAnalysis,
-      final ColumnCapabilities.Capable hasMultipleValues
+      final ColumnCapabilities columnCapabilities
   )
   {
     Preconditions.checkState(bindingAnalysis.getRequiredBindings().size() == 1, "requiredBindings.size == 1");
-    return !hasMultipleValues.isUnknown() && !bindingAnalysis.hasInputArrays() && !bindingAnalysis.isOutputArray();
+    return columnCapabilities != null &&
+           !columnCapabilities.hasMultipleValues().isUnknown() &&
+           !bindingAnalysis.hasInputArrays() &&
+           !bindingAnalysis.isOutputArray();
   }
 
   /**
-   * Create {@link Expr.ObjectBinding} given a {@link ColumnSelectorFactory} and {@link Expr.BindingAnalysis} which
-   * provides the set of identifiers which need a binding (list of required columns), and context of whether or not they
-   * are used as array or scalar inputs
-   */
-  public static Expr.ObjectBinding createBindings(
-      Expr.BindingAnalysis bindingAnalysis,
-      ColumnSelectorFactory columnSelectorFactory
-  )
-  {
-    final List<String> columns = bindingAnalysis.getRequiredBindingsList();
-    return createBindings(columnSelectorFactory, columns);
-  }
-
-  /**
-   * Create {@link Expr.ObjectBinding} given a {@link ColumnSelectorFactory} and {@link Expr.BindingAnalysis} which
+   * Create {@link Expr.ObjectBinding} given a {@link ColumnSelectorFactory} and {@link ExpressionPlan} which
    * provides the set of identifiers which need a binding (list of required columns), and context of whether or not they
    * are used as array or scalar inputs
    */
   public static Expr.ObjectBinding createBindings(
       ColumnSelectorFactory columnSelectorFactory,
-      List<String> columns
+      ExpressionPlan plan
   )
   {
-    final Map<String, Supplier<Object>> suppliers = new HashMap<>();
+    final List<String> columns = plan.getAnalysis().getRequiredBindingsList();
+    final Map<String, InputBindings.InputSupplier> suppliers = new HashMap<>();
     for (String columnName : columns) {
-      final ColumnCapabilities columnCapabilities = columnSelectorFactory.getColumnCapabilities(columnName);
-      final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
-      final boolean multiVal = columnCapabilities != null && columnCapabilities.hasMultipleValues().isTrue();
+      final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(columnName);
+      final boolean multiVal = capabilities != null && capabilities.hasMultipleValues().isTrue();
       final Supplier<Object> supplier;
+      final ExpressionType expressionType = ExpressionType.fromColumnType(capabilities);
 
-      if (nativeType == ValueType.FLOAT) {
+      final boolean useObjectSupplierForMultiValueStringArray =
+          capabilities != null
+          // if homogenizing null multi-value string arrays, or if a single valued function that must be applied across
+          // multi-value rows, we can just use the dimension selector, which has the homogenization behavior built-in
+          && ((!capabilities.is(ValueType.STRING))
+              || (capabilities.is(ValueType.STRING)
+                  && !ExpressionProcessing.isHomogenizeNullMultiValueStringArrays()
+                  && !plan.is(ExpressionPlan.Trait.NEEDS_APPLIED)
+              )
+          )
+          // expression has array output
+          && plan.is(ExpressionPlan.Trait.NON_SCALAR_OUTPUT);
+
+      final boolean homogenizeNullMultiValueStringArrays =
+          plan.is(ExpressionPlan.Trait.NEEDS_APPLIED) || ExpressionProcessing.isHomogenizeNullMultiValueStringArrays();
+
+      if (capabilities == null || capabilities.isArray() || useObjectSupplierForMultiValueStringArray) {
+        // Unknown type, array type, or output array uses an Object selector and see if that gives anything useful
+        supplier = supplierFromObjectSelector(
+            columnSelectorFactory.makeColumnValueSelector(columnName),
+            homogenizeNullMultiValueStringArrays
+        );
+      } else if (capabilities.is(ValueType.FLOAT)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getFloat);
-      } else if (nativeType == ValueType.LONG) {
+      } else if (capabilities.is(ValueType.LONG)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getLong);
-      } else if (nativeType == ValueType.DOUBLE) {
+      } else if (capabilities.is(ValueType.DOUBLE)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
         supplier = makeNullableNumericSupplier(selector, selector::getDouble);
-      } else if (nativeType == ValueType.STRING) {
+      } else if (capabilities.is(ValueType.STRING)) {
         supplier = supplierFromDimensionSelector(
             columnSelectorFactory.makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName)),
-            multiVal
+            multiVal,
+            homogenizeNullMultiValueStringArrays
         );
-      } else if (nativeType == null || ValueType.isArray(nativeType)) {
-        // Unknown ValueType or array type. Try making an Object selector and see if that gives us anything useful.
-        supplier = supplierFromObjectSelector(columnSelectorFactory.makeColumnValueSelector(columnName));
       } else {
-        // Unhandleable ValueType (COMPLEX).
-        supplier = null;
+        // complex type just pass straight through
+        ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
+        if (!(selector instanceof NilColumnValueSelector)) {
+          supplier = selector::getObject;
+        } else {
+          supplier = null;
+        }
       }
 
       if (supplier != null) {
-        suppliers.put(columnName, supplier);
+        suppliers.put(columnName, InputBindings.inputSupplier(expressionType, supplier));
       }
     }
 
     if (suppliers.isEmpty()) {
-      return ExprUtils.nilBindings();
+      return InputBindings.nilBindings();
     } else if (suppliers.size() == 1 && columns.size() == 1) {
       // If there's only one column (and it has a supplier), we can skip the Map and just use that supplier when
       // asked for something.
-      final String column = Iterables.getOnlyElement(suppliers.keySet());
-      final Supplier<Object> supplier = Iterables.getOnlyElement(suppliers.values());
+      final InputBindings.InputSupplier<?> supplier = Iterables.getOnlyElement(suppliers.values());
 
-      return identifierName -> {
-        // There's only one binding, and it must be the single column, so it can safely be ignored in production.
-        assert column.equals(identifierName);
-        return supplier.get();
-      };
+      return InputBindings.forInputSupplier(supplier.getType(), supplier);
     } else {
-      return InputBindings.withSuppliers(suppliers);
+      return InputBindings.forInputSuppliers(suppliers);
     }
   }
 
@@ -317,7 +398,8 @@ public class ExpressionSelectors
    *
    * @see org.apache.druid.segment.BaseNullableColumnValueSelector#isNull() for why this only works in the numeric case
    */
-  private static <T> Supplier<T> makeNullableNumericSupplier(
+  @VisibleForTesting
+  public static <T> Supplier<T> makeNullableNumericSupplier(
       ColumnValueSelector selector,
       Supplier<T> supplier
   )
@@ -339,7 +421,7 @@ public class ExpressionSelectors
    * arrays if specified.
    */
   @VisibleForTesting
-  static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector, boolean coerceArray)
+  static Supplier<Object> supplierFromDimensionSelector(final DimensionSelector selector, boolean coerceArray, boolean homogenize)
   {
     Preconditions.checkNotNull(selector, "selector");
     return () -> {
@@ -349,10 +431,14 @@ public class ExpressionSelectors
         return selector.lookupName(row.get(0));
       } else {
         // column selector factories hate you and use [] and [null] interchangeably for nullish data
-        if (row.size() == 0) {
-          return new String[]{null};
+        if (row.size() == 0 || (row.size() == 1 && selector.getObject() == null)) {
+          if (homogenize) {
+            return new Object[]{null};
+          } else {
+            return null;
+          }
         }
-        final String[] strings = new String[row.size()];
+        final Object[] strings = new Object[row.size()];
         // noinspection SSBasedInspection
         for (int i = 0; i < row.size(); i++) {
           strings[i] = selector.lookupName(row.get(i));
@@ -368,7 +454,10 @@ public class ExpressionSelectors
    * detected as a primitive type
    */
   @Nullable
-  static Supplier<Object> supplierFromObjectSelector(final BaseObjectColumnValueSelector<?> selector)
+  static Supplier<Object> supplierFromObjectSelector(
+      final BaseObjectColumnValueSelector<?> selector,
+      boolean homogenizeMultiValue
+  )
   {
     if (selector instanceof NilColumnValueSelector) {
       return null;
@@ -382,44 +471,57 @@ public class ExpressionSelectors
       // Might be Numbers and Strings. Use a selector that double-checks.
       return () -> {
         final Object val = selector.getObject();
-        if (val instanceof Number || val instanceof String || (val != null && val.getClass().isArray())) {
-          return val;
-        } else if (val instanceof List) {
-          return ExprEval.coerceListToArray((List) val, true);
+        if (val instanceof List) {
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, homogenizeMultiValue);
+          if (coerced == null) {
+            return null;
+          }
+          return coerced.rhs;
         } else {
-          return null;
+          return val;
         }
       };
     } else if (clazz.isAssignableFrom(List.class)) {
       return () -> {
         final Object val = selector.getObject();
         if (val != null) {
-          return ExprEval.coerceListToArray((List) val, true);
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, homogenizeMultiValue);
+          if (coerced == null) {
+            return null;
+          }
+          return coerced.rhs;
         }
         return null;
       };
     } else {
-      // No numbers or strings.
-      return null;
+      // No numbers or strings, just pass it through
+      return selector::getObject;
     }
   }
 
   /**
-   * Coerces {@link ExprEval} value back to selector friendly {@link List} if the evaluated expression result is an
-   * array type
+   * Coerces {@link ExprEval} value back to a {@link ColumnType#STRING} selector friendly value, converting into:
+   *    - the expression value if the value is not an array
+   *    - the single array element if the value is an array with 1 element
+   *    - a list with all of the array elements if the value is an array with more than 1 element
+   * This method is used by {@link #makeStringColumnValueSelector(ColumnSelectorFactory, Expr)}, which is used
+   * exclusively for making {@link ColumnValueSelector} when an {@link ExpressionVirtualColumn} has STRING output type,
+   * and by {@link org.apache.druid.segment.transform.ExpressionTransform} which should be reconsidered if we ever
+   * want to add support for ingestion transforms producing {@link ValueType#ARRAY} typed outputs.
    */
   @Nullable
-  public static Object coerceEvalToSelectorObject(ExprEval eval)
+  public static Object coerceEvalToObjectOrList(ExprEval eval)
   {
-    switch (eval.type()) {
-      case STRING_ARRAY:
-        return Arrays.stream(eval.asStringArray()).collect(Collectors.toList());
-      case DOUBLE_ARRAY:
-        return Arrays.stream(eval.asDoubleArray()).collect(Collectors.toList());
-      case LONG_ARRAY:
-        return Arrays.stream(eval.asLongArray()).collect(Collectors.toList());
-      default:
-        return eval.value();
+    if (eval.type().isArray()) {
+      final Object[] asArray = eval.asArray();
+      if (asArray == null) {
+        return null;
+      }
+      if (asArray.length == 1) {
+        return asArray[0];
+      }
+      return Arrays.stream(asArray).collect(Collectors.toList());
     }
+    return eval.valueOrDefault();
   }
 }

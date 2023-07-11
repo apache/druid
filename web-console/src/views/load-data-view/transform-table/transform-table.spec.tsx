@@ -19,23 +19,15 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
+import { JSON_SAMPLE } from '../../../utils/sampler.mock';
+
 import { TransformTable } from './transform-table';
 
-describe('transform table', () => {
+describe('TransformTable', () => {
   it('matches snapshot', () => {
-    const sampleData = {
-      header: ['c1'],
-      rows: [
-        {
-          input: { c1: 'hello' },
-          parsed: { c1: 'hello' },
-        },
-      ],
-    };
-
     const transformTable = (
       <TransformTable
-        sampleData={sampleData}
+        sampleResponse={JSON_SAMPLE}
         columnFilter=""
         transformedColumnsOnly={false}
         transforms={[]}

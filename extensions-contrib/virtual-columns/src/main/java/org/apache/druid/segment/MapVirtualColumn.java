@@ -30,7 +30,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.virtual.VirtualColumnCacheHelper;
 
@@ -173,7 +173,7 @@ public class MapVirtualColumn implements VirtualColumn
   @Override
   public ColumnCapabilities capabilities(String columnName)
   {
-    final ValueType valueType = columnName.indexOf('.') < 0 ? ValueType.COMPLEX : ValueType.STRING;
+    final ColumnType valueType = columnName.indexOf('.') < 0 ? ColumnType.UNKNOWN_COMPLEX : ColumnType.STRING;
     return new ColumnCapabilitiesImpl().setType(valueType);
   }
 

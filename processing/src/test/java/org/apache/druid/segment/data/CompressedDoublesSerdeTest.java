@@ -23,10 +23,10 @@ import com.google.common.base.Supplier;
 import com.google.common.primitives.Doubles;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.utils.CloseableUtils;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -179,19 +179,17 @@ public class CompressedDoublesSerdeTest
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
     Supplier<ColumnarDoubles> supplier = CompressedColumnarDoublesSuppliers
         .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order);
-    ColumnarDoubles doubles = supplier.get();
-
-    assertIndexMatchesVals(doubles, values);
-    for (int i = 0; i < 10; i++) {
-      int a = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
-      int b = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
-      int start = a < b ? a : b;
-      int end = a < b ? b : a;
-      tryFill(doubles, values, start, end - start);
+    try (ColumnarDoubles doubles = supplier.get()) {
+      assertIndexMatchesVals(doubles, values);
+      for (int i = 0; i < 10; i++) {
+        int a = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
+        int b = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
+        int start = a < b ? a : b;
+        int end = a < b ? b : a;
+        tryFill(doubles, values, start, end - start);
+      }
+      testConcurrentThreadReads(supplier, doubles, values);
     }
-    testConcurrentThreadReads(supplier, doubles, values);
-
-    doubles.close();
   }
 
   private void tryFill(ColumnarDoubles indexed, double[] vals, final int startIndex, final int size)
@@ -321,7 +319,7 @@ public class CompressedDoublesSerdeTest
       stopLatch.await();
     }
     finally {
-      CloseQuietly.close(indexed2);
+      CloseableUtils.closeAndWrapExceptions(indexed2);
     }
 
     if (failureHappened.get()) {

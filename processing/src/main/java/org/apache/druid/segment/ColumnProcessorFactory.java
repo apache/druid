@@ -20,7 +20,7 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.dimension.ColumnSelectorStrategyFactory;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 /**
  * Class that encapsulates knowledge about how to create "column processors", which are... objects that process columns
@@ -45,7 +45,7 @@ public interface ColumnProcessorFactory<T>
    * This allows a column processor factory to specify what type it prefers to deal with (the most 'natural' type for
    * whatever it is doing) when all else is equal.
    */
-  ValueType defaultType();
+  ColumnType defaultType();
 
   /**
    * Create a processor for a string column.

@@ -19,7 +19,6 @@
 
 package /*CHECKSTYLE.OFF: PackageName*/org.testng/*CHECKSTYLE.ON: PackageName*/;
 
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.utils.SuiteListener;
 import org.testng.internal.IConfiguration;
 import org.testng.internal.Systematiser;
@@ -34,7 +33,6 @@ import java.util.List;
  */
 public class DruidTestRunnerFactory implements ITestRunnerFactory
 {
-  private static final Logger LOG = new Logger(DruidTestRunnerFactory.class);
   private static final SuiteListener SUITE_LISTENER = new SuiteListener();
 
   @Override

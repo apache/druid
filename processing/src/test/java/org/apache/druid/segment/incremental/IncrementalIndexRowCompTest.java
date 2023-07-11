@@ -66,7 +66,7 @@ public class IncrementalIndexRowCompTest extends InitializedNullHandlingTest
   @Test
   public void testBasic()
   {
-    IncrementalIndex<?> index = indexCreator.createIndex();
+    IncrementalIndex index = indexCreator.createIndex();
 
     long time = System.currentTimeMillis();
     IncrementalIndexRow ir1 = index.toIncrementalIndexRow(toMapRow(time, "billy", "A", "joe", "B")).getIncrementalIndexRow();

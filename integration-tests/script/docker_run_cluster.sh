@@ -47,9 +47,11 @@ fi
   if [ -z "$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH" ]
   then
     # Start Druid cluster
-    docker-compose $(getComposeArgs) up -d
+    echo "Starting cluster with empty config"
+    OVERRIDE_ENV=environment-configs/empty-config docker-compose $(getComposeArgs) up -d
   else
     # run druid cluster with override config
+    echo "Starting cluster with a config file at $DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH"
     OVERRIDE_ENV=$DRUID_INTEGRATION_TEST_OVERRIDE_CONFIG_PATH docker-compose $(getComposeArgs) up -d
   fi
 }

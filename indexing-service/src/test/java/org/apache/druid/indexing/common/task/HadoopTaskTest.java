@@ -26,11 +26,11 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.JvmUtils;
-import org.apache.hadoop.util.ApplicationClassLoader;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -107,19 +107,13 @@ public class HadoopTaskTest
       }
     };
     final TaskToolbox toolbox = EasyMock.createStrictMock(TaskToolbox.class);
-    EasyMock.expect(toolbox.getConfig()).andReturn(new TaskConfig(
-        temporaryFolder.newFolder().toString(),
-        null,
-        null,
-        null,
-        ImmutableList.of("something:hadoop:1"),
-        false,
-        null,
-        null,
-        null,
-        false,
-        false
-    )).once();
+    EasyMock.expect(toolbox.getConfig()).andReturn(
+        new TaskConfigBuilder()
+            .setBaseDir(temporaryFolder.newFolder().toString())
+            .setDefaultHadoopCoordinates(ImmutableList.of("something:hadoop:1"))
+            .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+            .build()
+    ).once();
     EasyMock.replay(toolbox);
 
     final ClassLoader classLoader = task.buildClassLoader(toolbox);
@@ -145,7 +139,7 @@ public class HadoopTaskTest
       // This is a check against the current HadoopTask which creates a single URLClassLoader with null parent
       Assert.assertNull(classLoader.getParent());
     }
-    Assert.assertFalse(classLoader instanceof ApplicationClassLoader);
+    Assert.assertFalse(classLoader.getClass().getSimpleName().equals("ApplicationClassLoader"));
     Assert.assertTrue(classLoader instanceof URLClassLoader);
 
     final ClassLoader appLoader = HadoopDruidIndexerConfig.class.getClassLoader();

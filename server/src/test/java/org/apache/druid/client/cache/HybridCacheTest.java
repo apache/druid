@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
 
@@ -82,10 +83,12 @@ public class HybridCacheTest
   }
 
   @Test
-  public void testSanity()
+  public void testSanity() throws IOException
   {
-    final MapCache l1 = new MapCache(new ByteCountingLRUMap(1024 * 1024));
-    final MapCache l2 = new MapCache(new ByteCountingLRUMap(1024 * 1024));
+    final ByteCountingLRUMap l1Map = new ByteCountingLRUMap(1024 * 1024);
+    final ByteCountingLRUMap l2Map = new ByteCountingLRUMap(1024 * 1024);
+    final MapCache l1 = new MapCache(l1Map);
+    final MapCache l2 = new MapCache(l2Map);
     HybridCache cache = new HybridCache(new HybridCacheConfig(), l1, l2);
 
     final Cache.NamedKey key1 = new Cache.NamedKey("a", HI);
@@ -175,5 +178,10 @@ public class HybridCacheTest
       Assert.assertEquals(hits + 1, cache.getStats().getNumHits());
       Assert.assertEquals(misses + 1, cache.getStats().getNumMisses());
     }
+
+    // test close
+    cache.close();
+    Assert.assertEquals("l1 size after close()", 0, l1Map.size());
+    Assert.assertEquals("l2 size after close()", 0, l2Map.size());
   }
 }

@@ -17,24 +17,38 @@
   ~ under the License.
   -->
 
-[![Slack](https://img.shields.io/badge/slack-%23druid-72eff8?logo=slack)](https://s.apache.org/slack-invite)
-[![Build Status](https://api.travis-ci.com/apache/druid.svg?branch=master)](https://travis-ci.com/apache/druid)
-[![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/apache/druid.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/apache/druid/context:java)
 [![Coverage Status](https://img.shields.io/codecov/c/gh/apache/druid)](https://codecov.io/gh/apache/druid)
 [![Docker](https://img.shields.io/badge/container-docker-blue.svg)](https://hub.docker.com/r/apache/druid)
-[![Helm](https://img.shields.io/badge/helm-druid-5F90AB?logo=helm)](https://artifacthub.io/packages/helm/helm-incubator/druid)
+[![Helm](https://img.shields.io/badge/helm-druid-5F90AB?logo=helm)](https://github.com/apache/druid/blob/master/helm/druid/README.md)
 <!--- Following badges are disabled until they can be fixed: -->
 <!--- [![Inspections Status](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/OpenSourceProjects_Druid_Inspections.svg?label=TeamCity%20inspections)](https://teamcity.jetbrains.com/viewType.html?buildTypeId=OpenSourceProjects_Druid_Inspections) -->
 
+| Workflow                             | Status                                                       |
+| :----------------------------------- | :----------------------------------------------------------- |
+| ⚙️ CodeQL Config                      | ![codeql-config](https://img.shields.io/github/actions/workflow/status/apache/druid/codeql-config.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🔍 CodeQL                             | ![codeql](https://img.shields.io/github/actions/workflow/status/apache/druid/codeql.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🕒 Cron Job ITS                       | ![cron-job-its](https://img.shields.io/github/actions/workflow/status/apache/druid/cron-job-its.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🏷️ Labeler                            | ![labeler](https://img.shields.io/github/actions/workflow/status/apache/druid/labeler.yml?branch=master&logo=github-actions&style=flat-square) |
+| ♻️ Reusable Revised ITS               | ![reusable-revised-its](https://img.shields.io/github/actions/workflow/status/apache/druid/reusable-revised-its.yml?branch=master&logo=github-actions&style=flat-square) |
+| ♻️ Reusable Standard ITS              | ![reusable-standard-its](https://img.shields.io/github/actions/workflow/status/apache/druid/reusable-standard-its.yml?branch=master&logo=github-actions&style=flat-square) |
+| ♻️ Reusable Unit Tests                | ![reusable-unit-tests](https://img.shields.io/github/actions/workflow/status/apache/druid/reusable-unit-tests.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🔄 Revised ITS                        | ![revised-its](https://img.shields.io/github/actions/workflow/status/apache/druid/revised-its.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🔧 Standard ITS                       | ![standard-its](https://img.shields.io/github/actions/workflow/status/apache/druid/standard-its.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🛠️ Static Checks                      | ![static-checks](https://img.shields.io/github/actions/workflow/status/apache/druid/static-checks.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🧪 Unit and Integration Tests Unified | ![unit-and-integration-tests-unified](https://img.shields.io/github/actions/workflow/status/apache/druid/unit-and-integration-tests-unified.yml?branch=master&logo=github-actions&style=flat-square) |
+| 🔬 Unit Tests                         | ![unit-tests](https://img.shields.io/github/actions/workflow/status/apache/druid/unit-tests.yml?branch=master&logo=github-actions&style=flat-square) |
+
 ---
 
-[Website](https://druid.apache.org/) |
-[Documentation](https://druid.apache.org/docs/latest/design/) |
-[Developer Mailing List](https://lists.apache.org/list.html?dev@druid.apache.org) |
-[User Mailing List](https://groups.google.com/forum/#!forum/druid-user) |
-[Slack](https://s.apache.org/slack-invite) |
-[Twitter](https://twitter.com/druidio) |
-[Download](https://druid.apache.org/downloads.html)
+[![Website](https://img.shields.io/badge/Website-druid.apache.org-blue?style=flat-square&logo=apache-druid)](https://druid.apache.org/)
+[![Twitter](https://img.shields.io/badge/Twitter-%40druidio-blue?style=flat-square&logo=twitter)](https://twitter.com/druidio)
+[![Download](https://img.shields.io/badge/Download-Downloads_Page-blue?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0NDggNTEyIj4KICA8cGF0aCBkPSJNNDQxLjkgMTY3LjNsLTE5LjgtMTkuOGMtNC43LTQuNy0xMi4zLTQuNy0xNyAwbC0xODIuMSAxODAuNy0xODEuMS0xODAuN2MtNC43LTQuNy0xMi4zLTQuNy0xNyAwbC0xOS44IDE5LjhjLTQuNyA0LjctNC43IDEyLjMgMCAxN2wyMDkuNCAyMDkuNGM0LjcgNC43IDEyLjMgNC43IDE3IDBsMjA5LjQtMjA5LjRjNC43LTQuNyA0LjctMTIuMyAwLTE3eiIvPgo8L3N2Zz4K)](https://druid.apache.org/downloads.html)
+[![Get Started](https://img.shields.io/badge/Get_Started-Getting_Started-blue?style=flat-square&logo=quicklook)](#getting-started)
+[![Documentation](https://img.shields.io/badge/Documentation-Design_Docs-blue?style=flat-square&logo=read-the-docs)](https://druid.apache.org/docs/latest/design/)
+[![Community](https://img.shields.io/badge/Community-Join_Us-blue?style=flat-square&logo=slack)](#community)
+[![Build](https://img.shields.io/badge/Build-Building_From_Source-blue?style=flat-square&logo=github-actions)](#building-from-source)
+[![Contribute](https://img.shields.io/badge/Contribute-How_to_Contribute-blue?style=flat-square&logo=github)](#contributing)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square&logo=apache)](#license)
 
 ---
 
@@ -49,7 +63,7 @@ Druid is designed for workflows where fast queries and ingest really matter. Dru
 You can get started with Druid with our [local](https://druid.apache.org/docs/latest/tutorials/quickstart.html) or [Docker](http://druid.apache.org/docs/latest/tutorials/docker.html) quickstart.
 
 Druid provides a rich set of APIs (via HTTP and [JDBC](https://druid.apache.org/docs/latest/querying/sql.html#jdbc)) for loading, managing, and querying your data.
-You can also interact with Druid via the [built-in console](https://druid.apache.org/docs/latest/operations/druid-console.html) (shown below).
+You can also interact with Druid via the built-in [web console](https://druid.apache.org/docs/latest/operations/web-console.html) (shown below).
 
 #### Load data
 
@@ -71,28 +85,26 @@ Use the built-in query workbench to prototype [DruidSQL](https://druid.apache.or
 
 ### Documentation
 
-You can find the [documentation for the latest Druid release](https://druid.apache.org/docs/latest/) on
-the [project website](https://druid.apache.org).
+See the [latest documentation](https://druid.apache.org/docs/latest/) for the documentation for the current official release.  If you need information on a previous release, you can browse [previous releases documentation](https://druid.apache.org/docs/).
 
-If you would like to contribute documentation, please do so under
-`/docs` in this repository and submit a pull request.
+Make documentation and tutorials updates in [`/docs`](https://github.com/apache/druid/tree/master/docs) using [MarkDown](https://www.markdownguide.org/) and contribute them using a pull request.
 
 ### Community
 
-Community support is available on the
-[druid-user mailing list](https://groups.google.com/forum/#!forum/druid-user), which
-is hosted at Google Groups.
+Visit the official project [community](https://druid.apache.org/community/) page to read about getting involved in contributing to Apache Druid, and how we help one another use and operate Druid.
 
-Development discussions occur on [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org), which
-you can subscribe to by emailing [dev-subscribe@druid.apache.org](mailto:dev-subscribe@druid.apache.org).
+* Druid users can find help in the [`druid-user`](https://groups.google.com/forum/#!forum/druid-user) mailing list on Google Groups, and have more technical conversations in `#troubleshooting` on Slack.
+* Druid development discussions take place in the [`druid-dev`](https://lists.apache.org/list.html?dev@druid.apache.org) mailing list ([dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org)).  Subscribe by emailing [dev-subscribe@druid.apache.org](mailto:dev-subscribe@druid.apache.org).  For live conversations, join the `#dev` channel on Slack.
 
-Chat with Druid committers and users in real-time on the `#druid` channel in the Apache Slack team. Please use [this invitation link to join the ASF Slack](https://s.apache.org/slack-invite), and once joined, go into the `#druid` channel.
+Check out the official [community](https://druid.apache.org/community/) page for details of how to join the community Slack channels.
+
+Find articles written by community members and a calendar of upcoming events on the [project site](https://druid.apache.org/) - contribute your own events and articles by submitting a PR in the [`apache/druid-website-src`](https://github.com/apache/druid-website-src/tree/master/_data) repository.
 
 ### Building from source
 
-Please note that JDK 8 is required to build Druid.
+Please note that JDK 8 or JDK 11 is required to build Druid.
 
-For instructions on building Druid from source, see [docs/development/build.md](docs/development/build.md)
+See the latest [build guide](https://druid.apache.org/docs/latest/development/build.html) for instructions on building Apache Druid from source.
 
 ### Contributing
 

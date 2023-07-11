@@ -61,55 +61,29 @@ public class KillRulesTest
   @Test
   public void testRunSkipIfLastRunLessThanPeriod()
   {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        null,
-        null,
-        null,
-        new Duration("PT5S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new Duration(Long.MAX_VALUE),
-        new Duration("PT1S"),
-        null,
-        null,
-        10,
-        null
-    );
+    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
+        .withCoordinatorRuleKillPeriod(new Duration(Long.MAX_VALUE))
+        .withCoordinatorRuleKillDurationToRetain(new Duration("PT1S"))
+        .withCoordinatorKillMaxSegments(10)
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     killRules = new KillRules(druidCoordinatorConfig);
     killRules.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verifyZeroInteractions(mockRuleManager);
+    Mockito.verifyNoInteractions(mockRuleManager);
   }
 
   @Test
   public void testRunNotSkipIfLastRunMoreThanPeriod()
   {
     Mockito.when(mockDruidCoordinatorRuntimeParams.getEmitter()).thenReturn(mockServiceEmitter);
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        null,
-        null,
-        null,
-        new Duration("PT5S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new Duration("PT6S"),
-        new Duration("PT1S"),
-        null,
-        null,
-        10,
-        null
-    );
+    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
+        .withCoordinatorRuleKillPeriod(new Duration("PT6S"))
+        .withCoordinatorRuleKillDurationToRetain(new Duration("PT1S"))
+        .withCoordinatorKillMaxSegments(10)
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     killRules = new KillRules(druidCoordinatorConfig);
     killRules.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verify(mockRuleManager).removeRulesForEmptyDatasourcesOlderThan(ArgumentMatchers.anyLong());
@@ -119,26 +93,13 @@ public class KillRulesTest
   @Test
   public void testConstructorFailIfInvalidPeriod()
   {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        null,
-        null,
-        null,
-        new Duration("PT5S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new Duration("PT3S"),
-        new Duration("PT1S"),
-        null,
-        null,
-        10,
-        null
-    );
+    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
+        .withCoordinatorRuleKillPeriod(new Duration("PT3S"))
+        .withCoordinatorRuleKillDurationToRetain(new Duration("PT1S"))
+        .withCoordinatorKillMaxSegments(10)
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("coordinator rule kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
     killRules = new KillRules(druidCoordinatorConfig);
@@ -147,26 +108,13 @@ public class KillRulesTest
   @Test
   public void testConstructorFailIfInvalidRetainDuration()
   {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        null,
-        null,
-        null,
-        new Duration("PT5S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new Duration("PT6S"),
-        new Duration("PT-1S"),
-        null,
-        null,
-        10,
-        null
-    );
+    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
+        .withCoordinatorRuleKillPeriod(new Duration("PT6S"))
+        .withCoordinatorRuleKillDurationToRetain(new Duration("PT-1S"))
+        .withCoordinatorKillMaxSegments(10)
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("coordinator rule kill retainDuration must be >= 0");
     killRules = new KillRules(druidCoordinatorConfig);

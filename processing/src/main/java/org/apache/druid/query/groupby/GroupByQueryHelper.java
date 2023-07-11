@@ -21,7 +21,6 @@ package org.apache.druid.query.groupby;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
@@ -43,11 +42,9 @@ import org.apache.druid.segment.incremental.AppendableIndexBuilder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
-import org.apache.druid.segment.incremental.OffheapIncrementalIndex;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -60,8 +57,7 @@ public class GroupByQueryHelper
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
       @Nullable final GroupByQuery subquery,
-      final GroupByQueryConfig config,
-      NonBlockingPool<ByteBuffer> bufferPool
+      final GroupByQueryConfig config
   )
   {
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
@@ -104,7 +100,7 @@ public class GroupByQueryHelper
     );
     final IncrementalIndex index;
 
-    final boolean sortResults = query.getContextValue(CTX_KEY_SORT_RESULTS, true);
+    final boolean sortResults = query.context().getBoolean(CTX_KEY_SORT_RESULTS, true);
 
     // All groupBy dimensions are strings, for now.
     final List<DimensionSchema> dimensionSchemas = new ArrayList<>();
@@ -113,7 +109,7 @@ public class GroupByQueryHelper
     }
 
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
-        .withDimensionsSpec(new DimensionsSpec(dimensionSchemas, null, null))
+        .withDimensionsSpec(new DimensionsSpec(dimensionSchemas))
         .withMetrics(aggs.toArray(new AggregatorFactory[0]))
         .withQueryGranularity(gran)
         .withMinTimestamp(granTimeStart)
@@ -122,9 +118,12 @@ public class GroupByQueryHelper
 
     final AppendableIndexBuilder indexBuilder;
 
-    if (query.getContextValue("useOffheap", false)) {
-      indexBuilder = new OffheapIncrementalIndex.Builder()
-          .setBufferPool(bufferPool);
+    if (query.context().getBoolean("useOffheap", false)) {
+      throw new UnsupportedOperationException(
+          "The 'useOffheap' option is no longer available for groupBy v1. Please move to the newer groupBy engine, "
+          + "which always operates off-heap, by removing any custom 'druid.query.groupBy.defaultStrategy' runtime "
+          + "properties and 'groupByStrategy' query context parameters that you have set."
+      );
     } else {
       indexBuilder = new OnheapIncrementalIndex.Builder();
     }
@@ -196,18 +195,17 @@ public class GroupByQueryHelper
       GroupByQuery query,
       @Nullable GroupByQuery subquery,
       GroupByQueryConfig config,
-      NonBlockingPool<ByteBuffer> bufferPool,
       Sequence<ResultRow> rows
   )
   {
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, ResultRow>> indexAccumulatorPair =
-        GroupByQueryHelper.createIndexAccumulatorPair(query, subquery, config, bufferPool);
+        GroupByQueryHelper.createIndexAccumulatorPair(query, subquery, config);
 
     return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
   }
 
   // Used by GroupByStrategyV1
-  public static Sequence<ResultRow> postAggregate(final GroupByQuery query, IncrementalIndex<?> index)
+  public static Sequence<ResultRow> postAggregate(final GroupByQuery query, IncrementalIndex index)
   {
     return Sequences.map(
         Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs(), query.isDescending())),

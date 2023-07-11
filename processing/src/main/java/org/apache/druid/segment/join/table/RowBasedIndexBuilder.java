@@ -20,13 +20,15 @@
 package org.apache.druid.segment.join.table;
 
 import com.google.common.primitives.Ints;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -49,17 +51,17 @@ public class RowBasedIndexBuilder
 
   private int currentRow = 0;
   private int nullKeys = 0;
-  private final ValueType keyType;
-  private final Map<Object, IntList> index;
+  private final ColumnType keyType;
+  private final Map<Object, IntSortedSet> index;
 
   private long minLongKey = Long.MAX_VALUE;
   private long maxLongKey = Long.MIN_VALUE;
 
-  public RowBasedIndexBuilder(ValueType keyType)
+  public RowBasedIndexBuilder(ColumnType keyType)
   {
     this.keyType = keyType;
 
-    if (keyType == ValueType.LONG) {
+    if (keyType.is(ValueType.LONG)) {
       // We're specializing the type even though we don't specialize usage in this class, for two reasons:
       //  (1) It's still useful to reduce overall memory footprint.
       //  (2) MapIndex specifically checks for Long2ObjectMap instances and *does* specialize usage.
@@ -80,15 +82,15 @@ public class RowBasedIndexBuilder
     final Object castKey = DimensionHandlerUtils.convertObjectToType(key, keyType);
 
     if (castKey != null) {
-      final IntList rowNums = index.computeIfAbsent(castKey, k -> new IntArrayList());
+      final IntSortedSet rowNums = index.computeIfAbsent(castKey, k -> new IntAVLTreeSet());
       rowNums.add(currentRow);
 
       // Track min, max long value so we can decide later on if it's appropriate to use an array-backed implementation.
-      if (keyType == ValueType.LONG && (long) castKey < minLongKey) {
+      if (keyType.is(ValueType.LONG) && (long) castKey < minLongKey) {
         minLongKey = (long) castKey;
       }
 
-      if (keyType == ValueType.LONG && (long) castKey > maxLongKey) {
+      if (keyType.is(ValueType.LONG) && (long) castKey > maxLongKey) {
         maxLongKey = (long) castKey;
       }
     } else {
@@ -107,7 +109,7 @@ public class RowBasedIndexBuilder
   {
     final boolean keysUnique = index.size() == currentRow - nullKeys;
 
-    if (keyType == ValueType.LONG && keysUnique && index.size() > 0) {
+    if (keyType.is(ValueType.LONG) && keysUnique && index.size() > 0) {
       // May be a good candidate for UniqueLongArrayIndex. Check the range of values as compared to min and max.
       long range;
 
@@ -131,18 +133,18 @@ public class RowBasedIndexBuilder
         Arrays.fill(indexAsArray, IndexedTable.Index.NOT_FOUND);
 
         // Safe to cast to Long2ObjectMap because the constructor always uses one for long-typed keys.
-        final ObjectIterator<Long2ObjectMap.Entry<IntList>> entries =
-            ((Long2ObjectMap<IntList>) ((Map) index)).long2ObjectEntrySet().iterator();
+        final ObjectIterator<Long2ObjectMap.Entry<IntSortedSet>> entries =
+            ((Long2ObjectMap<IntSortedSet>) ((Map) index)).long2ObjectEntrySet().iterator();
 
         while (entries.hasNext()) {
-          final Long2ObjectMap.Entry<IntList> entry = entries.next();
-          final IntList rowNums = entry.getValue();
+          final Long2ObjectMap.Entry<IntSortedSet> entry = entries.next();
+          final IntSortedSet rowNums = entry.getValue();
 
           if (rowNums.size() != 1) {
             throw new ISE("Expected single element");
           }
 
-          indexAsArray[Ints.checkedCast(entry.getLongKey() - minLongKey)] = rowNums.getInt(0);
+          indexAsArray[Ints.checkedCast(entry.getLongKey() - minLongKey)] = rowNums.firstInt();
           entries.remove();
         }
 

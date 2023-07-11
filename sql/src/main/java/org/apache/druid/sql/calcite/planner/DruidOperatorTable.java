@@ -33,12 +33,13 @@ import org.apache.calcite.sql.validate.SqlNameMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.ApproxCountDistinctSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.ArrayConcatSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.ArraySqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.AvgSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.BitwiseSqlAggregator;
-import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.BuiltinApproxCountDistinctSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestAnySqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.EarliestLatestBySqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.GroupingSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MaxSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MinSqlAggregator;
@@ -53,6 +54,7 @@ import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryFunctionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnaryPrefixOperatorConversion;
 import org.apache.druid.sql.calcite.expression.UnarySuffixOperatorConversion;
+import org.apache.druid.sql.calcite.expression.WindowSqlAggregate;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayAppendOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayConcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayConstructorOperatorConversion;
@@ -64,17 +66,21 @@ import org.apache.druid.sql.calcite.expression.builtin.ArrayOrdinalOfOperatorCon
 import org.apache.druid.sql.calcite.expression.builtin.ArrayOrdinalOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayOverlapOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayPrependOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ArrayQuantileOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArraySliceOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ArrayToStringOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.BTrimOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.CaseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CastOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.CeilOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ComplexDecodeBase64OperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ConcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ContainsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.FloorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.GreatestOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.HumanReadableFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressMatchOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressParseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressStringifyOperatorConversion;
@@ -85,6 +91,8 @@ import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MillisToTimestampOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringOperatorConversions;
+import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringToArrayOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.NestedDataOperatorConversions;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.PositionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RPadOperatorConversion;
@@ -96,6 +104,7 @@ import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.SafeDivideOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringToArrayOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
@@ -111,6 +120,7 @@ import org.apache.druid.sql.calcite.expression.builtin.TimeShiftOperatorConversi
 import org.apache.druid.sql.calcite.expression.builtin.TimestampToMillisOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
+import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletTable;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -124,26 +134,38 @@ import java.util.stream.Collectors;
 
 public class DruidOperatorTable implements SqlOperatorTable
 {
+  // COUNT and APPROX_COUNT_DISTINCT are not here because they are added by SqlAggregationModule.
   private static final List<SqlAggregator> STANDARD_AGGREGATORS =
       ImmutableList.<SqlAggregator>builder()
-                   .add(new ApproxCountDistinctSqlAggregator())
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.LAG))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.LEAD))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.FIRST_VALUE))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.LAST_VALUE))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.CUME_DIST))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.DENSE_RANK))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.NTILE))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.PERCENT_RANK))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.RANK))
+                   .add(new WindowSqlAggregate(SqlStdOperatorTable.ROW_NUMBER))
+                   .add(new BuiltinApproxCountDistinctSqlAggregator())
                    .add(new AvgSqlAggregator())
-                   .add(new CountSqlAggregator())
                    .add(EarliestLatestAnySqlAggregator.EARLIEST)
                    .add(EarliestLatestAnySqlAggregator.LATEST)
                    .add(EarliestLatestAnySqlAggregator.ANY_VALUE)
+                   .add(EarliestLatestBySqlAggregator.EARLIEST_BY)
+                   .add(EarliestLatestBySqlAggregator.LATEST_BY)
                    .add(new MinSqlAggregator())
                    .add(new MaxSqlAggregator())
                    .add(new SumSqlAggregator())
                    .add(new SumZeroSqlAggregator())
                    .add(new GroupingSqlAggregator())
                    .add(new ArraySqlAggregator())
+                   .add(new ArrayConcatSqlAggregator())
                    .add(new StringSqlAggregator())
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.AND))
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.OR))
                    .add(new BitwiseSqlAggregator(BitwiseSqlAggregator.Op.XOR))
                    .build();
-
 
   // STRLEN has so many aliases.
   private static final SqlOperatorConversion CHARACTER_LENGTH_CONVERSION = new DirectOperatorConversion(
@@ -202,6 +224,7 @@ public class DruidOperatorTable implements SqlOperatorTable
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(new CastOperatorConversion())
                    .add(new ReinterpretOperatorConversion())
+                   .add(new ComplexDecodeBase64OperatorConversion())
                    .build();
 
   private static final List<SqlOperatorConversion> ARRAY_OPERATOR_CONVERSIONS =
@@ -217,6 +240,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new ArrayOrdinalOperatorConversion())
                    .add(new ArrayOffsetOfOperatorConversion())
                    .add(new ArrayOrdinalOfOperatorConversion())
+                   .add(new ArrayQuantileOperatorConversion())
                    .add(new ArraySliceOperatorConversion())
                    .add(new ArrayToStringOperatorConversion())
                    .add(new StringToArrayOperatorConversion())
@@ -237,6 +261,9 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new MultiValueStringOperatorConversions.Slice())
                    .add(new MultiValueStringOperatorConversions.MultiStringToString())
                    .add(new MultiValueStringOperatorConversions.StringToMultiString())
+                   .add(new MultiValueStringOperatorConversions.FilterOnly())
+                   .add(new MultiValueStringOperatorConversions.FilterNone())
+                   .add(new MultiValueStringToArrayOperatorConversion())
                    .build();
 
   private static final List<SqlOperatorConversion> REDUCTION_OPERATOR_CONVERSIONS =
@@ -250,6 +277,18 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new IPv4AddressMatchOperatorConversion())
                    .add(new IPv4AddressParseOperatorConversion())
                    .add(new IPv4AddressStringifyOperatorConversion())
+                   .build();
+
+  private static final List<SqlOperatorConversion> FORMAT_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+                   .add(HumanReadableFormatOperatorConversion.BINARY_BYTE_FORMAT)
+                   .add(HumanReadableFormatOperatorConversion.DECIMAL_BYTE_FORMAT)
+                   .add(HumanReadableFormatOperatorConversion.DECIMAL_FORMAT)
+                   .build();
+
+  private static final List<SqlOperatorConversion> CUSTOM_MATH_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+                   .add(new SafeDivideOperatorConversion())
                    .build();
 
   private static final List<SqlOperatorConversion> BITWISE_OPERATOR_CONVERSIONS =
@@ -274,10 +313,28 @@ public class DruidOperatorTable implements SqlOperatorTable
                    )
                    .build();
 
+  private static final List<SqlOperatorConversion> NESTED_DATA_OPERATOR_CONVERSIONS =
+      ImmutableList.<SqlOperatorConversion>builder()
+                   .add(new NestedDataOperatorConversions.JsonKeysOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonPathsOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonQueryOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueAnyOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueBigintOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueDoubleOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueVarcharOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueReturningArrayBigIntOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueReturningArrayDoubleOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonValueReturningArrayVarcharOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonObjectOperatorConversion())
+                   .add(new NestedDataOperatorConversions.ToJsonStringOperatorConversion())
+                   .add(new NestedDataOperatorConversions.ParseJsonOperatorConversion())
+                   .add(new NestedDataOperatorConversions.TryParseJsonOperatorConversion())
+                   .build();
+
   private static final List<SqlOperatorConversion> STANDARD_OPERATOR_CONVERSIONS =
       ImmutableList.<SqlOperatorConversion>builder()
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.ABS, "abs"))
-                   .add(new DirectOperatorConversion(SqlStdOperatorTable.CASE, "case_searched"))
+                   .add(new CaseOperatorConversion())
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.CHAR_LENGTH, "strlen"))
                    .add(CHARACTER_LENGTH_CONVERSION)
                    .add(new AliasedOperatorConversion(CHARACTER_LENGTH_CONVERSION, "LENGTH"))
@@ -344,7 +401,10 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .addAll(MULTIVALUE_STRING_OPERATOR_CONVERSIONS)
                    .addAll(REDUCTION_OPERATOR_CONVERSIONS)
                    .addAll(IPV4ADDRESS_OPERATOR_CONVERSIONS)
+                   .addAll(FORMAT_OPERATOR_CONVERSIONS)
                    .addAll(BITWISE_OPERATOR_CONVERSIONS)
+                   .addAll(CUSTOM_MATH_OPERATOR_CONVERSIONS)
+                   .addAll(NESTED_DATA_OPERATOR_CONVERSIONS)
                    .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.
@@ -368,7 +428,7 @@ public class DruidOperatorTable implements SqlOperatorTable
     for (SqlAggregator aggregator : aggregators) {
       final OperatorKey operatorKey = OperatorKey.of(aggregator.calciteFunction());
       if (this.aggregators.put(operatorKey, aggregator) != null) {
-        throw new ISE("Cannot have two operators with key[%s]", operatorKey);
+        throw new ISE("Cannot have two operators with key [%s]", operatorKey);
       }
     }
 
@@ -383,7 +443,7 @@ public class DruidOperatorTable implements SqlOperatorTable
       final OperatorKey operatorKey = OperatorKey.of(operatorConversion.calciteOperator());
       if (this.aggregators.containsKey(operatorKey)
           || this.operatorConversions.put(operatorKey, operatorConversion) != null) {
-        throw new ISE("Cannot have two operators with key[%s]", operatorKey);
+        throw new ISE("Cannot have two operators with key [%s]", operatorKey);
       }
     }
 
@@ -430,11 +490,7 @@ public class DruidOperatorTable implements SqlOperatorTable
       final SqlNameMatcher nameMatcher
   )
   {
-    if (opName == null) {
-      return;
-    }
-
-    if (opName.names.size() != 1) {
+    if (opName == null || opName.names.size() != 1) {
       return;
     }
 
@@ -499,16 +555,6 @@ public class DruidOperatorTable implements SqlOperatorTable
     public static OperatorKey of(final SqlOperator operator)
     {
       return new OperatorKey(operator.getName(), operator.getSyntax());
-    }
-
-    public String getName()
-    {
-      return name;
-    }
-
-    public SqlSyntax getSyntax()
-    {
-      return syntax;
     }
 
     @Override

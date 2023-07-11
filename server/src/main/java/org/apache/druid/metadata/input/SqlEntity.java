@@ -21,9 +21,11 @@ package org.apache.druid.metadata.input;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
 import org.apache.druid.metadata.SQLMetadataStorageActionHandler;
@@ -117,7 +119,8 @@ public class SqlEntity implements InputEntity
       throws IOException
   {
     try (FileOutputStream fos = new FileOutputStream(tempFile);
-         final JsonGenerator jg = objectMapper.getFactory().createGenerator(fos);) {
+         final JsonGenerator jg = objectMapper.getFactory().createGenerator(fos)) {
+      final SerializerProvider serializers = objectMapper.getSerializerProviderInstance();
 
       // Execute the sql query and lazily retrieve the results into the file in json format.
       // foldCase is useful to handle differences in case sensitivity behavior across databases.
@@ -152,7 +155,7 @@ public class SqlEntity implements InputEntity
             ).iterator();
             jg.writeStartArray();
             while (resultIterator.hasNext()) {
-              jg.writeObject(resultIterator.next());
+              JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, resultIterator.next());
             }
             jg.writeEndArray();
             jg.close();

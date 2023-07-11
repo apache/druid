@@ -23,10 +23,9 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
-import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -45,13 +44,14 @@ public class DruidCalciteSchemaModule implements Module
     binder.bind(String.class).annotatedWith(DruidSchemaName.class).toInstance(DRUID_SCHEMA_NAME);
 
     // Should only be used by the information schema
-    binder.bind(SchemaPlus.class)
+    binder.bind(DruidSchemaCatalog.class)
           .annotatedWith(Names.named(INCOMPLETE_SCHEMA))
           .toProvider(RootSchemaProvider.class)
           .in(Scopes.SINGLETON);
 
-    // DruidSchema needs to listen to changes for incoming segments
-    LifecycleModule.register(binder, DruidSchema.class);
+    // SegmentMetadataCache needs to listen to changes for incoming segments
+    LifecycleModule.register(binder, SegmentMetadataCache.class);
+    binder.bind(DruidSchema.class).in(Scopes.SINGLETON);
     binder.bind(SystemSchema.class).in(Scopes.SINGLETON);
     binder.bind(InformationSchema.class).in(Scopes.SINGLETON);
     binder.bind(LookupSchema.class).in(Scopes.SINGLETON);
@@ -64,10 +64,10 @@ public class DruidCalciteSchemaModule implements Module
   }
 
   @Provides
-  @Singleton
-  private SchemaPlus getRootSchema(@Named(INCOMPLETE_SCHEMA) SchemaPlus rootSchema, InformationSchema informationSchema)
+  @LazySingleton
+  private DruidSchemaCatalog getRootSchema(@Named(INCOMPLETE_SCHEMA) DruidSchemaCatalog rootSchema, InformationSchema informationSchema)
   {
-    rootSchema.add(INFORMATION_SCHEMA_NAME, informationSchema);
+    rootSchema.getRootSchema().add(INFORMATION_SCHEMA_NAME, informationSchema);
     return rootSchema;
   }
 }

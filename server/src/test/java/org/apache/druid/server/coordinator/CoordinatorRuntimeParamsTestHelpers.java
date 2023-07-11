@@ -28,13 +28,6 @@ public class CoordinatorRuntimeParamsTestHelpers
         .withStartTimeNanos(System.nanoTime());
   }
 
-  public static DruidCoordinatorRuntimeParams.Builder newBuilder(DruidCluster druidCluster)
-  {
-    return newBuilder()
-        .withDruidCluster(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster, false));
-  }
-
   private CoordinatorRuntimeParamsTestHelpers()
   {
   }

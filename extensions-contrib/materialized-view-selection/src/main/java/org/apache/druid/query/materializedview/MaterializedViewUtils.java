@@ -65,7 +65,7 @@ public class MaterializedViewUtils
         dimensions.add(dim);
       }
     } else {
-      throw new UnsupportedOperationException("Method getRequeiredFields only support TopNQuery/TimeseriesQuery/GroupByQuery");
+      throw new UnsupportedOperationException("Method getRequiredFields only supports TopNQuery/TimeseriesQuery/GroupByQuery");
     }
     return dimensions;
   }

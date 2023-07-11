@@ -19,22 +19,21 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteSink;
-import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
+import com.google.common.math.IntMath;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -43,27 +42,31 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.tasklogs.ConsoleLoggingEnforcementConfigurationFactory;
 import org.apache.druid.indexing.common.tasklogs.LogUtils;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.server.metrics.MonitorsConfig;
+import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogStreamer;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -72,23 +75,26 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.RoundingMode;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Runs tasks in separate processes using the "internal peon" verb.
  */
 public class ForkingTaskRunner
     extends BaseRestorableTaskRunner<ForkingTaskRunner.ForkingTaskRunnerWorkItem>
-    implements TaskLogStreamer
+    implements TaskLogStreamer, WorkerTaskCountStatsProvider
 {
   private static final EmittingLogger LOGGER = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
@@ -99,8 +105,15 @@ public class ForkingTaskRunner
   private final ListeningExecutorService exec;
   private final PortFinder portFinder;
   private final StartupLoggingConfig startupLoggingConfig;
+  private final WorkerConfig workerConfig;
 
+  private volatile int numProcessorsPerTask = -1;
   private volatile boolean stopping = false;
+
+  private static final AtomicLong LAST_REPORTED_FAILED_TASK_COUNT = new AtomicLong();
+  private static final AtomicLong FAILED_TASK_COUNT = new AtomicLong();
+  private static final AtomicLong SUCCESSFUL_TASK_COUNT = new AtomicLong();
+  private static final AtomicLong LAST_REPORTED_SUCCESSFUL_TASK_COUNT = new AtomicLong();
 
   @Inject
   public ForkingTaskRunner(
@@ -111,16 +124,18 @@ public class ForkingTaskRunner
       TaskLogPusher taskLogPusher,
       ObjectMapper jsonMapper,
       @Self DruidNode node,
-      StartupLoggingConfig startupLoggingConfig
+      StartupLoggingConfig startupLoggingConfig,
+      TaskStorageDirTracker dirTracker
   )
   {
-    super(jsonMapper, taskConfig);
+    super(jsonMapper, taskConfig, dirTracker);
     this.config = config;
     this.props = props;
     this.taskLogPusher = taskLogPusher;
     this.node = node;
     this.portFinder = new PortFinder(config.getStartPort(), config.getEndPort(), config.getPorts());
     this.startupLoggingConfig = startupLoggingConfig;
+    this.workerConfig = workerConfig;
     this.exec = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(workerConfig.getCapacity(), "forking-task-runner-%d")
     );
@@ -139,9 +154,22 @@ public class ForkingTaskRunner
                 @Override
                 public TaskStatus call()
                 {
-                  final String attemptUUID = UUID.randomUUID().toString();
-                  final File taskDir = taskConfig.getTaskDir(task.getId());
-                  final File attemptDir = new File(taskDir, attemptUUID);
+
+                  final File baseDirForTask;
+                  try {
+                    baseDirForTask = getTracker().pickBaseDir(task.getId());
+                  }
+                  catch (RuntimeException e) {
+                    LOG.error(e, "Failed to get directory for task [%s], cannot schedule.", task.getId());
+                    return TaskStatus.failure(
+                        task.getId(),
+                        StringUtils.format("Could not schedule due to error [%s]", e.getMessage())
+                    );
+                  }
+
+                  final File taskDir = new File(baseDirForTask, task.getId());
+                  final String attemptId = String.valueOf(getNextAttemptID(taskDir));
+                  final File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", attemptId).toFile();
 
                   final ProcessHolder processHolder;
                   final String childHost = node.getHost();
@@ -161,10 +189,6 @@ public class ForkingTaskRunner
                   try {
                     final Closer closer = Closer.create();
                     try {
-                      if (!attemptDir.mkdirs()) {
-                        throw new IOE("Could not create directories: %s", attemptDir);
-                      }
-
                       final File taskFile = new File(taskDir, "task.json");
                       final File statusFile = new File(attemptDir, "status.json");
                       final File logFile = new File(taskDir, "log");
@@ -205,6 +229,13 @@ public class ForkingTaskRunner
                         command.add("-cp");
                         command.add(taskClasspath);
 
+                        if (numProcessorsPerTask < 1) {
+                          // numProcessorsPerTask is set by start()
+                          throw new ISE("Not started");
+                        }
+
+                        command.add(StringUtils.format("-XX:ActiveProcessorCount=%d", numProcessorsPerTask));
+
                         Iterables.addAll(command, new QuotableWhiteSpaceSplitter(config.getJavaOpts()));
                         Iterables.addAll(command, config.getJavaOptsArray());
 
@@ -216,6 +247,24 @@ public class ForkingTaskRunner
                           Iterables.addAll(
                               command,
                               new QuotableWhiteSpaceSplitter((String) taskJavaOpts)
+                          );
+                        }
+
+                        // Override task specific javaOptsArray
+                        try {
+                          List<String> taskJavaOptsArray = jsonMapper.convertValue(
+                              task.getContextValue(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY),
+                              new TypeReference<List<String>>() {}
+                          );
+                          if (taskJavaOptsArray != null) {
+                            Iterables.addAll(command, taskJavaOptsArray);
+                          }
+                        }
+                        catch (Exception e) {
+                          throw new IllegalArgumentException(
+                              ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY
+                              + " in context of task: " + task.getId() + " must be an array of strings.",
+                              e
                           );
                         }
 
@@ -266,6 +315,15 @@ public class ForkingTaskRunner
                           }
                         }
 
+                        // add the attemptId as a system property
+                        command.add(
+                            StringUtils.format(
+                                "-D%s=%s",
+                                "attemptId",
+                                "1"
+                            )
+                        );
+
                         // Add dataSource, taskId and taskType for metrics or logging
                         command.add(
                             StringUtils.format(
@@ -313,6 +371,7 @@ public class ForkingTaskRunner
                         command.add(
                             StringUtils.format("-Ddruid.task.executor.enableTlsPort=%s", node.isEnableTlsPort())
                         );
+                        command.add(StringUtils.format("-Dlog4j2.configurationFactory=%s", ConsoleLoggingEnforcementConfigurationFactory.class.getName()));
 
                         // These are not enabled per default to allow the user to either set or not set them
                         // Users are highly suggested to be set in druid.indexer.runner.javaOpts
@@ -320,13 +379,13 @@ public class ForkingTaskRunner
                         // for more information
                         // command.add("-XX:+UseThreadPriorities");
                         // command.add("-XX:ThreadPriorityPolicy=42");
+                        command.add(StringUtils.format("-Ddruid.indexer.task.baseTaskDir=%s", baseDirForTask.getAbsolutePath()));
 
                         command.add("org.apache.druid.cli.Main");
                         command.add("internal");
                         command.add("peon");
-                        command.add(taskFile.toString());
-                        command.add(statusFile.toString());
-                        command.add(reportsFile.toString());
+                        command.add(taskDir.toString());
+                        command.add(attemptId);
                         String nodeType = task.getNodeType();
                         if (nodeType != null) {
                           command.add("--nodeType");
@@ -380,7 +439,11 @@ public class ForkingTaskRunner
                             )
                         );
                       }
-
+                      if (status.isSuccess()) {
+                        SUCCESSFUL_TASK_COUNT.incrementAndGet();
+                      } else {
+                        FAILED_TASK_COUNT.incrementAndGet();
+                      }
                       TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
                       return status;
                     }
@@ -469,7 +532,7 @@ public class ForkingTaskRunner
     }
     finally {
       Thread.currentThread().setName(priorThreadName);
-      // Upload task logs
+        // Upload task logs
       taskLogPusher.pushTaskLog(task.getId(), logFile);
       if (reportsFile.exists()) {
         taskLogPusher.pushTaskReports(task.getId(), reportsFile);
@@ -601,13 +664,14 @@ public class ForkingTaskRunner
   }
 
   @Override
+  @LifecycleStart
   public void start()
   {
-    // No state setup required
+    setNumProcessorsPerTask();
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset)
+  public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final ProcessHolder processHolder;
 
@@ -619,17 +683,7 @@ public class ForkingTaskRunner
         return Optional.absent();
       }
     }
-
-    return Optional.of(
-        new ByteSource()
-        {
-          @Override
-          public InputStream openStream() throws IOException
-          {
-            return LogUtils.streamFile(processHolder.logFile, offset);
-          }
-        }
-    );
+    return Optional.of(LogUtils.streamFile(processHolder.logFile, offset));
   }
 
   /**
@@ -651,7 +705,7 @@ public class ForkingTaskRunner
     }
   }
 
-  String getMaskedCommand(List<String> maskedProperties, List<String> command)
+  public static String getMaskedCommand(List<String> maskedProperties, List<String> command)
   {
     final Set<String> maskedPropertiesSet = Sets.newHashSet(maskedProperties);
     final Iterator<String> maskedIterator = command.stream().map(element -> {
@@ -669,36 +723,105 @@ public class ForkingTaskRunner
   }
 
   @Override
-  public long getTotalTaskSlotCount()
+  public Map<String, Long> getTotalTaskSlotCount()
   {
-    if (config.getPorts() != null && !config.getPorts().isEmpty()) {
-      return config.getPorts().size();
-    }
-    return config.getEndPort() - config.getStartPort() + 1;
+    return ImmutableMap.of(workerConfig.getCategory(), getTotalTaskSlotCountLong());
+  }
+
+  public long getTotalTaskSlotCountLong()
+  {
+    return workerConfig.getCapacity();
   }
 
   @Override
-  public long getIdleTaskSlotCount()
+  public Map<String, Long> getIdleTaskSlotCount()
   {
-    return Math.max(getTotalTaskSlotCount() - getUsedTaskSlotCount(), 0);
+    return ImmutableMap.of(workerConfig.getCategory(), Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0));
   }
 
   @Override
-  public long getUsedTaskSlotCount()
+  public Map<String, Long> getUsedTaskSlotCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(portFinder.findUsedPortCount()));
+  }
+
+  public long getUsedTaskSlotCountLong()
   {
     return portFinder.findUsedPortCount();
   }
 
   @Override
-  public long getLazyTaskSlotCount()
+  public Map<String, Long> getLazyTaskSlotCount()
   {
-    return 0;
+    return ImmutableMap.of(workerConfig.getCategory(), 0L);
   }
 
   @Override
-  public long getBlacklistedTaskSlotCount()
+  public Map<String, Long> getBlacklistedTaskSlotCount()
   {
-    return 0;
+    return ImmutableMap.of(workerConfig.getCategory(), 0L);
+  }
+
+  @Override
+  public Long getWorkerFailedTaskCount()
+  {
+    long failedTaskCount = FAILED_TASK_COUNT.get();
+    long lastReportedFailedTaskCount = LAST_REPORTED_FAILED_TASK_COUNT.get();
+    LAST_REPORTED_FAILED_TASK_COUNT.set(failedTaskCount);
+    return failedTaskCount - lastReportedFailedTaskCount;
+  }
+
+  @Override
+  public Long getWorkerIdleTaskSlotCount()
+  {
+    return Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0);
+  }
+
+  @Override
+  public Long getWorkerUsedTaskSlotCount()
+  {
+    return (long) portFinder.findUsedPortCount();
+  }
+
+  @Override
+  public Long getWorkerTotalTaskSlotCount()
+  {
+    return getTotalTaskSlotCountLong();
+  }
+
+  @Override
+  public String getWorkerCategory()
+  {
+    return workerConfig.getCategory();
+  }
+
+  @Override
+  public String getWorkerVersion()
+  {
+    return workerConfig.getVersion();
+  }
+
+  @Override
+  public Long getWorkerSuccessfulTaskCount()
+  {
+    long successfulTaskCount = SUCCESSFUL_TASK_COUNT.get();
+    long lastReportedSuccessfulTaskCount = LAST_REPORTED_SUCCESSFUL_TASK_COUNT.get();
+    LAST_REPORTED_SUCCESSFUL_TASK_COUNT.set(successfulTaskCount);
+    return successfulTaskCount - lastReportedSuccessfulTaskCount;
+  }
+
+  @VisibleForTesting
+  void setNumProcessorsPerTask()
+  {
+    // Divide number of available processors by the number of tasks.
+    // This prevents various automatically-sized thread pools from being unreasonably large (we don't want each
+    // task to size its pools as if it is the only thing on the entire machine).
+
+    final int availableProcessors = JvmUtils.getRuntimeInfo().getAvailableProcessors();
+    numProcessorsPerTask = Math.max(
+        1,
+        IntMath.divide(availableProcessors, workerConfig.getCapacity(), RoundingMode.CEILING)
+    );
   }
 
   protected static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem
@@ -776,40 +899,30 @@ public class ForkingTaskRunner
       process.destroy();
     }
   }
-}
 
-/**
- * Make an iterable of space delimited strings... unless there are quotes, which it preserves
- */
-class QuotableWhiteSpaceSplitter implements Iterable<String>
-{
-  private final String string;
-
-  public QuotableWhiteSpaceSplitter(String string)
+  @VisibleForTesting
+  static int getNextAttemptID(File taskDir)
   {
-    this.string = Preconditions.checkNotNull(string);
-  }
-
-  @Override
-  public Iterator<String> iterator()
-  {
-    return Splitter.on(
-        new CharMatcher()
-        {
-          private boolean inQuotes = false;
-
-          @Override
-          public boolean matches(char c)
-          {
-            if ('"' == c) {
-              inQuotes = !inQuotes;
-            }
-            if (inQuotes) {
-              return false;
-            }
-            return CharMatcher.BREAKING_WHITESPACE.matches(c);
-          }
-        }
-    ).omitEmptyStrings().split(string).iterator();
+    File attemptDir = new File(taskDir, "attempt");
+    try {
+      FileUtils.mkdirp(attemptDir);
+    }
+    catch (IOException e) {
+      throw new ISE("Error creating directory", e);
+    }
+    int maxAttempt =
+        Arrays.stream(attemptDir.listFiles(File::isDirectory))
+              .mapToInt(x -> Integer.parseInt(x.getName()))
+              .max().orElse(0);
+    // now make the directory
+    File attempt = new File(attemptDir, String.valueOf(maxAttempt + 1));
+    try {
+      FileUtils.mkdirp(attempt);
+    }
+    catch (IOException e) {
+      throw new ISE("Error creating directory", e);
+    }
+    return maxAttempt + 1;
   }
 }
+

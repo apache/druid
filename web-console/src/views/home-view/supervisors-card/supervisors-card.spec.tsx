@@ -19,11 +19,11 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { Capabilities } from '../../../utils';
+import { Capabilities } from '../../../helpers';
 
 import { SupervisorsCard } from './supervisors-card';
 
-describe('supervisors card', () => {
+describe('SupervisorsCard', () => {
   it('matches snapshot', () => {
     const supervisorsCard = <SupervisorsCard capabilities={Capabilities.FULL} />;
 

@@ -65,9 +65,7 @@ public class HadoopDruidIndexerMapperTest
               new JSONParseSpec(
                   new TimestampSpec("t", "auto", null),
                   new DimensionsSpec(
-                      DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim1t", "dim2")),
-                      null,
-                      null
+                      DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim1t", "dim2"))
                   ),
                   new JSONPathSpec(true, ImmutableList.of()),
                   ImmutableMap.of(),

@@ -31,15 +31,15 @@ import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.cache.PathChildrenCacheFactory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.CloseableUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -135,12 +135,11 @@ public class Announcer
 
       started = false;
 
-      Closer closer = Closer.create();
-      for (PathChildrenCache cache : listeners.values()) {
-        closer.register(cache);
-      }
       try {
-        CloseQuietly.close(closer);
+        CloseableUtils.closeAll(listeners.values());
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
       }
       finally {
         pathChildrenCacheExecutor.shutdown();
@@ -413,9 +412,8 @@ public class Announcer
     try {
       cache.start();
     }
-    catch (Exception e) {
-      CloseQuietly.close(cache);
-      throw new RuntimeException(e);
+    catch (Throwable e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, cache);
     }
   }
 

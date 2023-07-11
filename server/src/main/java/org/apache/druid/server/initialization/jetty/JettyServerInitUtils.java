@@ -23,8 +23,12 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AllowHttpMethodsResourceFilter;
+import org.eclipse.jetty.rewrite.handler.HeaderPatternRule;
+import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.RequestLogHandler;
 import org.eclipse.jetty.server.handler.gzip.GzipHandler;
 import org.eclipse.jetty.servlet.FilterHolder;
@@ -32,6 +36,7 @@ import org.eclipse.jetty.servlet.FilterMapping;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 
 import javax.ws.rs.HttpMethod;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -54,11 +59,28 @@ public class JettyServerInitUtils
     return gzipHandler;
   }
 
+  /**
+   * Add any filters that were registered with {@link JettyBindings#addQosFilter}. These must be added first in
+   * the filter chain, because when a request is suspended and later resumed due to QoS constraints, its filter
+   * chain is restarted. Placing QoSFilters first in the chain avoids double-execution of other filters.
+   */
+  public static void addQosFilters(ServletContextHandler handler, Injector injector)
+  {
+    final Set<JettyBindings.QosFilterHolder> filters =
+        injector.getInstance(Key.get(new TypeLiteral<Set<JettyBindings.QosFilterHolder>>() {}));
+    addFilters(handler, filters);
+  }
+
   public static void addExtensionFilters(ServletContextHandler handler, Injector injector)
   {
-    Set<ServletFilterHolder> extensionFilters = injector.getInstance(Key.get(new TypeLiteral<Set<ServletFilterHolder>>(){}));
+    final Set<ServletFilterHolder> filters =
+        injector.getInstance(Key.get(new TypeLiteral<Set<ServletFilterHolder>>() {}));
+    addFilters(handler, filters);
+  }
 
-    for (ServletFilterHolder servletFilterHolder : extensionFilters) {
+  public static void addFilters(ServletContextHandler handler, Set<? extends ServletFilterHolder> filterHolders)
+  {
+    for (ServletFilterHolder servletFilterHolder : filterHolders) {
       // Check the Filter first to guard against people who don't read the docs and return the Class even
       // when they have an instance.
       FilterHolder holder;
@@ -104,5 +126,26 @@ public class JettyServerInitUtils
         "/*",
         null
     );
+  }
+  
+  public static void maybeAddHSTSPatternRule(ServerConfig serverConfig, RewriteHandler rewriteHandler)
+  {
+    if (serverConfig.isEnableHSTS()) {
+      rewriteHandler.addRule(getHSTSHeaderPattern());
+    }
+  }
+
+  public static void maybeAddHSTSRewriteHandler(ServerConfig serverConfig, HandlerList handlerList)
+  {
+    if (serverConfig.isEnableHSTS()) {
+      RewriteHandler rewriteHandler = new RewriteHandler();
+      rewriteHandler.addRule(getHSTSHeaderPattern());
+      handlerList.addHandler(rewriteHandler);
+    }
+  }
+
+  private static HeaderPatternRule getHSTSHeaderPattern()
+  {
+    return new HeaderPatternRule("*", "Strict-Transport-Security", "max-age=63072000; includeSubDomains");
   }
 }

@@ -23,12 +23,14 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
@@ -54,8 +56,8 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.apache.druid.utils.Streams;
@@ -240,7 +242,25 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
     final DruidSegmentInputFormat inputFormat = new DruidSegmentInputFormat(indexIO, dimFilter);
 
+    return new InputEntityIteratingReader(
+        getInputRowSchemaToUse(inputRowSchema),
+        inputFormat,
+        entityIterator,
+        temporaryDirectory
+    );
+  }
+
+  @VisibleForTesting
+  InputRowSchema getInputRowSchemaToUse(InputRowSchema inputRowSchema)
+  {
     final InputRowSchema inputRowSchemaToUse;
+
+    ColumnsFilter columnsFilterToUse = inputRowSchema.getColumnsFilter();
+    if (inputRowSchema.getMetricNames() != null) {
+      for (String metricName : inputRowSchema.getMetricNames()) {
+        columnsFilterToUse = columnsFilterToUse.plus(metricName);
+      }
+    }
 
     if (taskConfig.isIgnoreTimestampSpecForDruidInputSource()) {
       // Legacy compatibility mode; see https://github.com/apache/druid/pull/10267.
@@ -250,10 +270,14 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       inputRowSchemaToUse = new InputRowSchema(
           new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, STANDARD_TIME_COLUMN_FORMATS.iterator().next(), null),
           inputRowSchema.getDimensionsSpec(),
-          inputRowSchema.getColumnsFilter().plus(ColumnHolder.TIME_COLUMN_NAME)
+          columnsFilterToUse.plus(ColumnHolder.TIME_COLUMN_NAME)
       );
     } else {
-      inputRowSchemaToUse = inputRowSchema;
+      inputRowSchemaToUse = new InputRowSchema(
+          inputRowSchema.getTimestampSpec(),
+          inputRowSchema.getDimensionsSpec(),
+          columnsFilterToUse
+      );
     }
 
     if (ColumnHolder.TIME_COLUMN_NAME.equals(inputRowSchemaToUse.getTimestampSpec().getTimestampColumn())
@@ -267,12 +291,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       );
     }
 
-    return new InputEntityIteratingReader(
-        inputRowSchemaToUse,
-        inputFormat,
-        entityIterator,
-        temporaryDirectory
-    );
+    return inputRowSchemaToUse;
   }
 
   private List<TimelineObjectHolder<String, DataSegment>> createTimeline()
@@ -490,7 +509,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
       }
     }
 
-    return VersionedIntervalTimeline.forSegments(usedSegments).lookup(interval);
+    return SegmentTimeline.forSegments(usedSegments).lookup(interval);
   }
 
   public static List<TimelineObjectHolder<String, DataSegment>> getTimelineForSegmentIds(

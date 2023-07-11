@@ -19,14 +19,20 @@
 
 package org.apache.druid.client.cache;
 
+import org.apache.druid.java.util.common.Pair;
 import redis.clients.jedis.JedisCluster;
+import redis.clients.util.JedisClusterCRC16;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RedisClusterCache extends AbstractRedisCache
 {
-  private JedisCluster cluster;
+  private final JedisCluster cluster;
 
   RedisClusterCache(JedisCluster cluster, RedisCacheConfig config)
   {
@@ -46,10 +52,59 @@ public class RedisClusterCache extends AbstractRedisCache
     cluster.setex(key, (int) expiration.getSeconds(), value);
   }
 
-  @Override
-  protected List<byte[]> mgetFromRedis(byte[]... keys)
+  static class CachableKey
   {
-    return cluster.mget(keys);
+    byte[] keyBytes;
+    NamedKey namedKey;
+
+    public CachableKey(NamedKey namedKey)
+    {
+      this.keyBytes = namedKey.toByteArray();
+      this.namedKey = namedKey;
+    }
+  }
+
+  /**
+   * Jedis does not work if the given keys are distributed among different redis nodes
+   * A simple workaround is to group keys by their slots and mget values for each slot.
+   * <p>
+   * In future, Jedis could be replaced by the Lettuce driver which supports mget operation on a redis cluster
+   */
+  @Override
+  protected Pair<Integer, Map<NamedKey, byte[]>> mgetFromRedis(Iterable<NamedKey> keys)
+  {
+    int inputKeyCount = 0;
+
+    // group keys based on their slots
+    Map<Integer, List<CachableKey>> slot2Keys = new HashMap<>();
+    for (NamedKey key : keys) {
+      inputKeyCount++;
+
+      CachableKey cachableKey = new CachableKey(key);
+      int keySlot = JedisClusterCRC16.getSlot(cachableKey.keyBytes);
+      slot2Keys.computeIfAbsent(keySlot, val -> new ArrayList<>()).add(cachableKey);
+    }
+
+    ConcurrentHashMap<NamedKey, byte[]> results = new ConcurrentHashMap<>();
+    slot2Keys.keySet()
+             .parallelStream()
+             .forEach(slot -> {
+               List<CachableKey> keyList = slot2Keys.get(slot);
+
+               // mget for this slot
+               List<byte[]> values = cluster.mget(keyList.stream()
+                                                         .map(key -> key.keyBytes)
+                                                         .toArray(byte[][]::new));
+
+               for (int i = 0; i < keyList.size(); i++) {
+                 byte[] value = values.get(i);
+                 if (value != null) {
+                   results.put(keyList.get(i).namedKey, value);
+                 }
+               }
+             });
+
+    return new Pair<>(inputKeyCount, results);
   }
 
   @Override

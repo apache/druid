@@ -29,6 +29,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.filter.cnf.CalciteCnfHelper;
 import org.apache.druid.segment.filter.cnf.HiveCnfHelper;
 import org.junit.Assert;
@@ -113,7 +114,7 @@ public class FilterCnfConversionTest
   }
 
   @Test
-  public void testToCnfWithMuchReducibleFilter()
+  public void testToCnfWithMuchReducibleFilter() throws CNFFilterExplosionException
   {
     final Filter muchReducible = FilterTestUtils.and(
         // should be flattened
@@ -158,7 +159,7 @@ public class FilterCnfConversionTest
   }
 
   @Test
-  public void testToNormalizedOrClausesWithMuchReducibleFilter()
+  public void testToNormalizedOrClausesWithMuchReducibleFilter() throws CNFFilterExplosionException
   {
     final Filter muchReducible = FilterTestUtils.and(
         // should be flattened
@@ -203,7 +204,7 @@ public class FilterCnfConversionTest
   }
 
   @Test
-  public void testToCnfWithComplexFilterIncludingNotAndOr()
+  public void testToCnfWithComplexFilterIncludingNotAndOr() throws CNFFilterExplosionException
   {
     final Filter filter = FilterTestUtils.and(
         FilterTestUtils.or(
@@ -307,7 +308,7 @@ public class FilterCnfConversionTest
   }
 
   @Test
-  public void testToNormalizedOrClausesWithComplexFilterIncludingNotAndOr()
+  public void testToNormalizedOrClausesWithComplexFilterIncludingNotAndOr() throws CNFFilterExplosionException
   {
     final Filter filter = FilterTestUtils.and(
         FilterTestUtils.or(
@@ -411,7 +412,7 @@ public class FilterCnfConversionTest
   }
 
   @Test
-  public void testToCnfCollapsibleBigFilter()
+  public void testToCnfCollapsibleBigFilter() throws CNFFilterExplosionException
   {
     List<Filter> ands = new ArrayList<>();
     List<Filter> ors = new ArrayList<>();
@@ -477,7 +478,7 @@ public class FilterCnfConversionTest
   }
 
   @Test
-  public void testToCnfFilterThatPullCannotConvertToCnfProperly()
+  public void testToCnfFilterThatPullCannotConvertToCnfProperly() throws CNFFilterExplosionException
   {
     final Filter filter = FilterTestUtils.or(
         FilterTestUtils.and(
@@ -507,7 +508,7 @@ public class FilterCnfConversionTest
   }
 
   @Test
-  public void testToNormalizedOrClausesNonAndFilterShouldReturnSingleton()
+  public void testToNormalizedOrClausesNonAndFilterShouldReturnSingleton() throws CNFFilterExplosionException
   {
     Filter filter = FilterTestUtils.or(
         FilterTestUtils.selector("col1", "val1"),
@@ -526,6 +527,78 @@ public class FilterCnfConversionTest
 
     Assert.assertEquals(TrueFilter.instance(), TrueFilter.instance().rewriteRequiredColumns(ImmutableMap.of()));
     Assert.assertEquals(FalseFilter.instance(), FalseFilter.instance().rewriteRequiredColumns(ImmutableMap.of()));
+  }
+
+  @Test(expected = CNFFilterExplosionException.class)
+  public void testExceptionOnCNFFilterExplosion() throws CNFFilterExplosionException
+  {
+    Filter filter = FilterTestUtils.or(
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val1"),
+            FilterTestUtils.selector("col2", "val2")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val3"),
+            FilterTestUtils.selector("col2", "val4")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val1"),
+            FilterTestUtils.selector("col2", "val3")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val3"),
+            FilterTestUtils.selector("col2", "val2")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val5"),
+            FilterTestUtils.selector("col2", "val6")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val5"),
+            FilterTestUtils.selector("col2", "val7")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val6"),
+            FilterTestUtils.selector("col2", "val7")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val6"),
+            FilterTestUtils.selector("col2", "val8")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val7"),
+            FilterTestUtils.selector("col2", "val9")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val8"),
+            FilterTestUtils.selector("col2", "val9")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val4"),
+            FilterTestUtils.selector("col2", "val9")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val4"),
+            FilterTestUtils.selector("col2", "val8")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val5"),
+            FilterTestUtils.selector("col2", "val2")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val5"),
+            FilterTestUtils.selector("col2", "val1")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val7"),
+            FilterTestUtils.selector("col2", "val0")
+        ),
+        FilterTestUtils.and(
+            FilterTestUtils.selector("col1", "val9"),
+            FilterTestUtils.selector("col2", "val8")
+        )
+    );
+    Filters.toNormalizedOrClauses(filter);
   }
 
   private void assertFilter(Filter original, Filter expectedConverted, Filter actualConverted)

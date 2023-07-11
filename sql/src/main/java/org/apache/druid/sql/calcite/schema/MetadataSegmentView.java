@@ -38,7 +38,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.SegmentMetadataCacheConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -61,7 +61,6 @@ import java.util.concurrent.TimeUnit;
 @ManageLifecycle
 public class MetadataSegmentView
 {
-
   private static final EmittingLogger log = new EmittingLogger(MetadataSegmentView.class);
 
   private final DruidLeaderClient coordinatorDruidLeaderClient;
@@ -88,15 +87,15 @@ public class MetadataSegmentView
       final @Coordinator DruidLeaderClient druidLeaderClient,
       final ObjectMapper jsonMapper,
       final BrokerSegmentWatcherConfig segmentWatcherConfig,
-      final PlannerConfig plannerConfig
+      final SegmentMetadataCacheConfig config
   )
   {
-    Preconditions.checkNotNull(plannerConfig, "plannerConfig");
+    Preconditions.checkNotNull(config, "SegmentMetadataCacheConfig");
     this.coordinatorDruidLeaderClient = druidLeaderClient;
     this.jsonMapper = jsonMapper;
     this.segmentWatcherConfig = segmentWatcherConfig;
-    this.isCacheEnabled = plannerConfig.isMetadataSegmentCacheEnable();
-    this.pollPeriodInMS = plannerConfig.getMetadataSegmentPollPeriod();
+    this.isCacheEnabled = config.isMetadataSegmentCacheEnable();
+    this.pollPeriodInMS = config.getMetadataSegmentPollPeriod();
     this.scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
   }
 

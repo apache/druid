@@ -26,7 +26,6 @@ import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.data.SearchableVersionedDataFinder;
-import org.apache.druid.firehose.hdfs.HdfsFirehoseFactory;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.Hdfs;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -51,7 +50,7 @@ import java.util.Properties;
  */
 public class HdfsStorageDruidModule implements DruidModule
 {
-  static final String SCHEME = "hdfs";
+  public static final String SCHEME = "hdfs";
   private Properties props = null;
 
   @Inject
@@ -66,7 +65,6 @@ public class HdfsStorageDruidModule implements DruidModule
     return Collections.singletonList(
         new SimpleModule().registerSubtypes(
             new NamedType(HdfsLoadSpec.class, HdfsStorageDruidModule.SCHEME),
-            new NamedType(HdfsFirehoseFactory.class, HdfsStorageDruidModule.SCHEME),
             new NamedType(HdfsInputSource.class, HdfsStorageDruidModule.SCHEME)
         )
     );

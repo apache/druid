@@ -19,40 +19,13 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.expression.DruidExpression;
-import org.apache.druid.sql.calcite.expression.OperatorConversions;
-import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 
-public class ArrayConstructorOperatorConversion implements SqlOperatorConversion
+public class ArrayConstructorOperatorConversion extends DirectOperatorConversion
 {
-  private static final SqlOperator SQL_FUNCTION = SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR;
-
-  @Override
-  public SqlOperator calciteOperator()
+  public ArrayConstructorOperatorConversion()
   {
-    return SQL_FUNCTION;
-  }
-
-  @Override
-  public DruidExpression toDruidExpression(
-      final PlannerContext plannerContext,
-      final RowSignature rowSignature,
-      final RexNode rexNode
-  )
-  {
-    return OperatorConversions.convertCall(
-        plannerContext,
-        rowSignature,
-        rexNode,
-        druidExpressions -> DruidExpression.of(
-            null,
-            DruidExpression.functionCall("array", druidExpressions)
-        )
-    );
+    super(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, "array");
   }
 }

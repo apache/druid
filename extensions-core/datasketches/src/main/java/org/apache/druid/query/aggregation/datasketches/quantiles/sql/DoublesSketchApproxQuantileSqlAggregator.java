@@ -33,14 +33,13 @@ import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToQuantilePostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -50,10 +49,13 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 
 public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 {
+  public static final String CTX_APPROX_QUANTILE_DS_MAX_STREAM_LENGTH = "approxQuantileDsMaxStreamLength";
+
   private static final SqlAggFunction FUNCTION_INSTANCE = new DoublesSketchApproxQuantileSqlAggFunction();
   private static final String NAME = "APPROX_QUANTILE_DS";
 
@@ -81,6 +83,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
         plannerContext,
         rowSignature,
         Expressions.fromFieldAccess(
+            rexBuilder.getTypeFactory(),
             rowSignature,
             project,
             aggregateCall.getArgList().get(0)
@@ -93,6 +96,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
     final AggregatorFactory aggregatorFactory;
     final String histogramName = StringUtils.format("%s:agg", name);
     final RexNode probabilityArg = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         aggregateCall.getArgList().get(1)
@@ -108,6 +112,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 
     if (aggregateCall.getArgList().size() >= 3) {
       final RexNode resolutionArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(2)
@@ -131,8 +136,8 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
 
           // Check input for equivalence.
           final boolean inputMatches;
-          final VirtualColumn virtualInput =
-              virtualColumnRegistry.findVirtualColumns(theFactory.requiredFields())
+          final DruidExpression virtualInput =
+              virtualColumnRegistry.findVirtualColumnExpressions(theFactory.requiredFields())
                                    .stream()
                                    .findFirst()
                                    .orElse(null);
@@ -140,7 +145,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
           if (virtualInput == null) {
             inputMatches = input.isDirectColumnAccess() && input.getDirectColumn().equals(theFactory.getFieldName());
           } else {
-            inputMatches = ((ExpressionVirtualColumn) virtualInput).getExpression().equals(input.getExpression());
+            inputMatches = virtualInput.equals(input);
           }
 
           final boolean matches = inputMatches
@@ -169,18 +174,21 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
       aggregatorFactory = new DoublesSketchAggregatorFactory(
           histogramName,
           input.getDirectColumn(),
-          k
+          k,
+          getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
+          true
       );
     } else {
-      VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-          plannerContext,
+      String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           input,
-          ValueType.FLOAT
+          ColumnType.FLOAT
       );
       aggregatorFactory = new DoublesSketchAggregatorFactory(
           histogramName,
-          virtualColumn.getOutputName(),
-          k
+          virtualColumnName,
+          k,
+          getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
+          true
       );
     }
 
@@ -194,6 +202,14 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
             ),
             probability
         )
+    );
+  }
+
+  static long getMaxStreamLengthFromQueryContext(QueryContext queryContext)
+  {
+    return queryContext.getLong(
+        CTX_APPROX_QUANTILE_DS_MAX_STREAM_LENGTH,
+        DoublesSketchAggregatorFactory.DEFAULT_MAX_STREAM_LENGTH
     );
   }
 

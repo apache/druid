@@ -17,14 +17,19 @@
  */
 
 import React from 'react';
-import { Filter, ReactTableDefaults } from 'react-table';
+import type { Filter } from 'react-table';
+import { ReactTableDefaults } from 'react-table';
 
 import { Loader } from '../components';
-import { booleanCustomTableFilter, countBy, makeTextFilter } from '../utils';
+import {
+  booleanCustomTableFilter,
+  DEFAULT_TABLE_CLASS_NAME,
+  GenericFilterInput,
+  ReactTablePagination,
+} from '../react-table';
+import { countBy } from '../utils';
 
-import { ReactTableCustomPagination } from './react-table-custom-pagination';
-
-const NoData = React.memo(function NoData(props) {
+const NoData = React.memo(function NoData(props: { children?: React.ReactNode }) {
   const { children } = props;
   if (!children) return null;
   return <div className="rt-noData">{children}</div>;
@@ -32,7 +37,7 @@ const NoData = React.memo(function NoData(props) {
 
 export function bootstrapReactTable() {
   Object.assign(ReactTableDefaults, {
-    className: '-striped -highlight',
+    className: DEFAULT_TABLE_CLASS_NAME,
     defaultFilterMethod: (filter: Filter, row: any) => {
       const id = filter.pivotId || filter.id;
       return booleanCustomTableFilter(filter, row[id]);
@@ -40,8 +45,17 @@ export function bootstrapReactTable() {
     LoadingComponent: Loader,
     loadingText: '',
     NoDataComponent: NoData,
-    FilterComponent: makeTextFilter(),
-    PaginationComponent: ReactTableCustomPagination,
+    FilterComponent: GenericFilterInput,
+    PaginationComponent: ReactTablePagination,
+    PivotValueComponent: function PivotValue(opt: any) {
+      const { value, subRows } = opt;
+      let msg = String(value);
+      if (msg === 'undefined') msg = 'n/a';
+      if (subRows) {
+        msg += ` (${subRows.length})`;
+      }
+      return <span className="default-pivoted">{msg}</span>;
+    },
     AggregatedComponent: function Aggregated(opt: any) {
       const { subRows, column } = opt;
       const previewValues = subRows
@@ -49,12 +63,12 @@ export function bootstrapReactTable() {
         .map((row: any) => row[column.id]);
       const previewCount = countBy(previewValues);
       return (
-        <span>
+        <div className="default-aggregated">
           {Object.keys(previewCount)
             .sort()
             .map(v => `${v} (${previewCount[v]})`)
             .join(', ')}
-        </span>
+        </div>
       );
     },
     defaultPageSize: 20,

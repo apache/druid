@@ -90,13 +90,14 @@ public class InlineSchemaAvroBytesDecoder implements AvroBytesDecoder
     catch (EOFException eof) {
       // waiting for avro v1.9.0 (#AVRO-813)
       throw new ParseException(
+          null,
           eof,
           "Avro's unnecessary EOFException, detail: [%s]",
           "https://issues.apache.org/jira/browse/AVRO-813"
       );
     }
     catch (Exception e) {
-      throw new ParseException(e, "Fail to decode avro message!");
+      throw new ParseException(null, e, "Fail to decode avro message!");
     }
   }
 }

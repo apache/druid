@@ -19,214 +19,355 @@
 
 package org.apache.druid.sql.http;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.common.exception.SanitizableException;
+import org.apache.druid.guice.annotations.NativeQuery;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.BadQueryException;
-import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryInterruptedException;
-import org.apache.druid.query.QueryTimeoutException;
-import org.apache.druid.query.QueryUnsupportedException;
-import org.apache.druid.query.ResourceLimitExceededException;
-import org.apache.druid.server.security.ForbiddenException;
-import org.apache.druid.sql.SqlLifecycle;
-import org.apache.druid.sql.SqlLifecycleFactory;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.QueryResource;
+import org.apache.druid.server.QueryResponse;
+import org.apache.druid.server.QueryResultPusher;
+import org.apache.druid.server.ResponseContextConfig;
+import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.DirectStatement.ResultSet;
+import org.apache.druid.sql.HttpStatement;
+import org.apache.druid.sql.SqlLifecycleManager;
+import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
 import org.apache.druid.sql.SqlPlanningException;
-import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.joda.time.DateTimeZone;
-import org.joda.time.format.ISODateTimeFormat;
+import org.apache.druid.sql.SqlRowTransformer;
+import org.apache.druid.sql.SqlStatementFactory;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
-import java.util.Arrays;
+import java.io.OutputStream;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Path("/druid/v2/sql/")
 public class SqlResource
 {
+  public static final String SQL_QUERY_ID_RESPONSE_HEADER = "X-Druid-SQL-Query-Id";
+  public static final String SQL_HEADER_RESPONSE_HEADER = "X-Druid-SQL-Header-Included";
+  public static final String SQL_HEADER_VALUE = "yes";
   private static final Logger log = new Logger(SqlResource.class);
+  public static final SqlResourceQueryMetricCounter QUERY_METRIC_COUNTER = new SqlResourceQueryMetricCounter();
 
   private final ObjectMapper jsonMapper;
-  private final SqlLifecycleFactory sqlLifecycleFactory;
+  private final AuthorizerMapper authorizerMapper;
+  private final SqlStatementFactory sqlStatementFactory;
+  private final SqlLifecycleManager sqlLifecycleManager;
+  private final ServerConfig serverConfig;
+  private final ResponseContextConfig responseContextConfig;
+  private final DruidNode selfNode;
 
   @Inject
-  public SqlResource(
-      @Json ObjectMapper jsonMapper,
-      SqlLifecycleFactory sqlLifecycleFactory
+  SqlResource(
+      final ObjectMapper jsonMapper,
+      final AuthorizerMapper authorizerMapper,
+      final @NativeQuery SqlStatementFactory sqlStatementFactory,
+      final SqlLifecycleManager sqlLifecycleManager,
+      final ServerConfig serverConfig,
+      ResponseContextConfig responseContextConfig,
+      @Self DruidNode selfNode
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
-    this.sqlLifecycleFactory = Preconditions.checkNotNull(sqlLifecycleFactory, "sqlLifecycleFactory");
+    this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
+    this.sqlStatementFactory = Preconditions.checkNotNull(sqlStatementFactory, "sqlStatementFactory");
+    this.sqlLifecycleManager = Preconditions.checkNotNull(sqlLifecycleManager, "sqlLifecycleManager");
+    this.serverConfig = Preconditions.checkNotNull(serverConfig, "serverConfig");
+    this.responseContextConfig = responseContextConfig;
+    this.selfNode = selfNode;
+
   }
 
   @POST
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
+  @Nullable
   public Response doPost(
       final SqlQuery sqlQuery,
       @Context final HttpServletRequest req
-  ) throws IOException
+  )
   {
-    final SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
-    final String sqlQueryId = lifecycle.initialize(sqlQuery.getQuery(), sqlQuery.getContext());
-    final String remoteAddr = req.getRemoteAddr();
+    final HttpStatement stmt = sqlStatementFactory.httpStatement(sqlQuery, req);
+    final String sqlQueryId = stmt.sqlQueryId();
     final String currThreadName = Thread.currentThread().getName();
 
     try {
       Thread.currentThread().setName(StringUtils.format("sql[%s]", sqlQueryId));
 
-      lifecycle.setParameters(sqlQuery.getParameterList());
-      lifecycle.validateAndAuthorize(req);
-      final PlannerContext plannerContext = lifecycle.plan();
-      final DateTimeZone timeZone = plannerContext.getTimeZone();
-
-      // Remember which columns are time-typed, so we can emit ISO8601 instead of millis values.
-      // Also store list of all column names, for X-Druid-Sql-Columns header.
-      final List<RelDataTypeField> fieldList = lifecycle.rowType().getFieldList();
-      final boolean[] timeColumns = new boolean[fieldList.size()];
-      final boolean[] dateColumns = new boolean[fieldList.size()];
-      final String[] columnNames = new String[fieldList.size()];
-
-      for (int i = 0; i < fieldList.size(); i++) {
-        final SqlTypeName sqlTypeName = fieldList.get(i).getType().getSqlTypeName();
-        timeColumns[i] = sqlTypeName == SqlTypeName.TIMESTAMP;
-        dateColumns[i] = sqlTypeName == SqlTypeName.DATE;
-        columnNames[i] = fieldList.get(i).getName();
-      }
-
-      final Yielder<Object[]> yielder0 = Yielders.each(lifecycle.execute());
-
-      try {
-        return Response
-            .ok(
-                (StreamingOutput) outputStream -> {
-                  Exception e = null;
-                  CountingOutputStream os = new CountingOutputStream(outputStream);
-                  Yielder<Object[]> yielder = yielder0;
-
-                  try (final ResultFormat.Writer writer = sqlQuery.getResultFormat()
-                                                                  .createFormatter(os, jsonMapper)) {
-                    writer.writeResponseStart();
-
-                    if (sqlQuery.includeHeader()) {
-                      writer.writeHeader(Arrays.asList(columnNames));
-                    }
-
-                    while (!yielder.isDone()) {
-                      final Object[] row = yielder.get();
-                      writer.writeRowStart();
-                      for (int i = 0; i < fieldList.size(); i++) {
-                        final Object value;
-
-                        if (row[i] == null) {
-                          value = null;
-                        } else if (timeColumns[i]) {
-                          value = ISODateTimeFormat.dateTime().print(
-                              Calcites.calciteTimestampToJoda((long) row[i], timeZone)
-                          );
-                        } else if (dateColumns[i]) {
-                          value = ISODateTimeFormat.dateTime().print(
-                              Calcites.calciteDateToJoda((int) row[i], timeZone)
-                          );
-                        } else {
-                          value = row[i];
-                        }
-
-                        writer.writeRowField(fieldList.get(i).getName(), value);
-                      }
-                      writer.writeRowEnd();
-                      yielder = yielder.next(null);
-                    }
-
-                    writer.writeResponseEnd();
-                  }
-                  catch (Exception ex) {
-                    e = ex;
-                    log.error(ex, "Unable to send SQL response [%s]", sqlQueryId);
-                    throw new RuntimeException(ex);
-                  }
-                  finally {
-                    yielder.close();
-                    lifecycle.emitLogsAndMetrics(e, remoteAddr, os.getCount());
-                  }
-                }
-            )
-            .header("X-Druid-SQL-Query-Id", sqlQueryId)
-            .build();
-      }
-      catch (Throwable e) {
-        // make sure to close yielder if anything happened before starting to serialize the response.
-        yielder0.close();
-        throw new RuntimeException(e);
-      }
-    }
-    catch (QueryCapacityExceededException cap) {
-      lifecycle.emitLogsAndMetrics(cap, remoteAddr, -1);
-      return buildNonOkResponse(QueryCapacityExceededException.STATUS_CODE, cap);
-    }
-    catch (QueryUnsupportedException unsupported) {
-      lifecycle.emitLogsAndMetrics(unsupported, remoteAddr, -1);
-      return buildNonOkResponse(QueryUnsupportedException.STATUS_CODE, unsupported);
-    }
-    catch (QueryTimeoutException timeout) {
-      lifecycle.emitLogsAndMetrics(timeout, remoteAddr, -1);
-      return buildNonOkResponse(QueryTimeoutException.STATUS_CODE, timeout);
-    }
-    catch (SqlPlanningException | ResourceLimitExceededException e) {
-      lifecycle.emitLogsAndMetrics(e, remoteAddr, -1);
-      return buildNonOkResponse(BadQueryException.STATUS_CODE, e);
-    }
-    catch (ForbiddenException e) {
-      throw e; // let ForbiddenExceptionMapper handle this
-    }
-    catch (Exception e) {
-      log.warn(e, "Failed to handle query: %s", sqlQuery);
-      lifecycle.emitLogsAndMetrics(e, remoteAddr, -1);
-
-      final Exception exceptionToReport;
-
-      if (e instanceof RelOptPlanner.CannotPlanException) {
-        exceptionToReport = new ISE("Cannot build plan for query: %s", sqlQuery.getQuery());
-      } else {
-        exceptionToReport = e;
-      }
-
-      return buildNonOkResponse(
-          Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-          QueryInterruptedException.wrapIfNeeded(exceptionToReport)
-      );
+      QueryResultPusher pusher = makePusher(req, stmt, sqlQuery);
+      return pusher.push();
     }
     finally {
       Thread.currentThread().setName(currThreadName);
     }
   }
 
-  Response buildNonOkResponse(int status, Exception e) throws JsonProcessingException
+  @DELETE
+  @Path("{id}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response cancelQuery(
+      @PathParam("id") String sqlQueryId,
+      @Context final HttpServletRequest req
+  )
   {
-    return Response.status(status)
-                   .type(MediaType.APPLICATION_JSON_TYPE)
-                   .entity(jsonMapper.writeValueAsBytes(e))
-                   .build();
+    log.debug("Received cancel request for query [%s]", sqlQueryId);
+
+    List<Cancelable> lifecycles = sqlLifecycleManager.getAll(sqlQueryId);
+    if (lifecycles.isEmpty()) {
+      return Response.status(Status.NOT_FOUND).build();
+    }
+
+    // Considers only datasource and table resources; not context
+    // key resources when checking permissions. This means that a user's
+    // permission to cancel a query depends on the datasource, not the
+    // context variables used in the query.
+    Set<ResourceAction> resources = lifecycles
+        .stream()
+        .flatMap(lifecycle -> lifecycle.resources().stream())
+        .collect(Collectors.toSet());
+    Access access = AuthorizationUtils.authorizeAllResourceActions(
+        req,
+        resources,
+        authorizerMapper
+    );
+
+    if (access.isAllowed()) {
+      // should remove only the lifecycles in the snapshot.
+      sqlLifecycleManager.removeAll(sqlQueryId, lifecycles);
+      lifecycles.forEach(Cancelable::cancel);
+      return Response.status(Status.ACCEPTED).build();
+    } else {
+      return Response.status(Status.FORBIDDEN).build();
+    }
+  }
+
+  /**
+   * The SqlResource only generates metrics and doesn't keep track of aggregate counts of successful/failed/interrupted
+   * queries, so this implementation is effectively just a noop.
+   */
+  private static class SqlResourceQueryMetricCounter implements QueryResource.QueryMetricCounter
+  {
+    @Override
+    public void incrementSuccess()
+    {
+
+    }
+
+    @Override
+    public void incrementFailed()
+    {
+
+    }
+
+    @Override
+    public void incrementInterrupted()
+    {
+
+    }
+
+    @Override
+    public void incrementTimedOut()
+    {
+
+    }
+  }
+
+  private SqlResourceQueryResultPusher makePusher(HttpServletRequest req, HttpStatement stmt, SqlQuery sqlQuery)
+  {
+    final String sqlQueryId = stmt.sqlQueryId();
+    Map<String, String> headers = new LinkedHashMap<>();
+    headers.put(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId);
+
+    if (sqlQuery.includeHeader()) {
+      headers.put(SQL_HEADER_RESPONSE_HEADER, SQL_HEADER_VALUE);
+    }
+
+    return new SqlResourceQueryResultPusher(req, sqlQueryId, stmt, sqlQuery, headers);
+  }
+
+  private class SqlResourceQueryResultPusher extends QueryResultPusher
+  {
+
+    private final String sqlQueryId;
+    private final HttpStatement stmt;
+    private final SqlQuery sqlQuery;
+
+    public SqlResourceQueryResultPusher(
+        HttpServletRequest req,
+        String sqlQueryId,
+        HttpStatement stmt,
+        SqlQuery sqlQuery,
+        Map<String, String> headers
+    )
+    {
+      super(
+          req,
+          SqlResource.this.jsonMapper,
+          SqlResource.this.responseContextConfig,
+          SqlResource.this.selfNode,
+          SqlResource.QUERY_METRIC_COUNTER,
+          sqlQueryId,
+          MediaType.APPLICATION_JSON_TYPE,
+          headers
+      );
+      this.sqlQueryId = sqlQueryId;
+      this.stmt = stmt;
+      this.sqlQuery = sqlQuery;
+    }
+
+    @Override
+    public ResultsWriter start()
+    {
+      return new ResultsWriter()
+      {
+        private QueryResponse<Object[]> queryResponse;
+        private ResultSet thePlan;
+
+        @Override
+        @Nullable
+        public Response.ResponseBuilder start()
+        {
+          try {
+            thePlan = stmt.plan();
+            queryResponse = thePlan.run();
+            return null;
+          }
+          catch (RelOptPlanner.CannotPlanException e) {
+            throw new SqlPlanningException(
+                SqlPlanningException.PlanningError.UNSUPPORTED_SQL_ERROR,
+                e.getMessage()
+            );
+          }
+          // There is a claim that Calcite sometimes throws a java.lang.AssertionError, but we do not have a test that can
+          // reproduce it checked into the code (the best we have is something that uses mocks to throw an Error, which is
+          // dubious at best).  We keep this just in case, but it might be best to remove it and see where the
+          // AssertionErrors are coming from and do something to ensure that they don't actually make it out of Calcite
+          catch (AssertionError e) {
+            log.warn(e, "AssertionError killed query: %s", sqlQuery);
+
+            // We wrap the exception here so that we get the sanitization.  java.lang.AssertionError apparently
+            // doesn't implement org.apache.druid.common.exception.SanitizableException.
+            throw new QueryInterruptedException(e);
+          }
+        }
+
+        @Override
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        public QueryResponse<Object> getQueryResponse()
+        {
+          return (QueryResponse) queryResponse;
+        }
+
+        @Override
+        public Writer makeWriter(OutputStream out) throws IOException
+        {
+          ResultFormat.Writer writer = sqlQuery.getResultFormat().createFormatter(out, jsonMapper);
+          final SqlRowTransformer rowTransformer = thePlan.createRowTransformer();
+
+          return new Writer()
+          {
+
+            @Override
+            public void writeResponseStart() throws IOException
+            {
+              writer.writeResponseStart();
+
+              if (sqlQuery.includeHeader()) {
+                writer.writeHeader(
+                    rowTransformer.getRowType(),
+                    sqlQuery.includeTypesHeader(),
+                    sqlQuery.includeSqlTypesHeader()
+                );
+              }
+            }
+
+            @Override
+            public void writeRow(Object obj) throws IOException
+            {
+              Object[] row = (Object[]) obj;
+
+              writer.writeRowStart();
+              for (int i = 0; i < rowTransformer.getFieldList().size(); i++) {
+                final Object value = rowTransformer.transform(row, i);
+                writer.writeRowField(rowTransformer.getFieldList().get(i), value);
+              }
+              writer.writeRowEnd();
+            }
+
+            @Override
+            public void writeResponseEnd() throws IOException
+            {
+              writer.writeResponseEnd();
+            }
+
+            @Override
+            public void close() throws IOException
+            {
+              writer.close();
+            }
+          };
+        }
+
+        @Override
+        public void recordSuccess(long numBytes)
+        {
+          stmt.reporter().succeeded(numBytes);
+        }
+
+        @Override
+        public void recordFailure(Exception e)
+        {
+          if (sqlQuery.queryContext().isDebug()) {
+            log.warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
+          } else {
+            log.noStackTrace().warn(e, "Exception while processing sqlQueryId[%s]", sqlQueryId);
+          }
+          stmt.reporter().failed(e);
+        }
+
+        @Override
+        public void close()
+        {
+          stmt.close();
+        }
+      };
+    }
+
+    @Override
+    public void writeException(Exception ex, OutputStream out) throws IOException
+    {
+      if (ex instanceof SanitizableException) {
+        ex = serverConfig.getErrorResponseTransformStrategy().transformIfNeeded((SanitizableException) ex);
+      }
+      out.write(jsonMapper.writeValueAsBytes(ex));
+    }
+
   }
 }

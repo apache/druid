@@ -25,14 +25,17 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Singleton;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.server.metrics.MetricsModule;
 
 import java.util.List;
 
+@LoadScope(roles = NodeRole.BROKER_JSON_NAME)
 public class MaterializedViewSelectionDruidModule implements DruidModule
 {
   @Override 

@@ -84,8 +84,8 @@ public class SubstringOperatorConversion implements SqlOperatorConversion
         expression -> StringUtils.format(
             "substring(%s, %s, %s)",
             expression,
-            DruidExpression.numberLiteral(index),
-            DruidExpression.numberLiteral(length)
+            DruidExpression.longLiteral(index),
+            DruidExpression.longLiteral(length)
         )
     );
   }

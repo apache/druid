@@ -21,6 +21,7 @@ package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -31,6 +32,7 @@ import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.ByteArrayOutputStream;
@@ -120,10 +122,11 @@ public class BackgroundCachePopulator implements CachePopulator
   {
     try {
       final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      final SerializerProvider serializers = objectMapper.getSerializerProviderInstance();
 
       try (JsonGenerator gen = objectMapper.getFactory().createGenerator(bytes)) {
         for (CacheType result : results) {
-          gen.writeObject(result);
+          JacksonUtils.writeObjectUsingSerializerProvider(gen, serializers, result);
 
           if (maxEntrySize > 0 && bytes.size() > maxEntrySize) {
             cachePopulatorStats.incrementOversized();

@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.config.Config;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 import org.hamcrest.CoreMatchers;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -51,6 +52,12 @@ public class DruidProcessingConfigTest
   private static Injector makeInjector(int numProcessors, long directMemorySize, long heapSize)
   {
     return makeInjector(numProcessors, directMemorySize, heapSize, new Properties(), null);
+  }
+
+  @AfterClass
+  public static void teardown()
+  {
+    JvmUtils.resetTestsToDefaultRuntimeInfo();
   }
 
   private static Injector makeInjector(
@@ -91,7 +98,7 @@ public class DruidProcessingConfigTest
     Assert.assertEquals(NUM_PROCESSORS - 1, config.getNumThreads());
     Assert.assertEquals(Math.max(2, config.getNumThreads() / 4), config.getNumMergeBuffers());
     Assert.assertEquals(0, config.columnCacheSizeBytes());
-    Assert.assertFalse(config.isFifo());
+    Assert.assertTrue(config.isFifo());
     Assert.assertEquals(System.getProperty("java.io.tmpdir"), config.getTmpDir());
     Assert.assertEquals(BUFFER_SIZE, config.intermediateComputeSizeBytes());
   }
@@ -106,7 +113,7 @@ public class DruidProcessingConfigTest
     Assert.assertTrue(config.getNumThreads() == 1);
     Assert.assertEquals(Math.max(2, config.getNumThreads() / 4), config.getNumMergeBuffers());
     Assert.assertEquals(0, config.columnCacheSizeBytes());
-    Assert.assertFalse(config.isFifo());
+    Assert.assertTrue(config.isFifo());
     Assert.assertEquals(System.getProperty("java.io.tmpdir"), config.getTmpDir());
     Assert.assertEquals(BUFFER_SIZE, config.intermediateComputeSizeBytes());
   }
@@ -132,8 +139,9 @@ public class DruidProcessingConfigTest
     props.setProperty("druid.processing.buffer.poolCacheMaxCount", "1");
     props.setProperty("druid.processing.numThreads", "256");
     props.setProperty("druid.processing.columnCache.sizeBytes", "1");
-    props.setProperty("druid.processing.fifo", "true");
+    props.setProperty("druid.processing.fifo", "false");
     props.setProperty("druid.processing.tmpDir", "/test/path");
+
 
     Injector injector = makeInjector(
         NUM_PROCESSORS,
@@ -149,8 +157,9 @@ public class DruidProcessingConfigTest
     Assert.assertEquals(256, config.getNumThreads());
     Assert.assertEquals(64, config.getNumMergeBuffers());
     Assert.assertEquals(1, config.columnCacheSizeBytes());
-    Assert.assertTrue(config.isFifo());
+    Assert.assertFalse(config.isFifo());
     Assert.assertEquals("/test/path", config.getTmpDir());
+    Assert.assertEquals(0, config.getNumInitalBuffersForIntermediatePool());
   }
 
   @Test
@@ -188,13 +197,13 @@ public class DruidProcessingConfigTest
     config.intermediateComputeSizeBytes();
   }
 
-  static class MockRuntimeInfo extends RuntimeInfo
+  public static class MockRuntimeInfo extends RuntimeInfo
   {
     private final int availableProcessors;
     private final long maxHeapSize;
     private final long directSize;
 
-    MockRuntimeInfo(int availableProcessors, long directSize, long maxHeapSize)
+    public MockRuntimeInfo(int availableProcessors, long directSize, long maxHeapSize)
     {
       this.availableProcessors = availableProcessors;
       this.directSize = directSize;

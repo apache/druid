@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`lookups view matches snapshot 1`] = `
+exports[`LookupsView matches snapshot 1`] = `
 <div
   className="lookups-view app-view"
 >
@@ -11,7 +11,7 @@ exports[`lookups view matches snapshot 1`] = `
       localStorageKey="lookups-refresh-rate"
       onRefresh={[Function]}
     />
-    <Blueprint3.Button
+    <Blueprint4.Button
       icon="plus"
       onClick={[Function]}
       text="Add lookup"
@@ -23,6 +23,8 @@ exports[`lookups view matches snapshot 1`] = `
           "Lookup tier",
           "Type",
           "Version",
+          "Poll period",
+          "Summary",
           "Actions",
         ]
       }
@@ -88,37 +90,62 @@ exports[`lookups view matches snapshot 1`] = `
     columns={
       Array [
         Object {
+          "Cell": [Function],
           "Header": "Lookup name",
           "accessor": "id",
           "filterable": true,
           "id": "lookup_name",
           "show": true,
+          "width": 200,
         },
         Object {
+          "Cell": [Function],
           "Header": "Lookup tier",
           "accessor": "tier",
           "filterable": true,
           "id": "tier",
           "show": true,
+          "width": 100,
         },
         Object {
+          "Cell": [Function],
           "Header": "Type",
           "accessor": "spec.type",
           "filterable": true,
           "id": "type",
           "show": true,
+          "width": 150,
         },
         Object {
+          "Cell": [Function],
           "Header": "Version",
           "accessor": "version",
           "filterable": true,
           "id": "version",
           "show": true,
+          "width": 190,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Poll period",
+          "accessor": [Function],
+          "className": "padded",
+          "id": "poolPeriod",
+          "show": true,
+          "width": 150,
+        },
+        Object {
+          "Cell": [Function],
+          "Header": "Summary",
+          "accessor": [Function],
+          "id": "summary",
+          "show": true,
+          "width": 600,
         },
         Object {
           "Cell": [Function],
           "Header": "Actions",
-          "accessor": [Function],
+          "accessor": "id",
           "filterable": false,
           "id": "actions",
           "show": true,
@@ -135,7 +162,14 @@ exports[`lookups view matches snapshot 1`] = `
     defaultResized={Array []}
     defaultSortDesc={false}
     defaultSortMethod={[Function]}
-    defaultSorted={Array []}
+    defaultSorted={
+      Array [
+        Object {
+          "desc": false,
+          "id": "lookup_name",
+        },
+      ]
+    }
     expanderDefaults={
       Object {
         "filterable": false,
@@ -145,6 +179,7 @@ exports[`lookups view matches snapshot 1`] = `
       }
     }
     filterable={true}
+    filtered={Array []}
     freezeWhenExpanded={false}
     getLoadingProps={[Function]}
     getNoDataProps={[Function]}
@@ -175,19 +210,17 @@ exports[`lookups view matches snapshot 1`] = `
     multiSort={true}
     nestingLevelKey="_nestingLevel"
     nextText="Next"
-    noDataText=""
+    noDataText="No lookups"
     ofText="of"
     onFetchData={[Function]}
+    onFilteredChange={[Function]}
     originalKey="_original"
     pageJumpText="jump to page"
     pageSizeOptions={
       Array [
-        5,
-        10,
-        20,
-        25,
         50,
         100,
+        200,
       ]
     }
     pageText="Page"
@@ -201,7 +234,7 @@ exports[`lookups view matches snapshot 1`] = `
     rowsText="rows"
     showPageJump={true}
     showPageSizeOptions={true}
-    showPagination={true}
+    showPagination={false}
     showPaginationBottom={true}
     showPaginationTop={false}
     sortable={true}

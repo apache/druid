@@ -74,7 +74,7 @@ public class BroadcastTableJoinableFactory implements JoinableFactory
   private Optional<ReferenceCountingIndexedTable> getOnlyIndexedTable(DataSource dataSource)
   {
     GlobalTableDataSource broadcastDataSource = (GlobalTableDataSource) dataSource;
-    DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(dataSource);
+    DataSourceAnalysis analysis = dataSource.getAnalysis();
     return segmentManager.getIndexedTables(analysis).flatMap(tables -> {
       Iterator<ReferenceCountingIndexedTable> tableIterator = tables.iterator();
       if (!tableIterator.hasNext()) {

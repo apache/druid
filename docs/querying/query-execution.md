@@ -24,7 +24,7 @@ title: "Query execution"
 
 > This document describes how Druid executes [native queries](querying.md), but since [Druid SQL](sql.md) queries
 > are translated to native queries, this document applies to the SQL runtime as well. Refer to the SQL
-> [Query translation](sql.md#query-translation) page for information about how SQL queries are translated to native
+> [Query translation](sql-translation.md) page for information about how SQL queries are translated to native
 > queries.
 
 Druid's approach to query execution varies depending on the kind of [datasource](datasource.md) you are querying.
@@ -85,9 +85,7 @@ their "base" (bottom-leftmost) datasource, as described in the [join](#join) sec
 the results are brought back to the Broker. Then, the Broker continues on with the rest of the query as if the subquery
 was replaced with an inline datasource.
 
-In most cases, subquery results are fully buffered in memory on the Broker before the rest of the query proceeds,
-meaning subqueries execute sequentially. The total number of rows buffered across all subqueries of a given query
-in this way cannot exceed the [`druid.server.http.maxSubqueryRows` property](../configuration/index.md).
+In most cases, Druid buffers subquery results in memory on the Broker before the rest of the query proceeds. Therefore, subqueries execute sequentially. The total number of rows buffered across all subqueries of a given query cannot exceed the [`druid.server.http.maxSubqueryRows`](../configuration/index.md) which defaults to 100000 rows. Otherwise Druid throws a resource limit exceeded exception: "Subquery generated results beyond maximum."
 
 There is one exception: if the outer query and all subqueries are the [groupBy](groupbyquery.md) type, then subquery
 results can be processed in a streaming fashion and the `druid.server.http.maxSubqueryRows` limit does not apply.

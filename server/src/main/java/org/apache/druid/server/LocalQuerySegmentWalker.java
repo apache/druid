@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FluentQueryRunnerBuilder;
 import org.apache.druid.query.Query;
@@ -36,8 +37,6 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SegmentWrangler;
-import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.joda.time.Interval;
 
@@ -49,7 +48,7 @@ import java.util.stream.StreamSupport;
  * Processor that computes Druid queries, single-threaded.
  *
  * The datasource for the query must satisfy {@link DataSourceAnalysis#isConcreteBased()} and
- * {@link DataSourceAnalysis#isGlobal()}. Its base datasource must also be handleable by the provided
+ * {@link DataSource#isGlobal()}. Its base datasource must also be handleable by the provided
  * {@link SegmentWrangler}.
  *
  * Mainly designed to be used by {@link ClientQuerySegmentWalker}.
@@ -66,14 +65,14 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
   public LocalQuerySegmentWalker(
       QueryRunnerFactoryConglomerate conglomerate,
       SegmentWrangler segmentWrangler,
-      JoinableFactory joinableFactory,
+      JoinableFactoryWrapper joinableFactoryWrapper,
       QueryScheduler scheduler,
       ServiceEmitter emitter
   )
   {
     this.conglomerate = conglomerate;
     this.segmentWrangler = segmentWrangler;
-    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
+    this.joinableFactoryWrapper = joinableFactoryWrapper;
     this.scheduler = scheduler;
     this.emitter = emitter;
   }
@@ -81,10 +80,11 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    final DataSource dataSourceFromQuery = query.getDataSource();
+    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
 
-    if (!analysis.isConcreteBased() || !analysis.isGlobal()) {
-      throw new IAE("Cannot query dataSource locally: %s", analysis.getDataSource());
+    if (!analysis.isConcreteBased() || !dataSourceFromQuery.isGlobal()) {
+      throw new IAE("Cannot query dataSource locally: %s", dataSourceFromQuery);
     }
 
     // wrap in ReferenceCountingSegment, these aren't currently managed by SegmentManager so reference tracking doesn't
@@ -95,12 +95,12 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
-        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
-        analysis.getPreJoinableClauses(),
-        cpuAccumulator,
-        analysis.getBaseQuery().orElse(query)
-    );
+    final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery
+        .createSegmentMapFunction(
+            query,
+            cpuAccumulator
+        );
+
 
     final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(query);
     final QueryRunner<T> baseRunner = queryRunnerFactory.mergeRunners(

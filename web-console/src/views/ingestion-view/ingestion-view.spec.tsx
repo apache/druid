@@ -16,23 +16,25 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
 import React from 'react';
 
-import { Capabilities } from '../../utils';
+import { Capabilities } from '../../helpers';
+import { shallow } from '../../utils/shallow-renderer';
 
 import { IngestionView } from './ingestion-view';
 
-describe('tasks view', () => {
+describe('IngestionView', () => {
   it('matches snapshot', () => {
     const taskView = shallow(
       <IngestionView
         openDialog="test"
+        taskId={undefined}
         taskGroupId="test"
         datasourceId="datasource"
         goToDatasource={() => {}}
         goToQuery={() => {}}
-        goToLoadData={() => {}}
+        goToStreamingDataLoader={() => {}}
+        goToClassicBatchDataLoader={() => {}}
         capabilities={Capabilities.FULL}
       />,
     );

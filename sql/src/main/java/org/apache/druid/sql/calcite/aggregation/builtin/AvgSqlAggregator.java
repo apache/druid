@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -31,13 +32,13 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -69,6 +70,7 @@ public class AvgSqlAggregator implements SqlAggregator
   {
 
     final List<DruidExpression> arguments = Aggregations.getArgumentsForSimpleAggregator(
+        rexBuilder,
         plannerContext,
         rowSignature,
         aggregateCall,
@@ -90,10 +92,7 @@ public class AvgSqlAggregator implements SqlAggregator
         project
     );
 
-    final String fieldName;
-    final String expression;
     final DruidExpression arg = Iterables.getOnlyElement(arguments);
-
 
     final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
     final ValueType sumType;
@@ -104,21 +103,25 @@ public class AvgSqlAggregator implements SqlAggregator
       sumType = ValueType.DOUBLE;
     }
 
+    final String fieldName;
+
     if (arg.isDirectColumnAccess()) {
       fieldName = arg.getDirectColumn();
-      expression = null;
     } else {
-      // if the filter or anywhere else defined a virtual column for us, re-use it
-      VirtualColumn vc = virtualColumnRegistry.getVirtualColumnByExpression(arg.getExpression());
-      fieldName = vc != null ? vc.getOutputName() : null;
-      expression = vc != null ? null : arg.getExpression();
+      final RexNode resolutionArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
+          rowSignature,
+          project,
+          Iterables.getOnlyElement(aggregateCall.getArgList())
+      );
+      fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, resolutionArg.getType());
     }
+
     final String sumName = Calcites.makePrefixedName(name, "sum");
     final AggregatorFactory sum = SumSqlAggregator.createSumAggregatorFactory(
         sumType,
         sumName,
         fieldName,
-        expression,
         macroTable
     );
 

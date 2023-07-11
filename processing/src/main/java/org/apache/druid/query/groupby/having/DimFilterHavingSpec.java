@@ -32,6 +32,7 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper;
+import org.apache.druid.segment.column.RowSignature;
 
 import java.util.Objects;
 import java.util.function.Function;
@@ -83,7 +84,8 @@ public class DimFilterHavingSpec implements HavingSpec
     this.matcher = dimFilter.toFilter().makeMatcher(
         RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(
             query,
-            rowSupplier
+            rowSupplier,
+            finalize ? RowSignature.Finalization.YES : RowSignature.Finalization.NO
         )
     );
   }

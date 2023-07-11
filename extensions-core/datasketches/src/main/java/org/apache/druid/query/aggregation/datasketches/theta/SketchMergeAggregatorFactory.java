@@ -20,11 +20,13 @@
 package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.jackson.DefaultTrueJsonIncludeFilter;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -94,12 +96,14 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   }
 
   @JsonProperty
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = DefaultTrueJsonIncludeFilter.class)
   public boolean getShouldFinalize()
   {
     return shouldFinalize;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean getIsInputThetaSketch()
   {
     return isInputThetaSketch;
@@ -107,6 +111,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Integer getErrorBoundsStdDev()
   {
     return errorBoundsStdDev;
@@ -140,23 +145,13 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
     }
   }
 
-  @Override
-  public String getComplexTypeName()
-  {
-    if (isInputThetaSketch) {
-      return SketchModule.THETA_SKETCH_MERGE_AGG;
-    } else {
-      return SketchModule.THETA_SKETCH_BUILD_AGG;
-    }
-  }
-
   /**
    * actual type is {@link SketchHolder}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getIntermediateType()
   {
-    return ValueType.COMPLEX;
+    return isInputThetaSketch ? SketchModule.MERGE_TYPE : SketchModule.BUILD_TYPE;
   }
 
   /**
@@ -166,12 +161,25 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
    * if {@link #shouldFinalize} is NOT set, type is {@link SketchHolder}
    */
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getResultType()
   {
     if (shouldFinalize && errorBoundsStdDev == null) {
-      return ValueType.DOUBLE;
+      return ColumnType.DOUBLE;
     }
-    return ValueType.COMPLEX;
+    return getIntermediateType();
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new SketchMergeAggregatorFactory(
+        newName,
+        getFieldName(),
+        getSize(),
+        getShouldFinalize(),
+        getIsInputThetaSketch(),
+        getErrorBoundsStdDev()
+    );
   }
 
   @Override

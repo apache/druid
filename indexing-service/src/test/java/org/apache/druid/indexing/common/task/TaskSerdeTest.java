@@ -24,7 +24,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.Firehose;
+import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -43,13 +46,11 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.hamcrest.CoreMatchers;
@@ -64,8 +65,7 @@ import java.io.File;
 public class TaskSerdeTest
 {
   private final ObjectMapper jsonMapper;
-  private final RowIngestionMetersFactory rowIngestionMetersFactory;
-  private final IndexSpec indexSpec = new IndexSpec();
+  private final IndexSpec indexSpec = IndexSpec.DEFAULT;
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -74,14 +74,14 @@ public class TaskSerdeTest
   {
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
-    rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
 
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
     jsonMapper.registerSubtypes(
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
-        new NamedType(IndexTuningConfig.class, "index")
+        new NamedType(IndexTuningConfig.class, "index"),
+        new NamedType(MockFirehoseFactory.class, "mock")
     );
   }
 
@@ -94,6 +94,7 @@ public class TaskSerdeTest
     );
 
     Assert.assertEquals(false, ioConfig.isAppendToExisting());
+    Assert.assertEquals(false, ioConfig.isDropExisting());
   }
 
   @Test
@@ -105,7 +106,7 @@ public class TaskSerdeTest
     );
 
     Assert.assertFalse(tuningConfig.isReportParseExceptions());
-    Assert.assertEquals(new IndexSpec(), tuningConfig.getIndexSpec());
+    Assert.assertEquals(IndexSpec.DEFAULT, tuningConfig.getIndexSpec());
     Assert.assertEquals(new Period(Integer.MAX_VALUE), tuningConfig.getIntermediatePersistPeriod());
     Assert.assertEquals(0, tuningConfig.getMaxPendingPersists());
     Assert.assertEquals(1000000, tuningConfig.getMaxRowsInMemory());
@@ -293,6 +294,7 @@ public class TaskSerdeTest
     Assert.assertTrue(taskIoConfig.getInputSource() instanceof LocalInputSource);
     Assert.assertTrue(task2IoConfig.getInputSource() instanceof LocalInputSource);
     Assert.assertEquals(taskIoConfig.isAppendToExisting(), task2IoConfig.isAppendToExisting());
+    Assert.assertEquals(taskIoConfig.isDropExisting(), task2IoConfig.isDropExisting());
 
     IndexTask.IndexTuningConfig taskTuningConfig = task.getIngestionSchema().getTuningConfig();
     IndexTask.IndexTuningConfig task2TuningConfig = task2.getIngestionSchema().getTuningConfig();
@@ -400,7 +402,7 @@ public class TaskSerdeTest
                 jsonMapper
             ),
             new RealtimeIOConfig(
-                new LocalFirehoseFactory(new File("lol"), "rofl", null),
+                new MockFirehoseFactory(),
                 (schema, config, metrics) -> null
             ),
 
@@ -584,5 +586,62 @@ public class TaskSerdeTest
     );
     Assert.assertEquals("blah", task.getClasspathPrefix());
     Assert.assertEquals("blah", task2.getClasspathPrefix());
+  }
+
+  private static class MockFirehoseFactory implements FirehoseFactory
+  {
+    @Override
+    public Firehose connect(InputRowParser parser, File temporaryDirectory)
+    {
+      return null;
+    }
+  }
+
+  @Test
+  public void testHadoopIndexTaskWithContextSerde() throws Exception
+  {
+    final HadoopIndexTask task = new HadoopIndexTask(
+        null,
+        new HadoopIngestionSpec(
+            new DataSchema(
+                "foo",
+                null,
+                null,
+                new AggregatorFactory[0],
+                new UniformGranularitySpec(
+                    Granularities.DAY,
+                    null, ImmutableList.of(Intervals.of("2010-01-01/P1D"))
+                ),
+                null,
+                null,
+                jsonMapper
+            ), new HadoopIOConfig(ImmutableMap.of("paths", "bar"), null, null), null
+        ),
+        null,
+        null,
+        "blah",
+        jsonMapper,
+        ImmutableMap.of("userid", 12345, "username", "bob"),
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null
+    );
+
+    final String json = jsonMapper.writeValueAsString(task);
+
+    final HadoopIndexTask task2 = (HadoopIndexTask) jsonMapper.readValue(json, Task.class);
+
+    Assert.assertEquals("foo", task.getDataSource());
+
+    Assert.assertEquals(task.getId(), task2.getId());
+    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assert.assertEquals(
+        task.getSpec().getTuningConfig().getJobProperties(),
+        task2.getSpec().getTuningConfig().getJobProperties()
+    );
+    Assert.assertEquals("blah", task.getClasspathPrefix());
+    Assert.assertEquals("blah", task2.getClasspathPrefix());
+    Assert.assertEquals(ImmutableMap.of("userid", 12345, "username", "bob"), task2.getContext());
+    Assert.assertEquals(ImmutableMap.of("userid", 12345, "username", "bob"), task2.getSpec().getContext());
   }
 }

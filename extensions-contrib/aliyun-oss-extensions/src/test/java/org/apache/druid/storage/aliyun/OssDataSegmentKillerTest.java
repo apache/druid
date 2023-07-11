@@ -23,6 +23,7 @@ import com.aliyun.oss.ClientException;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.model.DeleteObjectsRequest;
 import com.aliyun.oss.model.OSSObjectSummary;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
@@ -76,7 +77,7 @@ public class OssDataSegmentKillerTest extends EasyMockSupport
 
       EasyMock.replay(client, segmentPusherConfig, inputDataConfig);
 
-      segmentKiller = new OssDataSegmentKiller(client, segmentPusherConfig, inputDataConfig);
+      segmentKiller = new OssDataSegmentKiller(Suppliers.ofInstance(client), segmentPusherConfig, inputDataConfig);
       segmentKiller.killAll();
     }
     catch (ISE e) {
@@ -119,7 +120,7 @@ public class OssDataSegmentKillerTest extends EasyMockSupport
 
     EasyMock.replay(client, segmentPusherConfig, inputDataConfig);
 
-    segmentKiller = new OssDataSegmentKiller(client, segmentPusherConfig, inputDataConfig);
+    segmentKiller = new OssDataSegmentKiller(Suppliers.ofInstance(client), segmentPusherConfig, inputDataConfig);
     segmentKiller.killAll();
     EasyMock.verify(client, segmentPusherConfig, inputDataConfig);
   }
@@ -154,7 +155,7 @@ public class OssDataSegmentKillerTest extends EasyMockSupport
 
     EasyMock.replay(client, segmentPusherConfig, inputDataConfig);
 
-    segmentKiller = new OssDataSegmentKiller(client, segmentPusherConfig, inputDataConfig);
+    segmentKiller = new OssDataSegmentKiller(Suppliers.ofInstance(client), segmentPusherConfig, inputDataConfig);
     segmentKiller.killAll();
     EasyMock.verify(client, segmentPusherConfig, inputDataConfig);
   }
@@ -192,7 +193,7 @@ public class OssDataSegmentKillerTest extends EasyMockSupport
 
       EasyMock.replay(client, segmentPusherConfig, inputDataConfig);
 
-      segmentKiller = new OssDataSegmentKiller(client, segmentPusherConfig, inputDataConfig);
+      segmentKiller = new OssDataSegmentKiller(Suppliers.ofInstance(client), segmentPusherConfig, inputDataConfig);
       segmentKiller.killAll();
     }
     catch (IOException e) {

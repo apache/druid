@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.loading.StorageLocationConfig;
@@ -104,19 +105,15 @@ public class TestStorageLocation
     Assert.assertEquals(expectedSegments, segmentsInFiles);
   }
 
-  public StorageLocationConfig toStorageLocationConfig()
+  public StorageLocationConfig toStorageLocationConfig() throws IOException
   {
-    if (!cacheDir.exists()) {
-      cacheDir.mkdirs();
-    }
+    FileUtils.mkdirp(cacheDir);
     return new StorageLocationConfig(cacheDir, 100L, 100d);
   }
 
-  public StorageLocationConfig toStorageLocationConfig(long maxSize, Double freeSpacePercent)
+  public StorageLocationConfig toStorageLocationConfig(long maxSize, Double freeSpacePercent) throws IOException
   {
-    if (!cacheDir.exists()) {
-      cacheDir.mkdirs();
-    }
+    FileUtils.mkdirp(cacheDir);
     return new StorageLocationConfig(cacheDir, maxSize, freeSpacePercent);
   }
 }

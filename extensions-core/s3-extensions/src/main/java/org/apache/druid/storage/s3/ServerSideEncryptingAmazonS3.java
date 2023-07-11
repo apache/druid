@@ -19,21 +19,29 @@
 
 package org.apache.druid.storage.s3;
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.AccessControlList;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.CopyObjectResult;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.UploadPartRequest;
+import com.amazonaws.services.s3.model.UploadPartResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -43,9 +51,10 @@ import java.io.InputStream;
 
 /**
  * {@link AmazonS3} wrapper with {@link ServerSideEncryption}. Every {@link AmazonS3#putObject},
- * {@link AmazonS3#copyObject}, {@link AmazonS3#getObject}, and {@link AmazonS3#getObjectMetadata} methods should be
+ * {@link AmazonS3#copyObject}, {@link AmazonS3#getObject}, and {@link AmazonS3#getObjectMetadata},
+ * {@link AmazonS3#initiateMultipartUpload}, @{@link AmazonS3#uploadPart} methods should be
  * wrapped using ServerSideEncryption.
- *
+ * <p>
  * Additional methods can be added to this class if needed, but subclassing AmazonS3Client is discouraged to reduce
  * human mistakes like some methods are not encoded properly.
  */
@@ -132,6 +141,31 @@ public class ServerSideEncryptingAmazonS3
   public void deleteObjects(DeleteObjectsRequest request)
   {
     amazonS3.deleteObjects(request);
+  }
+
+
+  public InitiateMultipartUploadResult initiateMultipartUpload(InitiateMultipartUploadRequest request)
+      throws SdkClientException
+  {
+    return amazonS3.initiateMultipartUpload(serverSideEncryption.decorate(request));
+  }
+
+  public UploadPartResult uploadPart(UploadPartRequest request)
+      throws SdkClientException
+  {
+    return amazonS3.uploadPart(serverSideEncryption.decorate(request));
+  }
+
+  public void cancelMultiPartUpload(AbortMultipartUploadRequest request)
+      throws SdkClientException
+  {
+    amazonS3.abortMultipartUpload(request);
+  }
+
+  public CompleteMultipartUploadResult completeMultipartUpload(CompleteMultipartUploadRequest request)
+      throws SdkClientException
+  {
+    return amazonS3.completeMultipartUpload(request);
   }
 
   public static class Builder

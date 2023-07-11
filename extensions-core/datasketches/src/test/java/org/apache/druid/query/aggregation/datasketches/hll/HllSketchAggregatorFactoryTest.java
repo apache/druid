@@ -32,6 +32,7 @@ import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregat
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.easymock.EasyMock;
@@ -44,6 +45,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class HllSketchAggregatorFactoryTest
@@ -79,7 +81,19 @@ public class HllSketchAggregatorFactoryTest
     Assert.assertEquals(FIELD_NAME, aggregatorFactory.getFieldName());
     Assert.assertEquals(LG_K, aggregatorFactory.getLgK());
     Assert.assertEquals(TGT_HLL_TYPE, aggregatorFactory.getTgtHllType());
+    Assert.assertEquals(HllSketchAggregatorFactory.DEFAULT_SHOULD_FINALIZE, aggregatorFactory.isShouldFinalize());
     Assert.assertEquals(ROUND, aggregatorFactory.isRound());
+  }
+
+
+  @Test
+  public void testWithName()
+  {
+    List<AggregatorFactory> aggregatorFactories = target.getRequiredColumns();
+    Assert.assertEquals(1, aggregatorFactories.size());
+    HllSketchAggregatorFactory aggregatorFactory = (HllSketchAggregatorFactory) aggregatorFactories.get(0);
+    Assert.assertEquals(aggregatorFactory, aggregatorFactory.withName(aggregatorFactory.getName()));
+    Assert.assertEquals("newTest", aggregatorFactory.withName("newTest").getName());
   }
 
   @Test
@@ -224,8 +238,13 @@ public class HllSketchAggregatorFactoryTest
                                        .collect(Collectors.toList());
 
     for (Field field : toStringFields) {
-      String expectedToken = formatFieldForToString(field);
-      Assert.assertTrue("Missing \"" + expectedToken + "\"", string.contains(expectedToken));
+      if ("shouldFinalize".equals(field.getName())) {
+        // Skip; not included in the toString if it has the default value.
+        continue;
+      }
+
+      Pattern expectedPattern = testPatternForToString(field);
+      Assert.assertTrue("Missing \"" + field.getName() + "\"", expectedPattern.matcher(string).find());
     }
   }
 
@@ -244,11 +263,13 @@ public class HllSketchAggregatorFactoryTest
                       "col",
                       null,
                       null,
+                      null,
                       false
                   ),
                   new HllSketchBuildAggregatorFactory(
                       "hllBuildRound",
                       "col",
+                      null,
                       null,
                       null,
                       true
@@ -258,11 +279,13 @@ public class HllSketchAggregatorFactoryTest
                       "col",
                       null,
                       null,
+                      null,
                       false
                   ),
                   new HllSketchMergeAggregatorFactory(
                       "hllMergeRound",
                       "col",
+                      null,
                       null,
                       null,
                       true
@@ -283,19 +306,19 @@ public class HllSketchAggregatorFactoryTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
+                    .add("count", ColumnType.LONG)
                     .add("hllBuild", null)
                     .add("hllBuildRound", null)
                     .add("hllMerge", null)
                     .add("hllMergeRound", null)
-                    .add("hllBuild-access", ValueType.COMPLEX)
-                    .add("hllBuild-finalize", ValueType.DOUBLE)
-                    .add("hllBuildRound-access", ValueType.COMPLEX)
-                    .add("hllBuildRound-finalize", ValueType.LONG)
-                    .add("hllMerge-access", ValueType.COMPLEX)
-                    .add("hllMerge-finalize", ValueType.DOUBLE)
-                    .add("hllMergeRound-access", ValueType.COMPLEX)
-                    .add("hllMergeRound-finalize", ValueType.LONG)
+                    .add("hllBuild-access", HllSketchBuildAggregatorFactory.TYPE)
+                    .add("hllBuild-finalize", ColumnType.DOUBLE)
+                    .add("hllBuildRound-access", HllSketchBuildAggregatorFactory.TYPE)
+                    .add("hllBuildRound-finalize", ColumnType.LONG)
+                    .add("hllMerge-access", HllSketchMergeAggregatorFactory.TYPE)
+                    .add("hllMerge-finalize", ColumnType.DOUBLE)
+                    .add("hllMergeRound-access", HllSketchMergeAggregatorFactory.TYPE)
+                    .add("hllMergeRound-finalize", ColumnType.LONG)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
@@ -307,9 +330,9 @@ public class HllSketchAggregatorFactoryTest
     return Modifier.isPrivate(modfiers) && !Modifier.isStatic(modfiers) && Modifier.isFinal(modfiers);
   }
 
-  private static String formatFieldForToString(Field field)
+  private static Pattern testPatternForToString(Field field)
   {
-    return " " + field.getName() + "=";
+    return Pattern.compile("\\b" + Pattern.quote(field.getName()) + "=");
   }
 
   // Helper for testing abstract base class
@@ -329,7 +352,7 @@ public class HllSketchAggregatorFactoryTest
         boolean round
     )
     {
-      super(name, fieldName, lgK, tgtHllType, round);
+      super(name, fieldName, lgK, tgtHllType, null, round);
     }
 
     @Override
@@ -351,15 +374,21 @@ public class HllSketchAggregatorFactoryTest
     }
 
     @Override
-    public String getComplexTypeName()
+    public ColumnType getIntermediateType()
     {
-      return DUMMY_TYPE_NAME;
+      return new ColumnType(ValueType.COMPLEX, DUMMY_TYPE_NAME, null);
     }
 
     @Override
     public int getMaxIntermediateSize()
     {
       return DUMMY_SIZE;
+    }
+
+    @Override
+    public AggregatorFactory withName(String newName)
+    {
+      return new TestHllSketchAggregatorFactory(newName, getFieldName(), getLgK(), getTgtHllType(), isRound());
     }
   }
 }

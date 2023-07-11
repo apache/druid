@@ -19,10 +19,10 @@
 
 package org.apache.druid.segment.join.table;
 
-import it.unimi.dsi.fastutil.ints.IntList;
-import it.unimi.dsi.fastutil.ints.IntLists;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
+import it.unimi.dsi.fastutil.ints.IntSortedSets;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 /**
  * An {@link IndexedTable.Index} backed by an int array.
@@ -49,9 +49,9 @@ public class UniqueLongArrayIndex implements IndexedTable.Index
   }
 
   @Override
-  public ValueType keyType()
+  public ColumnType keyType()
   {
-    return ValueType.LONG;
+    return ColumnType.LONG;
   }
 
   @Override
@@ -61,18 +61,18 @@ public class UniqueLongArrayIndex implements IndexedTable.Index
   }
 
   @Override
-  public IntList find(Object key)
+  public IntSortedSet find(Object key)
   {
     final Long longKey = DimensionHandlerUtils.convertObjectToLong(key);
 
     if (longKey != null) {
       final int row = findUniqueLong(longKey);
       if (row >= 0) {
-        return IntLists.singleton(row);
+        return IntSortedSets.singleton(row);
       }
     }
 
-    return IntLists.EMPTY_LIST;
+    return IntSortedSets.EMPTY_SET;
   }
 
   @Override

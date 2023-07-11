@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.theta.oldapi;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
 
 /**
@@ -37,4 +38,11 @@ public class OldSketchMergeAggregatorFactory extends SketchMergeAggregatorFactor
   {
     super(name, fieldName, size, shouldFinalize, true, null);
   }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new OldSketchMergeAggregatorFactory(newName, getFieldName(), getSize(), getShouldFinalize());
+  }
+
 }

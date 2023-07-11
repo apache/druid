@@ -93,7 +93,8 @@ public class KinesisIOConfigTest
     Assert.assertTrue(config.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
     Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-1.amazonaws.com");
-    Assert.assertEquals(config.getRecordsPerFetch(), 4000);
+    Assert.assertNull(config.getRecordsPerFetchConfigured());
+    Assert.assertEquals(config.getRecordsPerFetchOrDefault(1_000_000_000, 4), 1250);
     Assert.assertEquals(config.getFetchDelayMillis(), 0);
     Assert.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
     Assert.assertNull(config.getAwsAssumedRoleArn());
@@ -149,7 +150,7 @@ public class KinesisIOConfigTest
     Assert.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime().get());
     Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-2.amazonaws.com");
     Assert.assertEquals(config.getStartSequenceNumbers().getExclusivePartitions(), ImmutableSet.of("0"));
-    Assert.assertEquals(1000, config.getRecordsPerFetch());
+    Assert.assertEquals(1000, (int) config.getRecordsPerFetchConfigured());
     Assert.assertEquals(1000, config.getFetchDelayMillis());
     Assert.assertEquals("role", config.getAwsAssumedRoleArn());
     Assert.assertEquals("awsexternalid", config.getAwsExternalId());
@@ -301,7 +302,7 @@ public class KinesisIOConfigTest
     Assert.assertEquals(currentConfig.getMinimumMessageTime(), oldConfig.getMinimumMessageTime());
     Assert.assertEquals(currentConfig.getMaximumMessageTime(), oldConfig.getMaximumMessageTime());
     Assert.assertEquals(currentConfig.getEndpoint(), oldConfig.getEndpoint());
-    Assert.assertEquals(currentConfig.getRecordsPerFetch(), oldConfig.getRecordsPerFetch());
+    Assert.assertEquals((int) currentConfig.getRecordsPerFetchConfigured(), oldConfig.getRecordsPerFetch());
     Assert.assertEquals(currentConfig.getFetchDelayMillis(), oldConfig.getFetchDelayMillis());
     Assert.assertEquals(currentConfig.getAwsAssumedRoleArn(), oldConfig.getAwsAssumedRoleArn());
     Assert.assertEquals(currentConfig.getAwsExternalId(), oldConfig.getAwsExternalId());
@@ -348,7 +349,7 @@ public class KinesisIOConfigTest
     Assert.assertEquals(oldConfig.getMinimumMessageTime(), currentConfig.getMinimumMessageTime());
     Assert.assertEquals(oldConfig.getMaximumMessageTime(), currentConfig.getMaximumMessageTime());
     Assert.assertEquals(oldConfig.getEndpoint(), currentConfig.getEndpoint());
-    Assert.assertEquals(oldConfig.getRecordsPerFetch(), currentConfig.getRecordsPerFetch());
+    Assert.assertEquals(oldConfig.getRecordsPerFetch(), (int) currentConfig.getRecordsPerFetchConfigured());
     Assert.assertEquals(oldConfig.getFetchDelayMillis(), currentConfig.getFetchDelayMillis());
     Assert.assertEquals(oldConfig.getAwsAssumedRoleArn(), currentConfig.getAwsAssumedRoleArn());
     Assert.assertEquals(oldConfig.getAwsExternalId(), currentConfig.getAwsExternalId());

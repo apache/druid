@@ -48,9 +48,14 @@ public class LockResult
     return new LockResult(taskLock, newSegmentId, false);
   }
 
-  public static LockResult fail(boolean revoked)
+  public static LockResult fail()
   {
-    return new LockResult(null, null, revoked);
+    return new LockResult(null, null, false);
+  }
+
+  public static LockResult revoked(TaskLock taskLock)
+  {
+    return new LockResult(taskLock, null, true);
   }
 
   @JsonCreator
@@ -87,6 +92,6 @@ public class LockResult
 
   public boolean isOk()
   {
-    return taskLock != null;
+    return taskLock != null && !revoked;
   }
 }

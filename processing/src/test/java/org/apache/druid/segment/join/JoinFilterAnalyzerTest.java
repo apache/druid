@@ -36,7 +36,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.BoundFilter;
 import org.apache.druid.segment.filter.FalseFilter;
@@ -242,7 +242,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#en.wikipedia"),
-                new InDimFilter("countryIsoCode", ImmutableSet.of("US"), null, null).toFilter()
+                new InDimFilter("countryIsoCode", ImmutableSet.of("US")).toFilter()
             )
         ),
         new SelectorFilter("rtc.countryName", "United States"),
@@ -405,7 +405,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new ExpressionVirtualColumn(
                 "v1",
                 "concat('virtual-column-', \"channel\")",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -476,7 +476,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             new ExpressionVirtualColumn(
                 "v0",
                 "upper(\"r1.regionName\")",
-                ValueType.STRING,
+                ColumnType.STRING,
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -649,7 +649,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                         ))
                     )
                 ),
-                new InDimFilter("countryIsoCode", ImmutableSet.of("CA"), null, null).toFilter()
+                new InDimFilter("countryIsoCode", ImmutableSet.of("CA")).toFilter()
             )
         ),
         new AndFilter(
@@ -751,7 +751,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#en.wikipedia"),
-                new InDimFilter("JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0", ImmutableSet.of("SU"), null, null).toFilter()
+                new InDimFilter("JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0", ImmutableSet.of("SU")).toFilter()
             )
         ),
         new SelectorFilter("rtc.countryName", "States United"),
@@ -763,7 +763,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     ExpressionVirtualColumn expectedVirtualColumn = new ExpressionVirtualColumn(
         "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0",
         "reverse(countryIsoCode)",
-        ValueType.STRING,
+        ColumnType.STRING,
         ExprMacroTable.nil()
     );
     Assert.assertEquals(
@@ -898,7 +898,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                 new OrFilter(
                     ImmutableList.of(
                         new SelectorFilter("channel", "#ko.wikipedia"),
-                        new InDimFilter("countryIsoCode", ImmutableSet.of("US"), null, null).toFilter()
+                        new InDimFilter("countryIsoCode", ImmutableSet.of("US")).toFilter()
                     )
                 ),
                 new OrFilter(
@@ -906,8 +906,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                         new SelectorFilter("channel", "#ko.wikipedia"),
                         new AndFilter(
                             ImmutableList.of(
-                                new InDimFilter("countryIsoCode", ImmutableSet.of("US"), null, null).toFilter(),
-                                new InDimFilter("regionIsoCode", ImmutableSet.of("VA"), null, null).toFilter()
+                                new InDimFilter("countryIsoCode", ImmutableSet.of("US")).toFilter(),
+                                new InDimFilter("regionIsoCode", ImmutableSet.of("VA")).toFilter()
                             )
                         )
                     )
@@ -997,14 +997,14 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     ExpressionVirtualColumn expectedVirtualColumn = new ExpressionVirtualColumn(
         "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0",
         "concat(countryIsoCode, regionIsoCode)",
-        ValueType.STRING,
+        ColumnType.STRING,
         ExprMacroTable.nil()
     );
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#en.wikipedia"),
-                new InDimFilter("JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0", ImmutableSet.of("USCA"), null, null).toFilter()
+                new InDimFilter("JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0", ImmutableSet.of("USCA")).toFilter()
             )
         ),
         new SelectorFilter("c1.countryName", "Usca"),
@@ -1087,14 +1087,14 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     ExpressionVirtualColumn expectedVirtualColumn = new ExpressionVirtualColumn(
         "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0",
         "concat(countryIsoCode, regionIsoCode)",
-        ValueType.STRING,
+        ColumnType.STRING,
         ExprMacroTable.nil()
     );
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#en.wikipedia"),
-                new InDimFilter("JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0", ImmutableSet.of("USCA"), null, null).toFilter()
+                new InDimFilter("JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0", ImmutableSet.of("USCA")).toFilter()
             )
         ),
         new SelectorFilter("c1.v", "Usca"),
@@ -1164,7 +1164,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#de.wikipedia"),
-                new InDimFilter("countryIsoCode", ImmutableSet.of("DE"), null, null).toFilter()
+                new InDimFilter("countryIsoCode", ImmutableSet.of("DE")).toFilter()
             )
         ),
         new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "Germany"),
@@ -1221,7 +1221,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#de.wikipedia"),
-                new InDimFilter("countryIsoCode", ImmutableSet.of("DE"), null, null).toFilter()
+                new InDimFilter("countryIsoCode", ImmutableSet.of("DE")).toFilter()
             )
         ),
         new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "v", "Germany"),
@@ -1453,7 +1453,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#en.wikipedia"),
-                new InDimFilter("countryNumber", ImmutableSet.of("0"), null, null).toFilter()
+                new InDimFilter("countryNumber", ImmutableSet.of("0")).toFilter()
             )
         ),
         new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "countryName", "Australia"),
@@ -1516,7 +1516,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#en.wikipedia"),
-                new InDimFilter("countryNumber", ImmutableSet.of("0"), null, null).toFilter()
+                new InDimFilter("countryNumber", ImmutableSet.of("0")).toFilter()
             )
         ),
         new SelectorFilter(FACT_TO_COUNTRY_ON_NUMBER_PREFIX + "v", "Australia"),
@@ -1683,7 +1683,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#es.wikipedia"),
-                new InDimFilter("countryIsoCode", ImmutableSet.of("SV"), null, null).toFilter()
+                new InDimFilter("countryIsoCode", ImmutableSet.of("SV")).toFilter()
             )
         ),
         new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName", "El Salvador"),
@@ -1740,7 +1740,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new AndFilter(
             ImmutableList.of(
                 new SelectorFilter("channel", "#es.wikipedia"),
-                new InDimFilter("countryIsoCode", ImmutableSet.of("SV"), null, null).toFilter()
+                new InDimFilter("countryIsoCode", ImmutableSet.of("SV")).toFilter()
             )
         ),
         new SelectorFilter(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "v", "El Salvador"),
@@ -1916,8 +1916,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new AndFilter(
             ImmutableList.of(
-                new InDimFilter("countryIsoCode", ImmutableSet.of("MMMM"), null, null).toFilter(),
-                new InDimFilter("regionIsoCode", ImmutableSet.of("MMMM"), null, null).toFilter()
+                new InDimFilter("countryIsoCode", ImmutableSet.of("MMMM")).toFilter(),
+                new InDimFilter("regionIsoCode", ImmutableSet.of("MMMM")).toFilter()
             )
         ),
         new SelectorFilter("r1.regionName", "Fourems Province"),
@@ -1987,7 +1987,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new OrFilter(
             ImmutableList.of(
-                new InDimFilter("regionIsoCode", ImmutableSet.of("MMMM"), null, null).toFilter(),
+                new InDimFilter("regionIsoCode", ImmutableSet.of("MMMM")).toFilter(),
                 new SelectorFilter("regionIsoCode", "AAAA")
             )
         ),
@@ -2288,7 +2288,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                 null
             )),
             expressionFilter,
-            new InDimFilter("rtc.countryIsoCode", ImmutableSet.of("CA", "CA2", "CA3"), null, null).toFilter(),
+            new InDimFilter("rtc.countryIsoCode", ImmutableSet.of("CA", "CA2", "CA3")).toFilter(),
             new OrFilter(
                 ImmutableList.of(
                     new SelectorFilter("channel", "#fr.wikipedia"),
@@ -2376,13 +2376,13 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
           new ExpressionVirtualColumn(
               rewrittenRegionIsoCodeColumnName,
               "(upper [(lower [regionIsoCode])])",
-              ValueType.STRING,
+              ColumnType.STRING,
               ExprMacroTable.nil()
           ),
           new ExpressionVirtualColumn(
               rewrittenCountryIsoCodeColumnName,
               "(upper [(lower [countryIsoCode])])",
-              ValueType.STRING,
+              ColumnType.STRING,
               ExprMacroTable.nil()
           )
       );
@@ -2414,7 +2414,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             ImmutableList.of(
                 new SelectorFilter(rewrittenRegionIsoCodeColumnName, "ON"),
                 new SelectorFilter(rewrittenCountryIsoCodeColumnName, "CA"),
-                new InDimFilter(rewrittenCountryIsoCodeColumnName, ImmutableSet.of("CA"), null, null).toFilter(),
+                new InDimFilter(rewrittenCountryIsoCodeColumnName, ImmutableSet.of("CA")).toFilter(),
                 new BoundFilter(new BoundDimFilter(
                     rewrittenCountryIsoCodeColumnName,
                     "CA",
@@ -2427,9 +2427,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                 )),
                 new InDimFilter(
                     rewrittenCountryIsoCodeColumnName,
-                    ImmutableSet.of("CA", "CA2", "CA3"),
-                    null,
-                    null
+                    ImmutableSet.of("CA", "CA2", "CA3")
                 ).toFilter(),
                 new OrFilter(
                     ImmutableList.of(
@@ -2453,9 +2451,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
                         new SelectorFilter(rewrittenCountryIsoCodeColumnName, "ABCDEF"),
                         new InDimFilter(
                             rewrittenCountryIsoCodeColumnName,
-                            ImmutableSet.of("CA"),
-                            null,
-                            null
+                            ImmutableSet.of("CA")
                         ).toFilter(),
                         new BoundFilter(new BoundDimFilter(
                             rewrittenCountryIsoCodeColumnName,
@@ -2549,10 +2545,10 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
         new AndFilter(
             ImmutableList.of(
-                new InDimFilter("countryIsoCode", ImmutableSet.of("US"), null, null).toFilter(),
-                new InDimFilter("regionIsoCode", ImmutableSet.of("CA"), null, null).toFilter(),
-                new InDimFilter("countryIsoCode", ImmutableSet.of("MMMM", "AAAA"), null, null).toFilter(),
-                new InDimFilter("regionIsoCode", ImmutableSet.of("MMMM", "AAAA"), null, null).toFilter()
+                new InDimFilter("countryIsoCode", ImmutableSet.of("US")).toFilter(),
+                new InDimFilter("regionIsoCode", ImmutableSet.of("CA")).toFilter(),
+                new InDimFilter("countryIsoCode", ImmutableSet.of("MMMM", "AAAA")).toFilter(),
+                new InDimFilter("regionIsoCode", ImmutableSet.of("MMMM", "AAAA")).toFilter()
             )
         ),
         originalFilter,

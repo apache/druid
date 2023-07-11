@@ -30,7 +30,9 @@ import {
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { Rule, RuleUtil } from '../../utils/load-rule';
+import { durationSanitizer } from '../../utils';
+import type { Rule } from '../../utils/load-rule';
+import { RuleUtil } from '../../utils/load-rule';
 import { SuggestibleInput } from '../suggestible-input/suggestible-input';
 
 import './rule-editor.scss';
@@ -39,9 +41,9 @@ const PERIOD_SUGGESTIONS: string[] = ['P1D', 'P7D', 'P1M', 'P1Y', 'P1000Y'];
 
 export interface RuleEditorProps {
   rule: Rule;
-  tiers: any[];
-  onChange: (newRule: Rule) => void;
-  onDelete: () => void;
+  tiers: string[];
+  onChange(newRule: Rule): void;
+  onDelete(): void;
   moveUp: (() => void) | undefined;
   moveDown: (() => void) | undefined;
 }
@@ -82,18 +84,6 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
       return (
         <ControlGroup key={tier}>
           <Button minimal style={{ pointerEvents: 'none' }}>
-            Replicants:
-          </Button>
-          <NumericInput
-            value={tieredReplicants[tier]}
-            onValueChange={(v: number) => {
-              if (isNaN(v)) return;
-              onChange(RuleUtil.addTieredReplicant(rule, tier, v));
-            }}
-            min={1}
-            max={256}
-          />
-          <Button minimal style={{ pointerEvents: 'none' }}>
             Tier:
           </Button>
           <HTMLSelect
@@ -108,14 +98,24 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
             </option>
             {tiers
               .filter(t => t !== tier && !tieredReplicants[t])
-              .map(t => {
-                return (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                );
-              })}
+              .map(t => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
           </HTMLSelect>
+          <Button minimal style={{ pointerEvents: 'none' }}>
+            Replicants:
+          </Button>
+          <NumericInput
+            value={tieredReplicants[tier]}
+            onValueChange={(v: number) => {
+              if (isNaN(v)) return;
+              onChange(RuleUtil.addTieredReplicant(rule, tier, v));
+            }}
+            min={0}
+            max={256}
+          />
           <Button
             disabled={ruleTiers.length === 1}
             onClick={() => removeTier(tier)}
@@ -164,21 +164,18 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
                 value={rule.type}
                 onChange={(e: any) => onChange(RuleUtil.changeRuleType(rule, e.target.value))}
               >
-                {RuleUtil.TYPES.map(type => {
-                  return (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  );
-                })}
+                {RuleUtil.TYPES.map(type => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
               </HTMLSelect>
               {RuleUtil.hasPeriod(rule) && (
                 <SuggestibleInput
                   value={rule.period || ''}
+                  sanitizer={durationSanitizer}
                   onValueChange={period => {
                     if (typeof period === 'undefined') return;
-                    // Ensure the period is upper case and does not contain anytihng but the allowed chars
-                    period = period.toUpperCase().replace(/[^PYMDTHS0-9]/g, '');
                     onChange(RuleUtil.changePeriod(rule, period));
                   }}
                   placeholder={PERIOD_SUGGESTIONS[0]}

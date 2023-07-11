@@ -54,7 +54,7 @@ public class StringFirstBufferAggregatorTest
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
     StringFirstAggregatorFactory factory = new StringFirstAggregatorFactory(
-        "billy", "billy", maxStringBytes
+        "billy", "billy", null, maxStringBytes
     );
 
     StringFirstBufferAggregator agg = new StringFirstBufferAggregator(
@@ -91,7 +91,7 @@ public class StringFirstBufferAggregatorTest
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
     StringFirstAggregatorFactory factory = new StringFirstAggregatorFactory(
-        "billy", "billy", maxStringBytes
+        "billy", "billy", null, maxStringBytes
     );
 
     StringFirstBufferAggregator agg = new StringFirstBufferAggregator(
@@ -129,7 +129,7 @@ public class StringFirstBufferAggregatorTest
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
     StringFirstAggregatorFactory factory = new StringFirstAggregatorFactory(
-        "billy", "billy", maxStringBytes
+        "billy", "billy", null, maxStringBytes
     );
 
     StringFirstBufferAggregator agg = new StringFirstBufferAggregator(
@@ -168,7 +168,7 @@ public class StringFirstBufferAggregatorTest
     TestObjectColumnSelector<Double> objectColumnSelector = new TestObjectColumnSelector<>(doubles);
 
     StringFirstAggregatorFactory factory = new StringFirstAggregatorFactory(
-        "billy", "billy", maxStringBytes
+        "billy", "billy", null, maxStringBytes
     );
 
     StringFirstBufferAggregator agg = new StringFirstBufferAggregator(

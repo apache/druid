@@ -22,11 +22,13 @@ package org.apache.druid.segment.virtual;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
@@ -43,6 +45,10 @@ public class ExpressionPlan
      * expression has no inputs and can be optimized into a constant selector
       */
     CONSTANT,
+    /**
+     * expression is a simple identifier expression, do not transform
+     */
+    IDENTIFIER,
     /**
      * expression has a single, single valued input, and is dictionary encoded if the value is a string, and does
      * not produce non-scalar output
@@ -87,9 +93,9 @@ public class ExpressionPlan
   private final EnumSet<Trait> traits;
 
   @Nullable
-  private final ExprType outputType;
+  private final ExpressionType outputType;
   @Nullable
-  private final ValueType singleInputType;
+  private final ColumnType singleInputType;
   private final Set<String> unknownInputs;
   private final List<String> unappliedInputs;
 
@@ -98,8 +104,8 @@ public class ExpressionPlan
       Expr expression,
       Expr.BindingAnalysis analysis,
       EnumSet<Trait> traits,
-      @Nullable ExprType outputType,
-      @Nullable ValueType singleInputType,
+      @Nullable ExpressionType outputType,
+      @Nullable ColumnType singleInputType,
       Set<String> unknownInputs,
       List<String> unappliedInputs
   )
@@ -127,6 +133,7 @@ public class ExpressionPlan
    */
   public Expr getExpression()
   {
+    Parser.validateExpr(expression, analysis);
     return expression;
   }
 
@@ -139,9 +146,11 @@ public class ExpressionPlan
   public Expr getAppliedExpression()
   {
     if (is(Trait.NEEDS_APPLIED)) {
-      return Parser.applyUnappliedBindings(expression, analysis, unappliedInputs);
+      final Expr applied = Parser.applyUnappliedBindings(expression, analysis, unappliedInputs);
+      Parser.validateExpr(applied, applied.analyzeInputs());
+      return applied;
     }
-    return expression;
+    return getExpression();
   }
 
   /**
@@ -159,9 +168,11 @@ public class ExpressionPlan
           "Accumulator cannot be implicitly transformed, if it is an ARRAY or multi-valued type it must"
           + " be used explicitly as such"
       );
-      return Parser.foldUnappliedBindings(expression, analysis, unappliedInputs, accumulatorId);
+      final Expr folded = Parser.foldUnappliedBindings(expression, analysis, unappliedInputs, accumulatorId);
+      Parser.validateExpr(folded, folded.analyzeInputs());
+      return folded;
     }
-    return expression;
+    return getExpression();
   }
 
   /**
@@ -171,7 +182,7 @@ public class ExpressionPlan
    * or {@link #getAppliedFoldExpression(String)}, should the expression have any unapplied inputs
    */
   @Nullable
-  public ExprType getOutputType()
+  public ExpressionType getOutputType()
   {
     return outputType;
   }
@@ -180,7 +191,7 @@ public class ExpressionPlan
    * If and only if the column has a single input, get the {@link ValueType} of that input
    */
   @Nullable
-  public ValueType getSingleInputType()
+  public ColumnType getSingleInputType()
   {
     return singleInputType;
   }
@@ -219,16 +230,20 @@ public class ExpressionPlan
    * If no output type was able to be inferred during planning, returns null
    */
   @Nullable
-  public ColumnCapabilities inferColumnCapabilities(@Nullable ValueType outputTypeHint)
+  public ColumnCapabilities inferColumnCapabilities(@Nullable ColumnType outputTypeHint)
   {
     if (outputType != null) {
-      final ValueType inferredValueType = ExprType.toValueType(outputType);
+      final ColumnType inferredValueType = ExpressionType.toColumnType(outputType);
+
+      if (inferredValueType.is(ValueType.COMPLEX)) {
+        return ColumnCapabilitiesImpl.createDefault().setHasNulls(true).setType(inferredValueType);
+      }
 
       if (inferredValueType.isNumeric()) {
         // if float was explicitly specified preserve it, because it will currently never be the computed output type
         // since there is no float expression type
-        if (ValueType.FLOAT == outputTypeHint) {
-          return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ValueType.FLOAT);
+        if (Types.is(outputTypeHint, ValueType.FLOAT)) {
+          return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT);
         }
         return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(inferredValueType);
       }
@@ -240,7 +255,7 @@ public class ExpressionPlan
       }
 
       // fancy string stuffs
-      if (ValueType.STRING == inferredValueType) {
+      if (inferredValueType.is(ValueType.STRING)) {
         // constant strings are supported as dimension selectors, set them as dictionary encoded and unique for all the
         // bells and whistles the engines have to offer
         if (isConstant()) {
@@ -261,9 +276,10 @@ public class ExpressionPlan
             // to create a dictionary encoded selector instead of an object selector to defer expression evaluation
             // until query time
             return ColumnCapabilitiesImpl.copyOf(underlyingCapabilities)
-                                         .setType(ValueType.STRING)
+                                         .setType(ColumnType.STRING)
                                          .setDictionaryValuesSorted(false)
                                          .setDictionaryValuesUnique(false)
+                                         .setHasBitmapIndexes(false)
                                          .setHasNulls(true);
           }
         }
@@ -273,11 +289,11 @@ public class ExpressionPlan
       // the complete set of input types
       if (any(Trait.NON_SCALAR_OUTPUT, Trait.NEEDS_APPLIED)) {
         // if the hint requested a string, use a string
-        if (ValueType.STRING == outputTypeHint) {
-          return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ValueType.STRING);
+        if (Types.is(outputTypeHint, ValueType.STRING) || inferredValueType.is(ValueType.STRING)) {
+          return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities().setHasMultipleValues(true);
         }
         // maybe something is looking for a little fun and wants arrays? let whatever it is through
-        return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ExprType.toValueType(outputType));
+        return ColumnCapabilitiesImpl.createSimpleArrayColumnCapabilities(ExpressionType.toColumnType(outputType));
       }
 
       // if we got here, lets call it single value string output, non-dictionary encoded

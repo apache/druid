@@ -203,6 +203,12 @@ public interface QueryMetrics<QueryType extends Query<?>>
   void queryId(QueryType query);
 
   /**
+   * Sets id of the given query as dimension.
+   */
+  @PublicApi
+  void queryId(@SuppressWarnings("UnusedParameters") String queryId);
+
+  /**
    * Sets {@link Query#getSubQueryId()} of the given query as dimension.
    */
   @PublicApi
@@ -213,6 +219,12 @@ public interface QueryMetrics<QueryType extends Query<?>>
    */
   @PublicApi
   void sqlQueryId(QueryType query);
+
+  /**
+   * Sets sqlQueryId as a dimension
+   */
+  @PublicApi
+  void sqlQueryId(@SuppressWarnings("UnusedParameters") String sqlQueryId);
 
   /**
    * Sets {@link Query#getContext()} of the given query as dimension.
@@ -262,31 +274,51 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   /**
    * Registers "query time" metric.
+   *
+   * Measures the time between a Jetty thread starting to handle a query, and the response being fully written to
+   * the response output stream. Does not include time spent waiting in a queue before the query runs.
    */
   QueryMetrics<QueryType> reportQueryTime(long timeNs);
 
   /**
    * Registers "query bytes" metric.
+   *
+   * Measures the total number of bytes written by the query server thread to the response output stream.
+   *
+   * Emitted once per query.
    */
   QueryMetrics<QueryType> reportQueryBytes(long byteCount);
 
   /**
-   * Registeres "segments queried count" metric.
+   * Registers "segments queried count" metric.
    */
   QueryMetrics<QueryType> reportQueriedSegmentCount(long segmentCount);
 
   /**
    * Registers "wait time" metric.
+   *
+   * Measures the total time segment-processing runnables spent waiting for execution in the processing thread pool.
+   *
+   * Emitted once per segment.
    */
   QueryMetrics<QueryType> reportWaitTime(long timeNs);
 
   /**
    * Registers "segment time" metric.
+   *
+   * Measures the total wall-clock time spent operating on segments in processing threads.
+   *
+   * Emitted once per segment.
    */
   QueryMetrics<QueryType> reportSegmentTime(long timeNs);
 
   /**
    * Registers "segmentAndCache time" metric.
+   *
+   * Measures the total wall-clock time spent in processing threads, either operating on segments or retrieving items
+   * from cache.
+   *
+   * Emitted once per segment.
    */
   QueryMetrics<QueryType> reportSegmentAndCacheTime(long timeNs);
 
@@ -363,6 +395,30 @@ public interface QueryMetrics<QueryType extends Query<?>>
    * Reports broker total CPU time in nanoseconds where fork join merge combine tasks were doing work
    */
   QueryMetrics<QueryType> reportParallelMergeTotalCpuTime(long timeNs);
+
+  /**
+   * Reports broker total "wall" time in nanoseconds from parallel merge start sequence creation to total
+   * consumption.
+   */
+  QueryMetrics<QueryType> reportParallelMergeTotalTime(long timeNs);
+
+  /**
+   * Reports broker "wall" time in nanoseconds for the fastest parallel merge sequence partition to be 'initialized',
+   * where 'initialized' is time to the first result batch is populated from data servers and merging can begin.
+   *
+   * Similar to query 'time to first byte' metrics, except is a composite of the whole group of data servers which are
+   * present in the merge partition, which all must supply an initial result batch before merging can actually begin.
+   */
+  QueryMetrics<QueryType> reportParallelMergeFastestPartitionTime(long timeNs);
+
+  /**
+   * Reports broker "wall" time in nanoseconds for the slowest parallel merge sequence partition to be 'initialized',
+   * where 'initialized' is time to the first result batch is populated from data servers and merging can begin.
+   *
+   * Similar to query 'time to first byte' metrics, except is a composite of the whole group of data servers which are
+   * present in the merge partition, which all must supply an initial result batch before merging can actually begin.
+   */
+  QueryMetrics<QueryType> reportParallelMergeSlowestPartitionTime(long timeNs);
 
   /**
    * Emits all metrics, registered since the last {@code emit()} call on this QueryMetrics object.

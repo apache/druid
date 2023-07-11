@@ -68,7 +68,7 @@ how quickly data can become available.
 ### Query Flexibility
 
 Druid's query language is fairly low level and maps to how Druid operates internally. Although Druid can be combined with a high level query
-planner such as [Plywood](https://github.com/implydata/plywood) to support most SQL queries and analytic SQL queries (minus joins among large tables),
+planner to support most SQL queries and analytic SQL queries (minus joins among large tables),
 base Druid is less flexible than SQL-on-Hadoop solutions for generic processing.
 
 SQL-on-Hadoop support SQL style queries with full joins.

@@ -1,32 +1,40 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`home view matches snapshot (coordinator) 1`] = `
+exports[`HomeView matches snapshot (coordinator) 1`] = `
 <div
   className="home-view app-view"
 >
   <Memo(StatusCard) />
-  <Memo(DatasourcesCard)
-    capabilities={
-      Capabilities {
-        "coordinator": true,
-        "overlord": false,
-        "queryType": "none",
+  <React.Fragment>
+    <Memo(DatasourcesCard)
+      capabilities={
+        Capabilities {
+          "clusterCapacity": undefined,
+          "coordinator": true,
+          "multiStageQuery": false,
+          "overlord": false,
+          "queryType": "none",
+        }
       }
-    }
-  />
-  <Memo(SegmentsCard)
-    capabilities={
-      Capabilities {
-        "coordinator": true,
-        "overlord": false,
-        "queryType": "none",
+    />
+    <Memo(SegmentsCard)
+      capabilities={
+        Capabilities {
+          "clusterCapacity": undefined,
+          "coordinator": true,
+          "multiStageQuery": false,
+          "overlord": false,
+          "queryType": "none",
+        }
       }
-    }
-  />
+    />
+  </React.Fragment>
   <Memo(ServicesCard)
     capabilities={
       Capabilities {
+        "clusterCapacity": undefined,
         "coordinator": true,
+        "multiStageQuery": false,
         "overlord": false,
         "queryType": "none",
       }
@@ -35,7 +43,9 @@ exports[`home view matches snapshot (coordinator) 1`] = `
   <Memo(LookupsCard)
     capabilities={
       Capabilities {
+        "clusterCapacity": undefined,
         "coordinator": true,
+        "multiStageQuery": false,
         "overlord": false,
         "queryType": "none",
       }
@@ -44,51 +54,65 @@ exports[`home view matches snapshot (coordinator) 1`] = `
 </div>
 `;
 
-exports[`home view matches snapshot (full) 1`] = `
+exports[`HomeView matches snapshot (full) 1`] = `
 <div
   className="home-view app-view"
 >
   <Memo(StatusCard) />
-  <Memo(DatasourcesCard)
-    capabilities={
-      Capabilities {
-        "coordinator": true,
-        "overlord": true,
-        "queryType": "nativeAndSql",
+  <React.Fragment>
+    <Memo(DatasourcesCard)
+      capabilities={
+        Capabilities {
+          "clusterCapacity": undefined,
+          "coordinator": true,
+          "multiStageQuery": true,
+          "overlord": true,
+          "queryType": "nativeAndSql",
+        }
       }
-    }
-  />
-  <Memo(SegmentsCard)
-    capabilities={
-      Capabilities {
-        "coordinator": true,
-        "overlord": true,
-        "queryType": "nativeAndSql",
+    />
+    <Memo(SegmentsCard)
+      capabilities={
+        Capabilities {
+          "clusterCapacity": undefined,
+          "coordinator": true,
+          "multiStageQuery": true,
+          "overlord": true,
+          "queryType": "nativeAndSql",
+        }
       }
-    }
-  />
-  <Memo(SupervisorsCard)
-    capabilities={
-      Capabilities {
-        "coordinator": true,
-        "overlord": true,
-        "queryType": "nativeAndSql",
+    />
+  </React.Fragment>
+  <React.Fragment>
+    <Memo(SupervisorsCard)
+      capabilities={
+        Capabilities {
+          "clusterCapacity": undefined,
+          "coordinator": true,
+          "multiStageQuery": true,
+          "overlord": true,
+          "queryType": "nativeAndSql",
+        }
       }
-    }
-  />
-  <Memo(TasksCard)
-    capabilities={
-      Capabilities {
-        "coordinator": true,
-        "overlord": true,
-        "queryType": "nativeAndSql",
+    />
+    <Memo(TasksCard)
+      capabilities={
+        Capabilities {
+          "clusterCapacity": undefined,
+          "coordinator": true,
+          "multiStageQuery": true,
+          "overlord": true,
+          "queryType": "nativeAndSql",
+        }
       }
-    }
-  />
+    />
+  </React.Fragment>
   <Memo(ServicesCard)
     capabilities={
       Capabilities {
+        "clusterCapacity": undefined,
         "coordinator": true,
+        "multiStageQuery": true,
         "overlord": true,
         "queryType": "nativeAndSql",
       }
@@ -97,7 +121,9 @@ exports[`home view matches snapshot (full) 1`] = `
   <Memo(LookupsCard)
     capabilities={
       Capabilities {
+        "clusterCapacity": undefined,
         "coordinator": true,
+        "multiStageQuery": true,
         "overlord": true,
         "queryType": "nativeAndSql",
       }
@@ -106,28 +132,34 @@ exports[`home view matches snapshot (full) 1`] = `
 </div>
 `;
 
-exports[`home view matches snapshot (overlord) 1`] = `
+exports[`HomeView matches snapshot (overlord) 1`] = `
 <div
   className="home-view app-view"
 >
   <Memo(StatusCard) />
-  <Memo(SupervisorsCard)
-    capabilities={
-      Capabilities {
-        "coordinator": false,
-        "overlord": true,
-        "queryType": "none",
+  <React.Fragment>
+    <Memo(SupervisorsCard)
+      capabilities={
+        Capabilities {
+          "clusterCapacity": undefined,
+          "coordinator": false,
+          "multiStageQuery": false,
+          "overlord": true,
+          "queryType": "none",
+        }
       }
-    }
-  />
-  <Memo(TasksCard)
-    capabilities={
-      Capabilities {
-        "coordinator": false,
-        "overlord": true,
-        "queryType": "none",
+    />
+    <Memo(TasksCard)
+      capabilities={
+        Capabilities {
+          "clusterCapacity": undefined,
+          "coordinator": false,
+          "multiStageQuery": false,
+          "overlord": true,
+          "queryType": "none",
+        }
       }
-    }
-  />
+    />
+  </React.Fragment>
 </div>
 `;

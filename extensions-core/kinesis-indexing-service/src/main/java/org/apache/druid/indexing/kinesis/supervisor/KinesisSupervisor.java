@@ -176,6 +176,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
           (KinesisIndexTaskTuningConfig) taskTuningConfig,
           (KinesisIndexTaskIOConfig) taskIoConfig,
           context,
+          spec.getSpec().getTuningConfig().isUseListShards(),
           awsCredentialsConfig
       ));
     }
@@ -196,16 +197,16 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
             ioConfig.getAwsAssumedRoleArn(),
             ioConfig.getAwsExternalId()
         ),
-        ioConfig.getRecordsPerFetch(),
+        0, // no records-per-fetch, it is not used
         ioConfig.getFetchDelayMillis(),
         0, // skip starting background fetch, it is not used
         ioConfig.isDeaggregate(),
-        taskTuningConfig.getRecordBufferSize(),
+        taskTuningConfig.getRecordBufferSizeOrDefault(Runtime.getRuntime().maxMemory(), ioConfig.isDeaggregate()),
         taskTuningConfig.getRecordBufferOfferTimeout(),
         taskTuningConfig.getRecordBufferFullWait(),
-        taskTuningConfig.getFetchSequenceNumberTimeout(),
-        taskTuningConfig.getMaxRecordsPerPoll(),
-        ioConfig.isUseEarliestSequenceNumber()
+        taskTuningConfig.getMaxRecordsPerPollOrDefault(ioConfig.isDeaggregate()),
+        ioConfig.isUseEarliestSequenceNumber(),
+        spec.getSpec().getTuningConfig().isUseListShards()
     );
   }
 
@@ -379,11 +380,19 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
     return true;
   }
 
-  // not yet supported, will be implemented in the future maybe? need to find a proper way to measure kinesis lag.
+  // Unlike the Kafka Indexing Service,
+  // Kinesis reports lag metrics measured in time difference in milliseconds between the current sequence number and latest sequence number,
+  // rather than message count.
   @Override
   public LagStats computeLagStats()
   {
-    throw new UnsupportedOperationException("Compute Lag Stats is not supported in KinesisSupervisor yet.");
+    Map<String, Long> partitionTimeLags = getPartitionTimeLag();
+
+    if (partitionTimeLags == null) {
+      return new LagStats(0, 0, 0);
+    }
+
+    return computeLags(partitionTimeLags);
   }
 
   @Override

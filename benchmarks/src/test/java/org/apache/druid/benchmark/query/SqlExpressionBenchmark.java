@@ -21,12 +21,13 @@ package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.calcite.schema.SchemaPlus;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -35,13 +36,17 @@ import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.SqlVectorizedExpressionSanityTest;
-import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
@@ -62,6 +67,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -79,7 +85,7 @@ public class SqlExpressionBenchmark
 
   static {
     NullHandling.initializeForTests();
-    Calcites.setSystemProperties();
+    ExpressionProcessing.initializeForStrictBooleansTests(true);
   }
 
   private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
@@ -181,8 +187,35 @@ public class SqlExpressionBenchmark
       "SELECT CONCAT(string2, '-', long2), SUM(long1 * double4) FROM foo GROUP BY 1 ORDER BY 2",
       // 28: group by single input string low cardinality expr with expr agg
       "SELECT CONCAT(string2, '-', 'foo'), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2",
-      // 28: group by single input string high cardinality expr with expr agg
-      "SELECT CONCAT(string3, '-', 'foo'), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2"
+      // 29: group by single input string high cardinality expr with expr agg
+      "SELECT CONCAT(string3, '-', 'foo'), SUM(long1 * long4) FROM foo GROUP BY 1 ORDER BY 2",
+      // 30: logical and operator
+      "SELECT CAST(long1 as BOOLEAN) AND CAST (long2 as BOOLEAN), COUNT(*) FROM foo GROUP BY 1 ORDER BY 2",
+      // 31: isnull, notnull
+      "SELECT long5 IS NULL, long3 IS NOT NULL, count(*) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 32: time shift, non-expr col + reg agg, regular
+      "SELECT TIME_SHIFT(__time, 'PT1H', 3), string2, SUM(double4) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 33: time shift, non-expr col + expr agg, sequential low cardinality
+      "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long1), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 34: time shift + non-expr agg (timeseries) (non-expression reference), zipf distribution low cardinality
+      "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long2), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 35: time shift + expr agg (timeseries), zipf distribution high cardinality
+      "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long3), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 36: time shift + non-expr agg (group by), uniform distribution low cardinality
+      "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long4), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 37: time shift + expr agg (group by), uniform distribution high cardinality
+      "SELECT TIME_SHIFT(MILLIS_TO_TIMESTAMP(long5), 'PT1H', 1), string2, SUM(long1 * double4) FROM foo GROUP BY 1,2 ORDER BY 3",
+      // 38: LATEST aggregator
+      "SELECT LATEST(long1) FROM foo",
+      // 39: LATEST aggregator double
+      "SELECT LATEST(double4) FROM foo",
+      // 40: LATEST aggregator double
+      "SELECT LATEST(float3) FROM foo",
+      // 41: LATEST aggregator double
+      "SELECT LATEST(float3), LATEST(long1), LATEST(double4) FROM foo",
+      // 42,43: filter numeric nulls
+      "SELECT SUM(long5) FROM foo WHERE long5 IS NOT NULL",
+      "SELECT string2, SUM(long5) FROM foo WHERE long5 IS NOT NULL GROUP BY 1"
   );
 
   @Param({"5000000"})
@@ -203,7 +236,7 @@ public class SqlExpressionBenchmark
       "4",
       "5",
       "6",
-      // expressions
+      // expressions, etc
       "7",
       "8",
       "9",
@@ -226,10 +259,25 @@ public class SqlExpressionBenchmark
       "26",
       "27",
       "28",
-      "29"
+      "29",
+      "30",
+      "31",
+      "32",
+      "33",
+      "34",
+      "35",
+      "36",
+      "37",
+      "38",
+      "39",
+      "40",
+      "41",
+      "42",
+      "43"
   })
   private String query;
 
+  private SqlEngine engine;
   @Nullable
   private PlannerFactory plannerFactory;
   private Closer closer = Closer.create();
@@ -264,17 +312,21 @@ public class SqlExpressionBenchmark
     );
     closer.register(walker);
 
-    final SchemaPlus rootSchema =
+    final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
     plannerFactory = new PlannerFactory(
         rootSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper(),
-        CalciteTests.DRUID_SCHEMA_NAME
+        CalciteTests.DRUID_SCHEMA_NAME,
+        new CalciteRulesManager(ImmutableSet.of()),
+        CalciteTests.createJoinableFactoryWrapper(),
+        CatalogResolver.NULL_RESOLVER,
+        new AuthConfig()
     );
 
     try {
@@ -304,9 +356,9 @@ public class SqlExpressionBenchmark
         QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
     );
     final String sql = QUERIES.get(Integer.parseInt(query));
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(context, sql)) {
-      final PlannerResult plannerResult = planner.plan(sql);
-      final Sequence<Object[]> resultSequence = plannerResult.run();
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
+      final PlannerResult plannerResult = planner.plan();
+      final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);
     }

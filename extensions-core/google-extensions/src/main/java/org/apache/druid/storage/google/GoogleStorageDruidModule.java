@@ -29,11 +29,11 @@ import com.google.api.client.json.JsonFactory;
 import com.google.api.services.storage.Storage;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.data.input.google.GoogleCloudStorageInputSource;
-import org.apache.druid.firehose.google.StaticGoogleBlobStoreFirehoseFactory;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -76,7 +76,6 @@ public class GoogleStorageDruidModule implements DruidModule
           }
         },
         new SimpleModule().registerSubtypes(
-            new NamedType(StaticGoogleBlobStoreFirehoseFactory.class, "static-google-blobstore"),
             new NamedType(GoogleCloudStorageInputSource.class, SCHEME)
         )
     );
@@ -98,26 +97,36 @@ public class GoogleStorageDruidModule implements DruidModule
     JsonConfigProvider.bind(binder, "druid.indexer.logs", GoogleTaskLogsConfig.class);
     binder.bind(GoogleTaskLogs.class).in(LazySingleton.class);
     MapBinder.newMapBinder(binder, String.class, SearchableVersionedDataFinder.class)
-        .addBinding(SCHEME_GS)
-        .to(GoogleTimestampVersionedDataFinder.class)
-        .in(LazySingleton.class);
+             .addBinding(SCHEME_GS)
+             .to(GoogleTimestampVersionedDataFinder.class)
+             .in(LazySingleton.class);
   }
 
   @Provides
   @LazySingleton
-  public GoogleStorage getGoogleStorage(
+  public Storage getGcpStorage(
       HttpTransport httpTransport,
       JsonFactory jsonFactory,
       HttpRequestInitializer requestInitializer
   )
   {
-    LOG.info("Building Cloud Storage Client...");
-
-    Storage storage = new Storage
+    return new Storage
         .Builder(httpTransport, jsonFactory, requestInitializer)
         .setApplicationName(APPLICATION_NAME)
         .build();
+  }
 
-    return new GoogleStorage(storage);
+  /**
+   * Returns a GoogleStorage that lazily initialize {@link {@link Storage}}.
+   * This is to avoid immediate config validation but defer it until you actually use the client.
+   */
+  @Provides
+  @LazySingleton
+  public GoogleStorage getGoogleStorage(
+      Provider<Storage> baseStorageProvider
+  )
+  {
+    LOG.info("Building Cloud Storage Client...");
+    return new GoogleStorage(baseStorageProvider::get);
   }
 }

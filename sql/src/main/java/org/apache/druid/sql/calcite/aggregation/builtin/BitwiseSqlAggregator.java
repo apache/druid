@@ -38,9 +38,8 @@ import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -134,7 +133,7 @@ public class BitwiseSqlAggregator implements SqlAggregator
     final List<DruidExpression> arguments = aggregateCall
         .getArgList()
         .stream()
-        .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
+        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
         .map(rexNode -> Expressions.toDruidExpression(plannerContext, rowSignature, rexNode))
         .collect(Collectors.toList());
 
@@ -149,8 +148,7 @@ public class BitwiseSqlAggregator implements SqlAggregator
     if (arg.isDirectColumnAccess()) {
       fieldName = arg.getDirectColumn();
     } else {
-      VirtualColumn vc = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, ValueType.LONG);
-      fieldName = vc.getOutputName();
+      fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, ColumnType.LONG);
     }
 
     return Aggregation.create(
@@ -162,6 +160,8 @@ public class BitwiseSqlAggregator implements SqlAggregator
                 "0",
                 null,
                 null,
+                false,
+                false,
                 StringUtils.format("%s(\"__acc\", \"%s\")", op.getDruidFunction(), fieldName),
                 null,
                 null,

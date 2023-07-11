@@ -63,7 +63,7 @@ public class ArrayOfDoublesSketchMergeAggregator implements Aggregator
       return;
     }
     synchronized (this) {
-      union.update(update);
+      union.union(update);
     }
   }
 

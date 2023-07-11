@@ -22,6 +22,7 @@ package org.apache.druid.query.groupby.epinephelinae;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -42,7 +43,7 @@ public class GroupByQueryEngineV2Test
   @Test
   public void testCanPushDownLimitForSegmentStringSelector()
   {
-    ColumnCapabilities capabilities = new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+    ColumnCapabilities capabilities = new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
                                                                   .setHasBitmapIndexes(true)
                                                                   .setHasMultipleValues(false)
                                                                   .setDictionaryEncoded(true)
@@ -57,7 +58,7 @@ public class GroupByQueryEngineV2Test
   @Test
   public void testCanPushDownLimitForIncrementalStringSelector()
   {
-    ColumnCapabilities capabilities = new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+    ColumnCapabilities capabilities = new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
                                                                   .setHasBitmapIndexes(false)
                                                                   .setHasMultipleValues(false)
                                                                   .setDictionaryEncoded(false)
@@ -72,7 +73,7 @@ public class GroupByQueryEngineV2Test
   @Test
   public void testCanPushDownLimitForExpressionStringSelector()
   {
-    ColumnCapabilities capabilities = new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+    ColumnCapabilities capabilities = new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
                                                                   .setHasBitmapIndexes(false)
                                                                   .setHasMultipleValues(false)
                                                                   .setDictionaryEncoded(false)
@@ -87,7 +88,7 @@ public class GroupByQueryEngineV2Test
   @Test
   public void testCanPushDownLimitForJoinStringSelector()
   {
-    ColumnCapabilities capabilities = new ColumnCapabilitiesImpl().setType(ValueType.STRING)
+    ColumnCapabilities capabilities = new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
                                                                   .setHasBitmapIndexes(false)
                                                                   .setHasMultipleValues(false)
                                                                   .setDictionaryEncoded(true)
@@ -102,7 +103,7 @@ public class GroupByQueryEngineV2Test
   @Test
   public void testCanPushDownLimitForNumericSelector()
   {
-    ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl().setType(ValueType.LONG)
+    ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl().setType(ColumnType.LONG)
                                                                       .setHasBitmapIndexes(false)
                                                                       .setHasMultipleValues(false)
                                                                       .setDictionaryEncoded(false)
@@ -111,9 +112,9 @@ public class GroupByQueryEngineV2Test
     EasyMock.expect(factory.getColumnCapabilities(DIM)).andReturn(capabilities).anyTimes();
     EasyMock.replay(factory);
     Assert.assertTrue(GroupByQueryEngineV2.canPushDownLimit(factory, DIM));
-    capabilities.setType(ValueType.DOUBLE);
+    capabilities.setType(ColumnType.DOUBLE);
     Assert.assertTrue(GroupByQueryEngineV2.canPushDownLimit(factory, DIM));
-    capabilities.setType(ValueType.FLOAT);
+    capabilities.setType(ColumnType.FLOAT);
     Assert.assertTrue(GroupByQueryEngineV2.canPushDownLimit(factory, DIM));
     EasyMock.verify(factory);
   }
@@ -121,7 +122,7 @@ public class GroupByQueryEngineV2Test
   @Test
   public void testCanPushDownLimitForComplexSelector()
   {
-    ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl().setType(ValueType.COMPLEX)
+    ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl().setType(new ColumnType(ValueType.COMPLEX, "foo", null))
                                                                       .setHasBitmapIndexes(false)
                                                                       .setHasMultipleValues(false)
                                                                       .setDictionaryEncoded(false)

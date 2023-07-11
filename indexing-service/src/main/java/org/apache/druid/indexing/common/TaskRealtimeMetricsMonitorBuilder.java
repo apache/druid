@@ -45,7 +45,11 @@ public class TaskRealtimeMetricsMonitorBuilder
     );
   }
 
-  public static TaskRealtimeMetricsMonitor build(Task task, FireDepartment fireDepartment, RowIngestionMeters meters)
+  public static TaskRealtimeMetricsMonitor build(
+      Task task,
+      FireDepartment fireDepartment,
+      RowIngestionMeters meters
+  )
   {
     return new TaskRealtimeMetricsMonitor(
         fireDepartment,
@@ -53,7 +57,8 @@ public class TaskRealtimeMetricsMonitorBuilder
         ImmutableMap.of(
             DruidMetrics.TASK_ID, new String[]{task.getId()},
             DruidMetrics.TASK_TYPE, new String[]{task.getType()}
-        )
+            ),
+        task.getContextValue(DruidMetrics.TAGS)
     );
   }
 }

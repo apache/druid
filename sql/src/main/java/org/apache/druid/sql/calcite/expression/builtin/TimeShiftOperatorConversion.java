@@ -34,10 +34,9 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.DateTimeZone;
-
-import java.util.stream.Collectors;
 
 public class TimeShiftOperatorConversion implements SqlOperatorConversion
 {
@@ -92,14 +91,15 @@ public class TimeShiftOperatorConversion implements SqlOperatorConversion
         plannerContext.getTimeZone()
     );
 
-    return DruidExpression.fromFunctionCall(
+    return DruidExpression.ofFunctionCall(
+        Calcites.getColumnTypeForRelDataType(rexNode.getType()),
         "timestamp_shift",
         ImmutableList.of(
-            timeExpression.getExpression(),
-            periodExpression.getExpression(),
-            stepExpression.getExpression(),
-            DruidExpression.stringLiteral(timeZone.getID())
-        ).stream().map(DruidExpression::fromExpression).collect(Collectors.toList())
+            timeExpression,
+            periodExpression,
+            stepExpression,
+            DruidExpression.ofStringLiteral(timeZone.getID())
+        )
     );
   }
 }

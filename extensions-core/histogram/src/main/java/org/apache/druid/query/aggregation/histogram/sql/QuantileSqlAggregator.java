@@ -38,10 +38,9 @@ import org.apache.druid.query.aggregation.histogram.ApproximateHistogram;
 import org.apache.druid.query.aggregation.histogram.ApproximateHistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.histogram.ApproximateHistogramFoldingAggregatorFactory;
 import org.apache.druid.query.aggregation.histogram.QuantilePostAggregator;
-import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -82,6 +81,7 @@ public class QuantileSqlAggregator implements SqlAggregator
         plannerContext,
         rowSignature,
         Expressions.fromFieldAccess(
+            rexBuilder.getTypeFactory(),
             rowSignature,
             project,
             aggregateCall.getArgList().get(0)
@@ -94,6 +94,7 @@ public class QuantileSqlAggregator implements SqlAggregator
     final AggregatorFactory aggregatorFactory;
     final String histogramName = StringUtils.format("%s:agg", name);
     final RexNode probabilityArg = Expressions.fromFieldAccess(
+        rexBuilder.getTypeFactory(),
         rowSignature,
         project,
         aggregateCall.getArgList().get(1)
@@ -109,6 +110,7 @@ public class QuantileSqlAggregator implements SqlAggregator
 
     if (aggregateCall.getArgList().size() >= 3) {
       final RexNode resolutionArg = Expressions.fromFieldAccess(
+          rexBuilder.getTypeFactory(),
           rowSignature,
           project,
           aggregateCall.getArgList().get(2)
@@ -136,8 +138,8 @@ public class QuantileSqlAggregator implements SqlAggregator
 
           // Check input for equivalence.
           final boolean inputMatches;
-          final VirtualColumn virtualInput =
-              virtualColumnRegistry.findVirtualColumns(theFactory.requiredFields())
+          final DruidExpression virtualInput =
+              virtualColumnRegistry.findVirtualColumnExpressions(theFactory.requiredFields())
                                    .stream()
                                    .findFirst()
                                    .orElse(null);
@@ -146,8 +148,7 @@ public class QuantileSqlAggregator implements SqlAggregator
             inputMatches = input.isDirectColumnAccess()
                            && input.getDirectColumn().equals(theFactory.getFieldName());
           } else {
-            inputMatches = ((ExpressionVirtualColumn) virtualInput).getExpression()
-                                                                   .equals(input.getExpression());
+            inputMatches = virtualInput.equals(input);
           }
 
           final boolean matches = inputMatches
@@ -169,7 +170,7 @@ public class QuantileSqlAggregator implements SqlAggregator
 
     // No existing match found. Create a new one.
     if (input.isDirectColumnAccess()) {
-      if (rowSignature.getColumnType(input.getDirectColumn()).orElse(null) == ValueType.COMPLEX) {
+      if (rowSignature.getColumnType(input.getDirectColumn()).map(type -> type.is(ValueType.COMPLEX)).orElse(false)) {
         aggregatorFactory = new ApproximateHistogramFoldingAggregatorFactory(
             histogramName,
             input.getDirectColumn(),
@@ -191,11 +192,11 @@ public class QuantileSqlAggregator implements SqlAggregator
         );
       }
     } else {
-      final VirtualColumn virtualColumn =
-          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, input, ValueType.FLOAT);
+      final String virtualColumnName =
+          virtualColumnRegistry.getOrCreateVirtualColumnForExpression(input, ColumnType.FLOAT);
       aggregatorFactory = new ApproximateHistogramAggregatorFactory(
           histogramName,
-          virtualColumn.getOutputName(),
+          virtualColumnName,
           resolution,
           numBuckets,
           lowerLimit,

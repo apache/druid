@@ -99,8 +99,7 @@ public class DataGenerator
     for (ColumnValueGenerator generator : columnGenerators) {
       event.put(generator.getSchema().getName(), generator.generateRowValue());
     }
-    MapBasedInputRow row = new MapBasedInputRow(nextTimestamp(), dimensionNames, event);
-    return row;
+    return new MapBasedInputRow(nextTimestamp(), dimensionNames, event);
   }
 
   /**
@@ -189,7 +188,7 @@ public class DataGenerator
    * @param stream the stream of rows to add
    * @param index the index to add rows to
    */
-  public static void addStreamToIndex(Stream<InputRow> stream, IncrementalIndex<?> index)
+  public static void addStreamToIndex(Stream<InputRow> stream, IncrementalIndex index)
   {
     stream.forEachOrdered(row -> {
       try {
@@ -207,7 +206,7 @@ public class DataGenerator
    * @param index the index to add rows to
    * @param numOfRows the number of rows to add
    */
-  public void addToIndex(IncrementalIndex<?> index, int numOfRows)
+  public void addToIndex(IncrementalIndex index, int numOfRows)
   {
     addStreamToIndex(generator(numOfRows), index);
   }

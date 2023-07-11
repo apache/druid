@@ -28,7 +28,7 @@ This tutorial shows you how to load data files into Apache Druid using a remote 
 
 For this tutorial, we'll assume that you've already completed the previous
 [batch ingestion tutorial](tutorial-batch.md) using Druid's native batch ingestion system and are using the
-`micro-quickstart` single-machine configuration as described in the [quickstart](index.md).
+automatic single-machine configuration as described in the [quickstart](../operations/single-server.md).
 
 ## Install Docker
 
@@ -156,7 +156,7 @@ cp /tmp/shared/hadoop_xml/*.xml {PATH_TO_DRUID}/conf/druid/single-server/micro-q
 
 ### Update Druid segment and log storage
 
-In your favorite text editor, open `conf/druid/single-server/micro-quickstart/_common/common.runtime.properties`, and make the following edits:
+In your favorite text editor, open `conf/druid/auto/_common/common.runtime.properties`, and make the following edits:
 
 #### Disable local deep storage and enable HDFS deep storage
 
@@ -196,7 +196,7 @@ druid.indexer.logs.directory=/druid/indexing-logs
 
 Once the Hadoop .xml files have been copied to the Druid cluster and the segment/log storage configuration has been updated to use HDFS, the Druid cluster needs to be restarted for the new configurations to take effect.
 
-If the cluster is still running, CTRL-C to terminate the `bin/start-micro-quickstart` script, and re-run it to bring the Druid services back up.
+If the cluster is still running, CTRL-C to terminate the `bin/start-druid` script, and re-run it to bring the Druid services back up.
 
 ## Load batch data
 
@@ -221,7 +221,7 @@ This tutorial is only meant to be used together with the [query tutorial](../tut
 
 If you wish to go through any of the other tutorials, you will need to:
 * Shut down the cluster and reset the cluster state by removing the contents of the `var` directory under the druid package.
-* Revert the deep storage and task storage config back to local types in `conf/druid/single-server/micro-quickstart/_common/common.runtime.properties`
+* Revert the deep storage and task storage config back to local types in `conf/druid/auto/_common/common.runtime.properties`
 * Restart the cluster
 
 This is necessary because the other ingestion tutorials will write to the same "wikipedia" datasource, and later tutorials expect the cluster to use local deep storage.

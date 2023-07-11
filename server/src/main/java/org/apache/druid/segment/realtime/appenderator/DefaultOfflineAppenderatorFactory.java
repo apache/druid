@@ -58,7 +58,7 @@ public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
   public Appenderator build(DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics)
   {
     final RowIngestionMeters rowIngestionMeters = new NoopRowIngestionMeters();
-    return Appenderators.createOffline(
+    return Appenderators.createClosedSegmentsOffline(
         schema.getDataSource(),
         schema,
         config,
@@ -74,7 +74,7 @@ public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
             config.isReportParseExceptions() ? 0 : Integer.MAX_VALUE,
             0
         ),
-        false
+        true
     );
   }
 }

@@ -50,15 +50,6 @@ services:
       - druid-metadata-storage
       - druid-zookeeper-kafka
 
-  druid-historical:
-    extends:
-      file: docker-compose.base.yml
-      service: druid-historical
-    environment:
-      - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-    depends_on:
-      - druid-zookeeper-kafka
-
   druid-broker:
     extends:
       file: docker-compose.base.yml
@@ -67,7 +58,7 @@ services:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:
       - druid-zookeeper-kafka
-      - druid-historical
+      - druid-historical-for-query-retry-test
 
   druid-router:
     extends:
@@ -87,7 +78,7 @@ services:
       druid-it-net:
         ipv4_address: 172.172.172.14
     ports:
-      - 8084:8083
+      - 8086:8083 #8084 is used by mono service on GHA runners
       - 8284:8283
       - 5010:5007
     privileged: true
@@ -97,6 +88,7 @@ services:
     env_file:
       - ./environment-configs/common
       - ./environment-configs/historical-for-query-error-test
+      - ${OVERRIDE_ENV}
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
     depends_on:

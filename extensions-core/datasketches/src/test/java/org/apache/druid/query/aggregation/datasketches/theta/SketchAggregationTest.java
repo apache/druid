@@ -46,8 +46,8 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.GroupByTestColumnSelectorFactory;
 import org.apache.druid.query.groupby.epinephelinae.GrouperTestUtil;
-import org.apache.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -132,6 +132,7 @@ public class SketchAggregationTest
                                    + "   Theta (long) hex        : 7fffffffffffffff\n"
                                    + "   EstMode?                : false\n"
                                    + "   Empty?                  : false\n"
+                                   + "   Ordered?                : true\n"
                                    + "   Retained Entries        : 50\n"
                                    + "   Seed Hash               : 93cc | 37836\n"
                                    + "### END SKETCH SUMMARY\n";
@@ -469,6 +470,7 @@ public class SketchAggregationTest
   public void testSketchAggregatorFactoryComparator()
   {
     Comparator<Object> comparator = SketchHolder.COMPARATOR;
+    //noinspection EqualsWithItself
     Assert.assertEquals(0, comparator.compare(null, null));
 
     Union union1 = (Union) SetOperation.builder().setNominalEntries(1 << 4).build(Family.UNION);
@@ -496,7 +498,7 @@ public class SketchAggregationTest
   @Test
   public void testRelocation()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().setNominalEntries(16).build());
     UpdateSketch updateSketch = (UpdateSketch) sketchHolder.getSketch();
     updateSketch.update(1);
@@ -516,6 +518,7 @@ public class SketchAggregationTest
     List<String> value = new ArrayList<>();
     value.add("foo");
     value.add(null);
+    value.add("");
     value.add("bar");
     List[] columnValues = new List[]{value};
     final TestObjectColumnSelector selector = new TestObjectColumnSelector(columnValues);
@@ -542,6 +545,46 @@ public class SketchAggregationTest
     Assert.assertEquals(1, ((SketchHolder) agg.get()).getEstimate(), 0);
     Assert.assertNotNull(((SketchHolder) agg.get()).getSketch());
     Assert.assertEquals(1, ((SketchHolder) agg.get()).getSketch().getEstimate(), 0);
+  }
+
+  @Test
+  public void testAggregateWithSize()
+  {
+    final String[] columnValues = new String[20];
+    for (int i = 0; i < columnValues.length; ++i) {
+      columnValues[i] = "" + i;
+    }
+
+    final TestObjectColumnSelector<String> selector = new TestObjectColumnSelector<>(columnValues);
+    final SketchAggregator agg = new SketchAggregator(selector, 128);
+
+    // Verify initial size of sketch
+    Assert.assertEquals(48L, agg.getInitialSizeBytes());
+    Assert.assertEquals(328L, agg.aggregateWithSize());
+
+    // Verify that subsequent size deltas are zero
+    for (int i = 1; i < 16; ++i) {
+      selector.increment();
+      long sizeDelta = agg.aggregateWithSize();
+      Assert.assertEquals(0, sizeDelta);
+    }
+
+    // Verify that size delta is positive when sketch resizes
+    selector.increment();
+    long deltaAtResize = agg.aggregateWithSize();
+    Assert.assertEquals(1792, deltaAtResize);
+
+    for (int i = 17; i < columnValues.length; ++i) {
+      selector.increment();
+      long sizeDelta = agg.aggregateWithSize();
+      Assert.assertEquals(0, sizeDelta);
+    }
+
+    // Verify unique count estimate
+    SketchHolder sketchHolder = (SketchHolder) agg.get();
+    Assert.assertEquals(columnValues.length, sketchHolder.getEstimate(), 0);
+    Assert.assertNotNull(sketchHolder.getSketch());
+    Assert.assertEquals(columnValues.length, sketchHolder.getSketch().getEstimate(), 0);
   }
 
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception

@@ -48,11 +48,15 @@ public abstract class DruidCoordinatorConfig
   public abstract Duration getCoordinatorKillPeriod();
 
   @Config("druid.coordinator.kill.durationToRetain")
-  @Default("PT-1s")
+  @Default("P90D")
   public abstract Duration getCoordinatorKillDurationToRetain();
 
+  @Config("druid.coordinator.kill.ignoreDurationToRetain")
+  @Default("false")
+  public abstract boolean getCoordinatorKillIgnoreDurationToRetain();
+
   @Config("druid.coordinator.kill.maxSegments")
-  @Default("0")
+  @Default("100")
   public abstract int getCoordinatorKillMaxSegments();
 
   @Config("druid.coordinator.kill.supervisor.period")
@@ -60,7 +64,7 @@ public abstract class DruidCoordinatorConfig
   public abstract Duration getCoordinatorSupervisorKillPeriod();
 
   @Config("druid.coordinator.kill.supervisor.durationToRetain")
-  @Default("PT-1s")
+  @Default("P90D")
   public abstract Duration getCoordinatorSupervisorKillDurationToRetain();
 
   @Config("druid.coordinator.kill.audit.period")
@@ -68,7 +72,7 @@ public abstract class DruidCoordinatorConfig
   public abstract Duration getCoordinatorAuditKillPeriod();
 
   @Config("druid.coordinator.kill.audit.durationToRetain")
-  @Default("PT-1s")
+  @Default("P90D")
   public abstract Duration getCoordinatorAuditKillDurationToRetain();
 
   @Config("druid.coordinator.kill.compaction.period")
@@ -80,7 +84,7 @@ public abstract class DruidCoordinatorConfig
   public abstract Duration getCoordinatorRuleKillPeriod();
 
   @Config("druid.coordinator.kill.rule.durationToRetain")
-  @Default("PT-1s")
+  @Default("P90D")
   public abstract Duration getCoordinatorRuleKillDurationToRetain();
 
   @Config("druid.coordinator.kill.datasource.period")
@@ -88,7 +92,7 @@ public abstract class DruidCoordinatorConfig
   public abstract Duration getCoordinatorDatasourceKillPeriod();
 
   @Config("druid.coordinator.kill.datasource.durationToRetain")
-  @Default("PT-1s")
+  @Default("P90D")
   public abstract Duration getCoordinatorDatasourceKillDurationToRetain();
 
   @Config("druid.coordinator.load.timeout")
@@ -97,16 +101,10 @@ public abstract class DruidCoordinatorConfig
     return new Duration(15 * 60 * 1000);
   }
 
-  @Config("druid.coordinator.loadqueuepeon.repeatDelay")
-  public Duration getLoadQueuePeonRepeatDelay()
-  {
-    return Duration.millis(50);
-  }
-
   @Config("druid.coordinator.loadqueuepeon.type")
   public String getLoadQueuePeonType()
   {
-    return "curator";
+    return "http";
   }
 
   @Config("druid.coordinator.curator.loadqueuepeon.numCallbackThreads")

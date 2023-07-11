@@ -20,10 +20,13 @@
 package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.datasketches.Util;
 import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.datasketches.quantiles.DoublesUnion;
+import org.apache.druid.jackson.DefaultTrueJsonIncludeFilter;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -42,7 +45,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.VectorColumnProcessorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -61,26 +64,55 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
       Comparator.nullsFirst(Comparator.comparingLong(DoublesSketch::getN));
 
   public static final int DEFAULT_K = 128;
+  public static final boolean DEFAULT_SHOULD_FINALIZE = true;
 
   // Used for sketch size estimation.
-  private static final long MAX_STREAM_LENGTH = 1_000_000_000;
+  public static final long DEFAULT_MAX_STREAM_LENGTH = 1_000_000_000;
 
   private final String name;
   private final String fieldName;
   private final int k;
+  private final long maxStreamLength;
+  private final boolean shouldFinalize;
   private final byte cacheTypeId;
 
   @JsonCreator
   public DoublesSketchAggregatorFactory(
       @JsonProperty("name") final String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("k") final Integer k
+      @JsonProperty("k") @Nullable final Integer k,
+      @JsonProperty("maxStreamLength") @Nullable final Long maxStreamLength,
+      @JsonProperty("shouldFinalize") @Nullable final Boolean shouldFinalize
   )
   {
-    this(name, fieldName, k, AggregatorUtil.QUANTILES_DOUBLES_SKETCH_BUILD_CACHE_TYPE_ID);
+    this(
+        name,
+        fieldName,
+        k,
+        maxStreamLength,
+        shouldFinalize,
+        AggregatorUtil.QUANTILES_DOUBLES_SKETCH_BUILD_CACHE_TYPE_ID
+    );
   }
 
-  DoublesSketchAggregatorFactory(final String name, final String fieldName, final Integer k, final byte cacheTypeId)
+  @VisibleForTesting
+  public DoublesSketchAggregatorFactory(
+      final String name,
+      final String fieldName,
+      @Nullable final Integer k
+  )
+  {
+    this(name, fieldName, k, null, DEFAULT_SHOULD_FINALIZE);
+  }
+
+  DoublesSketchAggregatorFactory(
+      final String name,
+      final String fieldName,
+      @Nullable final Integer k,
+      @Nullable final Long maxStreamLength,
+      @Nullable final Boolean shouldFinalize,
+      final byte cacheTypeId
+  )
   {
     if (name == null) {
       throw new IAE("Must have a valid, non-null aggregator name");
@@ -92,6 +124,8 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
     this.fieldName = fieldName;
     this.k = k == null ? DEFAULT_K : k;
     Util.checkIfPowerOf2(this.k, "k");
+    this.maxStreamLength = maxStreamLength == null ? DEFAULT_MAX_STREAM_LENGTH : maxStreamLength;
+    this.shouldFinalize = shouldFinalize == null ? DEFAULT_SHOULD_FINALIZE : shouldFinalize;
     this.cacheTypeId = cacheTypeId;
   }
 
@@ -99,7 +133,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(final ColumnSelectorFactory metricFactory)
   {
     if (metricFactory.getColumnCapabilities(fieldName) != null
-        && ValueType.isNumeric(metricFactory.getColumnCapabilities(fieldName).getType())) {
+        && metricFactory.getColumnCapabilities(fieldName).isNumeric()) {
       final ColumnValueSelector<Double> selector = metricFactory.makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
         return new NoopDoublesSketchAggregator();
@@ -117,7 +151,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory metricFactory)
   {
     if (metricFactory.getColumnCapabilities(fieldName) != null
-        && ValueType.isNumeric(metricFactory.getColumnCapabilities(fieldName).getType())) {
+        && metricFactory.getColumnCapabilities(fieldName).isNumeric()) {
       final BaseDoubleColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
         return new NoopDoublesSketchBufferAggregator();
@@ -266,10 +300,42 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
     return k;
   }
 
+  @JsonProperty
+  public long getMaxStreamLength()
+  {
+    return maxStreamLength;
+  }
+
+  @JsonProperty
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = DefaultTrueJsonIncludeFilter.class)
+  public boolean isShouldFinalize()
+  {
+    return shouldFinalize;
+  }
+
   @Override
   public List<String> requiredFields()
   {
     return Collections.singletonList(fieldName);
+  }
+
+  @Override
+  public int guessAggregatorHeapFootprint(long rows)
+  {
+    return DoublesSketch.getUpdatableStorageBytes(k, rows);
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new DoublesSketchAggregatorFactory(
+        newName,
+        getFieldName(),
+        getK(),
+        getMaxStreamLength(),
+        shouldFinalize,
+        cacheTypeId
+    );
   }
 
   // Quantiles sketches never stop growing, but they do so very slowly.
@@ -278,7 +344,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return DoublesSketch.getUpdatableStorageBytes(k, MAX_STREAM_LENGTH);
+    return DoublesSketch.getUpdatableStorageBytes(k, maxStreamLength);
   }
 
   @Override
@@ -288,7 +354,9 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
         new DoublesSketchAggregatorFactory(
             fieldName,
             fieldName,
-            k
+            k,
+            maxStreamLength,
+            shouldFinalize
         )
     );
   }
@@ -296,82 +364,88 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new DoublesSketchMergeAggregatorFactory(name, k);
+    return new DoublesSketchMergeAggregatorFactory(name, k, maxStreamLength, shouldFinalize);
   }
 
   @Override
   public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
   {
     if (other.getName().equals(this.getName()) && other instanceof DoublesSketchAggregatorFactory) {
-      // DoublesUnion supports inputs with different k.
-      // The result will have effective k between the specified k and the minimum k from all input sketches
-      // to achieve higher accuracy as much as possible.
-      return new DoublesSketchMergeAggregatorFactory(name, Math.max(k, ((DoublesSketchAggregatorFactory) other).k));
-    } else {
-      throw new AggregatorFactoryNotMergeableException(this, other);
+      final DoublesSketchAggregatorFactory castedOther = (DoublesSketchAggregatorFactory) other;
+
+      if (castedOther.shouldFinalize == shouldFinalize) {
+        // DoublesUnion supports inputs with different k.
+        // The result will have effective k between the specified k and the minimum k from all input sketches
+        // to achieve higher accuracy as much as possible.
+        return new DoublesSketchMergeAggregatorFactory(
+            name,
+            Math.max(k, castedOther.k),
+            Math.max(maxStreamLength, castedOther.maxStreamLength),
+            shouldFinalize
+        );
+      }
     }
+
+    throw new AggregatorFactoryNotMergeableException(this, other);
   }
 
   @Nullable
   @Override
   public Object finalizeComputation(@Nullable final Object object)
   {
-    return object == null ? null : ((DoublesSketch) object).getN();
-  }
+    if (!shouldFinalize || object == null) {
+      return object;
+    }
 
-  @Override
-  public String getComplexTypeName()
-  {
-    return DoublesSketchModule.DOUBLES_SKETCH;
+    return ((DoublesSketch) object).getN();
   }
 
   /**
    * actual type is {@link DoublesSketch}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getIntermediateType()
   {
-    return ValueType.COMPLEX;
+    return DoublesSketchModule.TYPE;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getResultType()
   {
-    return ValueType.LONG;
+    return ColumnType.LONG;
   }
 
   @Override
   public byte[] getCacheKey()
   {
+    // maxStreamLength is not included in the cache key as it does nothing with query result.
     return new CacheKeyBuilder(cacheTypeId).appendString(name).appendString(fieldName).appendInt(k).build();
   }
 
   @Override
-  public boolean equals(final Object o)
+  public boolean equals(Object o)
   {
     if (this == o) {
       return true;
     }
-    if (o == null || !getClass().equals(o.getClass())) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final DoublesSketchAggregatorFactory that = (DoublesSketchAggregatorFactory) o;
-    if (!name.equals(that.name)) {
-      return false;
-    }
-    if (!fieldName.equals(that.fieldName)) {
-      return false;
-    }
-    if (k != that.k) {
-      return false;
-    }
-    return true;
+    DoublesSketchAggregatorFactory that = (DoublesSketchAggregatorFactory) o;
+
+    // no need to use cacheTypeId here
+    return k == that.k
+           && maxStreamLength == that.maxStreamLength
+           && shouldFinalize == that.shouldFinalize
+           && name.equals(that.name)
+           && fieldName.equals(that.fieldName);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName, k); // no need to use cacheTypeId here
+    // no need to use cacheTypeId here
+    return Objects.hash(name, fieldName, k, maxStreamLength, shouldFinalize);
   }
 
   @Override

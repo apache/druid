@@ -19,8 +19,6 @@
 
 package org.apache.druid.https;
 
-import com.fasterxml.jackson.databind.Module;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.annotations.Client;
@@ -31,17 +29,9 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.server.router.Router;
 
 import javax.net.ssl.SSLContext;
-import java.util.List;
 
 public class SSLContextModule implements DruidModule
 {
-
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return ImmutableList.of();
-  }
-
   @Override
   public void configure(Binder binder)
   {

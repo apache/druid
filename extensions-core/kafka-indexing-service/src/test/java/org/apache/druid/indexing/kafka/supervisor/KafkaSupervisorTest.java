@@ -44,7 +44,6 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.kafka.KafkaDataSourceMetadata;
 import org.apache.druid.indexing.kafka.KafkaIndexTask;
-import org.apache.druid.indexing.kafka.KafkaIndexTaskClient;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskIOConfig;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
@@ -63,12 +62,15 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
@@ -80,6 +82,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
@@ -88,6 +91,10 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.server.metrics.ExceptionCapturingServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.NewPartitions;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -102,7 +109,6 @@ import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.easymock.IAnswer;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -113,7 +119,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -132,6 +137,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private static final InputFormat INPUT_FORMAT = new JsonInputFormat(
       new JSONPathSpec(true, ImmutableList.of()),
       ImmutableMap.of(),
+      false,
+      false,
       false
   );
   private static final String TOPIC_PREFIX = "testTopic";
@@ -155,7 +162,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private TaskMaster taskMaster;
   private TaskRunner taskRunner;
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
-  private KafkaIndexTaskClient taskClient;
+  private SeekableStreamIndexTaskClient<Integer, Long> taskClient;
   private TaskQueue taskQueue;
   private String topic;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
@@ -210,7 +217,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskMaster = createMock(TaskMaster.class);
     taskRunner = createMock(TaskRunner.class);
     indexerMetadataStorageCoordinator = createMock(IndexerMetadataStorageCoordinator.class);
-    taskClient = createMock(KafkaIndexTaskClient.class);
+    taskClient = createMock(SeekableStreamIndexTaskClient.class);
+    EasyMock.expect(taskClient.resumeAsync(EasyMock.anyString())).andReturn(Futures.immediateFuture(true)).anyTimes();
     taskQueue = createMock(TaskQueue.class);
 
     topic = getTopic();
@@ -240,23 +248,26 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testNoInitialStateWithAutoscaler() throws Exception
   {
+    final int taskCountMax = 2;
+    final int replicas = 1;
+
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
-            null,
-            null
+        null,
+        null,
+        null
     )
     {
       @Override
-      public KafkaIndexTaskClient build(
-              TaskInfoProvider taskInfoProvider,
-              String dataSource,
-              int numThreads,
-              Duration httpTimeout,
-              long numRetries
+      public SeekableStreamIndexTaskClient<Integer, Long> build(
+          final String dataSource,
+          final TaskInfoProvider taskInfoProvider,
+          final int maxNumTasks,
+          final SeekableStreamSupervisorTuningConfig tuningConfig
       )
       {
-        Assert.assertEquals(TEST_CHAT_THREADS, numThreads);
-        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), httpTimeout);
-        Assert.assertEquals(TEST_CHAT_RETRIES, numRetries);
+        Assert.assertEquals(replicas * taskCountMax, maxNumTasks);
+        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), tuningConfig.getHttpTimeout());
+        Assert.assertEquals(TEST_CHAT_RETRIES, (long) tuningConfig.getChatRetries());
         return taskClient;
       }
     };
@@ -270,8 +281,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     autoScalerConfig.put("scaleInThreshold", 1000000);
     autoScalerConfig.put("triggerScaleInFractionThreshold", 0.8);
     autoScalerConfig.put("scaleActionStartDelayMillis", 0);
-    autoScalerConfig.put("scaleActionPeriodMillis", 100);
-    autoScalerConfig.put("taskCountMax", 2);
+    autoScalerConfig.put("scaleActionPeriodMillis", 600);
+    autoScalerConfig.put("taskCountMax", taskCountMax);
     autoScalerConfig.put("taskCountMin", 1);
     autoScalerConfig.put("scaleInStep", 1);
     autoScalerConfig.put("scaleOutStep", 2);
@@ -284,7 +295,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
             topic,
             INPUT_FORMAT,
-            1,
+            replicas,
             1,
             new Period("PT1H"),
             consumerProperties,
@@ -296,7 +307,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
             new Period("PT30M"),
             null,
             null,
-            null
+            null,
+            null,
+            new IdleConfig(true, 1000L)
     );
 
     final KafkaSupervisorTuningConfig tuningConfigOri = new KafkaSupervisorTuningConfig(
@@ -307,7 +320,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             50000,
             null,
             new Period("P1Y"),
-            new File("/test"),
             null,
             null,
             null,
@@ -316,6 +328,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             false,
             null,
             numThreads,
+            null,
             TEST_CHAT_THREADS,
             TEST_CHAT_RETRIES,
             TEST_HTTP_TIMEOUT,
@@ -376,7 +389,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
                     null
             )
     ).anyTimes();
-    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).anyTimes();
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
 
@@ -385,11 +398,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(1, taskCountBeforeScale);
     autoscaler.start();
     supervisor.runInternal();
-    Thread.sleep(1 * 1000);
+    Thread.sleep(1000);
+    supervisor.runInternal();
     verifyAll();
 
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScale);
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
 
 
     KafkaIndexTask task = captured.getValue();
@@ -422,6 +437,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
             Long.MAX_VALUE,
             (long) taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(2)
     );
+    Assert.assertEquals(
+        Collections.singleton(new ResourceAction(
+            new Resource(KafkaSupervisorSpec.TASK_TYPE, ResourceType.EXTERNAL),
+            Action.READ
+        )),
+        testableSupervisorSpec.getInputSourceResources()
+    );
 
     autoscaler.reset();
     autoscaler.stop();
@@ -446,7 +468,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         ),
         new KafkaIndexTaskTuningConfig(
             null,
@@ -1544,13 +1567,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(Status.PUBLISHING));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync("id1", false))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)));
-    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
+    EasyMock.expect(taskClient.getEndOffsetsAsync("id1"))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)));
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
 
     TreeMap<Integer, Map<Integer, Long>> checkpoints = new TreeMap<>();
     checkpoints.put(0, ImmutableMap.of(0, 0L, 1, 0L, 2, 0L));
-    EasyMock.expect(taskClient.getCheckpoints(EasyMock.anyString(), EasyMock.anyBoolean()))
-            .andReturn(checkpoints)
+    EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints))
             .anyTimes();
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
@@ -1660,7 +1684,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getStatusAsync("id1")).andReturn(Futures.immediateFuture(Status.PUBLISHING));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync("id1", false))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 10L, 2, 30L)));
-    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(0, 10L, 2, 30L));
+    EasyMock.expect(taskClient.getEndOffsetsAsync("id1"))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 10L, 2, 30L)));
     EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true);
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
@@ -1795,7 +1820,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync("id1", false))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 1L, 1, 2L, 2, 3L)));
-    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(0, 1L, 1, 2L, 2, 3L));
+    EasyMock.expect(taskClient.getEndOffsetsAsync("id1"))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 1L, 1, 2L, 2, 3L)));
     EasyMock.expect(taskClient.getCurrentOffsetsAsync("id2", false))
             .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 4L, 1, 5L, 2, 6L)));
 
@@ -1848,6 +1874,621 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(ImmutableMap.of(0, 3L, 1, 2L, 2, 1L), payload.getMinimumLag());
     Assert.assertEquals(6L, (long) payload.getAggregateLag());
     Assert.assertTrue(payload.getOffsetsLastUpdated().plusMinutes(1).isAfterNow());
+  }
+
+  @Test
+  public void testReportWhenMultipleActiveTasks() throws Exception
+  {
+    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
+
+    supervisor = getTestableSupervisorForIdleBehaviour(1, 2, true, "PT10S", null, null, false, null);
+
+    addSomeEvents(6);
+
+    Task id1 = createKafkaIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(0, 2L, 2, 1L),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)
+        ),
+        null,
+        null,
+        supervisor.getTuningConfig()
+    );
+
+    Task id2 = createKafkaIndexTask(
+        "id2",
+        DATASOURCE,
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(1, 3L),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(1, Long.MAX_VALUE)
+        ),
+        null,
+        null,
+        supervisor.getTuningConfig()
+    );
+
+    List<Task> existingTasks = ImmutableList.of(id1, id2);
+
+    Collection workItems = new ArrayList<>();
+    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
+    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(existingTasks).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    EasyMock.expect(taskClient.getStatusAsync("id1"))
+            .andReturn(Futures.immediateFuture(Status.READING))
+            .anyTimes();
+    EasyMock.expect(taskClient.getStatusAsync("id2"))
+            .andReturn(Futures.immediateFuture(Status.READING))
+            .anyTimes();
+    EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+
+    replayAll();
+
+    supervisor.start();
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        0,
+        ImmutableMap.of(0, 0L, 2, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("id1"),
+        ImmutableSet.of()
+    );
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        1,
+        ImmutableMap.of(1, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("id2"),
+        ImmutableSet.of()
+    );
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+    verifyAll();
+
+    EasyMock.reset(taskClient);
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 2L, 2, 1L)));
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 3L)));
+
+    EasyMock.replay(taskClient);
+
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    SupervisorReport<KafkaSupervisorReportPayload> report = supervisor.getStatus();
+    verifyAll();
+
+    Assert.assertEquals(DATASOURCE, report.getId());
+
+    KafkaSupervisorReportPayload payload = report.getPayload();
+
+    Assert.assertEquals(DATASOURCE, payload.getDataSource());
+    Assert.assertEquals(10L, payload.getDurationSeconds());
+    Assert.assertEquals(NUM_PARTITIONS, payload.getPartitions());
+    Assert.assertEquals(1, payload.getReplicas());
+    Assert.assertEquals(topic, payload.getStream());
+    Assert.assertEquals(2, payload.getActiveTasks().size());
+    Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
+    Assert.assertEquals(0, payload.getRecentErrors().size());
+
+    TaskReportData id1TaskReport = payload.getActiveTasks().get(0);
+    TaskReportData id2TaskReport = payload.getActiveTasks().get(1);
+
+    Assert.assertEquals("id2", id2TaskReport.getId());
+    Assert.assertEquals(ImmutableMap.of(1, 0L), id2TaskReport.getStartingOffsets());
+    Assert.assertEquals(ImmutableMap.of(1, 3L), id2TaskReport.getCurrentOffsets());
+    Assert.assertEquals(ImmutableMap.of(1, 4L), id2TaskReport.getLag());
+
+    Assert.assertEquals("id1", id1TaskReport.getId());
+    Assert.assertEquals(ImmutableMap.of(0, 0L, 2, 0L), id1TaskReport.getStartingOffsets());
+    Assert.assertEquals(ImmutableMap.of(0, 2L, 2, 1L), id1TaskReport.getCurrentOffsets());
+    Assert.assertEquals(ImmutableMap.of(0, 5L, 2, 6L), id1TaskReport.getLag());
+
+    Assert.assertEquals(ImmutableMap.of(0, 7L, 1, 7L, 2, 7L), payload.getLatestOffsets());
+    Assert.assertEquals(ImmutableMap.of(0, 5L, 1, 4L, 2, 6L), payload.getMinimumLag());
+    Assert.assertEquals(15L, (long) payload.getAggregateLag());
+    Assert.assertTrue(payload.getOffsetsLastUpdated().plusMinutes(1).isAfterNow());
+  }
+
+  @Test
+  public void testSupervisorIsIdleIfStreamInactive() throws Exception
+  {
+    supervisor = getTestableSupervisorForIdleBehaviour(
+        1,
+        2,
+        true,
+        "PT10S",
+        null,
+        null,
+        false,
+        new IdleConfig(true, 200L)
+    );
+
+    addSomeEvents(100);
+
+    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location2 = new TaskLocation("testHost", 234, -1);
+
+    Task id1 = createKafkaIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(0, 10L, 2, 30L),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)
+        ),
+        null,
+        null,
+        supervisor.getTuningConfig()
+    );
+
+    Task id2 = createKafkaIndexTask(
+        "id2",
+        DATASOURCE,
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(1, 20L),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(1, Long.MAX_VALUE)
+        ),
+        null,
+        null,
+        supervisor.getTuningConfig()
+    );
+
+    List<Task> existingTasks = ImmutableList.of(id1, id2);
+
+    Collection workItems = new ArrayList<>();
+    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
+    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(existingTasks).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    EasyMock.expect(taskClient.getStatusAsync("id1"))
+            .andReturn(Futures.immediateFuture(Status.READING))
+            .anyTimes();
+    EasyMock.expect(taskClient.getStatusAsync("id2"))
+            .andReturn(Futures.immediateFuture(Status.READING))
+            .anyTimes();
+    EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+
+    replayAll();
+
+    supervisor.start();
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        0,
+        ImmutableMap.of(0, 0L, 2, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("id1"),
+        ImmutableSet.of()
+    );
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        1,
+        ImmutableMap.of(1, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("id2"),
+        ImmutableSet.of()
+    );
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    EasyMock.reset(taskClient);
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 25L, 2, 45L)));
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 45L)));
+
+    EasyMock.replay(taskClient);
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    EasyMock.reset(taskClient);
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 25L, 2, 45L)));
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 45L)));
+
+    EasyMock.replay(taskClient);
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Assert.assertNotEquals(supervisor.getState(), SupervisorStateManager.BasicState.IDLE);
+
+    EasyMock.reset(taskClient);
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 101L, 2, 101L)));
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 101L)));
+
+    EasyMock.replay(taskClient);
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    EasyMock.reset(taskClient);
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 101L, 2, 101L)));
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 101L)));
+
+    EasyMock.replay(taskClient);
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
+  }
+
+  @Test
+  public void testSupervisorIsIdleIfStreamInactiveWhenNoActiveTasks() throws Exception
+  {
+    supervisor = getTestableSupervisorForIdleBehaviour(
+        1,
+        2,
+        true,
+        "PT10S",
+        null,
+        null,
+        false,
+        new IdleConfig(true, 200L)
+    );
+    addSomeEvents(1);
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            new SeekableStreamEndSequenceNumbers<Integer, Long>(topic, ImmutableMap.of(0, 2L, 1, 2L, 2, 2L))
+        )
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    supervisor.start();
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+    verifyAll();
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
+  }
+
+  @Test
+  public void testSupervisorNotIdleIfStreamInactiveWhenSuspended() throws Exception
+  {
+    supervisor = getTestableSupervisorForIdleBehaviour(
+        1,
+        2,
+        true,
+        "PT10S",
+        null,
+        null,
+        true,
+        new IdleConfig(true, 200L)
+    );
+    addSomeEvents(1);
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            new SeekableStreamEndSequenceNumbers<Integer, Long>(topic, ImmutableMap.of(0, 2L, 1, 2L, 2, 2L))
+        )
+    ).anyTimes();
+
+    replayAll();
+
+    supervisor.start();
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Assert.assertEquals(SupervisorStateManager.BasicState.SUSPENDED, supervisor.getState());
+  }
+
+  @Test
+  public void testSupervisorIsIdleIfStreamInactiveWhenSuspended() throws Exception
+  {
+    Map<String, String> config = ImmutableMap.of("idleConfig.enabled", "false",
+                                                 "idleConfig.inactiveAfterMillis", "200");
+    supervisorConfig = OBJECT_MAPPER.convertValue(config, SupervisorStateManagerConfig.class);
+    supervisor = getTestableSupervisorForIdleBehaviour(
+        1,
+        2,
+        true,
+        "PT10S",
+        null,
+        null,
+        false,
+        new IdleConfig(true, null)
+    );
+    addSomeEvents(1);
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            new SeekableStreamEndSequenceNumbers<Integer, Long>(topic, ImmutableMap.of(0, 2L, 1, 2L, 2, 2L))
+        )
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+
+    supervisor.start();
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+    verifyAll();
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
+  }
+
+  @Test
+  public void testSupervisorIsIdleIfStreamInactiveWhenNoActiveTasksAndFewPendingTasks() throws Exception
+  {
+    supervisor = getTestableSupervisorForIdleBehaviour(
+        1,
+        2,
+        true,
+        "PT10S",
+        null,
+        null,
+        false,
+        new IdleConfig(true, 200L)
+    );
+
+    addSomeEvents(100);
+
+    final TaskLocation location1 = new TaskLocation("testHost", 1234, -1);
+    final TaskLocation location2 = new TaskLocation("testHost", 234, -1);
+
+    Task id1 = createKafkaIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(0, 10L, 2, 30L),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)
+        ),
+        null,
+        null,
+        supervisor.getTuningConfig()
+    );
+
+    Task id2 = createKafkaIndexTask(
+        "id2",
+        DATASOURCE,
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(1, 20L),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(1, Long.MAX_VALUE)
+        ),
+        null,
+        null,
+        supervisor.getTuningConfig()
+    );
+
+    List<Task> existingTasks = ImmutableList.of(id1, id2);
+
+    Collection workItems = new ArrayList<>();
+    workItems.add(new TestTaskRunnerWorkItem(id1, null, location1));
+    workItems.add(new TestTaskRunnerWorkItem(id2, null, location2));
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(existingTasks).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    EasyMock.expect(taskClient.getStatusAsync("id1"))
+            .andReturn(Futures.immediateFuture(Status.READING))
+            .anyTimes();
+    EasyMock.expect(taskClient.getStatusAsync("id2"))
+            .andReturn(Futures.immediateFuture(Status.READING))
+            .anyTimes();
+    EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+
+    replayAll();
+
+    supervisor.start();
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        0,
+        ImmutableMap.of(0, 0L, 2, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("id1"),
+        ImmutableSet.of()
+    );
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        1,
+        ImmutableMap.of(1, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("id2"),
+        ImmutableSet.of()
+    );
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    EasyMock.reset(taskClient);
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 25L, 2, 45L)));
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 45L)));
+
+    EasyMock.replay(taskClient);
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    EasyMock.reset(taskClient);
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 101L, 2, 101L)));
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 101L)));
+
+    EasyMock.replay(taskClient);
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    EasyMock.reset(taskClient);
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 101L, 2, 101L)));
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 101L)));
+
+    EasyMock.replay(taskClient);
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
+
+    supervisor.moveTaskGroupToPendingCompletion(0);
+    supervisor.moveTaskGroupToPendingCompletion(1);
+
+    Assert.assertEquals(0, supervisor.getActiveTaskGroupsCount());
+
+    EasyMock.reset(taskClient);
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 101L, 2, 101L)));
+    EasyMock.expect(taskClient.getCurrentOffsetsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(1, 101L)));
+
+    EasyMock.replay(taskClient);
+
+    Thread.sleep(100);
+    supervisor.updateCurrentAndLatestOffsets();
+    supervisor.runInternal();
+
+    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
   }
 
   @Test
@@ -1974,7 +2615,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             .andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(2);
     taskQueue.shutdown(
         EasyMock.contains("sequenceName-0"),
-        EasyMock.eq("An exception occured while waiting for task [%s] to pause: [%s]"),
+        EasyMock.eq("An exception occurred while waiting for task [%s] to pause: [%s]"),
         EasyMock.contains("sequenceName-0"),
         EasyMock.anyString()
     );
@@ -2187,7 +2828,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getStatusAsync("id3")).andReturn(Futures.immediateFuture(Status.READING));
     EasyMock.expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
     EasyMock.expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
-    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
+    EasyMock.expect(taskClient.getEndOffsetsAsync("id1"))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)));
 
     // getCheckpoints will not be called for id1 as it is in publishing state
     TreeMap<Integer, Map<Integer, Long>> checkpoints = new TreeMap<>();
@@ -2355,7 +2997,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
                 new KafkaDataSourceMetadata(
                     new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(1, -100L, 2, 200L))
                 )
-            ).times(4);
+            ).times(3);
     // getOffsetFromStorageForPartition() throws an exception when the offsets are automatically reset.
     // Since getOffsetFromStorageForPartition() is called per partition, all partitions can't be reset at the same time.
     // Instead, subsequent partitions will be reset in the following supervisor runs.
@@ -2454,7 +3096,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskClient.getStatusAsync("id3")).andReturn(Futures.immediateFuture(Status.READING));
     EasyMock.expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
     EasyMock.expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
-    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
+    EasyMock.expect(taskClient.getEndOffsetsAsync("id1"))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)));
 
     TreeMap<Integer, Map<Integer, Long>> checkpoints = new TreeMap<>();
     checkpoints.put(0, ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
@@ -2911,7 +3554,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             .andReturn(Futures.immediateFuture(Status.READING));
     EasyMock.expect(taskClient.getStartTimeAsync("id2")).andReturn(Futures.immediateFuture(startTime));
     EasyMock.expect(taskClient.getStartTimeAsync("id3")).andReturn(Futures.immediateFuture(startTime));
-    EasyMock.expect(taskClient.getEndOffsets("id1")).andReturn(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L));
+    EasyMock.expect(taskClient.getEndOffsetsAsync("id1"))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 10L, 1, 20L, 2, 30L)));
 
     // getCheckpoints will not be called for id1 as it is in publishing state
     TreeMap<Integer, Map<Integer, Long>> checkpoints = new TreeMap<>();
@@ -3116,6 +3760,75 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
+  public void testGetCurrentParseErrors()
+  {
+    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, false, kafkaHost);
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        supervisor.getTaskGroupIdForPartition(0),
+        ImmutableMap.of(0, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task1"),
+        ImmutableSet.of()
+    );
+
+    supervisor.addTaskGroupToPendingCompletionTaskGroup(
+        supervisor.getTaskGroupIdForPartition(1),
+        ImmutableMap.of(0, 0L),
+        Optional.absent(),
+        Optional.absent(),
+        ImmutableSet.of("task2"),
+        ImmutableSet.of()
+    );
+
+    ParseExceptionReport exception1 = new ParseExceptionReport(
+        "testInput1",
+        "unparseable",
+        ImmutableList.of("detail1", "detail2"),
+        1000L
+    );
+
+    ParseExceptionReport exception2 = new ParseExceptionReport(
+        "testInput2",
+        "unparseable",
+        ImmutableList.of("detail1", "detail2"),
+        2000L
+    );
+
+    ParseExceptionReport exception3 = new ParseExceptionReport(
+        "testInput3",
+        "unparseable",
+        ImmutableList.of("detail1", "detail2"),
+        3000L
+    );
+
+    ParseExceptionReport exception4 = new ParseExceptionReport(
+        "testInput4",
+        "unparseable",
+        ImmutableList.of("detail1", "detail2"),
+        4000L
+    );
+
+    EasyMock.expect(taskClient.getParseErrorsAsync("task1")).andReturn(Futures.immediateFuture(ImmutableList.of(
+        exception1,
+        exception2
+    ))).times(1);
+
+    EasyMock.expect(taskClient.getParseErrorsAsync("task2")).andReturn(Futures.immediateFuture(ImmutableList.of(
+        exception3,
+        exception4
+    ))).times(1);
+
+    replayAll();
+
+    List<ParseExceptionReport> errors = supervisor.getParseErrors();
+
+    verifyAll();
+
+    Assert.assertEquals(ImmutableList.of(exception4, exception3, exception2, exception1), errors);
+  }
+
+  @Test
   public void testDoNotKillCompatibleTasks()
       throws Exception
   {
@@ -3274,7 +3987,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
             50000,
             null,
             new Period("P1Y"),
-            new File("/test"),
             null,
             null,
             null,
@@ -3283,6 +3995,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             false,
             null,
             numThreads,
+            null,
             TEST_CHAT_THREADS,
             TEST_CHAT_RETRIES,
             TEST_HTTP_TIMEOUT,
@@ -3314,7 +4027,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         50000,
         null,
         new Period("P1Y"),
-        new File("/test"),
         null,
         null,
         null,
@@ -3323,6 +4035,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         numThreads,
+        null,
         TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
@@ -3333,6 +4046,27 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null
     );
+
+    KafkaIndexTask completedTaskFromStorage = createKafkaIndexTask(
+        "id0",
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(0, 0L, 2, 0L),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)
+        ),
+        minMessageTime,
+        maxMessageTime,
+        dataSchema,
+        supervisor.getTuningConfig()
+    );
+
+    // Expect metadata call only for tasks that are not active
+    EasyMock.expect(taskStorage.getTask("id0")).andReturn(Optional.of(completedTaskFromStorage));
 
     KafkaIndexTask taskFromStorage = createKafkaIndexTask(
         "id1",
@@ -3406,25 +4140,205 @@ public class KafkaSupervisorTest extends EasyMockSupport
         supervisor.getTuningConfig()
     );
 
-    EasyMock.expect(taskStorage.getTask("id1"))
-            .andReturn(Optional.of(taskFromStorage))
-            .once();
-    EasyMock.expect(taskStorage.getTask("id2"))
-            .andReturn(Optional.of(taskFromStorageMismatchedDataSchema))
-            .once();
-    EasyMock.expect(taskStorage.getTask("id3"))
-            .andReturn(Optional.of(taskFromStorageMismatchedTuningConfig))
-            .once();
-    EasyMock.expect(taskStorage.getTask("id4"))
-            .andReturn(Optional.of(taskFromStorageMismatchedPartitionsWithTaskGroup))
-            .once();
+    Map<String, Task> taskMap = ImmutableMap.of(
+        taskFromStorage.getId(), taskFromStorage,
+        taskFromStorageMismatchedDataSchema.getId(), taskFromStorageMismatchedDataSchema,
+        taskFromStorageMismatchedTuningConfig.getId(), taskFromStorageMismatchedTuningConfig,
+        taskFromStorageMismatchedPartitionsWithTaskGroup.getId(), taskFromStorageMismatchedPartitionsWithTaskGroup
+    );
 
     replayAll();
 
-    Assert.assertTrue(supervisor.isTaskCurrent(42, "id1"));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id2"));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id3"));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id4"));
+    Assert.assertTrue(supervisor.isTaskCurrent(42, "id0", taskMap));
+
+    Assert.assertTrue(supervisor.isTaskCurrent(42, "id1", taskMap));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id2", taskMap));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id3", taskMap));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id4", taskMap));
+    verifyAll();
+  }
+
+  @Test
+  public void testResumeAllActivelyReadingTasks() throws Exception
+  {
+    supervisor = getTestableSupervisor(2, 3, true, "PT1H", null, null);
+    // Mock with task based setup for resumeAsync
+    EasyMock.reset(taskClient);
+    addSomeEvents(100);
+
+    KafkaIndexTask readingTask = createKafkaIndexTask("readingTask",
+                                                      DATASOURCE,
+                                                      0,
+                                                      new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 0L), Collections.emptySet()),
+                                                      new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, Long.MAX_VALUE)),
+                                                      null,
+                                                      null,
+                                                      supervisor.getTuningConfig()
+    );
+
+    KafkaIndexTask publishingTask = createKafkaIndexTask("publishingTask",
+                                                         DATASOURCE,
+                                                         1,
+                                                         new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(0, 0L), Collections.emptySet()),
+                                                         new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(0, Long.MAX_VALUE)),
+                                                         null,
+                                                         null,
+                                                         supervisor.getTuningConfig()
+    );
+
+    KafkaIndexTask pausedTask = createKafkaIndexTask("pausedTask",
+                                                     DATASOURCE,
+                                                     1,
+                                                     new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(1, 0L), Collections.emptySet()),
+                                                     new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(1, Long.MAX_VALUE)),
+                                                     null,
+                                                     null,
+                                                     supervisor.getTuningConfig()
+    );
+
+    KafkaIndexTask failsToResumePausedTask = createKafkaIndexTask("failsToResumePausedTask",
+                                                                  DATASOURCE,
+                                                                  1,
+                                                                  new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(1, 0L), Collections.emptySet()),
+                                                                  new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(1, Long.MAX_VALUE)),
+                                                                  null,
+                                                                  null,
+                                                                  supervisor.getTuningConfig()
+    );
+
+    KafkaIndexTask waitingTask = createKafkaIndexTask("waitingTask",
+                                                      DATASOURCE,
+                                                      2,
+                                                      new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(2, 0L), Collections.emptySet()),
+                                                      new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(2, Long.MAX_VALUE)),
+                                                      null,
+                                                      null,
+                                                      supervisor.getTuningConfig()
+    );
+
+    KafkaIndexTask pendingTask = createKafkaIndexTask("pendingTask",
+                                                      DATASOURCE,
+                                                      2,
+                                                      new SeekableStreamStartSequenceNumbers<>(topic, ImmutableMap.of(2, 0L), Collections.emptySet()),
+                                                      new SeekableStreamEndSequenceNumbers<>(topic, ImmutableMap.of(2, Long.MAX_VALUE)),
+                                                      null,
+                                                      null,
+                                                      supervisor.getTuningConfig()
+    );
+
+    List<Task> tasks = ImmutableList.of(readingTask, publishingTask, pausedTask, failsToResumePausedTask, waitingTask, pendingTask);
+    Collection taskRunnerWorkItems = ImmutableList.of(
+        new TestTaskRunnerWorkItem(readingTask, null, new TaskLocation("testHost", 1001, -1)),
+        new TestTaskRunnerWorkItem(publishingTask, null, new TaskLocation("testHost", 1002, -1)),
+        new TestTaskRunnerWorkItem(pausedTask, null, new TaskLocation("testHost", 1003, -1)),
+        new TestTaskRunnerWorkItem(failsToResumePausedTask, null, new TaskLocation("testHost", 1004, -1))
+    );
+
+    DateTime startTime = DateTimes.nowUtc();
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(taskRunnerWorkItems).anyTimes();
+
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(tasks).anyTimes();
+
+    EasyMock.expect(taskStorage.getStatus(readingTask.getId()))
+            .andReturn(Optional.of(TaskStatus.running(readingTask.getId()))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus(publishingTask.getId()))
+            .andReturn(Optional.of(TaskStatus.running(publishingTask.getId()))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus(pausedTask.getId()))
+            .andReturn(Optional.of(TaskStatus.running(pausedTask.getId()))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus(failsToResumePausedTask.getId()))
+            .andReturn(Optional.of(TaskStatus.running(failsToResumePausedTask.getId()))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus(waitingTask.getId()))
+            .andReturn(Optional.of(TaskStatus.running(waitingTask.getId()))).anyTimes();
+    EasyMock.expect(taskStorage.getStatus(pendingTask.getId()))
+            .andReturn(Optional.of(TaskStatus.running(pendingTask.getId()))).anyTimes();
+
+    EasyMock.expect(taskStorage.getTask(readingTask.getId()))
+            .andReturn(Optional.of(readingTask)).anyTimes();
+    EasyMock.expect(taskStorage.getTask(publishingTask.getId()))
+            .andReturn(Optional.of(publishingTask)).anyTimes();
+    EasyMock.expect(taskStorage.getTask(pausedTask.getId()))
+            .andReturn(Optional.of(pausedTask)).anyTimes();
+    EasyMock.expect(taskStorage.getTask(failsToResumePausedTask.getId()))
+            .andReturn(Optional.of(failsToResumePausedTask)).anyTimes();
+    EasyMock.expect(taskStorage.getTask(waitingTask.getId()))
+            .andReturn(Optional.of(waitingTask)).anyTimes();
+    EasyMock.expect(taskStorage.getTask(pendingTask.getId()))
+            .andReturn(Optional.of(pendingTask)).anyTimes();
+
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject(Task.class))).andReturn(true);
+
+
+    EasyMock.expect(taskClient.getStartTimeAsync(waitingTask.getId()))
+            .andReturn(Futures.immediateFuture(null));
+    EasyMock.expect(taskClient.getStartTimeAsync(pendingTask.getId()))
+            .andReturn(Futures.immediateFuture(null));
+
+    EasyMock.expect(taskClient.getStatusAsync(readingTask.getId()))
+            .andReturn(Futures.immediateFuture(Status.READING));
+    EasyMock.expect(taskClient.getStatusAsync(publishingTask.getId()))
+            .andReturn(Futures.immediateFuture(Status.PUBLISHING));
+    EasyMock.expect(taskClient.getStatusAsync(pausedTask.getId()))
+            .andReturn(Futures.immediateFuture(Status.PAUSED));
+    EasyMock.expect(taskClient.getStatusAsync(failsToResumePausedTask.getId()))
+            .andReturn(Futures.immediateFuture(Status.PAUSED));
+    EasyMock.expect(taskClient.getStatusAsync(waitingTask.getId()))
+            .andReturn(Futures.immediateFuture(Status.NOT_STARTED));
+    EasyMock.expect(taskClient.getStatusAsync(pendingTask.getId()))
+            .andReturn(Futures.immediateFuture(Status.NOT_STARTED));
+
+    EasyMock.expect(taskClient.getEndOffsetsAsync(publishingTask.getId()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of(0, 0L)));
+
+    EasyMock.expect(taskClient.getCheckpointsAsync(readingTask.getId(), true))
+            .andReturn(Futures.immediateFuture(new TreeMap<>())).anyTimes();
+
+    EasyMock.expect(taskClient.getCheckpointsAsync(pausedTask.getId(), true))
+            .andReturn(Futures.immediateFuture(new TreeMap<>()));
+
+    EasyMock.expect(taskClient.getCheckpointsAsync(failsToResumePausedTask.getId(), true))
+            .andReturn(Futures.immediateFuture(new TreeMap<>()));
+
+    EasyMock.expect(taskClient.getCheckpointsAsync(waitingTask.getId(), true))
+            .andReturn(Futures.immediateFuture(null));
+
+    EasyMock.expect(taskClient.getCheckpointsAsync(pendingTask.getId(), true))
+            .andReturn(Futures.immediateFuture(null));
+
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+
+    // Only the active i.e non-publishing tasks are resumed
+    EasyMock.expect(taskClient.getStartTimeAsync(readingTask.getId())).andReturn(Futures.immediateFuture(startTime));
+    EasyMock.expect(taskClient.resumeAsync(readingTask.getId())).andReturn(Futures.immediateFuture(true));
+
+    EasyMock.expect(taskClient.getStartTimeAsync(pausedTask.getId())).andReturn(Futures.immediateFuture(startTime));
+    EasyMock.expect(taskClient.resumeAsync(pausedTask.getId())).andReturn(Futures.immediateFuture(true));
+
+    EasyMock.expect(taskClient.getStartTimeAsync(failsToResumePausedTask.getId())).andReturn(Futures.immediateFuture(startTime));
+    EasyMock.expect(taskClient.resumeAsync(failsToResumePausedTask.getId())).andReturn(Futures.immediateFuture(false));
+
+    Capture<String> shutdownTaskId = EasyMock.newCapture();
+    // The task which failed to resume is shutdown forcibly.
+    taskQueue.shutdown(EasyMock.capture(shutdownTaskId), EasyMock.anyString());
+    EasyMock.expectLastCall();
+
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+
+    Thread.sleep(1000);
+
+    Assert.assertEquals(failsToResumePausedTask.getId(), shutdownTaskId.getValue());
+
     verifyAll();
   }
 
@@ -3521,7 +4435,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         false,
-        kafkaHost
+        kafkaHost,
+        null
     );
   }
 
@@ -3545,7 +4460,33 @@ public class KafkaSupervisorTest extends EasyMockSupport
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         suspended,
-        kafkaHost
+        kafkaHost,
+        null
+    );
+  }
+
+  private TestableKafkaSupervisor getTestableSupervisorForIdleBehaviour(
+      int replicas,
+      int taskCount,
+      boolean useEarliestOffset,
+      String duration,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod,
+      boolean suspended,
+      IdleConfig idleConfig
+  )
+  {
+    return getTestableSupervisor(
+        replicas,
+        taskCount,
+        useEarliestOffset,
+        false,
+        duration,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        suspended,
+        kafkaHost,
+        idleConfig
     );
   }
 
@@ -3558,7 +4499,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
       boolean suspended,
-      String kafkaHost
+      String kafkaHost,
+      IdleConfig idleConfig
   )
   {
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
@@ -3579,26 +4521,28 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
-        null
+        null,
+        null,
+        idleConfig
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
+        null,
         null,
         null
     )
     {
       @Override
-      public KafkaIndexTaskClient build(
-          TaskInfoProvider taskInfoProvider,
+      public SeekableStreamIndexTaskClient<Integer, Long> build(
           String dataSource,
-          int numThreads,
-          Duration httpTimeout,
-          long numRetries
+          TaskInfoProvider taskInfoProvider,
+          int maxNumTasks,
+          SeekableStreamSupervisorTuningConfig tuningConfig
       )
       {
-        Assert.assertEquals(TEST_CHAT_THREADS, numThreads);
-        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), httpTimeout);
-        Assert.assertEquals(TEST_CHAT_RETRIES, numRetries);
+        Assert.assertEquals(replicas * taskCount, maxNumTasks);
+        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), tuningConfig.getHttpTimeout());
+        Assert.assertEquals(TEST_CHAT_RETRIES, (long) tuningConfig.getChatRetries());
         return taskClient;
       }
     };
@@ -3611,7 +4555,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         50000,
         null,
         new Period("P1Y"),
-        new File("/test"),
         null,
         null,
         null,
@@ -3620,6 +4563,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         resetOffsetAutomatically,
         null,
         numThreads,
+        null,
         TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
@@ -3628,7 +4572,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        null
+        10
     );
 
     return new TestableKafkaSupervisor(
@@ -3652,7 +4596,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
-            new SupervisorStateManagerConfig()
+            supervisorConfig
         ),
         rowIngestionMetersFactory
     );
@@ -3691,26 +4635,28 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
+        null,
         null
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
         null,
+        null,
         null
     )
     {
       @Override
-      public KafkaIndexTaskClient build(
-          TaskInfoProvider taskInfoProvider,
+      public SeekableStreamIndexTaskClient<Integer, Long> build(
           String dataSource,
-          int numThreads,
-          Duration httpTimeout,
-          long numRetries
+          TaskInfoProvider taskInfoProvider,
+          int maxNumTasks,
+          SeekableStreamSupervisorTuningConfig tuningConfig
       )
       {
-        Assert.assertEquals(TEST_CHAT_THREADS, numThreads);
-        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), httpTimeout);
-        Assert.assertEquals(TEST_CHAT_RETRIES, numRetries);
+        Assert.assertEquals(replicas * taskCount, maxNumTasks);
+        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), tuningConfig.getHttpTimeout());
+        Assert.assertEquals(TEST_CHAT_RETRIES, (long) tuningConfig.getChatRetries());
         return taskClient;
       }
     };
@@ -3723,7 +4669,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         50000,
         null,
         new Period("P1Y"),
-        new File("/test"),
         null,
         null,
         null,
@@ -3732,6 +4677,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         false,
         null,
         numThreads,
+        null,
         TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
@@ -3807,26 +4753,28 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
+        null,
         null
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
         null,
+        null,
         null
     )
     {
       @Override
-      public KafkaIndexTaskClient build(
-          TaskInfoProvider taskInfoProvider,
+      public SeekableStreamIndexTaskClient<Integer, Long> build(
           String dataSource,
-          int numThreads,
-          Duration httpTimeout,
-          long numRetries
+          TaskInfoProvider taskInfoProvider,
+          int maxNumTasks,
+          SeekableStreamSupervisorTuningConfig tuningConfig
       )
       {
-        Assert.assertEquals(TEST_CHAT_THREADS, numThreads);
-        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), httpTimeout);
-        Assert.assertEquals(TEST_CHAT_RETRIES, numRetries);
+        Assert.assertEquals(replicas * taskCount, maxNumTasks);
+        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), tuningConfig.getHttpTimeout());
+        Assert.assertEquals(TEST_CHAT_RETRIES, (long) tuningConfig.getChatRetries());
         return taskClient;
       }
     };
@@ -3867,11 +4815,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     return new DataSchema(
         dataSource,
         new TimestampSpec("timestamp", "iso", null),
-        new DimensionsSpec(
-            dimensions,
-            null,
-            null
-        ),
+        new DimensionsSpec(dimensions),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(
             Granularities.HOUR,
@@ -3954,7 +4898,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             true,
             minimumMessageTime,
             maximumMessageTime,
-            INPUT_FORMAT
+            INPUT_FORMAT,
+            null
         ),
         Collections.emptyMap(),
         OBJECT_MAPPER
@@ -4082,7 +5027,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
 
     @Override
-    public boolean isTaskCurrent(int taskGroupId, String taskId)
+    public boolean isTaskCurrent(int taskGroupId, String taskId, Map<String, Task> taskMap)
     {
       return isTaskCurrentReturn;
     }

@@ -19,14 +19,15 @@
 
 package org.apache.druid.query.aggregation.histogram.sql;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -45,15 +46,16 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.Test;
@@ -63,18 +65,21 @@ import java.util.List;
 
 public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  private static final DruidOperatorTable OPERATOR_TABLE = new DruidOperatorTable(
-      ImmutableSet.of(new QuantileSqlAggregator()),
-      ImmutableSet.of()
-  );
+  @Override
+  public void configureGuice(DruidInjectorBuilder builder)
+  {
+    super.configureGuice(builder);
+    builder.addModule(new ApproximateHistogramDruidModule());
+  }
 
   @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker() throws IOException
+  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final JoinableFactoryWrapper joinableFactory,
+      final Injector injector
+  ) throws IOException
   {
     ApproximateHistogramDruidModule.registerSerde();
-    for (Module mod : new ApproximateHistogramDruidModule().getJacksonModules()) {
-      CalciteTests.getJsonMapper().registerModule(mod);
-    }
 
     final QueryableIndex index = IndexBuilder.create(CalciteTests.getJsonMapper())
                                              .tmpDir(temporaryFolder.newFolder())
@@ -97,7 +102,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                                                      .withRollup(false)
                                                      .build()
                                              )
-                                             .rows(CalciteTests.ROWS1)
+                                             .rows(TestDataBuilder.ROWS1)
                                              .buildMMappedIndex();
 
     return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
@@ -112,14 +117,8 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
     );
   }
 
-  @Override
-  public DruidOperatorTable createOperatorTable()
-  {
-    return OPERATOR_TABLE;
-  }
-
   @Test
-  public void testQuantileOnFloatAndLongs() throws Exception
+  public void testQuantileOnFloatAndLongs()
   {
     testQuery(
         "SELECT\n"
@@ -142,7 +141,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                       new ExpressionVirtualColumn(
                           "v0",
                           "(\"m1\" * 2)",
-                          ValueType.FLOAT,
+                          ColumnType.FLOAT,
                           TestExprMacroTable.INSTANCE
                       )
                   )
@@ -191,7 +190,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnComplexColumn() throws Exception
+  public void testQuantileOnComplexColumn()
   {
     testQuery(
         "SELECT\n"
@@ -239,7 +238,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnInnerQuery() throws Exception
+  public void testQuantileOnInnerQuery()
   {
     final List<Object[]> expectedResults;
     if (NullHandling.replaceWithDefault()) {
@@ -305,7 +304,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testQuantileOnCastedString() throws Exception
+  public void testQuantileOnCastedString()
   {
     cannotVectorize();
 
@@ -339,7 +338,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                             new ExpressionVirtualColumn(
                                 "v0",
                                 "CAST(\"dim1\", 'DOUBLE')",
-                                ValueType.FLOAT,
+                                ColumnType.FLOAT,
                                 ExprMacroTable.nil()
                             )
                         )
@@ -368,7 +367,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testEmptyTimeseriesResults() throws Exception
+  public void testEmptyTimeseriesResults()
   {
     testQuery(
         "SELECT\n"
@@ -400,7 +399,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByAggregatorDefaultValues() throws Exception
+  public void testGroupByAggregatorDefaultValues()
   {
     testQuery(
         "SELECT\n"
@@ -414,8 +413,8 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setDimFilter(selector("dim2", "a", null))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ValueType.STRING))
-                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ValueType.STRING))
+                        .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(

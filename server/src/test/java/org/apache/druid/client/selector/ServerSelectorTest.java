@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -100,4 +101,66 @@ public class ServerSelectorTest
 
     Assert.assertEquals(ImmutableList.of("a", "b", "c"), selector.getSegment().getDimensions());
   }
+
+  @Test(expected = NullPointerException.class)
+  public void testSegmentCannotBeNull()
+  {
+    final ServerSelector selector = new ServerSelector(
+        null,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+    );
+  }
+
+  @Test
+  public void testSegmentWithNoData()
+  {
+    final ServerSelector selector = new ServerSelector(
+        DataSegment.builder()
+                   .dataSource("test_broker_server_view")
+                   .interval(Intervals.of("2012/2013"))
+                   .loadSpec(
+                       ImmutableMap.of(
+                           "type",
+                           "tombstone"
+                       )
+                   )
+                   .version("v1")
+                   .dimensions(ImmutableList.of())
+                   .metrics(ImmutableList.of())
+                   .shardSpec(new TombstoneShardSpec())
+                   .binaryVersion(9)
+                   .size(0)
+                   .build(),
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+    );
+    Assert.assertFalse(selector.hasData());
+  }
+
+  @Test
+  public void testSegmentWithData()
+  {
+    final ServerSelector selector = new ServerSelector(
+        DataSegment.builder()
+                   .dataSource("another segment") // fool the interner inside the selector
+                   .interval(Intervals.of("2012/2013"))
+                   .loadSpec(
+                       ImmutableMap.of(
+                           "type",
+                           "local",
+                           "path",
+                           "somewhere"
+                       )
+                   )
+                   .version("v1")
+                   .dimensions(ImmutableList.of())
+                   .metrics(ImmutableList.of())
+                   .shardSpec(NoneShardSpec.instance())
+                   .binaryVersion(9)
+                   .size(0)
+                   .build(),
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+    );
+    Assert.assertTrue(selector.hasData());
+  }
+
 }

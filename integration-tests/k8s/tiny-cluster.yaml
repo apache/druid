@@ -132,8 +132,6 @@ spec:
                 port: 8088
                 protocol: TCP
                 targetPort: 8088
-          selector:
-            nodeSpecUniqueStr: druid-tiny-cluster-brokers
           metadata:
             name: broker-%s-service
         - spec:
@@ -150,7 +148,6 @@ spec:
 
         # Processing threads and buffers
         druid.processing.buffer.sizeBytes=25000000
-        druid.processing.numThreads=1
         druid.sql.enable=true
       extra.jvm.options: |-
         -Xmx512m
@@ -182,8 +179,6 @@ spec:
                 port: 8088
                 protocol: TCP
                 targetPort: 8088
-          selector:
-            nodeSpecUniqueStr: druid-tiny-cluster-coordinators
           metadata:
             name: coordinator-%s-service
         - spec:
@@ -230,8 +225,6 @@ spec:
                 port: 8088
                 protocol: TCP
                 targetPort: 8088
-          selector:
-            nodeSpecUniqueStr: druid-tiny-cluster-historicals
           metadata:
             name: historical-%s-service
         - spec:
@@ -274,8 +267,6 @@ spec:
                 port: 8088
                 protocol: TCP
                 targetPort: 8088
-          selector:
-            nodeSpecUniqueStr: druid-tiny-cluster-routers
           metadata:
             name: router-%s-service
         - spec:
@@ -313,8 +304,6 @@ spec:
                 port: 8088
                 protocol: TCP
                 targetPort: 8088
-          selector:
-            nodeSpecUniqueStr: druid-tiny-cluster-middleManagers
           metadata:
             name: middlemanager-%s-service
         - spec:

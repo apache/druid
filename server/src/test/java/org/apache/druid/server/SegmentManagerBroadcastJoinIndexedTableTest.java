@@ -38,7 +38,6 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
@@ -338,9 +337,9 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     );
     final String storageDir = DataSegmentPusher.getDefaultStorageDir(tmpSegment, false);
     final File segmentDir = new File(segmentDeepStorageDir, storageDir);
-    org.apache.commons.io.FileUtils.forceMkdir(segmentDir);
+    FileUtils.mkdirp(segmentDir);
 
-    IndexMerger indexMerger =
+    IndexMergerV9 indexMerger =
         new IndexMergerV9(objectMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
 
     SegmentizerFactory factory = new BroadcastJoinableMMappedQueryableSegmentizerFactory(indexIO, KEY_COLUMNS);
@@ -349,13 +348,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
         data,
         Intervals.of(interval),
         segmentDir,
-        new IndexSpec(
-            null,
-            null,
-            null,
-            null,
-            factory
-        ),
+        IndexSpec.builder().withSegmentLoader(factory).build(),
         null
     );
     final File factoryJson = new File(segmentDir, "factory.json");

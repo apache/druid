@@ -5,7 +5,6 @@ exports[`AutoForm matches snapshot 1`] = `
   className="auto-form"
 >
   <Memo(FormGroupWithInfo)
-    key="testNumber"
     label="Test number"
   >
     <Memo(NumericInputWithDefault)
@@ -18,10 +17,9 @@ exports[`AutoForm matches snapshot 1`] = `
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testSizeBytes"
     label="Test size bytes"
   >
-    <Blueprint3.NumericInput
+    <Blueprint4.NumericInput
       allowNumericCharactersOnly={true}
       buttonPosition="right"
       clampValueOnBlur={false}
@@ -40,11 +38,11 @@ exports[`AutoForm matches snapshot 1`] = `
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testString"
     label="Test string"
   >
     <Memo(SuggestibleInput)
       disabled={false}
+      multiline={false}
       onBlur={[Function]}
       onValueChange={[Function]}
       placeholder=""
@@ -52,11 +50,11 @@ exports[`AutoForm matches snapshot 1`] = `
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testStringWithDefault"
     label="Test string with default"
   >
     <Memo(SuggestibleInput)
       disabled={false}
+      multiline={false}
       onBlur={[Function]}
       onValueChange={[Function]}
       placeholder=""
@@ -64,49 +62,58 @@ exports[`AutoForm matches snapshot 1`] = `
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testBoolean"
+    label="Test string with multiline"
+  >
+    <Memo(SuggestibleInput)
+      disabled={false}
+      multiline={true}
+      onBlur={[Function]}
+      onValueChange={[Function]}
+      placeholder=""
+      value="Hello World"
+    />
+  </Memo(FormGroupWithInfo)>
+  <Memo(FormGroupWithInfo)
     label="Test boolean"
   >
-    <Blueprint3.ButtonGroup>
-      <Blueprint3.Button
+    <Blueprint4.ButtonGroup>
+      <Blueprint4.Button
         active={false}
         disabled={false}
         onClick={[Function]}
       >
         False
-      </Blueprint3.Button>
-      <Blueprint3.Button
+      </Blueprint4.Button>
+      <Blueprint4.Button
         active={false}
         disabled={false}
         onClick={[Function]}
       >
         True
-      </Blueprint3.Button>
-    </Blueprint3.ButtonGroup>
+      </Blueprint4.Button>
+    </Blueprint4.ButtonGroup>
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testBooleanWithDefault"
     label="Test boolean with default"
   >
-    <Blueprint3.ButtonGroup>
-      <Blueprint3.Button
+    <Blueprint4.ButtonGroup>
+      <Blueprint4.Button
         active={true}
         disabled={false}
         onClick={[Function]}
       >
         False
-      </Blueprint3.Button>
-      <Blueprint3.Button
+      </Blueprint4.Button>
+      <Blueprint4.Button
         active={false}
         disabled={false}
         onClick={[Function]}
       >
         True
-      </Blueprint3.Button>
-    </Blueprint3.ButtonGroup>
+      </Blueprint4.Button>
+    </Blueprint4.ButtonGroup>
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testStringArray"
     label="Test string array"
   >
     <Memo(ArrayInput)
@@ -117,7 +124,6 @@ exports[`AutoForm matches snapshot 1`] = `
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testStringArrayWithDefault"
     label="Test string array with default"
   >
     <Memo(ArrayInput)
@@ -133,7 +139,6 @@ exports[`AutoForm matches snapshot 1`] = `
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testJson"
     label="Test json"
   >
     <Memo(JsonInput)
@@ -142,28 +147,26 @@ exports[`AutoForm matches snapshot 1`] = `
     />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
-    key="testStringRequiredAndDefaultValue"
     label="Test string required and default value"
   >
     <Memo(SuggestibleInput)
       disabled={false}
       intent="primary"
+      multiline={false}
       onBlur={[Function]}
       onValueChange={[Function]}
       placeholder=""
       value=""
     />
   </Memo(FormGroupWithInfo)>
-  <Blueprint3.FormGroup
-    key="more-or-less"
-  >
-    <Blueprint3.Button
+  <Blueprint4.FormGroup>
+    <Blueprint4.Button
       fill={true}
       minimal={true}
       onClick={[Function]}
       rightIcon="chevron-down"
       text="Show more"
     />
-  </Blueprint3.FormGroup>
+  </Blueprint4.FormGroup>
 </div>
 `;

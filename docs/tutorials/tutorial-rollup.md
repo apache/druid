@@ -96,7 +96,9 @@ We'll ingest this data using the following ingestion task spec, located at `quic
     },
     "tuningConfig" : {
       "type" : "index_parallel",
-      "maxRowsPerSegment" : 5000000,
+      "partitionsSpec": {
+        "type": "dynamic"
+      },
       "maxRowsInMemory" : 25000
     }
   }

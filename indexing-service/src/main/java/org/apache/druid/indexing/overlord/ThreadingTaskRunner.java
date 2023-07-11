@@ -22,8 +22,8 @@ package org.apache.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -35,6 +35,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskReportFileWriter;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -43,7 +44,6 @@ import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -61,9 +61,11 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -108,10 +110,11 @@ public class ThreadingTaskRunner
       ObjectMapper jsonMapper,
       AppenderatorsManager appenderatorsManager,
       TaskReportFileWriter taskReportFileWriter,
-      @Self DruidNode node
+      @Self DruidNode node,
+      TaskStorageDirTracker dirTracker
   )
   {
-    super(jsonMapper, taskConfig);
+    super(jsonMapper, taskConfig, dirTracker);
     this.toolboxFactory = toolboxFactory;
     this.taskLogPusher = taskLogPusher;
     this.node = node;
@@ -127,7 +130,7 @@ public class ThreadingTaskRunner
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(String taskid, long offset)
+  public Optional<InputStream> streamTaskLog(String taskid, long offset)
   {
     // task logs will appear in the main indexer log, streaming individual task logs is not supported
     return Optional.absent();
@@ -152,8 +155,21 @@ public class ThreadingTaskRunner
                         @Override
                         public TaskStatus call()
                         {
+                          final File baseDirForTask;
+                          try {
+                            baseDirForTask = getTracker().pickBaseDir(task.getId());
+                          }
+                          catch (RuntimeException e) {
+                            LOG.error(e, "Failed to get directory for task [%s], cannot schedule.", task.getId());
+                            return TaskStatus.failure(
+                                task.getId(),
+                                StringUtils.format("Could not schedule due to error [%s]", e.getMessage())
+                            );
+
+                          }
+                          final File taskDir = new File(baseDirForTask, task.getId());
+
                           final String attemptUUID = UUID.randomUUID().toString();
-                          final File taskDir = taskConfig.getTaskDir(task.getId());
                           final File attemptDir = new File(taskDir, attemptUUID);
 
                           final TaskLocation taskLocation = TaskLocation.create(
@@ -165,9 +181,7 @@ public class ThreadingTaskRunner
                           final ThreadingTaskRunnerWorkItem taskWorkItem;
 
                           try {
-                            if (!attemptDir.mkdirs()) {
-                              throw new IOE("Could not create directories: %s", attemptDir);
-                            }
+                            FileUtils.mkdirp(attemptDir);
 
                             final File taskFile = new File(taskDir, "task.json");
                             final File reportsFile = new File(attemptDir, "report.json");
@@ -198,7 +212,7 @@ public class ThreadingTaskRunner
                                   .setName(StringUtils.format("[%s]-%s", task.getId(), priorThreadName));
 
                             TaskStatus taskStatus;
-                            final TaskToolbox toolbox = toolboxFactory.build(task);
+                            final TaskToolbox toolbox = toolboxFactory.build(baseDirForTask, task);
                             TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
                             TaskRunnerUtils.notifyStatusChanged(
                                 listeners,
@@ -455,33 +469,43 @@ public class ThreadingTaskRunner
   }
 
   @Override
-  public long getTotalTaskSlotCount()
+  public Map<String, Long> getTotalTaskSlotCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(workerConfig.getCapacity()));
+  }
+
+  public long getTotalTaskSlotCountLong()
   {
     return workerConfig.getCapacity();
   }
 
   @Override
-  public long getIdleTaskSlotCount()
+  public Map<String, Long> getIdleTaskSlotCount()
   {
-    return Math.max(getTotalTaskSlotCount() - getUsedTaskSlotCount(), 0);
+    return ImmutableMap.of(workerConfig.getCategory(), Math.max(getTotalTaskSlotCountLong() - getUsedTaskSlotCountLong(), 0));
   }
 
   @Override
-  public long getUsedTaskSlotCount()
+  public Map<String, Long> getUsedTaskSlotCount()
+  {
+    return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(getRunningTasks().size()));
+  }
+
+  public long getUsedTaskSlotCountLong()
   {
     return getRunningTasks().size();
   }
 
   @Override
-  public long getLazyTaskSlotCount()
+  public Map<String, Long> getLazyTaskSlotCount()
   {
-    return 0;
+    return ImmutableMap.of(workerConfig.getCategory(), 0L);
   }
 
   @Override
-  public long getBlacklistedTaskSlotCount()
+  public Map<String, Long> getBlacklistedTaskSlotCount()
   {
-    return 0;
+    return ImmutableMap.of(workerConfig.getCategory(), 0L);
   }
 
   @Override

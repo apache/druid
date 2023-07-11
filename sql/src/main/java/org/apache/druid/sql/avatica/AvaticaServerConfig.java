@@ -30,6 +30,7 @@ class AvaticaServerConfig
   public static Period DEFAULT_CONNECTION_IDLE_TIMEOUT = new Period("PT5M");
   public static int DEFAULT_MIN_ROWS_PER_FRAME = 100;
   public static int DEFAULT_MAX_ROWS_PER_FRAME = 5000;
+  public static int DEFAULT_FETCH_TIMEOUT_MS = 5000;
 
   @JsonProperty
   public int maxConnections = DEFAULT_MAX_CONNECTIONS;
@@ -45,6 +46,17 @@ class AvaticaServerConfig
 
   @JsonProperty
   public int maxRowsPerFrame = DEFAULT_MAX_ROWS_PER_FRAME;
+
+  /**
+   * The maximum amount of time to wait per-fetch for the next result set.
+   * If a query takes longer than this amount of time, then the fetch will
+   * return 0 rows, without EOF, and the client will automatically try
+   * another fetch. The result is an async protocol that avoids network
+   * timeouts for long-running queries, especially those that take a long
+   * time to deliver a first batch of results.
+   */
+  @JsonProperty
+  public int fetchTimeoutMs = DEFAULT_FETCH_TIMEOUT_MS;
 
   public int getMaxConnections()
   {
@@ -76,5 +88,10 @@ class AvaticaServerConfig
       return Math.min(getMaxRowsPerFrame(), minRowsPerFrame);
     }
     return minRowsPerFrame;
+  }
+
+  public int getFetchTimeoutMs()
+  {
+    return fetchTimeoutMs;
   }
 }

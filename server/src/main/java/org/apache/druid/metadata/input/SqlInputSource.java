@@ -21,6 +21,7 @@ package org.apache.druid.metadata.input;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -35,15 +36,18 @@ import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class SqlInputSource extends AbstractInputSource implements SplittableInputSource<String>
 {
+  static final String TYPE_KEY = "sql";
   private final List<String> sqls;
   private final SQLFirehoseDatabaseConnector sqlFirehoseDatabaseConnector;
   private final ObjectMapper objectMapper;
@@ -66,6 +70,14 @@ public class SqlInputSource extends AbstractInputSource implements SplittableInp
         "SQL Metadata Connector not configured!"
     );
     this.objectMapper = objectMapper;
+  }
+
+  @JsonIgnore
+  @Nonnull
+  @Override
+  public Set<String> getTypes()
+  {
+    return Collections.singleton(TYPE_KEY);
   }
 
   @JsonProperty

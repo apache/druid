@@ -57,7 +57,7 @@ interface RowBasedKeySerdeHelper
    * @param dimValIdx     Index within dimValues to store the value read from the buffer
    * @param dimValues     Output array containing grouping key values for a row
    */
-  void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Comparable[] dimValues);
+  void getFromByteBuffer(ByteBuffer buffer, int initialOffset, int dimValIdx, Object[] dimValues);
 
   /**
    * Return a {@link BufferComparator} to compare keys stored in ByteBuffer.

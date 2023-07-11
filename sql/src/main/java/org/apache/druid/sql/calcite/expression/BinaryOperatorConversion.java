@@ -25,6 +25,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
@@ -58,22 +59,7 @@ public class BinaryOperatorConversion implements SqlOperatorConversion
         plannerContext,
         rowSignature,
         rexNode,
-        operands -> {
-          if (operands.size() < 2) {
-            throw new ISE("Got binary operator[%s] with %s args", operator.getName(), operands.size());
-          }
-
-          return DruidExpression.fromExpression(
-              StringUtils.format(
-                  "(%s)",
-                  joiner.join(
-                      operands.stream()
-                              .map(DruidExpression::getExpression)
-                              .collect(Collectors.toList())
-                  )
-              )
-          );
-        }
+        getOperatorFunction(rexNode)
     );
   }
 
@@ -90,23 +76,30 @@ public class BinaryOperatorConversion implements SqlOperatorConversion
         plannerContext,
         rowSignature,
         rexNode,
-        operands -> {
-          if (operands.size() < 2) {
-            throw new ISE("Got binary operator[%s] with %s args", operator.getName(), operands.size());
-          }
-
-          return DruidExpression.fromExpression(
-              StringUtils.format(
-                  "(%s)",
-                  joiner.join(
-                      operands.stream()
-                              .map(DruidExpression::getExpression)
-                              .collect(Collectors.toList())
-                  )
-              )
-          );
-        },
+        getOperatorFunction(rexNode),
         postAggregatorVisitor
     );
+  }
+
+  private DruidExpression.DruidExpressionCreator getOperatorFunction(RexNode rexNode)
+  {
+    return operands -> {
+      if (operands.size() < 2) {
+        throw new ISE("Got binary operator[%s] with %s args", operator.getName(), operands.size());
+      }
+
+      return DruidExpression.ofExpression(
+          Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+          (args) -> StringUtils.format(
+              "(%s)",
+              joiner.join(
+                  args.stream()
+                      .map(DruidExpression::getExpression)
+                      .collect(Collectors.toList())
+              )
+          ),
+          operands
+      );
+    };
   }
 }

@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.ISE;
@@ -61,14 +62,22 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
   protected final ConcurrentHashMap<String, WorkItemType> tasks = new ConcurrentHashMap<>();
   protected final ObjectMapper jsonMapper;
   protected final TaskConfig taskConfig;
+  private final TaskStorageDirTracker tracker;
 
   public BaseRestorableTaskRunner(
       ObjectMapper jsonMapper,
-      TaskConfig taskConfig
+      TaskConfig taskConfig,
+      TaskStorageDirTracker tracker
   )
   {
     this.jsonMapper = jsonMapper;
     this.taskConfig = taskConfig;
+    this.tracker = tracker;
+  }
+
+  protected TaskStorageDirTracker getTracker()
+  {
+    return tracker;
   }
 
   @Override
@@ -91,7 +100,7 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
     final List<Pair<Task, ListenableFuture<TaskStatus>>> retVal = new ArrayList<>();
     for (final String taskId : taskRestoreInfo.getRunningTasks()) {
       try {
-        final File taskFile = new File(taskConfig.getTaskDir(taskId), "task.json");
+        final File taskFile = new File(tracker.findExistingTaskDir(taskId), "task.json");
         final Task task = jsonMapper.readValue(taskFile, Task.class);
 
         if (!task.getId().equals(taskId)) {

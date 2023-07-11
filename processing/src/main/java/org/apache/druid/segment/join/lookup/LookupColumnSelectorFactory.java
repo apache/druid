@@ -29,7 +29,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -105,7 +105,7 @@ public class LookupColumnSelectorFactory implements ColumnSelectorFactory
   public ColumnCapabilities getColumnCapabilities(String column)
   {
     if (LookupJoinable.ALL_COLUMNS.contains(column)) {
-      return new ColumnCapabilitiesImpl().setType(ValueType.STRING);
+      return new ColumnCapabilitiesImpl().setType(ColumnType.STRING);
     } else {
       return null;
     }

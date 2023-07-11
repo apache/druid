@@ -24,20 +24,19 @@ title: "Schema design tips"
 
 ## Druid's data model
 
-For general information, check out the documentation on [Druid's data model](index.md#data-model) on the main
+For general information, check out the documentation on [Druid's data model](./data-model.md) on the main
 ingestion overview page. The rest of this page discusses tips for users coming from other kinds of systems, as well as
 general tips and common practices.
 
-* Druid data is stored in [datasources](index.md#datasources), which are similar to tables in a traditional RDBMS.
-* Druid datasources can be ingested with or without [rollup](#rollup). With rollup enabled, Druid partially aggregates your data during ingestion, potentially reducing its row count, decreasing storage footprint, and improving query performance. With rollup disabled, Druid stores one row for each row in your input data, without any pre-aggregation.
+* Druid data is stored in [datasources](./data-model.md), which are similar to tables in a traditional RDBMS.
+* Druid datasources can be ingested with or without [rollup](./rollup.md). With rollup enabled, Druid partially aggregates your data during ingestion, potentially reducing its row count, decreasing storage footprint, and improving query performance. With rollup disabled, Druid stores one row for each row in your input data, without any pre-aggregation.
 * Every row in Druid must have a timestamp. Data is always partitioned by time, and every query has a time filter. Query results can also be broken down by time buckets like minutes, hours, days, and so on.
 * All columns in Druid datasources, other than the timestamp column, are either dimensions or metrics. This follows the [standard naming convention](https://en.wikipedia.org/wiki/Online_analytical_processing#Overview_of_OLAP_systems) of OLAP data.
 * Typical production datasources have tens to hundreds of columns.
-* [Dimension columns](index.md#dimensions) are stored as-is, so they can be filtered on, grouped by, or aggregated at query time. They are always single Strings, [arrays of Strings](../querying/multi-value-dimensions.md), single Longs, single Doubles or single Floats.
-* [Metric columns](index.md#metrics) are stored [pre-aggregated](../querying/aggregations.md), so they can only be aggregated at query time (not filtered or grouped by). They are often stored as numbers (integers or floats) but can also be stored as complex objects like [HyperLogLog sketches or approximate quantile sketches](../querying/aggregations.md#approx). Metrics can be configured at ingestion time even when rollup is disabled, but are most useful when rollup is enabled.
+* [Dimension columns](./data-model.md#dimensions) are stored as-is, so they can be filtered on, grouped by, or aggregated at query time. They are always single Strings, [arrays of Strings](../querying/multi-value-dimensions.md), single Longs, single Doubles or single Floats.
+* [Metric columns](./data-model.md#metrics) are stored [pre-aggregated](../querying/aggregations.md), so they can only be aggregated at query time (not filtered or grouped by). They are often stored as numbers (integers or floats) but can also be stored as complex objects like [HyperLogLog sketches or approximate quantile sketches](../querying/aggregations.md#approximate-aggregations). Metrics can be configured at ingestion time even when rollup is disabled, but are most useful when rollup is enabled.
 
-
-## If you're coming from a...
+## If you're coming from a
 
 ### Relational model
 
@@ -71,13 +70,13 @@ reflected immediately for already-ingested rows in your main table.
 
 Tips for modeling relational data in Druid:
 
-- Druid datasources do not have primary or unique keys, so skip those.
-- Denormalize if possible. If you need to be able to update dimension / lookup tables periodically and have those
+* Druid datasources do not have primary or unique keys, so skip those.
+* Denormalize if possible. If you need to be able to update dimension / lookup tables periodically and have those
 changes reflected in already-ingested data, consider partial normalization with [lookups](../querying/lookups.md).
-- If you need to join two large distributed tables with each other, you must do this before loading the data into Druid.
+* If you need to join two large distributed tables with each other, you must do this before loading the data into Druid.
 Druid does not support query-time joins of two datasources. Lookups do not help here, since a full copy of each lookup
 table is stored on each Druid server, so they are not a good choice for large tables.
-- Consider whether you want to enable [rollup](#rollup) for pre-aggregation, or whether you want to disable
+* Consider whether you want to enable [rollup](#rollup) for pre-aggregation, or whether you want to disable
 rollup and load your existing data as-is. Rollup in Druid is similar to creating a summary table in a relational model.
 
 ### Time series model
@@ -89,25 +88,25 @@ it is a natural choice for storing timeseries data. Its flexible data model allo
 non-timeseries data, even in the same datasource.
 
 To achieve best-case compression and query performance in Druid for timeseries data, it is important to partition and
-sort by metric name, like timeseries databases often do. See [Partitioning and sorting](index.md#partitioning) for more details.
+sort by metric name, like timeseries databases often do. See [Partitioning and sorting](./partitioning.md) for more details.
 
 Tips for modeling timeseries data in Druid:
 
-- Druid does not think of data points as being part of a "time series". Instead, Druid treats each point separately
+* Druid does not think of data points as being part of a "time series". Instead, Druid treats each point separately
 for ingestion and aggregation.
-- Create a dimension that indicates the name of the series that a data point belongs to. This dimension is often called
+* Create a dimension that indicates the name of the series that a data point belongs to. This dimension is often called
 "metric" or "name". Do not get the dimension named "metric" confused with the concept of Druid metrics. Place this
 first in the list of dimensions in your "dimensionsSpec" for best performance (this helps because it improves locality;
-see [partitioning and sorting](index.md#partitioning) below for details).
-- Create other dimensions for attributes attached to your data points. These are often called "tags" in timeseries
+see [partitioning and sorting](./partitioning.md) below for details).
+* Create other dimensions for attributes attached to your data points. These are often called "tags" in timeseries
 database systems.
-- Create [metrics](../querying/aggregations.md) corresponding to the types of aggregations that you want to be able
-to query. Typically this includes "sum", "min", and "max" (in one of the long, float, or double flavors). If you want to
-be able to compute percentiles or quantiles, use Druid's [approximate aggregators](../querying/aggregations.md#approx).
-- Consider enabling [rollup](#rollup), which will allow Druid to potentially combine multiple points into one
+* Create [metrics](../querying/aggregations.md) corresponding to the types of aggregations that you want to be able
+to query. Typically this includes "sum", "min", and "max" (in one of the long, float, or double flavors). If you want the ability
+to compute percentiles or quantiles, use Druid's [approximate aggregators](../querying/aggregations.md#approximate-aggregations).
+* Consider enabling [rollup](./rollup.md), which will allow Druid to potentially combine multiple points into one
 row in your Druid datasource. This can be useful if you want to store data at a different time granularity than it is
 naturally emitted. It is also useful if you want to combine timeseries and non-timeseries data in the same datasource.
-- If you don't know ahead of time what columns you'll want to ingest, use an empty dimensions list to trigger
+* If you don't know ahead of time what columns you'll want to ingest, use an empty dimensions list to trigger
 [automatic detection of dimension columns](#schema-less-dimensions).
 
 ### Log aggregation model
@@ -117,15 +116,14 @@ naturally emitted. It is also useful if you want to combine timeseries and non-t
 Similar to log aggregation systems, Druid offers inverted indexes for fast searching and filtering. Druid's search
 capabilities are generally less developed than these systems, and its analytical capabilities are generally more
 developed. The main data modeling differences between Druid and these systems are that when ingesting data into Druid,
-you must be more explicit. Druid columns have types specific upfront and Druid does not, at this time, natively support
-nested data.
+you must be more explicit. Druid columns have types specific upfront.
 
 Tips for modeling log data in Druid:
 
-- If you don't know ahead of time what columns you'll want to ingest, use an empty dimensions list to trigger
+* If you don't know ahead of time what columns you'll want to ingest, use an empty dimensions list to trigger
 [automatic detection of dimension columns](#schema-less-dimensions).
-- If you have nested data, flatten it using a [`flattenSpec`](index.md#flattenspec).
-- Consider enabling [rollup](#rollup) if you have mainly analytical use cases for your log data. This will
+* If you have nested data, you can ingest it using the [nested columns](../querying/nested-columns.md) feature or flatten it using a [`flattenSpec`](./ingestion-spec.md#flattenspec).
+* Consider enabling [rollup](./rollup.md) if you have mainly analytical use cases for your log data. This will
 mean you lose the ability to retrieve individual events from Druid, but you potentially gain substantial compression and
 query performance boosts.
 
@@ -134,13 +132,13 @@ query performance boosts.
 ### Rollup
 
 Druid can roll up data as it is ingested to minimize the amount of raw data that needs to be stored. This is a form
-of summarization or pre-aggregation. For more details, see the [Rollup](index.md#rollup) section of the ingestion
+of summarization or pre-aggregation. For more details, see the [Rollup](./rollup.md) section of the ingestion
 documentation.
 
 ### Partitioning and sorting
 
 Optimally partitioning and sorting your data can have substantial impact on footprint and performance. For more details,
-see the [Partitioning](index.md#partitioning) section of the ingestion documentation.
+see the [Partitioning](./partitioning.md) section of the ingestion documentation.
 
 <a name="sketches"></a>
 
@@ -167,7 +165,7 @@ so they can be sorted and the quantile can be computed, Druid instead only needs
 can reduce data transfer needs to mere kilobytes.
 
 For details about the sketches available in Druid, see the
-[approximate aggregators](../querying/aggregations.md#approx) page.
+[approximate aggregators](../querying/aggregations.md#approximate-aggregations) page.
 
 If you prefer videos, take a look at [Not exactly!](https://www.youtube.com/watch?v=Hpd3f_MLdXo), a conference talk
 about sketches in Druid.
@@ -180,42 +178,40 @@ There are performance tradeoffs between string and numeric columns. Numeric colu
 than string columns. But unlike string columns, numeric columns don't have indexes, so they can be slower to filter on.
 You may want to experiment to find the optimal choice for your use case.
 
-For details about how to configure numeric dimensions, see the [`dimensionsSpec`](index.md#dimensionsspec) documentation.
-
-
+For details about how to configure numeric dimensions, see the [`dimensionsSpec`](./ingestion-spec.md#dimensionsspec) documentation.
 
 ### Secondary timestamps
 
 Druid schemas must always include a primary timestamp. The primary timestamp is used for
-[partitioning and sorting](index.md#partitioning) your data, so it should be the timestamp that you will most often filter on.
+[partitioning and sorting](./partitioning.md) your data, so it should be the timestamp that you will most often filter on.
 Druid is able to rapidly identify and retrieve data corresponding to time ranges of the primary timestamp column.
 
 If your data has more than one timestamp, you can ingest the others as secondary timestamps. The best way to do this
-is to ingest them as [long-typed dimensions](index.md#dimensionsspec) in milliseconds format.
-If necessary, you can get them into this format using a [`transformSpec`](index.md#transformspec) and
+is to ingest them as [long-typed dimensions](./ingestion-spec.md#dimensionsspec) in milliseconds format.
+If necessary, you can get them into this format using a [`transformSpec`](./ingestion-spec.md#transformspec) and
 [expressions](../misc/math-expr.md) like `timestamp_parse`, which returns millisecond timestamps.
 
-At query time, you can query secondary timestamps with [SQL time functions](../querying/sql.md#time-functions)
+At query time, you can query secondary timestamps with [SQL time functions](../querying/sql-scalar.md#date-and-time-functions)
 like `MILLIS_TO_TIMESTAMP`, `TIME_FLOOR`, and others. If you're using native Druid queries, you can use
 [expressions](../misc/math-expr.md).
 
 ### Nested dimensions
 
-At the time of this writing, Druid does not support nested dimensions. Nested dimensions need to be flattened. For example,
-if you have data of the following form:
+You can ingest and store nested data in a Druid column as a `COMPLEX<json>` data type. See [Nested columns](../querying/nested-columns.md) for more information.
 
-```
-{"foo":{"bar": 3}}
+If you want to ingest nested data in a format unsupported by the nested columns feature, you  must use the `flattenSpec` object to flatten it. For example, if you have data of the following form:
+
+```json
+{ "foo": { "bar": 3 } }
 ```
 
 then before indexing it, you should transform it to:
 
-```
-{"foo_bar": 3}
+```json
+{ "foo_bar": 3 }
 ```
 
-Druid is capable of flattening JSON, Avro, or Parquet input data.
-Please read about [`flattenSpec`](index.md#flattenspec) for more details.
+See the [`flattenSpec`](./ingestion-spec.md#flattenspec) documentation for more details.
 
 <a name="counting"></a>
 
@@ -231,26 +227,19 @@ the number of Druid rows for the time interval, which can be used to determine w
 
 To clarify with an example, if your ingestion spec contains:
 
-```
-...
-"metricsSpec" : [
-      {
-        "type" : "count",
-        "name" : "count"
-      },
-...
+```json
+"metricsSpec": [
+    { "type": "count", "name": "count" }
+]
 ```
 
 You should query for the number of ingested rows with:
 
-```
-...
+```json
 "aggregations": [
-    { "type": "longSum", "name": "numIngestedEvents", "fieldName": "count" },
-...
+    { "type": "longSum", "name": "numIngestedEvents", "fieldName": "count" }
+]
 ```
-
-
 
 ### Schema-less dimensions
 
@@ -268,14 +257,14 @@ some work at ETL time.
 
 As an example, for schema-less dimensions, repeat the same column:
 
-```
-{"device_id_dim":123, "device_id_met":123}
+```json
+{ "device_id_dim": 123, "device_id_met": 123 }
 ```
 
 and in your `metricsSpec`, include:
 
-```
-{ "type" : "hyperUnique", "name" : "devices", "fieldName" : "device_id_met" }
+```json
+{ "type": "hyperUnique", "name": "devices", "fieldName": "device_id_met" }
 ```
 
 `device_id_dim` should automatically get picked up as a dimension.

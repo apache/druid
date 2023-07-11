@@ -16,15 +16,21 @@
  * limitations under the License.
  */
 
+import classNames from 'classnames';
 import { max } from 'd3-array';
-import React from 'react';
+import React, { Fragment } from 'react';
 
 import './braced-text.scss';
 
+const THOUSANDS_SEPARATOR = ','; // Maybe one day make this locale aware
+
 export interface BracedTextProps {
+  className?: string;
   text: string;
   braces: string[];
   padFractionalPart?: boolean;
+  unselectableThousandsSeparator?: boolean;
+  title?: string;
 }
 
 export function findMostNumbers(strings: string[]): string {
@@ -42,7 +48,7 @@ export function findMostNumbers(strings: string[]): string {
       longestNumLengthPlusOne = numLengthPlusOne;
     }
   }
-  return longest;
+  return longest.replace(/K/g, 'M');
 }
 
 function lengthAfterLastDot(str: string): number | undefined {
@@ -56,8 +62,29 @@ function zerosOfLength(n: number): string {
   return new Array(n + 1).join('0');
 }
 
+function arrayJoin<T, U>(array: T[], separator: U): (T | U)[] {
+  const result: (T | U)[] = [];
+  for (let i = 0; i < array.length; i++) {
+    if (i) {
+      result.push(separator, array[i]);
+    } else {
+      result.push(array[i]);
+    }
+  }
+  return result;
+}
+
+function hideThousandsSeparator(text: string) {
+  const parts = text.split(THOUSANDS_SEPARATOR);
+  if (parts.length < 2) return text;
+  return arrayJoin(parts, <span className="unselectable">{THOUSANDS_SEPARATOR}</span>).map(
+    (x, i) => <Fragment key={i}>{x}</Fragment>,
+  );
+}
+
 export const BracedText = React.memo(function BracedText(props: BracedTextProps) {
-  const { text, braces, padFractionalPart } = props;
+  const { className, text, braces, padFractionalPart, unselectableThousandsSeparator, title } =
+    props;
 
   let effectiveBraces = braces.concat(text);
 
@@ -87,10 +114,10 @@ export const BracedText = React.memo(function BracedText(props: BracedTextProps)
   }
 
   return (
-    <span className="braced-text">
+    <span className={classNames('braced-text', className)} title={title}>
       <span className="brace-text">{findMostNumbers(effectiveBraces)}</span>
       <span className="real-text">
-        {text}
+        {unselectableThousandsSeparator ? hideThousandsSeparator(text) : text}
         {zeroPad}
       </span>
     </span>

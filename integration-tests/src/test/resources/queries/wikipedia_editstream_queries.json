@@ -1402,6 +1402,7 @@
                 "intervals":["2012-12-29T00:00:00.000Z/2013-01-10T08:00:00.000Z"],
                 "columns":{
                     "country_name":{
+                        "typeSignature": "STRING",
                         "type":"STRING",
                         "hasMultipleValues":false,
                         "size":0,
@@ -1412,6 +1413,7 @@
                         "hasNulls":true
                     },
                     "language":{
+                        "typeSignature": "STRING",
                         "type":"STRING",
                         "hasMultipleValues":false,
                         "size":0,

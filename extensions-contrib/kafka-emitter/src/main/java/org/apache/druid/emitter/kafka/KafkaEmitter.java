@@ -22,13 +22,13 @@ package org.apache.druid.emitter.kafka;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.emitter.kafka.MemoryBoundLinkedBlockingQueue.ObjectContainer;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.server.log.RequestLogEvent;
@@ -39,7 +39,6 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -50,6 +49,8 @@ public class KafkaEmitter implements Emitter
 {
   private static Logger log = new Logger(KafkaEmitter.class);
 
+  private static final int DEFAULT_SEND_INTERVAL_SECONDS = 10;
+  private static final int DEFAULT_SEND_LOST_INTERVAL_MINUTES = 5;
   private static final int DEFAULT_RETRIES = 3;
   private final AtomicLong metricLost;
   private final AtomicLong alertLost;
@@ -63,6 +64,8 @@ public class KafkaEmitter implements Emitter
   private final MemoryBoundLinkedBlockingQueue<String> alertQueue;
   private final MemoryBoundLinkedBlockingQueue<String> requestQueue;
   private final ScheduledExecutorService scheduler;
+
+  protected int sendInterval = DEFAULT_SEND_INTERVAL_SECONDS;
 
   public KafkaEmitter(KafkaEmitterConfig config, ObjectMapper jsonMapper)
   {
@@ -116,16 +119,20 @@ public class KafkaEmitter implements Emitter
   @Override
   public void start()
   {
-    scheduler.schedule(this::sendMetricToKafka, 10, TimeUnit.SECONDS);
-    scheduler.schedule(this::sendAlertToKafka, 10, TimeUnit.SECONDS);
+    scheduler.schedule(this::sendMetricToKafka, sendInterval, TimeUnit.SECONDS);
+    scheduler.schedule(this::sendAlertToKafka, sendInterval, TimeUnit.SECONDS);
     if (config.getRequestTopic() != null) {
-      scheduler.schedule(this::sendRequestToKafka, 10, TimeUnit.SECONDS);
+      scheduler.schedule(this::sendRequestToKafka, sendInterval, TimeUnit.SECONDS);
     }
     scheduler.scheduleWithFixedDelay(() -> {
-      log.info("Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], invalidLost=[%d]",
-          metricLost.get(), alertLost.get(), requestLost.get(), invalidLost.get()
+      log.info(
+          "Message lost counter: metricLost=[%d], alertLost=[%d], requestLost=[%d], invalidLost=[%d]",
+          metricLost.get(),
+          alertLost.get(),
+          requestLost.get(),
+          invalidLost.get()
       );
-    }, 5, 5, TimeUnit.MINUTES);
+    }, DEFAULT_SEND_LOST_INTERVAL_MINUTES, DEFAULT_SEND_LOST_INTERVAL_MINUTES, TimeUnit.MINUTES);
     log.info("Starting Kafka Emitter.");
   }
 
@@ -144,8 +151,7 @@ public class KafkaEmitter implements Emitter
     sendToKafka(config.getRequestTopic(), requestQueue, setProducerCallback(requestLost));
   }
 
-  @VisibleForTesting
-  protected void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue, Callback callback)
+  private void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue, Callback callback)
   {
     ObjectContainer<String> objectToSend;
     try {
@@ -163,14 +169,16 @@ public class KafkaEmitter implements Emitter
   public void emit(final Event event)
   {
     if (event != null) {
-      ImmutableMap.Builder<String, Object> resultBuilder = ImmutableMap.<String, Object>builder().putAll(event.toMap());
-      if (config.getClusterName() != null) {
-        resultBuilder.put("clusterName", config.getClusterName());
-      }
-      Map<String, Object> result = resultBuilder.build();
-
       try {
-        String resultJson = jsonMapper.writeValueAsString(result);
+        EventMap map = event.toMap();
+        if (config.getClusterName() != null) {
+          map = map.asBuilder()
+                   .put("clusterName", config.getClusterName())
+                   .build();
+        }
+
+        String resultJson = jsonMapper.writeValueAsString(map);
+
         ObjectContainer<String> objectContainer = new ObjectContainer<>(
             resultJson,
             StringUtils.toUtf8(resultJson).length

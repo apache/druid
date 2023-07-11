@@ -33,9 +33,10 @@ import redis.clients.jedis.JedisPoolConfig;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class RedisClusterCacheTest
 {
@@ -58,6 +59,7 @@ public class RedisClusterCacheTest
   };
 
   private RedisClusterCache cache;
+  private AtomicLong mgetCount = new AtomicLong();
 
   @Before
   public void setUp()
@@ -71,7 +73,7 @@ public class RedisClusterCacheTest
     // some methods must be overriden for test cases
     cache = new RedisClusterCache(new MockJedisCluster(Collections.singleton(new HostAndPort("localhost", 6379)))
     {
-      Map<String, byte[]> cacheStorage = new HashMap<>();
+      final ConcurrentHashMap<String, byte[]> cacheStorage = new ConcurrentHashMap<>();
 
       @Override
       public String setex(final byte[] key, final int seconds, final byte[] value)
@@ -89,13 +91,12 @@ public class RedisClusterCacheTest
       @Override
       public List<byte[]> mget(final byte[]... keys)
       {
+        mgetCount.incrementAndGet();
         List<byte[]> ret = new ArrayList<>();
         for (byte[] key : keys) {
           String k = StringUtils.encodeBase64String(key);
           byte[] value = cacheStorage.get(k);
-          if (value != null) {
-            ret.add(value);
-          }
+          ret.add(value);
         }
         return ret;
       }
@@ -122,6 +123,7 @@ public class RedisClusterCacheTest
     Cache.NamedKey key1 = new Cache.NamedKey("the", HI);
     Cache.NamedKey key2 = new Cache.NamedKey("the", HO);
     Cache.NamedKey key3 = new Cache.NamedKey("a", HI);
+    Cache.NamedKey notExist = new Cache.NamedKey("notExist", HI);
 
     //test put and get
     cache.put(key1, new byte[]{1, 2, 3, 4});
@@ -130,15 +132,24 @@ public class RedisClusterCacheTest
     Assert.assertEquals(0x01020304, Ints.fromByteArray(cache.get(key1)));
     Assert.assertEquals(0x02030405, Ints.fromByteArray(cache.get(key2)));
     Assert.assertEquals(0x03040506, Ints.fromByteArray(cache.get(key3)));
+    Assert.assertEquals(0x03040506, Ints.fromByteArray(cache.get(key3)));
+    Assert.assertNull(cache.get(notExist));
+
+    this.mgetCount.set(0);
 
     //test multi get
     Map<Cache.NamedKey, byte[]> result = cache.getBulk(
         Lists.newArrayList(
             key1,
             key2,
-            key3
+            key3,
+            notExist
         )
     );
+
+    // these 4 keys are distributed among different nodes, so there should be 4 times call of MGET
+    Assert.assertEquals(mgetCount.get(), 4);
+    Assert.assertEquals(result.size(), 3);
     Assert.assertEquals(0x01020304, Ints.fromByteArray(result.get(key1)));
     Assert.assertEquals(0x02030405, Ints.fromByteArray(result.get(key2)));
     Assert.assertEquals(0x03040506, Ints.fromByteArray(result.get(key3)));

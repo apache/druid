@@ -27,7 +27,7 @@ export async function createBrowser(): Promise<playwright.Browser> {
   const headless = process.env['DRUID_E2E_TEST_HEADLESS'] || TRUE;
   const debug = headless !== TRUE;
   const launchOptions: any = {
-    args: [`--window-size=${WIDTH},${HEIGHT + PADDING}`],
+    args: [`--window-size=${WIDTH},${HEIGHT + PADDING}`, `--disable-local-storage`],
   };
   if (debug) {
     launchOptions.headless = false;
@@ -46,6 +46,13 @@ export async function createPage(browser: playwright.Browser): Promise<playwrigh
 export async function getLabeledInput(page: playwright.Page, label: string): Promise<string> {
   return await page.$eval(
     `//*[text()="${label}"]/following-sibling::div//input`,
+    el => (el as HTMLInputElement).value,
+  );
+}
+
+export async function getLabeledTextarea(page: playwright.Page, label: string): Promise<string> {
+  return await page.$eval(
+    `//*[text()="${label}"]/following-sibling::div//textarea`,
     el => (el as HTMLInputElement).value,
   );
 }
@@ -98,6 +105,10 @@ export async function clickLabeledButton(
   text: string,
 ): Promise<void> {
   await page.click(`//*[text()="${label}"]/following-sibling::div${buttonSelector(text)}`);
+}
+
+export async function clickText(page: playwright.Page, text: string): Promise<void> {
+  await page.click(`//*[text()="${text}"]`);
 }
 
 export async function selectSuggestibleInput(

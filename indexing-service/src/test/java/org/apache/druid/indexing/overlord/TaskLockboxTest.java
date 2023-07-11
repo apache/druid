@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -168,24 +169,81 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testTrySharedLock()
+  public void testTrySharedLock() throws EntryExistsException
   {
     final Interval interval = Intervals.of("2017-01/2017-02");
     final List<Task> tasks = new ArrayList<>();
-    final Set<TaskLock> actualLocks = new HashSet<>();
+    final Set<TaskLock> activeLocks = new HashSet<>();
 
-    // test creating new locks
-    for (int i = 0; i < 5; i++) {
-      final Task task = NoopTask.create(Math.min(0, (i - 1) * 10)); // the first two tasks have the same priority
+    // Add an exclusive lock entry of the highest priority
+    Task exclusiveHigherPriorityRevokedLockTask = NoopTask.create(100);
+    tasks.add(exclusiveHigherPriorityRevokedLockTask);
+    taskStorage.insert(
+        exclusiveHigherPriorityRevokedLockTask,
+        TaskStatus.running(exclusiveHigherPriorityRevokedLockTask.getId())
+    );
+    lockbox.add(exclusiveHigherPriorityRevokedLockTask);
+    final TaskLock exclusiveRevokedLock = tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        exclusiveHigherPriorityRevokedLockTask,
+        interval
+    ).getTaskLock();
+
+    // Any equal or lower priority shared lock must fail
+    final Task sharedLockTask = NoopTask.create(100);
+    lockbox.add(sharedLockTask);
+    Assert.assertFalse(tryTimeChunkLock(TaskLockType.SHARED, sharedLockTask, interval).isOk());
+
+    // Revoke existing active exclusive lock
+    lockbox.revokeLock(exclusiveHigherPriorityRevokedLockTask.getId(), exclusiveRevokedLock);
+    Assert.assertEquals(1, getAllLocks(tasks).size());
+    Assert.assertEquals(0, getAllActiveLocks(tasks).size());
+    Assert.assertEquals(activeLocks, getAllActiveLocks(tasks));
+
+    // test creating new shared locks
+    for (int i = 0; i < 3; i++) {
+      final Task task = NoopTask.create(Math.max(0, (i - 1) * 10)); // the first two tasks have the same priority
       tasks.add(task);
+      taskStorage.insert(task, TaskStatus.running(task.getId()));
       lockbox.add(task);
       final TaskLock lock = tryTimeChunkLock(TaskLockType.SHARED, task, interval).getTaskLock();
       Assert.assertNotNull(lock);
-      actualLocks.add(lock);
+      activeLocks.add(lock);
     }
+    Assert.assertEquals(4, getAllLocks(tasks).size());
+    Assert.assertEquals(3, getAllActiveLocks(tasks).size());
+    Assert.assertEquals(activeLocks, getAllActiveLocks(tasks));
 
+    // Adding an exclusive task lock of priority 15 should revoke all existing active locks
+    Task exclusiveLowerPriorityLockTask = NoopTask.create(15);
+    tasks.add(exclusiveLowerPriorityLockTask);
+    taskStorage.insert(exclusiveLowerPriorityLockTask, TaskStatus.running(exclusiveLowerPriorityLockTask.getId()));
+    lockbox.add(exclusiveLowerPriorityLockTask);
+    final TaskLock lowerPriorityExclusiveLock = tryTimeChunkLock(
+        TaskLockType.EXCLUSIVE,
+        exclusiveLowerPriorityLockTask,
+        interval
+    ).getTaskLock();
+    activeLocks.clear();
+    activeLocks.add(lowerPriorityExclusiveLock);
     Assert.assertEquals(5, getAllLocks(tasks).size());
-    Assert.assertEquals(getAllLocks(tasks), actualLocks);
+    Assert.assertEquals(1, getAllActiveLocks(tasks).size());
+    Assert.assertEquals(activeLocks, getAllActiveLocks(tasks));
+
+    // Add new shared locks which revoke the active exclusive task lock
+    activeLocks.clear();
+    for (int i = 3; i < 5; i++) {
+      final Task task = NoopTask.create(Math.max(0, (i - 1) * 10)); // the first two tasks have the same priority
+      tasks.add(task);
+      taskStorage.insert(task, TaskStatus.running(task.getId()));
+      lockbox.add(task);
+      final TaskLock lock = tryTimeChunkLock(TaskLockType.SHARED, task, interval).getTaskLock();
+      Assert.assertNotNull(lock);
+      activeLocks.add(lock);
+    }
+    Assert.assertEquals(7, getAllLocks(tasks).size());
+    Assert.assertEquals(2, getAllActiveLocks(tasks).size());
+    Assert.assertEquals(activeLocks, getAllActiveLocks(tasks));
   }
 
   @Test
@@ -391,9 +449,9 @@ public class TaskLockboxTest
     );
 
     final TaskLockbox lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("lock priority[10] is different from task priority[50]");
-    lockbox.syncFromStorage();
+    TaskLockboxSyncResult result = lockbox.syncFromStorage();
+    Assert.assertEquals(1, result.getTasksToFail().size());
+    Assert.assertTrue(result.getTasksToFail().contains(task));
   }
 
   @Test
@@ -491,7 +549,7 @@ public class TaskLockboxTest
     lockbox.add(task);
     Assert.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, task, interval).isOk());
 
-    Assert.assertFalse(
+    Assert.assertTrue(
         lockbox.doInCriticalSection(
             task,
             Collections.singletonList(interval),
@@ -1258,6 +1316,55 @@ public class TaskLockboxTest
     );
   }
 
+  @Test
+  public void testFailedToReacquireTaskLock() throws Exception
+  {
+    // Tasks to be failed have a group id with the substring "FailingLockAcquisition"
+    // Please refer to NullLockPosseTaskLockbox
+    final Task taskWithFailingLockAcquisition0 = NoopTask.withGroupId("FailingLockAcquisition");
+    final Task taskWithFailingLockAcquisition1 = NoopTask.withGroupId("FailingLockAcquisition");
+    final Task taskWithSuccessfulLockAcquisition = NoopTask.create();
+    taskStorage.insert(taskWithFailingLockAcquisition0, TaskStatus.running(taskWithFailingLockAcquisition0.getId()));
+    taskStorage.insert(taskWithFailingLockAcquisition1, TaskStatus.running(taskWithFailingLockAcquisition1.getId()));
+    taskStorage.insert(taskWithSuccessfulLockAcquisition, TaskStatus.running(taskWithSuccessfulLockAcquisition.getId()));
+
+    TaskLockbox testLockbox = new NullLockPosseTaskLockbox(taskStorage, metadataStorageCoordinator);
+    testLockbox.add(taskWithFailingLockAcquisition0);
+    testLockbox.add(taskWithFailingLockAcquisition1);
+    testLockbox.add(taskWithSuccessfulLockAcquisition);
+
+    testLockbox.tryLock(taskWithFailingLockAcquisition0,
+                        new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+                                                 taskWithFailingLockAcquisition0,
+                                                 Intervals.of("2017-07-01/2017-08-01"),
+                                                 null
+                        )
+    );
+
+    testLockbox.tryLock(taskWithSuccessfulLockAcquisition,
+                        new TimeChunkLockRequest(TaskLockType.EXCLUSIVE,
+                                                 taskWithSuccessfulLockAcquisition,
+                                                 Intervals.of("2017-07-01/2017-08-01"),
+                                                 null
+                        )
+    );
+
+    Assert.assertEquals(3, taskStorage.getActiveTasks().size());
+
+    // The tasks must be marked for failure
+    TaskLockboxSyncResult result = testLockbox.syncFromStorage();
+    Assert.assertEquals(ImmutableSet.of(taskWithFailingLockAcquisition0, taskWithFailingLockAcquisition1),
+                        result.getTasksToFail());
+  }
+
+  private Set<TaskLock> getAllActiveLocks(List<Task> tasks)
+  {
+    return tasks.stream()
+                .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
+                .filter(taskLock -> !taskLock.isRevoked())
+                .collect(Collectors.toSet());
+  }
+
   private Set<TaskLock> getAllLocks(List<Task> tasks)
   {
     return tasks.stream()
@@ -1378,9 +1485,30 @@ public class TaskLockboxTest
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox)
+    public TaskStatus runTask(TaskToolbox toolbox)
     {
       return TaskStatus.failure("how?", "Dummy task status err msg");
+    }
+  }
+
+  /**
+   * Extends TaskLockbox to return a null TaskLockPosse when the task's group name contains "FailingLockAcquisition".
+   */
+  private static class NullLockPosseTaskLockbox extends TaskLockbox
+  {
+    public NullLockPosseTaskLockbox(
+        TaskStorage taskStorage,
+        IndexerMetadataStorageCoordinator metadataStorageCoordinator
+    )
+    {
+      super(taskStorage, metadataStorageCoordinator);
+    }
+
+    @Override
+    protected TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
+    {
+      return task.getGroupId()
+                 .contains("FailingLockAcquisition") ? null : super.verifyAndCreateOrFindLockPosse(task, taskLock);
     }
   }
 }

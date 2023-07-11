@@ -237,7 +237,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
   @JsonIgnore
   public boolean getContextSortByDimsFirst()
   {
-    return getContextBoolean(CTX_KEY_SORT_BY_DIMS_FIRST, false);
+    return context().getBoolean(CTX_KEY_SORT_BY_DIMS_FIRST, false);
   }
 
   @Override

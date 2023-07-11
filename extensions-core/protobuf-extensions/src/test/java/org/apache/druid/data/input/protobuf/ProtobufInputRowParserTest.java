@@ -21,6 +21,7 @@ package org.apache.druid.data.input.protobuf;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -29,6 +30,7 @@ import org.apache.druid.data.input.impl.JavaScriptParseSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -67,7 +69,7 @@ public class ProtobufInputRowParserTest
             new StringDimensionSchema("id"),
             new StringDimensionSchema("someOtherId"),
             new StringDimensionSchema("isValid")
-        ), null, null),
+        )),
         new JSONPathSpec(
             true,
             Lists.newArrayList(
@@ -87,7 +89,7 @@ public class ProtobufInputRowParserTest
                     new StringDimensionSchema("id"),
                     new StringDimensionSchema("someOtherId"),
                     new StringDimensionSchema("isValid")
-            ), null, null),
+            )),
 
             null,
             null,
@@ -101,7 +103,7 @@ public class ProtobufInputRowParserTest
             new StringDimensionSchema("id"),
             new StringDimensionSchema("someOtherId"),
             new StringDimensionSchema("isValid")
-        ), null, null),
+        )),
 
         null,
         null,
@@ -136,7 +138,7 @@ public class ProtobufInputRowParserTest
     ProtoTestEventWrapper.ProtoTestEvent event = buildFlatData(dateTime);
 
     InputRow row = parser.parseBatch(toByteBuffer(event)).get(0);
-    verifyFlatData(row, dateTime);
+    verifyFlatData(row, dateTime, true);
   }
 
   @Test
@@ -150,7 +152,7 @@ public class ProtobufInputRowParserTest
 
     InputRow row = parser.parseBatch(toByteBuffer(event)).get(0);
 
-    verifyFlatDataWithComplexTimestamp(row, dateTime);
+    verifyFlatDataWithComplexTimestamp(row, dateTime, true);
   }
 
   @Test
@@ -164,9 +166,7 @@ public class ProtobufInputRowParserTest
                     "dim1",
                     "dim2"
                 )
-            ),
-            null,
-            null
+            )
         ),
         "func",
         new JavaScriptConfig(false)
@@ -214,10 +214,11 @@ public class ProtobufInputRowParserTest
         .setSomeFloatColumn(47.11F)
         .setSomeIntColumn(815)
         .setSomeLongColumn(816L)
+        .setSomeBytesColumn(ByteString.copyFrom(new byte[]{0x01, 0x02, 0x03, 0x04}))
         .build();
   }
 
-  static void verifyFlatData(InputRow row, DateTime dateTime)
+  static void verifyFlatData(InputRow row, DateTime dateTime, boolean badBytesConversion)
   {
     Assert.assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
 
@@ -225,6 +226,13 @@ public class ProtobufInputRowParserTest
     assertDimensionEquals(row, "isValid", "true");
     assertDimensionEquals(row, "someOtherId", "4712");
     assertDimensionEquals(row, "description", "description");
+    if (badBytesConversion) {
+      // legacy flattener used by parser doesn't convert bytes, instead calls tostring
+      // this can be removed if we update the parser to use the protobuf flattener used by the input format/reader
+      assertDimensionEquals(row, "someBytesColumn", row.getRaw("someBytesColumn").toString());
+    } else {
+      assertDimensionEquals(row, "someBytesColumn", StringUtils.encodeBase64String(new byte[]{0x01, 0x02, 0x03, 0x04}));
+    }
 
 
     Assert.assertEquals(47.11F, row.getMetric("someFloatColumn").floatValue(), 0.0);
@@ -244,6 +252,7 @@ public class ProtobufInputRowParserTest
         .setSomeFloatColumn(47.11F)
         .setSomeIntColumn(815)
         .setSomeLongColumn(816L)
+        .setSomeBytesColumn(ByteString.copyFrom(new byte[]{0x01, 0x02, 0x03, 0x04}))
         .setFoo(ProtoTestEventWrapper.ProtoTestEvent.Foo
             .newBuilder()
             .setBar("baz"))
@@ -268,6 +277,7 @@ public class ProtobufInputRowParserTest
     assertDimensionEquals(row, "eventType", ProtoTestEventWrapper.ProtoTestEvent.EventCategory.CATEGORY_ONE.name());
     assertDimensionEquals(row, "foobar", "baz");
     assertDimensionEquals(row, "bar0", "bar0");
+    assertDimensionEquals(row, "someBytesColumn", StringUtils.encodeBase64String(new byte[]{0x01, 0x02, 0x03, 0x04}));
 
 
     Assert.assertEquals(47.11F, row.getMetric("someFloatColumn").floatValue(), 0.0);
@@ -289,12 +299,13 @@ public class ProtobufInputRowParserTest
         .setSomeFloatColumn(47.11F)
         .setSomeIntColumn(815)
         .setSomeLongColumn(816L)
+        .setSomeBytesColumn(ByteString.copyFrom(new byte[]{0x01, 0x02, 0x03, 0x04}))
         .build();
   }
 
-  static void verifyFlatDataWithComplexTimestamp(InputRow row, DateTime dateTime)
+  static void verifyFlatDataWithComplexTimestamp(InputRow row, DateTime dateTime, boolean badBytesConversion)
   {
-    verifyFlatData(row, dateTime);
+    verifyFlatData(row, dateTime, badBytesConversion);
   }
 
   static ByteBuffer toByteBuffer(ProtoTestEventWrapper.ProtoTestEvent event) throws IOException

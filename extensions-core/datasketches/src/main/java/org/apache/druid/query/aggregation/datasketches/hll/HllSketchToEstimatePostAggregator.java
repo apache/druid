@@ -27,7 +27,8 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -64,9 +65,9 @@ public class HllSketchToEstimatePostAggregator implements PostAggregator
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
-    return round ? ValueType.LONG : ValueType.DOUBLE;
+    return round ? ColumnType.LONG : ColumnType.DOUBLE;
   }
 
   @JsonProperty
@@ -96,8 +97,11 @@ public class HllSketchToEstimatePostAggregator implements PostAggregator
   @Override
   public Object compute(final Map<String, Object> combinedAggregators)
   {
-    final HllSketch sketch = (HllSketch) field.compute(combinedAggregators);
-    return round ? Math.round(sketch.getEstimate()) : sketch.getEstimate();
+    final HllSketchHolder holder = HllSketchHolder.fromObj(field.compute(combinedAggregators));
+    // The union object always uses an HLL_8 sketch, so we always get that.  The target type doesn't actually impact
+    // the estimate anyway, so whatever gives us the "cheapest" operation should be good.
+    double estimate = holder.getEstimate();
+    return round ? Math.round(estimate) : estimate;
   }
 
   @Override

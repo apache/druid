@@ -19,9 +19,10 @@
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
+import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import { Capabilities, pluralIfNeeded, queryDruidSql } from '../../../utils';
+import { pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface SupervisorCounts {

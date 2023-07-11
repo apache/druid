@@ -24,10 +24,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.LazySequence;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Queries;
@@ -38,18 +38,14 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -62,7 +58,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -76,20 +71,17 @@ import java.util.function.Function;
 public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 {
   private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines;
-  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final QueryRunnerFactoryConglomerate conglomerate;
   @Nullable
   private final QueryScheduler scheduler;
 
   TestClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
-      JoinableFactory joinableFactory,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler
   )
   {
     this.timelines = timelines;
-    this.joinableFactoryWrapper = new JoinableFactoryWrapper(joinableFactory);
     this.conglomerate = conglomerate;
     this.scheduler = scheduler;
   }
@@ -101,7 +93,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     // Strange, but true. Required to get authentic behavior with UnionDataSources. (Although, it would be great if
     // this wasn't required.)
     return (queryPlus, responseContext) -> {
-      final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(queryPlus.getQuery().getDataSource());
+      final DataSourceAnalysis analysis = queryPlus.getQuery().getDataSource().getAnalysis();
 
       if (!analysis.isConcreteTableBased()) {
         throw new ISE("Cannot handle datasource: %s", queryPlus.getQuery().getDataSource());
@@ -121,15 +113,16 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
+    final DataSource dataSourceFromQuery = query.getDataSource();
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     if (factory == null) {
       throw new ISE("Unknown query type[%s].", query.getClass());
     }
 
-    final DataSourceAnalysis analysis = DataSourceAnalysis.forDataSource(query.getDataSource());
+    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
 
     if (!analysis.isConcreteTableBased()) {
-      throw new ISE("Cannot handle datasource: %s", query.getDataSource());
+      throw new ISE("Cannot handle datasource: %s", dataSourceFromQuery);
     }
 
     final String dataSourceName = ((TableDataSource) analysis.getBaseDataSource()).getName();
@@ -137,16 +130,14 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
     // Make sure this query type can handle the subquery, if present.
-    if (analysis.isQuery()
-        && !toolChest.canPerformSubquery(((QueryDataSource) analysis.getDataSource()).getQuery())) {
-      throw new ISE("Cannot handle subquery: %s", analysis.getDataSource());
+    if ((dataSourceFromQuery instanceof QueryDataSource)
+        && !toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery())) {
+      throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
     }
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = joinableFactoryWrapper.createSegmentMapFn(
-        analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
-        analysis.getPreJoinableClauses(),
-        new AtomicLong(),
-        analysis.getBaseQuery().orElse(query)
+    final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery.createSegmentMapFunction(
+        query,
+        new AtomicLong()
     );
 
     final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(
@@ -167,11 +158,9 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     // the LocalQuerySegmentWalker constructor instead since this walker is not mimic remote DruidServer objects
     // to actually serve the queries
     return (theQuery, responseContext) -> {
-      responseContext.put(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS, new ConcurrentHashMap<>());
-      responseContext.add(
-          Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS,
-          new NonnullPair<>(theQuery.getQuery().getMostSpecificId(), 0)
-      );
+      responseContext.initializeRemainingResponses();
+      responseContext.addRemainingResponse(
+          theQuery.getQuery().getMostSpecificId(), 0);
       if (scheduler != null) {
         Set<SegmentServerSelector> segments = new HashSet<>();
         specs.forEach(spec -> segments.add(new SegmentServerSelector(spec)));
@@ -220,8 +209,11 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
                     .transform(
                         segment ->
                             new SpecificSegmentQueryRunner<>(
-                                factory.createRunner(segmentMapFn.apply(ReferenceCountingSegment.wrapRootGenerationSegment(
-                                    segment.getSegment()))),
+                                new ReferenceCountingSegmentQueryRunner<>(
+                                    factory,
+                                    segmentMapFn.apply(segment.getSegment()),
+                                    segment.getDescriptor()
+                                ),
                                 new SpecificSegmentSpec(segment.getDescriptor())
                             )
                     )
@@ -274,17 +266,17 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 
   private static class WindowedSegment
   {
-    private final Segment segment;
+    private final ReferenceCountingSegment segment;
     private final Interval interval;
 
-    public WindowedSegment(Segment segment, Interval interval)
+    public WindowedSegment(ReferenceCountingSegment segment, Interval interval)
     {
       this.segment = segment;
       this.interval = interval;
       Preconditions.checkArgument(segment.getId().getInterval().contains(interval));
     }
 
-    public Segment getSegment()
+    public ReferenceCountingSegment getSegment()
     {
       return segment;
     }

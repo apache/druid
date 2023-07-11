@@ -20,19 +20,55 @@
 package org.apache.druid.sql.calcite.aggregation;
 
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.multibindings.Multibinder;
+import com.google.inject.Provides;
+import org.apache.druid.guice.PolyBind;
+import org.apache.druid.sql.calcite.aggregation.builtin.BuiltinApproxCountDistinctSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.CountSqlAggregator;
+import org.apache.druid.sql.guice.ApproxCountDistinct;
+import org.apache.druid.sql.guice.SqlBindings;
+import org.apache.druid.sql.guice.SqlModule;
 
 /**
  * Module that provides SQL aggregations.
- * To add an aggregation use {@link org.apache.druid.sql.guice.SqlBindings#addAggregator(Binder, Class)}
+ *
+ * To add an aggregation, use {@link SqlBindings#addAggregator}.
+ *
+ * To add an implementation option for APPROX_COUNT_DISTINCT, use {@link SqlBindings#addApproxCountDistinctChoice}.
  */
 public class SqlAggregationModule implements Module
 {
   @Override
   public void configure(Binder binder)
   {
-    // Add empty SqlAggregator binder.
-    Multibinder.newSetBinder(binder, SqlAggregator.class);
+    // Set up APPROX_COUNT_DISTINCT. As an additional bonus effect, this line ensures that the Guice binding
+    // for SqlAggregator is set up.
+    SqlBindings.addAggregator(binder, ApproxCountDistinctSqlAggregator.class);
+
+    PolyBind.createChoiceWithDefault(
+        binder,
+        SqlModule.PROPERTY_SQL_APPROX_COUNT_DISTINCT_CHOICE,
+        Key.get(SqlAggregator.class, ApproxCountDistinct.class),
+        BuiltinApproxCountDistinctSqlAggregator.NAME
+    );
+
+    SqlBindings.addApproxCountDistinctChoice(
+        binder,
+        BuiltinApproxCountDistinctSqlAggregator.NAME,
+        BuiltinApproxCountDistinctSqlAggregator.class
+    );
+
+    // Set up COUNT. Because it delegates to APPROX_COUNT_DISTINCT in certain cases, it must be added here
+    // so it can have APPROX_COUNT_DISTINCT injected.
+    SqlBindings.addAggregator(binder, CountSqlAggregator.class);
+  }
+
+  @Provides
+  public ApproxCountDistinctSqlAggregator provideApproxCountDistinctSqlAggregator(
+      @ApproxCountDistinct SqlAggregator aggregator
+  )
+  {
+    return new ApproxCountDistinctSqlAggregator(aggregator);
   }
 }

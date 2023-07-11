@@ -26,11 +26,11 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -45,7 +45,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -162,7 +161,7 @@ public class BalanceSegmentsTest
     druidServers = ImmutableList.of(druidServer1, druidServer2, druidServer3, druidServer4);
     peons = ImmutableList.of(peon1, peon2, peon3, peon4);
 
-    balancerStrategyExecutor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
+    balancerStrategyExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "BalanceSegmentsTest-%d"));
     balancerStrategy = new CostBalancerStrategyFactory().createBalancerStrategy(balancerStrategyExecutor);
 
     broadcastDatasources = Collections.singleton("datasourceBroadcast");
@@ -236,11 +235,10 @@ public class BalanceSegmentsTest
     EasyMock.expect(
         strategy.pickSegmentsToMove(
             ImmutableList.of(
-                new ServerHolder(druidServer2, peon2, false)
+                new ServerHolder(druidServer2, peon2, true)
             ),
             broadcastDatasources,
-            1,
-            100
+            2
         )
     ).andReturn(
         ImmutableList.of(
@@ -249,7 +247,7 @@ public class BalanceSegmentsTest
         ).iterator()
     );
 
-    EasyMock.expect(strategy.pickSegmentsToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt()))
+    EasyMock.expect(strategy.pickSegmentsToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt()))
             .andReturn(
                 ImmutableList.of(
                     new BalancerSegmentHolder(druidServer1, segment1),
@@ -276,10 +274,11 @@ public class BalanceSegmentsTest
         .build();
 
     params = new BalanceSegmentsTester(coordinator).run(params);
+    EasyMock.verify(strategy);
     Assert.assertEquals(3L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
-    Assert.assertThat(
-        peon3.getSegmentsToLoad(),
-        Matchers.is(Matchers.equalTo(ImmutableSet.of(segment1, segment3, segment4)))
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment3, segment4),
+        peon3.getSegmentsToLoad()
     );
   }
 
@@ -289,7 +288,7 @@ public class BalanceSegmentsTest
     DruidCoordinatorRuntimeParams params = setupParamsForDecommissioningMaxPercentOfMaxSegmentsToMove(0);
     params = new BalanceSegmentsTester(coordinator).run(params);
     Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
-    Assert.assertThat(peon3.getSegmentsToLoad(), Matchers.is(Matchers.equalTo(ImmutableSet.of(segment1))));
+    Assert.assertEquals(ImmutableSet.of(segment1), peon3.getSegmentsToLoad());
   }
 
   @Test
@@ -298,7 +297,7 @@ public class BalanceSegmentsTest
     DruidCoordinatorRuntimeParams params = setupParamsForDecommissioningMaxPercentOfMaxSegmentsToMove(10);
     params = new BalanceSegmentsTester(coordinator).run(params);
     Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
-    Assert.assertThat(peon3.getSegmentsToLoad(), Matchers.is(Matchers.equalTo(ImmutableSet.of(segment2))));
+    Assert.assertEquals(ImmutableSet.of(segment1), peon3.getSegmentsToLoad());
   }
 
   /**
@@ -316,9 +315,8 @@ public class BalanceSegmentsTest
     mockCoordinator(coordinator);
 
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
-    EasyMock.expect(strategy.pickSegmentsToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt()))
-            .andReturn(ImmutableList.of(new BalancerSegmentHolder(druidServer1, segment1)).iterator());
-    EasyMock.expect(strategy.pickSegmentsToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt()))
+    EasyMock.expect(
+        strategy.pickSegmentsToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt()))
             .andReturn(
                 ImmutableList.of(
                     new BalancerSegmentHolder(druidServer1, segment2),
@@ -346,10 +344,11 @@ public class BalanceSegmentsTest
         .build();
 
     params = new BalanceSegmentsTester(coordinator).run(params);
+    EasyMock.verify(strategy);
     Assert.assertEquals(3L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
-    Assert.assertThat(
-        peon3.getSegmentsToLoad(),
-        Matchers.is(Matchers.equalTo(ImmutableSet.of(segment1, segment2, segment3)))
+    Assert.assertEquals(
+        ImmutableSet.of(segment2, segment3, segment4),
+        peon3.getSegmentsToLoad()
     );
   }
 
@@ -368,7 +367,7 @@ public class BalanceSegmentsTest
     mockCoordinator(coordinator);
 
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
-    EasyMock.expect(strategy.pickSegmentsToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt()))
+    EasyMock.expect(strategy.pickSegmentsToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt()))
             .andReturn(ImmutableList.of(new BalancerSegmentHolder(druidServer1, segment1)).iterator())
             .anyTimes();
     EasyMock.expect(strategy.findNewSegmentHomeBalancer(EasyMock.anyObject(), EasyMock.anyObject())).andAnswer(() -> {
@@ -387,6 +386,7 @@ public class BalanceSegmentsTest
         .build();
 
     params = new BalanceSegmentsTester(coordinator).run(params);
+    EasyMock.verify(strategy);
     Assert.assertEquals(0, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
   }
 
@@ -403,7 +403,7 @@ public class BalanceSegmentsTest
 
     ServerHolder holder2 = new ServerHolder(druidServer2, peon2, false);
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
-    EasyMock.expect(strategy.pickSegmentsToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt()))
+    EasyMock.expect(strategy.pickSegmentsToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt()))
             .andReturn(ImmutableList.of(new BalancerSegmentHolder(druidServer1, segment1)).iterator())
             .once();
     EasyMock.expect(strategy.findNewSegmentHomeBalancer(EasyMock.anyObject(), EasyMock.anyObject()))
@@ -422,6 +422,7 @@ public class BalanceSegmentsTest
         .build();
 
     params = new BalanceSegmentsTester(coordinator).run(params);
+    EasyMock.verify(strategy);
     Assert.assertEquals(1, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
     Assert.assertEquals(0, peon1.getNumberOfSegmentsInQueue());
     Assert.assertEquals(1, peon2.getNumberOfSegmentsInQueue());
@@ -564,18 +565,7 @@ public class BalanceSegmentsTest
 
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
 
-    // The first call for decommissioning servers
-    EasyMock.expect(
-        strategy.pickSegmentsToMove(
-            ImmutableList.of(),
-            broadcastDatasources,
-            1,
-            40
-        )
-    )
-            .andReturn(Collections.emptyIterator());
-
-    // The second call for the single non decommissioning server move
+    // Move from non-decomissioning servers
     EasyMock.expect(
         strategy.pickSegmentsToMove(
             ImmutableList.of(
@@ -584,8 +574,7 @@ public class BalanceSegmentsTest
                 new ServerHolder(druidServer1, peon1, false)
             ),
             broadcastDatasources,
-            1,
-            40
+            40.0
         )
     )
             .andReturn(ImmutableList.of(new BalancerSegmentHolder(druidServer2, segment3)).iterator());
@@ -603,6 +592,7 @@ public class BalanceSegmentsTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withMaxSegmentsToMove(1)
+                                    .withUseBatchedSegmentSampler(false)
                                     .withPercentOfSegmentsToConsiderPerMove(40)
                                     .build()
         )
@@ -611,11 +601,9 @@ public class BalanceSegmentsTest
         .build();
 
     params = new BalanceSegmentsTester(coordinator).run(params);
+    EasyMock.verify(strategy);
     Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
-    Assert.assertThat(
-        peon3.getSegmentsToLoad(),
-        Matchers.is(Matchers.equalTo(ImmutableSet.of(segment3)))
-    );
+    Assert.assertEquals(ImmutableSet.of(segment3), peon3.getSegmentsToLoad());
   }
 
   @Test
@@ -755,7 +743,16 @@ public class BalanceSegmentsTest
     public Iterator<BalancerSegmentHolder> pickSegmentsToMove(
         List<ServerHolder> serverHolders,
         Set<String> broadcastDatasources,
-        int numberOfSegments,
+        int numberOfSegments
+    )
+    {
+      return pickOrder.iterator();
+    }
+
+    @Override
+    public Iterator<BalancerSegmentHolder> pickSegmentsToMove(
+        List<ServerHolder> serverHolders,
+        Set<String> broadcastDatasources,
         double percentOfSegmentsToConsider
     )
     {
@@ -787,13 +784,12 @@ public class BalanceSegmentsTest
                 new ServerHolder(druidServer2, peon2, true)
             ),
             broadcastDatasources,
-            1,
-            100
+            100.0
         )
     ).andReturn(
         ImmutableList.of(new BalancerSegmentHolder(druidServer2, segment2)).iterator()
     );
-    EasyMock.expect(strategy.pickSegmentsToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyDouble()))
+    EasyMock.expect(strategy.pickSegmentsToMove(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyInt()))
             .andReturn(ImmutableList.of(new BalancerSegmentHolder(druidServer1, segment1)).iterator());
     EasyMock.expect(strategy.findNewSegmentHomeBalancer(EasyMock.anyObject(), EasyMock.anyObject()))
             .andReturn(new ServerHolder(druidServer3, peon3))

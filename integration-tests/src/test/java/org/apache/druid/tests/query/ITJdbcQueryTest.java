@@ -21,13 +21,13 @@ package org.apache.druid.tests.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
+import org.apache.calcite.avatica.AvaticaSqlException;
 import org.apache.druid.https.SSLClientConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
@@ -76,7 +76,7 @@ public class ITJdbcQueryTest
   SSLClientConfig sslConfig;
 
   @Inject
-  private CoordinatorResourceTestClient coordinatorClient;
+  private DataLoaderHelper dataLoaderHelper;
 
   @BeforeMethod
   public void before()
@@ -107,9 +107,9 @@ public class ITJdbcQueryTest
         )
     };
     // ensure that wikipedia segments are loaded completely
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinatorClient.areSegmentsLoaded(WIKIPEDIA_DATA_SOURCE), "wikipedia segment load"
-    );
+    dataLoaderHelper.waitUntilDatasourceIsReady(WIKIPEDIA_DATA_SOURCE);
+    dataLoaderHelper.waitUntilDatasourceIsReady("wikipedia");
+    dataLoaderHelper.waitUntilDatasourceIsReady("twitterstream");
   }
 
   @Test
@@ -163,7 +163,7 @@ public class ITJdbcQueryTest
         );
       }
       catch (SQLException throwables) {
-        Assert.assertFalse(true, throwables.getMessage());
+        Assert.fail(throwables.getMessage());
       }
     }
   }
@@ -185,7 +185,7 @@ public class ITJdbcQueryTest
         }
       }
       catch (SQLException throwables) {
-        Assert.assertFalse(true, throwables.getMessage());
+        Assert.fail(throwables.getMessage());
       }
     }
   }
@@ -208,7 +208,18 @@ public class ITJdbcQueryTest
         }
       }
       catch (SQLException throwables) {
-        Assert.assertFalse(true, throwables.getMessage());
+        Assert.fail(throwables.getMessage());
+      }
+    }
+  }
+
+  @Test(expectedExceptions = AvaticaSqlException.class, expectedExceptionsMessageRegExp = ".* Parameter at position \\[0] is not bound")
+  public void testJdbcPrepareStatementQueryMissingParameters() throws SQLException
+  {
+    for (String url : connections) {
+      try (Connection connection = DriverManager.getConnection(url, connectionProperties);
+           PreparedStatement statement = connection.prepareStatement(QUERY_PARAMETERIZED);
+           ResultSet resultSet = statement.executeQuery()) {
       }
     }
   }

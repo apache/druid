@@ -54,55 +54,29 @@ public class KillAuditLogTest
   @Test
   public void testRunSkipIfLastRunLessThanPeriod()
   {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        null,
-        null,
-        null,
-        new Duration("PT5S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        new Duration(Long.MAX_VALUE),
-        new Duration("PT1S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        10,
-        null
-    );
+    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withMetadataStoreManagementPeriod(new Duration("PT5s"))
+        .withCoordianatorAuditKillPeriod(new Duration(Long.MAX_VALUE))
+        .withCoordinatorAuditKillDurationToRetain(new Duration("PT1S"))
+        .withCoordinatorKillMaxSegments(10)
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
     killAuditLog.run(mockDruidCoordinatorRuntimeParams);
-    Mockito.verifyZeroInteractions(mockAuditManager);
+    Mockito.verifyNoInteractions(mockAuditManager);
   }
 
   @Test
   public void testRunNotSkipIfLastRunMoreThanPeriod()
   {
     Mockito.when(mockDruidCoordinatorRuntimeParams.getEmitter()).thenReturn(mockServiceEmitter);
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        null,
-        null,
-        null,
-        new Duration("PT5S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        new Duration("PT6S"),
-        new Duration("PT1S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        10,
-        null
-    );
+    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withMetadataStoreManagementPeriod(new Duration("PT5s"))
+        .withCoordianatorAuditKillPeriod(new Duration("PT6S"))
+        .withCoordinatorAuditKillDurationToRetain(new Duration("PT1S"))
+        .withCoordinatorKillMaxSegments(10)
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
     killAuditLog.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verify(mockAuditManager).removeAuditLogsOlderThan(ArgumentMatchers.anyLong());
@@ -112,26 +86,13 @@ public class KillAuditLogTest
   @Test
   public void testConstructorFailIfInvalidPeriod()
   {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        null,
-        null,
-        null,
-        new Duration("PT5S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        new Duration("PT3S"),
-        new Duration("PT1S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        10,
-        null
-    );
+    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withMetadataStoreManagementPeriod(new Duration("PT5s"))
+        .withCoordianatorAuditKillPeriod(new Duration("PT3S"))
+        .withCoordinatorAuditKillDurationToRetain(new Duration("PT1S"))
+        .withCoordinatorKillMaxSegments(10)
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("coordinator audit kill period must be >= druid.coordinator.period.metadataStoreManagementPeriod");
     killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);
@@ -140,26 +101,13 @@ public class KillAuditLogTest
   @Test
   public void testConstructorFailIfInvalidRetainDuration()
   {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig(
-        null,
-        null,
-        null,
-        new Duration("PT5S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        new Duration("PT6S"),
-        new Duration("PT-1S"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        10,
-        null
-    );
+    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
+        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
+        .withCoordianatorAuditKillPeriod(new Duration("PT6S"))
+        .withCoordinatorAuditKillDurationToRetain(new Duration("PT-1S"))
+        .withCoordinatorKillMaxSegments(10)
+        .withCoordinatorKillIgnoreDurationToRetain(false)
+        .build();
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage("coordinator audit kill retainDuration must be >= 0");
     killAuditLog = new KillAuditLog(mockAuditManager, druidCoordinatorConfig);

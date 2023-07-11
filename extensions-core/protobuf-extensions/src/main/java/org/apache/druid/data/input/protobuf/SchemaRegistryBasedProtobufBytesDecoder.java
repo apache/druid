@@ -144,11 +144,11 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     }
     catch (RestClientException e) {
       LOGGER.error(e.getMessage());
-      throw new ParseException(e, "Fail to get protobuf schema because of can not connect to registry or failed http request!");
+      throw new ParseException(null, e, "Fail to get protobuf schema because of can not connect to registry or failed http request!");
     }
     catch (IOException e) {
       LOGGER.error(e.getMessage());
-      throw new ParseException(e, "Fail to get protobuf schema because of invalid schema!");
+      throw new ParseException(null, e, "Fail to get protobuf schema because of invalid schema!");
     }
     try {
       byte[] rawMessage = new byte[length];
@@ -158,7 +158,7 @@ public class SchemaRegistryBasedProtobufBytesDecoder implements ProtobufBytesDec
     }
     catch (Exception e) {
       LOGGER.error(e.getMessage());
-      throw new ParseException(e, "Fail to decode protobuf message!");
+      throw new ParseException(null, e, "Fail to decode protobuf message!");
     }
   }
 

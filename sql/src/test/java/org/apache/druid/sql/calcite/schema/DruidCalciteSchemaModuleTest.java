@@ -28,8 +28,7 @@ import com.google.inject.Key;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import org.apache.calcite.schema.SchemaPlus;
-import org.apache.druid.client.InventoryView;
+import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
@@ -37,6 +36,8 @@ import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -45,6 +46,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.view.ViewManager;
@@ -77,7 +79,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Mock
   AuthorizerMapper authorizerMapper;
   @Mock
-  private InventoryView serverInventoryView;
+  private FilteredServerInventoryView serverInventoryView;
   @Mock
   private DruidLeaderClient coordinatorDruidLeaderClient;
   @Mock
@@ -97,8 +99,6 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Before
   public void setUp()
   {
-    EasyMock.expect(plannerConfig.isMetadataSegmentCacheEnable()).andStubReturn(false);
-    EasyMock.expect(plannerConfig.getMetadataSegmentPollPeriod()).andStubReturn(6000L);
     EasyMock.replay(plannerConfig);
     target = new DruidCalciteSchemaModule();
     injector = Guice.createInjector(
@@ -110,7 +110,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(ViewManager.class).toInstance(viewManager);
           binder.bind(Escalator.class).toInstance(escalator);
           binder.bind(AuthorizerMapper.class).toInstance(authorizerMapper);
-          binder.bind(InventoryView.class).toInstance(serverInventoryView);
+          binder.bind(FilteredServerInventoryView.class).toInstance(serverInventoryView);
           binder.bind(SegmentManager.class).toInstance(segmentManager);
           binder.bind(DruidLeaderClient.class)
                 .annotatedWith(Coordinator.class)
@@ -119,9 +119,12 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
                 .annotatedWith(IndexingService.class)
                 .toInstance(overlordDruidLeaderClient);
           binder.bind(DruidNodeDiscoveryProvider.class).toInstance(druidNodeDiscoveryProvider);
-          binder.bind(ObjectMapper.class).toInstance(objectMapper);
+          binder.bind(DruidSchemaManager.class).toInstance(new NoopDruidSchemaManager());
+          binder.bind(ObjectMapper.class).annotatedWith(Json.class).toInstance(objectMapper);
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupReferencesManager);
+          binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
+          binder.bind(ServiceEmitter.class).toInstance(new ServiceEmitter("", "", null));
         },
         new LifecycleModule(),
         target);
@@ -203,12 +206,12 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Test
   public void testRootSchemaAnnotatedIsInjectedAsSingleton()
   {
-    SchemaPlus rootSchema = injector.getInstance(
-        Key.get(SchemaPlus.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
+    DruidSchemaCatalog rootSchema = injector.getInstance(
+        Key.get(DruidSchemaCatalog.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
     );
     Assert.assertNotNull(rootSchema);
-    SchemaPlus other = injector.getInstance(
-        Key.get(SchemaPlus.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
+    DruidSchemaCatalog other = injector.getInstance(
+        Key.get(DruidSchemaCatalog.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
     );
     Assert.assertSame(other, rootSchema);
   }
@@ -216,10 +219,10 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Test
   public void testRootSchemaIsInjectedAsSingleton()
   {
-    SchemaPlus rootSchema = injector.getInstance(Key.get(SchemaPlus.class));
+    DruidSchemaCatalog rootSchema = injector.getInstance(Key.get(DruidSchemaCatalog.class));
     Assert.assertNotNull(rootSchema);
-    SchemaPlus other = injector.getInstance(
-        Key.get(SchemaPlus.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
+    DruidSchemaCatalog other = injector.getInstance(
+        Key.get(DruidSchemaCatalog.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
     );
     Assert.assertSame(other, rootSchema);
   }
@@ -227,7 +230,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Test
   public void testRootSchemaIsInjectedAndHasInformationSchema()
   {
-    SchemaPlus rootSchema = injector.getInstance(Key.get(SchemaPlus.class));
+    DruidSchemaCatalog rootSchema = injector.getInstance(Key.get(DruidSchemaCatalog.class));
     InformationSchema expectedSchema = injector.getInstance(InformationSchema.class);
     Assert.assertNotNull(rootSchema);
     Assert.assertSame(expectedSchema, rootSchema.getSubSchema("INFORMATION_SCHEMA").unwrap(InformationSchema.class));

@@ -19,27 +19,69 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.UpdateLocationAction;
+import org.apache.druid.indexing.common.actions.UpdateStatusAction;
+import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.segment.indexing.BatchIOConfig;
+import org.apache.druid.server.DruidNode;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public abstract class AbstractTask implements Task
 {
+
+  private static final Logger log = new Logger(AbstractTask.class);
+
+  // This is mainly to avoid using combinations of IOConfig flags to figure out the ingestion mode and
+  // also to use the mode as dimension in metrics
+  public enum IngestionMode
+  {
+    REPLACE, // replace with tombstones
+    APPEND, // append to existing segments
+    REPLACE_LEGACY, // original replace, it does not replace existing data for empty time chunks in input intervals
+    HADOOP, // non-native batch, hadoop ingestion
+    NONE; // not an ingestion task (i.e. a kill task)
+
+    @JsonCreator
+    public static IngestionMode fromString(String name)
+    {
+      if (name == null) {
+        return null;
+      }
+      return valueOf(StringUtils.toUpperCase(name));
+    }
+  }
+  private final IngestionMode ingestionMode;
+
   @JsonIgnore
   private final String id;
 
@@ -54,9 +96,38 @@ public abstract class AbstractTask implements Task
 
   private final Map<String, Object> context;
 
+  private File reportsFile;
+  private File statusFile;
+
+  private final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+
+  protected AbstractTask(String id, String dataSource, Map<String, Object> context, IngestionMode ingestionMode)
+  {
+    this(id, null, null, dataSource, context, ingestionMode);
+  }
+
   protected AbstractTask(String id, String dataSource, Map<String, Object> context)
   {
-    this(id, null, null, dataSource, context);
+    this(id, null, null, dataSource, context, IngestionMode.NONE);
+  }
+
+  protected AbstractTask(
+      String id,
+      @Nullable String groupId,
+      @Nullable TaskResource taskResource,
+      String dataSource,
+      @Nullable Map<String, Object> context,
+      @Nonnull IngestionMode ingestionMode
+  )
+  {
+    this.id = IdUtils.validateId("task ID", id);
+    this.groupId = groupId == null ? id : groupId;
+    this.taskResource = taskResource == null ? new TaskResource(id, 1) : taskResource;
+    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
+    // Copy the given context into a new mutable map because the Druid indexing service can add some internal contexts.
+    this.context = context == null ? new HashMap<>() : new HashMap<>(context);
+    this.ingestionMode = ingestionMode;
+    IndexTaskUtils.setTaskDimensions(metricBuilder, this);
   }
 
   protected AbstractTask(
@@ -67,12 +138,82 @@ public abstract class AbstractTask implements Task
       @Nullable Map<String, Object> context
   )
   {
-    this.id = Preconditions.checkNotNull(id, "id");
-    this.groupId = groupId == null ? id : groupId;
-    this.taskResource = taskResource == null ? new TaskResource(id, 1) : taskResource;
-    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    // Copy the given context into a new mutable map because the Druid indexing service can add some internal contexts.
-    this.context = context == null ? new HashMap<>() : new HashMap<>(context);
+    this(id, groupId, taskResource, dataSource, context, IngestionMode.NONE);
+  }
+
+  @Nullable
+  public String setup(TaskToolbox toolbox) throws Exception
+  {
+    if (toolbox.getConfig().isEncapsulatedTask()) {
+      File taskDir = toolbox.getConfig().getTaskDir(getId());
+      FileUtils.mkdirp(taskDir);
+      File attemptDir = Paths.get(taskDir.getAbsolutePath(), "attempt", toolbox.getAttemptId()).toFile();
+      FileUtils.mkdirp(attemptDir);
+      reportsFile = new File(attemptDir, "report.json");
+      statusFile = new File(attemptDir, "status.json");
+      InetAddress hostName = InetAddress.getLocalHost();
+      DruidNode node = toolbox.getTaskExecutorNode();
+      toolbox.getTaskActionClient().submit(new UpdateLocationAction(TaskLocation.create(
+          hostName.getHostAddress(), node.getPlaintextPort(), node.getTlsPort(), node.isEnablePlaintextPort()
+      )));
+    }
+    log.debug("Task setup complete");
+    return null;
+  }
+
+  @Override
+  public final TaskStatus run(TaskToolbox taskToolbox) throws Exception
+  {
+    TaskStatus taskStatus = TaskStatus.running(getId());
+    try {
+      String errorMessage = setup(taskToolbox);
+      if (org.apache.commons.lang3.StringUtils.isNotBlank(errorMessage)) {
+        return TaskStatus.failure(getId(), errorMessage);
+      }
+      taskStatus = runTask(taskToolbox);
+      return taskStatus;
+    }
+    catch (Exception e) {
+      taskStatus = TaskStatus.failure(getId(), e.toString());
+      throw e;
+    }
+    finally {
+      cleanUp(taskToolbox, taskStatus);
+    }
+  }
+
+  public abstract TaskStatus runTask(TaskToolbox taskToolbox) throws Exception;
+
+  public void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus) throws Exception
+  {
+    if (!toolbox.getConfig().isEncapsulatedTask()) {
+      log.debug("Not pushing task logs and reports from task.");
+      return;
+    }
+
+    // report back to the overlord
+    UpdateStatusAction status = new UpdateStatusAction("successful");
+    if (taskStatus.isFailure()) {
+      status = new UpdateStatusAction("failure");
+    }
+    toolbox.getTaskActionClient().submit(status);
+    toolbox.getTaskActionClient().submit(new UpdateLocationAction(TaskLocation.unknown()));
+
+    if (reportsFile != null && reportsFile.exists()) {
+      toolbox.getTaskLogPusher().pushTaskReports(id, reportsFile);
+      log.debug("Pushed task reports");
+    } else {
+      log.debug("No task reports file exists to push");
+    }
+
+    if (statusFile != null) {
+      toolbox.getJsonMapper().writeValue(statusFile, taskStatus);
+      toolbox.getTaskLogPusher().pushTaskStatus(id, statusFile);
+      Files.deleteIfExists(statusFile.toPath());
+      log.debug("Pushed task status");
+    } else {
+      log.debug("No task status file exists to push");
+    }
   }
 
   public static String getOrMakeId(@Nullable String id, final String typeName, String dataSource)
@@ -151,12 +292,12 @@ public abstract class AbstractTask implements Task
   public String toString()
   {
     return "AbstractTask{" +
-           "id='" + id + '\'' +
-           ", groupId='" + groupId + '\'' +
-           ", taskResource=" + taskResource +
-           ", dataSource='" + dataSource + '\'' +
-           ", context=" + context +
-           '}';
+        "id='" + id + '\'' +
+        ", groupId='" + groupId + '\'' +
+        ", taskResource=" + taskResource +
+        ", dataSource='" + dataSource + '\'' +
+        ", context=" + context +
+        '}';
   }
 
   public TaskStatus success()
@@ -208,4 +349,71 @@ public abstract class AbstractTask implements Task
   {
     return context;
   }
+
+  /**
+   * Whether maximum memory usage should be considered in estimation for indexing tasks.
+   */
+  protected boolean isUseMaxMemoryEstimates()
+  {
+    return getContextValue(
+        Tasks.USE_MAX_MEMORY_ESTIMATES,
+        Tasks.DEFAULT_USE_MAX_MEMORY_ESTIMATES
+    );
+  }
+
+  protected ServiceMetricEvent.Builder getMetricBuilder()
+  {
+    return metricBuilder;
+  }
+
+  public IngestionMode getIngestionMode()
+  {
+    return ingestionMode;
+  }
+
+  protected static IngestionMode computeCompactionIngestionMode(@Nullable CompactionIOConfig ioConfig)
+  {
+    // CompactionIOConfig does not have an isAppendToExisting method, so use default (for batch since compaction
+    // is basically batch ingestion)
+    final boolean isAppendToExisting = BatchIOConfig.DEFAULT_APPEND_EXISTING;
+    final boolean isDropExisting = ioConfig == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : ioConfig.isDropExisting();
+    return computeIngestionMode(isAppendToExisting, isDropExisting);
+  }
+
+  protected static IngestionMode computeBatchIngestionMode(@Nullable BatchIOConfig ioConfig)
+  {
+    final boolean isAppendToExisting = ioConfig == null
+        ? BatchIOConfig.DEFAULT_APPEND_EXISTING
+        : ioConfig.isAppendToExisting();
+    final boolean isDropExisting = ioConfig == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : ioConfig.isDropExisting();
+    return computeIngestionMode(isAppendToExisting, isDropExisting);
+  }
+
+  private static IngestionMode computeIngestionMode(boolean isAppendToExisting, boolean isDropExisting)
+  {
+    if (!isAppendToExisting && isDropExisting) {
+      return IngestionMode.REPLACE;
+    } else if (isAppendToExisting && !isDropExisting) {
+      return IngestionMode.APPEND;
+    } else if (!isAppendToExisting) {
+      return IngestionMode.REPLACE_LEGACY;
+    }
+    throw new IAE("Cannot simultaneously replace and append to existing segments. "
+        + "Either dropExisting or appendToExisting should be set to false");
+  }
+
+  public void emitMetric(
+      ServiceEmitter emitter,
+      String metric,
+      Number value
+  )
+  {
+
+    if (emitter == null || metric == null || value == null) {
+      return;
+    }
+    emitter.emit(getMetricBuilder().build(metric, value));
+  }
+
+
 }

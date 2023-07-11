@@ -21,9 +21,8 @@ package org.apache.druid.tests.query;
 
 import com.google.inject.Inject;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.tests.TestNGGroup;
 import org.testng.annotations.BeforeMethod;
@@ -39,7 +38,7 @@ public class ITSystemTableQueryTest
   private static final String SYSTEM_QUERIES_RESOURCE = "/queries/sys_queries.json";
 
   @Inject
-  CoordinatorResourceTestClient coordinatorClient;
+  DataLoaderHelper dataLoaderHelper;
   @Inject
   private SqlTestQueryHelper queryHelper;
   @Inject
@@ -49,14 +48,10 @@ public class ITSystemTableQueryTest
   public void before()
   {
     // ensure that wikipedia segments are loaded completely
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinatorClient.areSegmentsLoaded(WIKIPEDIA_DATA_SOURCE), "wikipedia segment load"
-    );
+    dataLoaderHelper.waitUntilDatasourceIsReady(WIKIPEDIA_DATA_SOURCE);
 
     // ensure that the twitter segments are loaded completely
-    ITRetryUtil.retryUntilTrue(
-        () -> coordinatorClient.areSegmentsLoaded(TWITTER_DATA_SOURCE), "twitter segment load"
-    );
+    dataLoaderHelper.waitUntilDatasourceIsReady(TWITTER_DATA_SOURCE);
   }
 
   @Test

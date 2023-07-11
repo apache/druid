@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.testing.junit.LoggerCaptureRule;
@@ -42,7 +43,7 @@ public class ParseExceptionHandlerTest
   @Test
   public void testMetricWhenAllConfigurationsAreTurnedOff()
   {
-    final ParseException parseException = new ParseException("test");
+    final ParseException parseException = new ParseException(null, "test");
     final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
         rowIngestionMeters,
@@ -60,7 +61,7 @@ public class ParseExceptionHandlerTest
   @Test
   public void testLogParseExceptions()
   {
-    final ParseException parseException = new ParseException("test");
+    final ParseException parseException = new ParseException(null, "test");
     final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
         rowIngestionMeters,
@@ -85,13 +86,13 @@ public class ParseExceptionHandlerTest
         Integer.MAX_VALUE,
         0
     );
-    Assert.assertNull(parseExceptionHandler.getSavedParseExceptions());
+    Assert.assertNull(parseExceptionHandler.getSavedParseExceptionReports());
   }
 
   @Test
   public void testMaxAllowedParseExceptionsThrowExceptionWhenItHitsMax()
   {
-    final ParseException parseException = new ParseException("test");
+    final ParseException parseException = new ParseException(null, "test");
     final int maxAllowedParseExceptions = 3;
     final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
@@ -126,30 +127,39 @@ public class ParseExceptionHandlerTest
         Integer.MAX_VALUE,
         maxSavedParseExceptions
     );
-    Assert.assertNotNull(parseExceptionHandler.getSavedParseExceptions());
+    Assert.assertNotNull(parseExceptionHandler.getSavedParseExceptionReports());
     int exceptionCounter = 0;
     for (; exceptionCounter < maxSavedParseExceptions; exceptionCounter++) {
-      parseExceptionHandler.handle(new ParseException(StringUtils.format("test %d", exceptionCounter)));
+      parseExceptionHandler.handle(new ParseException(null, StringUtils.format("test %d", exceptionCounter)));
     }
     Assert.assertEquals(3, rowIngestionMeters.getUnparseable());
-    Assert.assertEquals(maxSavedParseExceptions, parseExceptionHandler.getSavedParseExceptions().size());
+    Assert.assertEquals(maxSavedParseExceptions, parseExceptionHandler.getSavedParseExceptionReports().size());
     for (int i = 0; i < maxSavedParseExceptions; i++) {
       Assert.assertEquals(
           StringUtils.format("test %d", i),
-          parseExceptionHandler.getSavedParseExceptions().get(i).getMessage()
+          parseExceptionHandler.getSavedParseExceptionReports().get(i).getDetails().get(0)
       );
     }
     for (; exceptionCounter < 5; exceptionCounter++) {
-      parseExceptionHandler.handle(new ParseException(StringUtils.format("test %d", exceptionCounter)));
+      parseExceptionHandler.handle(new ParseException(null, StringUtils.format("test %d", exceptionCounter)));
     }
     Assert.assertEquals(5, rowIngestionMeters.getUnparseable());
 
-    Assert.assertEquals(maxSavedParseExceptions, parseExceptionHandler.getSavedParseExceptions().size());
+    Assert.assertEquals(maxSavedParseExceptions, parseExceptionHandler.getSavedParseExceptionReports().size());
     for (int i = 0; i < maxSavedParseExceptions; i++) {
       Assert.assertEquals(
           StringUtils.format("test %d", i + 2),
-          parseExceptionHandler.getSavedParseExceptions().get(i).getMessage()
+          parseExceptionHandler.getSavedParseExceptionReports().get(i).getDetails().get(0)
       );
     }
+  }
+
+  @Test
+  public void testParseExceptionReportEquals()
+  {
+    EqualsVerifier.forClass(ParseExceptionReport.class)
+                  .withNonnullFields("errorType", "details", "timeOfExceptionMillis")
+                  .usingGetClass()
+                  .verify();
   }
 }

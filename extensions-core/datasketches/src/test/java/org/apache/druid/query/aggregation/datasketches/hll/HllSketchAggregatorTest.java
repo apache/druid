@@ -25,14 +25,17 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -54,17 +57,25 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 {
   private static final boolean ROUND = true;
 
-  private final AggregationTestHelper helper;
+  private final AggregationTestHelper groupByHelper;
+  private final AggregationTestHelper timeseriesHelper;
   private final QueryContexts.Vectorize vectorize;
 
   @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  public final TemporaryFolder groupByFolder = new TemporaryFolder();
+
+  @Rule
+  public final TemporaryFolder timeseriesFolder = new TemporaryFolder();
 
   public HllSketchAggregatorTest(GroupByQueryConfig config, String vectorize)
   {
     HllSketchModule.registerSerde();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        new HllSketchModule().getJacksonModules(), config, tempFolder);
+    groupByHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+        new HllSketchModule().getJacksonModules(), config, groupByFolder
+    );
+    timeseriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
+        new HllSketchModule().getJacksonModules(), timeseriesFolder
+    );
     this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
   }
 
@@ -83,7 +94,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void ingestSketches() throws Exception
   {
-    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
         buildParserJson(
             Arrays.asList("dim", "multiDim"),
@@ -92,7 +103,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         buildAggregatorJson("HLLSketchMerge", "sketch", !ROUND),
         0, // minTimestamp
         Granularities.NONE,
-        200, // maxRowCount
+        10, // maxRowCount
         buildGroupByQueryJson("HLLSketchMerge", "sketch", !ROUND)
     );
     List<ResultRow> results = seq.toList();
@@ -102,9 +113,36 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void ingestSketchesTimeseries() throws Exception
+  {
+    final File inputFile = new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile());
+    final String parserJson = buildParserJson(
+        Arrays.asList("dim", "multiDim"),
+        Arrays.asList("timestamp", "dim", "multiDim", "sketch")
+    );
+    final String aggregators = buildAggregatorJson("HLLSketchMerge", "sketch", !ROUND);
+    final int minTimestamp = 0;
+    final Granularity gran = Granularities.NONE;
+    final int maxRowCount = 10;
+    final String queryJson = buildTimeseriesQueryJson("HLLSketchMerge", "sketch", !ROUND);
+
+    File segmentDir1 = timeseriesFolder.newFolder();
+    timeseriesHelper.createIndex(inputFile, parserJson, aggregators, segmentDir1, minTimestamp, gran, maxRowCount, true);
+
+    File segmentDir2 = timeseriesFolder.newFolder();
+    timeseriesHelper.createIndex(inputFile, parserJson, aggregators, segmentDir2, minTimestamp, gran, maxRowCount, true);
+
+    Sequence<Result> seq = timeseriesHelper.runQueryOnSegments(Arrays.asList(segmentDir1, segmentDir2), queryJson);
+    List<Result> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    Result row = results.get(0);
+    Assert.assertEquals(200, (double) ((TimeseriesResultValue) row.getValue()).getMetric("sketch"), 0.1);
+  }
+
+  @Test
   public void buildSketchesAtIngestionTime() throws Exception
   {
-    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
         buildParserJson(
             Collections.singletonList("dim"),
@@ -113,7 +151,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         buildAggregatorJson("HLLSketchBuild", "id", !ROUND),
         0, // minTimestamp
         Granularities.NONE,
-        200, // maxRowCount
+        10, // maxRowCount
         buildGroupByQueryJson("HLLSketchMerge", "sketch", !ROUND)
     );
     List<ResultRow> results = seq.toList();
@@ -123,9 +161,30 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void buildSketchesAtIngestionTimeTimeseries() throws Exception
+  {
+    Sequence<Result> seq = timeseriesHelper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
+        buildParserJson(
+            Collections.singletonList("dim"),
+            Arrays.asList("timestamp", "dim", "multiDim", "id")
+        ),
+        buildAggregatorJson("HLLSketchBuild", "id", !ROUND),
+        0, // minTimestamp
+        Granularities.NONE,
+        10, // maxRowCount
+        buildTimeseriesQueryJson("HLLSketchMerge", "sketch", !ROUND)
+    );
+    List<Result> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    Result row = results.get(0);
+    Assert.assertEquals(200, (double) ((TimeseriesResultValue) row.getValue()).getMetric("sketch"), 0.1);
+  }
+
+  @Test
   public void buildSketchesAtQueryTime() throws Exception
   {
-    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
         buildParserJson(
             Arrays.asList("dim", "multiDim", "id"),
@@ -134,7 +193,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         "[]",
         0, // minTimestamp
         Granularities.NONE,
-        200, // maxRowCount
+        10, // maxRowCount
         buildGroupByQueryJson("HLLSketchBuild", "id", !ROUND)
     );
     List<ResultRow> results = seq.toList();
@@ -144,9 +203,9 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void buildSketchesAtQueryTimeMultiValue() throws Exception
+  public void buildSketchesAtQueryTimeTimeseries() throws Exception
   {
-    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<Result> seq = timeseriesHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
         buildParserJson(
             Arrays.asList("dim", "multiDim", "id"),
@@ -155,7 +214,56 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         "[]",
         0, // minTimestamp
         Granularities.NONE,
-        200, // maxRowCount
+        10, // maxRowCount
+        buildTimeseriesQueryJson("HLLSketchBuild", "id", !ROUND)
+    );
+    List<Result> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    Result row = results.get(0);
+    Assert.assertEquals(200, (double) ((TimeseriesResultValue) row.getValue()).getMetric("sketch"), 0.1);
+  }
+
+  @Test
+  public void unsuccessfulComplexTypesInHLL() throws Exception
+  {
+    String metricSpec = "[{"
+                        + "\"type\": \"hyperUnique\","
+                        + "\"name\": \"index_hll\","
+                        + "\"fieldName\": \"id\""
+                        + "}]";
+    try {
+      Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
+          new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
+          buildParserJson(
+              Arrays.asList("dim", "multiDim", "id"),
+              Arrays.asList("timestamp", "dim", "multiDim", "id")
+          ),
+          metricSpec,
+          0, // minTimestamp
+          Granularities.NONE,
+          10, // maxRowCount
+          buildGroupByQueryJson("HLLSketchBuild", "index_hll", !ROUND)
+      );
+    }
+    catch (RuntimeException e) {
+      Assert.assertTrue(
+          e.getMessage().contains("Invalid input [index_hll] of type [COMPLEX<hyperUnique>] for [HLLSketchBuild]"));
+    }
+  }
+
+  @Test
+  public void buildSketchesAtQueryTimeMultiValue() throws Exception
+  {
+    Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
+        buildParserJson(
+            Arrays.asList("dim", "multiDim", "id"),
+            Arrays.asList("timestamp", "dim", "multiDim", "id")
+        ),
+        "[]",
+        0, // minTimestamp
+        Granularities.NONE,
+        10, // maxRowCount
         buildGroupByQueryJson("HLLSketchBuild", "multiDim", !ROUND)
     );
     List<ResultRow> results = seq.toList();
@@ -167,7 +275,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void roundBuildSketch() throws Exception
   {
-    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
         buildParserJson(
             Arrays.asList("dim", "multiDim", "id"),
@@ -176,7 +284,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         "[]",
         0, // minTimestamp
         Granularities.NONE,
-        200, // maxRowCount
+        10, // maxRowCount
         buildGroupByQueryJson("HLLSketchBuild", "id", ROUND)
     );
     List<ResultRow> results = seq.toList();
@@ -188,7 +296,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void roundMergeSketch() throws Exception
   {
-    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
         buildParserJson(
             Arrays.asList("dim", "multiDim"),
@@ -197,7 +305,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         buildAggregatorJson("HLLSketchMerge", "sketch", ROUND),
         0, // minTimestamp
         Granularities.NONE,
-        200, // maxRowCount
+        10, // maxRowCount
         buildGroupByQueryJson("HLLSketchMerge", "sketch", ROUND)
     );
     List<ResultRow> results = seq.toList();
@@ -209,7 +317,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void testPostAggs() throws Exception
   {
-    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
         buildParserJson(
             Arrays.asList("dim", "multiDim"),
@@ -218,14 +326,14 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         buildAggregatorJson("HLLSketchMerge", "sketch", ROUND),
         0, // minTimestamp
         Granularities.NONE,
-        200, // maxRowCount
-        helper.getObjectMapper().writeValueAsString(
+        10, // maxRowCount
+        groupByHelper.getObjectMapper().writeValueAsString(
             GroupByQuery.builder()
                         .setDataSource("test_datasource")
                         .setGranularity(Granularities.ALL)
                         .setInterval(Intervals.ETERNITY)
                         .setAggregatorSpecs(
-                            new HllSketchMergeAggregatorFactory("sketch", "sketch", null, null, false)
+                            new HllSketchMergeAggregatorFactory("sketch", "sketch", null, null, null, false)
                         )
                         .setPostAggregatorSpecs(
                             ImmutableList.of(
@@ -278,7 +386,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(new double[]{200, 200, 200}, (double[]) row.get(2), 0.1);
     Assert.assertEquals(expectedSummary, row.get(3));
     // union with self = self
-    Assert.assertEquals(expectedSummary, row.get(4).toString());
+    Assert.assertEquals(expectedSummary, ((HllSketchHolder) row.get(4)).getSketch().toString());
   }
 
   private static String buildParserJson(List<String> dimensions, List<String> columns)
@@ -369,4 +477,27 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         .build();
     return toJson(object);
   }
+
+  private String buildTimeseriesQueryJson(
+      String aggregationType,
+      String aggregationFieldName,
+      boolean aggregationRound
+  )
+  {
+    Map<String, Object> aggregation = buildAggregatorObject(
+        aggregationType,
+        aggregationFieldName,
+        aggregationRound
+    );
+    Map<String, Object> object = new ImmutableMap.Builder<String, Object>()
+        .put("queryType", "timeseries")
+        .put("dataSource", "test_dataSource")
+        .put("granularity", "ALL")
+        .put("aggregations", Collections.singletonList(aggregation))
+        .put("intervals", Collections.singletonList("2017-01-01T00:00:00.000Z/2017-01-31T00:00:00.000Z"))
+        .put("context", ImmutableMap.of(QueryContexts.VECTORIZE_KEY, vectorize.toString()))
+        .build();
+    return toJson(object);
+  }
+
 }

@@ -116,6 +116,7 @@ public class FlattenSpecParquetInputTest extends BaseParquetInputTest
     Assert.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
     Assert.assertEquals("listDim1v1", rows.get(0).getDimension("list").get(0));
     Assert.assertEquals("listDim1v2", rows.get(0).getDimension("list").get(1));
+    Assert.assertEquals("2", rows.get(0).getDimension("listLength").get(0));
     Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
   }
 
@@ -222,5 +223,26 @@ public class FlattenSpecParquetInputTest extends BaseParquetInputTest
     Assert.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
     Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listextracted").get(0));
     Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+  }
+
+  @Test
+  public void testFlattenNullableListNullableElement() throws IOException, InterruptedException
+  {
+    HadoopDruidIndexerConfig config = transformHadoopDruidIndexerConfig(
+        "example/flattening/nullable_list_flatten.json",
+        parserType,
+        true
+    );
+    config.intoConfiguration(job);
+    Object data = getFirstRow(job, parserType, ((StaticPathSpec) config.getPathSpec()).getPaths());
+
+    List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
+    Assert.assertEquals("2022-02-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assert.assertEquals(1L, rows.get(0).getRaw("a1_b1_c1"));
+    Assert.assertEquals(2L, rows.get(0).getRaw("a1_b1_c2"));
+    Assert.assertEquals(1L, rows.get(0).getRaw("a2_0_b1"));
+    Assert.assertEquals(2L, rows.get(0).getRaw("a2_0_b2"));
+    Assert.assertEquals(1L, rows.get(0).getRaw("a2_1_b1"));
+    Assert.assertEquals(2L, rows.get(0).getRaw("a2_1_b2"));
   }
 }

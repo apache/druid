@@ -17,15 +17,15 @@
  */
 
 import path from 'path';
-import * as playwright from 'playwright-chromium';
+import type * as playwright from 'playwright-chromium';
 
 import { DatasourcesOverview } from './component/datasources/overview';
 import { IngestionOverview } from './component/ingestion/overview';
 import { ConfigureSchemaConfig } from './component/load-data/config/configure-schema';
 import {
   PartitionConfig,
+  RangePartitionsSpec,
   SegmentGranularity,
-  SingleDimPartitionsSpec,
 } from './component/load-data/config/partition';
 import { PublishConfig } from './component/load-data/config/publish';
 import { ReindexDataConnector } from './component/load-data/data-connector/reindex';
@@ -59,8 +59,8 @@ describe('Reindexing from Druid', () => {
     await browser.close();
   });
 
-  it('Reindex datasource from dynamic to single dim partitions', async () => {
-    const testName = 'reindex-dynamic-to-single-dim-';
+  it('Reindex datasource from dynamic to range partitions', async () => {
+    const testName = 'reindex-dynamic-to-range-';
     const datasourceName = testName + new Date().toISOString();
     const interval = '2015-09-12/2015-09-13';
     const dataConnector = new ReindexDataConnector(page, {
@@ -71,8 +71,8 @@ describe('Reindexing from Druid', () => {
     const partitionConfig = new PartitionConfig({
       segmentGranularity: SegmentGranularity.DAY,
       timeIntervals: null,
-      partitionsSpec: new SingleDimPartitionsSpec({
-        partitionDimension: 'channel',
+      partitionsSpec: new RangePartitionsSpec({
+        partitionDimensions: ['channel'],
         targetRowsPerSegment: 10_000,
         maxRowsPerSegment: null,
       }),
@@ -116,7 +116,7 @@ function validateConnectLocalData(preview: string) {
   expect(lines.length).toBe(500);
   const firstLine = lines[0];
   expect(firstLine).toBe(
-    'Druid row: {' +
+    '[Druid row: {' +
       '"__time":1442018818771' +
       ',"channel":"#en.wikipedia"' +
       ',"comment":"added project"' +
@@ -131,11 +131,11 @@ function validateConnectLocalData(preview: string) {
       ',"added":36' +
       ',"deleted":0' +
       ',"delta":36' +
-      '}',
+      '}]',
   );
   const lastLine = lines[lines.length - 1];
   expect(lastLine).toBe(
-    'Druid row: {' +
+    '[Druid row: {' +
       '"__time":1442020314823' +
       ',"channel":"#en.wikipedia"' +
       ',"comment":"/* History */[[WP:AWB/T|Typo fixing]], [[WP:AWB/T|typo(s) fixed]]: nothern → northern using [[Project:AWB|AWB]]"' +
@@ -150,7 +150,7 @@ function validateConnectLocalData(preview: string) {
       ',"added":1' +
       ',"deleted":0' +
       ',"delta":1' +
-      '}',
+      '}]',
   );
 }
 

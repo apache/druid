@@ -20,10 +20,10 @@
 package org.apache.druid.indexing.input;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import org.apache.druid.data.input.BytesCountingInputEntity;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntity.CleanableFile;
@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.filter.DimFilter;
@@ -53,12 +52,13 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
+import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.CollectionUtils;
+import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
@@ -73,12 +73,13 @@ import java.util.Set;
 
 public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String, Object>>
 {
-  private final DruidSegmentInputEntity source;
+  private final InputEntity source;
   private final IndexIO indexIO;
   private final ColumnsFilter columnsFilter;
   private final InputRowSchema inputRowSchema;
   private final DimFilter dimFilter;
   private final File temporaryDirectory;
+  private final Interval intervalFilter;
 
   DruidSegmentReader(
       final InputEntity source,
@@ -90,8 +91,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
       final File temporaryDirectory
   )
   {
-    Preconditions.checkArgument(source instanceof DruidSegmentInputEntity);
-    this.source = (DruidSegmentInputEntity) source;
+    this.source = source;
     this.indexIO = indexIO;
     this.columnsFilter = columnsFilter;
     this.inputRowSchema = new InputRowSchema(
@@ -101,17 +101,25 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     );
     this.dimFilter = dimFilter;
     this.temporaryDirectory = temporaryDirectory;
+
+    final InputEntity baseInputEntity;
+    if (source instanceof BytesCountingInputEntity) {
+      baseInputEntity = ((BytesCountingInputEntity) source).getBaseInputEntity();
+    } else {
+      baseInputEntity = source;
+    }
+    this.intervalFilter = ((DruidSegmentInputEntity) baseInputEntity).getIntervalFilter();
   }
 
   @Override
   protected CloseableIterator<Map<String, Object>> intermediateRowIterator() throws IOException
   {
-    final CleanableFile segmentFile = source.fetch(temporaryDirectory, null);
+    final CleanableFile segmentFile = source().fetch(temporaryDirectory, null);
     final WindowedStorageAdapter storageAdapter = new WindowedStorageAdapter(
         new QueryableIndexStorageAdapter(
             indexIO.loadIndex(segmentFile.file())
         ),
-        source.getIntervalFilter()
+        intervalFilter
     );
 
     final Sequence<Cursor> cursors = storageAdapter.getAdapter().makeCursors(
@@ -127,11 +135,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     // schemaless mode.
     final Set<String> columnsToRead = Sets.newLinkedHashSet(
         Iterables.filter(
-            Iterables.concat(
-                Collections.singleton(ColumnHolder.TIME_COLUMN_NAME),
-                storageAdapter.getAdapter().getAvailableDimensions(),
-                storageAdapter.getAdapter().getAvailableMetrics()
-            ),
+            storageAdapter.getAdapter().getRowSignature().getColumnNames(),
             columnsFilter::apply
         )
     );
@@ -144,6 +148,12 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     );
 
     return makeCloseableIteratorFromSequenceAndSegmentFile(sequence, segmentFile);
+  }
+
+  @Override
+  protected InputEntity source()
+  {
+    return source;
   }
 
   @Override
@@ -208,10 +218,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
       @Override
       public void close() throws IOException
       {
-        Closer closer = Closer.create();
-        closer.register(rowYielder);
-        closer.register(segmentFile);
-        closer.close();
+        CloseableUtils.closeAll(rowYielder, segmentFile);
       }
     };
   }
@@ -224,9 +231,9 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     private static final IntermediateRowColumnProcessorFactory INSTANCE = new IntermediateRowColumnProcessorFactory();
 
     @Override
-    public ValueType defaultType()
+    public ColumnType defaultType()
     {
-      return ValueType.STRING;
+      return ColumnType.STRING;
     }
 
     @Override

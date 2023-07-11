@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
@@ -28,10 +29,10 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
-
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Map;
@@ -102,9 +103,9 @@ public class SketchEstimatePostAggregator implements PostAggregator
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
-    return errorBoundsStdDev != null ? ValueType.COMPLEX : ValueType.DOUBLE;
+    return errorBoundsStdDev != null ? SketchModule.MERGE_TYPE : ColumnType.DOUBLE;
   }
 
   @Override
@@ -121,6 +122,7 @@ public class SketchEstimatePostAggregator implements PostAggregator
 
   @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Integer getErrorBoundsStdDev()
   {
     return errorBoundsStdDev;

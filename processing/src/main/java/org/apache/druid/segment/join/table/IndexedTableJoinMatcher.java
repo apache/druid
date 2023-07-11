@@ -23,11 +23,14 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import io.netty.util.SuppressForbidden;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
+import it.unimi.dsi.fastutil.ints.IntBidirectionalIterator;
 import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntIterators;
-import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
+import it.unimi.dsi.fastutil.ints.IntSortedSets;
+import org.apache.druid.collections.RangeIntSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
@@ -45,6 +48,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleDescendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.join.Equality;
@@ -68,12 +72,11 @@ public class IndexedTableJoinMatcher implements JoinMatcher
   private static final int UNINITIALIZED_CURRENT_ROW = -1;
 
   // Key column type to use when the actual key type is unknown.
-  static final ValueType DEFAULT_KEY_TYPE = ValueType.STRING;
+  static final ColumnType DEFAULT_KEY_TYPE = ColumnType.STRING;
 
   private final IndexedTable table;
   private final List<ConditionMatcher> conditionMatchers;
   private final boolean singleRowMatching;
-  private final IntIterator[] currentMatchedRows;
   private final ColumnSelectorFactory selectorFactory;
 
   // matchedRows and matchingRemainder are used to implement matchRemainder().
@@ -104,10 +107,10 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     reset();
 
     if (condition.isAlwaysTrue()) {
-      this.conditionMatchers = Collections.singletonList(() -> IntIterators.fromTo(0, table.numRows()));
+      this.conditionMatchers = Collections.singletonList(() -> new RangeIntSet(0, table.numRows()));
       this.singleRowMatching = false;
     } else if (condition.isAlwaysFalse()) {
-      this.conditionMatchers = Collections.singletonList(() -> IntIterators.EMPTY_ITERATOR);
+      this.conditionMatchers = Collections.singletonList(() -> IntSortedSets.EMPTY_SET);
       this.singleRowMatching = false;
     } else if (condition.getNonEquiConditions().isEmpty()) {
       final List<Pair<IndexedTable.Index, Equality>> indexes =
@@ -127,13 +130,6 @@ public class IndexedTableJoinMatcher implements JoinMatcher
           "Cannot build hash-join matcher on non-equi-join condition: %s",
           condition.getOriginalExpression()
       );
-    }
-
-    if (!singleRowMatching) {
-      // Only used by "matchCondition", and only in the multi-row-matching case.
-      this.currentMatchedRows = new IntIterator[conditionMatchers.size()];
-    } else {
-      this.currentMatchedRows = null;
     }
 
     ColumnSelectorFactory selectorFactory = table.makeColumnSelectorFactory(joinableOffset, descending, closer);
@@ -203,18 +199,50 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       }
     } else {
       if (conditionMatchers.size() == 1) {
-        currentIterator = conditionMatchers.get(0).match();
+        currentIterator = conditionMatchers.get(0).match().iterator();
       } else {
+        final IntSortedSet[] matchingSets = new IntSortedSet[conditionMatchers.size()];
+        int smallestMatchingSet = -1;
+
         for (int i = 0; i < conditionMatchers.size(); i++) {
-          final IntIterator rows = conditionMatchers.get(i).match();
-          if (rows.hasNext()) {
-            currentMatchedRows[i] = rows;
-          } else {
-            return;
+          matchingSets[i] = conditionMatchers.get(i).match();
+          if (i == 0 || matchingSets[i].size() < matchingSets[smallestMatchingSet].size()) {
+            smallestMatchingSet = i;
           }
         }
 
-        currentIterator = new SortedIntIntersectionIterator(currentMatchedRows);
+        // Start intersection using the smallest matching set.
+        IntSortedSet intersection = matchingSets[smallestMatchingSet];
+
+        // Remember if we copied matchingSets[smallestMatchingSet] or not. Avoids unnecessary copies.
+        boolean copied = false;
+
+        for (int i = 0; i < conditionMatchers.size(); i++) {
+          final int numIntersectionElements = intersection.size();
+
+          if (numIntersectionElements > 0 && i != smallestMatchingSet) {
+            final IntBidirectionalIterator it = intersection.iterator();
+            while (it.hasNext()) {
+              final int rowNumber = it.nextInt();
+              if (!matchingSets[i].contains(rowNumber)) {
+                // Remove from intersection.
+                if (numIntersectionElements == 1) {
+                  intersection = IntSortedSets.EMPTY_SET;
+                  break;
+                } else {
+                  if (!copied) {
+                    intersection = new IntAVLTreeSet(intersection);
+                    copied = true;
+                  }
+
+                  intersection.remove(rowNumber);
+                }
+              }
+            }
+          }
+        }
+
+        currentIterator = intersection.iterator();
       }
 
       advanceCurrentRow();
@@ -322,14 +350,14 @@ public class IndexedTableJoinMatcher implements JoinMatcher
      */
     default int matchSingleRow()
     {
-      final IntIterator it = match();
-      return it.hasNext() ? it.nextInt() : NO_CONDITION_MATCH;
+      final IntSortedSet rows = match();
+      return rows.isEmpty() ? NO_CONDITION_MATCH : rows.firstInt();
     }
 
     /**
-     * Returns an iterator for the row numbers that match the current cursor position.
+     * Returns row numbers that match the current cursor position.
      */
-    IntIterator match();
+    IntSortedSet match();
   }
 
   /**
@@ -343,12 +371,12 @@ public class IndexedTableJoinMatcher implements JoinMatcher
 
     private static final int MAX_NUM_CACHE = 10;
 
-    private final ValueType keyType;
+    private final ColumnType keyType;
     private final IndexedTable.Index index;
 
-    // DimensionSelector -> (int) dimension id -> (IntList) row numbers
+    // DimensionSelector -> (int) dimension id -> (IntSortedSet) row numbers
     @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")  // updated via computeIfAbsent
-    private final LruLoadingHashMap<DimensionSelector, Int2IntListMap> dimensionCaches;
+    private final LruLoadingHashMap<DimensionSelector, Int2IntSortedSetMap> dimensionCaches;
 
     ConditionMatcherFactory(IndexedTable.Index index)
     {
@@ -359,27 +387,27 @@ public class IndexedTableJoinMatcher implements JoinMatcher
           MAX_NUM_CACHE,
           selector -> {
             int cardinality = selector.getValueCardinality();
-            IntFunction<IntList> loader = dimensionId -> getRowNumbers(selector, dimensionId);
+            IntFunction<IntSortedSet> loader = dimensionId -> getRowNumbers(selector, dimensionId);
             return cardinality <= CACHE_MAX_SIZE
-                   ? new Int2IntListLookupTable(cardinality, loader)
-                   : new Int2IntListLruCache(CACHE_MAX_SIZE, loader);
+                   ? new Int2IntSortedSetLookupTable(cardinality, loader)
+                   : new Int2IntSortedSetLruCache(CACHE_MAX_SIZE, loader);
           }
       );
     }
 
-    private IntList getRowNumbers(DimensionSelector selector, int dimensionId)
+    private IntSortedSet getRowNumbers(DimensionSelector selector, int dimensionId)
     {
       final String key = selector.lookupName(dimensionId);
       return index.find(key);
     }
 
-    private IntList getAndCacheRowNumbers(DimensionSelector selector, int dimensionId)
+    private IntSortedSet getAndCacheRowNumbers(DimensionSelector selector, int dimensionId)
     {
       return dimensionCaches.getAndLoadIfAbsent(selector).getAndLoadIfAbsent(dimensionId);
     }
 
     @Override
-    public ValueType defaultType()
+    public ColumnType defaultType()
     {
       return keyType;
     }
@@ -402,10 +430,9 @@ public class IndexedTableJoinMatcher implements JoinMatcher
 
           if (row.size() == 1) {
             int dimensionId = row.get(0);
-            IntList rowNumbers = getRowNumbers(selector, dimensionId);
-            return rowNumbers.iterator();
+            return getRowNumbers(selector, dimensionId);
           } else if (row.size() == 0) {
-            return IntIterators.EMPTY_ITERATOR;
+            return IntSortedSets.EMPTY_SET;
           } else {
             // Multi-valued rows are not handled by the join system right now
             // TODO: Remove when https://github.com/apache/druid/issues/9924 is done
@@ -420,10 +447,9 @@ public class IndexedTableJoinMatcher implements JoinMatcher
 
           if (row.size() == 1) {
             int dimensionId = row.get(0);
-            IntList rowNumbers = getAndCacheRowNumbers(selector, dimensionId);
-            return rowNumbers.iterator();
+            return getAndCacheRowNumbers(selector, dimensionId);
           } else if (row.size() == 0) {
-            return IntIterators.EMPTY_ITERATOR;
+            return IntSortedSets.EMPTY_SET;
           } else {
             // Multi-valued rows are not handled by the join system right now
             // TODO: Remove when https://github.com/apache/druid/issues/9924 is done
@@ -437,9 +463,9 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     public ConditionMatcher makeFloatProcessor(BaseFloatColumnValueSelector selector)
     {
       if (NullHandling.replaceWithDefault()) {
-        return () -> index.find(selector.getFloat()).iterator();
+        return () -> index.find(selector.getFloat());
       } else {
-        return () -> selector.isNull() ? IntIterators.EMPTY_ITERATOR : index.find(selector.getFloat()).iterator();
+        return () -> selector.isNull() ? IntSortedSets.EMPTY_SET : index.find(selector.getFloat());
       }
     }
 
@@ -447,21 +473,21 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     public ConditionMatcher makeDoubleProcessor(BaseDoubleColumnValueSelector selector)
     {
       if (NullHandling.replaceWithDefault()) {
-        return () -> index.find(selector.getDouble()).iterator();
+        return () -> index.find(selector.getDouble());
       } else {
-        return () -> selector.isNull() ? IntIterators.EMPTY_ITERATOR : index.find(selector.getDouble()).iterator();
+        return () -> selector.isNull() ? IntSortedSets.EMPTY_SET : index.find(selector.getDouble());
       }
     }
 
     @Override
     public ConditionMatcher makeLongProcessor(BaseLongColumnValueSelector selector)
     {
-      if (index.keyType() == ValueType.LONG) {
+      if (index.keyType().is(ValueType.LONG)) {
         return makePrimitiveLongMatcher(selector);
       } else if (NullHandling.replaceWithDefault()) {
-        return () -> index.find(selector.getLong()).iterator();
+        return () -> index.find(selector.getLong());
       } else {
-        return () -> selector.isNull() ? IntIterators.EMPTY_ITERATOR : index.find(selector.getLong()).iterator();
+        return () -> selector.isNull() ? IntSortedSets.EMPTY_SET : index.find(selector.getLong());
       }
     }
 
@@ -477,9 +503,9 @@ public class IndexedTableJoinMatcher implements JoinMatcher
         }
 
         @Override
-        public IntIterator match()
+        public IntSortedSet match()
         {
-          return IntIterators.EMPTY_ITERATOR;
+          return IntSortedSets.EMPTY_SET;
         }
       };
     }
@@ -500,9 +526,9 @@ public class IndexedTableJoinMatcher implements JoinMatcher
           }
 
           @Override
-          public IntIterator match()
+          public IntSortedSet match()
           {
-            return index.find(selector.getLong()).iterator();
+            return index.find(selector.getLong());
           }
         };
       } else {
@@ -515,9 +541,9 @@ public class IndexedTableJoinMatcher implements JoinMatcher
           }
 
           @Override
-          public IntIterator match()
+          public IntSortedSet match()
           {
-            return selector.isNull() ? IntIterators.EMPTY_ITERATOR : index.find(selector.getLong()).iterator();
+            return selector.isNull() ? IntSortedSets.EMPTY_SET : index.find(selector.getLong());
           }
         };
       }
@@ -558,30 +584,30 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     }
   }
 
-  private interface Int2IntListMap
+  private interface Int2IntSortedSetMap
   {
-    IntList getAndLoadIfAbsent(int key);
+    IntSortedSet getAndLoadIfAbsent(int key);
   }
 
   /**
    * Lookup table for keys in the range from 0 to maxSize - 1
    */
   @VisibleForTesting
-  static class Int2IntListLookupTable implements Int2IntListMap
+  static class Int2IntSortedSetLookupTable implements Int2IntSortedSetMap
   {
-    private final IntList[] lookup;
-    private final IntFunction<IntList> loader;
+    private final IntSortedSet[] lookup;
+    private final IntFunction<IntSortedSet> loader;
 
-    Int2IntListLookupTable(int maxSize, IntFunction<IntList> loader)
+    Int2IntSortedSetLookupTable(int maxSize, IntFunction<IntSortedSet> loader)
     {
       this.loader = loader;
-      this.lookup = new IntList[maxSize];
+      this.lookup = new IntSortedSet[maxSize];
     }
 
     @Override
-    public IntList getAndLoadIfAbsent(int key)
+    public IntSortedSet getAndLoadIfAbsent(int key)
     {
-      IntList value = lookup[key];
+      IntSortedSet value = lookup[key];
 
       if (value == null) {
         value = loader.apply(key);
@@ -596,13 +622,13 @@ public class IndexedTableJoinMatcher implements JoinMatcher
    * LRU cache optimized for primitive int keys
    */
   @VisibleForTesting
-  static class Int2IntListLruCache implements Int2IntListMap
+  static class Int2IntSortedSetLruCache implements Int2IntSortedSetMap
   {
-    private final Int2ObjectLinkedOpenHashMap<IntList> cache;
+    private final Int2ObjectLinkedOpenHashMap<IntSortedSet> cache;
     private final int maxSize;
-    private final IntFunction<IntList> loader;
+    private final IntFunction<IntSortedSet> loader;
 
-    Int2IntListLruCache(int maxSize, IntFunction<IntList> loader)
+    Int2IntSortedSetLruCache(int maxSize, IntFunction<IntSortedSet> loader)
     {
       this.cache = new Int2ObjectLinkedOpenHashMap<>(maxSize);
       this.maxSize = maxSize;
@@ -610,9 +636,9 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     }
 
     @Override
-    public IntList getAndLoadIfAbsent(int key)
+    public IntSortedSet getAndLoadIfAbsent(int key)
     {
-      IntList value = cache.getAndMoveToFirst(key);
+      IntSortedSet value = cache.getAndMoveToFirst(key);
 
       if (value == null) {
         value = loader.apply(key);
@@ -627,7 +653,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
     }
 
     @VisibleForTesting
-    IntList get(int key)
+    IntSortedSet get(int key)
     {
       return cache.get(key);
     }

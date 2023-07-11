@@ -29,9 +29,14 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
+import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -57,11 +62,22 @@ public class DruidJoinRuleTest
           ImmutableList.of("left", "right")
       );
 
+  private DruidJoinRule druidJoinRule;
+
+  @Before
+  public void setup()
+  {
+    PlannerContext plannerContext = Mockito.mock(PlannerContext.class);
+    Mockito.when(plannerContext.queryContext()).thenReturn(QueryContext.empty());
+    Mockito.when(plannerContext.getJoinAlgorithm()).thenReturn(JoinAlgorithm.BROADCAST);
+    druidJoinRule = DruidJoinRule.instance(plannerContext);
+  }
+
   @Test
   public void test_canHandleCondition_leftEqRight()
   {
     Assert.assertTrue(
-        DruidJoinRule.canHandleCondition(
+        druidJoinRule.canHandleCondition(
             rexBuilder.makeCall(
                 SqlStdOperatorTable.EQUALS,
                 rexBuilder.makeInputRef(joinType, 0),
@@ -77,7 +93,7 @@ public class DruidJoinRuleTest
   public void test_canHandleCondition_leftFnEqRight()
   {
     Assert.assertTrue(
-        DruidJoinRule.canHandleCondition(
+        druidJoinRule.canHandleCondition(
             rexBuilder.makeCall(
                 SqlStdOperatorTable.EQUALS,
                 rexBuilder.makeCall(
@@ -97,7 +113,7 @@ public class DruidJoinRuleTest
   public void test_canHandleCondition_leftEqRightFn()
   {
     Assert.assertFalse(
-        DruidJoinRule.canHandleCondition(
+        druidJoinRule.canHandleCondition(
             rexBuilder.makeCall(
                 SqlStdOperatorTable.EQUALS,
                 rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 0),
@@ -117,7 +133,7 @@ public class DruidJoinRuleTest
   public void test_canHandleCondition_leftEqLeft()
   {
     Assert.assertFalse(
-        DruidJoinRule.canHandleCondition(
+        druidJoinRule.canHandleCondition(
             rexBuilder.makeCall(
                 SqlStdOperatorTable.EQUALS,
                 rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 0),
@@ -133,7 +149,7 @@ public class DruidJoinRuleTest
   public void test_canHandleCondition_rightEqRight()
   {
     Assert.assertFalse(
-        DruidJoinRule.canHandleCondition(
+        druidJoinRule.canHandleCondition(
             rexBuilder.makeCall(
                 SqlStdOperatorTable.EQUALS,
                 rexBuilder.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), 1),
@@ -149,7 +165,7 @@ public class DruidJoinRuleTest
   public void test_canHandleCondition_true()
   {
     Assert.assertTrue(
-        DruidJoinRule.canHandleCondition(
+        druidJoinRule.canHandleCondition(
             rexBuilder.makeLiteral(true),
             leftType,
             null
@@ -161,7 +177,7 @@ public class DruidJoinRuleTest
   public void test_canHandleCondition_false()
   {
     Assert.assertTrue(
-        DruidJoinRule.canHandleCondition(
+        druidJoinRule.canHandleCondition(
             rexBuilder.makeLiteral(false),
             leftType,
             null

@@ -23,15 +23,10 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
-import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.js.JavaScriptConfig;
@@ -55,28 +50,20 @@ import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class InFilterTest extends BaseFilterTest
 {
-  private static final String TIMESTAMP_COLUMN = "timestamp";
-
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          new DimensionsSpec(null, null, null)
-      )
-  );
-
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parseBatch(ImmutableMap.of("dim0", "a", "dim1", "", "dim2", ImmutableList.of("a", "b"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "b", "dim1", "10", "dim2", ImmutableList.of())).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "c", "dim1", "2", "dim2", ImmutableList.of(""))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "d", "dim1", "1", "dim2", ImmutableList.of("a"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "e", "dim1", "def", "dim2", ImmutableList.of("c"))).get(0),
-      PARSER.parseBatch(ImmutableMap.of("dim0", "f", "dim1", "abc")).get(0)
+      makeDefaultSchemaRow("a", "", ImmutableList.of("a", "b"), "2017-07-25", 0.0, 0.0f, 0L),
+      makeDefaultSchemaRow("b", "10", ImmutableList.of(), "2017-07-25", 10.1, 10.1f, 100L),
+      makeDefaultSchemaRow("c", "2", ImmutableList.of(""), "2017-05-25", null, 5.5f, 40L),
+      makeDefaultSchemaRow("d", "1", ImmutableList.of("a"), "2020-01-25", 120.0245, 110.0f, null),
+      makeDefaultSchemaRow("e", "def", ImmutableList.of("c"), null, 60.0, null, 9001L),
+      makeDefaultSchemaRow("f", "abc", null, "2020-01-25", 765.432, 123.45f, 12345L)
   );
 
   public InFilterTest(
@@ -364,6 +351,40 @@ public class InFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testNumericColumnNullsAndDefaults()
+  {
+    if (canTestNumericNullsAsDefaultValues) {
+      assertFilterMatches(new InDimFilter("f0", Sets.newHashSet("0"), null), ImmutableList.of("a", "e"));
+      assertFilterMatches(new InDimFilter("d0", Sets.newHashSet("0"), null), ImmutableList.of("a", "c"));
+      assertFilterMatches(new InDimFilter("l0", Sets.newHashSet("0"), null), ImmutableList.of("a", "d"));
+      assertFilterMatches(new InDimFilter("f0", Collections.singleton(null), null), ImmutableList.of());
+      assertFilterMatches(new InDimFilter("d0", Collections.singleton(null), null), ImmutableList.of());
+      assertFilterMatches(new InDimFilter("l0", Collections.singleton(null), null), ImmutableList.of());
+
+      assertFilterMatches(new InDimFilter("f0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a", "e"));
+      assertFilterMatches(new InDimFilter("d0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a", "c"));
+      assertFilterMatches(new InDimFilter("l0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a", "d"));
+      assertFilterMatches(new InDimFilter("f0", Sets.newHashSet(null, "999"), null), ImmutableList.of());
+      assertFilterMatches(new InDimFilter("d0", Sets.newHashSet(null, "999"), null), ImmutableList.of());
+      assertFilterMatches(new InDimFilter("l0", Sets.newHashSet(null, "999"), null), ImmutableList.of());
+    } else {
+      assertFilterMatches(new InDimFilter("f0", Sets.newHashSet("0"), null), ImmutableList.of("a"));
+      assertFilterMatches(new InDimFilter("d0", Sets.newHashSet("0"), null), ImmutableList.of("a"));
+      assertFilterMatches(new InDimFilter("l0", Sets.newHashSet("0"), null), ImmutableList.of("a"));
+      assertFilterMatches(new InDimFilter("f0", Collections.singleton(null), null), ImmutableList.of("e"));
+      assertFilterMatches(new InDimFilter("d0", Collections.singleton(null), null), ImmutableList.of("c"));
+      assertFilterMatches(new InDimFilter("l0", Collections.singleton(null), null), ImmutableList.of("d"));
+
+      assertFilterMatches(new InDimFilter("f0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a"));
+      assertFilterMatches(new InDimFilter("d0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a"));
+      assertFilterMatches(new InDimFilter("l0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a"));
+      assertFilterMatches(new InDimFilter("f0", Sets.newHashSet(null, "999"), null), ImmutableList.of("e"));
+      assertFilterMatches(new InDimFilter("d0", Sets.newHashSet(null, "999"), null), ImmutableList.of("c"));
+      assertFilterMatches(new InDimFilter("l0", Sets.newHashSet(null, "999"), null), ImmutableList.of("d"));
+    }
+  }
+
+  @Test
   public void testRequiredColumnRewrite()
   {
     InDimFilter filter = (InDimFilter) toInFilter("dim0", "a", "c").toFilter();
@@ -386,7 +407,7 @@ public class InFilterTest extends BaseFilterTest
     EqualsVerifier.forClass(InDimFilter.class)
                   .usingGetClass()
                   .withNonnullFields("dimension", "values")
-                  .withIgnoredFields("cacheKeySupplier", "predicateFactory", "cachedOptimizedFilter")
+                  .withIgnoredFields("cacheKeySupplier", "predicateFactory", "cachedOptimizedFilter", "valuesUtf8")
                   .verify();
   }
 

@@ -1,17 +1,21 @@
-# Licensed to the Apache Software Foundation (ASF) under one or more
-# contributor license agreements.  See the NOTICE file distributed with
-# this work for additional information regarding copyright ownership.
-# The ASF licenses this file to You under the Apache License, Version 2.0
-# (the "License"); you may not use this file except in compliance with
-# the License.  You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+{{/*
+
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+
+*/}}
 
 {{- if .Values.middleManager.enabled -}}
 apiVersion: apps/v1
@@ -38,9 +42,15 @@ spec:
         app: {{ template "druid.name" . }}
         component: {{ .Values.middleManager.name }}
         release: {{ .Release.Name }}
-        {{- if .Values.middleManager.podAnnotations }}
       annotations:
-{{ toYaml .Values.middleManager.podAnnotations | indent 8 }}
+        druid.k8s.enablePatching: "true"
+        {{- with .Values.middleManager.podAnnotations }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.prometheus.enabled }}
+          {{- with .Values.prometheus.annotation }}
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
         {{- end }}
     spec:
       {{- if or .Values.middleManager.antiAffinity .Values.middleManager.nodeAffinity }}
@@ -87,10 +97,17 @@ spec:
       imagePullSecrets:
 {{ toYaml .Values.image.pullSecrets | indent 8 }}
 {{- end }}
+      {{- if .Values.middleManager.serviceAccount.create }}
+      serviceAccountName: {{ include "druid.middleManager.serviceAccountName" . }}
+      {{- end }}
       containers:
       - name: druid
         args: [ "middleManager" ]
         env:
+        - name: POD_NAME
+          valueFrom:  {fieldRef: {fieldPath: metadata.name}}
+        - name: POD_NAMESPACE
+          valueFrom: {fieldRef: {fieldPath: metadata.namespace}}
         {{- range $key, $val := .Values.middleManager.config }}
         - name: {{ $key }}
           value: {{ $val | quote }}
@@ -115,6 +132,11 @@ spec:
         ports:
         - containerPort: {{ .Values.middleManager.port }}
           name: http
+        {{- if .Values.prometheus.enabled}}
+        - name: prometheus
+          containerPort: {{ .Values.prometheus.port }}
+          protocol: TCP
+        {{- end }}
         volumeMounts:
         - mountPath: /opt/druid/var/druid/
           name: data

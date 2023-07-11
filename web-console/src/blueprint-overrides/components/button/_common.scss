@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
+@use 'sass:math';
+
 $button-border-width: 1px;
-$button-padding: ($pt-grid-size / 2) ($pt-grid-size * 1.3);
+$button-padding: ($pt-grid-size * 0.5) ($pt-grid-size * 1.3);
 $button-padding-small: 0 ($pt-grid-size * 0.7);
-$button-padding-large: ($pt-grid-size / 2) ($pt-grid-size * 1.5);
-$button-icon-spacing: ($pt-button-height - $pt-icon-size-standard) / 1.6;
-$button-icon-spacing-large: ($pt-button-height-large - $pt-icon-size-large) / 1.8;
+$button-padding-large: ($pt-grid-size * 0.5) ($pt-grid-size * 1.5);
+$button-icon-spacing: math.div($pt-button-height - $pt-icon-size-standard, 1.6);
+$button-icon-spacing-large: math.div($pt-button-height-large - $pt-icon-size-large, 1.8);
 
 /*
 CSS `border` property issues:

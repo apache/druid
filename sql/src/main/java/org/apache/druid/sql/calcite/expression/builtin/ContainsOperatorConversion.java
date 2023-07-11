@@ -24,7 +24,6 @@ import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
@@ -34,8 +33,8 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SearchQueryDimFilter;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.query.search.SearchQuerySpec;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
@@ -51,9 +50,8 @@ import java.util.List;
  * translate these functions into {@link SearchQueryDimFilter} with {@link ContainsSearchQuerySpec} as
  * search query spec.
  */
-public class ContainsOperatorConversion implements SqlOperatorConversion
+public class ContainsOperatorConversion extends DirectOperatorConversion
 {
-  private final SqlOperator operator;
   private final boolean caseSensitive;
 
   private ContainsOperatorConversion(
@@ -61,7 +59,7 @@ public class ContainsOperatorConversion implements SqlOperatorConversion
       final boolean caseSensitive
   )
   {
-    this.operator = sqlFunction;
+    super(sqlFunction, StringUtils.toLowerCase(sqlFunction.getName()));
     this.caseSensitive = caseSensitive;
   }
 
@@ -87,31 +85,6 @@ public class ContainsOperatorConversion implements SqlOperatorConversion
         .returnTypeNonNull(SqlTypeName.BOOLEAN)
         .functionCategory(SqlFunctionCategory.STRING)
         .build();
-  }
-
-  @Override
-  public SqlOperator calciteOperator()
-  {
-    return operator;
-  }
-
-  @Nullable
-  @Override
-  public DruidExpression toDruidExpression(
-      PlannerContext plannerContext,
-      RowSignature rowSignature,
-      RexNode rexNode
-  )
-  {
-    return OperatorConversions.convertCall(
-        plannerContext,
-        rowSignature,
-        rexNode,
-        operands -> DruidExpression.fromExpression(DruidExpression.functionCall(
-            StringUtils.toLowerCase(operator.getName()),
-            operands
-        ))
-    );
   }
 
   @Nullable
@@ -145,17 +118,14 @@ public class ContainsOperatorConversion implements SqlOperatorConversion
           null
       );
     } else if (virtualColumnRegistry != null) {
-      VirtualColumn v = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-          plannerContext,
+      String v = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           druidExpression,
           operands.get(0).getType()
       );
 
-      return new SearchQueryDimFilter(
-          v.getOutputName(), spec, null, null);
+      return new SearchQueryDimFilter(v, spec, null, null);
     } else {
       return null;
     }
   }
-
 }

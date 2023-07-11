@@ -32,7 +32,7 @@ array of values instead of a single value, such as the `tags` values in the foll
 
 This document describes filtering and grouping behavior for multi-value dimensions. For information about the internal representation of multi-value dimensions, see
 [segments documentation](../design/segments.md#multi-value-columns). Examples in this document
-are in the form of [native Druid queries](querying.md). Refer to the [Druid SQL documentation](sql.md) for details
+are in the form of [native Druid queries](querying.md). Refer to the [Druid SQL documentation](sql-multivalue-string-functions.md) for details
 about using multi-value string dimensions in SQL.
 
 ## Overview
@@ -59,7 +59,7 @@ By default, Druid sorts values in multi-value dimensions. This behavior is contr
 * `SORTED_SET`: results in the removal of duplicate values
 * `ARRAY`: retains the original order of the values
 
-See [Dimension Objects](../ingestion/index.md#dimension-objects) for information on configuring multi-value handling.
+See [Dimension Objects](../ingestion/ingestion-spec.md#dimension-objects) for information on configuring multi-value handling.
 
 
 ## Querying multi-value dimensions
@@ -140,12 +140,11 @@ This "selector" filter would match row4 of the dataset above:
 ### Grouping
 
 topN and groupBy queries can group on multi-value dimensions. When grouping on a multi-value dimension, _all_ values
-from matching rows will be used to generate one group per value. This can be thought of as the equivalent to the
-`UNNEST` operator used on an `ARRAY` type that many SQL dialects support. This means it's possible for a query to return
-more groups than there are rows. For example, a topN on the dimension `tags` with filter `"t1" AND "t3"` would match
-only row1, and generate a result with three groups: `t1`, `t2`, and `t3`. If you only need to include values that match
-your filter, you can use a [filtered dimensionSpec](dimensionspecs.md#filtered-dimensionspecs). This can also
-improve performance.
+from matching rows will be used to generate one group per value. This behaves similarly to an implicit SQL `UNNEST`
+operation. This means it's possible for a query to return more groups than there are rows. For example, a topN on the
+dimension `tags` with filter `"t1" AND "t3"` would match only row1, and generate a result with three groups:
+`t1`, `t2`, and `t3`. If you only need to include values that match your filter, you can use a
+[filtered dimensionSpec](dimensionspecs.md#filtered-dimensionspecs). This can also improve performance.
 
 ## Example: GroupBy query with no filtering
 
@@ -375,3 +374,10 @@ This query returns the following result:
 Note that, for groupBy queries, you could get similar result with a [having spec](having.md) but using a filtered
 `dimensionSpec` is much more efficient because that gets applied at the lowest level in the query processing pipeline.
 Having specs are applied at the outermost level of groupBy query processing.
+
+## Disable GroupBy on multi-value columns
+
+You can disable the implicit unnesting behavior for groupBy by setting groupByEnableMultiValueUnnesting: false in your 
+query context. In this mode, the groupBy engine will return an error instead of completing the query. This is a safety 
+feature for situations where you believe that all dimensions are singly-valued and want the engine to reject any 
+multi-valued dimensions that were inadvertently included.

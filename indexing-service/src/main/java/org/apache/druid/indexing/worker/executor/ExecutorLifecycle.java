@@ -25,13 +25,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
-import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -104,68 +104,64 @@ public class ExecutorLifecycle
       throw new RuntimeException(e);
     }
 
-    // Avoid running the same task twice on the same machine by locking the task base directory.
+    // if the parent stream is not defined, like running a k8s peon task, it will never run on the same
+    // pod twice, no need to lock.
+    if (taskExecutorConfig.isParentStreamDefined()) {
+      // Avoid running the same task twice on the same machine by locking the task base directory.
+      final File taskLockFile = taskConfig.getTaskLockFile(task.getId());
+      try {
+        synchronized (this) {
+          if (taskLockChannel == null && taskLockFileLock == null) {
+            taskLockChannel = FileChannel.open(
+                taskLockFile.toPath(),
+                StandardOpenOption.CREATE,
+                StandardOpenOption.WRITE
+            );
 
-    final File taskLockFile = taskConfig.getTaskLockFile(task.getId());
-
-    try {
-      synchronized (this) {
-        if (taskLockChannel == null && taskLockFileLock == null) {
-          taskLockChannel = FileChannel.open(
-              taskLockFile.toPath(),
-              StandardOpenOption.CREATE,
-              StandardOpenOption.WRITE
-          );
-
-          log.info("Attempting to lock file[%s].", taskLockFile);
-          final long startLocking = System.currentTimeMillis();
-          final long timeout = DateTimes.utc(startLocking).plus(taskConfig.getDirectoryLockTimeout()).getMillis();
-          while (taskLockFileLock == null && System.currentTimeMillis() < timeout) {
-            taskLockFileLock = taskLockChannel.tryLock();
-            if (taskLockFileLock == null) {
-              Thread.sleep(100);
+            log.info("Attempting to lock file[%s].", taskLockFile);
+            final long startLocking = System.currentTimeMillis();
+            final long timeout = DateTimes.utc(startLocking).plus(taskConfig.getDirectoryLockTimeout()).getMillis();
+            while (taskLockFileLock == null && System.currentTimeMillis() < timeout) {
+              taskLockFileLock = taskLockChannel.tryLock();
+              if (taskLockFileLock == null) {
+                Thread.sleep(100);
+              }
             }
-          }
 
-          if (taskLockFileLock == null) {
-            throw new ISE("Could not acquire lock file[%s] within %,dms.", taskLockFile, timeout - startLocking);
+            if (taskLockFileLock == null) {
+              throw new ISE("Could not acquire lock file[%s] within %,dms.", taskLockFile, timeout - startLocking);
+            } else {
+              log.info("Acquired lock file[%s] in %,dms.", taskLockFile, System.currentTimeMillis() - startLocking);
+            }
           } else {
-            log.info("Acquired lock file[%s] in %,dms.", taskLockFile, System.currentTimeMillis() - startLocking);
+            throw new ISE("Already started!");
           }
-        } else {
-          throw new ISE("Already started!");
         }
       }
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
 
-    if (taskExecutorConfig.isParentStreamDefined()) {
       // Spawn monitor thread to keep a watch on parent's stdin
       // If stdin reaches eof, the parent is gone, and we should shut down
       parentMonitorExec.submit(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              try {
-                while (parentStream.read() != -1) {
-                  // Toss the byte
-                }
+          () -> {
+            try {
+              while (parentStream.read() != -1) {
+                // Toss the byte
               }
-              catch (Exception e) {
-                log.error(e, "Failed to read from stdin");
-              }
-
-              // Kind of gross, but best way to kill the JVM as far as I know
-              log.info("Triggering JVM shutdown.");
-              System.exit(2);
             }
+            catch (Exception e) {
+              log.error(e, "Failed to read from stdin");
+            }
+
+            // Kind of gross, but best way to kill the JVM as far as I know
+            log.info("Triggering JVM shutdown.");
+            System.exit(2);
           }
       );
     }
+
 
     // Won't hurt in remote mode, and is required for setting up locks in local mode:
     try {
@@ -192,7 +188,7 @@ public class ExecutorLifecycle
 
               final File statusFileParent = statusFile.getParentFile();
               if (statusFileParent != null) {
-                FileUtils.forceMkdir(statusFileParent);
+                FileUtils.mkdirp(statusFileParent);
               }
               jsonMapper.writeValue(statusFile, taskStatus);
 

@@ -22,7 +22,7 @@ package org.apache.druid.storage.aliyun;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSException;
 import com.aliyun.oss.model.OSSObject;
-import com.aliyun.oss.model.OSSObjectSummary;
+import com.aliyun.oss.model.ObjectMetadata;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.io.ByteSource;
@@ -80,7 +80,7 @@ public class OssDataSegmentPuller implements URIDataPuller
     }
 
     try {
-      org.apache.commons.io.FileUtils.forceMkdir(outDir);
+      FileUtils.mkdirp(outDir);
 
       final URI uri = ossCoords.toUri(OssStorageDruidModule.SCHEME);
       final ByteSource byteSource = new ByteSource()
@@ -151,8 +151,8 @@ public class OssDataSegmentPuller implements URIDataPuller
   private FileObject buildFileObject(final URI uri) throws OSSException
   {
     final CloudObjectLocation coords = new CloudObjectLocation(OssUtils.checkURI(uri));
-    final OSSObjectSummary objectSummary =
-        OssUtils.getSingleObjectSummary(client, coords.getBucket(), coords.getPath());
+    final ObjectMetadata objectMetadata =
+        OssUtils.getSingleObjectMetadata(client, coords.getBucket(), coords.getPath());
     final String path = uri.getPath();
 
     return new FileObject()
@@ -181,7 +181,7 @@ public class OssDataSegmentPuller implements URIDataPuller
         try {
           if (ossObject == null) {
             // lazily promote to full GET
-            ossObject = client.getObject(objectSummary.getBucketName(), objectSummary.getKey());
+            ossObject = client.getObject(coords.getBucket(), coords.getPath());
           }
 
           final InputStream in = ossObject.getObjectContent();
@@ -230,7 +230,7 @@ public class OssDataSegmentPuller implements URIDataPuller
       @Override
       public long getLastModified()
       {
-        return objectSummary.getLastModified().getTime();
+        return objectMetadata.getLastModified().getTime();
       }
 
       @Override
@@ -277,9 +277,9 @@ public class OssDataSegmentPuller implements URIDataPuller
   {
     try {
       final CloudObjectLocation coords = new CloudObjectLocation(OssUtils.checkURI(uri));
-      final OSSObjectSummary objectSummary =
-          OssUtils.getSingleObjectSummary(client, coords.getBucket(), coords.getPath());
-      return StringUtils.format("%d", objectSummary.getLastModified().getTime());
+      final ObjectMetadata objectMetadata =
+          OssUtils.getSingleObjectMetadata(client, coords.getBucket(), coords.getPath());
+      return StringUtils.format("%d", objectMetadata.getLastModified().getTime());
     }
     catch (OSSException e) {
       if (OssUtils.isServiceExceptionRecoverable(e)) {

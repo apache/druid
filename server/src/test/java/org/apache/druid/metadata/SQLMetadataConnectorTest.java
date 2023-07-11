@@ -32,7 +32,11 @@ import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -83,6 +87,14 @@ public class SQLMetadataConnectorTest
               Assert.assertTrue(
                   StringUtils.format("table %s was not created!", table),
                   connector.tableExists(handle, table)
+              );
+            }
+
+            String taskTable = tablesConfig.getTasksTable();
+            for (String column : Arrays.asList("type", "group_id")) {
+              Assert.assertTrue(
+                  StringUtils.format("Tasks table column %s was not created!", column),
+                  connector.tableContainsColumn(handle, taskTable, column)
               );
             }
 
@@ -171,6 +183,12 @@ public class SQLMetadataConnectorTest
     }
 
     @Override
+    public String limitClause(int limit)
+    {
+      return "";
+    }
+
+    @Override
     public String getQuoteString()
     {
       return null;
@@ -241,5 +259,33 @@ public class SQLMetadataConnectorTest
     BasicDataSource dataSource = testSQLMetadataConnector.getDatasource();
     Assert.assertEquals(dataSource.getMaxConnLifetimeMillis(), 1200000);
     Assert.assertEquals((long) dataSource.getDefaultQueryTimeout(), 30000);
+  }
+
+  private boolean verifyTaskTypeAndGroupId(String table, String id, String type, String groupId)
+  {
+    try {
+      return connector.retryWithHandle(
+          new HandleCallback<Boolean>()
+          {
+            @Override
+            public Boolean withHandle(Handle handle) throws SQLException
+            {
+              Statement statement = handle.getConnection().createStatement();
+              ResultSet resultSet = statement.executeQuery(
+                  StringUtils.format("SELECT * FROM %1$s WHERE id = '%2$s'", table, id)
+              );
+              resultSet.next();
+              boolean flag = type.equals(resultSet.getString("type"))
+                             && groupId.equals(resultSet.getString("group_id"));
+              statement.close();
+              return flag;
+            }
+          }
+      );
+    }
+    catch (Exception e) {
+      e.printStackTrace();
+      return false;
+    }
   }
 }

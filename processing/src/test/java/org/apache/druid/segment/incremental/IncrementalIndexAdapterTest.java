@@ -47,12 +47,13 @@ import java.util.function.Function;
 @RunWith(Parameterized.class)
 public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
 {
-  private static final IndexSpec INDEX_SPEC = new IndexSpec(
-      new ConciseBitmapSerdeFactory(),
-      CompressionStrategy.LZ4,
-      CompressionStrategy.LZ4,
-      CompressionFactory.LongEncodingStrategy.LONGS
-  );
+  private static final IndexSpec INDEX_SPEC =
+      IndexSpec.builder()
+               .withBitmapSerdeFactory(new ConciseBitmapSerdeFactory())
+               .withDimensionCompression(CompressionStrategy.LZ4)
+               .withMetricCompression(CompressionStrategy.LZ4)
+               .withLongEncoding(CompressionFactory.LongEncodingStrategy.LONGS)
+               .build();
 
   public final IncrementalIndexCreator indexCreator;
 
@@ -62,7 +63,7 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
   public IncrementalIndexAdapterTest(String indexType) throws JsonProcessingException
   {
     indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
-        .setSimpleTestingIndexSchema("rollup".equals(args[0]), new CountAggregatorFactory("count"))
+        .setSimpleTestingIndexSchema("rollup".equals(args[0]), null, new CountAggregatorFactory("count"))
         .setMaxRowCount(1_000_000)
         .build()
     ));
@@ -78,7 +79,7 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
   public void testGetBitmapIndex() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex<?> incrementalIndex = indexCreator.createIndex("rollup");
+    IncrementalIndex incrementalIndex = indexCreator.createIndex("rollup");
     IncrementalIndexTest.populateIndex(timestamp, incrementalIndex);
     IndexableAdapter adapter = new IncrementalIndexAdapter(
         incrementalIndex.getInterval(),
@@ -98,7 +99,7 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
   public void testGetRowsIterable() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex<?> toPersist1 = indexCreator.createIndex("rollup");
+    IncrementalIndex toPersist1 = indexCreator.createIndex("rollup");
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     final IndexableAdapter incrementalAdapter = new IncrementalIndexAdapter(
@@ -122,7 +123,7 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
   public void testGetRowsIterableNoRollup() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex<?> toPersist1 = indexCreator.createIndex("plain");
+    IncrementalIndex toPersist1 = indexCreator.createIndex("plain");
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);

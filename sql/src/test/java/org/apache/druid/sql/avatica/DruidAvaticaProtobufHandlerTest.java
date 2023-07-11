@@ -26,11 +26,10 @@ import org.apache.druid.server.DruidNode;
 public class DruidAvaticaProtobufHandlerTest extends DruidAvaticaHandlerTest
 {
   @Override
-  protected String getJdbcConnectionString(final int port)
+  protected String getJdbcUrlTail()
   {
     return StringUtils.format(
-            "jdbc:avatica:remote:url=http://127.0.0.1:%d%s;serialization=protobuf",
-            port,
+            "%s;serialization=protobuf",
             DruidAvaticaProtobufHandler.AVATICA_PATH
     );
   }

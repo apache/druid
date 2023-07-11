@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.join;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -34,7 +33,6 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.filter.Filters;
@@ -188,21 +186,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     }
   }
 
-  @Nullable
-  @Override
-  public String getColumnTypeName(String column)
-  {
-    final Optional<JoinableClause> maybeClause = getClauseForColumn(column);
-
-    if (maybeClause.isPresent()) {
-      final JoinableClause clause = maybeClause.get();
-      final ColumnCapabilities capabilities = clause.getJoinable().getColumnCapabilities(clause.unprefix(column));
-      return capabilities != null ? capabilities.getType().toString() : null;
-    } else {
-      return baseAdapter.getColumnTypeName(column);
-    }
-  }
-
   @Override
   public int getNumRows()
   {
@@ -229,8 +212,11 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   @Override
   public boolean hasBuiltInFilters()
   {
-    return clauses.stream()
-                  .anyMatch(clause -> clause.getJoinType() == JoinType.INNER && !clause.getCondition().isAlwaysTrue());
+    // if the baseFilter is not null, then rows from underlying storage adapter can be potentially filtered.
+    // otherwise, a filtering inner join can also filter rows.
+    return baseFilter != null || clauses.stream().anyMatch(
+        clause -> clause.getJoinType() == JoinType.INNER && !clause.getCondition().isAlwaysTrue()
+    );
   }
 
   @Override
@@ -306,10 +292,18 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         );
 
     final JoinFilterPreAnalysisKey keyCached = joinFilterPreAnalysis.getKey();
+    final JoinFilterSplit joinFilterSplit;
 
-    if (!keyIn.equals(keyCached)) {
-      // It is a bug if this happens. The implied key and the cached key should always match.
-      throw new ISE("Pre-analysis mismatch, cannot execute query");
+    if (keyIn.equals(keyCached)) {
+      // Common case: key used during filter pre-analysis (keyCached) matches key implied by makeCursors call (keyIn).
+      joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis, baseFilter);
+    } else {
+      // Less common case: key differs. Re-analyze the filter. This case can happen when an unnest datasource is
+      // layered on top of a join datasource.
+      joinFilterSplit = JoinFilterAnalyzer.splitFilter(
+          JoinFilterAnalyzer.computeJoinFilterPreAnalysis(keyIn),
+          baseFilter
+      );
     }
 
     final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
@@ -323,9 +317,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 
     // We merge the filter on base table specified by the user and filter on the base table that is pushed from
     // the join
-    JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis, baseFilter);
     preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
-
 
     final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
         joinFilterSplit.getBaseTableFilter().isPresent() ? joinFilterSplit.getBaseTableFilter().get() : null,
@@ -385,10 +377,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nullable List<VirtualColumn> postJoinVirtualColumns
   )
   {
-    final Set<String> baseColumns = new HashSet<>();
-    baseColumns.add(ColumnHolder.TIME_COLUMN_NAME);
-    Iterables.addAll(baseColumns, baseAdapter.getAvailableDimensions());
-    Iterables.addAll(baseColumns, baseAdapter.getAvailableMetrics());
+    final Set<String> baseColumns = new HashSet<>(baseAdapter.getRowSignature().getColumnNames());
 
     for (VirtualColumn virtualColumn : virtualColumns.getVirtualColumns()) {
       // Virtual columns cannot depend on each other, so we don't need to check transitive dependencies.

@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.IOConfig;
 
 import javax.annotation.Nullable;
@@ -43,7 +44,7 @@ public class UserCompactionTaskIOConfig
       @JsonProperty("dropExisting") @Nullable Boolean dropExisting
   )
   {
-    this.dropExisting = dropExisting == null ? IOConfig.DEFAULT_DROP_EXISTING : dropExisting;
+    this.dropExisting = dropExisting == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : dropExisting;
   }
 
   @JsonProperty

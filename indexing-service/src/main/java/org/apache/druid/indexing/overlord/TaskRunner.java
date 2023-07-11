@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 
 /**
@@ -124,14 +125,34 @@ public interface TaskRunner
 
   /**
    * APIs useful for emitting statistics for @TaskSlotCountStatsMonitor
-  */
-  long getTotalTaskSlotCount();
+   */
+  Map<String, Long> getTotalTaskSlotCount();
 
-  long getIdleTaskSlotCount();
+  Map<String, Long> getIdleTaskSlotCount();
 
-  long getUsedTaskSlotCount();
+  Map<String, Long> getUsedTaskSlotCount();
 
-  long getLazyTaskSlotCount();
+  Map<String, Long> getLazyTaskSlotCount();
 
-  long getBlacklistedTaskSlotCount();
+  Map<String, Long> getBlacklistedTaskSlotCount();
+
+  /**
+   * Beacause the k8s task runner is an extension, we need to know the task runner type in the overlord resource
+   */
+  default boolean isK8sTaskRunner()
+  {
+    return false;
+  }
+
+  default void updateStatus(Task task, TaskStatus status)
+  {
+    // do nothing
+  }
+
+  default void updateLocation(Task task, TaskLocation location)
+  {
+    // do nothing
+  }
+
+
 }

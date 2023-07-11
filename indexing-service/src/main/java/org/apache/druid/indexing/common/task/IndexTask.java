@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -29,17 +30,15 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.FirehoseFactory;
-import org.apache.druid.data.input.FirehoseFactoryToInputSourceAdaptor;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.Rows;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.IngestionState;
@@ -58,6 +57,7 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.batch.parallel.PartialHashSegmentGenerateTask;
+import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.DefaultIndexTaskInputRowIteratorBuilder;
 import org.apache.druid.indexing.common.task.batch.partition.CompletePartitionAnalysis;
 import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
@@ -77,6 +77,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -91,15 +92,20 @@ import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.utils.CircularBuffer;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -129,22 +135,26 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 {
+
+
+
   public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
   private static final Logger log = new Logger(IndexTask.class);
   private static final String TYPE = "index";
 
-  private static String makeGroupId(IndexIngestionSpec ingestionSchema)
+  private static String makeGroupId(IndexIngestionSpec ingestionSchema, IngestionMode ingestionMode)
   {
-    return makeGroupId(ingestionSchema.ioConfig.appendToExisting, ingestionSchema.dataSchema.getDataSource());
+    return makeGroupId(ingestionSchema.dataSchema.getDataSource(), ingestionMode);
   }
 
-  private static String makeGroupId(boolean isAppendToExisting, String dataSource)
+  private static String makeGroupId(String dataSource, IngestionMode ingestionMode)
   {
-    if (isAppendToExisting) {
+    if (ingestionMode == IngestionMode.APPEND) {
       // Shared locking group for all tasks that append, since they are OK to run concurrently.
       return StringUtils.format("%s_append_%s", TYPE, dataSource);
     } else {
@@ -187,12 +197,16 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   {
     this(
         id,
-        makeGroupId(ingestionSchema),
+        makeGroupId(
+            ingestionSchema,
+            computeBatchIngestionMode(ingestionSchema.getIOConfig())
+        ),
         taskResource,
         ingestionSchema.dataSchema.getDataSource(),
         null,
         ingestionSchema,
-        context
+        context,
+        -1
     );
   }
 
@@ -203,7 +217,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       String dataSource,
       @Nullable String baseSequenceName,
       IndexIngestionSpec ingestionSchema,
-      Map<String, Object> context
+      Map<String, Object> context,
+      int maxAllowedLockCount
   )
   {
     super(
@@ -211,7 +226,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         groupId,
         resource,
         dataSource,
-        context
+        context,
+        maxAllowedLockCount,
+        computeBatchIngestionMode(ingestionSchema.getIOConfig())
     );
     this.baseSequenceName = baseSequenceName == null ? getId() : baseSequenceName;
     this.ingestionSchema = ingestionSchema;
@@ -236,15 +253,16 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
     return determineLockGranularityAndTryLock(
         taskActionClient,
-        ingestionSchema.dataSchema.getGranularitySpec().inputIntervals()
+        ingestionSchema.dataSchema.getGranularitySpec().inputIntervals(),
+        ingestionSchema.getIOConfig()
     );
   }
 
   @Override
   public boolean requireLockExistingSegments()
   {
-    return isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig)
-           || !ingestionSchema.ioConfig.isAppendToExisting();
+    return isGuaranteedRollup(getIngestionMode(), ingestionSchema.tuningConfig)
+           || (getIngestionMode() != IngestionMode.APPEND);
   }
 
   @Override
@@ -254,15 +272,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     return findInputSegments(
         getDataSource(),
         taskActionClient,
-        intervals,
-        ingestionSchema.ioConfig.firehoseFactory
+        intervals
     );
   }
 
   @Override
   public boolean isPerfectRollup()
   {
-    return isGuaranteedRollup(ingestionSchema.ioConfig, ingestionSchema.tuningConfig);
+    return isGuaranteedRollup(getIngestionMode(), ingestionSchema.tuningConfig);
   }
 
   @Nullable
@@ -277,6 +294,22 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
+  @Nonnull
+  @JsonIgnore
+  @Override
+  public Set<ResourceAction> getInputSourceResources()
+  {
+    if (ingestionSchema.getIOConfig().firehoseFactory != null) {
+      throw getInputSecurityOnFirehoseUnsupportedError();
+    }
+    return getIngestionSchema().getIOConfig().getInputSource() != null ?
+           getIngestionSchema().getIOConfig().getInputSource().getTypes()
+               .stream()
+               .map(i -> new ResourceAction(new Resource(i, ResourceType.EXTERNAL), Action.READ))
+               .collect(Collectors.toSet()) :
+           ImmutableSet.of();
+  }
+
   @GET
   @Path("/unparseableEvents")
   @Produces(MediaType.APPLICATION_JSON)
@@ -286,7 +319,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   )
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    Map<String, List<String>> events = new HashMap<>();
+    return Response.ok(doGetUnparseableEvents(full)).build();
+  }
+
+  public Map<String, Object> doGetUnparseableEvents(String full)
+  {
+    Map<String, Object> events = new HashMap<>();
 
     boolean needsDeterminePartitions = false;
     boolean needsBuildSegments = false;
@@ -311,8 +349,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     if (needsDeterminePartitions) {
       events.put(
           RowIngestionMeters.DETERMINE_PARTITIONS,
-          IndexTaskUtils.getMessagesFromSavedParseExceptions(
-              determinePartitionsParseExceptionHandler.getSavedParseExceptions()
+          IndexTaskUtils.getReportListFromSavedParseExceptions(
+              determinePartitionsParseExceptionHandler.getSavedParseExceptionReports()
           )
       );
     }
@@ -320,16 +358,15 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     if (needsBuildSegments) {
       events.put(
           RowIngestionMeters.BUILD_SEGMENTS,
-          IndexTaskUtils.getMessagesFromSavedParseExceptions(
-              buildSegmentsParseExceptionHandler.getSavedParseExceptions()
+          IndexTaskUtils.getReportListFromSavedParseExceptions(
+              buildSegmentsParseExceptionHandler.getSavedParseExceptionReports()
           )
       );
     }
-
-    return Response.ok(events).build();
+    return events;
   }
 
-  private Map<String, Object> doGetRowStats(String full)
+  public Map<String, Object> doGetRowStats(String full)
   {
     Map<String, Object> returnMap = new HashMap<>();
     Map<String, Object> totalsMap = new HashMap<>();
@@ -430,6 +467,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   public TaskStatus runTask(final TaskToolbox toolbox)
   {
     try {
+
+      // emit metric for sequential batch ingestion mode:
+      emitMetric(toolbox.getEmitter(), "ingest/count", 1);
+
       log.debug("Found chat handler of class[%s]", toolbox.getChatHandlerProvider().getClass().getName());
 
       if (toolbox.getChatHandlerProvider().get(getId()).isPresent()) {
@@ -463,9 +504,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                                                         .inputIntervals()
                                                         .isEmpty();
 
-      final InputSource inputSource = ingestionSchema.getIOConfig().getNonNullInputSource(
-          ingestionSchema.getDataSchema().getParser()
-      );
+      final InputSource inputSource = ingestionSchema.getIOConfig().getInputSource();
 
       final File tmpDir = toolbox.getIndexingTmpDir();
 
@@ -483,7 +522,10 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final List<Interval> allocateIntervals = new ArrayList<>(partitionAnalysis.getAllIntervalsToIndex());
       final DataSchema dataSchema;
       if (determineIntervals) {
-        if (!determineLockGranularityAndTryLock(toolbox.getTaskActionClient(), allocateIntervals)) {
+        final boolean gotLocks = determineLockGranularityAndTryLock(
+            toolbox.getTaskActionClient(), allocateIntervals, ingestionSchema.getIOConfig()
+        );
+        if (!gotLocks) {
           throw new ISE("Failed to get locks for intervals[%s]", allocateIntervals);
         }
 
@@ -530,7 +572,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
                 errorMsg,
-                segmentAvailabilityConfirmationCompleted
+                segmentAvailabilityConfirmationCompleted,
+                segmentAvailabilityWaitTimeMs
             )
         )
     );
@@ -539,16 +582,20 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
-    List<String> determinePartitionsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        determinePartitionsParseExceptionHandler.getSavedParseExceptions()
-    );
-    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        buildSegmentsParseExceptionHandler.getSavedParseExceptions()
-    );
+    CircularBuffer<ParseExceptionReport> determinePartitionsParseExceptionReports =
+        determinePartitionsParseExceptionHandler.getSavedParseExceptionReports();
+    CircularBuffer<ParseExceptionReport> buildSegmentsParseExceptionReports =
+        buildSegmentsParseExceptionHandler.getSavedParseExceptionReports();
 
-    if (determinePartitionsParseExceptionMessages != null || buildSegmentsParseExceptionMessages != null) {
-      unparseableEventsMap.put(RowIngestionMeters.DETERMINE_PARTITIONS, determinePartitionsParseExceptionMessages);
-      unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
+    if (determinePartitionsParseExceptionReports != null || buildSegmentsParseExceptionReports != null) {
+      unparseableEventsMap.put(
+          RowIngestionMeters.DETERMINE_PARTITIONS,
+          IndexTaskUtils.getReportListFromSavedParseExceptions(determinePartitionsParseExceptionReports)
+      );
+      unparseableEventsMap.put(
+          RowIngestionMeters.BUILD_SEGMENTS,
+          IndexTaskUtils.getReportListFromSavedParseExceptions(buildSegmentsParseExceptionReports)
+      );
     }
 
     return unparseableEventsMap;
@@ -784,6 +831,11 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     return hllCollectors;
   }
 
+  public IngestionState getIngestionState()
+  {
+    return ingestionState;
+  }
+
   /**
    * This method reads input data row by row and adds the read row to a proper segment using {@link BaseAppenderatorDriver}.
    * If there is no segment for the row, a new one is created.  Segments can be published in the middle of reading inputs
@@ -814,14 +866,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         new FireDepartment(dataSchema, new RealtimeIOConfig(null, null), null);
     FireDepartmentMetrics buildSegmentsFireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
 
-    if (toolbox.getMonitorScheduler() != null) {
-      final TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
-          this,
-          fireDepartmentForMetrics,
-          buildSegmentsMeters
-      );
-      toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
-    }
+    final TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
+        this,
+        fireDepartmentForMetrics,
+        buildSegmentsMeters
+    );
+    toolbox.addMonitor(metricsMonitor);
 
     final PartitionsSpec partitionsSpec = partitionAnalysis.getPartitionsSpec();
     final IndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
@@ -850,7 +900,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             null,
             dataSchema,
             getTaskLockHelper(),
-            ingestionSchema.getIOConfig().isAppendToExisting(),
+            getIngestionMode(),
             partitionAnalysis.getPartitionsSpec(),
             null
         );
@@ -860,10 +910,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         throw new UOE("[%s] secondary partition type is not supported", partitionsSpec.getType());
     }
 
-    Set<DataSegment> segmentsFoundForDrop = null;
-    if (ingestionSchema.getIOConfig().isDropExisting()) {
-      segmentsFoundForDrop = getUsedSegmentsWithinInterval(toolbox, getDataSource(), ingestionSchema.getDataSchema().getGranularitySpec().inputIntervals());
-    }
 
     final TransactionalSegmentPublisher publisher = (segmentsToBeOverwritten, segmentsToDrop, segmentsToPublish, commitMetadata) ->
         toolbox.getTaskActionClient()
@@ -882,13 +928,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
         dataSchema,
         tuningConfig,
         buildSegmentsMeters,
-        buildSegmentsParseExceptionHandler
+        buildSegmentsParseExceptionHandler,
+        isUseMaxMemoryEstimates()
     );
     boolean exceptionOccurred = false;
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
       driver.startJob();
 
-      InputSourceProcessor.process(
+      SegmentsAndCommitMetadata pushed = InputSourceProcessor.process(
           dataSchema,
           driver,
           partitionsSpec,
@@ -915,13 +962,44 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           compactionStateAnnotateFunction(
               storeCompactionState,
               toolbox,
-              ingestionSchema.getTuningConfig(),
-              ingestionSchema.getDataSchema().getGranularitySpec()
+              ingestionSchema
           );
+
+      Set<DataSegment> tombStones = Collections.emptySet();
+      if (getIngestionMode() == IngestionMode.REPLACE) {
+        // check whether to generate tombstones...
+        TombstoneHelper tombstoneHelper = new TombstoneHelper(toolbox.getTaskActionClient());
+
+        List<Interval> tombstoneIntervals = tombstoneHelper.computeTombstoneIntervals(
+            pushed.getSegments(),
+            ingestionSchema.getDataSchema()
+        );
+        // now find the versions for the tombstone intervals
+        Map<Interval, SegmentIdWithShardSpec> tombstonesAndVersions = new HashMap<>();
+        for (Interval interval : tombstoneIntervals) {
+          SegmentIdWithShardSpec segmentIdWithShardSpec = allocateNewSegmentForTombstone(
+              ingestionSchema,
+              interval.getStart(),
+              toolbox
+          );
+          tombstonesAndVersions.put(interval, segmentIdWithShardSpec);
+        }
+
+        tombStones = tombstoneHelper.computeTombstones(ingestionSchema.getDataSchema(), tombstonesAndVersions);
+
+
+        log.debugSegments(tombStones, "To publish tombstones");
+      }
 
       // Probably we can publish atomicUpdateGroup along with segments.
       final SegmentsAndCommitMetadata published =
-          awaitPublish(driver.publishAll(inputSegments, segmentsFoundForDrop, publisher, annotateFunction), pushTimeout);
+          awaitPublish(driver.publishAll(
+              inputSegments,
+              null,
+              tombStones,
+              publisher,
+              annotateFunction
+          ), pushTimeout);
       appenderator.close();
 
       // Try to wait for segments to be loaded by the cluster if the tuning config specifies a non-zero value
@@ -929,7 +1007,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis() > 0 && published != null) {
         ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
         ArrayList<DataSegment> segmentsToWaitFor = new ArrayList<>(published.getSegments());
-        segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
+        waitForSegmentAvailability(
             toolbox,
             segmentsToWaitFor,
             tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
@@ -953,6 +1031,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
             buildSegmentsMeters.getThrownAway()
         );
         log.info("Published [%s] segments", published.getSegments().size());
+
+        // publish metrics:
+        emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());
+        // segments count metric is documented to include tombstones
+        emitMetric(toolbox.getEmitter(), "ingest/segments/count",
+                   published.getSegments().size() + tombStones.size()
+        );
+
         log.debugSegments(published.getSegments(), "Published segments");
 
         toolbox.getTaskReportFileWriter().write(getId(), getTaskCompletionReports());
@@ -973,6 +1059,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       } else {
         appenderator.close();
       }
+      toolbox.removeMonitor(metricsMonitor);
     }
   }
 
@@ -1011,6 +1098,15 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       if (dataSchema.getParserMap() != null && ioConfig.getInputSource() != null) {
         throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
       }
+
+      IngestionMode ingestionMode = AbstractTask.computeBatchIngestionMode(ioConfig);
+
+      if (ingestionMode == IngestionMode.REPLACE && dataSchema.getGranularitySpec()
+                                                              .inputIntervals()
+                                                              .isEmpty()) {
+        throw new IAE("GranularitySpec's intervals cannot be empty for replace.");
+      }
+
       if (ioConfig.getInputSource() != null && ioConfig.getInputSource().needsFormat()) {
         Checks.checkOneNotNullOrEmpty(
             ImmutableList.of(
@@ -1050,13 +1146,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @JsonTypeName("index")
   public static class IndexIOConfig implements BatchIOConfig
   {
-    private static final boolean DEFAULT_APPEND_TO_EXISTING = false;
 
     private final FirehoseFactory firehoseFactory;
     private final InputSource inputSource;
     private final InputFormat inputFormat;
-    private final boolean appendToExisting;
-    private final boolean dropExisting;
+    private boolean appendToExisting;
+    private boolean dropExisting;
 
     @JsonCreator
     public IndexIOConfig(
@@ -1076,12 +1171,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       this.firehoseFactory = firehoseFactory;
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
-      this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_TO_EXISTING : appendToExisting;
-      this.dropExisting = dropExisting == null ? DEFAULT_DROP_EXISTING : dropExisting;
-      if (this.dropExisting && this.appendToExisting) {
-        throw new IAE("Cannot both drop existing segments and append to existing segments. "
-                      + "Either dropExisting or appendToExisting should be set to false");
-      }
+      this.appendToExisting = appendToExisting == null ? BatchIOConfig.DEFAULT_APPEND_EXISTING : appendToExisting;
+      this.dropExisting = dropExisting == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : dropExisting;
     }
 
     // old constructor for backward compatibility
@@ -1120,16 +1211,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       return inputFormat;
     }
 
-    public InputSource getNonNullInputSource(@Nullable InputRowParser inputRowParser)
+    public InputSource getNonNullInputSource()
     {
-      if (inputSource == null) {
-        return new FirehoseFactoryToInputSourceAdaptor(
-            (FiniteFirehoseFactory) firehoseFactory,
-            inputRowParser
-        );
-      } else {
-        return inputSource;
-      }
+      return Preconditions.checkNotNull(inputSource, "inputSource");
     }
 
     public InputFormat getNonNullInputFormat()
@@ -1138,14 +1222,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
 
     @Override
-    @JsonProperty
     public boolean isAppendToExisting()
     {
       return appendToExisting;
     }
 
     @Override
-    @JsonProperty
     public boolean isDropExisting()
     {
       return dropExisting;
@@ -1154,7 +1236,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   public static class IndexTuningConfig implements AppenderatorConfig
   {
-    private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
+    private static final IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.DEFAULT;
     private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
     private static final boolean DEFAULT_GUARANTEE_ROLLUP = false;
     private static final boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = false;
@@ -1321,7 +1403,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     )
     {
       this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
-      this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
+      this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY_BATCH : maxRowsInMemory;
       // initializing this to 0, it will be lazily initialized to a value
       // @see #getMaxBytesInMemoryOrDefault()
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
@@ -1678,4 +1760,5 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              '}';
     }
   }
+
 }

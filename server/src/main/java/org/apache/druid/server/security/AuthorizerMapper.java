@@ -19,11 +19,8 @@
 
 package org.apache.druid.server.security;
 
-import org.apache.druid.guice.ManageLifecycle;
-
 import java.util.Map;
 
-@ManageLifecycle
 public class AuthorizerMapper
 {
   private Map<String, Authorizer> authorizerMap;

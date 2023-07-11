@@ -44,7 +44,7 @@ import java.util.Map;
 public class SqlReader extends IntermediateRowParsingReader<Map<String, Object>>
 {
   private final InputRowSchema inputRowSchema;
-  private final SqlEntity source;
+  private final InputEntity source;
   private final File temporaryDirectory;
   private final ObjectMapper objectMapper;
 
@@ -57,7 +57,7 @@ public class SqlReader extends IntermediateRowParsingReader<Map<String, Object>>
   )
   {
     this.inputRowSchema = inputRowSchema;
-    this.source = (SqlEntity) source;
+    this.source = source;
     this.temporaryDirectory = temporaryDirectory;
     this.objectMapper = objectMapper;
   }
@@ -73,6 +73,12 @@ public class SqlReader extends IntermediateRowParsingReader<Map<String, Object>>
     {
     }, inputStream, closer, objectMapper);
     return jsonIterator;
+  }
+
+  @Override
+  protected InputEntity source()
+  {
+    return source;
   }
 
   @Override

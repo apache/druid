@@ -1,0 +1,65 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<configuration>
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+    </property>
+
+    <property>
+      <name>yarn.application.classpath</name>
+      <value>/usr/local/hadoop/etc/hadoop, /usr/local/hadoop/share/hadoop/common/*, /usr/local/hadoop/share/hadoop/common/lib/*, /usr/local/hadoop/share/hadoop/hdfs/*, /usr/local/hadoop/share/hadoop/hdfs/lib/*, /usr/local/hadoop/share/hadoop/mapreduce/*, /usr/local/hadoop/share/hadoop/mapreduce/lib/*, /usr/local/hadoop/share/hadoop/yarn/*, /usr/local/hadoop/share/hadoop/yarn/lib/*</value>
+    </property>
+
+    <property>
+    <description>
+      Number of seconds after an application finishes before the nodemanager's
+      DeletionService will delete the application's localized file directory
+      and log directory.
+
+      To diagnose Yarn application problems, set this property's value large
+      enough (for example, to 600 = 10 minutes) to permit examination of these
+      directories. After changing the property's value, you must restart the
+      nodemanager in order for it to have an effect.
+
+      The roots of Yarn applications' work directories is configurable with
+      the yarn.nodemanager.local-dirs property (see below), and the roots
+      of the Yarn applications' log directories is configurable with the
+      yarn.nodemanager.log-dirs property (see also below).
+    </description>
+    <name>yarn.nodemanager.delete.debug-delay-sec</name>
+    <value>600</value>
+  </property>
+
+    <property>
+      <name>yarn.log-aggregation-enable</name>
+      <value>true</value> 
+    </property>
+
+    <property>
+      <name>yarn.log-aggregation.retain-seconds</name>
+      <value>900000</value> 
+    </property> 
+
+    <property>
+      <name>yarn.nodemanager.vmem-check-enabled</name>
+      <value>false</value>
+    </property>
+
+</configuration>

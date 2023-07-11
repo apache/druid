@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import { DateRange } from '@blueprintjs/datetime';
+import type { DateRange } from '@blueprintjs/datetime';
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
 
 export function dateToIsoDateString(date: Date): string {
-  return date.toISOString().substr(0, 10);
+  return date.toISOString().slice(0, 10);
 }
 
 export function utcToLocalDate(utcDate: Date): Date {
@@ -52,8 +52,8 @@ export function localDateRangeToInterval(localRange: DateRange): string {
   // This function takes in the dates selected from datepicker in local time, and displays them in UTC
   // Shall Blueprint make any changes to the way dates are selected, this function will have to be reworked
   const [localStartDate, localEndDate] = localRange;
-  return `${localStartDate ? localToUtcDate(localStartDate).toISOString().substring(0, 19) : ''}/${
-    localEndDate ? localToUtcDate(localEndDate).toISOString().substring(0, 19) : ''
+  return `${localStartDate ? localToUtcDate(localStartDate).toISOString().slice(0, 19) : ''}/${
+    localEndDate ? localToUtcDate(localEndDate).toISOString().slice(0, 19) : ''
   }`;
 }
 

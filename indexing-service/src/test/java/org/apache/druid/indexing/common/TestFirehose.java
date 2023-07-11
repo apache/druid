@@ -101,7 +101,7 @@ public class TestFirehose implements Firehose
                            ? ((StringInputRowParser) parser).parse((String) queue.removeFirst().orElse(null))
                            : (InputRow) parser.parseBatch(queue.removeFirst().orElse(null)).get(0);
       if (row != null && row.getRaw(FAIL_DIM) != null) {
-        throw new ParseException(FAIL_DIM);
+        throw new ParseException(null, FAIL_DIM);
       }
       return row;
     }

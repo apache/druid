@@ -19,7 +19,7 @@
 import React from 'react';
 
 export interface DeferredProps {
-  content: () => JSX.Element;
+  content: () => JSX.Element | null;
 }
 
 export const Deferred = React.memo(function Deferred(props: DeferredProps) {

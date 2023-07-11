@@ -23,13 +23,18 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -40,6 +45,7 @@ import javax.annotation.Nullable;
  */
 public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex(HllSketchModule.BUILD_TYPE_NAME);
 
   @JsonCreator
   public HllSketchBuildAggregatorFactory(
@@ -47,16 +53,18 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
       @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("lgK") @Nullable final Integer lgK,
       @JsonProperty("tgtHllType") @Nullable final String tgtHllType,
+      @JsonProperty("shouldFinalize") final Boolean shouldFinalize,
       @JsonProperty("round") final boolean round
   )
   {
-    super(name, fieldName, lgK, tgtHllType, round);
+    super(name, fieldName, lgK, tgtHllType, shouldFinalize, round);
   }
 
+
   @Override
-  public String getComplexTypeName()
+  public ColumnType getIntermediateType()
   {
-    return HllSketchModule.BUILD_TYPE_NAME;
+    return TYPE;
   }
 
   @Override
@@ -69,6 +77,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   public Aggregator factorize(final ColumnSelectorFactory columnSelectorFactory)
   {
     final ColumnValueSelector<Object> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
+    validateInputs(columnSelectorFactory.getColumnCapabilities(getFieldName()));
     return new HllSketchBuildAggregator(selector, getLgK(), TgtHllType.valueOf(getTgtHllType()));
   }
 
@@ -76,6 +85,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
     final ColumnValueSelector<Object> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
+    validateInputs(columnSelectorFactory.getColumnCapabilities(getFieldName()));
     return new HllSketchBuildBufferAggregator(
         selector,
         getLgK(),
@@ -93,6 +103,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
+    validateInputs(selectorFactory.getColumnCapabilities(getFieldName()));
     return new HllSketchBuildVectorAggregator(
         selectorFactory,
         getFieldName(),
@@ -110,6 +121,34 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
   public int getMaxIntermediateSize()
   {
     return HllSketch.getMaxUpdatableSerializationBytes(getLgK(), TgtHllType.valueOf(getTgtHllType()));
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new HllSketchBuildAggregatorFactory(
+        newName,
+        getFieldName(),
+        getLgK(),
+        getTgtHllType(),
+        isShouldFinalize(),
+        isRound()
+    );
+  }
+
+  private void validateInputs(@Nullable ColumnCapabilities capabilities)
+  {
+    if (capabilities != null) {
+      if (capabilities.is(ValueType.COMPLEX)) {
+        throw new ISE(
+            "Invalid input [%s] of type [%s] for [%s] aggregator [%s]",
+            getFieldName(),
+            capabilities.asTypeString(),
+            HllSketchModule.BUILD_TYPE_NAME,
+            getName()
+        );
+      }
+    }
   }
 
 }

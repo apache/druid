@@ -220,6 +220,8 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
 
       return new CloseableIterator<Entry<KeyType>>()
       {
+        final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregators.size());
+
         int curr = 0;
         final int size = getSize();
 
@@ -235,7 +237,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
           if (curr >= size) {
             throw new NoSuchElementException();
           }
-          return bucketEntryForOffset(wrappedOffsets.get(curr++));
+          return populateBucketEntryForOffset(reusableEntry, wrappedOffsets.get(curr++));
         }
 
         @Override
@@ -254,6 +256,8 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       // Unsorted iterator
       return new CloseableIterator<Entry<KeyType>>()
       {
+        final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregators.size());
+
         int curr = 0;
         final int size = getSize();
 
@@ -270,7 +274,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
             throw new NoSuchElementException();
           }
           final int offset = offsetList.get(curr);
-          final Entry<KeyType> entry = bucketEntryForOffset(offset);
+          final Entry<KeyType> entry = populateBucketEntryForOffset(reusableEntry, offset);
           curr++;
 
           return entry;

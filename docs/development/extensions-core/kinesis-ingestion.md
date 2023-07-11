@@ -23,29 +23,156 @@ sidebar_label: "Amazon Kinesis"
   ~ under the License.
   -->
 
+When you enable the Kinesis indexing service, you can configure *supervisors* on the Overlord to manage the creation and lifetime of Kinesis indexing tasks. These indexing tasks read events using Kinesis' own shard and sequence number mechanism to guarantee exactly-once ingestion. The supervisor oversees the state of the indexing tasks to:
+  - coordinate handoffs
+  - manage failures
+  - ensure that scalability and replication requirements are maintained.
 
-Similar to the [Kafka indexing service](./kafka-ingestion.md), the Kinesis indexing service for Apache Druid enables the configuration of *supervisors* on the Overlord. These supervisors facilitate ingestion from Kinesis by managing the creation and lifetime of Kinesis indexing tasks. These indexing tasks read events using Kinesis's own
-Shards and Sequence Number mechanism and are therefore able to provide guarantees of exactly-once ingestion.
-The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
-and ensure that the scalability and replication requirements are maintained.
 
-The Kinesis indexing service is provided as the `druid-kinesis-indexing-service` core Apache Druid extension (see
+To use the Kinesis indexing service, load the `druid-kinesis-indexing-service` core Apache Druid extension (see
 [Including Extensions](../../development/extensions.md#loading-extensions)).
 
 > Before you deploy the Kinesis extension to production, read the [Kinesis known issues](#kinesis-known-issues).
 
 ## Submitting a Supervisor Spec
 
-The Kinesis indexing service requires that the `druid-kinesis-indexing-service` extension be loaded on both the Overlord
-and the MiddleManagers. A supervisor for a dataSource is started by submitting a supervisor spec via HTTP POST to
-`http://<OVERLORD_IP>:<OVERLORD_PORT>/druid/indexer/v1/supervisor`, for example:
+To use the Kinesis indexing service, load the `druid-kinesis-indexing-service` extension on both the Overlord and the MiddleManagers. Druid starts a supervisor for a dataSource when you submit a supervisor spec. Submit your supervisor spec to the following endpoint:
+
+
+`http://<OVERLORD_IP>:<OVERLORD_PORT>/druid/indexer/v1/supervisor`
+
+For example:
 
 ```
 curl -X POST -H 'Content-Type: application/json' -d @supervisor-spec.json http://localhost:8090/druid/indexer/v1/supervisor
 ```
 
-A sample supervisor spec is shown below:
+Where the file `supervisor-spec.json` contains a Kinesis supervisor spec:
 
+```json
+{
+  "type": "kinesis",
+  "spec": {
+    "dataSchema": {
+      "dataSource": "metrics-kinesis",
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "auto"
+      },
+     "dimensionsSpec": {
+        "dimensions": [],
+        "dimensionExclusions": [
+         "timestamp",
+         "value"
+       ]
+      },
+     "metricsSpec": [
+        {
+         "name": "count",
+          "type": "count"
+       },
+       {
+          "name": "value_sum",
+          "fieldName": "value",
+          "type": "doubleSum"
+        },
+       {
+         "name": "value_min",
+         "fieldName": "value",
+         "type": "doubleMin"
+       },
+        {
+          "name": "value_max",
+         "fieldName": "value",
+         "type": "doubleMax"
+       }
+     ],
+     "granularitySpec": {
+        "type": "uniform",
+        "segmentGranularity": "HOUR",
+        "queryGranularity": "NONE"
+     }
+   },
+    "ioConfig": {
+     "stream": "metrics",
+     "inputFormat": {
+       "type": "json"
+      },
+      "endpoint": "kinesis.us-east-1.amazonaws.com",
+      "taskCount": 1,
+      "replicas": 1,
+      "taskDuration": "PT1H"
+   },
+   "tuningConfig": {
+     "type": "kinesis",
+     "maxRowsPerSegment": 5000000
+   }
+  }
+}
+```
+
+
+## Supervisor Spec
+
+|Field|Description|Required|
+|--------|-----------|---------|
+|`type`|The supervisor type; this should always be `kinesis`.|yes|
+|`spec`|Container object for the supervisor configuration.|yes|
+|`dataSchema`|The schema that will be used by the Kinesis indexing task during ingestion. See [`dataSchema`](../../ingestion/ingestion-spec.md#dataschema).|yes|
+|`ioConfig`|An [`ioConfig`](#ioconfig) object for configuring Kafka connection and I/O-related settings for the supervisor and indexing task.|yes|
+|`tuningConfig`|A [`tuningConfig`](#tuningconfig) object for configuring performance-related settings for the supervisor and indexing tasks.|no|
+
+### `ioConfig`
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|`stream`|String|The Kinesis stream to read.|yes|
+|`inputFormat`|Object|[`inputFormat`](../../ingestion/data-formats.md#input-format) to specify how to parse input data. See [Specifying data format](#specifying-data-format) for details about specifying the input format.|yes|
+|`endpoint`|String|The AWS Kinesis stream endpoint for a region. You can find a list of endpoints [here](http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region).|no (default == kinesis.us-east-1.amazonaws.com)|
+|`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against process failure.|no (default == 1)|
+|`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. This means that the maximum number of reading tasks will be `taskCount * replicas` and the total number of tasks (*reading* + *publishing*) will be higher than this. See [Capacity Planning](#capacity-planning) below for more details. The number of reading tasks will be less than `taskCount` if `taskCount > {numKinesisShards}`.|no (default == 1)|
+|`taskDuration`|ISO8601 Period|The length of time before tasks stop reading and begin publishing their segment.|no (default == PT1H)|
+|`startDelay`|ISO8601 Period|The period to wait before the supervisor starts managing tasks.|no (default == PT5S)|
+|`period`|ISO8601 Period|How often the supervisor will execute its management logic. Note that the supervisor will also run in response to certain events (such as tasks succeeding, failing, and reaching their taskDuration) so this value specifies the maximum time between iterations.|no (default == PT30S)|
+|`useEarliestSequenceNumber`|Boolean|If a supervisor is managing a dataSource for the first time, it will obtain a set of starting sequence numbers from Kinesis. This flag determines whether it retrieves the earliest or latest sequence numbers in Kinesis. Under normal circumstances, subsequent tasks will start from where the previous segments ended so this flag will only be used on first run.|no (default == false)|
+|`completionTimeout`|ISO8601 Period|The length of time to wait before declaring a publishing task as failed and terminating it. If this is set too low, your tasks may never publish. The publishing clock for a task begins roughly after `taskDuration` elapses.|no (default == PT6H)|
+|`lateMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps earlier than this period before the task was created; for example if this is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline).|no (default == none)|
+|`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*. Messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting `earlyMessageRejectionPeriod` too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
+|`recordsPerFetch`|Integer|The number of records to request per call to fetch records from Kinesis. See [Determining fetch settings](#determining-fetch-settings).|no (see [Determining fetch settings](#determining-fetch-settings) for defaults)|
+|`fetchDelayMillis`|Integer|Time in milliseconds to wait between subsequent calls to fetch records from Kinesis. See [Determining fetch settings](#determining-fetch-settings).|no (default == 0)|
+|`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|no|
+|`awsExternalId`|String|The AWS external id to use for additional permissions.|no|
+|`deaggregate`|Boolean|Whether to use the de-aggregate function of the KCL. See below for details.|no|
+|`autoScalerConfig`|Object|Defines auto scaling behavior for Kinesis ingest tasks. See [Tasks Autoscaler Properties](#task-autoscaler-properties).|no (default == null)|
+
+#### Task Autoscaler Properties
+
+| Property | Description | Required |
+| ------------- | ------------- | ------------- |
+| `enableTaskAutoScaler` | Enable or disable the auto scaler. When false or absent, Druid disables the `autoScaler` even when `autoScalerConfig` is not null.| no (default == false) |
+| `taskCountMax` | Maximum number of Kinesis ingestion tasks. Must be greater than or equal to `taskCountMin`. If greater than `{numKinesisShards}`, the maximum number of reading tasks is `{numKinesisShards}` and `taskCountMax` is ignored.  | yes |
+| `taskCountMin` | Minimum number of Kinesis ingestion tasks. When you enable the auto scaler, Druid ignores the value of taskCount in `IOConfig` and uses`taskCountMin` for the initial number of tasks to launch.| yes |
+| `minTriggerScaleActionFrequencyMillis` | Minimum time interval between two scale actions | no (default == 600000) |
+| `autoScalerStrategy` | The algorithm of `autoScaler`. ONLY `lagBased` is supported for now. See [Lag Based AutoScaler Strategy Related Properties](#lag-based-autoscaler-strategy-related-properties) for details.| no (default == `lagBased`) |
+
+##### Lag Based AutoScaler Strategy Related Properties
+
+The Kinesis indexing service reports lag metrics measured in time milliseconds rather than message count which is used by Kafka.
+
+| Property | Description | Required |
+| ------------- | ------------- | ------------- |
+| `lagCollectionIntervalMillis` | Period of lag points collection.  | no (default == 30000) |
+| `lagCollectionRangeMillis` | The total time window of lag collection, Use with `lagCollectionIntervalMillis`，it means that in the recent `lagCollectionRangeMillis`, collect lag metric points every `lagCollectionIntervalMillis`. | no (default == 600000) |
+| `scaleOutThreshold` | The Threshold of scale out action | no (default == 6000000) |
+| `triggerScaleOutFractionThreshold` | If `triggerScaleOutFractionThreshold` percent of lag points are higher than `scaleOutThreshold`, then do scale out action. | no (default == 0.3) |
+| `scaleInThreshold` | The Threshold of scale in action | no (default == 1000000) |
+| `triggerScaleInFractionThreshold` | If `triggerScaleInFractionThreshold` percent of lag points are lower than `scaleOutThreshold`, then do scale in action. | no (default == 0.9) |
+| `scaleActionStartDelayMillis` | Number of milliseconds to delay after the supervisor starts before the first scale logic check. | no (default == 300000) |
+| `scaleActionPeriodMillis` | Frequency in milliseconds to check if a scale action is triggered | no (default == 60000) |
+| `scaleInStep` | Number of tasks to reduce at a time when scaling down | no (default == 1) |
+| `scaleOutStep` | Number of tasks to add at a time when scaling out | no (default == 2) |
+
+The following example demonstrates a supervisor spec with `lagBased` autoScaler enabled:
 ```json
 {
   "type": "kinesis",
@@ -91,15 +218,30 @@ A sample supervisor spec is shown below:
   },
   "ioConfig": {
     "stream": "metrics",
+    "autoScalerConfig": {
+      "enableTaskAutoScaler": true,
+      "taskCountMax": 6,
+      "taskCountMin": 2,
+      "minTriggerScaleActionFrequencyMillis": 600000,
+      "autoScalerStrategy": "lagBased",
+      "lagCollectionIntervalMillis": 30000,
+      "lagCollectionRangeMillis": 600000,
+      "scaleOutThreshold": 600000,
+      "triggerScaleOutFractionThreshold": 0.3,
+      "scaleInThreshold": 100000,
+      "triggerScaleInFractionThreshold": 0.9,
+      "scaleActionStartDelayMillis": 300000,
+      "scaleActionPeriodMillis": 60000,
+      "scaleInStep": 1,
+      "scaleOutStep": 2
+    },
     "inputFormat": {
       "type": "json"
     },
     "endpoint": "kinesis.us-east-1.amazonaws.com",
     "taskCount": 1,
     "replicas": 1,
-    "taskDuration": "PT1H",
-    "recordsPerFetch": 2000,
-    "fetchDelayMillis": 1000
+    "taskDuration": "PT1H"
   },
   "tuningConfig": {
     "type": "kinesis",
@@ -108,89 +250,61 @@ A sample supervisor spec is shown below:
 }
 ```
 
-
-## Supervisor Spec
-
-|Field|Description|Required|
-|--------|-----------|---------|
-|`type`|The supervisor type, this should always be `kinesis`.|yes|
-|`dataSchema`|The schema that will be used by the Kinesis indexing task during ingestion. See [`dataSchema`](../../ingestion/index.md#dataschema).|yes|
-|`ioConfig`|A KinesisSupervisorIOConfig object for configuring Kafka connection and I/O-related settings for the supervisor and indexing task. See [KinesisSupervisorIOConfig](#kinesissupervisorioconfig) below.|yes|
-|`tuningConfig`|A KinesisSupervisorTuningConfig object for configuring performance-related settings for the supervisor and indexing tasks. See [KinesisSupervisorTuningConfig](#kinesissupervisortuningconfig) below.|no|
-
-
-### KinesisSupervisorIOConfig
-
-|Field|Type|Description|Required|
-|-----|----|-----------|--------|
-|`stream`|String|The Kinesis stream to read.|yes|
-|`inputFormat`|Object|[`inputFormat`](../../ingestion/data-formats.md#input-format) to specify how to parse input data. See [the below section](#specifying-data-format) for details about specifying the input format.|yes|
-|`endpoint`|String|The AWS Kinesis stream endpoint for a region. You can find a list of endpoints [here](http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region).|no (default == kinesis.us-east-1.amazonaws.com)|
-|`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against process failure.|no (default == 1)|
-|`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. This means that the maximum number of reading tasks will be `taskCount * replicas` and the total number of tasks (*reading* + *publishing*) will be higher than this. See [Capacity Planning](#capacity-planning) below for more details. The number of reading tasks will be less than `taskCount` if `taskCount > {numKinesisShards}`.|no (default == 1)|
-|`taskDuration`|ISO8601 Period|The length of time before tasks stop reading and begin publishing their segment.|no (default == PT1H)|
-|`startDelay`|ISO8601 Period|The period to wait before the supervisor starts managing tasks.|no (default == PT5S)|
-|`period`|ISO8601 Period|How often the supervisor will execute its management logic. Note that the supervisor will also run in response to certain events (such as tasks succeeding, failing, and reaching their taskDuration) so this value specifies the maximum time between iterations.|no (default == PT30S)|
-|`useEarliestSequenceNumber`|Boolean|If a supervisor is managing a dataSource for the first time, it will obtain a set of starting sequence numbers from Kinesis. This flag determines whether it retrieves the earliest or latest sequence numbers in Kinesis. Under normal circumstances, subsequent tasks will start from where the previous segments ended so this flag will only be used on first run.|no (default == false)|
-|`completionTimeout`|ISO8601 Period|The length of time to wait before declaring a publishing task as failed and terminating it. If this is set too low, your tasks may never publish. The publishing clock for a task begins roughly after `taskDuration` elapses.|no (default == PT6H)|
-|`lateMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps earlier than this period before the task was created; for example if this is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline).|no (default == none)|
-|`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting earlyMessageRejectionPeriod too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
-|`recordsPerFetch`|Integer|The number of records to request per GetRecords call to Kinesis. See 'Determining Fetch Settings' below.|no (default == 2000)|
-|`fetchDelayMillis`|Integer|Time in milliseconds to wait between subsequent GetRecords calls to Kinesis. See 'Determining Fetch Settings' below.|no (default == 1000)|
-|`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|no|
-|`awsExternalId`|String|The AWS external id to use for additional permissions.|no|
-|`deaggregate`|Boolean|Whether to use the de-aggregate function of the KCL. See below for details.|no|
-
 #### Specifying data format
 
 Kinesis indexing service supports both [`inputFormat`](../../ingestion/data-formats.md#input-format) and [`parser`](../../ingestion/data-formats.md#parser) to specify the data format.
-The `inputFormat` is a new and recommended way to specify the data format for Kinesis indexing service,
-but unfortunately, it doesn't support all data formats supported by the legacy `parser`.
-(They will be supported in the future.)
+Use the `inputFormat` to specify the data format for Kinesis indexing service unless you need a format only supported by the legacy `parser`.
 
-The supported `inputFormat`s include [`csv`](../../ingestion/data-formats.md#csv),
-[`delimited`](../../ingestion/data-formats.md#tsv-delimited), [`json`](../../ingestion/data-formats.md#json), [`avro_stream`](../../ingestion/data-formats.md#avro-stream), [`protobuf`](../../ingestion/data-formats.md#protobuf).
-You can also read [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
+Supported `inputFormat`s include:
+- `csv`
+- `delimited`
+- `json`
+- `avro_stream`
+- `avro_ocf`
+- `protobuf`
+
+For more information, see [Data formats](../../ingestion/data-formats.md). You can also read [`thrift`](../extensions-contrib/thrift.md) formats using `parser`.
 
 <a name="tuningconfig"></a>
 
-### KinesisSupervisorTuningConfig
+### `tuningConfig`
 
-The tuningConfig is optional and default parameters will be used if no tuningConfig is specified.
+The `tuningConfig` is optional. If no `tuningConfig` is specified, default parameters are used.
 
-| Field                                 | Type           | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Required                                                                                                     |
-|---------------------------------------|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
-| `type`                                | String         | The indexing task type, this should always be `kinesis`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | yes                                                                                                          |
-| `maxRowsInMemory`                     | Integer        | The number of rows to aggregate before persisting. This number is the post-aggregation rows, so it is not equivalent to the number of input events, but the number of aggregated rows that those events result in. This is used to manage the required JVM heap size. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | no (default == 100000)                                                                                       |
-| `maxBytesInMemory`                    | Long           | The number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. Normally this is computed internally and user does not need to set it. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | no (default == One-sixth of max JVM memory)                                                                  |
-| `maxRowsPerSegment`                   | Integer        | The number of rows to aggregate into a segment; this number is post-aggregation rows. Handoff will happen either if `maxRowsPerSegment` or `maxTotalRows` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | no (default == 5000000)                                                                                      |
-| `maxTotalRows`                        | Long           | The number of rows to aggregate across all segments; this number is post-aggregation rows. Handoff will happen either if `maxRowsPerSegment` or `maxTotalRows` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | no (default == unlimited)                                                                                    |
-| `intermediatePersistPeriod`           | ISO8601 Period | The period that determines the rate at which intermediate persists occur.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | no (default == PT10M)                                                                                        |
-| `maxPendingPersists`                  | Integer        | Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | no (default == 0, meaning one persist can be running concurrently with ingestion, and none can be queued up) |
-| `indexSpec`                           | Object         | Tune how data is indexed. See [IndexSpec](#indexspec) for more information.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | no                                                                                                           |
-| `indexSpecForIntermediatePersists`    |                | Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. This can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. However, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](#indexspec) for possible values.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | no (default = same as indexSpec)                                                                             |
-| `reportParseExceptions`               | Boolean        | If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | no (default == false)                                                                                        |
-| `handoffConditionTimeout`             | Long           | Milliseconds to wait for segment handoff. It must be >= 0, where 0 means to wait forever.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | no (default == 0)                                                                                            |
-| `resetOffsetAutomatically`            | Boolean        | Controls behavior when Druid needs to read Kinesis messages that are no longer available.<br/><br/>If false, the exception will bubble up, which will cause your tasks to fail and ingestion to halt. If this occurs, manual intervention is required to correct the situation; potentially using the [Reset Supervisor API](../../operations/api-reference.md#supervisors). This mode is useful for production, since it will make you aware of issues with ingestion.<br/><br/>If true, Druid will automatically reset to the earlier or latest sequence number available in Kinesis, based on the value of the `useEarliestSequenceNumber` property (earliest if true, latest if false). Please note that this can lead to data being _DROPPED_ (if `useEarliestSequenceNumber` is false) or _DUPLICATED_ (if `useEarliestSequenceNumber` is true) without your knowledge. Messages will be logged indicating that a reset has occurred, but ingestion will continue. This mode is useful for non-production situations, since it will make Druid attempt to recover from problems automatically, even if they lead to quiet dropping or duplicating of data. | no (default == false) |
-| `skipSequenceNumberAvailabilityCheck` | Boolean        | Whether to enable checking if the current sequence number is still available in a particular Kinesis shard. If set to false, the indexing task will attempt to reset the current sequence number (or not), depending on the value of `resetOffsetAutomatically`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | no (default == false)                                                                                        |
-| `workerThreads`                       | Integer        | The number of threads that the supervisor uses to handle requests/responses for worker tasks, along with any other internal asynchronous operation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | no (default == min(10, taskCount))                                                                           |
-| `chatThreads`                         | Integer        | The number of threads that will be used for communicating with indexing tasks.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | no (default == min(10, taskCount * replicas))                                                                |
-| `chatRetries`                         | Integer        | The number of times HTTP requests to indexing tasks will be retried before considering tasks unresponsive.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | no (default == 8)                                                                                            |
-| `httpTimeout`                         | ISO8601 Period | How long to wait for a HTTP response from an indexing task.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | no (default == PT10S)                                                                                        |
-| `shutdownTimeout`                     | ISO8601 Period | How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | no (default == PT80S)                                                                                        |
-| `recordBufferSize`                    | Integer        | Size of the buffer (number of events) used between the Kinesis fetch threads and the main ingestion thread.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | no (default == 10000)                                                                                        |
-| `recordBufferOfferTimeout`            | Integer        | Length of time in milliseconds to wait for space to become available in the buffer before timing out.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | no (default == 5000)                                                                                         |
-| `recordBufferFullWait`                | Integer        | Length of time in milliseconds to wait for the buffer to drain before attempting to fetch records from Kinesis again.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | no (default == 5000)                                                                                         |
-| `fetchSequenceNumberTimeout`          | Integer        | Length of time in milliseconds to wait for Kinesis to return the earliest or latest sequence number for a shard. Kinesis will not return the latest sequence number if no data is actively being written to that shard. In this case, this fetch call will repeatedly timeout and retry until fresh data is written to the stream.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | no (default == 60000)                                                                                        |
-| `fetchThreads`                        | Integer        | Size of the pool of threads fetching data from Kinesis. There is no benefit in having more threads than Kinesis shards.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | no (default == procs * 2, where "procs" is the number of processors on the server that the task is running on)                                                                  |
-| `segmentWriteOutMediumFactory`        | Object         | Segment write-out medium to use when creating segments. See below for more information.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | no (not specified by default, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used)  |
-| `intermediateHandoffPeriod`           | ISO8601 Period | How often the tasks should hand off segments. Handoff will happen either if `maxRowsPerSegment` or `maxTotalRows` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | no (default == P2147483647D)                                                                                 |
-| `logParseExceptions`                  | Boolean        | If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | no, default == false                                                                                         |
-| `maxParseExceptions`                  | Integer        | The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | no, unlimited default                                                                                        |
-| `maxSavedParseExceptions`             | Integer        | When a parse exception occurs, Druid can keep track of the most recent parse exceptions. "maxSavedParseExceptions" limits how many exception instances will be saved. These saved exceptions will be made available after the task finishes in the [task completion report](../../ingestion/tasks.md#reports). Overridden if `reportParseExceptions` is set.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | no, default == 0                                                                                             |
-| `maxRecordsPerPoll`                   | Integer        | The maximum number of records/events to be fetched from buffer per poll. The actual maximum will be `Max(maxRecordsPerPoll, Max(bufferSize, 1))`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | no, default == 100                                                                                           |
-| `repartitionTransitionDuration`       | ISO8601 Period | When shards are split or merged, the supervisor will recompute shard -> task group mappings, and signal any running tasks created under the old mappings to stop early at (current time + `repartitionTransitionDuration`). Stopping the tasks early allows Druid to begin reading from the new shards more quickly. The repartition transition wait time controlled by this property gives the stream additional time to write records to the new shards after the split/merge, which helps avoid the issues with empty shard handling described at https://github.com/apache/druid/issues/7600.                                                                                                                                                                                                                                                                                                                                                                               | no, (default == PT2M)                                                                                        |
-| `offsetFetchPeriod`                   | ISO8601 Period | How often the supervisor queries Kinesis and the indexing tasks to fetch current offsets and calculate lag. If the user-specified value is below the minimum value (`PT5S`), the supervisor ignores the value and uses the minimum value instead.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | no (default == PT30S, min == PT5S)                                                                           |
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|`type`| String|The indexing task type, this should always be `kinesis`.|yes|
+|`maxRowsInMemory`|Integer|The number of rows to aggregate before persisting. This number is the post-aggregation rows, so it is not equivalent to the number of input events, but the number of aggregated rows that those events result in. This is used to manage the required JVM heap size. Maximum heap memory usage for indexing scales with `maxRowsInMemory * (2 + maxPendingPersists)`.|no (default == 100000)|
+|`maxBytesInMemory`|Long| The number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. Normally, this is computed internally and user does not need to set it. The maximum heap memory usage for indexing is `maxBytesInMemory * (2 + maxPendingPersists)`.|no (default == One-sixth of max JVM memory)|
+|`maxRowsPerSegment`|Integer|The number of rows to aggregate into a segment; this number is post-aggregation rows. Handoff will happen either if `maxRowsPerSegment` or `maxTotalRows` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.|no (default == 5000000)|
+|`maxTotalRows`|Long|The number of rows to aggregate across all segments; this number is post-aggregation rows. Handoff will happen either if `maxRowsPerSegment` or `maxTotalRows` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.|no (default == unlimited)|
+|`intermediatePersistPeriod`|ISO8601 Period|The period that determines the rate at which intermediate persists occur.|no (default == PT10M)|
+|`maxPendingPersists`|Integer|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with `maxRowsInMemory * (2 + maxPendingPersists)`.|no (default == 0, meaning one persist can be running concurrently with ingestion, and none can be queued up)|
+|`indexSpec`|Object|Tune how data is indexed. See [IndexSpec](#indexspec) for more information.|no|
+|`indexSpecForIntermediatePersists`|Object|Defines segment storage format options to be used at indexing time for intermediate persisted temporary segments. This can be used to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. However, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published, see [IndexSpec](#indexspec) for possible values.| no (default = same as `indexSpec`)|
+|`reportParseExceptions`|Boolean|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|no (default == false)|
+|`handoffConditionTimeout`|Long| Milliseconds to wait for segment handoff. It must be >= 0, where 0 means to wait forever.| no (default == 0)|
+|`resetOffsetAutomatically`|Boolean|Controls behavior when Druid needs to read Kinesis messages that are no longer available.<br/><br/>If false, the exception will bubble up, which will cause your tasks to fail and ingestion to halt. If this occurs, manual intervention is required to correct the situation; potentially using the [Reset Supervisor API](../../operations/api-reference.md#supervisors). This mode is useful for production, since it will make you aware of issues with ingestion.<br/><br/>If true, Druid will automatically reset to the earlier or latest sequence number available in Kinesis, based on the value of the `useEarliestSequenceNumber` property (earliest if true, latest if false). Please note that this can lead to data being _DROPPED_ (if `useEarliestSequenceNumber` is false) or _DUPLICATED_ (if `useEarliestSequenceNumber` is true) without your knowledge. Messages will be logged indicating that a reset has occurred, but ingestion will continue. This mode is useful for non-production situations, since it will make Druid attempt to recover from problems automatically, even if they lead to quiet dropping or duplicating of data.|no (default == false)|
+|`skipSequenceNumberAvailabilityCheck`|Boolean|Whether to enable checking if the current sequence number is still available in a particular Kinesis shard. If set to false, the indexing task will attempt to reset the current sequence number (or not), depending on the value of `resetOffsetAutomatically`.|no (default == false)|
+|`workerThreads`|Integer|The number of threads that the supervisor uses to handle requests/responses for worker tasks, along with any other internal asynchronous operation.|no (default == min(10, taskCount))|
+|`chatAsync`|Boolean| If true, use asynchronous communication with indexing tasks, and ignore the `chatThreads` parameter. If false, use synchronous communication in a thread pool of size `chatThreads`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                | no (default == true)                                                                |
+|`chatThreads`|Integer| The number of threads that will be used for communicating with indexing tasks. Ignored if `chatAsync` is `true` (the default).| no (default == min(10, taskCount * replicas))|
+|`chatRetries`|Integer|The number of times HTTP requests to indexing tasks will be retried before considering tasks unresponsive.| no (default == 8)|
+|`httpTimeout`|ISO8601 Period|How long to wait for a HTTP response from an indexing task.|no (default == PT10S)|
+|`shutdownTimeout`|ISO8601 Period|How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.|no (default == PT80S)|
+|`recordBufferSize`|Integer|Size of the buffer (number of events) used between the Kinesis fetch threads and the main ingestion thread.|no (see [Determining fetch settings](#determining-fetch-settings) for defaults)|
+|`recordBufferOfferTimeout`|Integer|Length of time in milliseconds to wait for space to become available in the buffer before timing out.| no (default == 5000)|
+|`recordBufferFullWait`|Integer|Length of time in milliseconds to wait for the buffer to drain before attempting to fetch records from Kinesis again.|no (default == 5000)|
+|`fetchThreads`|Integer|Size of the pool of threads fetching data from Kinesis. There is no benefit in having more threads than Kinesis shards.|no (default == procs * 2, where "procs" is the number of processors available to the task)                                                                  |
+|`segmentWriteOutMediumFactory`|Object|Segment write-out medium to use when creating segments. See below for more information.|no (not specified by default, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used)|
+|`intermediateHandoffPeriod`|ISO8601 Period|How often the tasks should hand off segments. Handoff will happen either if `maxRowsPerSegment` or `maxTotalRows` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.| no (default == P2147483647D)|
+|`logParseExceptions`|Boolean|If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.|no, default == false|
+|`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|no, unlimited default|
+|`maxSavedParseExceptions`|Integer|When a parse exception occurs, Druid can keep track of the most recent parse exceptions. "maxSavedParseExceptions" limits how many exception instances will be saved. These saved exceptions will be made available after the task finishes in the [task completion report](../../ingestion/tasks.md#task-reports). Overridden if `reportParseExceptions` is set.|no, default == 0|
+|`maxRecordsPerPoll`|Integer|The maximum number of records/events to be fetched from buffer per poll. The actual maximum will be `Max(maxRecordsPerPoll, Max(bufferSize, 1))`|no (see [Determining fetch settings](#determining-fetch-settings) for defaults)|
+|`repartitionTransitionDuration`|ISO8601 Period|When shards are split or merged, the supervisor will recompute shard -> task group mappings, and signal any running tasks created under the old mappings to stop early at (current time + `repartitionTransitionDuration`). Stopping the tasks early allows Druid to begin reading from the new shards more quickly. The repartition transition wait time controlled by this property gives the stream additional time to write records to the new shards after the split/merge, which helps avoid the issues with empty shard handling described at https://github.com/apache/druid/issues/7600.|no, (default == PT2M)|
+|`offsetFetchPeriod`|ISO8601 Period|How often the supervisor queries Kinesis and the indexing tasks to fetch current offsets and calculate lag. If the user-specified value is below the minimum value (`PT5S`), the supervisor ignores the value and uses the minimum value instead.|no (default == PT30S, min == PT5S)|
+|`useListShards`|Boolean|Indicates if `listShards` API of AWS Kinesis SDK can be used to prevent `LimitExceededException` during ingestion. Please note that the necessary `IAM` permissions must be set for this to work.|no (default == false)|
 
 #### IndexSpec
 
@@ -208,7 +322,6 @@ For Roaring bitmaps:
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |`type`|String|Must be `roaring`.|yes|
-|`compressRunOnSerialization`|Boolean|Use a run-length encoding where it is estimated as more space efficient.|no (default == `true`)|
 
 For Concise bitmaps:
 
@@ -224,17 +337,75 @@ For Concise bitmaps:
 
 ## Operations
 
-This section gives descriptions of how some supervisor APIs work specifically in Kinesis Indexing Service.
-For all supervisor APIs, please check [Supervisor APIs](../../operations/api-reference.md#supervisors).
+This section describes how some supervisor APIs work in Kinesis Indexing Service.
+For all supervisor APIs, check [Supervisor APIs](../../operations/api-reference.md#supervisors).
 
 ### AWS Authentication
-To authenticate with AWS, you must provide your AWS access key and AWS secret key via runtime.properties, for example:
+
+To authenticate with AWS, you must provide your AWS access key and AWS secret key via `runtime.properties`, for example:
 ```
 -Ddruid.kinesis.accessKey=123 -Ddruid.kinesis.secretKey=456
 ```
+
 The AWS access key ID and secret access key are used for Kinesis API requests. If this is not provided, the service will
 look for credentials set in environment variables, via [Web Identity Token](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html), in the default profile configuration file, and from the EC2 instance
 profile provider (in this order).
+
+To ingest data from Kinesis, ensure that the policy attached to your IAM role contains the necessary permissions.
+The permissions needed depend on the value of `useListShards`.
+
+If the `useListShards` flag is set to `true`, you need following permissions:
+
+* `ListStreams`: required to list your data streams
+* `Get*`: required for `GetShardIterator`
+* `GetRecords`: required to get data records from a data stream's shard
+* `ListShards` : required to get the shards for a stream of interest
+
+**Example policy**
+
+```
+[
+  {
+    "Effect": "Allow",
+    "Action": ["kinesis:List*"],
+    "Resource": ["*"]
+  },
+  {
+    "Effect": "Allow",
+    "Action": ["kinesis:Get*"],
+    "Resource": [<ARN for shards to be ingested>]
+  }
+]
+```
+
+If the `useListShards` flag is set to `false`, you need following permissions:
+
+* `ListStreams`: required to list your data streams
+* `Get*`: required for `GetShardIterator`
+* `GetRecords`: required to get data records from a data stream's shard
+* `DescribeStream`: required to describe the specified data stream
+
+**Example policy**
+
+```    
+[
+  {
+    "Effect": "Allow",
+    "Action": ["kinesis:ListStreams"],
+    "Resource": ["*"]
+  },
+  {
+    "Effect": "Allow",
+    "Action": ["kinesis:DescribeStreams"],
+    "Resource": ["*"]
+  },
+  {
+    "Effect": "Allow",
+    "Action": ["kinesis:Get*"],
+    "Resource": [<ARN for shards to be ingested>]
+  }
+]
+```
 
 ### Getting Supervisor Status Report
 
@@ -417,16 +588,27 @@ There is also ongoing work to support automatic segment compaction of sharded se
 Hadoop (see [here](https://github.com/apache/druid/pull/5102)).
 
 ### Determining Fetch Settings
-Internally, the Kinesis Indexing Service uses the Kinesis Record Supplier abstraction for fetching Kinesis data records and storing the records
-locally. The way the Kinesis Record Supplier fetches records is to have a separate thread run the fetching operation per each Kinesis Shard, the
-max number of threads is determined by `fetchThreads`. For example, a Kinesis stream with 3 shards will have 3 threads, each fetching from a shard separately.
-There is a delay between each fetching operation, which is controlled by `fetchDelayMillis`. The maximum number of records to be fetched per thread per
-operation is controlled by `recordsPerFetch`. Note that this is not the same as `maxRecordsPerPoll`.
+Kinesis indexing tasks fetch records using `fetchThreads` threads.
+If `fetchThreads` is higher than the number of Kinesis shards, the excess threads are unused.
+Each fetch thread fetches up to `recordsPerFetch` records at once from a Kinesis shard, with a delay between fetches
+of `fetchDelayMillis`.
+The records fetched by each thread are pushed into a shared queue of size `recordBufferSize`.
+The main runner thread for each task polls up to `maxRecordsPerPoll` records from the queue at once.
 
-The records fetched by each thread will be pushed to a queue in the order that they are fetched. The records are stored in this queue until `poll()` is called
-by either the supervisor or the indexing task. `poll()` will attempt to drain the internal buffer queue up to a limit of `max(maxRecordsPerPoll, q.size())`.
-Here `maxRecordsPerPoll` controls the theoretical maximum records to drain out of the buffer queue, so setting this parameter to a reasonable value is essential
-in preventing the queue from overflowing or memory exceeding heap size.
+When using Kinesis Producer Library's aggregation feature (i.e. when [`deaggregate`](#deaggregation) is set),
+each of these parameters refers to aggregated records rather than individual records.
+
+The default values for these parameters are:
+
+- `fetchThreads`: Twice the number of processors available to the task. The number of processors available to the task
+is the total number of processors on the server, divided by `druid.worker.capacity` (the number of task slots on that
+particular server).
+- `fetchDelayMillis`: 0 (no delay between fetches).
+- `recordsPerFetch`: 100 MB or an estimated 5% of available heap, whichever is smaller, divided by `fetchThreads`.
+For estimation purposes, Druid uses a figure of 10 KB for regular records and 1 MB for [aggregated records](#deaggregation).
+- `recordBufferSize`: 100 MB or an estimated 10% of available heap, whichever is smaller.
+For estimation purposes, Druid uses a figure of 10 KB for regular records and 1 MB for [aggregated records](#deaggregation).
+- `maxRecordsPerPoll`: 100 for regular records, 1 for [aggregated records](#deaggregation).
 
 Kinesis places the following restrictions on calls to fetch records:
 
@@ -435,28 +617,19 @@ Kinesis places the following restrictions on calls to fetch records:
 - Each shard can read up to 2 MB per second.
 - The maximum size of data that GetRecords can return is 10 MB.
 
-Values for `recordsPerFetch` and `fetchDelayMillis` should be chosen to maximize throughput under the above constraints.
-The values that you choose will depend on the average size of a record and the number of consumers you have reading from
-a given shard (which will be `replicas` unless you have other consumers also reading from this Kinesis stream).
+If the above limits are exceeded, Kinesis throws ProvisionedThroughputExceededException errors. If this happens, Druid
+Kinesis tasks pause by `fetchDelayMillis` or 3 seconds, whichever is larger, and then attempt the call again.
 
-If the above limits are violated, AWS will throw ProvisionedThroughputExceededException errors on subsequent calls to
-read data. When this happens, the Kinesis indexing service will pause by `fetchDelayMillis` and then attempt the call
-again.
-
-Internally, each indexing task maintains a buffer that stores the fetched but not yet processed record. `recordsPerFetch` and `fetchDelayMillis`
-control this behavior. The number of records that the indexing task fetch from the buffer is controlled by `maxRecordsPerPoll`, which
-determines the number of records to be processed per each ingestion loop in the task.
+In most cases, the default settings for fetch parameters are sufficient to achieve good performance without excessive
+memory usage. However, in some cases, you may need to adjust these parameters in order to more finely control fetch rate
+and memory usage. Optimal values depend on the average size of a record and the number of consumers you have reading
+from a given shard, which will be `replicas` unless you have other consumers also reading from this Kinesis stream.
 
 ## Deaggregation
-See [issue](https://github.com/apache/druid/issues/6714)
-
 The Kinesis indexing service supports de-aggregation of multiple rows packed into a single record by the Kinesis
-Producer Library's aggregate method for more efficient data transfer. Currently, enabling the de-aggregate functionality
-requires the user to manually provide the Kinesis Client Library on the classpath, since this library has a license not
-compatible with Apache projects.
+Producer Library's aggregate method for more efficient data transfer.
 
-To enable this feature, add the `amazon-kinesis-client` (tested on version `1.9.2`) jar file ([link](https://mvnrepository.com/artifact/com.amazonaws/amazon-kinesis-client/1.9.2)) under `dist/druid/extensions/druid-kinesis-indexing-service/`.
-Then when submitting a supervisor-spec, set `deaggregate` to true.
+To enable this feature, set `deaggregate` to true in your `ioConfig` when submitting a supervisor spec.
 
 ## Resharding
 
@@ -475,7 +648,5 @@ Before you deploy the Kinesis extension to production, consider the following kn
 
 - Avoid implementing more than one Kinesis supervisor that read from the same Kinesis stream for ingestion. Kinesis has a per-shard read throughput limit and having multiple supervisors on the same stream can reduce available read throughput for an individual Supervisor's tasks. Additionally, multiple Supervisors ingesting to the same Druid Datasource can cause increased contention for locks on the Datasource.
 - The only way to change the stream reset policy is to submit a new ingestion spec and set up a new supervisor.
-- Timeouts for retrieving earliest sequence number will cause a reset of the supervisor. The job will resume own its own eventually, but it can trigger alerts.
-- The Kinesis supervisor will not make progress if you have empty shards. Make sure you have at least 1 record in the shard.
 - If ingestion tasks get stuck, the supervisor does not automatically recover. You should monitor ingestion tasks and investigate if your ingestion falls behind.
 - A Kinesis supervisor can sometimes compare the checkpoint offset to retention window of the stream to see if it has fallen behind. These checks fetch the earliest sequence number for Kinesis which can result in `IteratorAgeMilliseconds` becoming very high in AWS CloudWatch.

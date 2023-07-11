@@ -19,9 +19,11 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
+import { Capabilities } from '../../helpers';
+
 import { RetentionDialog } from './retention-dialog';
 
-describe('retention dialog', () => {
+describe('RetentionDialog', () => {
   it('matches snapshot', () => {
     const retentionDialog = (
       <RetentionDialog
@@ -35,7 +37,7 @@ describe('retention dialog', () => {
           },
         ]}
         defaultRules={[{ tieredReplicants: { _default_tier: 2 }, type: 'loadForever' }]}
-        tiers={['tier1', 'tier2']}
+        capabilities={Capabilities.FULL}
         onEditDefaults={() => {}}
         onCancel={() => {}}
         onSave={() => {}}

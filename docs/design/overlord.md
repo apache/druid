@@ -27,6 +27,8 @@ title: "Overlord Process"
 
 For Apache Druid Overlord Process Configuration, see [Overlord Configuration](../configuration/index.md#overlord).
 
+For basic tuning guidance for the Overlord process, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#overlord).
+
 ### HTTP endpoints
 
 For a list of API endpoints supported by the Overlord, please see the [API reference](../operations/api-reference.md#overlord).
@@ -37,10 +39,6 @@ The Overlord process is responsible for accepting tasks, coordinating task distr
 In local mode Overlord is also responsible for creating Peons for executing tasks. When running the Overlord in local mode, all MiddleManager and Peon configurations must be provided as well.
 Local mode is typically used for simple workflows.  In remote mode, the Overlord and MiddleManager are run in separate processes and you can run each on a different server.
 This mode is recommended if you intend to use the indexing service as the single endpoint for all Druid indexing.
-
-### Overlord console
-
-The Overlord provides a UI for managing tasks and workers. For more details, please see [overlord console](../operations/management-uis.md#overlord-console).
 
 ### Blacklisted workers
 

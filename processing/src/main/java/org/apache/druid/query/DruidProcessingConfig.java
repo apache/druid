@@ -38,6 +38,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   public static final HumanReadableBytes DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = HumanReadableBytes.valueOf(-1);
   public static final int MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = 1024 * 1024 * 1024;
   public static final int DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS = 60_000;
+  public static final int DEFAULT_INITIAL_BUFFERS_FOR_INTERMEDIATE_POOL = 0;
 
   private AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
 
@@ -70,10 +71,7 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     catch (UnsupportedOperationException e) {
       // max direct memory defaults to max heap size on recent JDK version, unless set explicitly
       directSizeBytes = computeMaxMemoryFromMaxHeapSize();
-      log.info(
-          "Defaulting to at most [%,d] bytes (25%% of max heap size) of direct memory for computation buffers",
-          directSizeBytes
-      );
+      log.info("Using up to [%,d] bytes of direct memory for computation buffers.", directSizeBytes);
     }
 
     int numProcessingThreads = getNumThreads();
@@ -84,7 +82,9 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     final int computedSizePerBuffer = Math.min(sizePerBuffer, MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES);
     if (computedBufferSizeBytes.compareAndSet(null, computedSizePerBuffer)) {
       log.info(
-          "Auto sizing buffers to [%,d] bytes each for [%,d] processing and [%,d] merge buffers",
+          "Auto sizing buffers to [%,d] bytes each for [%,d] processing and [%,d] merge buffers. "
+          + "If you run out of direct memory, you may need to set these parameters explicitly using the guidelines at "
+          + "https://druid.apache.org/docs/latest/operations/basic-cluster-tuning.html#processing-threads-buffers.",
           computedSizePerBuffer,
           numProcessingThreads,
           numMergeBuffers
@@ -102,6 +102,15 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
   public int poolCacheMaxCount()
   {
     return Integer.MAX_VALUE;
+  }
+
+  @Config({
+      "druid.computation.buffer.poolCacheInitialCount",
+      "${base_path}.buffer.poolCacheInitialCount"
+  })
+  public int getNumInitalBuffersForIntermediatePool()
+  {
+    return DEFAULT_INITIAL_BUFFERS_FOR_INTERMEDIATE_POOL;
   }
 
   @Override
@@ -140,10 +149,24 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     return 0;
   }
 
+  @Override
+  @Config(value = "${base_path}.indexes.skipValueRangeIndexScale")
+  public double skipValueRangeIndexScale()
+  {
+    return ColumnConfig.super.skipValueRangeIndexScale();
+  }
+
+  @Override
+  @Config(value = "${base_path}.indexes.skipValuePredicateIndexScale")
+  public double skipValuePredicateIndexScale()
+  {
+    return ColumnConfig.super.skipValuePredicateIndexScale();
+  }
+
   @Config(value = "${base_path}.fifo")
   public boolean isFifo()
   {
-    return false;
+    return true;
   }
 
   @Config(value = "${base_path}.tmpDir")

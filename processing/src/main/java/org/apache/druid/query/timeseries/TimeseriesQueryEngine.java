@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -82,7 +81,11 @@ public class TimeseriesQueryEngine
    * Run a single-segment, single-interval timeseries query on a particular adapter. The query must have been
    * scoped down to a single interval before calling this method.
    */
-  public Sequence<Result<TimeseriesResultValue>> process(final TimeseriesQuery query, final StorageAdapter adapter)
+  public Sequence<Result<TimeseriesResultValue>> process(
+      final TimeseriesQuery query,
+      final StorageAdapter adapter,
+      @Nullable final TimeseriesQueryMetrics timeseriesQueryMetrics
+  )
   {
     if (adapter == null) {
       throw new SegmentMissingException(
@@ -97,7 +100,7 @@ public class TimeseriesQueryEngine
 
     final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(adapter);
 
-    final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
+    final boolean doVectorize = query.context().getVectorize().shouldVectorize(
         adapter.canVectorize(filter, query.getVirtualColumns(), descending)
         && VirtualColumns.shouldVectorize(query, query.getVirtualColumns(), adapter)
         && query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(inspector))
@@ -106,9 +109,9 @@ public class TimeseriesQueryEngine
     final Sequence<Result<TimeseriesResultValue>> result;
 
     if (doVectorize) {
-      result = processVectorized(query, adapter, filter, interval, gran, descending);
+      result = processVectorized(query, adapter, filter, interval, gran, descending, timeseriesQueryMetrics);
     } else {
-      result = processNonVectorized(query, adapter, filter, interval, gran, descending);
+      result = processNonVectorized(query, adapter, filter, interval, gran, descending, timeseriesQueryMetrics);
     }
 
     final int limit = query.getLimit();
@@ -125,7 +128,8 @@ public class TimeseriesQueryEngine
       @Nullable final Filter filter,
       final Interval queryInterval,
       final Granularity gran,
-      final boolean descending
+      final boolean descending,
+      final TimeseriesQueryMetrics timeseriesQueryMetrics
   )
   {
     final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
@@ -136,8 +140,8 @@ public class TimeseriesQueryEngine
         queryInterval,
         query.getVirtualColumns(),
         descending,
-        QueryContexts.getVectorSize(query),
-        null
+        query.context().getVectorSize(),
+        timeseriesQueryMetrics
     );
 
     if (cursor == null) {
@@ -156,7 +160,7 @@ public class TimeseriesQueryEngine
       );
 
       if (granularizer == null) {
-        return Sequences.empty();
+        return Sequences.withBaggage(Sequences.empty(), closer);
       }
 
       final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
@@ -251,7 +255,8 @@ public class TimeseriesQueryEngine
       @Nullable final Filter filter,
       final Interval queryInterval,
       final Granularity gran,
-      final boolean descending
+      final boolean descending,
+      final TimeseriesQueryMetrics timeseriesQueryMetrics
   )
   {
     final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
@@ -299,7 +304,8 @@ public class TimeseriesQueryEngine
               agg.close();
             }
           }
-        }
+        },
+        timeseriesQueryMetrics
     );
   }
 }

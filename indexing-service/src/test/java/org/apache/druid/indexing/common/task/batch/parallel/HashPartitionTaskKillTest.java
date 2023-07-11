@@ -26,7 +26,6 @@ import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.ParseSpec;
-import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -47,7 +46,6 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -267,23 +265,23 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     } else {
       Preconditions.checkArgument(inputFormat == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          new LocalFirehoseFactory(inputDir, filter, null),
-          appendToExisting
+          null,
+          new LocalInputSource(inputDir, filter),
+          createInputFormatFromParseSpec(parseSpec),
+          appendToExisting,
+          null
       );
       //noinspection unchecked
       ingestionSpec = new ParallelIndexIngestionSpec(
           new DataSchema(
               "dataSource",
-              getObjectMapper().convertValue(
-                  new StringInputRowParser(parseSpec, null),
-                  Map.class
-              ),
+              parseSpec.getTimestampSpec(),
+              parseSpec.getDimensionsSpec(),
               new AggregatorFactory[]{
                   new LongSumAggregatorFactory("val", "val")
               },
               granularitySpec,
-              null,
-              getObjectMapper()
+              null
           ),
           ioConfig,
           tuningConfig
@@ -387,9 +385,15 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     }
 
     @Override
-    public void stopGracefully()
+    public void stopGracefully(String stopReason)
     {
 
+    }
+
+    @Override
+    public String getStopReason()
+    {
+      return null;
     }
 
     @Override

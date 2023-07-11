@@ -54,6 +54,7 @@ import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentsRetriever;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -65,11 +66,15 @@ import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.util.ToolRunner;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -83,13 +88,16 @@ import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class HadoopIndexTask extends HadoopTask implements ChatHandler
 {
+  public static final String INPUT_SOURCE_TYPE = "hadoop";
   private static final Logger log = new Logger(HadoopIndexTask.class);
   private static final String HADOOP_JOB_ID_FILENAME = "mapReduceJobId.json";
   private static final String TYPE = "index_hadoop";
@@ -166,7 +174,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     );
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
-    this.spec = spec;
+    this.spec = context == null ? spec : spec.withContext(context);
 
     // Some HadoopIngestionSpec stuff doesn't make sense in the context of the indexing service
     Preconditions.checkArgument(
@@ -190,6 +198,14 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     return "index_hadoop";
   }
 
+  @Nonnull
+  @JsonIgnore
+  @Override
+  public Set<ResourceAction> getInputSourceResources()
+  {
+    return Collections.singleton(new ResourceAction(new Resource(INPUT_SOURCE_TYPE, ResourceType.EXTERNAL), Action.READ));
+  }
+
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
@@ -198,7 +214,19 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       Interval interval = JodaUtils.umbrellaInterval(
           JodaUtils.condenseIntervals(intervals)
       );
-      return taskActionClient.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)) != null;
+      final TaskLock lock = taskActionClient.submit(
+          new TimeChunkLockTryAcquireAction(
+              TaskLockType.EXCLUSIVE,
+              interval
+          )
+      );
+      if (lock == null) {
+        return false;
+      }
+      if (lock.isRevoked()) {
+        throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
+      }
+      return true;
     } else {
       return true;
     }
@@ -317,6 +345,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     try {
       registerResourceCloserOnAbnormalExit(config -> killHadoopJob());
       String hadoopJobIdFile = getHadoopJobIdFileName();
+      logExtensionsConfig();
       final ClassLoader loader = buildClassLoader(toolbox);
       boolean determineIntervals = spec.getDataSchema().getGranularitySpec().inputIntervals().isEmpty();
 
@@ -393,6 +422,9 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
             ),
             "Cannot acquire a lock for interval[%s]", interval
         );
+        if (lock.isRevoked()) {
+          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
+        }
         version = lock.getVersion();
       } else {
         Iterable<TaskLock> locks = getTaskLocks(toolbox.getTaskActionClient());
@@ -467,7 +499,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
           // for awaitSegmentAvailabilityTimeoutMillis
           if (spec.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis() > 0) {
             ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
-            segmentAvailabilityConfirmationCompleted = waitForSegmentAvailability(
+            waitForSegmentAvailability(
                 toolbox,
                 segments,
                 spec.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis()
@@ -660,7 +692,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
                 null,
                 getTaskCompletionRowStats(),
                 errorMsg,
-                segmentAvailabilityConfirmationCompleted
+                segmentAvailabilityConfirmationCompleted,
+                segmentAvailabilityWaitTimeMs
             )
         )
     );

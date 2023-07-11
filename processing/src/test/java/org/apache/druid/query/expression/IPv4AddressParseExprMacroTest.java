@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.InputBindings;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -32,7 +32,6 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
 {
   private static final Expr VALID = ExprEval.of("192.168.0.1").toExpr();
   private static final long EXPECTED = 3232235521L;
-  private static final Long NULL = NullHandling.replaceWithDefault() ? NullHandling.ZERO_LONG : null;
 
   public IPv4AddressParseExprMacroTest()
   {
@@ -42,7 +41,7 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
   @Test
   public void testTooFewArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 1 argument");
+    expectException(IllegalArgumentException.class, "requires 1 argument");
 
     apply(Collections.emptyList());
   }
@@ -50,51 +49,51 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
   @Test
   public void testTooManyArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 1 argument");
+    expectException(IllegalArgumentException.class, "requires 1 argument");
 
     apply(Arrays.asList(VALID, VALID));
   }
 
   @Test
-  public void testNullStringArg()
+  public void testnullStringArg()
   {
     Expr nullString = ExprEval.of(null).toExpr();
-    Assert.assertSame(NULL, eval(nullString));
+    Assert.assertNull(eval(nullString));
   }
 
   @Test
-  public void testNullLongArg()
+  public void testnullLongArg()
   {
     Expr nullLong = ExprEval.ofLong(null).toExpr();
-    Assert.assertEquals(NULL, eval(nullLong));
+    Assert.assertNull(eval(nullLong));
   }
 
   @Test
   public void testInvalidArgType()
   {
     Expr longArray = ExprEval.ofLongArray(new Long[]{1L, 2L}).toExpr();
-    Assert.assertEquals(NULL, eval(longArray));
+    Assert.assertNull(eval(longArray));
   }
 
   @Test
   public void testInvalidStringArgNotIPAddress()
   {
     Expr notIpAddress = ExprEval.of("druid.apache.org").toExpr();
-    Assert.assertEquals(NULL, eval(notIpAddress));
+    Assert.assertNull(eval(notIpAddress));
   }
 
   @Test
   public void testInvalidStringArgIPv6Compatible()
   {
     Expr ipv6Compatible = ExprEval.of("::192.168.0.1").toExpr();
-    Assert.assertEquals(NULL, eval(ipv6Compatible));
+    Assert.assertNull(eval(ipv6Compatible));
   }
 
   @Test
   public void testValidStringArgIPv6Mapped()
   {
     Expr ipv6Mapped = ExprEval.of("::ffff:192.168.0.1").toExpr();
-    Assert.assertEquals(NULL, eval(ipv6Mapped));
+    Assert.assertNull(eval(ipv6Mapped));
   }
 
   @Test
@@ -107,14 +106,14 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
   public void testValidStringArgUnsignedInt()
   {
     Expr unsignedInt = ExprEval.of("3232235521").toExpr();
-    Assert.assertEquals(NULL, eval(unsignedInt));
+    Assert.assertNull(eval(unsignedInt));
   }
 
   @Test
   public void testInvalidLongArgTooLow()
   {
     Expr tooLow = ExprEval.ofLong(-1L).toExpr();
-    Assert.assertEquals(NULL, eval(tooLow));
+    Assert.assertNull(eval(tooLow));
   }
 
   @Test
@@ -137,7 +136,7 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
   public void testInvalidLongArgTooHigh()
   {
     Expr tooHigh = ExprEval.ofLong(0x1_00_00_00_00L).toExpr();
-    Assert.assertEquals(NULL, eval(tooHigh));
+    Assert.assertNull(eval(tooHigh));
   }
 
   @Test
@@ -151,7 +150,7 @@ public class IPv4AddressParseExprMacroTest extends MacroTestBase
   private Object eval(Expr arg)
   {
     Expr expr = apply(Collections.singletonList(arg));
-    ExprEval eval = expr.eval(ExprUtils.nilBindings());
+    ExprEval eval = expr.eval(InputBindings.nilBindings());
     return eval.value();
   }
 }

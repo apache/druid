@@ -56,7 +56,6 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
     this.report = report;
   }
 
-
   @Override
   public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
   {
@@ -88,7 +87,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
             if (report) {
               final long cpuTimeNs = cpuTimeAccumulator.get();
               if (cpuTimeNs > 0) {
-                responseContext.add(ResponseContext.Key.CPU_CONSUMED_NANOS, cpuTimeNs);
+                responseContext.addCpuNanos(cpuTimeNs);
                 queryWithMetrics.getQueryMetrics().reportCpuTime(cpuTimeNs).emit(emitter);
               }
             }

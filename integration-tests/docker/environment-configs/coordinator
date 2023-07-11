@@ -40,4 +40,6 @@ druid_auth_basic_common_cacheDirectory=/tmp/authCache/coordinator
 druid_auth_unsecuredPaths=["/druid/coordinator/v1/loadqueue"]
 druid_server_https_crlPath=/tls/revocations.crl
 druid_coordinator_period_indexingPeriod=PT180000S
+# 2x indexing period so that kill period is valid
+druid_coordinator_kill_period=PT360000S
 druid_coordinator_period=PT1S

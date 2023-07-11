@@ -33,7 +33,7 @@ import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -268,21 +268,34 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getIntermediateType()
   {
-    return ValueType.FLOAT;
+    return ColumnType.FLOAT;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getResultType()
   {
-    return ValueType.FLOAT;
+    return ColumnType.FLOAT;
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
     return Double.BYTES;
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new JavaScriptAggregatorFactory(
+        newName,
+        getFieldNames(),
+        getFnAggregate(),
+        getFnReset(),
+        getFnCombine(),
+        config
+    );
   }
 
   @Override

@@ -19,133 +19,24 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.StringUtils;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.joda.time.Interval;
 
-import java.net.URI;
-import java.util.Objects;
-
 /**
- * This class represents the intermediary data server where the partition of {@link #interval} and
+ * This class represents the intermediary data server where the partition of {@link #getInterval()} and
  * {@link #getBucketId()} is stored.
  */
-abstract class PartitionLocation<T>
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = GenericPartitionLocation.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = GenericPartitionStat.TYPE, value = GenericPartitionLocation.class),
+    @JsonSubTypes.Type(name = DeepStoragePartitionStat.TYPE, value = DeepStoragePartitionLocation.class)
+})
+public interface PartitionLocation
 {
-  private final String host;
-  private final int port;
-  private final boolean useHttps;
-  private final String subTaskId;
-  private final Interval interval;
-  private final T secondaryPartition;
-
-  PartitionLocation(
-      String host,
-      int port,
-      boolean useHttps,
-      String subTaskId,
-      Interval interval,
-      T secondaryPartition
-  )
-  {
-    this.host = host;
-    this.port = port;
-    this.useHttps = useHttps;
-    this.subTaskId = subTaskId;
-    this.interval = interval;
-    this.secondaryPartition = secondaryPartition;
-  }
-
-  @JsonProperty
-  public String getHost()
-  {
-    return host;
-  }
-
-  @JsonProperty
-  public int getPort()
-  {
-    return port;
-  }
-
-  @JsonProperty
-  public boolean isUseHttps()
-  {
-    return useHttps;
-  }
-
-  @JsonProperty
-  public String getSubTaskId()
-  {
-    return subTaskId;
-  }
-
-  @JsonProperty
-  public Interval getInterval()
-  {
-    return interval;
-  }
-
-  @JsonIgnore
-  public T getSecondaryPartition()
-  {
-    return secondaryPartition;
-  }
-
-  abstract int getBucketId();
-
-  final URI toIntermediaryDataServerURI(String supervisorTaskId)
-  {
-    return URI.create(
-        StringUtils.format(
-            "%s://%s:%d/druid/worker/v1/shuffle/task/%s/%s/partition?startTime=%s&endTime=%s&bucketId=%d",
-            useHttps ? "https" : "http",
-            host,
-            port,
-            StringUtils.urlEncode(supervisorTaskId),
-            StringUtils.urlEncode(subTaskId),
-            interval.getStart(),
-            interval.getEnd(),
-            getBucketId()
-        )
-    );
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    PartitionLocation<?> that = (PartitionLocation<?>) o;
-    return port == that.port &&
-           useHttps == that.useHttps &&
-           Objects.equals(host, that.host) &&
-           Objects.equals(subTaskId, that.subTaskId) &&
-           Objects.equals(interval, that.interval) &&
-           Objects.equals(secondaryPartition, that.secondaryPartition);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(host, port, useHttps, subTaskId, interval, secondaryPartition);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "PartitionLocation{" +
-           "host='" + host + '\'' +
-           ", port=" + port +
-           ", useHttps=" + useHttps +
-           ", subTaskId='" + subTaskId + '\'' +
-           ", interval=" + interval +
-           ", secondaryPartition=" + secondaryPartition +
-           '}';
-  }
+  int getBucketId();
+  Interval getInterval();
+  BuildingShardSpec getShardSpec();
+  String getSubTaskId();
 }

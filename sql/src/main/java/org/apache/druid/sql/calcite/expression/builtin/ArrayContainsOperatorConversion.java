@@ -25,8 +25,10 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
@@ -93,7 +95,7 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
     final DruidExpression leftExpr = druidExpressions.get(0);
     final DruidExpression rightExpr = druidExpressions.get(1);
 
-    if (leftExpr.isSimpleExtraction()) {
+    if (leftExpr.isSimpleExtraction() && !(leftExpr.isDirectColumnAccess() && leftExpr.getDruidType() != null && leftExpr.getDruidType().isArray())) {
       Expr expr = Parser.parse(rightExpr.getExpression(), plannerContext.getExprMacroTable());
       // To convert this expression filter into an And of Selector filters, we need to extract all array elements.
       // For now, we can optimize only when rightExpr is a literal because there is no way to extract the array elements
@@ -102,8 +104,8 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
       if (expr.isLiteral()) {
         // Evaluate the expression to get out the array elements.
         // We can safely pass a noop ObjectBinding if the expression is literal.
-        ExprEval<?> exprEval = expr.eval(name -> null);
-        String[] arrayElements = exprEval.asStringArray();
+        ExprEval<?> exprEval = expr.eval(InputBindings.nilBindings());
+        Object[] arrayElements = exprEval.asArray();
         if (arrayElements == null || arrayElements.length == 0) {
           // If arrayElements is empty which means rightExpr is an empty array,
           // it is technically more correct to return a TrueDimFiler here.
@@ -111,11 +113,11 @@ public class ArrayContainsOperatorConversion extends BaseExpressionDimFilterOper
           // to create an empty array with no argument, we just return null.
           return null;
         } else if (arrayElements.length == 1) {
-          return newSelectorDimFilter(leftExpr.getSimpleExtraction(), arrayElements[0]);
+          return newSelectorDimFilter(leftExpr.getSimpleExtraction(), Evals.asString(arrayElements[0]));
         } else {
           final List<DimFilter> selectFilters = Arrays
               .stream(arrayElements)
-              .map(val -> newSelectorDimFilter(leftExpr.getSimpleExtraction(), val))
+              .map(val -> newSelectorDimFilter(leftExpr.getSimpleExtraction(), Evals.asString(val)))
               .collect(Collectors.toList());
           return new AndDimFilter(selectFilters);
         }

@@ -36,8 +36,8 @@
     margin-right: 20px;
   }
 
-  label.bp3-control,
-  label.bp3-label {
+  label.#{$bp-ns}-control,
+  label.#{$bp-ns}-label {
     display: inline-block;
     margin-bottom: 0;
     line-height: 30px;

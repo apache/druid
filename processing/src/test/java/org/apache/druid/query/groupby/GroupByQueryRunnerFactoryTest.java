@@ -24,7 +24,6 @@ import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -67,17 +66,15 @@ public class GroupByQueryRunnerFactoryTest
   @Before
   public void setup()
   {
-    final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = GroupByQueryRunnerTest.makeQueryRunnerFactory(
-        new GroupByQueryConfig()
-    );
-
-    factory = factoryAndCloser.lhs;
-    resourceCloser = factoryAndCloser.rhs;
+    this.resourceCloser = Closer.create();
+    final TestGroupByBuffers buffers = resourceCloser.register(TestGroupByBuffers.createDefault());
+    this.factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig(), buffers);
   }
 
   @After
   public void teardown() throws IOException
   {
+    factory = null;
     resourceCloser.close();
   }
 
@@ -148,7 +145,7 @@ public class GroupByQueryRunnerFactoryTest
     StringInputRowParser parser = new StringInputRowParser(
         new CSVParseSpec(
             new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags")), null, null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags"))),
             "\t",
             ImmutableList.of("timestamp", "product", "tags"),
             false,

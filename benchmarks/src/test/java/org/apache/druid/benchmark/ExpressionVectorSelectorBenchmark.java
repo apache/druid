@@ -27,15 +27,15 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
@@ -102,7 +102,7 @@ public class ExpressionVectorSelectorBenchmark
   private Closer closer;
 
   @Nullable
-  private ExprType outputType;
+  private ExpressionType outputType;
 
   @Setup(Level.Trial)
   public void setup()
@@ -125,17 +125,7 @@ public class ExpressionVectorSelectorBenchmark
     );
 
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    outputType = parsed.getOutputType(
-        new ColumnInspector()
-        {
-          @Nullable
-          @Override
-          public ColumnCapabilities getColumnCapabilities(String column)
-          {
-            return QueryableIndexStorageAdapter.getColumnCapabilities(index, column);
-          }
-        }
-    );
+    outputType = parsed.getOutputType(new ColumnCache(index, closer));
     checkSanity();
   }
 
@@ -155,7 +145,7 @@ public class ExpressionVectorSelectorBenchmark
             new ExpressionVirtualColumn(
                 "v",
                 expression,
-                ExprType.toValueType(outputType),
+                ExpressionType.toColumnType(outputType),
                 TestExprMacroTable.INSTANCE
             )
         )
@@ -171,7 +161,7 @@ public class ExpressionVectorSelectorBenchmark
       );
       if (outputType.isNumeric()) {
         VectorValueSelector selector = cursor.getColumnSelectorFactory().makeValueSelector("v");
-        if (outputType.equals(ExprType.DOUBLE)) {
+        if (outputType.is(ExprType.DOUBLE)) {
           while (!cursor.isDone()) {
             blackhole.consume(selector.getDoubleVector());
             blackhole.consume(selector.getNullVector());

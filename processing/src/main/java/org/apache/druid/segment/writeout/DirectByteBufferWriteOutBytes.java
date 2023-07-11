@@ -25,8 +25,6 @@ import java.nio.ByteBuffer;
 
 final class DirectByteBufferWriteOutBytes extends ByteBufferWriteOutBytes
 {
-  private boolean open = true;
-
   @Override
   protected ByteBuffer allocateBuffer()
   {
@@ -34,12 +32,7 @@ final class DirectByteBufferWriteOutBytes extends ByteBufferWriteOutBytes
   }
 
   @Override
-  public boolean isOpen()
-  {
-    return open;
-  }
-
-  void free()
+  public void free()
   {
     open = false;
     buffers.forEach(ByteBufferUtils::free);

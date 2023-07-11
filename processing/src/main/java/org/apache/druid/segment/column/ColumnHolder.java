@@ -39,12 +39,16 @@ public interface ColumnHolder
 
   ColumnCapabilities getCapabilities();
 
+  default ColumnFormat getColumnFormat()
+  {
+    return new CapabilitiesBasedFormat(getCapabilities());
+  }
+
   int getLength();
   BaseColumn getColumn();
+
   @Nullable
-  BitmapIndex getBitmapIndex();
-  @Nullable
-  SpatialIndex getSpatialIndex();
+  ColumnIndexSupplier getIndexSupplier();
 
   /**
    * Returns a new instance of a {@link SettableColumnValueSelector}, corresponding to the type of this column.

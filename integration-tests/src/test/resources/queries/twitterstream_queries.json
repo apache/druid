@@ -596,6 +596,7 @@
                 "intervals":["2013-01-01T00:00:00.000Z/2013-01-02T00:00:00.000Z"],
                 "columns":{
                     "has_links":{
+                        "typeSignature": "STRING",
                         "type":"STRING",
                         "hasMultipleValues":false,
                         "size":0,
@@ -618,6 +619,7 @@
                 "intervals":["2013-01-02T00:00:00.000Z/2013-01-03T00:00:00.000Z"],
                 "columns":{
                     "has_links":{
+                        "typeSignature": "STRING",
                         "type":"STRING",
                         "hasMultipleValues":false,
                         "size":0,
@@ -640,6 +642,7 @@
                 "intervals":["2013-01-03T00:00:00.000Z/2013-01-04T00:00:00.000Z"],
                 "columns":{
                     "has_links":{
+                        "typeSignature": "STRING",
                         "type":"STRING",
                         "hasMultipleValues":false,
                         "size":0,

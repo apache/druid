@@ -93,7 +93,7 @@ class ParquetGroupConverter
         return convertLogicalList(g.getGroup(fieldIndex, 0), binaryAsString);
       }
 
-      // not a list, but not a primtive, return the nested group type
+      // not a list, but not a primitive, return the nested group type
       return g.getGroup(fieldIndex, 0);
     }
   }
@@ -162,6 +162,16 @@ class ParquetGroupConverter
           required binary str (UTF8);
         };
       }
+
+      // List<Tuple<Long, Long>> (nullable list; nullable object elements; nullable fields)
+      optional group my_list (LIST) {
+        repeated group list {
+          optional group element {
+            optional int64 b1;
+            optional int64 b2;
+          }
+        }
+      }
      */
     assert isLogicalListType(g.getType());
     int repeated = g.getFieldRepetitionCount(0);
@@ -173,10 +183,36 @@ class ParquetGroupConverter
         vals.add(convertPrimitiveField(g, 0, i, binaryAsString));
       } else {
         Group listItem = g.getGroup(0, i);
-        vals.add(listItem);
+        vals.add(convertListElement(listItem, binaryAsString));
       }
     }
     return vals;
+  }
+
+  private static Object convertListElement(Group listItem, boolean binaryAsString)
+  {
+    if (
+        listItem.getType().isRepetition(Type.Repetition.REPEATED) &&
+        listItem.getType().getFieldCount() == 1 &&
+        !listItem.getType().isPrimitive() &&
+        listItem.getType().getFields().get(0).isPrimitive()
+    ) {
+      // nullable primitive list elements can have a repeating wrapper element, peel it off
+      return convertPrimitiveField(listItem, 0, binaryAsString);
+    } else if (
+        listItem.getType().isRepetition(Type.Repetition.REPEATED) &&
+        listItem.getType().getFieldCount() == 1 &&
+        listItem.getFieldRepetitionCount(0) == 1 &&
+        listItem.getType().getName().equalsIgnoreCase("list") &&
+        listItem.getType().getFieldName(0).equalsIgnoreCase("element") &&
+        listItem.getGroup(0, 0).getType().isRepetition(Type.Repetition.OPTIONAL)
+    ) {
+      // nullable list elements can be represented as a repeated wrapping an optional
+      return listItem.getGroup(0, 0);
+    } else {
+      // else just pass it through
+      return listItem;
+    }
   }
 
   /**
@@ -239,7 +275,7 @@ class ParquetGroupConverter
   }
 
   /**
-   * Convert a primitive group field to a "ingestion friendly" java object
+   * Convert a primitive group field to an "ingestion friendly" java object
    *
    * @return "ingestion ready" java object, or null
    */
@@ -326,8 +362,9 @@ class ParquetGroupConverter
           // todo: idk wtd about unsigned
           case UINT_8:
           case UINT_16:
-          case UINT_32:
             return g.getInteger(fieldIndex, index);
+          case UINT_32:
+            return Integer.toUnsignedLong(g.getInteger(fieldIndex, index));
           case UINT_64:
             return g.getLong(fieldIndex, index);
           case DECIMAL:
@@ -408,7 +445,7 @@ class ParquetGroupConverter
 
   /**
    * convert deprecated parquet int96 nanosecond timestamp to a long, based on
-   * https://github.com/prestodb/presto/blob/master/presto-hive/src/main/java/com/facebook/presto/hive/parquet/ParquetTimestampUtils.java#L56
+   * https://github.com/prestodb/presto/blob/master/presto-parquet/src/main/java/com/facebook/presto/parquet/ParquetTimestampUtils.java#L44
    */
   private static long convertInt96BinaryToTimestamp(Binary value)
   {
@@ -454,19 +491,6 @@ class ParquetGroupConverter
     }
   }
 
-
-  static boolean isWrappedListPrimitive(Object o)
-  {
-    if (o instanceof Group) {
-      Group g = (Group) o;
-      return g.getType().isRepetition(Type.Repetition.REPEATED) &&
-             !g.getType().isPrimitive() &&
-             g.getType().asGroupType().getFieldCount() == 1 &&
-             g.getType().getFields().get(0).isPrimitive();
-    }
-    return false;
-  }
-
   private final boolean binaryAsString;
 
   ParquetGroupConverter(boolean binaryAsString)
@@ -487,15 +511,12 @@ class ParquetGroupConverter
     return convertField(g, fieldName, binaryAsString);
   }
 
-  /**
-   * Properly formed parquet lists when passed through {@link ParquetGroupConverter#convertField(Group, String)} can
-   * return lists which contain 'wrapped' primitives, that are a {@link Group} with a single, primitive field (see
-   * {@link ParquetGroupConverter#isWrappedListPrimitive(Object)})
-   */
-  Object unwrapListPrimitive(Object o)
+  Object unwrapListElement(Object o)
   {
-    assert isWrappedListPrimitive(o);
-    Group g = (Group) o;
-    return convertPrimitiveField(g, 0, binaryAsString);
+    if (o instanceof Group) {
+      Group g = (Group) o;
+      return convertListElement(g, binaryAsString);
+    }
+    return o;
   }
 }

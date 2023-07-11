@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.mean;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -45,10 +46,27 @@ public class DoubleMeanVectorAggregator implements VectorAggregator
   public void aggregate(final ByteBuffer buf, final int position, final int startRow, final int endRow)
   {
     final double[] vector = selector.getDoubleVector();
-    for (int i = startRow; i < endRow; i++) {
-      DoubleMeanHolder.update(buf, position, vector[i]);
+    final boolean[] nulls = selector.getNullVector();
+
+    if (nulls != null) {
+      if (NullHandling.replaceWithDefault()) {
+        for (int i = startRow; i < endRow; i++) {
+          DoubleMeanHolder.update(buf, position, vector[i]);
+        }
+      } else {
+        for (int i = startRow; i < endRow; i++) {
+          if (!nulls[i]) {
+            DoubleMeanHolder.update(buf, position, vector[i]);
+          }
+        }
+      }
+    } else {
+      for (int i = startRow; i < endRow; i++) {
+        DoubleMeanHolder.update(buf, position, vector[i]);
+      }
     }
   }
+
 
   @Override
   public void aggregate(
@@ -60,10 +78,27 @@ public class DoubleMeanVectorAggregator implements VectorAggregator
   )
   {
     final double[] vector = selector.getDoubleVector();
+    final boolean[] nulls = selector.getNullVector();
 
-    for (int i = 0; i < numRows; i++) {
-      final double val = vector[rows != null ? rows[i] : i];
-      DoubleMeanHolder.update(buf, positions[i] + positionOffset, val);
+    if (nulls != null) {
+      if (NullHandling.replaceWithDefault()) {
+        for (int i = 0; i < numRows; i++) {
+          final double val = vector[rows != null ? rows[i] : i];
+          DoubleMeanHolder.update(buf, positions[i] + positionOffset, val);
+        }
+      } else {
+        for (int j = 0; j < numRows; j++) {
+          if (!nulls[j]) {
+            final double val = vector[rows != null ? rows[j] : j];
+            DoubleMeanHolder.update(buf, positions[j] + positionOffset, val);
+          }
+        }
+      }
+    } else {
+      for (int i = 0; i < numRows; i++) {
+        final double val = vector[rows != null ? rows[i] : i];
+        DoubleMeanHolder.update(buf, positions[i] + positionOffset, val);
+      }
     }
   }
 

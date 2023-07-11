@@ -16,23 +16,18 @@
  * limitations under the License.
  */
 
-import {
-  FormGroup,
-  HTMLSelect,
-  IResizeEntry,
-  Radio,
-  RadioGroup,
-  ResizeSensor,
-} from '@blueprintjs/core';
-import { AxisScale } from 'd3-axis';
+import type { IResizeEntry } from '@blueprintjs/core';
+import { FormGroup, HTMLSelect, Radio, RadioGroup, ResizeSensor } from '@blueprintjs/core';
+import type { AxisScale } from 'd3-axis';
 import { scaleLinear, scaleUtc } from 'd3-scale';
 import React from 'react';
 
+import type { Capabilities } from '../../helpers';
 import { Api } from '../../singletons';
 import {
-  Capabilities,
   ceilToUtcDay,
   formatBytes,
+  formatInteger,
   queryDruidSql,
   QueryManager,
   uniq,
@@ -40,7 +35,8 @@ import {
 import { DateRangeSelector } from '../date-range-selector/date-range-selector';
 import { Loader } from '../loader/loader';
 
-import { BarUnitData, StackedBarChart } from './stacked-bar-chart';
+import type { BarUnitData } from './stacked-bar-chart';
+import { StackedBarChart } from './stacked-bar-chart';
 
 import './segment-timeline.scss';
 
@@ -193,6 +189,7 @@ ORDER BY "start" DESC`;
             y0,
             datasource,
             color: SegmentTimeline.getColor(i),
+            dailySize: d.total,
           };
           y0 += d[datasource] === undefined ? 0 : d[datasource];
           return barUnitData;
@@ -224,6 +221,7 @@ ORDER BY "start" DESC`;
             y,
             datasource,
             color: SegmentTimeline.getColor(i),
+            dailySize: d.total,
           };
         });
         if (!dataResult.every((d: any) => d.y === 0)) {
@@ -275,7 +273,7 @@ ORDER BY "start" DESC`;
             intervals = await queryDruidSql({
               query: SegmentTimeline.getSqlQuery(startDate, endDate),
             });
-            datasources = uniq(intervals.map(r => r.datasource));
+            datasources = uniq(intervals.map(r => r.datasource).sort());
           } else if (capabilities.hasCoordinatorAccess()) {
             const startIso = startDate.toISOString();
 
@@ -421,9 +419,10 @@ ORDER BY "start" DESC`;
   }
 
   private readonly formatTick = (n: number) => {
+    if (isNaN(n)) return '';
     const { activeDataType } = this.state;
     if (activeDataType === 'countData') {
-      return n.toString();
+      return formatInteger(n);
     } else {
       return formatBytes(n);
     }

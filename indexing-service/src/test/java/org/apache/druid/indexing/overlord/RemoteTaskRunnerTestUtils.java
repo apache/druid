@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.zookeeper.CreateMode;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -105,15 +106,16 @@ public class RemoteTaskRunnerTestUtils
     testingCluster.stop();
   }
 
-  RemoteTaskRunner makeRemoteTaskRunner(RemoteTaskRunnerConfig config)
+  RemoteTaskRunner makeRemoteTaskRunner(RemoteTaskRunnerConfig config, HttpClient httpClient)
   {
     NoopProvisioningStrategy<WorkerTaskRunner> resourceManagement = new NoopProvisioningStrategy<>();
-    return makeRemoteTaskRunner(config, resourceManagement);
+    return makeRemoteTaskRunner(config, resourceManagement, httpClient);
   }
 
   public RemoteTaskRunner makeRemoteTaskRunner(
       RemoteTaskRunnerConfig config,
-      ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy
+      ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy,
+      HttpClient httpClient
   )
   {
     RemoteTaskRunner remoteTaskRunner = new TestableRemoteTaskRunner(
@@ -131,7 +133,7 @@ public class RemoteTaskRunnerTestUtils
         ),
         cf,
         new PathChildrenCacheFactory.Builder(),
-        null,
+        httpClient,
         DSuppliers.of(new AtomicReference<>(DefaultWorkerBehaviorConfig.defaultConfig())),
         provisioningStrategy
     );
@@ -270,7 +272,8 @@ public class RemoteTaskRunnerTestUtils
           pathChildrenCacheFactory,
           httpClient,
           workerConfigRef,
-          provisioningStrategy
+          provisioningStrategy,
+          new NoopServiceEmitter()
       );
     }
 

@@ -19,14 +19,16 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
-
 import java.util.Comparator;
 
 /**
@@ -69,6 +71,16 @@ public interface DimensionHandler
   String getDimensionName();
 
   /**
+   * Create a {@link DimensionSpec} for this handler
+   */
+  default DimensionSpec getDimensionSpec()
+  {
+    return DefaultDimensionSpec.of(getDimensionName());
+  }
+
+  DimensionSchema getDimensionSchema(ColumnCapabilities capabilities);
+
+  /**
    * Get {@link MultiValueHandling} for the column associated with this handler.
    * Only string columns can have {@link MultiValueHandling} currently.
    */
@@ -82,9 +94,11 @@ public interface DimensionHandler
    * Creates a new DimensionIndexer, a per-dimension object responsible for processing ingested rows in-memory, used
    * by the IncrementalIndex. See {@link DimensionIndexer} interface for more information.
    *
+   * @param useMaxMemoryEstimates true if the created DimensionIndexer should use
+   *                              maximum values to estimate on-heap memory
    * @return A new DimensionIndexer object.
    */
-  DimensionIndexer<EncodedType, EncodedKeyComponentType, ActualType> makeIndexer();
+  DimensionIndexer<EncodedType, EncodedKeyComponentType, ActualType> makeIndexer(boolean useMaxMemoryEstimates);
 
   /**
    * Creates a new DimensionMergerV9, a per-dimension object responsible for merging indexes/row data across segments

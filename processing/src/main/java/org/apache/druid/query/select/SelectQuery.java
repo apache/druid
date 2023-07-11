@@ -33,6 +33,7 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 
@@ -105,24 +106,6 @@ public class SelectQuery implements Query<Object>
 
   @Override
   public Map<String, Object> getContext()
-  {
-    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
-  }
-
-  @Override
-  public <ContextType> ContextType getContextValue(String key)
-  {
-    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
-  }
-
-  @Override
-  public <ContextType> ContextType getContextValue(String key, ContextType defaultValue)
-  {
-    throw new RuntimeException(REMOVED_ERROR_MESSAGE);
-  }
-
-  @Override
-  public boolean getContextBoolean(String key, boolean defaultValue)
   {
     throw new RuntimeException(REMOVED_ERROR_MESSAGE);
   }

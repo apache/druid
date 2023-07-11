@@ -27,7 +27,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -50,7 +51,7 @@ public class SketchConstantPostAggregator implements PostAggregator
     Preconditions.checkArgument(value != null && !value.isEmpty(),
         "Constant value cannot be null or empty, expecting base64 encoded sketch string");
     this.value = value;
-    this.sketchValue = SketchHolder.deserialize(value);
+    this.sketchValue = SketchHolder.deserializeSafe(value);
   }
 
   @Override
@@ -80,11 +81,12 @@ public class SketchConstantPostAggregator implements PostAggregator
 
   /**
    * actual type is {@link SketchHolder}
+   * @param signature
    */
   @Override
-  public ValueType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
-    return ValueType.COMPLEX;
+    return SketchModule.BUILD_TYPE;
   }
 
   @Override

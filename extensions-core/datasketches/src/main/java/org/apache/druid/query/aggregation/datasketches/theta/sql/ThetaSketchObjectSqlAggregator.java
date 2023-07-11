@@ -24,9 +24,7 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -37,6 +35,11 @@ public class ThetaSketchObjectSqlAggregator extends ThetaSketchBaseSqlAggregator
 {
   private static final SqlAggFunction FUNCTION_INSTANCE = new ThetaSketchObjectSqlAggFunction();
   private static final String NAME = "DS_THETA";
+
+  public ThetaSketchObjectSqlAggregator()
+  {
+    super(false);
+  }
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -67,7 +70,7 @@ public class ThetaSketchObjectSqlAggregator extends ThetaSketchBaseSqlAggregator
           NAME,
           null,
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.OTHER),
+          ThetaSketchSqlOperators.RETURN_TYPE_INFERENCE,
           InferTypes.VARCHAR_1024,
           OperandTypes.or(
               OperandTypes.ANY,

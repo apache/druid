@@ -70,7 +70,7 @@ public class IndexGeneratorCombinerTest
                     new StringInputRowParser(
                         new TimeAndDimsParseSpec(
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "keywords")), null, null)
+                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "keywords")))
                         ),
                         null
                     ),
@@ -151,9 +151,7 @@ public class IndexGeneratorCombinerTest
         Arrays.asList(
             new StringDimensionSchema("host"),
             new StringDimensionSchema("keywords")
-        ),
-        null,
-        null
+        )
     );
 
     Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap = InputRowSerde.getTypeHelperMap(dimensionsSpec);
@@ -247,9 +245,7 @@ public class IndexGeneratorCombinerTest
         Arrays.asList(
             new StringDimensionSchema("host"),
             new StringDimensionSchema("keywords")
-        ),
-        null,
-        null
+        )
     );
 
     Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap = InputRowSerde.getTypeHelperMap(dimensionsSpec);

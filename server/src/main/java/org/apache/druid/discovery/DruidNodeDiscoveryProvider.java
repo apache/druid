@@ -46,7 +46,8 @@ public abstract class DruidNodeDiscoveryProvider
       ImmutableSet.of(NodeRole.BROKER, NodeRole.HISTORICAL, NodeRole.PEON, NodeRole.INDEXER),
       DataNodeService.DISCOVERY_SERVICE_KEY,
       ImmutableSet.of(NodeRole.HISTORICAL, NodeRole.PEON, NodeRole.INDEXER, NodeRole.BROKER),
-      WorkerNodeService.DISCOVERY_SERVICE_KEY, ImmutableSet.of(NodeRole.MIDDLE_MANAGER, NodeRole.INDEXER)
+      WorkerNodeService.DISCOVERY_SERVICE_KEY,
+      ImmutableSet.of(NodeRole.MIDDLE_MANAGER, NodeRole.INDEXER)
   );
 
   private final ConcurrentHashMap<String, ServiceDruidNodeDiscovery> serviceDiscoveryMap =
@@ -122,6 +123,16 @@ public abstract class DruidNodeDiscoveryProvider
           listener.nodeViewInitialized();
         }
         listeners.add(listener);
+      }
+    }
+
+    @Override
+    public void removeListener(Listener listener)
+    {
+      synchronized (lock) {
+        if (listener != null) {
+          listeners.remove(listener);
+        }
       }
     }
 

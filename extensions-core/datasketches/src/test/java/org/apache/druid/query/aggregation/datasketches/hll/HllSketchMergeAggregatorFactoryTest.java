@@ -31,6 +31,7 @@ public class HllSketchMergeAggregatorFactoryTest
   private static final String FIELD_NAME = "fieldName";
   private static final int LG_K = 2;
   private static final String TGT_HLL_TYPE = TgtHllType.HLL_6.name();
+  private static final boolean SHOULD_FINALIZE = true;
   private static final boolean ROUND = true;
 
   private HllSketchMergeAggregatorFactory targetRound;
@@ -39,8 +40,8 @@ public class HllSketchMergeAggregatorFactoryTest
   @Before
   public void setUp()
   {
-    targetRound = new HllSketchMergeAggregatorFactory(NAME, FIELD_NAME, LG_K, TGT_HLL_TYPE, ROUND);
-    targetNoRound = new HllSketchMergeAggregatorFactory(NAME, FIELD_NAME, LG_K, TGT_HLL_TYPE, !ROUND);
+    targetRound = new HllSketchMergeAggregatorFactory(NAME, FIELD_NAME, LG_K, TGT_HLL_TYPE, SHOULD_FINALIZE, ROUND);
+    targetNoRound = new HllSketchMergeAggregatorFactory(NAME, FIELD_NAME, LG_K, TGT_HLL_TYPE, SHOULD_FINALIZE, !ROUND);
   }
 
   @Test(expected = AggregatorFactoryNotMergeableException.class)
@@ -51,6 +52,7 @@ public class HllSketchMergeAggregatorFactoryTest
         FIELD_NAME,
         LG_K,
         TGT_HLL_TYPE,
+        SHOULD_FINALIZE,
         ROUND
     );
     targetRound.getMergingFactory(other);
@@ -64,6 +66,7 @@ public class HllSketchMergeAggregatorFactoryTest
         FIELD_NAME,
         LG_K,
         TGT_HLL_TYPE,
+        SHOULD_FINALIZE,
         ROUND
     );
     targetRound.getMergingFactory(other);
@@ -78,6 +81,7 @@ public class HllSketchMergeAggregatorFactoryTest
         FIELD_NAME,
         smallerLgK,
         TGT_HLL_TYPE,
+        SHOULD_FINALIZE,
         ROUND
     );
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(other);
@@ -93,6 +97,7 @@ public class HllSketchMergeAggregatorFactoryTest
         FIELD_NAME,
         largerLgK,
         TGT_HLL_TYPE,
+        SHOULD_FINALIZE,
         ROUND
     );
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(other);
@@ -108,6 +113,7 @@ public class HllSketchMergeAggregatorFactoryTest
         FIELD_NAME,
         LG_K,
         smallerTgtHllType,
+        SHOULD_FINALIZE,
         ROUND
     );
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(other);
@@ -123,6 +129,7 @@ public class HllSketchMergeAggregatorFactoryTest
         FIELD_NAME,
         LG_K,
         largerTgtHllType,
+        SHOULD_FINALIZE,
         ROUND
     );
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(other);
@@ -155,5 +162,13 @@ public class HllSketchMergeAggregatorFactoryTest
   {
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(targetRound);
     Assert.assertTrue(result.isRound());
+  }
+
+  @Test
+  public void testWithName() throws Exception
+  {
+    HllSketchAggregatorFactory factory = (HllSketchAggregatorFactory) targetRound.getMergingFactory(targetRound);
+    Assert.assertEquals(factory, factory.withName(targetRound.getName()));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
   }
 }

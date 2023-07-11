@@ -54,6 +54,9 @@ public abstract class NumericFirstAggregator<TSelector extends BaseNullableColum
   @Override
   public void aggregate()
   {
+    if (timeSelector.isNull()) {
+      return;
+    }
     long time = timeSelector.getLong();
     if (time < firstTime) {
       firstTime = time;

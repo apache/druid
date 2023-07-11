@@ -25,7 +25,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -73,7 +73,7 @@ public class SimpleExtraction
 
   public DimensionSpec toDimensionSpec(
       final String outputName,
-      final ValueType outputType
+      final ColumnType outputType
   )
   {
     Preconditions.checkNotNull(outputType, "outputType");

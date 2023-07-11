@@ -51,7 +51,7 @@ public class GoogleDataSegmentPuller implements URIDataPuller
     LOG.info("Pulling index at bucket[%s] path[%s] to outDir[%s]", bucket, path, outDir.getAbsolutePath());
 
     try {
-      org.apache.commons.io.FileUtils.forceMkdir(outDir);
+      FileUtils.mkdirp(outDir);
 
       final GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, path);
       final FileUtils.FileCopyResult result = CompressionUtils.unzip(
@@ -83,14 +83,14 @@ public class GoogleDataSegmentPuller implements URIDataPuller
   public InputStream getInputStream(URI uri) throws IOException
   {
     String path = StringUtils.maybeRemoveLeadingSlash(uri.getPath());
-    return storage.get(uri.getHost(), path);
+    return storage.get(uri.getHost() != null ? uri.getHost() : uri.getAuthority(), path);
   }
 
   @Override
   public String getVersion(URI uri) throws IOException
   {
     String path = StringUtils.maybeRemoveLeadingSlash(uri.getPath());
-    return storage.version(uri.getHost(), path);
+    return storage.version(uri.getHost() != null ? uri.getHost() : uri.getAuthority(), path);
   }
 
   @Override

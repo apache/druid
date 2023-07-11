@@ -68,7 +68,9 @@ import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -119,6 +121,9 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
   private FireDepartmentMetrics metrics;
   private File tmpDir;
 
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   public RealtimePlumberSchoolTest(
       RejectionPolicyFactory rejectionPolicy,
       SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
@@ -141,7 +146,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
             new StringInputRowParser(
                 new JSONParseSpec(
                     new TimestampSpec("timestamp", "auto", null),
-                    new DimensionsSpec(null, null, null),
+                    DimensionsSpec.EMPTY,
                     null,
                     null,
                     null
@@ -162,7 +167,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
             new StringInputRowParser(
                 new JSONParseSpec(
                     new TimestampSpec("timestamp", "auto", null),
-                    new DimensionsSpec(null, null, null),
+                    DimensionsSpec.EMPTY,
                     null,
                     null,
                     null
@@ -207,7 +212,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         null,
         null,
         null,
-        null,
+        temporaryFolder.newFolder(),
         new IntervalStartVersioningPolicy(),
         rejectionPolicy,
         null,
@@ -283,6 +288,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemoryOrDefault(),
+        true,
         tuningConfig.getDedupColumn()
     );
     plumber.getSinks().put(0L, sink);
@@ -329,6 +335,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemoryOrDefault(),
+        true,
         tuningConfig.getDedupColumn()
     );
     plumber.getSinks().put(0L, sink);
@@ -380,6 +387,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemoryOrDefault(),
+        true,
         tuningConfig.getDedupColumn()
     );
     plumber2.getSinks().put(0L, sink);

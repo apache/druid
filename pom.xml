@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.22.0-SNAPSHOT</version>
+    <version>27.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -75,69 +75,86 @@
         <java.version>8</java.version>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
-        <apache.curator.version>4.3.0</apache.curator.version>
-        <apache.curator.test.version>2.12.0</apache.curator.test.version>
-        <apache.kafka.version>2.8.0</apache.kafka.version>
+        <apache.curator.version>5.4.0</apache.curator.version>
+        <apache.kafka.version>3.4.0</apache.kafka.version>
         <apache.ranger.version>2.0.0</apache.ranger.version>
         <apache.ranger.gson.version>2.2.4</apache.ranger.gson.version>
+        <scala.library.version>2.13.9</scala.library.version>
         <avatica.version>1.17.0</avatica.version>
         <avro.version>1.9.2</avro.version>
+        <!-- sql/src/main/codegen/config.fmpp is based on a file from calcite-core, and needs to be
+          updated when upgrading Calcite. Refer to the top-level comments in that file for details.
+          Also, CalcitePlanner is a clone of Calcite's PlannerImpl and may require updates when
+          Calcite is upgrade. -->
         <calcite.version>1.21.0</calcite.version>
-        <datasketches.version>2.0.0</datasketches.version>
-        <datasketches.memory.version>1.3.0</datasketches.memory.version>
+        <datasketches.version>3.2.0</datasketches.version>
+        <datasketches.memory.version>2.0.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.0.0</dropwizard.metrics.version>
-        <errorprone.version>2.8.0</errorprone.version>
+        <errorprone.version>2.11.0</errorprone.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>16.0.1</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.40.v20210413</jetty.version>
-        <jersey.version>1.19.3</jersey.version>
+        <jetty.version>9.4.48.v20220622</jetty.version>
+        <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.10.5.20201202</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
-        <log4j.version>2.8.2</log4j.version>
-        <mysql.version>5.1.48</mysql.version>
+        <log4j.version>2.18.0</log4j.version>
+        <mysql.version>5.1.49</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.1.63.Final</netty4.version>
-        <postgresql.version>42.2.14</postgresql.version>
-        <protobuf.version>3.11.0</protobuf.version>
+        <netty4.version>4.1.86.Final</netty4.version>
+        <postgresql.version>42.4.1</postgresql.version>
+        <protobuf.version>3.21.7</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
-        <slf4j.version>1.7.12</slf4j.version>
+        <slf4j.version>1.7.36</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
-        <hadoop.compile.version>2.8.5</hadoop.compile.version>
-        <mockito.version>3.8.0</mockito.version>
-        <powermock.version>2.0.9</powermock.version>
-        <aws.sdk.version>1.12.37</aws.sdk.version>
+        <hadoop.compile.version>3.3.5</hadoop.compile.version>
+        <mockito.version>4.3.1</mockito.version>
+        <aws.sdk.version>1.12.317</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
         <jacoco.version>0.8.7</jacoco.version>
+        <hibernate-validator.version>5.3.6.Final</hibernate-validator.version>
+        <httpclient.version>4.5.13</httpclient.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
-        <zookeeper.version>3.5.9</zookeeper.version>
+        <zookeeper.version>3.5.10</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
         <com.google.apis.client.version>1.26.0</com.google.apis.client.version>
         <com.google.apis.compute.version>v1-rev20190607-${com.google.apis.client.version}</com.google.apis.compute.version>
         <com.google.apis.storage.version>v1-rev20190523-${com.google.apis.client.version}</com.google.apis.storage.version>
-        <repoOrgId>apache.snapshots</repoOrgId>
-        <repoOrgName>Apache Snapshot Repository</repoOrgName>
-        <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
+        <jdk.surefire.argLine><!-- empty placeholder --></jdk.surefire.argLine>
+        <repoOrgId>maven.org</repoOrgId>
+        <repoOrgName>Maven Central Repository</repoOrgName>
+        <repoOrgUrl>https://repo1.maven.org/maven2/</repoOrgUrl>
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
+
+        <!-- Using -DskipTests or -P skip-tests will skip both the unit tests and
+             the "new" integration tests. To skip just the unit tests (but run the
+             new integration tests by setting the required profile), use -DskipUTs=true.
+             -->
+        <skipTests>false</skipTests>
+        <skipUTs>${skipTests}</skipUTs>
+        <skipITs>${skipTests}</skipITs>
+
+        <!-- NetBeans has a problem when we use late binding with @ in the surefire arg line.
+             Therefore we set this empty property here.
+             ref: https://github.com/mapstruct/mapstruct/pull/1241
+             -->
+         <jacocoArgLine />
     </properties>
 
     <modules>
-        <module>core</module>
+        <module>processing</module>
         <module>indexing-hadoop</module>
         <module>indexing-service</module>
-        <module>processing</module>
         <module>server</module>
         <module>sql</module>
         <module>services</module>
         <module>integration-tests</module>
         <module>benchmarks</module>
-        <module>extendedset</module>
-        <module>hll</module>
         <module>web-console</module>
         <!-- Core cloud functionality -->
         <module>cloud/aws-common</module>
@@ -156,6 +173,7 @@
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
         <module>extensions-core/kinesis-indexing-service</module>
+        <module>extensions-core/multi-stage-query</module>
         <module>extensions-core/mysql-metadata-storage</module>
         <module>extensions-core/orc-extensions</module>
         <module>extensions-core/parquet-extensions</module>
@@ -170,7 +188,10 @@
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
         <module>extensions-core/druid-ranger-security</module>
+        <module>extensions-core/druid-catalog</module>
+        <module>extensions-core/testing-tools</module>
         <!-- Community extensions -->
+        <module>extensions-contrib/compressed-bigdecimal</module>
         <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
         <module>extensions-contrib/dropwizard-emitter</module>
@@ -195,8 +216,14 @@
         <module>extensions-contrib/gce-extensions</module>
         <module>extensions-contrib/aliyun-oss-extensions</module>
         <module>extensions-contrib/prometheus-emitter</module>
+        <module>extensions-contrib/opentelemetry-emitter</module>
+        <module>extensions-contrib/kubernetes-overlord-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
+        <!-- Revised integration tests -->
+        <module>integration-tests-ex/tools</module>
+        <module>integration-tests-ex/image</module>
+        <module>integration-tests-ex/cases</module>
     </modules>
 
     <repositories>
@@ -204,14 +231,31 @@
             <id>${repoOrgId}</id>
             <name>${repoOrgName}</name>
             <url>${repoOrgUrl}</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
         </repository>
-
+        
         <!-- Only used by core, but moved to root for parallel build dependency resolution -->
         <repository>
-          <id>sigar</id>
-          <url>https://repository.jboss.org/nexus/content/repositories/thirdparty-uploads/</url>
+            <id>sigar</id>
+            <url>https://repository.mulesoft.org/nexus/content/repositories/public</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
         </repository>
     </repositories>
+    
+    <pluginRepositories>
+        <pluginRepository>
+            <id>${repoOrgId}</id>
+            <name>${repoOrgName}</name>
+            <url>${repoOrgUrl}</url>
+            <snapshots>
+               <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <dependencyManagement>
         <dependencies>
@@ -241,10 +285,20 @@
                <artifactId>commons-net</artifactId>
                <version>3.6</version>
            </dependency>
+          <dependency>
+              <groupId>com.github.seancfoley</groupId>
+              <artifactId>ipaddress</artifactId>
+              <version>5.3.4</version>
+          </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>3.8.1</version>
+                <version>3.12.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-text</artifactId>
+                <version>1.10.0</version>
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
@@ -272,16 +326,9 @@
                 <version>1.0.4</version>
             </dependency>
             <dependency>
-                <groupId>io.airlift</groupId>
+                <groupId>com.github.rvesse</groupId>
                 <artifactId>airline</artifactId>
-                <version>0.7</version>
-                <exclusions>
-                    <exclusion>
-                        <!--LGPL licenced library-->
-                        <groupId>com.google.code.findbugs</groupId>
-                        <artifactId>annotations</artifactId>
-                    </exclusion>
-                </exclusions>
+                <version>2.8.4</version>
             </dependency>
             <dependency>
                 <groupId>org.skife.config</groupId>
@@ -330,23 +377,15 @@
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-client</artifactId>
                 <version>${apache.curator.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.curator</groupId>
-                <artifactId>curator-framework</artifactId>
-                <version>${apache.curator.version}</version>
                 <exclusions>
                     <exclusion>
-                        <groupId>org.jboss.netty</groupId>
-                        <artifactId>netty</artifactId>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-api</artifactId>
                     </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.curator</groupId>
-                <artifactId>curator-recipes</artifactId>
-                <version>${apache.curator.version}</version>
-                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.guava</groupId>
+                        <artifactId>guava</artifactId>
+                    </exclusion>
                     <exclusion>
                         <groupId>org.apache.zookeeper</groupId>
                         <artifactId>zookeeper</artifactId>
@@ -354,9 +393,25 @@
                 </exclusions>
             </dependency>
             <dependency>
-              <groupId>org.apache.curator</groupId>
-              <artifactId>curator-x-discovery</artifactId>
-              <version>${apache.curator.version}</version>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-framework</artifactId>
+                <version>${apache.curator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-recipes</artifactId>
+                <version>${apache.curator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-x-discovery</artifactId>
+                <version>${apache.curator.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-databind</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.calcite</groupId>
@@ -391,7 +446,7 @@
             <dependency>
                 <groupId>org.apache.hive</groupId>
                 <artifactId>hive-storage-api</artifactId>
-                <version>2.7.1</version>
+                <version>2.8.1</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
@@ -446,7 +501,7 @@
             <dependency>
                 <groupId>com.github.luben</groupId>
                 <artifactId>zstd-jni</artifactId>
-                <version>1.3.3-1</version>
+                <version>1.5.2-3</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
@@ -458,7 +513,7 @@
             <dependency>
                 <groupId>org.hibernate</groupId>
                 <artifactId>hibernate-validator</artifactId>
-                <version>5.2.5.Final</version>
+                <version>${hibernate-validator.version}</version>
             </dependency>
             <dependency>
                 <groupId>javax.validation</groupId>
@@ -466,9 +521,9 @@
                 <version>1.1.0.Final</version>
             </dependency>
             <dependency>
-                <groupId>javax.inject</groupId>
-                <artifactId>javax.inject</artifactId>
-                <version>1</version>
+                <groupId>jakarta.inject</groupId>
+                <artifactId>jakarta.inject-api</artifactId>
+                <version>1.0.3</version>
             </dependency>
             <dependency>
                 <groupId>javax.el</groupId>
@@ -488,8 +543,8 @@
             </dependency>
             <dependency>
                 <groupId>org.glassfish</groupId>
-                <artifactId>javax.el</artifactId>
-                <version>3.0.0</version>
+                <artifactId>jakarta.el</artifactId>
+                <version>3.0.4</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.grizzly</groupId>
@@ -616,7 +671,7 @@
             <dependency>
                 <groupId>joda-time</groupId>
                 <artifactId>joda-time</artifactId>
-                <version>2.10.5</version>
+                <version>2.12.4</version>
             </dependency>
             <dependency>
                 <groupId>com.google.code.findbugs</groupId>
@@ -695,7 +750,12 @@
             <dependency>
                 <groupId>org.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.7.1</version>
+                <version>1.8.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.xerial.snappy</groupId>
+                <artifactId>snappy-java</artifactId>
+                <version>1.1.8.4</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -726,59 +786,12 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
-                <version>4.5.10</version>
+                <version>${httpclient.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
                 <version>4.4.11</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-auth</artifactId>
-                <version>${hadoop.compile.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-client</artifactId>
-                <version>${hadoop.compile.version}</version>
-                <scope>provided</scope>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.apache.avro</groupId>
-                        <artifactId>avro</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-common</artifactId>
-                <version>${hadoop.compile.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-hdfs-client</artifactId>
-                <version>${hadoop.compile.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.hadoop</groupId>
-                <artifactId>hadoop-yarn-common</artifactId>
-                <version>${hadoop.compile.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-              <groupId>org.apache.hadoop</groupId>
-              <artifactId>hadoop-mapreduce-client-core</artifactId>
-              <version>${hadoop.compile.version}</version>
-              <scope>provided</scope>
-              <exclusions>
-                <exclusion>
-                  <groupId>javax.servlet</groupId>
-                  <artifactId>servlet-api</artifactId>
-                </exclusion>
-              </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.mapdb</groupId>
@@ -815,7 +828,7 @@
                 <artifactId>fastutil-core</artifactId>
                 <version>${fastutil.version}</version>
             </dependency>
-             <dependency>
+            <dependency>
                 <groupId>it.unimi.dsi</groupId>
                 <artifactId>fastutil-extra</artifactId>
                 <version>${fastutil.version}</version>
@@ -844,7 +857,7 @@
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
-                <version>1.7.25</version>
+                <version>${slf4j.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
@@ -854,23 +867,18 @@
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm</artifactId>
-                <version>7.1</version>
+                <version>9.3</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm-commons</artifactId>
-                <version>7.1</version>
+                <version>9.3</version>
             </dependency>
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
                 <artifactId>async-http-client</artifactId>
                 <!-- Uses Netty 4.1.x -->
                 <version>2.5.3</version>
-            </dependency>
-            <dependency>
-                <groupId>org.gridkit.lab</groupId>
-                <artifactId>jvm-attach-api</artifactId>
-                <version>1.5</version>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
@@ -967,7 +975,7 @@
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
-                <version>4.2</version>
+                <version>4.3</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -978,27 +986,17 @@
             </dependency>
             <dependency>
               <groupId>org.mockito</groupId>
-              <artifactId>mockito-core</artifactId>
+              <artifactId>mockito-bom</artifactId>
               <version>${mockito.version}</version>
-              <scope>test</scope>
+              <scope>import</scope>
+              <type>pom</type>
             </dependency>
             <dependency>
-                <groupId>org.powermock</groupId>
-                <artifactId>powermock-core</artifactId>
-                <version>${powermock.version}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.powermock</groupId>
-                <artifactId>powermock-module-junit4</artifactId>
-                <version>${powermock.version}</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.powermock</groupId>
-                <artifactId>powermock-api-easymock</artifactId>
-                <version>${powermock.version}</version>
-                <scope>test</scope>
+                <groupId>com.github.docker-java</groupId>
+                <artifactId>docker-java-bom</artifactId>
+                <version>3.2.13</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -1015,16 +1013,23 @@
                 <groupId>com.google.caliper</groupId>
                 <artifactId>caliper</artifactId>
                 <version>0.5-rc1</version>
+                <exclusions>
+                    <!-- caliper ships a very old asm version which can cause issues during testing  -->
+                    <exclusion>
+                        <groupId>asm</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+                </exclusions>
                 <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-test</artifactId>
-                <version>${apache.curator.test.version}</version>
+                <version>${apache.curator.version}</version>
                 <exclusions>
                     <exclusion>
-                        <groupId>org.jboss.netty</groupId>
-                        <artifactId>netty</artifactId>
+                        <groupId>org.junit.jupiter</groupId>
+                        <artifactId>junit-jupiter-api</artifactId>
                     </exclusion>
                 </exclusions>
                 <scope>test</scope>
@@ -1171,20 +1176,50 @@
             <dependency>
                 <groupId>nl.jqno.equalsverifier</groupId>
                 <artifactId>equalsverifier</artifactId>
-                <version>3.5.5</version>
+                <version>3.10.1</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>com.github.stefanbirkner</groupId>
-                <artifactId>system-rules</artifactId>
-                <version>1.19.0</version>
-                <scope>test</scope>
+              <groupId>com.github.stefanbirkner</groupId>
+              <artifactId>system-rules</artifactId>
+              <version>1.19.0</version>
+              <scope>test</scope>
             </dependency>
-            <dependency>
-                <groupId>io.timeandspace</groupId>
-                <artifactId>cron-scheduler</artifactId>
-                <version>0.1</version>
-            </dependency>
+          <dependency>
+            <groupId>io.timeandspace</groupId>
+            <artifactId>cron-scheduler</artifactId>
+            <version>0.1</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-hdfs-client</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-yarn-common</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-mapreduce-client-core</artifactId>
+            <version>${hadoop.compile.version}</version>
+            <scope>provided</scope>
+            <exclusions>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
+            </exclusions>
+          </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -1198,6 +1233,7 @@
                     <excludes>
                         <!-- Ignore initialization classes, these are tested by the integration tests. -->
                         <exclude>org/apache/druid/cli/Cli*</exclude>
+                        <exclude>org/apache/druid/cli/GuiceRunnable.class</exclude>
                         <exclude>org/apache/druid/cli/*JettyServerInitializer*</exclude>
                         <exclude>org/apache/druid/server/initialization/*Module*</exclude>
                         <exclude>org/apache/druid/server/initialization/jetty/*Module*</exclude>
@@ -1212,6 +1248,14 @@
                         <exclude>org/apache/druid/benchmark/**/*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/**/*Benchmark*</exclude>  <!-- benchmarks -->
                         <exclude>org/apache/druid/testing/**/*</exclude>  <!-- integration-tests -->
+                        <!-- The "new" ITs put the test classes into the above testing package. However,
+                             the "old" version has them sprinked through the module tree. Remove the following
+                             once the old version is retired. -->
+                        <exclude>org/apache/druid/server/coordination/ServerManagerForQueryErrorTest.class</exclude>
+                        <exclude>org/apache/druid/guice/SleepModule.class</exclude>
+                        <exclude>org/apache/druid/guice/CustomNodeRoleClientModule.class</exclude>
+                        <exclude>org/apache/druid/cli/CustomNodeRoleCommandCreator.class</exclude>
+                        <exclude>org/apache/druid/cli/QueryRetryTestCommandCreator.class</exclude>
 
                         <!-- Exceptions -->
                         <exclude>org/apache/druid/query/TruncatedResponseContextException.class</exclude>
@@ -1284,11 +1328,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.14.0</version>
+                <version>3.16.0</version>
                 <configuration>
+                    <linkXRef>false</linkXRef> <!-- prevent "Unable to locate Source XRef to link to" warning -->
                     <printFailingErrors>true</printFailingErrors>
                     <rulesets>
-                        <ruleset>/rulesets/java/imports.xml</ruleset>
+                        <ruleset>${project.parent.basedir}/codestyle/pmd-ruleset.xml</ruleset>
                     </rulesets>
                     <excludeRoots>
                         <excludeRoot>target/generated-sources/</excludeRoot>
@@ -1307,9 +1352,9 @@
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
-                <version>3.1</version>
+                <version>3.2</version>
                 <configuration>
-                    <failOnUnresolvableSignatures>false</failOnUnresolvableSignatures>
+                    <ignoreSignaturesOfMissingClasses>true</ignoreSignaturesOfMissingClasses>
                     <bundledSignatures>
                         <!--
                           This will automatically choose the right
@@ -1319,10 +1364,14 @@
                     </bundledSignatures>
                     <signaturesFiles>
                         <signaturesFile>${project.parent.basedir}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
+                        <signaturesFile>${project.parent.basedir}/codestyle/guava16-forbidden-apis.txt</signaturesFile>
                         <signaturesFile>${project.parent.basedir}/codestyle/druid-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
                     <excludes>
                       <exclude>**/SomeAvroDatum.class</exclude>
+                      <exclude>**/DruidSqlParserImpl.class</exclude>
+                      <exclude>**/DruidSqlParserImplTokenManager.class</exclude>
+                      <exclude>**/SimpleCharStream.class</exclude>
                     </excludes>
                     <suppressAnnotations>
                         <annotation>**.SuppressForbidden</annotation>
@@ -1432,7 +1481,7 @@
             <plugin>
                 <groupId>pl.project13.maven</groupId>
                 <artifactId>git-commit-id-plugin</artifactId>
-                <version>2.2.5</version>
+                <version>4.9.10</version>
                 <executions>
                     <execution>
                         <goals>
@@ -1482,7 +1531,7 @@
                                 <projectName>Apache Druid</projectName>
                             </properties>
                             <resourceBundles>
-                                <resourceBundle>org.apache.apache.resources:apache-jar-resource-bundle:1.5-SNAPSHOT</resourceBundle>
+                                <resourceBundle>org.apache.apache.resources:apache-jar-resource-bundle:1.5</resourceBundle>
                             </resourceBundles>
                         </configuration>
                     </execution>
@@ -1491,8 +1540,7 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>6.0.3</version>
-                <inherited>false</inherited>
+                <version>7.4.4</version>
                 <configuration>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <skipProvidedScope>true</skipProvidedScope>
@@ -1504,39 +1552,62 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <goals>
-                            <goal>aggregate</goal>
-                        </goals>
                         <phase>none</phase>  <!-- TODO: Consider enabling so part of dev flow instead of just CI -->
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.cyclonedx</groupId>
+                <artifactId>cyclonedx-maven-plugin</artifactId>
+                <version>2.7.5</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>makeBom</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
-                <plugin>
+              <plugin>
+                    <groupId>com.googlecode.fmpp-maven-plugin</groupId>
+                    <artifactId>fmpp-maven-plugin</artifactId>
+                    <version>1.0</version>
+              </plugin>
+              <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>2.22.2</version>
+                    <version>3.0.0-M7</version>
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set default options -->
                         <argLine>
                             @{jacocoArgLine}
+                            ${jdk.surefire.argLine}
                             -Xmx1500m
-                            -XX:MaxDirectMemorySize=512m
+                            -XX:MaxDirectMemorySize=2500m
+                            -XX:+ExitOnOutOfMemoryError
+                            -XX:+HeapDumpOnOutOfMemoryError
                             -Duser.language=en
                             -Duser.GroupByQueryRunnerTest.javacountry=US
                             -Dfile.encoding=UTF-8
                             -Duser.timezone=UTC
                             -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                             -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
+                            -Ddruid.test.stupidPool.poison=true
                             <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                         </argLine>
+                        <!-- Skip the tests which Surefire runs. Surefire runs the unit tests,
+                             while its sister plugin, Failsafe, runs the "new" ITs. -->
+                        <skipTests>${skipUTs}</skipTests>
                         <trimStackTrace>false</trimStackTrace>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                        <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -1563,11 +1634,6 @@
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-help-plugin</artifactId>
-                    <version>2.1.1</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-install-plugin</artifactId>
                     <version>2.3.1</version>
                     <executions>
@@ -1587,12 +1653,12 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>2.2</version>
+                    <version>3.2.4</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-site-plugin</artifactId>
-                    <version>3.1</version>
+                    <version>3.11.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.scala-tools</groupId>
@@ -1620,6 +1686,16 @@
                     <version>1.6.0</version>
                 </plugin>
                 <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>javacc-maven-plugin</artifactId>
+                    <version>2.4</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>3.1.0</version>
+                </plugin>
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
                     <version>2.10.1</version>
@@ -1640,15 +1716,15 @@
                         <target>${maven.compiler.target}</target>
                     </configuration>
                 </plugin>
-                <plugin>
-                    <groupId>com.github.eirslett</groupId>
-                    <artifactId>frontend-maven-plugin</artifactId>
-                    <version>1.11.3</version>
-                    <configuration>
-                        <nodeVersion>${node.version}</nodeVersion>
-                        <npmVersion>${npm.version}</npmVersion>
-                    </configuration>
-                </plugin>
+              <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>1.11.3</version>
+                <configuration>
+                  <nodeVersion>${node.version}</nodeVersion>
+                  <npmVersion>${npm.version}</npmVersion>
+                </configuration>
+              </plugin>
             </plugins>
         </pluginManagement>
     </build>
@@ -1659,6 +1735,26 @@
             <activation>
                 <jdk>[9,)</jdk>
             </activation>
+            <properties>
+                <jdk.surefire.argLine>
+                    <!-- required for DataSketches Memory on Java 11+ -->
+                    --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
+                    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
+                    --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
+                    --add-opens=java.base/java.nio=ALL-UNNAMED
+                    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+
+                    <!-- required for NativeIO#getfd -->
+                    --add-opens=java.base/java.io=ALL-UNNAMED
+
+                    <!-- required for Guice -->
+                    --add-opens=java.base/java.lang=ALL-UNNAMED
+
+                    <!-- required for certain EqualsVerifier tests -->
+                    <!-- (not required in production) -->
+                    --add-opens=java.base/java.util=ALL-UNNAMED
+                </jdk.surefire.argLine>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -1689,12 +1785,22 @@
                             <fork>true</fork>
                             <meminitial>1024m</meminitial>
                             <maxmem>3000m</maxmem>
-                            <source>${maven.compiler.source}</source>
-                            <target>${maven.compiler.target}</target>
+                            <release>${java.version}</release>
                             <showWarnings>false</showWarnings>
                             <compilerArgs>
                                 <arg>-XDcompilePolicy=simple</arg>
                                 <arg>-Xplugin:ErrorProne -XepExcludedPaths:.*/target/generated-(test-)?sources/.* -XepDisableWarningsInGeneratedCode -Xep:ClassCanBeStatic:ERROR -Xep:PreconditionsInvalidPlaceholder:ERROR -Xep:MissingOverride:ERROR -Xep:DefaultCharset:ERROR -Xep:QualifierOrScopeOnInjectMethod:ERROR -Xep:AssistedInjectAndInjectOnSameConstructor -Xep:AutoFactoryAtInject -Xep:ClassName -Xep:ComparisonContractViolated -Xep:DepAnn -Xep:DivZero -Xep:EmptyIf -Xep:InjectInvalidTargetingOnScopingAnnotation  -Xep:InjectMoreThanOneQualifier -Xep:InjectScopeAnnotationOnInterfaceOrAbstractClass -Xep:InjectScopeOrQualifierAnnotationRetention -Xep:InjectedConstructorAnnotations -Xep:InsecureCryptoUsage -Xep:JMockTestWithoutRunWithOrRuleAnnotation -Xep:JavaxInjectOnFinalField -Xep:LockMethodChecker -Xep:LongLiteralLowerCaseSuffix -Xep:NoAllocation -Xep:NonRuntimeAnnotation -Xep:NumericEquality -Xep:ProtoStringFieldReferenceEquality -Xep:UnlockMethod</arg>
+                                <!-- Error Prone requires exemptions for Java >= 16, see https://errorprone.info/docs/installation#maven -->
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                                <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                                <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
                               </compilerArgs>
                               <annotationProcessorPaths>
                                 <path>
@@ -1707,64 +1813,6 @@
                     </plugin>
                 </plugins>
             </build>
-        </profile>
-        <profile>
-          <id>strict-java-15+</id>
-          <activation>
-            <jdk>[15,)</jdk>
-            <property>
-              <name>strictCompile</name>
-            </property>
-          </activation>
-          <build>
-            <plugins>
-              <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                  <release>${java.version}</release>
-                  <compilerArgs combine.children="append">
-                    <!-- Error Prone requires exemptions for Java 16, see https://errorprone.info/docs/installation#jdk-16 -->
-                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
-                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
-                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
-                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
-                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>
-                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
-                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
-                    <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
-                    <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
-                    <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
-                  </compilerArgs>
-                </configuration>
-              </plugin>
-            </plugins>
-          </build>
-        </profile>
-        <!-- using github.com/google/error-prone-javac is required when running on JDK 8
-             see https://errorprone.info/docs/installation#jdk-8 -->
-        <profile>
-          <id>strict-java-8</id>
-          <activation>
-            <jdk>1.8</jdk>
-            <property>
-              <name>strictCompile</name>
-            </property>
-          </activation>
-          <build>
-            <plugins>
-              <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                  <fork>true</fork>
-                  <compilerArgs combine.children="append">
-                    <arg>-J-Xbootclasspath/p:${settings.localRepository}/com/google/errorprone/javac/9+181-r4173-1/javac-9+181-r4173-1.jar</arg>
-                  </compilerArgs>
-                </configuration>
-              </plugin>
-            </plugins>
-          </build>
         </profile>
         <profile>
             <id>parallel-test</id>
@@ -1790,9 +1838,13 @@
                             <trimStackTrace>false</trimStackTrace>
                             <!-- locale settings must be set on the command line before startup -->
                             <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
-                            <argLine>-Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
+                            <argLine>
+                                -Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
+                                -XX:+ExitOnOutOfMemoryError
+                                -XX:+HeapDumpOnOutOfMemoryError
                                 -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                                 -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
+                                -Ddruid.test.stupidPool.poison=true
                                 <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                                 -Ddruid.indexing.doubleStorage=double
                             </argLine>
@@ -1879,9 +1931,11 @@
                                 <exclude>conf/**</exclude>
                                 <exclude>docker/*.conf</exclude>
                                 <exclude>docker/service-supervisords/*.conf</exclude>
-                                <exclude>target/**</exclude>
+                                <exclude>**/target/**</exclude>
                                 <exclude>licenses/**</exclude>
-                                <exclude>**/test/resources/**</exclude>
+                                <exclude>**/test/resources/**/*</exclude> <!-- test data for "old" ITs. -->
+                                <exclude>**/docker/client_tls/*</exclude> <!-- generated files for "old" ITs. -->
+                                <exclude>resources/data/**/*</exclude> <!-- test data for "new" ITs. -->
                                 <exclude>**/derby.log</exclude>
                                 <exclude>**/jvm.config</exclude>
                                 <exclude>**/*.avsc</exclude>
@@ -1889,6 +1943,8 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
+                                <exclude>**/*.pmd</exclude> <!-- Artifact of maven-pmd-plugin -->
+                                <exclude>**/*.pmdruleset.xml</exclude> <!-- Artifact of maven-pmd-plugin -->
                                 <exclude>**/docker/schema-registry/*</exclude>
                                 <exclude>LICENSE</exclude>
                                 <exclude>LICENSE.BINARY</exclude>
@@ -1898,13 +1954,20 @@
                                 <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                                 <exclude>.github/pull_request_template.md</exclude>
                                 <exclude>.github/dependabot.yml</exclude>
+                                <exclude>.github/workflows/codeql.yml</exclude>
+                                <exclude>.github/workflows/codeql-config.yml</exclude>
                                 <exclude>git.version</exclude>
-                                <exclude>node_modules/**</exclude>
+                                <exclude>website/node_modules/**</exclude>
                                 <exclude>src/**/*.snap</exclude>
                                 <exclude>examples/conf/**</exclude>
                                 <exclude>.asf.yaml</exclude>
                                 <exclude>**/dependency-reduced-pom.xml</exclude>
                                 <exclude>.editorconfig</exclude>
+                                <exclude>**/hadoop.indexer.libs.version</exclude>
+                                <exclude>**/codegen/**/*</exclude>
+                                <exclude>**/.settings/**/*</exclude> <!-- Eclipse -->
+                                <exclude>**/.classpath</exclude> <!-- Eclipse -->
+                                <exclude>**/.project</exclude> <!-- Eclipse -->
                             </excludes>
                         </configuration>
                     </plugin>
@@ -1961,10 +2024,26 @@
         </profile>
         <profile>
           <id>skip-tests</id>
+          <activation>
+            <activeByDefault>false</activeByDefault>
+          </activation>
           <properties>
-            <skipTests>true</skipTests>
+            <skipTests>true</skipTests> <!-- skips both UTs and ITs -->
             <jacoco.skip>true</jacoco.skip>
           </properties>
         </profile>
+      <profile>
+        <id>hadoop2</id>
+        <activation>
+          <property>
+            <name>hadoop2.enabled</name>
+            <value>true</value>
+          </property>
+        </activation>
+        <properties>
+          <hadoop.compile.version>2.8.5</hadoop.compile.version>
+          <hibernate-validator.version>5.2.5.Final</hibernate-validator.version>
+        </properties>
+      </profile>
     </profiles>
 </project>

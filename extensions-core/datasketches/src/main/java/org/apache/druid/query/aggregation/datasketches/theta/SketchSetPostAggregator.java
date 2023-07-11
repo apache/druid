@@ -27,7 +27,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -97,11 +98,12 @@ public class SketchSetPostAggregator implements PostAggregator
 
   /**
    * actual type is {@link SketchHolder}
+   * @param signature
    */
   @Override
-  public ValueType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
-    return ValueType.COMPLEX;
+    return SketchModule.MERGE_TYPE;
   }
 
   @Override

@@ -23,7 +23,7 @@ title: "HDFS"
   -->
 
 
-To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-hdfs-storage` as an extension and run druid processes with `GOOGLE_APPLICATION_CREDENTIALS=/path/to/service_account_keyfile` in the environment.
+To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `druid-hdfs-storage` in the extensions load list and run druid processes with `GOOGLE_APPLICATION_CREDENTIALS=/path/to/service_account_keyfile` in the environment.
 
 ## Deep Storage
 
@@ -55,7 +55,7 @@ To use the AWS S3 as the deep storage, you need to configure `druid.storage.stor
 |`druid.storage.type`|hdfs| |Must be set.|
 |`druid.storage.storageDirectory`|s3a://bucket/example/directory or s3n://bucket/example/directory|Path to the deep storage|Must be set.|
 
-You also need to include the [Hadoop AWS module](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/), especially the `hadoop-aws.jar` in the Druid classpath.
+You also need to include the [Hadoop AWS module](https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/), especially the `hadoop-aws.jar` in the Druid classpath.
 Run the below command to install the `hadoop-aws.jar` file under `${DRUID_HOME}/extensions/druid-hdfs-storage` in all nodes.
 
 ```bash
@@ -64,7 +64,7 @@ cp ${DRUID_HOME}/hadoop-dependencies/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${H
 ```
 
 Finally, you need to add the below properties in the `core-site.xml`.
-For more configurations, see the [Hadoop AWS module](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/).
+For more configurations, see the [Hadoop AWS module](https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/).
 
 ```xml
 <property>
@@ -153,12 +153,12 @@ Tested with Druid 0.17.0, Hadoop 2.8.5 and gcs-connector jar 2.0.0-hadoop2.
 
 ### Native batch ingestion
 
-The [HDFS input source](../../ingestion/native-batch.md#hdfs-input-source) is supported by the [Parallel task](../../ingestion/native-batch.md#parallel-task)
+The [HDFS input source](../../ingestion/native-batch-input-source.md#hdfs-input-source) is supported by the [Parallel task](../../ingestion/native-batch.md)
 to read files directly from the HDFS Storage. You may be able to read objects from cloud storage
 with the HDFS input source, but we highly recommend to use a proper
-[Input Source](../../ingestion/native-batch.md#input-sources) instead if possible because
-it is simple to set up. For now, only the [S3 input source](../../ingestion/native-batch.md#s3-input-source)
-and the [Google Cloud Storage input source](../../ingestion/native-batch.md#google-cloud-storage-input-source)
+[Input Source](../../ingestion/native-batch-input-source.md) instead if possible because
+it is simple to set up. For now, only the [S3 input source](../../ingestion/native-batch-input-source.md#s3-input-source)
+and the [Google Cloud Storage input source](../../ingestion/native-batch-input-source.md#google-cloud-storage-input-source)
 are supported for cloud storage types, and so you may still want to use the HDFS input source
 to read from cloud storage other than those two.
 

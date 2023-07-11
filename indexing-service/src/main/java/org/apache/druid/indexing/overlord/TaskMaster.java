@@ -26,6 +26,7 @@ import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.discovery.DruidLeaderSelector.Listener;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.Task;
@@ -91,7 +92,8 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
       final ServiceEmitter emitter,
       final SupervisorManager supervisorManager,
       final OverlordHelperManager overlordHelperManager,
-      @IndexingService final DruidLeaderSelector overlordLeaderSelector
+      @IndexingService final DruidLeaderSelector overlordLeaderSelector,
+      final SegmentAllocationQueue segmentAllocationQueue
   )
   {
     this.supervisorManager = supervisorManager;
@@ -113,7 +115,6 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
         log.info("By the power of Grayskull, I have the power!");
 
         try {
-          taskLockbox.syncFromStorage();
           taskRunner = runnerFactory.build();
           taskQueue = new TaskQueue(
               taskLockConfig,
@@ -137,6 +138,22 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
           leaderLifecycle.addManagedInstance(taskQueue);
           leaderLifecycle.addManagedInstance(supervisorManager);
           leaderLifecycle.addManagedInstance(overlordHelperManager);
+          leaderLifecycle.addHandler(
+              new Lifecycle.Handler()
+              {
+                @Override
+                public void start()
+                {
+                  segmentAllocationQueue.becomeLeader();
+                }
+
+                @Override
+                public void stop()
+                {
+                  segmentAllocationQueue.stopBeingLeader();
+                }
+              }
+          );
 
           leaderLifecycle.addHandler(
               new Lifecycle.Handler()
@@ -230,6 +247,19 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   public String getCurrentLeader()
   {
     return overlordLeaderSelector.getCurrentLeader();
+  }
+
+  public Optional<String> getRedirectLocation()
+  {
+    String leader = overlordLeaderSelector.getCurrentLeader();
+    // do not redirect when
+    // leader is not elected
+    // leader is the current node
+    if (leader == null || leader.isEmpty() || overlordLeaderSelector.isLeader()) {
+      return Optional.absent();
+    } else {
+      return Optional.of(leader);
+    }
   }
 
   public Optional<TaskRunner> getTaskRunner()
@@ -346,7 +376,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   @Override
   @Nullable
-  public Long getTotalTaskSlotCount()
+  public Map<String, Long> getTotalTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
@@ -358,7 +388,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   @Override
   @Nullable
-  public Long getIdleTaskSlotCount()
+  public Map<String, Long> getIdleTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
@@ -370,7 +400,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   @Override
   @Nullable
-  public Long getUsedTaskSlotCount()
+  public Map<String, Long> getUsedTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
@@ -382,7 +412,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   @Override
   @Nullable
-  public Long getLazyTaskSlotCount()
+  public Map<String, Long> getLazyTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {
@@ -394,7 +424,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   @Override
   @Nullable
-  public Long getBlacklistedTaskSlotCount()
+  public Map<String, Long> getBlacklistedTaskSlotCount()
   {
     Optional<TaskRunner> taskRunner = getTaskRunner();
     if (taskRunner.isPresent()) {

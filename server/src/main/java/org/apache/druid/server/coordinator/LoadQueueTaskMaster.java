@@ -42,6 +42,7 @@ public class LoadQueueTaskMaster
   private final DruidCoordinatorConfig config;
   private final HttpClient httpClient;
   private final ZkPathsConfig zkPaths;
+  private final boolean httpLoading;
 
   public LoadQueueTaskMaster(
       Provider<CuratorFramework> curatorFrameworkProvider,
@@ -60,11 +61,12 @@ public class LoadQueueTaskMaster
     this.config = config;
     this.httpClient = httpClient;
     this.zkPaths = zkPaths;
+    this.httpLoading = "http".equalsIgnoreCase(config.getLoadQueuePeonType());
   }
 
   public LoadQueuePeon giveMePeon(ImmutableDruidServer server)
   {
-    if ("http".equalsIgnoreCase(config.getLoadQueuePeonType())) {
+    if (httpLoading) {
       return new HttpLoadQueuePeon(server.getURL(), jsonMapper, httpClient, config, peonExec, callbackExec);
     } else {
       return new CuratorLoadQueuePeon(
@@ -76,5 +78,10 @@ public class LoadQueueTaskMaster
           config
       );
     }
+  }
+
+  public boolean isHttpLoading()
+  {
+    return httpLoading;
   }
 }

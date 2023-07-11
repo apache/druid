@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Interval;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -34,15 +35,20 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
 {
   /**
    * Segment id is stored as a String rather than {@link org.apache.druid.timeline.SegmentId}, because when a
-   * SegmentAnalysis object is sent across Druid nodes, on the reciever (deserialization) side it's impossible to
+   * SegmentAnalysis object is sent across Druid nodes, on the receiver (deserialization) side it's impossible to
    * unambiguously convert a segment id string (as transmitted in the JSON format) back into a {@code SegmentId} object
    * ({@link org.apache.druid.timeline.SegmentId#tryParse} javadoc explains that ambiguities in details). It would be
    * fine to have the type of this field of Object, setting it to {@code SegmentId} on the sender side and remaining as
-   * a String on the reciever side, but it's even less type-safe than always storing the segment id as a String.
+   * a String on the receiver side, but it's even less type-safe than always storing the segment id as a String.
    */
   private final String id;
   private final List<Interval> interval;
-  private final Map<String, ColumnAnalysis> columns;
+
+  /**
+   * Require LinkedHashMap to emphasize how important column order is. It's used by DruidSchema to keep
+   * SQL column order in line with ingestion column order.
+   */
+  private final LinkedHashMap<String, ColumnAnalysis> columns;
   private final long size;
   private final long numRows;
   private final Map<String, AggregatorFactory> aggregators;
@@ -54,7 +60,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   public SegmentAnalysis(
       @JsonProperty("id") String id,
       @JsonProperty("intervals") List<Interval> interval,
-      @JsonProperty("columns") Map<String, ColumnAnalysis> columns,
+      @JsonProperty("columns") LinkedHashMap<String, ColumnAnalysis> columns,
       @JsonProperty("size") long size,
       @JsonProperty("numRows") long numRows,
       @JsonProperty("aggregators") Map<String, AggregatorFactory> aggregators,
@@ -87,7 +93,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   }
 
   @JsonProperty
-  public Map<String, ColumnAnalysis> getColumns()
+  public LinkedHashMap<String, ColumnAnalysis> getColumns()
   {
     return columns;
   }

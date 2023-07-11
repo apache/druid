@@ -86,7 +86,7 @@ public class ProtobufParserBenchmark
                         new StringDimensionSchema("id"),
                         new StringDimensionSchema("someOtherId"),
                         new StringDimensionSchema("isValid")
-                ), null, null),
+                )),
                 new JSONPathSpec(
                         true,
                         Lists.newArrayList(
@@ -106,7 +106,7 @@ public class ProtobufParserBenchmark
                     new StringDimensionSchema("id"),
                     new StringDimensionSchema("someOtherId"),
                     new StringDimensionSchema("isValid")
-            ), null, null),
+            )),
             null,
             null,
             null

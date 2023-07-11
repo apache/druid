@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -46,7 +47,9 @@ import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
@@ -121,17 +124,9 @@ public class TestIndex
       new StringDimensionSchema("null_column", null, false)
   );
 
-  public static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
-      DIMENSION_SCHEMAS,
-      null,
-      null
-  );
+  public static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(DIMENSION_SCHEMAS);
 
-  public static final DimensionsSpec DIMENSIONS_SPEC_NO_BITMAPS = new DimensionsSpec(
-      DIMENSION_SCHEMAS_NO_BITMAP,
-      null,
-      null
-  );
+  public static final DimensionsSpec DIMENSIONS_SPEC_NO_BITMAPS = new DimensionsSpec(DIMENSION_SCHEMAS_NO_BITMAP);
 
   public static final String[] DOUBLE_METRICS = new String[]{"index", "indexMin", "indexMaxPlusTen"};
   public static final String[] FLOAT_METRICS = new String[]{"indexFloat", "indexMinFloat", "indexMaxFloat"};
@@ -139,7 +134,7 @@ public class TestIndex
   private static final Logger log = new Logger(TestIndex.class);
   private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
       Collections.singletonList(
-          new ExpressionVirtualColumn("expr", "index + 10", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
+          new ExpressionVirtualColumn("expr", "index + 10", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
       )
   );
   public static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
@@ -151,7 +146,7 @@ public class TestIndex
       new DoubleMaxAggregatorFactory(DOUBLE_METRICS[2], VIRTUAL_COLUMNS.getVirtualColumns()[0].getOutputName()),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
-  public static final IndexSpec INDEX_SPEC = new IndexSpec();
+  public static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
 
   public static final IndexMerger INDEX_MERGER =
       TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
@@ -191,11 +186,11 @@ public class TestIndex
       File bottomFile = new File(tmpFile, "bottom");
       File mergedFile = new File(tmpFile, "merged");
 
-      topFile.mkdirs();
+      FileUtils.mkdirp(topFile);
+      FileUtils.mkdirp(bottomFile);
+      FileUtils.mkdirp(mergedFile);
       topFile.deleteOnExit();
-      bottomFile.mkdirs();
       bottomFile.deleteOnExit();
-      mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
       INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, INDEX_SPEC, null);
@@ -217,6 +212,16 @@ public class TestIndex
       throw new RuntimeException(e);
     }
   });
+  private static Supplier<QueryableIndex> frontCodedMmappedIndex = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(
+          realtimeIndex.get(),
+          IndexSpec.builder()
+                   .withStringDictionaryEncoding(
+                       new StringEncodingStrategy.FrontCoded(4, FrontCodedIndexed.V1)
+                   )
+                   .build()
+      )
+  );
 
   public static IncrementalIndex getIncrementalTestIndex()
   {
@@ -251,6 +256,11 @@ public class TestIndex
   public static QueryableIndex mergedRealtimeIndex()
   {
     return mergedRealtime.get();
+  }
+
+  public static QueryableIndex getFrontCodedMMappedTestIndex()
+  {
+    return frontCodedMmappedIndex.get();
   }
 
   public static IncrementalIndex makeRealtimeIndex(final String resourceFilename)
@@ -320,7 +330,7 @@ public class TestIndex
     final StringInputRowParser parser = new StringInputRowParser(
         new DelimitedParseSpec(
             new TimestampSpec("ts", "iso", null),
-            new DimensionsSpec(DIMENSION_SCHEMAS, null, null),
+            DIMENSIONS_SPEC,
             "\t",
             "\u0001",
             Arrays.asList(COLUMNS),
@@ -374,13 +384,18 @@ public class TestIndex
 
   public static QueryableIndex persistRealtimeAndLoadMMapped(IncrementalIndex index)
   {
+    return persistRealtimeAndLoadMMapped(index, INDEX_SPEC);
+  }
+
+  public static QueryableIndex persistRealtimeAndLoadMMapped(IncrementalIndex index, IndexSpec indexSpec)
+  {
     try {
       File someTmpFile = File.createTempFile("billy", "yay");
       someTmpFile.delete();
-      someTmpFile.mkdirs();
+      FileUtils.mkdirp(someTmpFile);
       someTmpFile.deleteOnExit();
 
-      INDEX_MERGER.persist(index, someTmpFile, INDEX_SPEC, null);
+      INDEX_MERGER.persist(index, someTmpFile, indexSpec, null);
       return INDEX_IO.loadIndex(someTmpFile);
     }
     catch (IOException e) {

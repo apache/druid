@@ -31,6 +31,7 @@ import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -50,7 +51,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -62,12 +62,12 @@ public class DataSourceMetadataQueryTest
   @Test
   public void testQuerySerialization() throws IOException
   {
-    Query query = Druids.newDataSourceMetadataQueryBuilder()
+    Query<?> query = Druids.newDataSourceMetadataQueryBuilder()
                         .dataSource("testing")
                         .build();
 
     String json = JSON_MAPPER.writeValueAsString(query);
-    Query serdeQuery = JSON_MAPPER.readValue(json, Query.class);
+    Query<?> serdeQuery = JSON_MAPPER.readValue(json, Query.class);
 
     Assert.assertEquals(query, serdeQuery);
   }
@@ -80,20 +80,20 @@ public class DataSourceMetadataQueryTest
                                                 .intervals("2013/2014")
                                                 .context(
                                                     ImmutableMap.of(
-                                                        "priority",
+                                                        QueryContexts.PRIORITY_KEY,
                                                         1,
-                                                        "useCache",
+                                                        QueryContexts.USE_CACHE_KEY,
                                                         true,
-                                                        "populateCache",
+                                                        QueryContexts.POPULATE_CACHE_KEY,
                                                         "true",
-                                                        "finalize",
+                                                        QueryContexts.FINALIZE_KEY,
                                                         true
                                                     )
                                                 ).build();
 
     final ObjectMapper mapper = new DefaultObjectMapper();
 
-    final Query serdeQuery = mapper.readValue(
+    final Query<?> serdeQuery = mapper.readValue(
         mapper.writeValueAsBytes(
             mapper.readValue(
                 mapper.writeValueAsString(
@@ -103,13 +103,14 @@ public class DataSourceMetadataQueryTest
         ), Query.class
     );
 
-    Assert.assertEquals(1, serdeQuery.getContextValue(QueryContexts.PRIORITY_KEY));
-    Assert.assertEquals(true, serdeQuery.getContextValue("useCache"));
-    Assert.assertEquals("true", serdeQuery.getContextValue("populateCache"));
-    Assert.assertEquals(true, serdeQuery.getContextValue("finalize"));
-    Assert.assertEquals(true, serdeQuery.getContextBoolean("useCache", false));
-    Assert.assertEquals(true, serdeQuery.getContextBoolean("populateCache", false));
-    Assert.assertEquals(true, serdeQuery.getContextBoolean("finalize", false));
+    final QueryContext queryContext = serdeQuery.context();
+    Assert.assertEquals(1, (int) queryContext.getInt(QueryContexts.PRIORITY_KEY));
+    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY));
+    Assert.assertEquals("true", queryContext.getString(QueryContexts.POPULATE_CACHE_KEY));
+    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY));
+    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY, false));
+    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.POPULATE_CACHE_KEY, false));
+    Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY, false));
   }
 
   @Test
@@ -140,7 +141,7 @@ public class DataSourceMetadataQueryTest
                                                             .dataSource("testing")
                                                             .build();
     ResponseContext context = ConcurrentResponseContext.createEmpty();
-    context.put(ResponseContext.Key.MISSING_SEGMENTS, new ArrayList<>());
+    context.initializeMissingSegments();
     Iterable<Result<DataSourceMetadataResultValue>> results =
         runner.run(QueryPlus.wrap(dataSourceMetadataQuery), context).toList();
     DataSourceMetadataResultValue val = results.iterator().next().getValue();
@@ -232,7 +233,7 @@ public class DataSourceMetadataQueryTest
         );
 
     Assert.assertEquals(segments.size(), 2);
-    // should only have the latest segments. 
+    // should only have the latest segments.
     List<LogicalSegment> expected = Arrays.asList(
         new LogicalSegment()
         {

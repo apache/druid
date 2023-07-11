@@ -16,14 +16,15 @@
  * limitations under the License.
  */
 
-@import '~normalize.css/normalize';
-@import '~fontsource-open-sans/index.css';
+@import 'normalize.css/normalize';
+@import 'fontsource-open-sans/index.css';
 @import './blueprint-overrides';
-@import '~@blueprintjs/core/src/blueprint';
-@import '~@blueprintjs/datetime/src/blueprint-datetime';
-@import '~@blueprintjs/popover2/src/blueprint-popover2';
-@import '~react-splitter-layout/lib/index';
-@import '../lib/react-table';
+@import '@blueprintjs/core/src/blueprint';
+@import '@blueprintjs/datetime/src/blueprint-datetime';
+@import '@blueprintjs/popover2/src/blueprint-popover2';
+@import 'react-splitter-layout/lib/index';
+@import './react-table/react-table-base-styles';
+@import './react-table/react-table-extra';
 
 html,
 body {
@@ -32,12 +33,13 @@ body {
   width: 100%;
   overflow: hidden;
   font-size: 13px;
+  overscroll-behavior-x: none;
 }
 
 body {
   background: $light-gray4;
 
-  &.bp3-dark {
+  &.#{$bp-ns}-dark {
     background: $dark-gray2;
   }
 
@@ -45,10 +47,6 @@ body {
     *:focus {
       outline: none !important;
     }
-  }
-
-  .ace-solarized-dark {
-    background-color: rgba($dark-gray1, 0.5);
   }
 }
 

@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`plural pair if needed works when both counts exist 1`] = `
+exports[`PluralPairIfNeeded works when both counts exist 1`] = `
 <p
   class="plural-pair-if-needed"
 >
@@ -8,9 +8,9 @@ exports[`plural pair if needed works when both counts exist 1`] = `
 </p>
 `;
 
-exports[`plural pair if needed works when no counts exist 1`] = `null`;
+exports[`PluralPairIfNeeded works when no counts exist 1`] = `null`;
 
-exports[`plural pair if needed works when only first count exists 1`] = `
+exports[`PluralPairIfNeeded works when only first count exists 1`] = `
 <p
   class="plural-pair-if-needed"
 >
@@ -18,7 +18,7 @@ exports[`plural pair if needed works when only first count exists 1`] = `
 </p>
 `;
 
-exports[`plural pair if needed works when only second count exists 1`] = `
+exports[`PluralPairIfNeeded works when only second count exists 1`] = `
 <p
   class="plural-pair-if-needed"
 >

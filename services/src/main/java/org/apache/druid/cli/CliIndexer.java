@@ -19,22 +19,23 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Command;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
-import io.airlift.airline.Command;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.DataNodeService;
-import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.guice.DruidProcessingModule;
+import org.apache.druid.guice.IndexerServiceModule;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
@@ -49,7 +50,9 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
+import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
+import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.guice.annotations.Self;
@@ -80,6 +83,7 @@ import org.eclipse.jetty.server.Server;
 
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  *
@@ -108,13 +112,21 @@ public class CliIndexer extends ServerRunnable
   }
 
   @Override
+  protected Set<NodeRole> getNodeRoles(Properties properties)
+  {
+    return ImmutableSet.of(NodeRole.INDEXER);
+  }
+
+  @Override
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
         new DruidProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
+        new SegmentWranglerModule(),
         new JoinableFactoryModule(),
+        new IndexerServiceModule(),
         new Module()
         {
           @Override
@@ -124,6 +136,8 @@ public class CliIndexer extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8291);
             binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
+            // needed for the CliPeon, not needed for indexer, but have to bind annotation.
+            binder.bindConstant().annotatedWith(AttemptId.class).to("");
 
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 
@@ -144,7 +158,7 @@ public class CliIndexer extends ServerRunnable
             CliPeon.bindPeonDataSegmentHandlers(binder);
             CliPeon.bindRealtimeCache(binder);
             CliPeon.bindCoordinatorHandoffNotiferAndClient(binder);
-            CliMiddleManager.bindWorkerManagementClasses(binder, isZkEnabled);
+            binder.install(CliMiddleManager.makeWorkerManagementModule(isZkEnabled));
 
             binder.bind(AppenderatorsManager.class)
                   .to(UnifiedIndexerAppenderatorsManager.class)
@@ -165,14 +179,9 @@ public class CliIndexer extends ServerRunnable
               LifecycleModule.register(binder, ZkCoordinator.class);
             }
 
-            bindNodeRoleAndAnnouncer(
+            bindAnnouncer(
                 binder,
-                DiscoverySideEffectsProvider
-                    .builder(NodeRole.INDEXER)
-                    .serviceClasses(
-                        ImmutableList.of(LookupNodeService.class, WorkerNodeService.class, DataNodeService.class)
-                    )
-                    .build()
+                DiscoverySideEffectsProvider.create()
             );
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);

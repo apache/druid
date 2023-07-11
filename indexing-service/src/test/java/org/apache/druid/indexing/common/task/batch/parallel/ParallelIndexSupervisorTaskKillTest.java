@@ -201,6 +201,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -403,7 +404,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     }
 
     @Override
-    public TaskStatus run(final TaskToolbox toolbox) throws Exception
+    public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
     {
       final TestInputSource inputSource = (TestInputSource) getIngestionSchema().getIOConfig().getInputSource();
       final TestInput testInput = Iterables.getOnlyElement(inputSource.splits).get();

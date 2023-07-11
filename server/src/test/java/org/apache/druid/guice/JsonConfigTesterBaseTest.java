@@ -43,7 +43,7 @@ public final class JsonConfigTesterBaseTest
     Assert.assertEquals("[]", testProperties.getProperty("druid.test.prefix.set"));
     Assert.assertEquals("{}", testProperties.getProperty("druid.test.prefix.map"));
     for (Map.Entry entry : System.getProperties().entrySet()) {
-      Assert.assertEquals(entry.getValue(), testProperties.get(entry.getKey()));
+      Assert.assertEquals(entry.getValue(), testProperties.getProperty(String.valueOf(entry.getKey())));
     }
   }
 

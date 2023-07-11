@@ -89,7 +89,7 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
       IndexMergerV9 indexMergerV9 = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
       IndexIO indexIO = TestHelper.getTestIndexIO();
 
-      final IndexSpec indexSpec = new IndexSpec();
+      final IndexSpec indexSpec = IndexSpec.DEFAULT;
       final IncrementalIndex rtIndex = makeIncrementalIndex();
       final QueryableIndex mMappedTestIndex = makeQueryableIndex(indexSpec, indexMergerV9, indexIO);
       final QueryableIndex mergedRealtimeIndex = makeMergedQueryableIndex(indexSpec, indexMergerV9, indexIO);
@@ -109,21 +109,20 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
                 .withQueryGranularity(Granularities.DAY)
                 .withMetrics(METRIC_AGGS)
                 .withDimensionsSpec(
-                    new DimensionsSpec(
-                        null,
-                        null,
-                        Arrays.asList(
-                            new SpatialDimensionSchema(
-                                "dim.geo",
-                                Arrays.asList("lat", "long")
-                            ),
-                            new SpatialDimensionSchema(
-                                "spatialIsRad",
-                                Arrays.asList("lat2", "long2")
-                            )
-
-                        )
-                    )
+                    DimensionsSpec.builder()
+                                  .setSpatialDimensions(
+                                      Arrays.asList(
+                                          new SpatialDimensionSchema(
+                                              "dim.geo",
+                                              Arrays.asList("lat", "long")
+                                          ),
+                                          new SpatialDimensionSchema(
+                                              "spatialIsRad",
+                                              Arrays.asList("lat2", "long2")
+                                          )
+                                      )
+                                  )
+                                  .build()
                 ).build()
         )
         .setMaxRowCount(NUM_POINTS)
@@ -259,7 +258,7 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
     IncrementalIndex theIndex = makeIncrementalIndex();
     File tmpFile = File.createTempFile("billy", "yay");
     tmpFile.delete();
-    tmpFile.mkdirs();
+    FileUtils.mkdirp(tmpFile);
 
     try {
       indexMergerV9.persist(theIndex, tmpFile, indexSpec, null);
@@ -284,21 +283,20 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Arrays.asList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  Arrays.asList("lat", "long")
-                              ),
-                              new SpatialDimensionSchema(
-                                  "spatialIsRad",
-                                  Arrays.asList("lat2", "long2")
+                      DimensionsSpec.builder()
+                          .setSpatialDimensions(
+                              Arrays.asList(
+                                  new SpatialDimensionSchema(
+                                      "dim.geo",
+                                      Arrays.asList("lat", "long")
+                                  ),
+                                  new SpatialDimensionSchema(
+                                      "spatialIsRad",
+                                      Arrays.asList("lat2", "long2")
+                                  )
                               )
-
                           )
-                      )
+                          .build()
                   ).build()
           )
           .setMaxRowCount(1000)
@@ -311,21 +309,20 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Arrays.asList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  Arrays.asList("lat", "long")
-                              ),
-                              new SpatialDimensionSchema(
-                                  "spatialIsRad",
-                                  Arrays.asList("lat2", "long2")
-                              )
-
-                          )
-                      )
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Arrays.asList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                Arrays.asList("lat", "long")
+                                            ),
+                                            new SpatialDimensionSchema(
+                                                "spatialIsRad",
+                                                Arrays.asList("lat2", "long2")
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
           .setMaxRowCount(1000)
@@ -338,21 +335,20 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Arrays.asList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  Arrays.asList("lat", "long")
-                              ),
-                              new SpatialDimensionSchema(
-                                  "spatialIsRad",
-                                  Arrays.asList("lat2", "long2")
-                              )
-
-                          )
-                      )
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Arrays.asList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                Arrays.asList("lat", "long")
+                                            ),
+                                            new SpatialDimensionSchema(
+                                                "spatialIsRad",
+                                                Arrays.asList("lat2", "long2")
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
           .setMaxRowCount(NUM_POINTS)
@@ -488,10 +484,10 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
       File thirdFile = new File(tmpFile, "third");
       File mergedFile = new File(tmpFile, "merged");
 
-      firstFile.mkdirs();
-      secondFile.mkdirs();
-      thirdFile.mkdirs();
-      mergedFile.mkdirs();
+      FileUtils.mkdirp(firstFile);
+      FileUtils.mkdirp(secondFile);
+      FileUtils.mkdirp(thirdFile);
+      FileUtils.mkdirp(mergedFile);
 
       indexMergerV9.persist(first, DATA_INTERVAL, firstFile, indexSpec, null);
       indexMergerV9.persist(second, DATA_INTERVAL, secondFile, indexSpec, null);

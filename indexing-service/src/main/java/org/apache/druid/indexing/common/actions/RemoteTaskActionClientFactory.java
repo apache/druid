@@ -22,33 +22,46 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.discovery.DruidLeaderClient;
-import org.apache.druid.indexing.common.RetryPolicyFactory;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.guice.annotations.EscalatedGlobal;
+import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.rpc.ServiceClient;
+import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.ServiceLocator;
+import org.apache.druid.rpc.StandardRetryPolicy;
 
 /**
  */
 public class RemoteTaskActionClientFactory implements TaskActionClientFactory
 {
-  private final DruidLeaderClient druidLeaderClient;
-  private final RetryPolicyFactory retryPolicyFactory;
+  private final ServiceClient overlordClient;
   private final ObjectMapper jsonMapper;
 
   @Inject
   public RemoteTaskActionClientFactory(
-      @IndexingService DruidLeaderClient leaderHttpClient,
-      RetryPolicyFactory retryPolicyFactory,
-      ObjectMapper jsonMapper
+      @Json final ObjectMapper jsonMapper,
+      @EscalatedGlobal final ServiceClientFactory clientFactory,
+      @IndexingService final ServiceLocator serviceLocator,
+      RetryPolicyConfig retryPolicyConfig
   )
   {
-    this.druidLeaderClient = leaderHttpClient;
-    this.retryPolicyFactory = retryPolicyFactory;
+    this.overlordClient = clientFactory.makeClient(
+        NodeRole.OVERLORD.toString(),
+        serviceLocator,
+        StandardRetryPolicy.builder()
+            .maxAttempts(retryPolicyConfig.getMaxRetryCount() - 1)
+            .minWaitMillis(retryPolicyConfig.getMinWait().toStandardDuration().getMillis())
+            .maxWaitMillis(retryPolicyConfig.getMaxWait().toStandardDuration().getMillis())
+            .build()
+    );
     this.jsonMapper = jsonMapper;
   }
 
   @Override
   public TaskActionClient create(Task task)
   {
-    return new RemoteTaskActionClient(task, druidLeaderClient, retryPolicyFactory, jsonMapper);
+    return new RemoteTaskActionClient(task, overlordClient, jsonMapper);
   }
 }

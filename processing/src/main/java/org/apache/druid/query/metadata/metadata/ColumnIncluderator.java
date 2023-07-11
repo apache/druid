@@ -21,6 +21,7 @@ package org.apache.druid.query.metadata.metadata;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.java.util.common.Cacheable;
 
 /**
  */
@@ -30,8 +31,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(name = "all", value = AllColumnIncluderator.class),
     @JsonSubTypes.Type(name = "list", value = ListColumnIncluderator.class)
 })
-public interface ColumnIncluderator
+public interface ColumnIncluderator extends Cacheable
 {
   boolean include(String columnName);
-  byte[] getCacheKey();
 }

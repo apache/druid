@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -29,6 +30,10 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
@@ -53,7 +58,7 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
   public void requiresForceGuaranteedRollup()
   {
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("single_dim partitionsSpec required");
+    exception.expectMessage("range or single_dim partitionsSpec required");
 
     ParallelIndexTuningConfig tuningConfig = new ParallelIndexTestingFactory.TuningConfigBuilder()
         .forceGuaranteedRollup(false)
@@ -66,10 +71,10 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
   }
 
   @Test
-  public void requiresSingleDimensionPartitions()
+  public void requiresMultiDimensionPartitions()
   {
     exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("single_dim partitionsSpec required");
+    exception.expectMessage("range or single_dim partitionsSpec required");
 
     PartitionsSpec partitionsSpec = new HashedPartitionsSpec(null, 1, null);
     ParallelIndexTuningConfig tuningConfig =
@@ -98,6 +103,20 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
   {
     PartialRangeSegmentGenerateTask task = new PartialRangeSegmentGenerateTaskBuilder().build();
     TestHelper.testSerializesDeserializes(getObjectMapper(), task);
+  }
+
+  @Test
+  public void hasCorrectInputSourceResources()
+  {
+    PartialRangeSegmentGenerateTask task = new PartialRangeSegmentGenerateTaskBuilder().build();
+    Assert.assertEquals(
+        Collections.singleton(
+            new ResourceAction(new Resource(
+                InlineInputSource.TYPE_KEY,
+                ResourceType.EXTERNAL
+            ), Action.READ)),
+        task.getInputSourceResources()
+    );
   }
 
   @Test
@@ -144,7 +163,7 @@ public class PartialRangeSegmentGenerateTaskTest extends AbstractParallelIndexSu
           ParallelIndexTestingFactory.NUM_ATTEMPTS,
           ingestionSpec,
           ParallelIndexTestingFactory.CONTEXT,
-          ImmutableMap.of(Intervals.ETERNITY, new PartitionBoundaries("a"))
+          ImmutableMap.of(Intervals.ETERNITY, new PartitionBoundaries(StringTuple.create("a")))
       );
     }
   }

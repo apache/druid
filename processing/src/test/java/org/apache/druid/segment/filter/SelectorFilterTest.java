@@ -116,6 +116,33 @@ public class SelectorFilterTest extends BaseFilterTest
   }
 
   @Test
+  public void testListFilteredVirtualColumn()
+  {
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("allow-dim0", "1", null), ImmutableList.of());
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("allow-dim0", "4", null), ImmutableList.of("4"));
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("allow-dim0", null, null), ImmutableList.of("0", "1", "2", "5"));
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("deny-dim0", "0", null), ImmutableList.of("0"));
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("deny-dim0", "4", null), ImmutableList.of());
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("deny-dim0", null, null), ImmutableList.of("3", "4"));
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("allow-dim2", "b", null), ImmutableList.of());
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("allow-dim2", "a", null), ImmutableList.of("0", "3"));
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("allow-dim2", null, null), ImmutableList.of("1", "2", "4", "5"));
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("deny-dim2", "b", null), ImmutableList.of("0"));
+    assertFilterMatchesSkipVectorize(new SelectorDimFilter("deny-dim2", "a", null), ImmutableList.of());
+    if (NullHandling.replaceWithDefault()) {
+      assertFilterMatchesSkipVectorize(
+          new SelectorDimFilter("deny-dim2", null, null),
+          ImmutableList.of("1", "2", "3", "5")
+      );
+    } else {
+      assertFilterMatchesSkipVectorize(
+          new SelectorDimFilter("deny-dim2", null, null),
+          ImmutableList.of("1", "3", "5")
+      );
+    }
+  }
+
+  @Test
   public void testSingleValueStringColumnWithNulls()
   {
     // testSingleValueStringColumnWithoutNulls but with virtual column selector

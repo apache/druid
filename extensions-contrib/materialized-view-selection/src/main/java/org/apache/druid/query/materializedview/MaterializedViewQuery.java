@@ -40,25 +40,26 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 /**
- * MaterializedViewQuery helps to do materialized view selection automatically. 
- * 
+ * MaterializedViewQuery helps to do materialized view selection automatically.
+ *
  * Each MaterializedViewQuery contains a real query which type can be topn, timeseries or groupBy.
  * The real query will be optimized based on its dataSources and intervals. It will be converted into one or more
  * sub-queries, in which dataSources and intervals are replaced by derived dataSources and related sub-intervals.
- * 
+ *
  * Derived dataSources always have less dimensions, but contains all dimensions which real query required.
  */
-public class MaterializedViewQuery<T> implements Query<T> 
+public class MaterializedViewQuery<T> implements Query<T>
 {
   public static final String TYPE = "view";
   private final Query query;
   private final DataSourceOptimizer optimizer;
-  
+
   @JsonCreator
   public MaterializedViewQuery(
       @JsonProperty("query") Query query,
@@ -72,24 +73,24 @@ public class MaterializedViewQuery<T> implements Query<T>
     this.query = query;
     this.optimizer = optimizer;
   }
-  
+
   @JsonProperty("query")
   public Query getQuery()
   {
     return query;
   }
-  
+
   public DataSourceOptimizer getOptimizer()
   {
     return optimizer;
   }
-  
+
   @Override
   public DataSource getDataSource()
   {
     return query.getDataSource();
   }
-  
+
   @Override
   public boolean hasFilters()
   {
@@ -109,14 +110,14 @@ public class MaterializedViewQuery<T> implements Query<T>
   }
 
   @Override
-  public QueryRunner<T> getRunner(QuerySegmentWalker walker) 
+  public QueryRunner<T> getRunner(QuerySegmentWalker walker)
   {
     return ((BaseQuery) query).getQuerySegmentSpec().lookup(this, walker);
   }
 
   @Override
   public List<Interval> getIntervals()
-      
+
   {
     return query.getIntervals();
   }
@@ -146,24 +147,6 @@ public class MaterializedViewQuery<T> implements Query<T>
   }
 
   @Override
-  public <ContextType> ContextType getContextValue(String key)
-  {
-    return (ContextType) query.getContextValue(key);
-  }
-
-  @Override
-  public <ContextType> ContextType getContextValue(String key, ContextType defaultValue) 
-  {
-    return (ContextType) query.getContextValue(key, defaultValue);
-  }
-
-  @Override
-  public boolean getContextBoolean(String key, boolean defaultValue) 
-  {
-    return query.getContextBoolean(key, defaultValue);
-  }
-
-  @Override
   public boolean isDescending()
   {
     return query.isDescending();
@@ -176,13 +159,13 @@ public class MaterializedViewQuery<T> implements Query<T>
   }
 
   @Override
-  public MaterializedViewQuery withOverriddenContext(Map<String, Object> contextOverride) 
+  public MaterializedViewQuery withOverriddenContext(Map<String, Object> contextOverride)
   {
     return new MaterializedViewQuery(query.withOverriddenContext(contextOverride), optimizer);
   }
 
   @Override
-  public MaterializedViewQuery withQuerySegmentSpec(QuerySegmentSpec spec) 
+  public MaterializedViewQuery withQuerySegmentSpec(QuerySegmentSpec spec)
   {
     return new MaterializedViewQuery(query.withQuerySegmentSpec(spec), optimizer);
   }
@@ -213,7 +196,7 @@ public class MaterializedViewQuery<T> implements Query<T>
   }
 
   @Override
-  public MaterializedViewQuery withDataSource(DataSource dataSource) 
+  public MaterializedViewQuery withDataSource(DataSource dataSource)
   {
     return new MaterializedViewQuery(query.withDataSource(dataSource), optimizer);
   }

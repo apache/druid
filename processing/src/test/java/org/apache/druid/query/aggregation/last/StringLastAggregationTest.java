@@ -31,13 +31,14 @@ import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 
 public class StringLastAggregationTest
 {
@@ -46,11 +47,13 @@ public class StringLastAggregationTest
   private AggregatorFactory combiningAggFactory;
   private ColumnSelectorFactory colSelectorFactory;
   private TestLongColumnSelector timeSelector;
+  private TestLongColumnSelector customTimeSelector;
   private TestObjectColumnSelector<String> valueSelector;
   private TestObjectColumnSelector objectSelector;
 
   private String[] strings = {"1111", "2222", "3333", null, "4444"};
   private long[] times = {8224, 6879, 2436, 3546, 7888};
+  private long[] customTimes = {1, 5, 4, 2, 3};
   private SerializablePairLongString[] pairs = {
       new SerializablePairLongString(52782L, "AAAA"),
       new SerializablePairLongString(65492L, "BBBB"),
@@ -63,17 +66,19 @@ public class StringLastAggregationTest
   public void setup()
   {
     NullHandling.initializeForTests();
-    stringLastAggFactory = new StringLastAggregatorFactory("billy", "nilly", MAX_STRING_SIZE);
+    stringLastAggFactory = new StringLastAggregatorFactory("billy", "nilly", null, MAX_STRING_SIZE);
     combiningAggFactory = stringLastAggFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
+    customTimeSelector = new TestLongColumnSelector(customTimes);
     valueSelector = new TestObjectColumnSelector<>(strings);
     objectSelector = new TestObjectColumnSelector<>(pairs);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME)).andReturn(timeSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("customTime")).andReturn(customTimeSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector);
     EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly"))
-            .andReturn(new ColumnCapabilitiesImpl().setType(ValueType.STRING));
+            .andReturn(new ColumnCapabilitiesImpl().setType(ColumnType.STRING));
     EasyMock.expect(colSelectorFactory.getColumnCapabilities("billy")).andReturn(null);
     EasyMock.replay(colSelectorFactory);
   }
@@ -94,6 +99,21 @@ public class StringLastAggregationTest
   }
 
   @Test
+  public void testStringLastAggregatorWithTimeColumn()
+  {
+    Aggregator agg = new StringLastAggregatorFactory("billy", "nilly", "customTime", MAX_STRING_SIZE).factorize(colSelectorFactory);
+
+    aggregate(agg);
+    aggregate(agg);
+    aggregate(agg);
+    aggregate(agg);
+
+    Pair<Long, String> result = (Pair<Long, String>) agg.get();
+
+    Assert.assertEquals(strings[1], result.rhs);
+  }
+
+  @Test
   public void testStringLastBufferAggregator()
   {
     BufferAggregator agg = stringLastAggFactory.factorizeBuffered(
@@ -110,6 +130,25 @@ public class StringLastAggregationTest
     Pair<Long, String> result = (Pair<Long, String>) agg.get(buffer, 0);
 
     Assert.assertEquals(strings[0], result.rhs);
+  }
+
+  @Test
+  public void testStringLastBufferAggregatorWithTimeColumn()
+  {
+    BufferAggregator agg = new StringLastAggregatorFactory("billy", "nilly", "customTime", MAX_STRING_SIZE).factorizeBuffered(
+        colSelectorFactory);
+
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[stringLastAggFactory.getMaxIntermediateSize()]);
+    agg.init(buffer, 0);
+
+    aggregate(agg, buffer, 0);
+    aggregate(agg, buffer, 0);
+    aggregate(agg, buffer, 0);
+    aggregate(agg, buffer, 0);
+
+    Pair<Long, String> result = (Pair<Long, String>) agg.get(buffer, 0);
+
+    Assert.assertEquals(strings[1], result.rhs);
   }
 
   @Test
@@ -179,12 +218,39 @@ public class StringLastAggregationTest
     Assert.assertEquals(pairs[1], stringFirstAggregateCombiner.getObject());
   }
 
+  @Test
+  @SuppressWarnings("EqualsWithItself")
+  public void testStringLastAggregatorComparator()
+  {
+    Comparator<SerializablePairLongString> comparator =
+        (Comparator<SerializablePairLongString>) stringLastAggFactory.getComparator();
+    SerializablePairLongString pair1 = new SerializablePairLongString(1L, "Z");
+    SerializablePairLongString pair2 = new SerializablePairLongString(2L, "A");
+    SerializablePairLongString pair3 = new SerializablePairLongString(3L, null);
+
+    // check non null values
+    Assert.assertEquals(0, comparator.compare(pair1, pair1));
+    Assert.assertTrue(comparator.compare(pair1, pair2) > 0);
+    Assert.assertTrue(comparator.compare(pair2, pair1) < 0);
+
+    // check non null value with null value (null values first comparator)
+    Assert.assertEquals(0, comparator.compare(pair3, pair3));
+    Assert.assertTrue(comparator.compare(pair1, pair3) > 0);
+    Assert.assertTrue(comparator.compare(pair3, pair1) < 0);
+
+    // check non null pair with null pair (null pairs first comparator)
+    Assert.assertEquals(0, comparator.compare(null, null));
+    Assert.assertTrue(comparator.compare(pair1, null) > 0);
+    Assert.assertTrue(comparator.compare(null, pair1) < 0);
+  }
+
   private void aggregate(
       Aggregator agg
   )
   {
     agg.aggregate();
     timeSelector.increment();
+    customTimeSelector.increment();
     valueSelector.increment();
     objectSelector.increment();
   }
@@ -197,6 +263,7 @@ public class StringLastAggregationTest
   {
     agg.aggregate(buff, position);
     timeSelector.increment();
+    customTimeSelector.increment();
     valueSelector.increment();
     objectSelector.increment();
   }

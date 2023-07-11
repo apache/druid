@@ -46,6 +46,51 @@ sub usage
   die "usage: $0 -c <conf file> [-d <var dir>] [-t <kill timeout>] [--svlogd <optional conf file>]\n";
 }
 
+sub process_config
+{
+    my @lines = @_;
+    my @commands;
+    my @verify;
+    my @notify;
+    my $kill_timeout;
+    for my $line (@lines)
+    {
+        if ($line =~ /^(:verify|:notify|:kill-timeout|(?:\!p[0-9]+\s+)?[^:]\S+)\s+(.+)$/) {
+          my $name = $1;
+          my $order = 50;
+          my $command = $2;
+
+          if ($name =~ /^(?:\!p([0-9]+)\s+)(.*)$/) {
+            $order = $1;
+            $name = $2;
+          }
+
+          if ($name eq ':verify') {
+            push @verify, $command;
+          } elsif ($name eq ':notify') {
+            push @notify, $command;
+          } elsif ($name eq ':kill-timeout') {
+            $kill_timeout = int($command);
+          } else {
+            die "Duplicate command: $line\n" if grep { $_->{name} eq $name } @commands;
+            push @commands, {
+              name => $name,
+              command => $command,
+              order => $order,  # Stop order for this command
+              pid => 0,         # Current pid, or 0 if not running
+              down => 0,        # Time the proc should be down until
+              killed => 0,      # Signal we sent to this process
+              restarting => 0,  # True if this command is currently restarting
+            };
+          }
+        } else {
+          die "Syntax error: $line\n";
+        }
+    }
+
+    return { commands => \@commands, verify => \@verify, notify => \@notify, 'kill-timeout' => $kill_timeout };
+}
+
 sub read_config_file
 {
   my ($config_file) = @_;
@@ -53,46 +98,20 @@ sub read_config_file
   open my $config_fh, "<", $config_file
     or die "open $config_file: $!";
 
-  my @commands;
-  my @verify;
-  my $kill_timeout;
+  my @lines;
   while (my $line = <$config_fh>) {
     chomp $line;
     next if $line =~ /^(\s*\#.*|\s*)$/;
 
-    if ($line =~ /^(:verify|:kill-timeout|(?:\!p[0-9]+\s+)?[^:]\S+)\s+(.+)$/) {
-      my $name = $1;
-      my $order = 50;
-      my $command = $2;
-
-      if ($name =~ /^(?:\!p([0-9]+)\s+)(.*)$/) {
-        $order = $1;
-        $name = $2;
-      }
-
-      if ($name eq ':verify') {
-        push @verify, $command;
-      } elsif ($name eq ':kill-timeout') {
-        $kill_timeout = int($command);
-      } else {
-        die "Duplicate command: $line\n" if grep { $_->{name} eq $name } @commands;
-        push @commands, {
-          name => $name,
-          command => $command,
-          order => $order,  # Stop order for this command
-          pid => 0,         # Current pid, or 0 if not running
-          down => 0,        # Time the proc should be down until
-          killed => 0,      # Signal we sent to this process
-          restarting => 0,  # True if this command is currently restarting
-        };
-      }
+    if ($line =~ /^(:verify|:notify|:kill-timeout|(?:\!p[0-9]+\s+)?[^:]\S+)\s+(.+)$/) {
+        push @lines, $line
     } else {
       die "Syntax error: $line\n";
     }
   }
 
   close $config_fh;
-  return { commands => \@commands, verify => \@verify, 'kill-timeout' => $kill_timeout };
+  return @lines;
 }
 
 sub stringify_exit_status
@@ -136,6 +155,8 @@ sub pretty
       return "\x1b[1m$text\x1b[0m";
     } elsif ($color eq 'red') {
       return "\x1b[31m\x1b[1m$text\x1b[0m";
+    } elsif ($color eq 'green') {
+      return "\x1b[32m\x1b[1m$text\x1b[0m";
     } else {
       return $text;
     }
@@ -174,13 +195,23 @@ usage() unless GetOptions(
   'vardir|d=s',
   'kill-timeout|t=i',
   'chdir=s',
-  'svlogd:s'
+  'svlogd:s',
+  'command=s@'
 );
 
-usage() unless $opt{'conf'} && $opt{'vardir'};
+usage() unless (($opt{'command'} && @{$opt{'command'}}) || $opt{'conf'}) && $opt{'vardir'};
 
-# Read config file
-my $config = read_config_file($opt{'conf'});
+my @config_lines;
+
+# get commands to execute either from reading the config file or command line
+if (not defined $opt{'conf'}) {
+    @config_lines = @{$opt{'command'}}
+} else {
+    @config_lines = read_config_file($opt{'conf'});
+}
+
+my $config = process_config(@config_lines);
+
 @commands = @{$config->{commands}};
 
 if (!@commands) {
@@ -192,8 +223,9 @@ if (defined $config->{'kill-timeout'}) {
   $opt{'kill-timeout'} = $config->{'kill-timeout'};
 }
 
-# Remember where vardir, svdir are after chdiring
+# Remember where vardir, logdir, svdir are after chdiring
 my $vardir = File::Spec->rel2abs($opt{vardir});
+my $logdir = File::Spec->rel2abs(realpath($ENV{'DRUID_LOG_DIR'} || "$FindBin::Bin/../log"));
 my $svdir = "$vardir/sv";
 
 # chdir to the root of the distribution (or whereever)
@@ -207,6 +239,11 @@ if (! -e "$vardir/tmp") {
 # Create svdir
 if (! -e $svdir) {
   system("mkdir -p \Q$svdir\E") == 0 or die "mkdir $svdir failed: $!\n";
+}
+
+# Create logdir, if needed
+if (!defined $opt{svlogd} && ! -e "$logdir") {
+  system("mkdir -p \Q$logdir\E") == 0 or die "mkdir $logdir failed: $!\n";
 }
 
 # Lock svdir and keep it locked until we exit
@@ -230,22 +267,37 @@ $SIG{TERM} = sub { if (!$killed) { $killed = 15; $killkill = time + $opt{'kill-t
 # Build up control fifo command over multiple sysreads, potentially
 my $fifobuffer = '';
 
+# Run notification commands and print their output
+for my $notify_cmd (@{$config->{notify}}) {
+  my $notify_output = qx[$notify_cmd 2>&1];
+  if (!$?) {
+    for my $notify_line (split /\n/, $notify_output) {
+      logit pretty($notify_line, 'green');
+    }
+  }
+}
+
+if (defined $opt{svlogd}) {
+  logit "Starting services with log directory [$svdir].";
+} else {
+  logit "Starting services with log directory [$logdir].";
+}
+
 while (1) {
   # Spawn new procs
   if (!$killed) {
     for my $command (grep { !$_->{pid} } @commands) {
       if ($command->{down} < time) {
-        my $logfile = sprintf("%s%s", "$svdir/$command->{name}", defined $opt{'svlogd'} ? "" : ".log");
-
-        logit "Running command[" . pretty($command->{name}, 'bold') . "], logging to[$logfile]: $command->{command}";
-
         if (my $pid = fork) {
           $command->{pid} = $pid;
-          $command->{logfile} = $logfile;
         } else {
           setsid;
 
           if (defined $opt{'svlogd'}) {
+            # If using svlogd, program output goes into the service directory. We do not use $logdir here.
+            my $logfile = "$svdir/$command->{name}";
+            logit "Running command[" . pretty($command->{name}, 'bold') . "]: $command->{command}";
+
             if (! -e $logfile) {
               system("mkdir -p \Q$logfile\E") == 0 or logdie "mkdir $logfile failed: $!\n";
             }
@@ -260,6 +312,11 @@ while (1) {
 
             open STDOUT, "|svlogd $logfile" or logdie "pipe to svlogd $logfile failed: $!\n";
           } else {
+            # If not using svlogd, program output goes to $logdir. In the default configuration, this will be a small
+            # amount of logging from the JVM itself, because all of the Druid and ZooKeeper logs are written into
+            # separate files by log4j2.
+            logit "Running command[" . pretty($command->{name}, 'bold') . "]: $command->{command}";
+            my $logfile = "$logdir/$command->{name}.stdout.log";
             open STDOUT, ">>", $logfile or logdie "open $logfile failed: $!\n";
           }
 
@@ -281,7 +338,7 @@ while (1) {
       logit "Command[" . pretty($command->{name}, 'bold') . "] exited (pid = $pid, " . stringify_exit_status($status) . ")";
       if ($status && !$killed && !$command->{restarting}) {
         # Unexpected exit
-        logit "Command[" . pretty($command->{name}, 'bold') . "] " . pretty("failed", "red") . ", see logfile for more details: $command->{logfile}";
+        logit "Command[" . pretty($command->{name}, 'bold') . "] " . pretty("failed", "red") . ", see its logfile for more details";
       }
       $command->{restarting} = 0;
     } else {

@@ -44,4 +44,13 @@ public class AWSEndpointConfig
   {
     return signingRegion;
   }
+
+  @Override
+  public String toString()
+  {
+    return "AWSEndpointConfig{" +
+           "url='" + url + '\'' +
+           ", signingRegion='" + signingRegion + '\'' +
+           '}';
+  }
 }

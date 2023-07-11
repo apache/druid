@@ -26,25 +26,27 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.RowAdapter;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
-import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
  * Represents an inline datasource, where the rows are embedded within the DataSource object itself.
- *
+ * <p>
  * The rows are backed by an Iterable, which can be lazy or not. Lazy datasources will only be iterated if someone calls
  * {@link #getRows()} and iterates the result, or until someone calls {@link #getRowsAsList()}.
  */
@@ -69,8 +71,8 @@ public class InlineDataSource implements DataSource
   @JsonCreator
   private static InlineDataSource fromJson(
       @JsonProperty("columnNames") List<String> columnNames,
-      @JsonProperty("columnTypes") List<ValueType> columnTypes,
-      @JsonProperty("rows") List<Object[]> rows
+      @JsonProperty("columnTypes") List<ColumnType> columnTypes,
+      @JsonProperty("rows") ArrayList<Object[]> rows
   )
   {
     Preconditions.checkNotNull(columnNames, "'columnNames' must be nonnull");
@@ -83,7 +85,7 @@ public class InlineDataSource implements DataSource
 
     for (int i = 0; i < columnNames.size(); i++) {
       final String name = columnNames.get(i);
-      final ValueType type = columnTypes != null ? columnTypes.get(i) : null;
+      final ColumnType type = columnTypes != null ? columnTypes.get(i) : null;
       builder.add(name, type);
     }
 
@@ -103,154 +105,6 @@ public class InlineDataSource implements DataSource
   )
   {
     return new InlineDataSource(rows, signature);
-  }
-
-  @Override
-  public Set<String> getTableNames()
-  {
-    return Collections.emptySet();
-  }
-
-  @JsonProperty
-  public List<String> getColumnNames()
-  {
-    return signature.getColumnNames();
-  }
-
-  @Nullable
-  @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  public List<ValueType> getColumnTypes()
-  {
-    if (IntStream.range(0, signature.size()).noneMatch(i -> signature.getColumnType(i).isPresent())) {
-      // All types are null; return null for columnTypes so it doesn't show up in serialized JSON.
-      return null;
-    } else {
-      return IntStream.range(0, signature.size())
-                      .mapToObj(i -> signature.getColumnType(i).orElse(null))
-                      .collect(Collectors.toList());
-    }
-  }
-
-  /**
-   * Returns rows as a list. If the original Iterable behind this datasource was a List, this method will return it
-   * as-is, without copying it. Otherwise, this method will walk the iterable and copy it into a List before returning.
-   */
-  @JsonProperty("rows")
-  public List<Object[]> getRowsAsList()
-  {
-    return rows instanceof List ? ((List<Object[]>) rows) : Lists.newArrayList(rows);
-  }
-
-  /**
-   * Returns rows as an Iterable.
-   */
-  @JsonIgnore
-  public Iterable<Object[]> getRows()
-  {
-    return rows;
-  }
-
-  @Override
-  public List<DataSource> getChildren()
-  {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public DataSource withChildren(List<DataSource> children)
-  {
-    if (!children.isEmpty()) {
-      throw new IAE("Cannot accept children");
-    }
-
-    return this;
-  }
-
-  @Override
-  public boolean isCacheable(boolean isBroker)
-  {
-    return false;
-  }
-
-  @Override
-  public boolean isGlobal()
-  {
-    return true;
-  }
-
-  @Override
-  public boolean isConcrete()
-  {
-    return true;
-  }
-
-  /**
-   * Returns the row signature (map of column name to type) for this inline datasource. Note that types may
-   * be null, meaning we know we have a column with a certain name, but we don't know what its type is.
-   */
-  public RowSignature getRowSignature()
-  {
-    return signature;
-  }
-
-  public RowAdapter<Object[]> rowAdapter()
-  {
-    return new RowAdapter<Object[]>()
-    {
-      @Override
-      public ToLongFunction<Object[]> timestampFunction()
-      {
-        final int columnNumber = signature.indexOf(ColumnHolder.TIME_COLUMN_NAME);
-
-        if (columnNumber >= 0) {
-          return row -> (long) row[columnNumber];
-        } else {
-          return row -> 0L;
-        }
-      }
-
-      @Override
-      public Function<Object[], Object> columnFunction(String columnName)
-      {
-        final int columnNumber = signature.indexOf(columnName);
-
-        if (columnNumber >= 0) {
-          return row -> row[columnNumber];
-        } else {
-          return row -> null;
-        }
-      }
-    };
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    InlineDataSource that = (InlineDataSource) o;
-    return rowsEqual(rows, that.rows) &&
-           Objects.equals(signature, that.signature);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(rowsHashCode(rows), signature);
-  }
-
-  @Override
-  public String toString()
-  {
-    // Don't include 'rows' in stringification, because it might be long and/or lazy.
-    return "InlineDataSource{" +
-           "signature=" + signature +
-           '}';
   }
 
   /**
@@ -300,5 +154,168 @@ public class InlineDataSource implements DataSource
     } else {
       return Objects.hash(rows);
     }
+  }
+
+  @Override
+  public Set<String> getTableNames()
+  {
+    return Collections.emptySet();
+  }
+
+  @JsonProperty
+  public List<String> getColumnNames()
+  {
+    return signature.getColumnNames();
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<ColumnType> getColumnTypes()
+  {
+    if (IntStream.range(0, signature.size()).noneMatch(i -> signature.getColumnType(i).isPresent())) {
+      // All types are null; return null for columnTypes so it doesn't show up in serialized JSON.
+      return null;
+    } else {
+      return IntStream.range(0, signature.size())
+                      .mapToObj(i -> signature.getColumnType(i).orElse(null))
+                      .collect(Collectors.toList());
+    }
+  }
+
+  /**
+   * Returns rows as a list. If the original Iterable behind this datasource was a List, this method will return it
+   * as-is, without copying it. Otherwise, this method will walk the iterable and copy it into a List before returning.
+   */
+  @JsonProperty("rows")
+  public List<Object[]> getRowsAsList()
+  {
+    return rows instanceof List ? ((List<Object[]>) rows) : Lists.newArrayList(rows);
+  }
+
+  /**
+   * Returns rows as an Iterable.
+   */
+  @JsonIgnore
+  public Iterable<Object[]> getRows()
+  {
+    return rows;
+  }
+
+  public boolean rowsAreArrayList()
+  {
+    return rows instanceof ArrayList;
+  }
+
+  @Override
+  public List<DataSource> getChildren()
+  {
+    return Collections.emptyList();
+  }
+
+  @Override
+  public DataSource withChildren(List<DataSource> children)
+  {
+    if (!children.isEmpty()) {
+      throw new IAE("Cannot accept children");
+    }
+
+    return this;
+  }
+
+  @Override
+  public boolean isCacheable(boolean isBroker)
+  {
+    return false;
+  }
+
+  @Override
+  public boolean isGlobal()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean isConcrete()
+  {
+    return true;
+  }
+
+  @Override
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
+      Query query,
+      AtomicLong cpuTimeAcc
+  )
+  {
+    return Function.identity();
+  }
+
+  @Override
+  public DataSource withUpdatedDataSource(DataSource newSource)
+  {
+    return newSource;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return null;
+  }
+
+  @Override
+  public DataSourceAnalysis getAnalysis()
+  {
+    return new DataSourceAnalysis(this, null, null, Collections.emptyList());
+  }
+
+  /**
+   * Returns the row signature (map of column name to type) for this inline datasource. Note that types may
+   * be null, meaning we know we have a column with a certain name, but we don't know what its type is.
+   */
+  public RowSignature getRowSignature()
+  {
+    return signature;
+  }
+
+  public RowAdapter<Object[]> rowAdapter()
+  {
+    return columnName -> {
+      final int columnNumber = signature.indexOf(columnName);
+
+      if (columnNumber >= 0) {
+        return row -> row[columnNumber];
+      } else {
+        return row -> null;
+      }
+    };
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    InlineDataSource that = (InlineDataSource) o;
+    return rowsEqual(rows, that.rows) &&
+           Objects.equals(signature, that.signature);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(rowsHashCode(rows), signature);
+  }
+
+  @Override
+  public String toString()
+  {
+    // Don't include 'rows' in stringification, because it might be long and/or lazy.
+    return "InlineDataSource{" +
+           "signature=" + signature +
+           '}';
   }
 }

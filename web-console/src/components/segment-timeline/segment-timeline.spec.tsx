@@ -17,10 +17,10 @@
  */
 
 import { render } from '@testing-library/react';
-import { sane } from 'druid-query-toolkit/build/test-utils';
+import { sane } from 'druid-query-toolkit';
 import React from 'react';
 
-import { Capabilities } from '../../utils';
+import { Capabilities } from '../../helpers';
 
 import { SegmentTimeline } from './segment-timeline';
 

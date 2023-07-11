@@ -68,7 +68,7 @@ public class MoveTask extends AbstractFixedIntervalTask
   }
 
   @Override
-  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
     final TaskLock myLock = getAndCheckLock(toolbox);
 

@@ -122,7 +122,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
         }
       }
       if (!handOffCallbacks.isEmpty()) {
-        log.info("Still waiting for Handoff for [%d] Segments", handOffCallbacks.size());
+        log.warn("Still waiting for Handoff for [%d] Segments", handOffCallbacks.size());
       }
     }
     catch (Throwable t) {

@@ -25,16 +25,15 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rex.RexLiteral;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
-import org.apache.druid.sql.calcite.rel.QueryMaker;
-import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -50,12 +49,12 @@ import java.util.stream.Collectors;
  */
 public class DruidLogicalValuesRule extends RelOptRule
 {
-  private final QueryMaker queryMaker;
+  private final PlannerContext plannerContext;
 
-  public DruidLogicalValuesRule(QueryMaker queryMaker)
+  public DruidLogicalValuesRule(PlannerContext plannerContext)
   {
     super(operand(LogicalValues.class, any()));
-    this.queryMaker = queryMaker;
+    this.plannerContext = plannerContext;
   }
 
   @Override
@@ -67,7 +66,7 @@ public class DruidLogicalValuesRule extends RelOptRule
         .stream()
         .map(tuple -> tuple
             .stream()
-            .map(v -> getValueFromLiteral(v, queryMaker.getPlannerContext()))
+            .map(v -> getValueFromLiteral(v, plannerContext))
             .collect(Collectors.toList())
             .toArray(new Object[0])
         )
@@ -76,14 +75,12 @@ public class DruidLogicalValuesRule extends RelOptRule
         values.getRowType().getFieldNames(),
         values.getRowType()
     );
-    final DruidTable druidTable = new DruidTable(
-        InlineDataSource.fromIterable(objectTuples, rowSignature),
-        rowSignature,
-        true,
-        false
-    );
     call.transformTo(
-        DruidQueryRel.fullScan(values, druidTable, queryMaker)
+        DruidQueryRel.scanConstantRel(
+            values,
+            InlineDataSource.fromIterable(objectTuples, rowSignature),
+            plannerContext
+        )
     );
   }
 
@@ -93,34 +90,50 @@ public class DruidLogicalValuesRule extends RelOptRule
    *
    * @throws IllegalArgumentException for unsupported types
    */
+  @Nullable
   @VisibleForTesting
   static Object getValueFromLiteral(RexLiteral literal, PlannerContext plannerContext)
   {
     switch (literal.getType().getSqlTypeName()) {
       case CHAR:
       case VARCHAR:
+        // RexLiteral.stringValue(literal) was causing some issue during tests
         return literal.getValueAs(String.class);
       case FLOAT:
-        return literal.getValueAs(Float.class);
+        if (literal.isNull()) {
+          return null;
+        }
+        return ((Number) RexLiteral.value(literal)).floatValue();
       case DOUBLE:
       case REAL:
       case DECIMAL:
-        return literal.getValueAs(Double.class);
+        if (literal.isNull()) {
+          return null;
+        }
+        return ((Number) RexLiteral.value(literal)).doubleValue();
       case TINYINT:
       case SMALLINT:
       case INTEGER:
       case BIGINT:
-        return literal.getValueAs(Long.class);
+        if (literal.isNull()) {
+          return null;
+        }
+        return ((Number) RexLiteral.value(literal)).longValue();
       case BOOLEAN:
         return literal.isAlwaysTrue() ? 1L : 0L;
       case TIMESTAMP:
       case DATE:
         return Calcites.calciteDateTimeLiteralToJoda(literal, plannerContext.getTimeZone()).getMillis();
+      case NULL:
+        if (!literal.isNull()) {
+          throw new UnsupportedSQLQueryException("Query has a non-null constant but is of NULL type.");
+        }
+        return null;
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
       case TIME:
       case TIME_WITH_LOCAL_TIME_ZONE:
       default:
-        throw new IAE("Unsupported type[%s]", literal.getTypeName());
+        throw new UnsupportedSQLQueryException("%s type is not supported", literal.getType().getSqlTypeName());
     }
   }
 }

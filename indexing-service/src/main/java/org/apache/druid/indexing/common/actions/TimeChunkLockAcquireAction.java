@@ -95,7 +95,7 @@ public class TimeChunkLockAcquireAction implements TaskAction<TaskLock>
                                          .lock(task, new TimeChunkLockRequest(type, task, interval, null))
                                 : toolbox.getTaskLockbox()
                                          .lock(task, new TimeChunkLockRequest(type, task, interval, null), timeoutMs);
-      return result.isOk() ? result.getTaskLock() : null;
+      return result.getTaskLock();
     }
     catch (InterruptedException e) {
       throw new RuntimeException(e);

@@ -31,10 +31,8 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -54,6 +52,7 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningService;
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
@@ -74,6 +73,8 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
@@ -95,8 +96,10 @@ import java.net.URL;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -178,6 +181,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
   private final ConcurrentMap<String, ScheduledFuture> removedWorkerCleanups = new ConcurrentHashMap<>();
   private final ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy;
+  private final ServiceEmitter emitter;
   private ProvisioningService provisioningService;
 
   public RemoteTaskRunner(
@@ -188,7 +192,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       PathChildrenCacheFactory.Builder pathChildrenCacheFactory,
       HttpClient httpClient,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
-      ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy
+      ProvisioningStrategy<WorkerTaskRunner> provisioningStrategy,
+      ServiceEmitter emitter
   )
   {
     this.jsonMapper = jsonMapper;
@@ -212,6 +217,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         config.getPendingTasksRunnerNumThreads(),
         "rtr-pending-tasks-runner-%d"
     );
+    this.emitter = emitter;
   }
 
   @Override
@@ -222,6 +228,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return;
     }
     try {
+      log.info("Starting RemoteTaskRunner...");
       final MutableInt waitingFor = new MutableInt(1);
       final Object waitingForMonitor = new Object();
 
@@ -349,6 +356,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return;
     }
     try {
+      log.info("Stopping RemoteTaskRunner...");
       provisioningService.close();
 
       Closer closer = Closer.create();
@@ -456,8 +464,24 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @Override
   public Collection<RemoteTaskRunnerWorkItem> getKnownTasks()
   {
-    // Racey, since there is a period of time during assignment when a task is neither pending nor running
-    return ImmutableList.copyOf(Iterables.concat(pendingTasks.values(), runningTasks.values(), completeTasks.values()));
+    // Use a map to dedupe tasks, since they may transition from one state to another while this method is iterating
+    // through the various collections.
+    final Map<String, RemoteTaskRunnerWorkItem> items = new LinkedHashMap<>();
+
+    // Racey, since there is a period of time during assignment when a task is neither pending nor running.
+    for (RemoteTaskRunnerWorkItem item : pendingTasks.values()) {
+      items.put(item.getTaskId(), item);
+    }
+
+    for (RemoteTaskRunnerWorkItem item : runningTasks.values()) {
+      items.put(item.getTaskId(), item);
+    }
+
+    for (RemoteTaskRunnerWorkItem item : completeTasks.values()) {
+      items.put(item.getTaskId(), item);
+    }
+
+    return ImmutableList.copyOf(items.values());
   }
 
   @Nullable
@@ -602,7 +626,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(final String taskId, final long offset)
+  public Optional<InputStream> streamTaskLog(final String taskId, final long offset) throws IOException
   {
     final ZkWorker zkWorker = findWorkerRunningTask(taskId);
 
@@ -617,72 +641,70 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           taskId,
           Long.toString(offset)
       );
-      return Optional.of(
-          new ByteSource()
-          {
-            @Override
-            public InputStream openStream() throws IOException
-            {
-              try {
-                return httpClient.go(
-                    new Request(HttpMethod.GET, url),
-                    new InputStreamResponseHandler()
-                ).get();
-              }
-              catch (InterruptedException e) {
-                throw new RuntimeException(e);
-              }
-              catch (ExecutionException e) {
-                // Unwrap if possible
-                Throwables.propagateIfPossible(e.getCause(), IOException.class);
-                throw new RuntimeException(e);
-              }
-            }
-          }
-      );
+      try {
+        return Optional.of(httpClient.go(
+            new Request(HttpMethod.GET, url),
+            new InputStreamResponseHandler()
+        ).get());
+      }
+      catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      catch (ExecutionException e) {
+        // Unwrap if possible
+        Throwables.propagateIfPossible(e.getCause(), IOException.class);
+        throw new RuntimeException(e);
+      }
     }
   }
 
+
   @Override
-  public Optional<ByteSource> streamTaskReports(final String taskId)
+  public Optional<InputStream> streamTaskReports(final String taskId) throws IOException
   {
     final ZkWorker zkWorker = findWorkerRunningTask(taskId);
 
     if (zkWorker == null) {
       // Worker is not running this task, it might be available in deep storage
       return Optional.absent();
-    } else {
-      TaskLocation taskLocation = runningTasks.get(taskId).getLocation();
-      final URL url = TaskRunnerUtils.makeTaskLocationURL(
-          taskLocation,
-          "/druid/worker/v1/chat/%s/liveReports",
-          taskId
-      );
-      return Optional.of(
-          new ByteSource()
-          {
-            @Override
-            public InputStream openStream() throws IOException
-            {
-              try {
-                return httpClient.go(
-                    new Request(HttpMethod.GET, url),
-                    new InputStreamResponseHandler()
-                ).get();
-              }
-              catch (InterruptedException e) {
-                throw new RuntimeException(e);
-              }
-              catch (ExecutionException e) {
-                // Unwrap if possible
-                Throwables.propagateIfPossible(e.getCause(), IOException.class);
-                throw new RuntimeException(e);
-              }
-            }
-          }
-      );
+    }
+
+    final RemoteTaskRunnerWorkItem runningWorkItem = runningTasks.get(taskId);
+
+    if (runningWorkItem == null) {
+      // Worker very recently exited.
+      return Optional.absent();
+    }
+
+    final TaskLocation taskLocation = runningWorkItem.getLocation();
+
+    if (TaskLocation.unknown().equals(taskLocation)) {
+      // No location known for this task. It may have not been assigned one yet.
+      return Optional.absent();
+    }
+
+    final URL url = TaskRunnerUtils.makeTaskLocationURL(
+        taskLocation,
+        "/druid/worker/v1/chat/%s/liveReports",
+        taskId
+    );
+
+    try {
+      return Optional.of(httpClient.go(
+          new Request(HttpMethod.GET, url),
+          new InputStreamResponseHandler()
+      ).get());
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    catch (ExecutionException e) {
+      // Unwrap if possible
+      Throwables.propagateIfPossible(e.getCause(), IOException.class);
+      throw new RuntimeException(e);
     }
   }
+
 
   /**
    * Adds a task to the pending queue.
@@ -910,10 +932,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     synchronized (statusLock) {
       if (!zkWorkers.containsKey(worker) || lazyWorkers.containsKey(worker)) {
         // the worker might have been killed or marked as lazy
-        log.info("Not assigning task to already removed worker[%s]", worker);
+        log.debug("Not assigning task to already removed worker[%s]", worker);
         return false;
       }
-      log.info("Coordinator asking Worker[%s] to add task[%s]", worker, task.getId());
+      log.info("Assigning task [%s] to worker [%s]", task.getId(), worker);
 
       CuratorUtils.createIfNotExists(
           cf,
@@ -931,9 +953,16 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         return false;
       }
 
+      final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+      IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+      emitter.emit(metricBuilder.build(
+          "task/pending/time",
+          new Duration(workItem.getQueueInsertionTime(), DateTimes.nowUtc()).getMillis())
+      );
+
       RemoteTaskRunnerWorkItem newWorkItem = workItem.withWorker(theZkWorker.getWorker(), null);
       runningTasks.put(task.getId(), newWorkItem);
-      log.info("Task %s switched from pending to running (on [%s])", task.getId(), newWorkItem.getWorker().getHost());
+      log.info("Task [%s] started running on worker [%s]", task.getId(), newWorkItem.getWorker().getHost());
       TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.running(task.getId()));
 
       // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running
@@ -1513,56 +1542,87 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     return workersWithUnacknowledgedTask;
   }
 
-  @Override
-  public long getTotalTaskSlotCount()
+  @VisibleForTesting
+  ProvisioningStrategy<WorkerTaskRunner> getProvisioningStrategy()
   {
-    long totalPeons = 0;
+    return provisioningStrategy;
+  }
+
+  @Override
+  public Map<String, Long> getTotalTaskSlotCount()
+  {
+    Map<String, Long> totalPeons = new HashMap<>();
     for (ImmutableWorkerInfo worker : getWorkers()) {
-      totalPeons += worker.getWorker().getCapacity();
+      String workerCategory = worker.getWorker().getCategory();
+      int workerCapacity = worker.getWorker().getCapacity();
+      totalPeons.compute(
+          workerCategory,
+          (category, totalCapacity) -> totalCapacity == null ? workerCapacity : totalCapacity + workerCapacity
+      );
     }
 
     return totalPeons;
   }
 
   @Override
-  public long getIdleTaskSlotCount()
+  public Map<String, Long> getIdleTaskSlotCount()
   {
-    long totalIdlePeons = 0;
+    Map<String, Long> totalIdlePeons = new HashMap<>();
     for (ImmutableWorkerInfo worker : getWorkersEligibleToRunTasks().values()) {
-      totalIdlePeons += worker.getAvailableCapacity();
+      String workerCategory = worker.getWorker().getCategory();
+      int workerAvailableCapacity = worker.getAvailableCapacity();
+      totalIdlePeons.compute(
+          workerCategory,
+          (category, availableCapacity) -> availableCapacity == null ? workerAvailableCapacity : availableCapacity + workerAvailableCapacity
+      );
     }
 
     return totalIdlePeons;
   }
 
   @Override
-  public long getUsedTaskSlotCount()
+  public Map<String, Long> getUsedTaskSlotCount()
   {
-    long totalUsedPeons = 0;
+    Map<String, Long> totalUsedPeons = new HashMap<>();
     for (ImmutableWorkerInfo worker : getWorkers()) {
-      totalUsedPeons += worker.getCurrCapacityUsed();
+      String workerCategory = worker.getWorker().getCategory();
+      int workerUsedCapacity = worker.getCurrCapacityUsed();
+      totalUsedPeons.compute(
+          workerCategory,
+          (category, usedCapacity) -> usedCapacity == null ? workerUsedCapacity : usedCapacity + workerUsedCapacity
+      );
     }
 
     return totalUsedPeons;
   }
 
   @Override
-  public long getLazyTaskSlotCount()
+  public Map<String, Long> getLazyTaskSlotCount()
   {
-    long totalLazyPeons = 0;
+    Map<String, Long> totalLazyPeons = new HashMap<>();
     for (Worker worker : getLazyWorkers()) {
-      totalLazyPeons += worker.getCapacity();
+      String workerCategory = worker.getCategory();
+      int workerLazyPeons = worker.getCapacity();
+      totalLazyPeons.compute(
+          workerCategory,
+          (category, lazyPeons) -> lazyPeons == null ? workerLazyPeons : lazyPeons + workerLazyPeons
+      );
     }
 
     return totalLazyPeons;
   }
 
   @Override
-  public long getBlacklistedTaskSlotCount()
+  public Map<String, Long> getBlacklistedTaskSlotCount()
   {
-    long totalBlacklistedPeons = 0;
+    Map<String, Long> totalBlacklistedPeons = new HashMap<>();
     for (ImmutableWorkerInfo worker : getBlackListedWorkers()) {
-      totalBlacklistedPeons += worker.getWorker().getCapacity();
+      String workerCategory = worker.getWorker().getCategory();
+      int workerBlacklistedPeons = worker.getWorker().getCapacity();
+      totalBlacklistedPeons.compute(
+          workerCategory,
+          (category, blacklistedPeons) -> blacklistedPeons == null ? workerBlacklistedPeons : blacklistedPeons + workerBlacklistedPeons
+      );
     }
 
     return totalBlacklistedPeons;

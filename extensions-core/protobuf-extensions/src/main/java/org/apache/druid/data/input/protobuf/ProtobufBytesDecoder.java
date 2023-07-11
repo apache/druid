@@ -28,7 +28,8 @@ import java.nio.ByteBuffer;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = SchemaRegistryBasedProtobufBytesDecoder.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "file", value = FileBasedProtobufBytesDecoder.class),
-    @JsonSubTypes.Type(name = "schema_registry", value = SchemaRegistryBasedProtobufBytesDecoder.class)
+    @JsonSubTypes.Type(name = "schema_registry", value = SchemaRegistryBasedProtobufBytesDecoder.class),
+    @JsonSubTypes.Type(name = "inline", value = InlineDescriptorProtobufBytesDecoder.class)
 })
 public interface ProtobufBytesDecoder
 {

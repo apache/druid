@@ -26,7 +26,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -73,6 +72,7 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -88,7 +88,6 @@ import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
@@ -97,6 +96,7 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.ordering.StringComparators;
@@ -120,7 +120,7 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.join.MapJoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.ServerTestHelper;
 import org.apache.druid.server.coordination.ServerType;
@@ -168,7 +168,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
@@ -181,10 +180,10 @@ import java.util.stream.IntStream;
 public class CachingClusteredClientTest
 {
   private static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.of(
-      "finalize", false,
+      QueryContexts.FINALIZE_KEY, false,
 
       // GroupBy v2 won't cache on the broker, so test with v1.
-      "groupByStrategy", GroupByStrategySelector.STRATEGY_V1
+      GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V1
   );
   private static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.of());
   private static final String DATA_SOURCE = "test";
@@ -264,8 +263,8 @@ public class CachingClusteredClientTest
   private static final DateTimeZone TIMEZONE = DateTimes.inferTzFromString("America/Los_Angeles");
   private static final Granularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
-  private static final Pair<QueryToolChestWarehouse, Closer> WAREHOUSE_AND_CLOSER = CachingClusteredClientTestUtils
-      .createWarehouse(JSON_MAPPER);
+  private static final Pair<QueryToolChestWarehouse, Closer> WAREHOUSE_AND_CLOSER =
+      CachingClusteredClientTestUtils.createWarehouse();
   private static final QueryToolChestWarehouse WAREHOUSE = WAREHOUSE_AND_CLOSER.lhs;
   private static final Closer RESOURCE_CLOSER = WAREHOUSE_AND_CLOSER.rhs;
 
@@ -2252,9 +2251,6 @@ public class CachingClusteredClientTest
               for (int i = 0; i < numTimesToQuery; ++i) {
                 TestHelper.assertExpectedResults(
                     new MergeIterable(
-                        query instanceof GroupByQuery
-                        ? ((GroupByQuery) query).getResultOrdering()
-                        : Comparators.naturalNullsFirst(),
                         FunctionalIterable
                             .create(new RangeIterable(expectedResultsRangeStart, expectedResultsRangeEnd))
                             .transformCat(
@@ -2275,7 +2271,10 @@ public class CachingClusteredClientTest
                                     return retVal;
                                   }
                                 }
-                            )
+                            ),
+                        query instanceof GroupByQuery
+                        ? ((GroupByQuery) query).getResultOrdering()
+                        : Comparators.naturalNullsFirst()
                     ),
                     runner.run(
                         QueryPlus.wrap(
@@ -2299,12 +2298,13 @@ public class CachingClusteredClientTest
       for (Capture queryCapture : queryCaptures) {
         QueryPlus capturedQueryPlus = (QueryPlus) queryCapture.getValue();
         Query capturedQuery = capturedQueryPlus.getQuery();
+        final QueryContext queryContext = capturedQuery.context();
         if (expectBySegment) {
-          Assert.assertEquals(true, capturedQuery.getContextValue(QueryContexts.BY_SEGMENT_KEY));
+          Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.BY_SEGMENT_KEY));
         } else {
           Assert.assertTrue(
-              capturedQuery.getContextValue(QueryContexts.BY_SEGMENT_KEY) == null ||
-              capturedQuery.getContextValue(QueryContexts.BY_SEGMENT_KEY).equals(false)
+              queryContext.get(QueryContexts.BY_SEGMENT_KEY) == null ||
+              !queryContext.getBoolean(QueryContexts.BY_SEGMENT_KEY)
           );
         }
       }
@@ -2851,7 +2851,7 @@ public class CachingClusteredClientTest
             NoQueryLaningStrategy.INSTANCE,
             new ServerConfig()
         ),
-        new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
+        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new NoopServiceEmitter()
     );
   }
@@ -3292,7 +3292,7 @@ public class CachingClusteredClientTest
     final ResponseContext responseContext = initializeResponseContext();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
-    Assert.assertEquals("MDs2yIUvYLVzaG6zmwTH1plqaYE=", responseContext.get(ResponseContext.Key.ETAG));
+    Assert.assertEquals("MDs2yIUvYLVzaG6zmwTH1plqaYE=", responseContext.getEntityTag());
   }
 
   @Test
@@ -3340,9 +3340,9 @@ public class CachingClusteredClientTest
     final ResponseContext responseContext = initializeResponseContext();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
-    final Object etag1 = responseContext.get(ResponseContext.Key.ETAG);
+    final String etag1 = responseContext.getEntityTag();
     getDefaultQueryRunner().run(QueryPlus.wrap(query2), responseContext);
-    final Object etag2 = responseContext.get(ResponseContext.Key.ETAG);
+    final String etag2 = responseContext.getEntityTag();
     Assert.assertNotEquals(etag1, etag2);
   }
 
@@ -3363,7 +3363,7 @@ public class CachingClusteredClientTest
   private static ResponseContext initializeResponseContext()
   {
     final ResponseContext context = ResponseContext.createEmpty();
-    context.put(Key.REMAINING_RESPONSES_FROM_QUERY_SERVERS, new ConcurrentHashMap<>());
+    context.initializeRemainingResponses();
     return context;
   }
 }

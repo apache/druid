@@ -6,6 +6,7 @@ target
 *.tar.gz
 *.swp
 *.swo
+*.pyc
 .classpath
 .idea
 .project
@@ -13,10 +14,28 @@ target
 .settings/
 .vscode
 *.log
-*.DS_Store
+.DS_Store
 _site
 dependency-reduced-pom.xml
 LICENSE.BINARY
 NOTICE.BINARY
 README.BINARY
 README
+*.lock
+.pmd
+.pmdruleset.xml
+.java-version
+integration-tests/gen-scripts/
+/bin/
+*.hprof
+**/.ipynb_checkpoints/
+*.pyc
+**/.ipython/
+**/.jupyter/
+**/.local/
+
+# ignore NetBeans IDE specific files
+nbproject
+nbactions.xml
+nb-configuration.xml
+

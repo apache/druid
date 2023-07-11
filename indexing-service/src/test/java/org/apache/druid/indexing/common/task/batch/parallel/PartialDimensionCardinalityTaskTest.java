@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.memory.Memory;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -36,10 +35,8 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
-import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -47,12 +44,15 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.testing.junit.LoggerCaptureRule;
 import org.apache.logging.log4j.core.LogEvent;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.hamcrest.Matchers;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -119,6 +119,21 @@ public class PartialDimensionCardinalityTaskTest
     }
 
     @Test
+    public void hasCorrectInputSourceResources()
+    {
+      PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()
+          .build();
+      Assert.assertEquals(
+          Collections.singleton(
+              new ResourceAction(new Resource(
+                  InlineInputSource.TYPE_KEY,
+                  ResourceType.EXTERNAL
+              ), Action.READ)),
+          task.getInputSourceResources()
+      );
+    }
+
+    @Test
     public void hasCorrectPrefixForAutomaticId()
     {
       PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()
@@ -147,27 +162,13 @@ public class PartialDimensionCardinalityTaskTest
     {
       reportCapture = Capture.newInstance();
       ParallelIndexSupervisorTaskClient taskClient = EasyMock.mock(ParallelIndexSupervisorTaskClient.class);
-      taskClient.report(EasyMock.eq(ParallelIndexTestingFactory.SUPERVISOR_TASK_ID), EasyMock.capture(reportCapture));
+      taskClient.report(EasyMock.capture(reportCapture));
       EasyMock.replay(taskClient);
       taskToolbox = EasyMock.mock(TaskToolbox.class);
       EasyMock.expect(taskToolbox.getIndexingTmpDir()).andStubReturn(temporaryFolder.getRoot());
-      EasyMock.expect(taskToolbox.getSupervisorTaskClientFactory()).andReturn(
-          new IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>()
-          {
-            @Override
-            public ParallelIndexSupervisorTaskClient build(
-                TaskInfoProvider taskInfoProvider,
-                String callerId,
-                int numThreads,
-                Duration httpTimeout,
-                long numRetries
-            )
-            {
-              return taskClient;
-            }
-          }
-      );
-      EasyMock.expect(taskToolbox.getIndexingServiceClient()).andReturn(new NoopIndexingServiceClient());
+      EasyMock.expect(taskToolbox.getSupervisorTaskClientProvider())
+              .andReturn((supervisorTaskId, httpTimeout, numRetries) -> taskClient);
+      EasyMock.expect(taskToolbox.getOverlordClient()).andReturn(null);
       EasyMock.expect(taskToolbox.getRowIngestionMetersFactory()).andReturn(new DropwizardRowIngestionMetersFactory());
       EasyMock.replay(taskToolbox);
     }
@@ -176,7 +177,7 @@ public class PartialDimensionCardinalityTaskTest
     public void requiresPartitionDimension() throws Exception
     {
       exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("partitionDimension must be specified");
+      exception.expectMessage("partitionDimensions must be specified");
 
       ParallelIndexTuningConfig tuningConfig = new ParallelIndexTestingFactory.TuningConfigBuilder()
           .partitionsSpec(

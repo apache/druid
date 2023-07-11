@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.server.coordinator.cost.ClusterCostCache;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.Collections;
 import java.util.Set;
 
 
@@ -61,6 +62,16 @@ public class CachingCostBalancerStrategy extends CostBalancerStrategy
     // add segments that will be loaded to the cost
     cost += costCacheForLoadingSegments(server).computeCost(serverName, proposalSegment);
 
+    // minus the cost of the segment itself
+    if (server.isServingSegment(proposalSegment)) {
+      cost -= costCacheForSegments(server, Collections.singleton(proposalSegment))
+          .computeCost(serverName, proposalSegment);
+    }
+
+    // minus the costs of segments that are marked to be dropped
+    cost -= costCacheForSegments(server, server.getPeon().getSegmentsMarkedToDrop())
+        .computeCost(serverName, proposalSegment);
+
     if (server.getAvailableSize() <= 0) {
       return Double.POSITIVE_INFINITY;
     }
@@ -72,8 +83,12 @@ public class CachingCostBalancerStrategy extends CostBalancerStrategy
 
   private ClusterCostCache costCacheForLoadingSegments(ServerHolder server)
   {
-    final Set<DataSegment> loadingSegments = server.getPeon().getSegmentsToLoad();
-    return ClusterCostCache.builder(ImmutableMap.of(server.getServer().getName(), loadingSegments)).build();
+    return costCacheForSegments(server, server.getPeon().getSegmentsToLoad());
+  }
+
+  private ClusterCostCache costCacheForSegments(ServerHolder server, Set<DataSegment> segments)
+  {
+    return ClusterCostCache.builder(ImmutableMap.of(server.getServer().getName(), segments)).build();
   }
 
 }

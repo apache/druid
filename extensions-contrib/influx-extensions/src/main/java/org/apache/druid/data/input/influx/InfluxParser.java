@@ -65,10 +65,10 @@ public class InfluxParser implements Parser<String, Object>
 
     List<InfluxLineProtocolParser.LineContext> lines = parser.lines().line();
     if (parser.getNumberOfSyntaxErrors() != 0) {
-      throw new ParseException("Unable to parse line.");
+      throw new ParseException(null, "Unable to parse line.");
     }
     if (lines.size() != 1) {
-      throw new ParseException("Multiple lines present; unable to parse more than one per record.");
+      throw new ParseException(null, "Multiple lines present; unable to parse more than one per record.");
     }
 
     Map<String, Object> out = new LinkedHashMap<>();
@@ -77,7 +77,7 @@ public class InfluxParser implements Parser<String, Object>
     String measurement = parseIdentifier(line.identifier());
 
     if (!checkWhitelist(measurement)) {
-      throw new ParseException("Metric not whitelisted.");
+      throw new ParseException(null, "Metric [%s] not whitelisted.", measurement);
     }
 
     out.put(MEASUREMENT_KEY, measurement);

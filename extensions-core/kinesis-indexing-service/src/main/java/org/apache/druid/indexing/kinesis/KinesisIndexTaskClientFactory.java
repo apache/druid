@@ -21,41 +21,35 @@ package org.apache.druid.indexing.kinesis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.joda.time.Duration;
+import org.apache.druid.rpc.ServiceClientFactory;
 
-public class KinesisIndexTaskClientFactory extends SeekableStreamIndexTaskClientFactory<KinesisIndexTaskClient>
+@LazySingleton
+public class KinesisIndexTaskClientFactory extends SeekableStreamIndexTaskClientFactory<String, String>
 {
   @Inject
   public KinesisIndexTaskClientFactory(
+      @EscalatedGlobal ServiceClientFactory serviceClientFactory,
       @EscalatedGlobal HttpClient httpClient,
       @Json ObjectMapper mapper
   )
   {
-    super(httpClient, mapper);
+    super(serviceClientFactory, httpClient, mapper);
   }
 
   @Override
-  public KinesisIndexTaskClient build(
-      TaskInfoProvider taskInfoProvider,
-      String dataSource,
-      int numThreads,
-      Duration httpTimeout,
-      long numRetries
-  )
+  public Class<String> getPartitionType()
   {
-    return new KinesisIndexTaskClient(
-        getHttpClient(),
-        getMapper(),
-        taskInfoProvider,
-        dataSource,
-        numThreads,
-        httpTimeout,
-        numRetries
-    );
+    return String.class;
+  }
+
+  @Override
+  public Class<String> getSequenceType()
+  {
+    return String.class;
   }
 }

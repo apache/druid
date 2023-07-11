@@ -90,7 +90,7 @@ public class HadoopDruidIndexerConfig
   static final Joiner TAB_JOINER = Joiner.on("\t");
   public static final ObjectMapper JSON_MAPPER;
   public static final IndexIO INDEX_IO;
-  static final IndexMerger INDEX_MERGER_V9;
+  static final IndexMerger INDEX_MERGER_V9; // storeEmptyColumns is off for this indexMerger
   static final HadoopKerberosConfig HADOOP_KERBEROS_CONFIG;
   static final DataSegmentPusher DATA_SEGMENT_PUSHER;
   private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";

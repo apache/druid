@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -88,7 +89,8 @@ public class EmptyIndexTest
           true,
           new AggregatorFactory[0],
           tmpDir,
-          new IndexSpec(),
+          DimensionsSpec.EMPTY,
+          IndexSpec.DEFAULT,
           -1
       );
 

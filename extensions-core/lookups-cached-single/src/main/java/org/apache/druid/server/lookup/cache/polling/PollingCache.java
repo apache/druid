@@ -41,4 +41,12 @@ public interface PollingCache<K, V>
    * close and clean the resources used by the cache
    */
   void close();
+
+  /**
+   * Estimated heap footprint of this object.
+   */
+  default long estimateHeapFootprint()
+  {
+    return 0;
+  }
 }

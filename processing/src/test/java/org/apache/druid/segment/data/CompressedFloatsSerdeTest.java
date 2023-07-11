@@ -23,10 +23,10 @@ import com.google.common.base.Supplier;
 import com.google.common.primitives.Floats;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.utils.CloseableUtils;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -78,8 +78,29 @@ public class CompressedFloatsSerdeTest
   private final float[] values2 = {13.2f, 6.1f, 0.001f, 123f, 12572f, 123.1f, 784.4f, 6892.8634f, 8.341111f};
   private final float[] values3 = {0.001f, 0.001f, 0.001f, 0.001f, 0.001f, 100f, 100f, 100f, 100f, 100f};
   private final float[] values4 = {0f, 0f, 0f, 0f, 0.01f, 0f, 0f, 0f, 21.22f, 0f, 0f, 0f, 0f, 0f, 0f};
-  private final float[] values5 = {123.16f, 1.12f, 62.00f, 462.12f, 517.71f, 56.54f, 971.32f, 824.22f, 472.12f, 625.26f};
-  private final float[] values6 = {1000000f, 1000001f, 1000002f, 1000003f, 1000004f, 1000005f, 1000006f, 1000007f, 1000008f};
+  private final float[] values5 = {
+      123.16f,
+      1.12f,
+      62.00f,
+      462.12f,
+      517.71f,
+      56.54f,
+      971.32f,
+      824.22f,
+      472.12f,
+      625.26f
+  };
+  private final float[] values6 = {
+      1000000f,
+      1000001f,
+      1000002f,
+      1000003f,
+      1000004f,
+      1000005f,
+      1000006f,
+      1000007f,
+      1000008f
+  };
   private final float[] values7 = {
       Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, 12378.5734f, -12718243.7496f, -93653653.1f, 12743153.385534f,
       21431.414538f, 65487435436632.123f, -43734526234564.65f
@@ -165,20 +186,19 @@ public class CompressedFloatsSerdeTest
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
     CompressedColumnarFloatsSupplier supplier = CompressedColumnarFloatsSupplier
         .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order);
-    ColumnarFloats floats = supplier.get();
+    try (ColumnarFloats floats = supplier.get()) {
 
-    assertIndexMatchesVals(floats, values);
-    for (int i = 0; i < 10; i++) {
-      int a = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
-      int b = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
-      int start = a < b ? a : b;
-      int end = a < b ? b : a;
-      tryFill(floats, values, start, end - start);
+      assertIndexMatchesVals(floats, values);
+      for (int i = 0; i < 10; i++) {
+        int a = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
+        int b = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
+        int start = a < b ? a : b;
+        int end = a < b ? b : a;
+        tryFill(floats, values, start, end - start);
+      }
+      testSupplierSerde(supplier, values);
+      testConcurrentThreadReads(supplier, floats, values);
     }
-    testSupplierSerde(supplier, values);
-    testConcurrentThreadReads(supplier, floats, values);
-
-    floats.close();
   }
 
   private void tryFill(ColumnarFloats indexed, float[] vals, final int startIndex, final int size)
@@ -221,8 +241,9 @@ public class CompressedFloatsSerdeTest
     CompressedColumnarFloatsSupplier anotherSupplier = CompressedColumnarFloatsSupplier.fromByteBuffer(
         ByteBuffer.wrap(bytes), order
     );
-    ColumnarFloats indexed = anotherSupplier.get();
-    assertIndexMatchesVals(indexed, vals);
+    try (ColumnarFloats indexed = anotherSupplier.get()) {
+      assertIndexMatchesVals(indexed, vals);
+    }
   }
 
   // This test attempts to cause a race condition with the DirectByteBuffers, it's non-deterministic in causing it,
@@ -321,7 +342,7 @@ public class CompressedFloatsSerdeTest
       stopLatch.await();
     }
     finally {
-      CloseQuietly.close(indexed2);
+      CloseableUtils.closeAndWrapExceptions(indexed2);
     }
 
     if (failureHappened.get()) {

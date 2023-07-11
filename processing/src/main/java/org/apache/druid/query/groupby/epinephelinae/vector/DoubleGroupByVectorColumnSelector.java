@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.groupby.epinephelinae.vector;
 
-import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 public class DoubleGroupByVectorColumnSelector implements GroupByVectorColumnSelector
@@ -40,7 +40,7 @@ public class DoubleGroupByVectorColumnSelector implements GroupByVectorColumnSel
   }
 
   @Override
-  public void writeKeys(
+  public int writeKeys(
       final WritableMemory keySpace,
       final int keySize,
       final int keyOffset,
@@ -57,16 +57,24 @@ public class DoubleGroupByVectorColumnSelector implements GroupByVectorColumnSel
         keySpace.putDouble(j, vector[i]);
       }
     }
+
+    return 0;
   }
 
   @Override
   public void writeKeyToResultRow(
-      final Memory keyMemory,
+      final MemoryPointer keyMemory,
       final int keyOffset,
       final ResultRow resultRow,
       final int resultRowPosition
   )
   {
-    resultRow.set(resultRowPosition, keyMemory.getDouble(keyOffset));
+    resultRow.set(resultRowPosition, keyMemory.memory().getDouble(keyMemory.position() + keyOffset));
+  }
+
+  @Override
+  public void reset()
+  {
+    // Nothing to do.
   }
 }

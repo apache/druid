@@ -23,7 +23,7 @@ title: "PostgreSQL Metadata Store"
   -->
 
 
-To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `postgresql-metadata-storage` as an extension.
+To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `postgresql-metadata-storage` in the extensions load list.
 
 ## Setting up PostgreSQL
 
@@ -69,7 +69,7 @@ To use this Apache Druid extension, make sure to [include](../../development/ext
 
 ## Configuration
 
-In most cases, the configuration options map directly to the [postgres JDBC connection options](https://jdbc.postgresql.org/documentation/head/connect.html).
+In most cases, the configuration options map directly to the [postgres JDBC connection options](https://jdbc.postgresql.org/documentation/use/#connecting-to-the-database).
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
@@ -87,7 +87,7 @@ In most cases, the configuration options map directly to the [postgres JDBC conn
 
 ### PostgreSQL Firehose
 
-The PostgreSQL extension provides an implementation of an [SqlFirehose](../../ingestion/native-batch.md#firehoses-deprecated) which can be used to ingest data into Druid from a PostgreSQL database.
+The PostgreSQL extension provides an implementation of an [SQL input source](../../ingestion/native-batch-input-source.md) which can be used to ingest data into Druid from a PostgreSQL database.
 
 ```json
 {
@@ -95,22 +95,17 @@ The PostgreSQL extension provides an implementation of an [SqlFirehose](../../in
   "spec": {
     "dataSchema": {
       "dataSource": "some_datasource",
-      "parser": {
-        "parseSpec": {
-          "format": "timeAndDims",
-          "dimensionsSpec": {
-            "dimensionExclusions": [],
-            "dimensions": [
-              "dim1",
-              "dim2",
-              "dim3"
-            ]
-          },
-          "timestampSpec": {
-            "format": "auto",
-            "column": "ts"
-          }
-        }
+      "dimensionsSpec": {
+        "dimensionExclusions": [],
+        "dimensions": [
+          "dim1",
+          "dim2",
+          "dim3"
+        ]
+      },
+      "timestampSpec": {
+        "format": "auto",
+        "column": "ts"
       },
       "metricsSpec": [],
       "granularitySpec": {
@@ -129,7 +124,7 @@ The PostgreSQL extension provides an implementation of an [SqlFirehose](../../in
     },
     "ioConfig": {
       "type": "index_parallel",
-      "firehose": {
+      "inputSource": {
         "type": "sql",
         "database": {
           "type": "postgresql",
@@ -142,6 +137,9 @@ The PostgreSQL extension provides an implementation of an [SqlFirehose](../../in
         "sqls": [
           "SELECT * FROM some_table"
         ]
+      },
+      "inputFormat": {
+        "type": "json"
       }
     },
     "tuningConfig": {

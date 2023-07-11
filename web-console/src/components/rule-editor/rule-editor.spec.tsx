@@ -21,11 +21,11 @@ import React from 'react';
 
 import { RuleEditor } from './rule-editor';
 
-describe('rule editor', () => {
+describe('RuleEditor', () => {
   it('matches snapshot no tier in rule', () => {
     const ruleEditor = (
       <RuleEditor
-        rule={{ type: 'loadForever' }}
+        rule={{ type: 'loadForever', tieredReplicants: { test1: 1 } }}
         tiers={['test', 'test', 'test']}
         onChange={() => {}}
         onDelete={() => {}}
@@ -42,7 +42,7 @@ describe('rule editor', () => {
       <RuleEditor
         rule={{
           type: 'loadByInterval',
-          period: '2010-01-01/2015-01-01',
+          interval: '2010-01-01/2015-01-01',
           tieredReplicants: { nonexist: 2 },
         }}
         tiers={['test1', 'test2', 'test3']}
@@ -61,7 +61,7 @@ describe('rule editor', () => {
       <RuleEditor
         rule={{
           type: 'loadByInterval',
-          period: '2010-01-01/2015-01-01',
+          interval: '2010-01-01/2015-01-01',
           tieredReplicants: { test1: 2 },
         }}
         tiers={['test1', 'test2', 'test3']}
@@ -80,7 +80,7 @@ describe('rule editor', () => {
       <RuleEditor
         rule={{
           type: 'loadByInterval',
-          period: '2010-01-01/2015-01-01',
+          interval: '2010-01-01/2015-01-01',
           tieredReplicants: {
             test1: 2,
             nonexist: 1,
@@ -102,7 +102,7 @@ describe('rule editor', () => {
       <RuleEditor
         rule={{
           type: 'broadcastByInterval',
-          period: '2010-01-01/2015-01-01',
+          interval: '2010-01-01/2015-01-01',
         }}
         tiers={[]}
         onChange={() => {}}

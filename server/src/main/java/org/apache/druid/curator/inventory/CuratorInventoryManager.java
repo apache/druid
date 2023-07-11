@@ -29,8 +29,6 @@ import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.cache.PathChildrenCacheFactory;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -100,7 +98,6 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
         .build();
   }
 
-  @LifecycleStart
   public void start() throws Exception
   {
     PathChildrenCache childrenCache;
@@ -131,7 +128,6 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
     }
   }
 
-  @LifecycleStop
   public void stop() throws IOException
   {
     synchronized (lock) {
@@ -282,7 +278,6 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
             // This close() call actually calls shutdownNow() on the executor registered with the Cache object, it
             // better have its own executor or ignore shutdownNow() calls...
             log.debug("Closing inventory cache for %s. Also removing listeners.", containerKey);
-            removed.getCache().getListenable().clear();
             removed.getCache().close();
             strategy.deadContainer(removed.getContainer());
 

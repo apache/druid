@@ -32,11 +32,36 @@ import java.io.Closeable;
  * Thus, an Aggregator can be thought of as a closure over some other thing that is stateful and changes between calls
  * to aggregate(). This is currently (as of this documentation) implemented through the use of {@link
  * org.apache.druid.segment.ColumnValueSelector} objects.
+ *
+ * During ingestion, {@link org.apache.druid.segment.incremental.OnheapIncrementalIndex} uses instances of this class
+ * from multiple threads. In particular, ingestion threads call {@link #aggregate()} simultaneously with query threads
+ * calling the various "get" methods. Instances of this class must be thread-safe.
  */
 @ExtensionPoint
 public interface Aggregator extends Closeable
 {
+  /**
+   * Performs aggregation.
+   */
   void aggregate();
+
+  /**
+   * Performs aggregation and returns the increase in required on-heap memory
+   * caused by this aggregation step.
+   * <p>
+   * The default implementation of this method calls {@link #aggregate()} and returns 0.
+   * <p>
+   * If overridden, this method must include the JVM object overheads in the size
+   * estimation and must ensure not to underestimate required memory as that might
+   * lead to OOM errors.
+   *
+   * @return Increase in required on-heap memory caused by this aggregation step.
+   */
+  default long aggregateWithSize()
+  {
+    aggregate();
+    return 0;
+  }
 
   @Nullable
   Object get();
@@ -50,7 +75,7 @@ public interface Aggregator extends Closeable
    */
   default double getDouble()
   {
-    return (double) getFloat();
+    return getFloat();
   }
 
   /**

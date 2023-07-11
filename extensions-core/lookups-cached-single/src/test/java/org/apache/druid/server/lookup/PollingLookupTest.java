@@ -223,6 +223,15 @@ public class PollingLookupTest extends InitializedNullHandlingTest
     pollingLookup.keySet();
   }
 
+  @Test
+  public void testEstimateHeapFootprint()
+  {
+    Assert.assertEquals(
+        pollingCacheFactory instanceof OffHeapPollingCache.OffHeapPollingCacheProvider ? 0L : 402L,
+        pollingLookup.estimateHeapFootprint()
+    );
+  }
+
   private void assertMapLookup(Map<String, String> map, LookupExtractor lookup)
   {
     for (Map.Entry<String, String> entry : map.entrySet()) {

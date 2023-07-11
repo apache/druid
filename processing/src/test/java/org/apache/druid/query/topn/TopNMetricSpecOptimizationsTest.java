@@ -302,13 +302,6 @@ public class TopNMetricSpecOptimizationsTest
         return null;
       }
 
-      @Nullable
-      @Override
-      public String getColumnTypeName(String column)
-      {
-        return null;
-      }
-
       @Override
       public int getNumRows()
       {

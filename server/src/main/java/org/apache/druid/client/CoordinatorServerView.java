@@ -26,6 +26,8 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
@@ -56,15 +58,18 @@ public class CoordinatorServerView implements InventoryView
   private final CoordinatorSegmentWatcherConfig segmentWatcherConfig;
 
   private final CountDownLatch initialized = new CountDownLatch(1);
+  private final ServiceEmitter emitter;
 
   @Inject
   public CoordinatorServerView(
       ServerInventoryView baseView,
-      CoordinatorSegmentWatcherConfig segmentWatcherConfig
+      CoordinatorSegmentWatcherConfig segmentWatcherConfig,
+      ServiceEmitter emitter
   )
   {
     this.baseView = baseView;
     this.segmentWatcherConfig = segmentWatcherConfig;
+    this.emitter = emitter;
     this.segmentLoadInfos = new HashMap<>();
     this.timelines = new HashMap<>();
 
@@ -117,7 +122,12 @@ public class CoordinatorServerView implements InventoryView
       final long startMillis = System.currentTimeMillis();
       log.info("%s waiting for initialization.", getClass().getSimpleName());
       initialized.await();
-      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), System.currentTimeMillis() - startMillis);
+      final long endMillis = System.currentTimeMillis();
+      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), endMillis - startMillis);
+      emitter.emit(ServiceMetricEvent.builder().build(
+          "init/serverview/time",
+          endMillis - startMillis
+      ));
     }
   }
 

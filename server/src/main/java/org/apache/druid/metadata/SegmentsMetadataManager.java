@@ -73,14 +73,14 @@ public interface SegmentsMetadataManager
 
   int markAsUnusedSegmentsInInterval(String dataSource, Interval interval);
 
-  int markSegmentsAsUnused(String dataSource, Set<String> segmentIds);
+  int markSegmentsAsUnused(Set<SegmentId> segmentIds);
 
   /**
    * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the
    * segment was marked as unused), false otherwise. If the call results in a database error, an exception is relayed to
    * the caller.
    */
-  boolean markSegmentAsUnused(String segmentId);
+  boolean markSegmentAsUnused(SegmentId segmentId);
 
   /**
    * If there are used segments belonging to the given data source this method returns them as an {@link
@@ -95,11 +95,6 @@ public interface SegmentsMetadataManager
    * returns an empty collection.
    */
   Collection<ImmutableDruidDataSource> getImmutableDataSourcesWithAllUsedSegments();
-
-  /**
-   * Returns a set of overshadowed segment ids.
-   */
-  Set<SegmentId> getOvershadowedSegments();
 
   /**
    * Returns a snapshot of DruidDataSources and overshadowed segments

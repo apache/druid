@@ -52,7 +52,7 @@ public class CassandraDataSegmentPuller extends CassandraStorage
   {
     log.info("Pulling index from C* at path[%s] to outDir[%s]", key, outDir);
     try {
-      org.apache.commons.io.FileUtils.forceMkdir(outDir);
+      FileUtils.mkdirp(outDir);
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, "");

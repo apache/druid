@@ -33,6 +33,11 @@ import javax.annotation.Nullable;
  */
 public class IncrementalIndexSchema
 {
+  public static IncrementalIndexSchema.Builder builder()
+  {
+    return new Builder();
+  }
+
   private final long minTimestamp;
   private final TimestampSpec timestampSpec;
   private final Granularity gran;
@@ -153,7 +158,7 @@ public class IncrementalIndexSchema
           && parser.getParseSpec().getDimensionsSpec() != null) {
         this.dimensionsSpec = parser.getParseSpec().getDimensionsSpec();
       } else {
-        this.dimensionsSpec = new DimensionsSpec(null, null, null);
+        this.dimensionsSpec = DimensionsSpec.EMPTY;
       }
 
       return this;

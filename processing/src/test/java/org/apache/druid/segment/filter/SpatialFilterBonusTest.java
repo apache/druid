@@ -27,6 +27,7 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.SpatialDimensionSchema;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -102,7 +103,7 @@ public class SpatialFilterBonusTest
     for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
       IndexMerger indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
       IndexIO indexIO = TestHelper.getTestIndexIO();
-      final IndexSpec indexSpec = new IndexSpec();
+      final IndexSpec indexSpec = IndexSpec.DEFAULT;
       final IncrementalIndex rtIndex = makeIncrementalIndex();
       final QueryableIndex mMappedTestIndex = makeQueryableIndex(indexSpec, indexMerger, indexIO);
       final QueryableIndex mergedRealtimeIndex = makeMergedQueryableIndex(indexSpec, indexMerger, indexIO);
@@ -122,16 +123,16 @@ public class SpatialFilterBonusTest
                 .withQueryGranularity(Granularities.DAY)
                 .withMetrics(METRIC_AGGS)
                 .withDimensionsSpec(
-                    new DimensionsSpec(
-                        null,
-                        null,
-                        Collections.singletonList(
-                            new SpatialDimensionSchema(
-                                "dim.geo",
-                                new ArrayList<>()
-                            )
-                        )
-                    )
+                    DimensionsSpec.builder()
+                                  .setSpatialDimensions(
+                                      Collections.singletonList(
+                                          new SpatialDimensionSchema(
+                                              "dim.geo",
+                                              new ArrayList<>()
+                                          )
+                                      )
+                                  )
+                                  .build()
                 ).build()
         )
         .setMaxRowCount(NUM_POINTS)
@@ -248,7 +249,7 @@ public class SpatialFilterBonusTest
     IncrementalIndex theIndex = makeIncrementalIndex();
     File tmpFile = File.createTempFile("billy", "yay");
     tmpFile.delete();
-    tmpFile.mkdirs();
+    FileUtils.mkdirp(tmpFile);
     tmpFile.deleteOnExit();
 
     indexMerger.persist(theIndex, tmpFile, indexSpec, null);
@@ -269,17 +270,16 @@ public class SpatialFilterBonusTest
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Collections.singletonList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  new ArrayList<>()
-                              )
-                          )
-                      )
-
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Collections.singletonList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                new ArrayList<>()
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
           .setMaxRowCount(NUM_POINTS)
@@ -292,16 +292,16 @@ public class SpatialFilterBonusTest
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Collections.singletonList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  new ArrayList<>()
-                              )
-                          )
-                      )
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Collections.singletonList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                new ArrayList<>()
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
           .setMaxRowCount(NUM_POINTS)
@@ -314,17 +314,16 @@ public class SpatialFilterBonusTest
                   .withQueryGranularity(Granularities.DAY)
                   .withMetrics(METRIC_AGGS)
                   .withDimensionsSpec(
-                      new DimensionsSpec(
-                          null,
-                          null,
-                          Collections.singletonList(
-                              new SpatialDimensionSchema(
-                                  "dim.geo",
-                                  new ArrayList<>()
-                              )
-                          )
-                      )
-
+                      DimensionsSpec.builder()
+                                    .setSpatialDimensions(
+                                        Collections.singletonList(
+                                            new SpatialDimensionSchema(
+                                                "dim.geo",
+                                                new ArrayList<>()
+                                            )
+                                        )
+                                    )
+                                    .build()
                   ).build()
           )
           .setMaxRowCount(NUM_POINTS)
@@ -433,13 +432,13 @@ public class SpatialFilterBonusTest
       File thirdFile = new File(tmpFile, "third");
       File mergedFile = new File(tmpFile, "merged");
 
-      firstFile.mkdirs();
+      FileUtils.mkdirp(firstFile);
+      FileUtils.mkdirp(secondFile);
+      FileUtils.mkdirp(thirdFile);
+      FileUtils.mkdirp(mergedFile);
       firstFile.deleteOnExit();
-      secondFile.mkdirs();
       secondFile.deleteOnExit();
-      thirdFile.mkdirs();
       thirdFile.deleteOnExit();
-      mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
       indexMerger.persist(first, DATA_INTERVAL, firstFile, indexSpec, null);

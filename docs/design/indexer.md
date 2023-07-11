@@ -91,6 +91,4 @@ Separate task logs are not currently supported when using the Indexer; all task 
 
 The Indexer currently imposes an identical memory limit on each task. In later releases, the per-task memory limit will be removed and only the global limit will apply. The limit on concurrent merges will also be removed.
 
-The Indexer does not work properly with [`index_realtime`](../ingestion/tasks.md#index_realtime) task types. Therefore, it is not compatible with [Tranquility](../ingestion/tranquility.md). If you are using Tranquility, consider migrating to Druid's builtin [Apache Kafka](../development/extensions-core/kafka-ingestion.md) or [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md) ingestion options.
-
 In later releases, per-task memory usage will be dynamically managed. Please see https://github.com/apache/druid/issues/7900 for details on future enhancements to the Indexer.

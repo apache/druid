@@ -28,11 +28,15 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.LocalCacheProvider;
+import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -49,6 +53,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
@@ -63,15 +68,14 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
@@ -81,10 +85,12 @@ import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
-import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -103,7 +109,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -115,7 +120,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -138,26 +142,37 @@ public class ServerManagerTest
   public void setUp()
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
-
+    NullHandling.initializeForTests();
     queryWaitLatch = new CountDownLatch(1);
     queryWaitYieldLatch = new CountDownLatch(1);
     queryNotifyLatch = new CountDownLatch(1);
     factory = new MyQueryRunnerFactory(queryWaitLatch, queryWaitYieldLatch, queryNotifyLatch);
-    serverManagerExec = Executors.newFixedThreadPool(2);
+    serverManagerExec = Execs.multiThreaded(2, "ServerManagerTest-%d");
     segmentManager = new SegmentManager(
         new SegmentLoader()
         {
           @Override
           public ReferenceCountingSegment getSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback SegmentLazyLoadFailCallback)
           {
-            return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
-                MapUtils.getString(segment.getLoadSpec(), "version"),
-                (Interval) segment.getLoadSpec().get("interval")
-            ), segment.getShardSpec());
+            if (segment.isTombstone()) {
+              return ReferenceCountingSegment
+                  .wrapSegment(TombstoneSegmentizerFactory.segmentForTombstone(segment), segment.getShardSpec());
+            } else {
+              return ReferenceCountingSegment.wrapSegment(new SegmentForTesting(
+                  MapUtils.getString(segment.getLoadSpec(), "version"),
+                  (Interval) segment.getLoadSpec().get("interval")
+              ), segment.getShardSpec());
+            }
           }
 
           @Override
           public void cleanup(DataSegment segment)
+          {
+
+          }
+
+          @Override
+          public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
           {
 
           }
@@ -183,7 +198,7 @@ public class ServerManagerTest
         new LocalCacheProvider().get(),
         new CacheConfig(),
         segmentManager,
-        NoopJoinableFactory.INSTANCE,
+        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new ServerConfig()
     );
 
@@ -200,6 +215,7 @@ public class ServerManagerTest
     loadQueryable("test", "2", Intervals.of("PT1h/2011-04-04T06"));
     loadQueryable("test2", "1", Intervals.of("P1d/2011-04-01"));
     loadQueryable("test2", "1", Intervals.of("P1d/2011-04-02"));
+    loadQueryable("testTombstone", "1", Intervals.of("P1d/2011-04-02"));
   }
 
   @Test
@@ -225,6 +241,19 @@ public class ServerManagerTest
         )
     );
     waitForTestVerificationAndCleanup(future);
+  }
+
+  @Test
+  public void testSimpleGetTombstone()
+  {
+    Future future = assertQueryable(
+        Granularities.DAY,
+        "testTombstone",
+        Intervals.of("P1d/2011-04-01"),
+        Collections.emptyList() // tombstone returns no data
+    );
+    waitForTestVerificationAndCleanup(future);
+
   }
 
   @Test
@@ -442,6 +471,25 @@ public class ServerManagerTest
     Assert.assertSame(NoopQueryRunner.class, queryRunner.getClass());
   }
 
+  @Test(expected = ISE.class)
+  public void testGetQueryRunnerForSegmentsWhenTimelineIsMissingReportingMissingSegmentsOnQueryDataSource()
+  {
+    final Interval interval = Intervals.of("0000-01-01/P1D");
+    final SearchQuery query = searchQueryWithQueryDataSource("unknown_datasource", interval, Granularities.ALL);
+    final List<SegmentDescriptor> unknownSegments = Collections.singletonList(
+        new SegmentDescriptor(interval, "unknown_version", 0)
+    );
+    final QueryRunner<Result<SearchResultValue>> queryRunner = serverManager.getQueryRunnerForSegments(
+        query,
+        unknownSegments
+    );
+    final ResponseContext responseContext = DefaultResponseContext.createEmpty();
+    final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
+    Assert.assertTrue(results.isEmpty());
+    Assert.assertNotNull(responseContext.getMissingSegments());
+    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
+  }
+
   @Test
   public void testGetQueryRunnerForSegmentsWhenTimelineIsMissingReportingMissingSegments()
   {
@@ -457,8 +505,8 @@ public class ServerManagerTest
     final ResponseContext responseContext = DefaultResponseContext.createEmpty();
     final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
     Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
-    Assert.assertEquals(unknownSegments, responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertNotNull(responseContext.getMissingSegments());
+    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -476,8 +524,8 @@ public class ServerManagerTest
     final ResponseContext responseContext = DefaultResponseContext.createEmpty();
     final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
     Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
-    Assert.assertEquals(unknownSegments, responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertNotNull(responseContext.getMissingSegments());
+    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -496,8 +544,8 @@ public class ServerManagerTest
     final ResponseContext responseContext = DefaultResponseContext.createEmpty();
     final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
     Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
-    Assert.assertEquals(unknownSegments, responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertNotNull(responseContext.getMissingSegments());
+    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -506,7 +554,7 @@ public class ServerManagerTest
     final Interval interval = Intervals.of("P1d/2011-04-01");
     final SearchQuery query = searchQuery("test", interval, Granularities.ALL);
     final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline = segmentManager
-        .getTimeline(DataSourceAnalysis.forDataSource(query.getDataSource()));
+        .getTimeline(query.getDataSource().getAnalysis());
     Assert.assertTrue(maybeTimeline.isPresent());
     final List<TimelineObjectHolder<String, ReferenceCountingSegment>> holders = maybeTimeline.get().lookup(interval);
     final List<SegmentDescriptor> closedSegments = new ArrayList<>();
@@ -527,8 +575,8 @@ public class ServerManagerTest
     final ResponseContext responseContext = DefaultResponseContext.createEmpty();
     final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
     Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.get(Key.MISSING_SEGMENTS));
-    Assert.assertEquals(closedSegments, responseContext.get(Key.MISSING_SEGMENTS));
+    Assert.assertNotNull(responseContext.getMissingSegments());
+    Assert.assertEquals(closedSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -611,6 +659,30 @@ public class ServerManagerTest
                  .build();
   }
 
+
+  private SearchQuery searchQueryWithQueryDataSource(String datasource, Interval interval, Granularity granularity)
+  {
+    final ImmutableList<SegmentDescriptor> descriptors = ImmutableList.of(
+        new SegmentDescriptor(Intervals.of("2000/3000"), "0", 0),
+        new SegmentDescriptor(Intervals.of("2000/3000"), "0", 1)
+    );
+    return Druids.newSearchQueryBuilder()
+                 .dataSource(
+                     new QueryDataSource(
+                         Druids.newTimeseriesQueryBuilder()
+                               .dataSource(datasource)
+                               .intervals(new MultipleSpecificSegmentSpec(descriptors))
+                               .granularity(Granularities.ALL)
+                               .build()
+                     )
+                 )
+                 .intervals(Collections.singletonList(interval))
+                 .granularity(granularity)
+                 .limit(10000)
+                 .query("wow")
+                 .build();
+  }
+
   private Future assertQueryable(
       Granularity granularity,
       String dataSource,
@@ -653,21 +725,43 @@ public class ServerManagerTest
   public void loadQueryable(String dataSource, String version, Interval interval)
   {
     try {
-      segmentManager.loadSegment(
-          new DataSegment(
-              dataSource,
-              interval,
-              version,
-              ImmutableMap.of("version", version, "interval", interval),
-              Arrays.asList("dim1", "dim2", "dim3"),
-              Arrays.asList("metric1", "metric2"),
-              NoneShardSpec.instance(),
-              IndexIO.CURRENT_VERSION_ID,
-              123L
-          ),
-          false,
-          SegmentLazyLoadFailCallback.NOOP
-      );
+      if ("testTombstone".equals(dataSource)) {
+        segmentManager.loadSegment(
+            new DataSegment(
+                dataSource,
+                interval,
+                version,
+                ImmutableMap.of("version", version,
+                                "interval", interval,
+                                "type",
+                                DataSegment.TOMBSTONE_LOADSPEC_TYPE
+                ),
+                Arrays.asList("dim1", "dim2", "dim3"),
+                Arrays.asList("metric1", "metric2"),
+                NoneShardSpec.instance(),
+                IndexIO.CURRENT_VERSION_ID,
+                123L
+            ),
+            false,
+            SegmentLazyLoadFailCallback.NOOP
+        );
+      } else {
+        segmentManager.loadSegment(
+            new DataSegment(
+                dataSource,
+                interval,
+                version,
+                ImmutableMap.of("version", version, "interval", interval),
+                Arrays.asList("dim1", "dim2", "dim3"),
+                Arrays.asList("metric1", "metric2"),
+                NoneShardSpec.instance(),
+                IndexIO.CURRENT_VERSION_ID,
+                123L
+            ),
+            false,
+            SegmentLazyLoadFailCallback.NOOP
+        );
+      }
     }
     catch (SegmentLoadingException e) {
       throw new RuntimeException(e);
@@ -791,6 +885,64 @@ public class ServerManagerTest
     private final Interval interval;
     private final Object lock = new Object();
     private volatile boolean closed = false;
+    private QueryableIndex index = new QueryableIndex()
+    {
+      @Override
+      public Interval getDataInterval()
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public int getNumRows()
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public Indexed<String> getAvailableDimensions()
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public BitmapFactory getBitmapFactoryForDimensions()
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Nullable
+      @Override
+      public Metadata getMetadata()
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public Map<String, DimensionHandler> getDimensionHandlers()
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public void close()
+      {
+
+      }
+
+      @Override
+      public List<String> getColumnNames()
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Nullable
+      @Override
+      public ColumnHolder getColumnHolder(String columnName)
+      {
+        throw new UnsupportedOperationException();
+      }
+    };
 
     SegmentForTesting(
         String version,
@@ -831,7 +983,7 @@ public class ServerManagerTest
     @Override
     public QueryableIndex asQueryableIndex()
     {
-      throw new UnsupportedOperationException();
+      return index;
     }
 
     @Override
@@ -908,13 +1060,6 @@ public class ServerManagerTest
         @Nullable
         @Override
         public ColumnCapabilities getColumnCapabilities(String column)
-        {
-          return null;
-        }
-
-        @Nullable
-        @Override
-        public String getColumnTypeName(String column)
         {
           return null;
         }

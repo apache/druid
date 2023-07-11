@@ -152,7 +152,7 @@ def main():
   if task_json['type'] == "compact":
     datasource = task_json['dataSource']
   else:
-    datasource = json.loads(task_contents)["spec"]["dataSchema"]["dataSource"]
+    datasource = task_json["spec"]["dataSchema"]["dataSource"]
   sys.stderr.write("Beginning indexing data for {0}\n".format(datasource))
 
   task_id = json.loads(post_task(args, task_contents, submit_timeout_at))["task"]

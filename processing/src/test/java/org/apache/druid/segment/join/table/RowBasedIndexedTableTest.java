@@ -19,11 +19,10 @@
 
 package org.apache.druid.segment.join.table;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinTestHelper;
 import org.junit.Assert;
 import org.junit.Before;
@@ -73,9 +72,9 @@ public class RowBasedIndexedTableTest
   {
     Assert.assertEquals(
         RowSignature.builder()
-                    .add("countryNumber", ValueType.LONG)
-                    .add("countryIsoCode", ValueType.STRING)
-                    .add("countryName", ValueType.STRING)
+                    .add("countryNumber", ColumnType.LONG)
+                    .add("countryIsoCode", ColumnType.STRING)
+                    .add("countryName", ColumnType.STRING)
                     .build(),
         countriesTable.rowSignature()
     );
@@ -92,9 +91,9 @@ public class RowBasedIndexedTableTest
   {
     final IndexedTable.Index index = countriesTable.columnIndex(INDEX_COUNTRIES_COUNTRY_ISO_CODE);
 
-    Assert.assertEquals(ImmutableList.of(), index.find(null));
-    Assert.assertEquals(ImmutableList.of(), index.find(2));
-    Assert.assertEquals(ImmutableList.of(13), index.find("US"));
+    Assert.assertEquals(ImmutableSet.of(), index.find(null));
+    Assert.assertEquals(ImmutableSet.of(), index.find(2));
+    Assert.assertEquals(ImmutableSet.of(13), index.find("US"));
   }
 
   @Test
@@ -102,15 +101,15 @@ public class RowBasedIndexedTableTest
   {
     final IndexedTable.Index index = countriesTable.columnIndex(INDEX_COUNTRIES_COUNTRY_NUMBER);
 
-    Assert.assertEquals(ImmutableList.of(), index.find(null));
-    Assert.assertEquals(ImmutableList.of(0), index.find(0));
-    Assert.assertEquals(ImmutableList.of(0), index.find(0.0));
-    Assert.assertEquals(ImmutableList.of(0), index.find("0"));
-    Assert.assertEquals(ImmutableList.of(2), index.find(2));
-    Assert.assertEquals(ImmutableList.of(2), index.find(2.0));
-    Assert.assertEquals(ImmutableList.of(2), index.find("2"));
-    Assert.assertEquals(ImmutableList.of(), index.find(20));
-    Assert.assertEquals(ImmutableList.of(), index.find("US"));
+    Assert.assertEquals(ImmutableSet.of(), index.find(null));
+    Assert.assertEquals(ImmutableSet.of(0), index.find(0));
+    Assert.assertEquals(ImmutableSet.of(0), index.find(0.0));
+    Assert.assertEquals(ImmutableSet.of(0), index.find("0"));
+    Assert.assertEquals(ImmutableSet.of(2), index.find(2));
+    Assert.assertEquals(ImmutableSet.of(2), index.find(2.0));
+    Assert.assertEquals(ImmutableSet.of(2), index.find("2"));
+    Assert.assertEquals(ImmutableSet.of(), index.find(20));
+    Assert.assertEquals(ImmutableSet.of(), index.find("US"));
   }
 
   @Test
@@ -132,11 +131,11 @@ public class RowBasedIndexedTableTest
   {
     final IndexedTable.Index index = regionsTable.columnIndex(INDEX_REGIONS_REGION_ISO_CODE);
 
-    Assert.assertEquals(ImmutableList.of(), index.find(null));
-    Assert.assertEquals(ImmutableList.of(0), index.find("11"));
-    Assert.assertEquals(ImmutableList.of(1), index.find(13));
-    Assert.assertEquals(ImmutableList.of(12), index.find("QC"));
-    Assert.assertEquals(ImmutableList.of(15, 16), index.find("VA"));
+    Assert.assertEquals(ImmutableSet.of(), index.find(null));
+    Assert.assertEquals(ImmutableSet.of(0), index.find("11"));
+    Assert.assertEquals(ImmutableSet.of(1), index.find(13));
+    Assert.assertEquals(ImmutableSet.of(12), index.find("QC"));
+    Assert.assertEquals(ImmutableSet.of(15, 16), index.find("VA"));
   }
 
   @Test

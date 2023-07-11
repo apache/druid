@@ -59,7 +59,8 @@ public class HttpServerInventoryViewProvider implements ServerInventoryViewProvi
         httpClient,
         druidNodeDiscoveryProvider,
         Predicates.alwaysTrue(),
-        config
+        config,
+        "HttpServerInventoryView"
     );
   }
 }

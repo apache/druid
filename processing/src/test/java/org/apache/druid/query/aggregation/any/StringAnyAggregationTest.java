@@ -25,7 +25,7 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -57,7 +57,7 @@ public class StringAnyAggregationTest
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector);
     EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly"))
-            .andReturn(new ColumnCapabilitiesImpl().setType(ValueType.STRING));
+            .andReturn(new ColumnCapabilitiesImpl().setType(ColumnType.STRING));
     EasyMock.expect(colSelectorFactory.getColumnCapabilities("billy")).andReturn(null);
     EasyMock.replay(colSelectorFactory);
   }
@@ -83,7 +83,7 @@ public class StringAnyAggregationTest
     valueSelector = new TestObjectColumnSelector<>(stringsWithNullFirst);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly"))
-            .andReturn(new ColumnCapabilitiesImpl().setType(ValueType.STRING));
+            .andReturn(new ColumnCapabilitiesImpl().setType(ColumnType.STRING));
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
     EasyMock.replay(colSelectorFactory);
 
@@ -123,7 +123,7 @@ public class StringAnyAggregationTest
     valueSelector = new TestObjectColumnSelector<>(stringsWithNullFirst);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly"))
-            .andReturn(new ColumnCapabilitiesImpl().setType(ValueType.STRING));
+            .andReturn(new ColumnCapabilitiesImpl().setType(ColumnType.STRING));
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
     EasyMock.replay(colSelectorFactory);
 

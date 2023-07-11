@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import * as playwright from 'playwright-chromium';
+import type * as playwright from 'playwright-chromium';
 
 import { extractTable } from '../../util/table';
 
@@ -30,10 +30,10 @@ enum TaskColumn {
   GROUP_ID,
   TYPE,
   DATASOURCE,
-  LOCATION,
-  CREATED_TIME,
   STATUS,
+  CREATED_TIME,
   DURATION,
+  LOCATION,
 }
 
 /**

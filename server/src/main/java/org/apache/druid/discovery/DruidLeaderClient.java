@@ -122,6 +122,14 @@ public class DruidLeaderClient
     return new Request(httpMethod, new URL(StringUtils.format("%s%s", getCurrentKnownLeader(true), urlPath)));
   }
 
+  /**
+   * Executes a Request object aimed at the leader. Throws IOException if the leader cannot be located.
+   * Internal retries with cache invalidation are attempted if 503/504 response is received.
+   *
+   * @param request
+   * @throws IOException
+   * @throws InterruptedException
+   */
   public StringFullResponseHolder go(Request request) throws IOException, InterruptedException
   {
     return go(request, new StringFullResponseHandler(StandardCharsets.UTF_8));
@@ -129,8 +137,17 @@ public class DruidLeaderClient
 
   /**
    * Executes a Request object aimed at the leader. Throws IOException if the leader cannot be located.
+   * Internal retries with cache invalidation are attempted if 503/504 response is received.
+   *
+   * @param request
+   * @param responseHandler
+   * @throws IOException
+   * @throws InterruptedException
    */
-  public <T, H extends FullResponseHolder<T>> H go(Request request, HttpResponseHandler<H, H> responseHandler)
+  public <T, H extends FullResponseHolder<T>> H go(
+      Request request,
+      HttpResponseHandler<H, H> responseHandler
+  )
       throws IOException, InterruptedException
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
@@ -152,38 +169,11 @@ public class DruidLeaderClient
       catch (IOException | ChannelException ex) {
         // can happen if the node is stopped.
         log.warn(ex, "Request[%s] failed.", request.getUrl());
-
-        try {
-          if (request.getUrl().getQuery() == null) {
-            request = withUrl(
-                request,
-                new URL(StringUtils.format("%s%s", getCurrentKnownLeader(false), request.getUrl().getPath()))
-            );
-          } else {
-            request = withUrl(
-                request,
-                new URL(StringUtils.format(
-                    "%s%s?%s",
-                    getCurrentKnownLeader(false),
-                    request.getUrl().getPath(),
-                    request.getUrl().getQuery()
-                ))
-            );
-          }
-          continue;
-        }
-        catch (MalformedURLException e) {
-          // Not an IOException; this is our own fault.
-          throw new ISE(
-              e,
-              "failed to build url with path[%] and query string [%s].",
-              request.getUrl().getPath(),
-              request.getUrl().getQuery()
-          );
-        }
+        request = getNewRequestUrlInvalidatingCache(request);
+        continue;
       }
-
-      if (HttpResponseStatus.TEMPORARY_REDIRECT.equals(fullResponseHolder.getResponse().getStatus())) {
+      HttpResponseStatus responseStatus = fullResponseHolder.getResponse().getStatus();
+      if (HttpResponseStatus.TEMPORARY_REDIRECT.equals(responseStatus)) {
         String redirectUrlStr = fullResponseHolder.getResponse().headers().get("Location");
         if (redirectUrlStr == null) {
           throw new IOE("No redirect location is found in response from url[%s].", request.getUrl());
@@ -213,6 +203,16 @@ public class DruidLeaderClient
         ));
 
         request = withUrl(request, redirectUrl);
+      } else if (HttpResponseStatus.SERVICE_UNAVAILABLE.equals(responseStatus)
+                 || HttpResponseStatus.GATEWAY_TIMEOUT.equals(responseStatus)) {
+        log.warn(
+            "Request[%s] received a %s response. Attempt %s/%s",
+            request.getUrl(),
+            responseStatus,
+            counter + 1,
+            MAX_RETRIES
+        );
+        request = getNewRequestUrlInvalidatingCache(request);
       } else {
         return fullResponseHolder;
       }
@@ -294,5 +294,38 @@ public class DruidLeaderClient
       req.setContent(old.getContent());
     }
     return req;
+  }
+
+  private Request getNewRequestUrlInvalidatingCache(Request oldRequest) throws IOException
+  {
+    try {
+      Request newRequest;
+      if (oldRequest.getUrl().getQuery() == null) {
+        newRequest = withUrl(
+            oldRequest,
+            new URL(StringUtils.format("%s%s", getCurrentKnownLeader(false), oldRequest.getUrl().getPath()))
+        );
+      } else {
+        newRequest = withUrl(
+            oldRequest,
+            new URL(StringUtils.format(
+                "%s%s?%s",
+                getCurrentKnownLeader(false),
+                oldRequest.getUrl().getPath(),
+                oldRequest.getUrl().getQuery()
+            ))
+        );
+      }
+      return newRequest;
+    }
+    catch (MalformedURLException e) {
+      // Not an IOException; this is our own fault.
+      throw new ISE(
+          e,
+          "failed to build url with path[%] and query string [%s].",
+          oldRequest.getUrl().getPath(),
+          oldRequest.getUrl().getQuery()
+      );
+    }
   }
 }

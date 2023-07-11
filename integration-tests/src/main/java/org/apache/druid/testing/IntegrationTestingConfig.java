@@ -23,6 +23,19 @@ import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
+ * Configuration for tests. Opinionated about the shape of the cluster:
+ * there is one or two Coordinators or Overlords, zero or one of
+ * everything else.
+ * <p>
+ * To work in Docker (and K8s) there are two methods per host:
+ * {@code get<service>Host()} which returns the host as seen from
+ * the test machine (meaning the proxy host), and
+ * {@code get<service>InternalHost()} which returns the name of
+ * the host as seen by itself and other services: the host published
+ * in ZK, which is the host known to the Docker/K8s overlay network.
+ * <p>
+ * The {@code get<service>Url()} methods return URLs relative to
+ * the test, using the proxy host for Docker and K8s.
  */
 public interface IntegrationTestingConfig
 {

@@ -62,7 +62,7 @@ public class DruidSortUnionRule extends RelOptRule
     final int offset = sort.offset != null ? RexLiteral.intValue(sort.offset) : 0;
 
     final DruidUnionRel newUnionRel = DruidUnionRel.create(
-        unionRel.getQueryMaker(),
+        unionRel.getPlannerContext(),
         unionRel.getRowType(),
         unionRel.getInputs(),
         unionRel.getLimit() >= 0 ? Math.min(limit + offset, unionRel.getLimit()) : limit + offset

@@ -19,45 +19,37 @@
 
 package org.apache.druid.common.gcp;
 
-import com.fasterxml.jackson.databind.Module;
-import com.google.api.client.googleapis.testing.auth.oauth2.MockGoogleCredential;
 import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.testing.http.MockHttpTransport;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 
-import java.util.List;
-
-public class GcpMockModule implements DruidModule
+public abstract class GcpMockModule implements DruidModule
 {
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return ImmutableList.of();
-  }
-
   @Override
   public void configure(Binder binder)
   {
-
   }
-
 
   @Provides
   @LazySingleton
-  public HttpRequestInitializer mockRequestInitializer(
+  public HttpRequestInitializer provideRequestInitializer(
       HttpTransport transport,
       JsonFactory factory
   )
   {
-    return new MockGoogleCredential.Builder().setTransport(transport).setJsonFactory(factory).build();
+    return mockRequestInitializer(transport, factory);
   }
+
+  public abstract HttpRequestInitializer mockRequestInitializer(
+      HttpTransport transport,
+      JsonFactory factory
+  );
 
   @Provides
   @LazySingleton

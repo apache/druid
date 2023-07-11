@@ -21,8 +21,9 @@ package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.rex.RexNode;
+import org.apache.druid.math.expr.ExpressionValidationException;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressStringifyOperatorConversion;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,7 +41,7 @@ public class IPv4AddressStringifyExpressionTest extends ExpressionTestBase
   private static final String NULL = null;
 
   private static final String VAR = "f";
-  private static final RowSignature ROW_SIGNATURE = RowSignature.builder().add(VAR, ValueType.FLOAT).build();
+  private static final RowSignature ROW_SIGNATURE = RowSignature.builder().add(VAR, ColumnType.FLOAT).build();
   private static final Map<String, Object> BINDINGS = ImmutableMap.of(VAR, 3.14);
 
   private IPv4AddressStringifyOperatorConversion target;
@@ -56,7 +57,7 @@ public class IPv4AddressStringifyExpressionTest extends ExpressionTestBase
   @Test
   public void testTooFewArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 1 argument");
+    expectException(ExpressionValidationException.class, "requires 1 argument");
 
     testExpression(
         Collections.emptyList(),
@@ -68,7 +69,7 @@ public class IPv4AddressStringifyExpressionTest extends ExpressionTestBase
   @Test
   public void testTooManyArgs()
   {
-    expectException(IllegalArgumentException.class, "must have 1 argument");
+    expectException(ExpressionValidationException.class, "requires 1 argument");
 
     testExpression(
         Arrays.asList(
@@ -224,7 +225,7 @@ public class IPv4AddressStringifyExpressionTest extends ExpressionTestBase
       final Object expectedResult
   )
   {
-    testHelper.testExpression(target.calciteOperator(), exprs, expectedExpression, expectedResult);
+    testHelper.testExpressionString(target.calciteOperator(), exprs, expectedExpression, expectedResult);
   }
 
   private DruidExpression buildExpectedExpression(Object... args)

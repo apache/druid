@@ -31,7 +31,7 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Test;
@@ -42,7 +42,7 @@ import org.junit.Test;
 public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
 {
   @Test
-  public void testGroupByTimeAndDim() throws Exception
+  public void testGroupByTimeAndDim()
   {
     testQuery(
         "SELECT FLOOR(__time TO MONTH), dim2, SUM(cnt)\n"
@@ -57,12 +57,12 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "timestamp_floor(\"__time\",'P1M',null,'UTC')",
-                                ValueType.LONG
+                                ColumnType.LONG
                             )
                         )
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "d0", ValueType.LONG),
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
                                 new DefaultDimensionSpec("dim2", "d1")
                             )
                         )
@@ -90,7 +90,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTime() throws Exception
+  public void testGroupByDimAndTime()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), SUM(cnt)\n"
@@ -105,13 +105,13 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "timestamp_floor(\"__time\",'P1M',null,'UTC')",
-                                ValueType.LONG
+                                ColumnType.LONG
                             )
                         )
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("dim2", "d0"),
-                                new DefaultDimensionSpec("v0", "d1", ValueType.LONG)
+                                new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -138,7 +138,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTimeWhereOnTime() throws Exception
+  public void testGroupByDimAndTimeWhereOnTime()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), SUM(cnt)\n"
@@ -154,13 +154,13 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "timestamp_floor(\"__time\",'P1M',null,'UTC')",
-                                ValueType.LONG
+                                ColumnType.LONG
                             )
                         )
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("dim2", "d0"),
-                                new DefaultDimensionSpec("v0", "d1", ValueType.LONG)
+                                new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -182,7 +182,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTimeOnDim() throws Exception
+  public void testGroupByDimAndTimeOnDim()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), SUM(cnt)\n"
@@ -198,13 +198,13 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "timestamp_floor(\"__time\",'P1M',null,'UTC')",
-                                ValueType.LONG
+                                ColumnType.LONG
                             )
                         )
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("dim2", "d0"),
-                                new DefaultDimensionSpec("v0", "d1", ValueType.LONG)
+                                new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
                             )
                         )
                         .setDimFilter(new LikeDimFilter("dim2", "a%", null, null))
@@ -227,7 +227,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByTimeAndDimOrderByDim() throws Exception
+  public void testGroupByTimeAndDimOrderByDim()
   {
     testQuery(
         "SELECT FLOOR(__time TO MONTH), dim2, SUM(cnt)\n"
@@ -243,12 +243,12 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "timestamp_floor(\"__time\",'P1M',null,'UTC')",
-                                ValueType.LONG
+                                ColumnType.LONG
                             )
                         )
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "d0", ValueType.LONG),
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
                                 new DefaultDimensionSpec("dim2", "d1")
                             )
                         )
@@ -282,7 +282,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByTimeAndDimOrderByDimDesc() throws Exception
+  public void testGroupByTimeAndDimOrderByDimDesc()
   {
     testQuery(
         "SELECT FLOOR(__time TO MONTH), dim2, SUM(cnt)\n"
@@ -298,12 +298,12 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "timestamp_floor(\"__time\",'P1M',null,'UTC')",
-                                ValueType.LONG
+                                ColumnType.LONG
                             )
                         )
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "d0", ValueType.LONG),
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
                                 new DefaultDimensionSpec("dim2", "d1")
                             )
                         )
@@ -337,7 +337,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTimeOrderByTime() throws Exception
+  public void testGroupByDimAndTimeOrderByTime()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), SUM(cnt)\n"
@@ -353,13 +353,13 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "timestamp_floor(\"__time\",'P1M',null,'UTC')",
-                                ValueType.LONG
+                                ColumnType.LONG
                             )
                         )
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("dim2", "d0"),
-                                new DefaultDimensionSpec("v0", "d1", ValueType.LONG)
+                                new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -394,7 +394,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTimeOrderByTimeDesc() throws Exception
+  public void testGroupByDimAndTimeOrderByTimeDesc()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), SUM(cnt)\n"
@@ -410,13 +410,13 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "timestamp_floor(\"__time\",'P1M',null,'UTC')",
-                                ValueType.LONG
+                                ColumnType.LONG
                             )
                         )
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("dim2", "d0"),
-                                new DefaultDimensionSpec("v0", "d1", ValueType.LONG)
+                                new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -451,7 +451,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTimeOrderByTimeAndDim() throws Exception
+  public void testGroupByDimAndTimeOrderByTimeAndDim()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), SUM(cnt)\n"
@@ -467,13 +467,13 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "timestamp_floor(\"__time\",'P1M',null,'UTC')",
-                                ValueType.LONG
+                                ColumnType.LONG
                             )
                         )
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("dim2", "d0"),
-                                new DefaultDimensionSpec("v0", "d1", ValueType.LONG)
+                                new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -509,7 +509,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTimeOrderByDimAndTime() throws Exception
+  public void testGroupByDimAndTimeOrderByDimAndTime()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), SUM(cnt)\n"
@@ -525,13 +525,13 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "timestamp_floor(\"__time\",'P1M',null,'UTC')",
-                                ValueType.LONG
+                                ColumnType.LONG
                             )
                         )
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("dim2", "d0"),
-                                new DefaultDimensionSpec("v0", "d1", ValueType.LONG)
+                                new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -567,7 +567,7 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testGroupByDimAndTimeAndDimOrderByDimAndTimeDim() throws Exception
+  public void testGroupByDimAndTimeAndDimOrderByDimAndTimeDim()
   {
     testQuery(
         "SELECT dim2, FLOOR(__time TO MONTH), dim1, SUM(cnt)\n"
@@ -583,13 +583,13 @@ public class CalciteSimpleQueryTest extends BaseCalciteQueryTest
                             expressionVirtualColumn(
                                 "v0",
                                 "timestamp_floor(\"__time\",'P1M',null,'UTC')",
-                                ValueType.LONG
+                                ColumnType.LONG
                             )
                         )
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("dim2", "d0"),
-                                new DefaultDimensionSpec("v0", "d1", ValueType.LONG),
+                                new DefaultDimensionSpec("v0", "d1", ColumnType.LONG),
                                 new DefaultDimensionSpec("dim1", "d2")
                             )
                         )

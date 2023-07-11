@@ -34,13 +34,14 @@ import java.io.IOException;
  * @see PartialSegmentMergeTask
  */
 @ExtensionPoint
-public interface ShuffleClient
+public interface ShuffleClient<P extends PartitionLocation>
 {
   /**
    * Fetch the segment file into the local storage for the given supervisorTaskId and the location.
    * If the segment file should be fetched from a remote site, the returned file will be created under the given
    * partitionDir. Otherwise, the returned file can be located in any path.
+   * @return dir containing the unzipped segment files
    */
-  <T, P extends PartitionLocation<T>> File fetchSegmentFile(File partitionDir, String supervisorTaskId, P location)
+  File fetchSegmentFile(File partitionDir, String supervisorTaskId, P location)
       throws IOException;
 }

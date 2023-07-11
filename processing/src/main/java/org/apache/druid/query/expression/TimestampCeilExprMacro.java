@@ -20,19 +20,18 @@
 package org.apache.druid.query.expression;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
 {
@@ -47,9 +46,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() < 2 || args.size() > 4) {
-      throw new IAE("Function[%s] must have 2 to 4 arguments", name());
-    }
+    validationHelperCheckArgumentRange(args, 2, 4);
 
     if (args.stream().skip(1).allMatch(Expr::isLiteral)) {
       return new TimestampCeilExpr(args);
@@ -66,7 +63,7 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     TimestampCeilExpr(final List<Expr> args)
     {
       super(FN_NAME, args);
-      this.granularity = getGranularity(args, ExprUtils.nilBindings());
+      this.granularity = getGranularity(args, InputBindings.nilBindings());
     }
 
     @Nonnull
@@ -89,15 +86,14 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new TimestampCeilExpr(newArgs));
+      return shuttle.visit(new TimestampCeilExpr(shuttle.visitAll(args)));
     }
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingInspector inspector)
+    public ExpressionType getOutputType(InputBindingInspector inspector)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
 
     @Override
@@ -157,15 +153,14 @@ public class TimestampCeilExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public Expr visit(Shuttle shuttle)
     {
-      List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-      return shuttle.visit(new TimestampCeilDynamicExpr(newArgs));
+      return shuttle.visit(new TimestampCeilDynamicExpr(shuttle.visitAll(args)));
     }
 
     @Nullable
     @Override
-    public ExprType getOutputType(InputBindingInspector inspector)
+    public ExpressionType getOutputType(InputBindingInspector inspector)
     {
-      return ExprType.LONG;
+      return ExpressionType.LONG;
     }
   }
 }

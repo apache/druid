@@ -26,6 +26,7 @@ import org.joda.time.Period;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.List;
 
 /**
  */
@@ -44,6 +45,9 @@ public class WorkerConfig
   private int capacity = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1);
 
   @JsonProperty
+  private List<String> baseTaskDirs = null;
+
+  @JsonProperty
   @NotNull
   private String category = DEFAULT_CATEGORY;
 
@@ -53,7 +57,7 @@ public class WorkerConfig
   private long intermediaryPartitionCleanupPeriodSec = 300L;
 
   @JsonProperty
-  private Period intermediaryPartitionTimeout = new Period("P1D");
+  private Period intermediaryPartitionTimeout = new Period("PT5M");
 
   @JsonProperty
   private final long globalIngestionHeapLimitBytes = Runtime.getRuntime().maxMemory() / 6;
@@ -74,6 +78,11 @@ public class WorkerConfig
   public int getCapacity()
   {
     return capacity;
+  }
+
+  public List<String> getBaseTaskDirs()
+  {
+    return baseTaskDirs;
   }
 
   public String getCategory()

@@ -22,7 +22,9 @@ package org.apache.druid.query.groupby;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -52,6 +54,30 @@ public class GroupByQueryRunnerTestHelper
 
     Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query));
     return queryResult.toList();
+  }
+
+  public static <T> Iterable<T> runQueryWithEmitter(
+      QueryRunnerFactory factory,
+      QueryRunner runner,
+      Query<T> query,
+      ServiceEmitter serviceEmitter
+  )
+  {
+    MetricsEmittingQueryRunner<ResultRow> metricsEmittingQueryRunner =
+        new MetricsEmittingQueryRunner<ResultRow>(
+            serviceEmitter,
+            factory.getToolchest(),
+            runner,
+            (obj, lng) -> {},
+            (metrics) -> {}
+        ).withWaitMeasuredFromNow();
+    QueryToolChest toolChest = factory.getToolchest();
+    QueryRunner<T> theRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(toolChest.preMergeQueryDecoration(metricsEmittingQueryRunner)),
+        toolChest
+    );
+
+    return theRunner.run(QueryPlus.wrap(query)).toList();
   }
 
   public static ResultRow createExpectedRow(final GroupByQuery query, final String timestamp, Object... vals)

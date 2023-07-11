@@ -48,7 +48,7 @@ public class HllSketchMergeBufferAggregatorHelper
     this.emptyUnion = new byte[size];
 
     //noinspection ResultOfObjectAllocationIgnored (Union writes to "emptyUnion" as a side effect of construction)
-    new Union(lgK, WritableMemory.wrap(emptyUnion));
+    new Union(lgK, WritableMemory.writableWrap(emptyUnion));
   }
 
   /**
@@ -77,9 +77,9 @@ public class HllSketchMergeBufferAggregatorHelper
    * Helper for implementing {@link org.apache.druid.query.aggregation.BufferAggregator#get} and
    * {@link org.apache.druid.query.aggregation.VectorAggregator#get}.
    */
-  public Object get(ByteBuffer buf, int position)
+  public HllSketch get(ByteBuffer buf, int position)
   {
-    final WritableMemory mem = WritableMemory.wrap(buf, ByteOrder.LITTLE_ENDIAN).writableRegion(position, size);
+    final WritableMemory mem = WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN).writableRegion(position, size);
     final Union union = Union.writableWrap(mem);
     return union.getResult(tgtHllType);
   }

@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.search.Bound;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
@@ -36,8 +36,15 @@ import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.AllFalseBitmapColumnIndex;
+import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
+import org.apache.druid.segment.column.SpatialIndex;
 import org.apache.druid.segment.incremental.SpatialDimensionRowTransformer;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 import java.util.Set;
 
@@ -60,11 +67,40 @@ public class SpatialFilter implements Filter
     this.filterTuning = filterTuning;
   }
 
+  @Nullable
   @Override
-  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    Iterable<ImmutableBitmap> search = selector.getSpatialIndex(dimension).search(bound);
-    return bitmapResultFactory.unionDimensionValueBitmaps(search);
+    if (!Filters.checkFilterTuningUseIndex(dimension, selector, filterTuning)) {
+      return null;
+    }
+    final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
+    final SpatialIndex spatialIndex = indexSupplier == null ? null : indexSupplier.as(SpatialIndex.class);
+    if (spatialIndex == null) {
+      return new AllFalseBitmapColumnIndex(selector);
+    }
+    return new BitmapColumnIndex()
+    {
+      @Override
+      public ColumnIndexCapabilities getIndexCapabilities()
+      {
+        return new SimpleColumnIndexCapabilities(true, true);
+      }
+
+      @Override
+      public double estimateSelectivity(int totalRows)
+      {
+        // selectivity estimation for multi-value columns is not implemented yet.
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+      {
+        Iterable<ImmutableBitmap> search = spatialIndex.getRTree().search(bound);
+        return bitmapResultFactory.unionDimensionValueBitmaps(search);
+      }
+    };
   }
 
   @Override
@@ -79,19 +115,7 @@ public class SpatialFilter implements Filter
   }
 
   @Override
-  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-  {
-    return selector.getBitmapIndex(dimension) != null;
-  }
-
-  @Override
-  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-  {
-    return Filters.shouldUseBitmapIndex(this, selector, filterTuning);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
     return false;
   }
@@ -103,7 +127,7 @@ public class SpatialFilter implements Filter
   }
 
   @Override
-  public double estimateSelectivity(BitmapIndexSelector indexSelector)
+  public double estimateSelectivity(ColumnIndexSelector indexSelector)
   {
     // selectivity estimation for multi-value columns is not implemented yet.
     throw new UnsupportedOperationException();

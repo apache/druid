@@ -22,6 +22,7 @@ package org.apache.druid.initialization;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
+import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.junit.Assert;
@@ -41,6 +42,7 @@ public class ServerConfigTest
     ServerConfig defaultConfig2 = OBJECT_MAPPER.readValue(defaultConfigJson, ServerConfig.class);
     Assert.assertEquals(defaultConfig, defaultConfig2);
     Assert.assertFalse(defaultConfig2.isEnableForwardedRequestCustomizer());
+    Assert.assertFalse(defaultConfig2.isEnableHSTS());
 
     ServerConfig modifiedConfig = new ServerConfig(
         999,
@@ -57,16 +59,24 @@ public class ServerConfigTest
         defaultConfig.getInflateBufferSize(),
         defaultConfig.getCompressionLevel(),
         true,
-        ImmutableList.of(HttpMethod.OPTIONS)
+        ImmutableList.of(HttpMethod.OPTIONS),
+        true,
+        new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(".*")),
+        "my-cool-policy",
+        true
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);
     Assert.assertEquals(modifiedConfig, modifiedConfig2);
     Assert.assertEquals(999, modifiedConfig2.getNumThreads());
     Assert.assertEquals(888, modifiedConfig2.getQueueSize());
+    Assert.assertTrue(modifiedConfig2.getErrorResponseTransformStrategy() instanceof AllowedRegexErrorResponseTransformStrategy);
     Assert.assertTrue(modifiedConfig2.isEnableForwardedRequestCustomizer());
     Assert.assertEquals(1, modifiedConfig2.getAllowedHttpMethods().size());
     Assert.assertTrue(modifiedConfig2.getAllowedHttpMethods().contains(HttpMethod.OPTIONS));
+    Assert.assertEquals("my-cool-policy", modifiedConfig.getContentSecurityPolicy());
+    Assert.assertEquals("my-cool-policy", modifiedConfig2.getContentSecurityPolicy());
+    Assert.assertTrue(modifiedConfig2.isEnableHSTS());
   }
 
   @Test

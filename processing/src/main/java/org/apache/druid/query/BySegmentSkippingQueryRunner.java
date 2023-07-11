@@ -39,7 +39,7 @@ public abstract class BySegmentSkippingQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
   {
-    if (QueryContexts.isBySegment(queryPlus.getQuery())) {
+    if (queryPlus.getQuery().context().isBySegment()) {
       return baseRunner.run(queryPlus, responseContext);
     }
 

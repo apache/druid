@@ -16,27 +16,25 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .overlord-dynamic-config-dialog {
-  &.bp3-dialog {
+  &.#{$bp-ns}-dialog {
     margin-top: 5vh;
     top: 5%;
     width: 600px;
   }
 
-  .bp3-dialog-body {
+  .loader {
+    position: relative;
+  }
+
+  .#{$bp-ns}-dialog-body {
     max-height: 70vh;
 
     .auto-form {
       max-height: 60vh;
       overflow: auto;
-
-      .ace_editor {
-        height: 25vh !important;
-      }
-    }
-
-    .html-select {
-      width: 195px;
     }
 
     .config-comment {

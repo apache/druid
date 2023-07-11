@@ -26,7 +26,7 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.SegmentTimeline;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -70,6 +70,7 @@ public class DruidCoordinatorRuntimeParams
   private final CoordinatorStats stats;
   private final BalancerStrategy balancerStrategy;
   private final Set<String> broadcastDatasources;
+  private final @Nullable RoundRobinServerSelector roundRobinServerSelector;
 
   private DruidCoordinatorRuntimeParams(
       long startTimeNanos,
@@ -80,6 +81,7 @@ public class DruidCoordinatorRuntimeParams
       @Nullable DataSourcesSnapshot dataSourcesSnapshot,
       Map<String, LoadQueuePeon> loadManagementPeons,
       ReplicationThrottler replicationManager,
+      @Nullable RoundRobinServerSelector roundRobinServerSelector,
       ServiceEmitter emitter,
       CoordinatorDynamicConfig coordinatorDynamicConfig,
       CoordinatorCompactionConfig coordinatorCompactionConfig,
@@ -96,6 +98,7 @@ public class DruidCoordinatorRuntimeParams
     this.dataSourcesSnapshot = dataSourcesSnapshot;
     this.loadManagementPeons = loadManagementPeons;
     this.replicationManager = replicationManager;
+    this.roundRobinServerSelector = roundRobinServerSelector;
     this.emitter = emitter;
     this.coordinatorDynamicConfig = coordinatorDynamicConfig;
     this.coordinatorCompactionConfig = coordinatorCompactionConfig;
@@ -128,7 +131,7 @@ public class DruidCoordinatorRuntimeParams
    * Creates and returns a "dataSource -> VersionedIntervalTimeline[version String, DataSegment]" map with "used"
    * segments.
    */
-  public Map<String, VersionedIntervalTimeline<String, DataSegment>> getUsedSegmentsTimelinesPerDataSource()
+  public Map<String, SegmentTimeline> getUsedSegmentsTimelinesPerDataSource()
   {
     Preconditions.checkState(dataSourcesSnapshot != null, "dataSourcesSnapshot or usedSegments must be set");
     return dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource();
@@ -148,6 +151,12 @@ public class DruidCoordinatorRuntimeParams
   public ReplicationThrottler getReplicationManager()
   {
     return replicationManager;
+  }
+
+  @Nullable
+  public RoundRobinServerSelector getRoundRobinServerSelector()
+  {
+    return roundRobinServerSelector;
   }
 
   public ServiceEmitter getEmitter()
@@ -211,6 +220,7 @@ public class DruidCoordinatorRuntimeParams
         dataSourcesSnapshot,
         loadManagementPeons,
         replicationManager,
+        roundRobinServerSelector,
         emitter,
         coordinatorDynamicConfig,
         coordinatorCompactionConfig,
@@ -231,6 +241,7 @@ public class DruidCoordinatorRuntimeParams
         null, // dataSourcesSnapshot
         loadManagementPeons,
         replicationManager,
+        roundRobinServerSelector,
         emitter,
         coordinatorDynamicConfig,
         coordinatorCompactionConfig,
@@ -250,6 +261,7 @@ public class DruidCoordinatorRuntimeParams
     private @Nullable DataSourcesSnapshot dataSourcesSnapshot;
     private final Map<String, LoadQueuePeon> loadManagementPeons;
     private ReplicationThrottler replicationManager;
+    private @Nullable RoundRobinServerSelector roundRobinServerSelector;
     private ServiceEmitter emitter;
     private CoordinatorDynamicConfig coordinatorDynamicConfig;
     private CoordinatorCompactionConfig coordinatorCompactionConfig;
@@ -267,6 +279,7 @@ public class DruidCoordinatorRuntimeParams
       this.dataSourcesSnapshot = null;
       this.loadManagementPeons = new HashMap<>();
       this.replicationManager = null;
+      this.roundRobinServerSelector = null;
       this.emitter = null;
       this.stats = new CoordinatorStats();
       this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
@@ -283,6 +296,7 @@ public class DruidCoordinatorRuntimeParams
         @Nullable DataSourcesSnapshot dataSourcesSnapshot,
         Map<String, LoadQueuePeon> loadManagementPeons,
         ReplicationThrottler replicationManager,
+        @Nullable RoundRobinServerSelector roundRobinServerSelector,
         ServiceEmitter emitter,
         CoordinatorDynamicConfig coordinatorDynamicConfig,
         CoordinatorCompactionConfig coordinatorCompactionConfig,
@@ -299,6 +313,7 @@ public class DruidCoordinatorRuntimeParams
       this.dataSourcesSnapshot = dataSourcesSnapshot;
       this.loadManagementPeons = loadManagementPeons;
       this.replicationManager = replicationManager;
+      this.roundRobinServerSelector = roundRobinServerSelector;
       this.emitter = emitter;
       this.coordinatorDynamicConfig = coordinatorDynamicConfig;
       this.coordinatorCompactionConfig = coordinatorCompactionConfig;
@@ -319,6 +334,7 @@ public class DruidCoordinatorRuntimeParams
           dataSourcesSnapshot,
           loadManagementPeons,
           replicationManager,
+          getOrCreateRoundRobinServerSelector(),
           emitter,
           coordinatorDynamicConfig,
           coordinatorCompactionConfig,
@@ -326,6 +342,18 @@ public class DruidCoordinatorRuntimeParams
           balancerStrategy,
           broadcastDatasources
       );
+    }
+
+    private RoundRobinServerSelector getOrCreateRoundRobinServerSelector()
+    {
+      if (druidCluster == null || coordinatorDynamicConfig == null
+          || !coordinatorDynamicConfig.isUseRoundRobinSegmentAssignment()) {
+        return null;
+      } else if (roundRobinServerSelector == null) {
+        return new RoundRobinServerSelector(druidCluster);
+      } else {
+        return roundRobinServerSelector;
+      }
     }
 
     public Builder withStartTimeNanos(long startTimeNanos)
@@ -378,7 +406,7 @@ public class DruidCoordinatorRuntimeParams
     /** This method must be used in test code only. */
     @VisibleForTesting
     public Builder withUsedSegmentsTimelinesPerDataSourceInTest(
-        Map<String, VersionedIntervalTimeline<String, DataSegment>> usedSegmentsTimelinesPerDataSource
+        Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource
     )
     {
       this.dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegmentsTimelines(
@@ -398,6 +426,12 @@ public class DruidCoordinatorRuntimeParams
     public Builder withReplicationManager(ReplicationThrottler replicationManager)
     {
       this.replicationManager = replicationManager;
+      return this;
+    }
+
+    public Builder withRoundRobinServerSelector(RoundRobinServerSelector roundRobinServerSelector)
+    {
+      this.roundRobinServerSelector = roundRobinServerSelector;
       return this;
     }
 

@@ -17,13 +17,7 @@
  */
 
 .auto-form {
-  // Popover in info label
-  label.bp3-label {
-    position: relative;
-
-    .bp3-text-muted {
-      position: absolute;
-      right: 0;
-    }
+  .custom-input input {
+    cursor: pointer;
   }
 }

@@ -19,11 +19,11 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { Capabilities } from '../../../utils';
+import { Capabilities } from '../../../helpers';
 
 import { DatasourcesCard } from './datasources-card';
 
-describe('datasources card', () => {
+describe('DatasourcesCard', () => {
   it('matches snapshot', () => {
     const datasourcesCard = <DatasourcesCard capabilities={Capabilities.FULL} />;
 

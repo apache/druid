@@ -69,7 +69,8 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
           {
             return 2;
           }
-        }
+        },
+        null
     );
 
     int numTasks = 6;

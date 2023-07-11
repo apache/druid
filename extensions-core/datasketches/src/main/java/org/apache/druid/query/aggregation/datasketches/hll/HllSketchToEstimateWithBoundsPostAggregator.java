@@ -27,7 +27,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -70,9 +71,9 @@ public class HllSketchToEstimateWithBoundsPostAggregator implements PostAggregat
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getType(ColumnInspector signature)
   {
-    return ValueType.DOUBLE_ARRAY;
+    return ColumnType.DOUBLE_ARRAY;
   }
 
   @JsonProperty
@@ -102,7 +103,7 @@ public class HllSketchToEstimateWithBoundsPostAggregator implements PostAggregat
   @Override
   public double[] compute(final Map<String, Object> combinedAggregators)
   {
-    final HllSketch sketch = (HllSketch) field.compute(combinedAggregators);
+    final HllSketchHolder sketch = HllSketchHolder.fromObj(field.compute(combinedAggregators));
     return new double[] {sketch.getEstimate(), sketch.getLowerBound(numStdDevs), sketch.getUpperBound(numStdDevs)};
   }
 

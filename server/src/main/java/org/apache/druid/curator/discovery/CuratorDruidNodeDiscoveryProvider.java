@@ -155,7 +155,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     closer.registerAll(nodeRoleWatchers.values());
     closer.registerAll(nodeDiscoverers);
 
-    CloseableUtils.closeBoth(closer, listenerExecutor::shutdownNow);
+    CloseableUtils.closeAll(closer, listenerExecutor::shutdownNow);
   }
 
   private static class NodeRoleWatcher implements DruidNodeDiscovery, Closeable
@@ -213,7 +213,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     @Override
     public void close() throws IOException
     {
-      CloseableUtils.closeBoth(cache, cacheExecutor::shutdownNow);
+      CloseableUtils.closeAll(cache, cacheExecutor::shutdownNow);
     }
 
     @Override
@@ -246,12 +246,12 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
               break;
             }
             default: {
-              log.warn("Ignored event type[%s] for node watcher of role[%s].", event.getType(), nodeRole.getJsonName());
+              log.warn("Ignored event type [%s] for node watcher of role [%s].", event.getType(), nodeRole.getJsonName());
             }
           }
         }
         catch (Exception ex) {
-          log.error(ex, "Unknown error in node watcher of role[%s].", nodeRole.getJsonName());
+          log.error(ex, "Unknown error in node watcher of role [%s].", nodeRole.getJsonName());
         }
       }
     }

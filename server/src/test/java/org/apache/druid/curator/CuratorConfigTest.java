@@ -33,6 +33,7 @@ public class CuratorConfigTest extends JsonConfigTesterBase<CuratorConfig>
     propertyValues.put(getPropertyKey("user"), "test-zk-user");
     propertyValues.put(getPropertyKey("pwd"), "test-zk-pwd");
     propertyValues.put(getPropertyKey("authScheme"), "auth");
+    propertyValues.put(getPropertyKey("maxZkRetries"), "20");
     testProperties.putAll(propertyValues);
     configProvider.inject(testProperties, configurator);
     CuratorConfig config = configProvider.get().get();
@@ -41,5 +42,17 @@ public class CuratorConfigTest extends JsonConfigTesterBase<CuratorConfig>
     Assert.assertEquals("test-zk-user", config.getZkUser());
     Assert.assertEquals("test-zk-pwd", config.getZkPwd());
     Assert.assertEquals("auth", config.getAuthScheme());
+    Assert.assertEquals(20, config.getMaxZkRetries());
+  }
+
+  @Test
+  public void testCreate()
+  {
+    CuratorConfig config = CuratorConfig.create("foo:2181,bar:2181");
+    Assert.assertEquals("foo:2181,bar:2181", config.getZkHosts());
+    Assert.assertEquals(false, config.getEnableAcl());
+    Assert.assertNull(config.getZkUser());
+    Assert.assertEquals("digest", config.getAuthScheme());
+    Assert.assertEquals(29, config.getMaxZkRetries());
   }
 }

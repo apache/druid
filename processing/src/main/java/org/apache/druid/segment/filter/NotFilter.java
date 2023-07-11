@@ -21,7 +21,7 @@ package org.apache.druid.segment.filter;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.BaseVectorValueMatcher;
@@ -32,8 +32,11 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.column.BitmapColumnIndex;
+import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -49,13 +52,37 @@ public class NotFilter implements Filter
     this.baseFilter = baseFilter;
   }
 
+  @Nullable
   @Override
-  public <T> T getBitmapResult(BitmapIndexSelector selector, BitmapResultFactory<T> bitmapResultFactory)
+  public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
-    return bitmapResultFactory.complement(
-        baseFilter.getBitmapResult(selector, bitmapResultFactory),
-        selector.getNumRows()
-    );
+    final BitmapColumnIndex baseIndex = baseFilter.getBitmapColumnIndex(selector);
+    if (baseIndex != null && baseIndex.getIndexCapabilities().isInvertible()) {
+      return new BitmapColumnIndex()
+      {
+        @Override
+        public ColumnIndexCapabilities getIndexCapabilities()
+        {
+          return baseIndex.getIndexCapabilities();
+        }
+
+        @Override
+        public double estimateSelectivity(int totalRows)
+        {
+          return 1. - baseFilter.estimateSelectivity(selector);
+        }
+
+        @Override
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        {
+          return bitmapResultFactory.complement(
+              baseIndex.computeBitmapResult(bitmapResultFactory),
+              selector.getNumRows()
+          );
+        }
+      };
+    }
+    return null;
   }
 
   @Override
@@ -126,27 +153,9 @@ public class NotFilter implements Filter
   }
 
   @Override
-  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
-  {
-    return baseFilter.supportsBitmapIndex(selector);
-  }
-
-  @Override
-  public boolean shouldUseBitmapIndex(BitmapIndexSelector selector)
-  {
-    return baseFilter.shouldUseBitmapIndex(selector);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
+  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
   {
     return baseFilter.supportsSelectivityEstimation(columnSelector, indexSelector);
-  }
-
-  @Override
-  public double estimateSelectivity(BitmapIndexSelector indexSelector)
-  {
-    return 1. - baseFilter.estimateSelectivity(indexSelector);
   }
 
   @Override

@@ -16,10 +16,12 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 $side-bar-width: 120px;
 
 .table-action-dialog {
-  &.bp3-dialog {
+  &.#{$bp-ns}-dialog {
     position: relative;
     width: 90vw;
     height: 85vh;
@@ -36,7 +38,7 @@ $side-bar-width: 120px;
     }
   }
 
-  .bp3-dialog-body {
+  .#{$bp-ns}-dialog-body {
     position: relative;
     margin: 0;
 
@@ -59,11 +61,11 @@ $side-bar-width: 120px;
           background-color: #2c74a8;
         }
 
-        .bp3-icon {
+        .#{$bp-ns}-icon {
           margin-right: 0;
         }
 
-        .bp3-button-text {
+        .#{$bp-ns}-button-text {
           margin-top: 5px;
         }
       }
@@ -79,7 +81,7 @@ $side-bar-width: 120px;
     }
   }
 
-  .bp3-dialog-footer {
+  .#{$bp-ns}-dialog-footer {
     position: relative;
 
     .footer-actions-left {

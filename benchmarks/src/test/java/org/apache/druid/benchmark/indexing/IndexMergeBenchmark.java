@@ -131,7 +131,7 @@ public class IndexMergeBenchmark
           rowsPerSegment
       );
 
-      IncrementalIndex<?> incIndex = makeIncIndex();
+      IncrementalIndex incIndex = makeIncIndex();
 
       gen.addToIndex(incIndex, rowsPerSegment);
 
@@ -141,7 +141,7 @@ public class IndexMergeBenchmark
       File indexFile = indexMergerV9.persist(
           incIndex,
           tmpDir,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           null
       );
 
@@ -157,7 +157,7 @@ public class IndexMergeBenchmark
   {
     File tmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-V9-" + System.currentTimeMillis(), ".TEMPFILE");
     tmpFile.delete();
-    tmpFile.mkdirs();
+    FileUtils.mkdirp(tmpFile);
     try {
       log.info(tmpFile.getAbsolutePath() + " isFile: " + tmpFile.isFile() + " isDir:" + tmpFile.isDirectory());
 
@@ -166,7 +166,7 @@ public class IndexMergeBenchmark
           rollup,
           schemaInfo.getAggsArray(),
           tmpFile,
-          new IndexSpec(),
+          IndexSpec.DEFAULT,
           null,
           -1
       );

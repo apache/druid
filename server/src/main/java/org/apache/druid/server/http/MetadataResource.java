@@ -182,10 +182,10 @@ public class MetadataResource
     final Stream<DataSegment> usedSegments = dataSourcesWithUsedSegments
         .stream()
         .flatMap(t -> t.getSegments().stream());
-    final Set<SegmentId> overshadowedSegments = dataSourcesSnapshot.getOvershadowedSegments();
+    final Set<DataSegment> overshadowedSegments = dataSourcesSnapshot.getOvershadowedSegments();
 
     final Stream<SegmentWithOvershadowedStatus> usedSegmentsWithOvershadowedStatus = usedSegments
-        .map(segment -> new SegmentWithOvershadowedStatus(segment, overshadowedSegments.contains(segment.getId())));
+        .map(segment -> new SegmentWithOvershadowedStatus(segment, overshadowedSegments.contains(segment)));
 
     final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections
         .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));

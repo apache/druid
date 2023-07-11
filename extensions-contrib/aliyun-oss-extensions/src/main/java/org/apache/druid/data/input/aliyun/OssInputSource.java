@@ -21,32 +21,33 @@ package org.apache.druid.data.input.aliyun;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.model.OSSObjectSummary;
+import com.aliyun.oss.model.ObjectMetadata;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.Iterators;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.InputEntity;
-import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputSplit;
-import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.data.input.impl.CloudObjectSplitWidget;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.storage.aliyun.OssInputDataConfig;
 import org.apache.druid.storage.aliyun.OssStorageDruidModule;
 import org.apache.druid.storage.aliyun.OssUtils;
-import org.apache.druid.utils.Streams;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.nio.file.FileSystems;
+import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class OssInputSource extends CloudObjectInputSource
 {
@@ -74,10 +75,11 @@ public class OssInputSource extends CloudObjectInputSource
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
+      @JsonProperty("objectGlob") @Nullable String objectGlob,
       @JsonProperty("properties") @Nullable OssClientConfig inputSourceConfig
   )
   {
-    super(OssStorageDruidModule.SCHEME, uris, prefixes, objects);
+    super(OssStorageDruidModule.SCHEME, uris, prefixes, objects, objectGlob);
     this.inputDataConfig = Preconditions.checkNotNull(inputDataConfig, "inputDataConfig");
     Preconditions.checkNotNull(client, "client");
     this.inputSourceConfig = inputSourceConfig;
@@ -107,18 +109,37 @@ public class OssInputSource extends CloudObjectInputSource
   }
 
   @Override
-  protected Stream<InputSplit<List<CloudObjectLocation>>> getPrefixesSplitStream(@Nonnull SplitHintSpec splitHintSpec)
+  protected CloudObjectSplitWidget getSplitWidget()
   {
-    final Iterator<List<OSSObjectSummary>> splitIterator = splitHintSpec.split(
-        getIterableObjectsFromPrefixes().iterator(),
-        object -> new InputFileAttribute(object.getSize())
-    );
+    class SplitWidget implements CloudObjectSplitWidget
+    {
+      @Override
+      public Iterator<LocationWithSize> getDescriptorIteratorForPrefixes(List<URI> prefixes)
+      {
+        return Iterators.transform(
+            OssUtils.objectSummaryIterator(
+                clientSupplier.get(),
+                getPrefixes(),
+                inputDataConfig.getMaxListingLength()
+            ),
+            object -> new LocationWithSize(object.getBucketName(), object.getKey(), object.getSize())
+        );
+      }
 
-    return Streams.sequentialStreamFrom(splitIterator)
-                  .map(objects -> objects.stream()
-                                         .map(OssUtils::summaryToCloudObjectLocation)
-                                         .collect(Collectors.toList()))
-                  .map(InputSplit::new);
+      @Override
+      public long getObjectSize(CloudObjectLocation location)
+      {
+        final ObjectMetadata objectMetadata = OssUtils.getSingleObjectMetadata(
+            clientSupplier.get(),
+            location.getBucket(),
+            location.getPath()
+        );
+
+        return objectMetadata.getContentLength();
+      }
+    }
+
+    return new SplitWidget();
   }
 
   @Override
@@ -130,6 +151,7 @@ public class OssInputSource extends CloudObjectInputSource
         null,
         null,
         split.get(),
+        getObjectGlob(),
         getOssInputSourceConfig()
     );
   }
@@ -163,16 +185,31 @@ public class OssInputSource extends CloudObjectInputSource
            "uris=" + getUris() +
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
+           ", objectGlob=" + getObjectGlob() +
            ", ossInputSourceConfig=" + getOssInputSourceConfig() +
            '}';
   }
 
   private Iterable<OSSObjectSummary> getIterableObjectsFromPrefixes()
   {
-    return () -> OssUtils.objectSummaryIterator(
-        clientSupplier.get(),
-        getPrefixes(),
-        inputDataConfig.getMaxListingLength()
-    );
+    return () -> {
+      Iterator<OSSObjectSummary> iterator = OssUtils.objectSummaryIterator(
+          clientSupplier.get(),
+          getPrefixes(),
+          inputDataConfig.getMaxListingLength()
+      );
+
+      // Skip files that didn't match glob filter.
+      if (StringUtils.isNotBlank(getObjectGlob())) {
+        PathMatcher m = FileSystems.getDefault().getPathMatcher("glob:" + getObjectGlob());
+
+        iterator = Iterators.filter(
+            iterator,
+            object -> m.matches(Paths.get(object.getKey()))
+        );
+      }
+
+      return iterator;
+    };
   }
 }

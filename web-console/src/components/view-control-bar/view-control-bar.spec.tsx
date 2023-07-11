@@ -21,7 +21,7 @@ import React from 'react';
 
 import { ViewControlBar } from './view-control-bar';
 
-describe('view control bar snapshot', () => {
+describe('ViewControlBar', () => {
   it('matches snapshot', () => {
     const viewControlBar = (
       <ViewControlBar label="A label">

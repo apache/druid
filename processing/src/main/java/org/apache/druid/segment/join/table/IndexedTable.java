@@ -19,11 +19,12 @@
 
 package org.apache.druid.segment.join.table;
 
-import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ReferenceCountedObject;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -119,7 +120,7 @@ public interface IndexedTable extends ReferenceCountedObject, Closeable
     /**
      * Returns the natural key type for the index.
      */
-    ValueType keyType();
+    ColumnType keyType();
 
     /**
      * Returns whether keys are unique in this index. If this returns true, then {@link #find(Object)} will only ever
@@ -133,7 +134,7 @@ public interface IndexedTable extends ReferenceCountedObject, Closeable
      * If "key" is some type other than the natural type {@link #keyType()}, it will be converted before checking
      * the index.
      */
-    IntList find(Object key);
+    IntSortedSet find(Object key);
 
     /**
      * Returns the row number corresponding to "key" in this index, or {@link #NOT_FOUND} if the key does not exist

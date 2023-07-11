@@ -21,7 +21,6 @@ package org.apache.druid.storage.google;
 
 import com.google.api.client.http.InputStreamContent;
 import com.google.common.base.Optional;
-import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.IOE;
@@ -75,6 +74,14 @@ public class GoogleTaskLogs implements TaskLogs
     pushTaskFile(reportFile, taskKey);
   }
 
+  @Override
+  public void pushTaskStatus(String taskid, File statusFile) throws IOException
+  {
+    final String taskKey = getTaskStatusKey(taskid);
+    LOG.info("Pushing task status %s to: %s", statusFile, taskKey);
+    pushTaskFile(statusFile, taskKey);
+  }
+
   private void pushTaskFile(final File logFile, final String taskKey) throws IOException
   {
     try (final InputStream fileStream = Files.newInputStream(logFile.toPath())) {
@@ -103,20 +110,28 @@ public class GoogleTaskLogs implements TaskLogs
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset) throws IOException
+  public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid);
     return streamTaskFile(taskid, offset, taskKey);
   }
 
   @Override
-  public Optional<ByteSource> streamTaskReports(String taskid) throws IOException
+  public Optional<InputStream> streamTaskReports(String taskid) throws IOException
   {
     final String taskKey = getTaskReportKey(taskid);
     return streamTaskFile(taskid, 0, taskKey);
   }
 
-  private Optional<ByteSource> streamTaskFile(final String taskid, final long offset, String taskKey) throws IOException
+  @Override
+  public Optional<InputStream> streamTaskStatus(String taskid) throws IOException
+  {
+    final String taskKey = getTaskStatusKey(taskid);
+    return streamTaskFile(taskid, 0, taskKey);
+  }
+
+  private Optional<InputStream> streamTaskFile(final String taskid, final long offset, String taskKey)
+      throws IOException
   {
     try {
       if (!storage.exists(config.getBucket(), taskKey)) {
@@ -124,32 +139,22 @@ public class GoogleTaskLogs implements TaskLogs
       }
 
       final long length = storage.size(config.getBucket(), taskKey);
+      try {
+        final long start;
 
-      return Optional.of(
-          new ByteSource()
-          {
-            @Override
-            public InputStream openStream() throws IOException
-            {
-              try {
-                final long start;
+        if (offset > 0 && offset < length) {
+          start = offset;
+        } else if (offset < 0 && (-1 * offset) < length) {
+          start = length + offset;
+        } else {
+          start = 0;
+        }
 
-                if (offset > 0 && offset < length) {
-                  start = offset;
-                } else if (offset < 0 && (-1 * offset) < length) {
-                  start = length + offset;
-                } else {
-                  start = 0;
-                }
-
-                return new GoogleByteSource(storage, config.getBucket(), taskKey).openStream(start);
-              }
-              catch (Exception e) {
-                throw new IOException(e);
-              }
-            }
-          }
-      );
+        return Optional.of(new GoogleByteSource(storage, config.getBucket(), taskKey).openStream(start));
+      }
+      catch (Exception e) {
+        throw new IOException(e);
+      }
     }
     catch (IOException e) {
       throw new IOE(e, "Failed to stream logs from: %s", taskKey);
@@ -164,6 +169,11 @@ public class GoogleTaskLogs implements TaskLogs
   private String getTaskReportKey(String taskid)
   {
     return config.getPrefix() + "/" + taskid.replace(':', '_') + ".report.json";
+  }
+
+  private String getTaskStatusKey(String taskid)
+  {
+    return config.getPrefix() + "/" + taskid.replace(':', '_') + ".status.json";
   }
 
   @Override

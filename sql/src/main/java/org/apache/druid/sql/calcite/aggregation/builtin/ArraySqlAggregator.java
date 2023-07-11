@@ -34,16 +34,14 @@ import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
-import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -54,7 +52,6 @@ import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class ArraySqlAggregator implements SqlAggregator
@@ -82,62 +79,43 @@ public class ArraySqlAggregator implements SqlAggregator
       boolean finalizeAggregations
   )
   {
-
-    final List<DruidExpression> arguments = aggregateCall
+    final List<RexNode> arguments = aggregateCall
         .getArgList()
         .stream()
-        .map(i -> Expressions.fromFieldAccess(rowSignature, project, i))
-        .map(rexNode -> Expressions.toDruidExpression(plannerContext, rowSignature, rexNode))
+        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
         .collect(Collectors.toList());
-
-    if (arguments.stream().anyMatch(Objects::isNull)) {
-      return null;
-    }
 
     Integer maxSizeBytes = null;
     if (arguments.size() > 1) {
-      RexNode maxBytes = Expressions.fromFieldAccess(
-          rowSignature,
-          project,
-          aggregateCall.getArgList().get(1)
-      );
+      RexNode maxBytes = arguments.get(1);
       if (!maxBytes.isA(SqlKind.LITERAL)) {
         // maxBytes must be a literal
         return null;
       }
       maxSizeBytes = ((Number) RexLiteral.value(maxBytes)).intValue();
     }
-    final DruidExpression arg = arguments.get(0);
+    final DruidExpression arg = Expressions.toDruidExpression(plannerContext, rowSignature, arguments.get(0));
+    if (arg == null) {
+      // can't translate argument
+      return null;
+    }
     final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
 
     final String fieldName;
     final String initialvalue;
-    final ValueType elementType;
-    final ValueType druidType = Calcites.getValueTypeForRelDataTypeFull(aggregateCall.getType());
-    if (druidType == null) {
+    final ColumnType druidType = Calcites.getValueTypeForRelDataTypeFull(aggregateCall.getType());
+    final ColumnType elementType;
+    if (druidType == null || !druidType.isArray()) {
       initialvalue = "[]";
-      elementType = ValueType.STRING;
+      elementType = ColumnType.STRING;
     } else {
-      switch (druidType) {
-        case LONG_ARRAY:
-          initialvalue = "<LONG>[]";
-          elementType = ValueType.LONG;
-          break;
-        case DOUBLE_ARRAY:
-          initialvalue = "<DOUBLE>[]";
-          elementType = ValueType.DOUBLE;
-          break;
-        default:
-          initialvalue = "[]";
-          elementType = ValueType.STRING;
-          break;
-      }
+      initialvalue = ExpressionType.fromColumnTypeStrict(druidType).asTypeString() + "[]";
+      elementType = (ColumnType) druidType.getElementType();
     }
     if (arg.isDirectColumnAccess()) {
       fieldName = arg.getDirectColumn();
     } else {
-      VirtualColumn vc = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(plannerContext, arg, elementType);
-      fieldName = vc.getOutputName();
+      fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, elementType);
     }
 
     if (aggregateCall.isDistinct()) {
@@ -149,6 +127,8 @@ public class ArraySqlAggregator implements SqlAggregator
               initialvalue,
               null,
               true,
+              true,
+              false,
               StringUtils.format("array_set_add(\"__acc\", \"%s\")", fieldName),
               StringUtils.format("array_set_add_all(\"__acc\", \"%s\")", name),
               null,
@@ -166,6 +146,8 @@ public class ArraySqlAggregator implements SqlAggregator
               initialvalue,
               null,
               true,
+              true,
+              false,
               StringUtils.format("array_append(\"__acc\", \"%s\")", fieldName),
               StringUtils.format("array_concat(\"__acc\", \"%s\")", name),
               null,
@@ -183,13 +165,9 @@ public class ArraySqlAggregator implements SqlAggregator
     public RelDataType inferReturnType(SqlOperatorBinding sqlOperatorBinding)
     {
       RelDataType type = sqlOperatorBinding.getOperandType(0);
-      if (SqlTypeUtil.isArray(type)) {
-        throw new ISE("Cannot use ARRAY_AGG on array inputs %s", type);
-      }
-      return Calcites.createSqlArrayTypeWithNullability(
-          sqlOperatorBinding.getTypeFactory(),
-          type.getSqlTypeName(),
-          true
+      return sqlOperatorBinding.getTypeFactory().createArrayType(
+          type,
+          -1
       );
     }
   }
@@ -209,7 +187,7 @@ public class ArraySqlAggregator implements SqlAggregator
           OperandTypes.or(
             OperandTypes.ANY,
             OperandTypes.and(
-                OperandTypes.sequence(StringUtils.format("'%s'(expr, maxSizeBytes)", NAME), OperandTypes.ANY, OperandTypes.POSITIVE_INTEGER_LITERAL),
+                OperandTypes.sequence(StringUtils.format("%s(expr, maxSizeBytes)", NAME), OperandTypes.ANY, OperandTypes.POSITIVE_INTEGER_LITERAL),
                 OperandTypes.family(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC)
             )
           ),

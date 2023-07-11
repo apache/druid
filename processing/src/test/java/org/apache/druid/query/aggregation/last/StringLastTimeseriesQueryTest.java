@@ -30,7 +30,8 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
-import org.apache.druid.query.aggregation.SerializablePairLongStringSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde;
+import org.apache.druid.query.timeseries.DefaultTimeseriesQueryMetrics;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -44,6 +45,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,11 +53,13 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.List;
 
-public class StringLastTimeseriesQueryTest
+public class StringLastTimeseriesQueryTest extends InitializedNullHandlingTest
 {
   private static final String VISITOR_ID = "visitor_id";
   private static final String CLIENT_TYPE = "client_type";
   private static final String LAST_CLIENT_TYPE = "last_client_type";
+
+  private static final String MULTI_VALUE = "mv";
 
   private static final DateTime TIME1 = DateTimes.of("2016-03-04T00:00:00.000Z");
   private static final DateTime TIME2 = DateTimes.of("2016-03-04T01:00:00.000Z");
@@ -66,7 +70,7 @@ public class StringLastTimeseriesQueryTest
   @Before
   public void setUp() throws IndexSizeExceededException
   {
-    final SerializablePairLongStringSerde serde = new SerializablePairLongStringSerde();
+    final SerializablePairLongStringComplexMetricSerde serde = new SerializablePairLongStringComplexMetricSerde();
     ComplexMetrics.registerSerde(serde.getTypeName(), serde);
 
     incrementalIndex = new OnheapIncrementalIndex.Builder()
@@ -74,7 +78,7 @@ public class StringLastTimeseriesQueryTest
             new IncrementalIndexSchema.Builder()
                 .withQueryGranularity(Granularities.SECOND)
                 .withMetrics(new CountAggregatorFactory("cnt"))
-                .withMetrics(new StringLastAggregatorFactory(LAST_CLIENT_TYPE, CLIENT_TYPE, 1024))
+                .withMetrics(new StringLastAggregatorFactory(LAST_CLIENT_TYPE, CLIENT_TYPE, null, 1024))
                 .build()
         )
         .setMaxRowCount(1000)
@@ -83,22 +87,22 @@ public class StringLastTimeseriesQueryTest
     incrementalIndex.add(
         new MapBasedInputRow(
             TIME1,
-            Lists.newArrayList(VISITOR_ID, CLIENT_TYPE),
-            ImmutableMap.of(VISITOR_ID, "0", CLIENT_TYPE, "iphone")
+            Lists.newArrayList(VISITOR_ID, CLIENT_TYPE, MULTI_VALUE),
+            ImmutableMap.of(VISITOR_ID, "0", CLIENT_TYPE, "iphone", MULTI_VALUE, ImmutableList.of("a", "b"))
         )
     );
     incrementalIndex.add(
         new MapBasedInputRow(
             TIME1,
-            Lists.newArrayList(VISITOR_ID, CLIENT_TYPE),
-            ImmutableMap.of(VISITOR_ID, "1", CLIENT_TYPE, "iphone")
+            Lists.newArrayList(VISITOR_ID, CLIENT_TYPE, MULTI_VALUE),
+            ImmutableMap.of(VISITOR_ID, "1", CLIENT_TYPE, "iphone", MULTI_VALUE, ImmutableList.of("c", "d"))
         )
     );
     incrementalIndex.add(
         new MapBasedInputRow(
             TIME2,
-            Lists.newArrayList(VISITOR_ID, CLIENT_TYPE),
-            ImmutableMap.of(VISITOR_ID, "0", CLIENT_TYPE, "android")
+            Lists.newArrayList(VISITOR_ID, CLIENT_TYPE, MULTI_VALUE),
+            ImmutableMap.of(VISITOR_ID, "0", CLIENT_TYPE, "android", MULTI_VALUE, ImmutableList.of("a", "e"))
         )
     );
 
@@ -117,10 +121,11 @@ public class StringLastTimeseriesQueryTest
                                   .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
                                   .aggregators(
                                       ImmutableList.of(
-                                          new StringLastAggregatorFactory("nonfolding", CLIENT_TYPE, 1024),
-                                          new StringLastAggregatorFactory("folding", LAST_CLIENT_TYPE, 1024),
-                                          new StringLastAggregatorFactory("nonexistent", "nonexistent", 1024),
-                                          new StringLastAggregatorFactory("numeric", "cnt", 1024)
+                                          new StringLastAggregatorFactory("nonfolding", CLIENT_TYPE, null, 1024),
+                                          new StringLastAggregatorFactory("folding", LAST_CLIENT_TYPE, null, 1024),
+                                          new StringLastAggregatorFactory("nonexistent", "nonexistent", null, 1024),
+                                          new StringLastAggregatorFactory("numeric", "cnt", null, 1024),
+                                          new StringLastAggregatorFactory("multiValue", MULTI_VALUE, null, 1024)
                                       )
                                   )
                                   .build();
@@ -134,16 +139,18 @@ public class StringLastTimeseriesQueryTest
                     .put("folding", new SerializablePairLongString(TIME2.getMillis(), "android"))
                     .put("nonexistent", new SerializablePairLongString(DateTimes.MIN.getMillis(), null))
                     .put("numeric", new SerializablePairLongString(DateTimes.MIN.getMillis(), null))
+                    .put("multiValue", new SerializablePairLongString(TIME2.getMillis(), "[a, e]"))
                     .build()
             )
         )
     );
 
+    final DefaultTimeseriesQueryMetrics defaultTimeseriesQueryMetrics = new DefaultTimeseriesQueryMetrics();
     final Iterable<Result<TimeseriesResultValue>> iiResults =
-        engine.process(query, new IncrementalIndexStorageAdapter(incrementalIndex)).toList();
+        engine.process(query, new IncrementalIndexStorageAdapter(incrementalIndex), defaultTimeseriesQueryMetrics).toList();
 
     final Iterable<Result<TimeseriesResultValue>> qiResults =
-        engine.process(query, new QueryableIndexStorageAdapter(queryableIndex)).toList();
+        engine.process(query, new QueryableIndexStorageAdapter(queryableIndex), defaultTimeseriesQueryMetrics).toList();
 
     TestHelper.assertExpectedResults(expectedResults, iiResults, "incremental index");
     TestHelper.assertExpectedResults(expectedResults, qiResults, "queryable index");

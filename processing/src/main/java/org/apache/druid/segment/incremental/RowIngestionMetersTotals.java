@@ -22,9 +22,12 @@ package org.apache.druid.segment.incremental;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 public class RowIngestionMetersTotals
 {
   private final long processed;
+  private final long processedBytes;
   private final long processedWithError;
   private final long thrownAway;
   private final long unparseable;
@@ -32,12 +35,14 @@ public class RowIngestionMetersTotals
   @JsonCreator
   public RowIngestionMetersTotals(
       @JsonProperty("processed") long processed,
+      @JsonProperty("processedBytes") long processedBytes,
       @JsonProperty("processedWithError") long processedWithError,
       @JsonProperty("thrownAway") long thrownAway,
       @JsonProperty("unparseable") long unparseable
   )
   {
     this.processed = processed;
+    this.processedBytes = processedBytes;
     this.processedWithError = processedWithError;
     this.thrownAway = thrownAway;
     this.unparseable = unparseable;
@@ -47,6 +52,12 @@ public class RowIngestionMetersTotals
   public long getProcessed()
   {
     return processed;
+  }
+
+  @JsonProperty
+  public long getProcessedBytes()
+  {
+    return processedBytes;
   }
 
   @JsonProperty
@@ -65,5 +76,40 @@ public class RowIngestionMetersTotals
   public long getUnparseable()
   {
     return unparseable;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    RowIngestionMetersTotals that = (RowIngestionMetersTotals) o;
+    return processed == that.processed
+           && processedBytes == that.processedBytes
+           && processedWithError == that.processedWithError
+           && thrownAway == that.thrownAway
+           && unparseable == that.unparseable;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(processed, processedBytes, processedWithError, thrownAway, unparseable);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "RowIngestionMetersTotals{" +
+           "processed=" + processed +
+           ", processedBytes=" + processedBytes +
+           ", processedWithError=" + processedWithError +
+           ", thrownAway=" + thrownAway +
+           ", unparseable=" + unparseable +
+           '}';
   }
 }

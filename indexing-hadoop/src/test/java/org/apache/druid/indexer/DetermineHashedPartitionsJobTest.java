@@ -172,9 +172,7 @@ public class DetermineHashedPartitionsJobTest
                                 "quality",
                                 "placement",
                                 "placementish"
-                            )),
-                            null,
-                            null
+                            ))
                         ),
                         "\t",
                         null,

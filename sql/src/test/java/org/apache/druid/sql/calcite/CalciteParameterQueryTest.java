@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import junitparams.JUnitParamsRunner;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
@@ -36,25 +35,28 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.sql.SqlPlanningException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * This class has copied a subset of the tests in {@link CalciteQueryTest} and replaced various parts of queries with
- * dynamic parameters. It is NOT important that this file remains in sync with {@link CalciteQueryTest}, the tests
- * were merely chosen to produce a selection of parameter types and positions within query expressions and have been
- * renamed to reflect this
+ * This class has copied a subset of the tests in {@link CalciteQueryTest} and
+ * replaced various parts of queries with dynamic parameters. It is NOT
+ * important that this file remains in sync with {@link CalciteQueryTest}, the
+ * tests were merely chosen to produce a selection of parameter types and
+ * positions within query expressions and have been renamed to reflect this
  */
-@RunWith(JUnitParamsRunner.class)
 public class CalciteParameterQueryTest extends BaseCalciteQueryTest
 {
   @Test
-  public void testSelectConstantParamGetsConstant() throws Exception
+  public void testSelectConstantParamGetsConstant()
   {
     testQuery(
         "SELECT 1 + ?",
@@ -63,7 +65,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .dataSource(
                       InlineDataSource.fromIterable(
                           ImmutableList.of(new Object[]{2L}),
-                          RowSignature.builder().add("EXPR$0", ValueType.LONG).build()
+                          RowSignature.builder().add("EXPR$0", ColumnType.LONG).build()
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
@@ -80,7 +82,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testParamsGetOptimizedIntoConstant() throws Exception
+  public void testParamsGetOptimizedIntoConstant()
   {
     testQuery(
         "SELECT 1 + ?, dim1 FROM foo LIMIT ?",
@@ -88,7 +90,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "2", ValueType.LONG))
+                .virtualColumns(expressionVirtualColumn("v0", "2", ColumnType.LONG))
                 .columns("dim1", "v0")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(1)
@@ -106,7 +108,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testParametersInSelectAndFilter() throws Exception
+  public void testParametersInSelectAndFilter()
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT,
@@ -138,7 +140,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectTrimFamilyWithParameters() throws Exception
+  public void testSelectTrimFamilyWithParameters()
   {
     // TRIM has some whacky parsing. Abuse this to test a bunch of parameters
 
@@ -205,7 +207,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testParamsInInformationSchema() throws Exception
+  public void testParamsInInformationSchema()
   {
     // Not including COUNT DISTINCT, since it isn't supported by BindableAggregate, and so it can't work.
     testQuery(
@@ -229,7 +231,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testParamsInSelectExpressionAndLimit() throws Exception
+  public void testParamsInSelectExpressionAndLimit()
   {
     testQuery(
         "SELECT SUBSTRING(dim2, ?, ?) FROM druid.foo LIMIT ?",
@@ -238,7 +240,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(
-                    expressionVirtualColumn("v0", "substring(\"dim2\", 0, 1)", ValueType.STRING)
+                    expressionVirtualColumn("v0", "substring(\"dim2\", 0, 1)", ColumnType.STRING)
                 )
                 .columns("v0")
                 .limit(2)
@@ -259,7 +261,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testParamsTuckedInACast() throws Exception
+  public void testParamsTuckedInACast()
   {
     testQuery(
         "SELECT dim1, m1, COUNT(*) FROM druid.foo WHERE m1 - CAST(? as INT) = dim1 GROUP BY dim1, m1",
@@ -271,7 +273,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                         .setDimFilter(expressionFilter("((\"m1\" - 1) == CAST(\"dim1\", 'DOUBLE'))"))
                         .setDimensions(dimensions(
                             new DefaultDimensionSpec("dim1", "d0"),
-                            new DefaultDimensionSpec("m1", "d1", ValueType.FLOAT)
+                            new DefaultDimensionSpec("m1", "d1", ColumnType.FLOAT)
                         ))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -292,7 +294,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testParametersInStrangePlaces() throws Exception
+  public void testParametersInStrangePlaces()
   {
     testQuery(
         "SELECT\n"
@@ -336,7 +338,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testParametersInCases() throws Exception
+  public void testParametersInCases()
   {
     testQuery(
         "SELECT\n"
@@ -370,7 +372,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
 
 
   @Test
-  public void testTimestamp() throws Exception
+  public void testTimestamp()
   {
     // with millis
     testQuery(
@@ -407,7 +409,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testTimestampString() throws Exception
+  public void testTimestampString()
   {
     // with timestampstring
     testQuery(
@@ -443,7 +445,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDate() throws Exception
+  public void testDate()
   {
     // with date from millis
 
@@ -480,7 +482,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testDoubles() throws Exception
+  public void testDoubles()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt > ? and cnt < ?",
@@ -529,7 +531,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFloats() throws Exception
+  public void testFloats()
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt = ?",
@@ -551,7 +553,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testLongs() throws Exception
+  public void testLongs()
   {
     testQuery(
         "SELECT COUNT(*)\n"
@@ -573,10 +575,10 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testMissingParameter() throws Exception
+  public void testMissingParameter()
   {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("Parameter: [?0] is not bound");
+    expectedException.expect(SqlPlanningException.class);
+    expectedException.expectMessage("Parameter at position [0] is not bound");
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -588,10 +590,10 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testPartiallyMissingParameter() throws Exception
+  public void testPartiallyMissingParameter()
   {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("Parameter: [?1] is not bound");
+    expectedException.expect(SqlPlanningException.class);
+    expectedException.expectMessage("Parameter at position [1] is not bound");
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -603,7 +605,23 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testWrongTypeParameter() throws Exception
+  public void testPartiallyMissingParameterInTheMiddle()
+  {
+    List<SqlParameter> params = new ArrayList<>();
+    params.add(null);
+    params.add(new SqlParameter(SqlType.INTEGER, 1));
+    expectedException.expect(SqlPlanningException.class);
+    expectedException.expectMessage("Parameter at position [0] is not bound");
+    testQuery(
+        "SELECT 1 + ?, dim1 FROM foo LIMIT ?",
+        ImmutableList.of(),
+        ImmutableList.of(),
+        params
+    );
+  }
+
+  @Test
+  public void testWrongTypeParameter()
   {
     if (!useDefault) {
       // cannot vectorize inline datasource
@@ -634,7 +652,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .dataSource(
                       InlineDataSource.fromIterable(
                           ImmutableList.of(),
-                          RowSignature.builder().add("f1", ValueType.FLOAT).add("l1", ValueType.LONG).build()
+                          RowSignature.builder().add("f1", ColumnType.FLOAT).add("l1", ColumnType.LONG).build()
                       )
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
@@ -648,7 +666,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testNullParameter() throws Exception
+  public void testNullParameter()
   {
     cannotVectorize();
     // contrived example of using null as an sql parameter to at least test the codepath because lots of things dont
@@ -665,11 +683,11 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'parameter')",
-                                ValueType.STRING
+                                "nvl(\"dim2\",'parameter')",
+                                ColumnType.STRING
                             )
                         )
-                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ValueType.STRING)))
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -700,11 +718,11 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "case_searched(notnull(\"dim2\"),\"dim2\",'parameter')",
-                                ValueType.STRING
+                                "nvl(\"dim2\",'parameter')",
+                                ColumnType.STRING
                             )
                         )
-                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ValueType.STRING)))
+                        .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()

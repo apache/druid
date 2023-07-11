@@ -31,8 +31,11 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -53,6 +56,7 @@ import java.util.Set;
 
 public class HttpIndexingServiceClient implements IndexingServiceClient
 {
+  private static final Logger log = new Logger(HttpIndexingServiceClient.class);
   private final DruidLeaderClient druidLeaderClient;
   private final ObjectMapper jsonMapper;
 
@@ -81,6 +85,9 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       int compactionTaskPriority,
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
+      @Nullable AggregatorFactory[] metricsSpec,
+      @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context
   )
@@ -97,12 +104,16 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     context.put("priority", compactionTaskPriority);
 
     final String taskId = IdUtils.newTaskId(idPrefix, ClientCompactionTaskQuery.TYPE, dataSource, null);
+    final Granularity segmentGranularity = granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
     final ClientTaskQuery taskQuery = new ClientCompactionTaskQuery(
         taskId,
         dataSource,
-        new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments), dropExisting),
+        new ClientCompactionIOConfig(ClientCompactionIntervalSpec.fromSegments(segments, segmentGranularity), dropExisting),
         tuningConfig,
         granularitySpec,
+        dimensionsSpec,
+        metricsSpec,
+        transformSpec,
         context
     );
     return runTask(taskId, taskQuery);
@@ -198,6 +209,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
             response.getStatus(),
             response.getContent()
         );
+
       }
       final Collection<IndexingWorkerInfo> workers = jsonMapper.readValue(
           response.getContent(),
@@ -205,6 +217,32 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
 
       return workers.stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public int getTotalWorkerCapacityWithAutoScale()
+  {
+    try {
+      final StringFullResponseHolder response = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/indexer/v1/totalWorkerCapacity")
+                           .setHeader("Content-Type", MediaType.APPLICATION_JSON)
+      );
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while getting total worker capacity. status[%s] content[%s]",
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+      final IndexingTotalWorkerCapacityInfo indexingTotalWorkerCapacityInfo = jsonMapper.readValue(
+          response.getContent(),
+          new TypeReference<IndexingTotalWorkerCapacityInfo>() {}
+      );
+      return indexingTotalWorkerCapacityInfo.getMaximumCapacityWithAutoScale();
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -285,27 +323,6 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds) throws InterruptedException
-  {
-    try {
-      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/taskStatus")
-                           .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(taskIds))
-      );
-
-      return jsonMapper.readValue(
-          responseHolder.getContent(),
-          new TypeReference<Map<String, TaskStatus>>()
-          {
-          }
-      );
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @Override
   @Nullable
   public TaskStatusPlus getLastCompleteTask()
   {
@@ -329,6 +346,43 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
           new TypeReference<TaskPayloadResponse>()
           {
           }
+      );
+    }
+    catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Nullable
+  @Override
+  public Map<String, Object> getTaskReport(String taskId)
+  {
+    try {
+      final StringFullResponseHolder responseHolder = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(
+              HttpMethod.GET,
+              StringUtils.format("/druid/indexer/v1/task/%s/reports", StringUtils.urlEncode(taskId))
+          )
+      );
+
+      if (responseHolder.getContent().length() == 0 || !HttpResponseStatus.OK.equals(responseHolder.getStatus())) {
+        if (responseHolder.getStatus() == HttpResponseStatus.NOT_FOUND) {
+          log.info("Report not found for taskId [%s] because [%s]", taskId, responseHolder.getContent());
+        } else {
+          // also log other non-ok statuses:
+          log.info(
+              "Non OK response status [%s] for taskId [%s] because [%s]",
+              responseHolder.getStatus(),
+              taskId,
+              responseHolder.getContent()
+          );
+        }
+        return null;
+      }
+
+      return jsonMapper.readValue(
+          responseHolder.getContent(),
+          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
       );
     }
     catch (IOException | InterruptedException e) {

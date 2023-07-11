@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.overlord.supervisor;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.java.util.common.DateTimes;
@@ -37,6 +38,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -191,6 +193,21 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
+  public void testGetSupervisorHistoryForId()
+  {
+    String id = "test-supervisor-1";
+    List<VersionedSupervisorSpec> supervisorHistory = ImmutableList.of();
+
+    EasyMock.expect(metadataSupervisorManager.getAllForId(id)).andReturn(supervisorHistory);
+    replayAll();
+
+    List<VersionedSupervisorSpec> history = manager.getSupervisorHistoryForId(id);
+    verifyAll();
+
+    Assert.assertEquals(supervisorHistory, history);
+  }
+
+  @Test
   public void testGetSupervisorStatus()
   {
     SupervisorReport<Void> report = new SupervisorReport<>("id1", DateTimes.nowUtc(), null);
@@ -242,6 +259,35 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
 
     // if we get here, we are properly insulated from exploding supervisors
+  }
+
+  @Test
+  public void testNoPersistOnFailedStart()
+  {
+    exception.expect(RuntimeException.class);
+
+    Capture<TestSupervisorSpec> capturedInsert = Capture.newInstance();
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(Collections.emptyMap());
+    metadataSupervisorManager.insert(EasyMock.eq("id1"), EasyMock.capture(capturedInsert));
+    supervisor1.start();
+    supervisor1.stop(true);
+    supervisor2.start();
+    EasyMock.expectLastCall().andThrow(new RuntimeException("supervisor failed to start"));
+    replayAll();
+
+    final SupervisorSpec testSpecOld = new TestSupervisorSpec("id1", supervisor1);
+    final SupervisorSpec testSpecNew = new TestSupervisorSpec("id1", supervisor2);
+
+    manager.start();
+    try {
+      manager.createOrUpdateAndStartSupervisor(testSpecOld);
+      manager.createOrUpdateAndStartSupervisor(testSpecNew);
+    }
+    catch (Exception e) {
+      Assert.assertEquals(testSpecOld, capturedInsert.getValue());
+      throw e;
+    }
   }
 
   @Test

@@ -45,11 +45,13 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
   private FloatLastAggregatorFactory combiningAggFactory;
   private ColumnSelectorFactory colSelectorFactory;
   private TestLongColumnSelector timeSelector;
+  private TestLongColumnSelector customTimeSelector;
   private TestFloatColumnSelector valueSelector;
   private TestObjectColumnSelector objectSelector;
 
   private float[] floats = {1.1897f, 0.001f, 86.23f, 166.228f};
   private long[] times = {8224, 6879, 2436, 7888};
+  private long[] customTimes = {1, 4, 3, 2};
   private SerializablePair[] pairs = {
       new SerializablePair<>(52782L, 134.3f),
       new SerializablePair<>(65492L, 1232.212f),
@@ -60,20 +62,22 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
   @Before
   public void setup()
   {
-    floatLastAggregatorFactory = new FloatLastAggregatorFactory("billy", "nilly");
+    floatLastAggregatorFactory = new FloatLastAggregatorFactory("billy", "nilly", null);
     combiningAggFactory = (FloatLastAggregatorFactory) floatLastAggregatorFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);
+    customTimeSelector = new TestLongColumnSelector(customTimes);
     valueSelector = new TestFloatColumnSelector(floats);
     objectSelector = new TestObjectColumnSelector<>(pairs);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME)).andReturn(timeSelector);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector("customTime")).andReturn(customTimeSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(valueSelector);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("billy")).andReturn(objectSelector);
     EasyMock.replay(colSelectorFactory);
   }
 
   @Test
-  public void testDoubleLastAggregator()
+  public void testFloatLastAggregator()
   {
     Aggregator agg = floatLastAggregatorFactory.factorize(colSelectorFactory);
 
@@ -91,7 +95,25 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testDoubleLastBufferAggregator()
+  public void testFloatLastAggregatorWithTimeColumn()
+  {
+    Aggregator agg = new FloatLastAggregatorFactory("billy", "nilly", "customTime").factorize(colSelectorFactory);
+
+    aggregate(agg);
+    aggregate(agg);
+    aggregate(agg);
+    aggregate(agg);
+
+    Pair<Long, Float> result = (Pair<Long, Float>) agg.get();
+
+    Assert.assertEquals(customTimes[1], result.lhs.longValue());
+    Assert.assertEquals(floats[1], result.rhs, 0.0001);
+    Assert.assertEquals((long) floats[1], agg.getLong());
+    Assert.assertEquals(floats[1], agg.getFloat(), 0.0001);
+  }
+
+  @Test
+  public void testFloatLastBufferAggregator()
   {
     BufferAggregator agg = floatLastAggregatorFactory.factorizeBuffered(
         colSelectorFactory);
@@ -110,6 +132,28 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
     Assert.assertEquals(floats[0], result.rhs, 0.0001);
     Assert.assertEquals((long) floats[0], agg.getLong(buffer, 0));
     Assert.assertEquals(floats[0], agg.getFloat(buffer, 0), 0.0001);
+  }
+
+  @Test
+  public void testFloatLastBufferAggregatorWithTimeColumn()
+  {
+    BufferAggregator agg = new FloatLastAggregatorFactory("billy", "nilly", "customTime").factorizeBuffered(
+        colSelectorFactory);
+
+    ByteBuffer buffer = ByteBuffer.wrap(new byte[floatLastAggregatorFactory.getMaxIntermediateSizeWithNulls()]);
+    agg.init(buffer, 0);
+
+    aggregate(agg, buffer, 0);
+    aggregate(agg, buffer, 0);
+    aggregate(agg, buffer, 0);
+    aggregate(agg, buffer, 0);
+
+    Pair<Long, Float> result = (Pair<Long, Float>) agg.get(buffer, 0);
+
+    Assert.assertEquals(customTimes[1], result.lhs.longValue());
+    Assert.assertEquals(floats[1], result.rhs, 0.0001);
+    Assert.assertEquals((long) floats[1], agg.getLong(buffer, 0));
+    Assert.assertEquals(floats[1], agg.getFloat(buffer, 0), 0.0001);
   }
 
   @Test
@@ -133,7 +177,7 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testDoubleLastCombiningAggregator()
+  public void testFloatLastCombiningAggregator()
   {
     Aggregator agg = combiningAggFactory.factorize(colSelectorFactory);
 
@@ -152,7 +196,7 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testDoubleLastCombiningBufferAggregator()
+  public void testFloatLastCombiningBufferAggregator()
   {
     BufferAggregator agg = combiningAggFactory.factorizeBuffered(
         colSelectorFactory);
@@ -179,8 +223,10 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
   public void testSerde() throws Exception
   {
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    String doubleSpecJson = "{\"type\":\"floatLast\",\"name\":\"billy\",\"fieldName\":\"nilly\"}";
-    Assert.assertEquals(floatLastAggregatorFactory, mapper.readValue(doubleSpecJson, AggregatorFactory.class));
+    String floatSpecJson = "{\"type\":\"floatLast\",\"name\":\"billy\",\"fieldName\":\"nilly\"}";
+    AggregatorFactory deserialized = mapper.readValue(floatSpecJson, AggregatorFactory.class);
+    Assert.assertEquals(floatLastAggregatorFactory, deserialized);
+    Assert.assertArrayEquals(floatLastAggregatorFactory.getCacheKey(), deserialized.getCacheKey());
   }
 
   private void aggregate(
@@ -189,6 +235,7 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
   {
     agg.aggregate();
     timeSelector.increment();
+    customTimeSelector.increment();
     valueSelector.increment();
     objectSelector.increment();
   }
@@ -201,6 +248,7 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
   {
     agg.aggregate(buff, position);
     timeSelector.increment();
+    customTimeSelector.increment();
     valueSelector.increment();
     objectSelector.increment();
   }

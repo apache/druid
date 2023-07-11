@@ -20,12 +20,12 @@
 package org.apache.druid.indexing.common.task.batch.partition;
 
 import com.google.common.collect.Maps;
-import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
+import org.apache.druid.timeline.partition.DimensionRangeBucketShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
-import org.apache.druid.timeline.partition.RangeBucketShardSpec;
 import org.joda.time.Interval;
 
 import java.util.Collections;
@@ -38,18 +38,18 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class RangePartitionAnalysis
-    implements CompletePartitionAnalysis<PartitionBoundaries, SingleDimensionPartitionsSpec>
+    implements CompletePartitionAnalysis<PartitionBoundaries, DimensionRangePartitionsSpec>
 {
   private final Map<Interval, PartitionBoundaries> intervalToPartitionBoundaries = new HashMap<>();
-  private final SingleDimensionPartitionsSpec partitionsSpec;
+  private final DimensionRangePartitionsSpec partitionsSpec;
 
-  public RangePartitionAnalysis(SingleDimensionPartitionsSpec partitionsSpec)
+  public RangePartitionAnalysis(DimensionRangePartitionsSpec partitionsSpec)
   {
     this.partitionsSpec = partitionsSpec;
   }
 
   @Override
-  public SingleDimensionPartitionsSpec getPartitionsSpec()
+  public DimensionRangePartitionsSpec getPartitionsSpec()
   {
     return partitionsSpec;
   }
@@ -90,10 +90,10 @@ public class RangePartitionAnalysis
 
   /**
    * Translate {@link PartitionBoundaries} into the corresponding
-   * {@link SingleDimensionPartitionsSpec} with segment id.
+   * {@link DimensionRangePartitionsSpec} with segment id.
    */
   private static List<BucketNumberedShardSpec<?>> translatePartitionBoundaries(
-      String partitionDimension,
+      List<String> partitionDimensions,
       PartitionBoundaries partitionBoundaries
   )
   {
@@ -102,9 +102,9 @@ public class RangePartitionAnalysis
     }
 
     return IntStream.range(0, partitionBoundaries.size() - 1)
-                    .mapToObj(i -> new RangeBucketShardSpec(
+                    .mapToObj(i -> new DimensionRangeBucketShardSpec(
                         i,
-                        partitionDimension,
+                        partitionDimensions,
                         partitionBoundaries.get(i),
                         partitionBoundaries.get(i + 1)
                     ))
@@ -114,7 +114,7 @@ public class RangePartitionAnalysis
   @Override
   public Map<Interval, List<BucketNumberedShardSpec<?>>> createBuckets(TaskToolbox toolbox)
   {
-    final String partitionDimension = partitionsSpec.getPartitionDimension();
+    final List<String> partitionDimensions = partitionsSpec.getPartitionDimensions();
     final Map<Interval, List<BucketNumberedShardSpec<?>>> intervalToSegmentIds = Maps.newHashMapWithExpectedSize(
         getNumTimePartitions()
     );
@@ -122,7 +122,7 @@ public class RangePartitionAnalysis
     forEach((interval, partitionBoundaries) ->
                 intervalToSegmentIds.put(
                     interval,
-                    translatePartitionBoundaries(partitionDimension, partitionBoundaries)
+                    translatePartitionBoundaries(partitionDimensions, partitionBoundaries)
                 )
     );
 

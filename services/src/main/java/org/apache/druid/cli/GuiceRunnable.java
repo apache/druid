@@ -19,12 +19,14 @@
 
 package org.apache.druid.cli;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import org.apache.druid.initialization.Initialization;
+import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -41,6 +43,7 @@ public abstract class GuiceRunnable implements Runnable
 {
   private final Logger log;
 
+  private Properties properties;
   private Injector baseInjector;
 
   public GuiceRunnable(Logger log)
@@ -56,17 +59,30 @@ public abstract class GuiceRunnable implements Runnable
   public abstract void run();
 
   @Inject
-  public void configure(Injector injector)
+  public void configure(Properties properties, Injector injector)
   {
+    this.properties = properties;
     this.baseInjector = injector;
+  }
+
+  protected Properties getProperties()
+  {
+    return properties;
   }
 
   protected abstract List<? extends Module> getModules();
 
   public Injector makeInjector()
   {
+    // Pass an empty set of nodeRoles for non-ServerRunnables.
+    // They will still load all modules except for the ones annotated with `LoadOn`.
+    return makeInjector(ImmutableSet.of());
+  }
+
+  public Injector makeInjector(Set<NodeRole> nodeRoles)
+  {
     try {
-      return Initialization.makeInjectorWithModules(baseInjector, getModules());
+      return ServerInjectorBuilder.makeServerInjector(baseInjector, nodeRoles, getModules());
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -74,6 +90,11 @@ public abstract class GuiceRunnable implements Runnable
   }
 
   public Lifecycle initLifecycle(Injector injector)
+  {
+    return initLifecycle(injector, log);
+  }
+
+  public static Lifecycle initLifecycle(Injector injector, Logger log)
   {
     try {
       final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
@@ -88,11 +109,11 @@ public abstract class GuiceRunnable implements Runnable
       }
 
       log.info(
-          "Starting up with processors[%,d], memory[%,d], maxMemory[%,d]%s. Properties follow.",
+          "Starting up with processors [%,d], memory [%,d], maxMemory [%,d]%s. Properties follow.",
           JvmUtils.getRuntimeInfo().getAvailableProcessors(),
           JvmUtils.getRuntimeInfo().getTotalHeapSizeBytes(),
           JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
-          directSizeBytes != null ? StringUtils.format(", directMemory[%,d]", directSizeBytes) : ""
+          directSizeBytes != null ? StringUtils.format(", directMemory [%,d]", directSizeBytes) : ""
       );
 
       if (startupLoggingConfig.isLogProperties()) {

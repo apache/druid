@@ -65,12 +65,15 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.ComparableList;
+import org.apache.druid.segment.data.ComparableStringArray;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -222,7 +225,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     verifyOutputNames(this.dimensions, this.aggregatorSpecs, this.postAggregatorSpecs);
 
     this.universalTimestamp = computeUniversalTimestamp();
-    this.resultRowSignature = computeResultRowSignature();
+    this.resultRowSignature = computeResultRowSignature(RowSignature.Finalization.UNKNOWN);
     this.havingSpec = havingSpec;
     this.limitSpec = LimitSpec.nullToNoopLimitSpec(limitSpec);
     this.subtotalsSpec = verifySubtotalsSpec(subtotalsSpec, this.dimensions);
@@ -269,6 +272,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
   @JsonProperty
   @Override
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = VirtualColumns.JsonIncludeFilter.class)
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
@@ -276,6 +280,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
   @Nullable
   @JsonProperty("filter")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public DimFilter getDimFilter()
   {
     return dimFilter;
@@ -288,18 +293,21 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   }
 
   @JsonProperty("aggregations")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<AggregatorFactory> getAggregatorSpecs()
   {
     return aggregatorSpecs;
   }
 
   @JsonProperty("postAggregations")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<PostAggregator> getPostAggregatorSpecs()
   {
     return postAggregatorSpecs;
   }
 
   @JsonProperty("having")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public HavingSpec getHavingSpec()
   {
     return havingSpec;
@@ -311,23 +319,44 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return limitSpec;
   }
 
-  @JsonInclude(JsonInclude.Include.NON_NULL)
-  @JsonProperty("subtotalsSpec")
+  /**
+   * Subtotals spec may be empty which has a distinct meaning from {@code null}.
+   */
   @Nullable
+  @JsonProperty("subtotalsSpec")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public List<List<String>> getSubtotalsSpec()
   {
     return subtotalsSpec;
   }
 
   /**
-   * Returns a list of field names, of the same size as {@link #getResultRowSizeWithPostAggregators()}, in the
-   * order that they will appear in ResultRows for this query.
+   * Equivalent to {@code getResultRowSignature(Finalization.UNKNOWN)}.
    *
    * @see ResultRow for documentation about the order that fields will be in
    */
   public RowSignature getResultRowSignature()
   {
     return resultRowSignature;
+  }
+
+  /**
+   * Returns a result row signature, of the same size as {@link #getResultRowSizeWithPostAggregators()}, in the
+   * order that they will appear in ResultRows for this query.
+   *
+   * Aggregator types in the signature depend on the value of {@code finalization}.
+   *
+   * If finalization is {@link RowSignature.Finalization#UNKNOWN}, this method returns a cached object.
+   *
+   * @see ResultRow for documentation about the order that fields will be in
+   */
+  public RowSignature getResultRowSignature(final RowSignature.Finalization finalization)
+  {
+    if (finalization == RowSignature.Finalization.UNKNOWN) {
+      return resultRowSignature;
+    } else {
+      return computeResultRowSignature(finalization);
+    }
   }
 
   /**
@@ -421,7 +450,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @JsonIgnore
   public boolean getContextSortByDimsFirst()
   {
-    return getContextBoolean(CTX_KEY_SORT_BY_DIMS_FIRST, false);
+    return context().getBoolean(CTX_KEY_SORT_BY_DIMS_FIRST, false);
   }
 
   @JsonIgnore
@@ -436,7 +465,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @JsonIgnore
   public boolean getApplyLimitPushDownFromContext()
   {
-    return getContextBoolean(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true);
+    return context().getBoolean(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true);
   }
 
   @Override
@@ -458,7 +487,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
   private boolean validateAndGetForceLimitPushDown()
   {
-    final boolean forcePushDown = getContextBoolean(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, false);
+    final boolean forcePushDown = context().getBoolean(GroupByQueryConfig.CTX_KEY_FORCE_LIMIT_PUSH_DOWN, false);
     if (forcePushDown) {
       if (!(limitSpec instanceof DefaultLimitSpec)) {
         throw new IAE("When forcing limit push down, a limit spec must be provided.");
@@ -481,7 +510,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return forcePushDown;
   }
 
-  private RowSignature computeResultRowSignature()
+  private RowSignature computeResultRowSignature(final RowSignature.Finalization finalization)
   {
     final RowSignature.Builder builder = RowSignature.builder();
 
@@ -490,7 +519,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     }
 
     return builder.addDimensions(dimensions)
-                  .addAggregators(aggregatorSpecs)
+                  .addAggregators(aggregatorSpecs, finalization)
                   .addPostAggregators(postAggregatorSpecs)
                   .build();
   }
@@ -549,7 +578,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     final IntList orderedFieldNumbers = new IntArrayList();
     final Set<Integer> dimsInOrderBy = new HashSet<>();
     final List<Boolean> needsReverseList = new ArrayList<>();
-    final List<ValueType> dimensionTypes = new ArrayList<>();
+    final List<ColumnType> dimensionTypes = new ArrayList<>();
     final List<StringComparator> comparators = new ArrayList<>();
 
     for (OrderByColumnSpec orderSpec : limitSpec.getColumns()) {
@@ -560,7 +589,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         orderedFieldNumbers.add(resultRowSignature.indexOf(dim.getOutputName()));
         dimsInOrderBy.add(dimIndex);
         needsReverseList.add(needsReverse);
-        final ValueType type = dimensions.get(dimIndex).getOutputType();
+        final ColumnType type = dimensions.get(dimIndex).getOutputType();
         dimensionTypes.add(type);
         comparators.add(orderSpec.getDimensionComparator());
       }
@@ -570,9 +599,13 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       if (!dimsInOrderBy.contains(i)) {
         orderedFieldNumbers.add(resultRowSignature.indexOf(dimensions.get(i).getOutputName()));
         needsReverseList.add(false);
-        final ValueType type = dimensions.get(i).getOutputType();
+        final ColumnType type = dimensions.get(i).getOutputType();
         dimensionTypes.add(type);
-        comparators.add(StringComparators.LEXICOGRAPHIC);
+        if (type.isNumeric()) {
+          comparators.add(StringComparators.NUMERIC);
+        } else {
+          comparators.add(StringComparators.LEXICOGRAPHIC);
+        }
       }
     }
 
@@ -715,7 +748,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @Nullable
   private DateTime computeUniversalTimestamp()
   {
-    final String timestampStringFromContext = getContextValue(CTX_KEY_FUDGE_TIMESTAMP, "");
+    final String timestampStringFromContext = context().getString(CTX_KEY_FUDGE_TIMESTAMP, "");
     final Granularity granularity = getGranularity();
 
     if (!timestampStringFromContext.isEmpty()) {
@@ -736,7 +769,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   private static int compareDimsForLimitPushDown(
       final IntList fields,
       final List<Boolean> needsReverseList,
-      final List<ValueType> dimensionTypes,
+      final List<ColumnType> dimensionTypes,
       final List<StringComparator> comparators,
       final ResultRow lhs,
       final ResultRow rhs
@@ -745,18 +778,27 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     for (int i = 0; i < fields.size(); i++) {
       final int fieldNumber = fields.getInt(i);
       final StringComparator comparator = comparators.get(i);
-      final ValueType dimensionType = dimensionTypes.get(i);
+      final ColumnType dimensionType = dimensionTypes.get(i);
 
       final int dimCompare;
       final Object lhsObj = lhs.get(fieldNumber);
       final Object rhsObj = rhs.get(fieldNumber);
 
-      if (ValueType.isNumeric(dimensionType)) {
+      if (dimensionType.isNumeric()) {
         if (comparator.equals(StringComparators.NUMERIC)) {
           dimCompare = DimensionHandlerUtils.compareObjectsAsType(lhsObj, rhsObj, dimensionType);
         } else {
           dimCompare = comparator.compare(String.valueOf(lhsObj), String.valueOf(rhsObj));
         }
+      } else if (dimensionType.equals(ColumnType.STRING_ARRAY)) {
+        final ComparableStringArray lhsArr = DimensionHandlerUtils.convertToComparableStringArray(lhsObj);
+        final ComparableStringArray rhsArr = DimensionHandlerUtils.convertToComparableStringArray(rhsObj);
+        dimCompare = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
+      } else if (dimensionType.equals(ColumnType.LONG_ARRAY)
+                 || dimensionType.equals(ColumnType.DOUBLE_ARRAY)) {
+        final ComparableList lhsArr = DimensionHandlerUtils.convertToList(lhsObj, dimensionType.getElementType().getType());
+        final ComparableList rhsArr = DimensionHandlerUtils.convertToList(rhsObj, dimensionType.getElementType().getType());
+        dimCompare = Comparators.<Comparable>naturalNullsFirst().compare(lhsArr, rhsArr);
       } else {
         dimCompare = comparator.compare((String) lhsObj, (String) rhsObj);
       }

@@ -26,21 +26,26 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.IdentityExtractionFn;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.search.CursorOnlyStrategy.CursorBasedExecutor;
-import org.apache.druid.segment.ColumnSelectorBitmapIndexSelector;
+import org.apache.druid.segment.ColumnSelectorColumnIndexSelector;
+import org.apache.druid.segment.DeprecatedQueryableIndexColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.BitmapIndex;
+import org.apache.druid.segment.column.BitmapColumnIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.column.NumericColumn;
+import org.apache.druid.segment.virtual.VirtualizedColumnInspector;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -73,15 +78,19 @@ public class UseIndexesStrategy extends SearchStrategy
 
     if (index != null) {
       // pair of bitmap dims and non-bitmap dims
-      final Pair<List<DimensionSpec>, List<DimensionSpec>> pair = partitionDimensionList(adapter, searchDims);
+      final Pair<List<DimensionSpec>, List<DimensionSpec>> pair = partitionDimensionList(
+          adapter,
+          query.getVirtualColumns(),
+          searchDims
+      );
       final List<DimensionSpec> bitmapSuppDims = pair.lhs;
       final List<DimensionSpec> nonBitmapSuppDims = pair.rhs;
 
       if (bitmapSuppDims.size() > 0) {
-        final BitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
+        final ColumnIndexSelector selector = new ColumnSelectorColumnIndexSelector(
             index.getBitmapFactoryForDimensions(),
-            VirtualColumns.EMPTY,
-            index
+            query.getVirtualColumns(),
+            new DeprecatedQueryableIndexColumnSelector(index)
         );
 
         // Index-only plan is used only when any filter is not specified or the filter supports bitmap indexes.
@@ -89,8 +98,14 @@ public class UseIndexesStrategy extends SearchStrategy
         // Note: if some filters support bitmap indexes but others are not, the current implementation always employs
         // the cursor-based plan. This can be more optimized. One possible optimization is generating a bitmap index
         // from the non-bitmap-support filter, and then use it to compute the filtered result by intersecting bitmaps.
-        if (filter == null || filter.supportsBitmapIndex(selector)) {
-          final ImmutableBitmap timeFilteredBitmap = makeTimeFilteredBitmap(index, segment, filter, interval);
+        if (filter == null || filter.getBitmapColumnIndex(selector) != null) {
+          final ImmutableBitmap timeFilteredBitmap = makeTimeFilteredBitmap(
+              index,
+              segment,
+              query.getVirtualColumns(),
+              filter,
+              interval
+          );
           builder.add(new IndexOnlyExecutor(query, segment, timeFilteredBitmap, bitmapSuppDims));
         } else {
           // Fall back to cursor-based execution strategy
@@ -114,6 +129,7 @@ public class UseIndexesStrategy extends SearchStrategy
    */
   private static Pair<List<DimensionSpec>, List<DimensionSpec>> partitionDimensionList(
       StorageAdapter adapter,
+      VirtualColumns virtualColumns,
       List<DimensionSpec> dimensions
   )
   {
@@ -123,9 +139,10 @@ public class UseIndexesStrategy extends SearchStrategy
         adapter.getAvailableDimensions(),
         dimensions
     );
+    VirtualizedColumnInspector columnInspector = new VirtualizedColumnInspector(adapter, virtualColumns);
 
     for (DimensionSpec spec : dimsToSearch) {
-      ColumnCapabilities capabilities = adapter.getColumnCapabilities(spec.getDimension());
+      ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(spec.getDimension());
       if (capabilities == null) {
         continue;
       }
@@ -143,6 +160,7 @@ public class UseIndexesStrategy extends SearchStrategy
   static ImmutableBitmap makeTimeFilteredBitmap(
       final QueryableIndex index,
       final Segment segment,
+      final VirtualColumns virtualColumns,
       final Filter filter,
       final Interval interval
   )
@@ -152,13 +170,18 @@ public class UseIndexesStrategy extends SearchStrategy
     if (filter == null) {
       baseFilter = null;
     } else {
-      final BitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
+      final ColumnIndexSelector selector = new ColumnSelectorColumnIndexSelector(
           index.getBitmapFactoryForDimensions(),
-          VirtualColumns.EMPTY,
-          index
+          virtualColumns,
+          new DeprecatedQueryableIndexColumnSelector(index)
       );
-      Preconditions.checkArgument(filter.supportsBitmapIndex(selector), "filter[%s] should support bitmap", filter);
-      baseFilter = filter.getBitmapIndex(selector);
+      final BitmapColumnIndex columnIndex = filter.getBitmapColumnIndex(selector);
+      Preconditions.checkNotNull(
+          columnIndex,
+          "filter[%s] should support bitmap",
+          filter
+      );
+      baseFilter = columnIndex.computeBitmapResult(new DefaultBitmapResultFactory(selector.getBitmapFactory()));
     }
 
     final ImmutableBitmap timeFilteredBitmap;
@@ -240,32 +263,32 @@ public class UseIndexesStrategy extends SearchStrategy
       final QueryableIndex index = segment.asQueryableIndex();
       Preconditions.checkArgument(index != null, "Index should not be null");
 
+      ColumnSelectorColumnIndexSelector indexSelector = new ColumnSelectorColumnIndexSelector(
+          index.getBitmapFactoryForDimensions(),
+          query.getVirtualColumns(),
+          new DeprecatedQueryableIndexColumnSelector(index)
+      );
+
       final Object2IntRBTreeMap<SearchHit> retVal = new Object2IntRBTreeMap<>(query.getSort().getComparator());
       retVal.defaultReturnValue(0);
 
       final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
 
       for (DimensionSpec dimension : dimsToSearch) {
-        final ColumnHolder columnHolder = index.getColumnHolder(dimension.getDimension());
-        if (columnHolder == null) {
-          continue;
-        }
 
-        final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
-        Preconditions.checkArgument(bitmapIndex != null,
-                                    "Dimension [%s] should support bitmap index", dimension.getDimension()
-        );
+        final ColumnIndexSupplier indexSupplier = indexSelector.getIndexSupplier(dimension.getDimension());
 
         ExtractionFn extractionFn = dimension.getExtractionFn();
         if (extractionFn == null) {
           extractionFn = IdentityExtractionFn.getInstance();
         }
-        for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
-          String dimVal = extractionFn.apply(bitmapIndex.getValue(i));
+        // if indexSupplier is null here, it means the column is missing
+        if (indexSupplier == null) {
+          String dimVal = extractionFn.apply(null);
           if (!searchQuerySpec.accept(dimVal)) {
             continue;
           }
-          ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+          ImmutableBitmap bitmap = bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), index.getNumRows());
           if (timeFilteredBitmap != null) {
             bitmap = bitmapFactory.intersection(Arrays.asList(timeFilteredBitmap, bitmap));
           }
@@ -273,6 +296,25 @@ public class UseIndexesStrategy extends SearchStrategy
             retVal.addTo(new SearchHit(dimension.getOutputName(), dimVal), bitmap.size());
             if (retVal.size() >= limit) {
               return retVal;
+            }
+          }
+        } else {
+          final DictionaryEncodedStringValueIndex bitmapIndex =
+              indexSupplier.as(DictionaryEncodedStringValueIndex.class);
+          for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
+            String dimVal = extractionFn.apply(bitmapIndex.getValue(i));
+            if (!searchQuerySpec.accept(dimVal)) {
+              continue;
+            }
+            ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+            if (timeFilteredBitmap != null) {
+              bitmap = bitmapFactory.intersection(Arrays.asList(timeFilteredBitmap, bitmap));
+            }
+            if (!bitmap.isEmpty()) {
+              retVal.addTo(new SearchHit(dimension.getOutputName(), dimVal), bitmap.size());
+              if (retVal.size() >= limit) {
+                return retVal;
+              }
             }
           }
         }

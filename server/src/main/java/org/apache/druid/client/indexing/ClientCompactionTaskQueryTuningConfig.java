@@ -25,6 +25,8 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
+import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.Duration;
@@ -72,15 +74,22 @@ public class ClientCompactionTaskQueryTuningConfig
   private final Integer maxNumSegmentsToMerge;
   @Nullable
   private final Integer totalNumMergeTasks;
+  @Nullable
+  private final Integer maxColumnsToMerge;
+  @Nullable
+  private final AppendableIndexSpec appendableIndexSpec;
 
   public static ClientCompactionTaskQueryTuningConfig from(
       @Nullable UserCompactionTaskQueryTuningConfig userCompactionTaskQueryTuningConfig,
-      @Nullable Integer maxRowsPerSegment
+      @Nullable Integer maxRowsPerSegment,
+      @Nullable Boolean preserveExistingMetrics
   )
   {
     if (userCompactionTaskQueryTuningConfig == null) {
       return new ClientCompactionTaskQueryTuningConfig(
           maxRowsPerSegment,
+          new OnheapIncrementalIndex.Spec(preserveExistingMetrics),
+          null,
           null,
           null,
           null,
@@ -100,8 +109,12 @@ public class ClientCompactionTaskQueryTuningConfig
           null
       );
     } else {
+      AppendableIndexSpec appendableIndexSpecToUse = userCompactionTaskQueryTuningConfig.getAppendableIndexSpec() != null
+                                                     ? userCompactionTaskQueryTuningConfig.getAppendableIndexSpec()
+                                                     : new OnheapIncrementalIndex.Spec(preserveExistingMetrics);
       return new ClientCompactionTaskQueryTuningConfig(
           maxRowsPerSegment,
+          appendableIndexSpecToUse,
           userCompactionTaskQueryTuningConfig.getMaxRowsInMemory(),
           userCompactionTaskQueryTuningConfig.getMaxBytesInMemory(),
           userCompactionTaskQueryTuningConfig.getMaxTotalRows(),
@@ -118,7 +131,8 @@ public class ClientCompactionTaskQueryTuningConfig
           userCompactionTaskQueryTuningConfig.getChatHandlerTimeout(),
           userCompactionTaskQueryTuningConfig.getChatHandlerNumRetries(),
           userCompactionTaskQueryTuningConfig.getMaxNumSegmentsToMerge(),
-          userCompactionTaskQueryTuningConfig.getTotalNumMergeTasks()
+          userCompactionTaskQueryTuningConfig.getTotalNumMergeTasks(),
+          userCompactionTaskQueryTuningConfig.getMaxColumnsToMerge()
       );
     }
   }
@@ -126,6 +140,7 @@ public class ClientCompactionTaskQueryTuningConfig
   @JsonCreator
   public ClientCompactionTaskQueryTuningConfig(
       @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
+      @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
@@ -142,10 +157,12 @@ public class ClientCompactionTaskQueryTuningConfig
       @JsonProperty("chatHandlerTimeout") @Nullable Duration chatHandlerTimeout,
       @JsonProperty("chatHandlerNumRetries") @Nullable Integer chatHandlerNumRetries,
       @JsonProperty("maxNumSegmentsToMerge") @Nullable Integer maxNumSegmentsToMerge,
-      @JsonProperty("totalNumMergeTasks") @Nullable Integer totalNumMergeTasks
+      @JsonProperty("totalNumMergeTasks") @Nullable Integer totalNumMergeTasks,
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
   )
   {
     this.maxRowsPerSegment = maxRowsPerSegment;
+    this.appendableIndexSpec = appendableIndexSpec;
     this.maxRowsInMemory = maxRowsInMemory;
     this.maxBytesInMemory = maxBytesInMemory;
     this.maxTotalRows = maxTotalRows;
@@ -163,6 +180,7 @@ public class ClientCompactionTaskQueryTuningConfig
     this.chatHandlerNumRetries = chatHandlerNumRetries;
     this.maxNumSegmentsToMerge = maxNumSegmentsToMerge;
     this.totalNumMergeTasks = totalNumMergeTasks;
+    this.maxColumnsToMerge = maxColumnsToMerge;
   }
 
   @JsonProperty
@@ -306,6 +324,20 @@ public class ClientCompactionTaskQueryTuningConfig
     return totalNumMergeTasks;
   }
 
+  @JsonProperty
+  @Nullable
+  public Integer getMaxColumnsToMerge()
+  {
+    return maxColumnsToMerge;
+  }
+
+  @JsonProperty
+  @Nullable
+  public AppendableIndexSpec getAppendableIndexSpec()
+  {
+    return appendableIndexSpec;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -333,7 +365,9 @@ public class ClientCompactionTaskQueryTuningConfig
            Objects.equals(chatHandlerTimeout, that.chatHandlerTimeout) &&
            Objects.equals(chatHandlerNumRetries, that.chatHandlerNumRetries) &&
            Objects.equals(maxNumSegmentsToMerge, that.maxNumSegmentsToMerge) &&
-           Objects.equals(totalNumMergeTasks, that.totalNumMergeTasks);
+           Objects.equals(totalNumMergeTasks, that.totalNumMergeTasks) &&
+           Objects.equals(maxColumnsToMerge, that.maxColumnsToMerge) &&
+           Objects.equals(appendableIndexSpec, that.appendableIndexSpec);
   }
 
   @Override
@@ -357,7 +391,9 @@ public class ClientCompactionTaskQueryTuningConfig
         chatHandlerTimeout,
         chatHandlerNumRetries,
         maxNumSegmentsToMerge,
-        totalNumMergeTasks
+        totalNumMergeTasks,
+        maxColumnsToMerge,
+        appendableIndexSpec
     );
   }
 
@@ -383,6 +419,8 @@ public class ClientCompactionTaskQueryTuningConfig
            ", chatHandlerNumRetries=" + chatHandlerNumRetries +
            ", maxNumSegmentsToMerge=" + maxNumSegmentsToMerge +
            ", totalNumMergeTasks=" + totalNumMergeTasks +
+           ", maxColumnsToMerge=" + maxColumnsToMerge +
+           ", appendableIndexSpec=" + appendableIndexSpec +
            '}';
   }
 }

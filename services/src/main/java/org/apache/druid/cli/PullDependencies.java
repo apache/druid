@@ -19,14 +19,14 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Command;
+import com.github.rvesse.airline.annotations.Option;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.SetMultimap;
 import com.google.inject.Inject;
-import io.airlift.airline.Command;
-import io.airlift.airline.Option;
 import io.netty.util.SuppressForbidden;
 import io.tesla.aether.Repository;
 import io.tesla.aether.TeslaAether;
@@ -183,7 +183,7 @@ public class PullDependencies implements Runnable
 
   @Option(
       name = "--no-default-hadoop",
-      description = "Don't pull down the default hadoop coordinate, i.e., org.apache.hadoop:hadoop-client:2.8.5. If `-h` option is supplied, then default hadoop coordinate will not be downloaded."
+      description = "Don't pull down the default hadoop coordinate, i.e., org.apache.hadoop:hadoop-client if hadoop2 or org.apache.hadoop:hadoop-client-runtime if hadoop3. If `-h` option is supplied, then default hadoop coordinate will not be downloaded."
   )
   public boolean noDefaultHadoop = false;
 
@@ -253,7 +253,7 @@ public class PullDependencies implements Runnable
   )
   public String proxyPassword = "";
 
-  @SuppressWarnings("unused")  // used by io.airlift:airline
+  @SuppressWarnings("unused")  // used by com.github.rvesse.airline
   public PullDependencies()
   {
     hadoopExclusions = Dependencies.builder()
@@ -285,8 +285,8 @@ public class PullDependencies implements Runnable
         FileUtils.deleteDirectory(extensionsDir);
         FileUtils.deleteDirectory(hadoopDependenciesDir);
       }
-      org.apache.commons.io.FileUtils.forceMkdir(extensionsDir);
-      org.apache.commons.io.FileUtils.forceMkdir(hadoopDependenciesDir);
+      FileUtils.mkdirp(extensionsDir);
+      FileUtils.mkdirp(hadoopDependenciesDir);
     }
     catch (IOException e) {
       log.error(e, "Unable to clear or create extension directory at [%s]", extensionsDir);

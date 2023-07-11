@@ -20,14 +20,17 @@ import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 import './bootstrap/ace';
 
+import { QueryRunner } from 'druid-query-toolkit';
 import React from 'react';
 import ReactDOM from 'react-dom';
 
 import { bootstrapJsonParse } from './bootstrap/json-parser';
 import { bootstrapReactTable } from './bootstrap/react-table-defaults';
 import { ConsoleApplication } from './console-application';
-import { Links, setLinkOverrides } from './links';
+import type { Links } from './links';
+import { setLinkOverrides } from './links';
 import { Api, UrlBaser } from './singletons';
+import { setLocalStorageNamespace } from './utils';
 
 import './entry.scss';
 
@@ -51,9 +54,6 @@ interface ConsoleConfig {
   // A set of custom headers name/value to set on every AJAX request
   customHeaders?: Record<string, string>;
 
-  // The URL for where to load the example manifest, a JSON document that tells the console where to find all the example datasets
-  exampleManifestsUrl?: string;
-
   // The query context to set if the user does not have one saved in local storage, defaults to {}
   defaultQueryContext?: Record<string, any>;
 
@@ -62,6 +62,9 @@ interface ConsoleConfig {
 
   // Allow for link overriding to different docs
   linkOverrides?: Links;
+
+  // Allow for namespacing the local storage in case multiple clusters share a URL due to proxying
+  localStorageNamespace?: string;
 }
 
 const consoleConfig: ConsoleConfig = (window as any).consoleConfig;
@@ -76,10 +79,10 @@ if (consoleConfig.baseURL) {
   UrlBaser.baseUrl = consoleConfig.baseURL;
 }
 if (consoleConfig.customHeaderName && consoleConfig.customHeaderValue) {
-  apiConfig.headers[consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
+  apiConfig.headers![consoleConfig.customHeaderName] = consoleConfig.customHeaderValue;
 }
 if (consoleConfig.customHeaders) {
-  Object.assign(apiConfig.headers, consoleConfig.customHeaders);
+  Object.assign(apiConfig.headers!, consoleConfig.customHeaders);
 }
 
 Api.initialize(apiConfig);
@@ -88,9 +91,16 @@ if (consoleConfig.linkOverrides) {
   setLinkOverrides(consoleConfig.linkOverrides);
 }
 
+if (consoleConfig.localStorageNamespace) {
+  setLocalStorageNamespace(consoleConfig.localStorageNamespace);
+}
+
+QueryRunner.defaultQueryExecutor = (payload, isSql, cancelToken) => {
+  return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
+};
+
 ReactDOM.render(
   React.createElement(ConsoleApplication, {
-    exampleManifestsUrl: consoleConfig.exampleManifestsUrl,
     defaultQueryContext: consoleConfig.defaultQueryContext,
     mandatoryQueryContext: consoleConfig.mandatoryQueryContext,
   }),
@@ -103,7 +113,7 @@ ReactDOM.render(
 let mode: 'mouse' | 'tab' = 'mouse';
 
 function handleTab(e: KeyboardEvent) {
-  if (e.keyCode !== 9) return;
+  if (e.key !== 'Tab') return;
   if (mode === 'tab') return;
   mode = 'tab';
   document.body.classList.remove('mouse-mode');

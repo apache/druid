@@ -32,6 +32,7 @@ import org.junit.runners.model.Statement;
 
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * JUnit Rule that adds a Calcite hook to log and remember Druid queries.
@@ -40,22 +41,22 @@ public class QueryLogHook implements TestRule
 {
   private static final Logger log = new Logger(QueryLogHook.class);
 
-  private final ObjectMapper objectMapper;
-  private final List<Query> recordedQueries = Lists.newCopyOnWriteArrayList();
+  private final Supplier<ObjectMapper> objectMapperSupplier;
+  private final List<Query<?>> recordedQueries = Lists.newCopyOnWriteArrayList();
 
-  public QueryLogHook(final ObjectMapper objectMapper)
+  public QueryLogHook(final Supplier<ObjectMapper> objectMapperSupplier)
   {
-    this.objectMapper = objectMapper;
+    this.objectMapperSupplier = objectMapperSupplier;
   }
 
   public static QueryLogHook create()
   {
-    return new QueryLogHook(new DefaultObjectMapper());
+    return new QueryLogHook(() -> DefaultObjectMapper.INSTANCE);
   }
 
   public static QueryLogHook create(final ObjectMapper objectMapper)
   {
-    return new QueryLogHook(objectMapper);
+    return new QueryLogHook(() -> objectMapper);
   }
 
   public void clearRecordedQueries()
@@ -63,7 +64,7 @@ public class QueryLogHook implements TestRule
     recordedQueries.clear();
   }
 
-  public List<Query> getRecordedQueries()
+  public List<Query<?>> getRecordedQueries()
   {
     return ImmutableList.copyOf(recordedQueries);
   }
@@ -80,10 +81,10 @@ public class QueryLogHook implements TestRule
 
         final Consumer<Object> function = query -> {
           try {
-            recordedQueries.add((Query) query);
+            recordedQueries.add((Query<?>) query);
             log.info(
                 "Issued query: %s",
-                objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(query)
+                objectMapperSupplier.get().writerWithDefaultPrettyPrinter().writeValueAsString(query)
             );
           }
           catch (Exception e) {

@@ -61,6 +61,7 @@
         "fs.default.name" : "hdfs://druid-it-hadoop:9000",
         "fs.defaultFS" : "hdfs://druid-it-hadoop:9000",
         "dfs.datanode.address" : "druid-it-hadoop",
+        "mapreduce.job.classloader": "true",
         "dfs.client.use.datanode.hostname" : "true",
         "dfs.datanode.use.datanode.hostname" : "true",
         "yarn.resourcemanager.hostname" : "druid-it-hadoop",

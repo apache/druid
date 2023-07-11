@@ -33,6 +33,7 @@ import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
 import org.joda.time.Interval;
@@ -137,7 +138,7 @@ public class TopNQueryEngine
         // if sorted by dimension we should aggregate all metrics in a single pass, use the regular pooled algorithm for
         // this
         topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
-      } else if (selector.isAggregateTopNMetricFirst() || query.getContextBoolean("doAggregateTopNMetricFirst", false)) {
+      } else if (selector.isAggregateTopNMetricFirst() || query.context().getBoolean("doAggregateTopNMetricFirst", false)) {
         // for high cardinality dimensions with larger result sets we aggregate with only the ordering aggregation to
         // compute the first 'n' values, and then for the rest of the metrics but for only the 'n' values
         topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(adapter, query, bufferPool);
@@ -188,11 +189,11 @@ public class TopNQueryEngine
       return false;
     }
 
-    if (query.getDimensionSpec().getOutputType() != ValueType.STRING) {
+    if (!query.getDimensionSpec().getOutputType().is(ValueType.STRING)) {
       // non-string output cannot use the pooled algorith, even if the underlying selector supports it
       return false;
     }
-    if (capabilities != null && capabilities.getType() == ValueType.STRING) {
+    if (Types.is(capabilities, ValueType.STRING)) {
       // string columns must use the on heap algorithm unless they have the following capabilites
       return capabilities.isDictionaryEncoded().isTrue() && capabilities.areDictionaryValuesUnique().isTrue();
     } else {

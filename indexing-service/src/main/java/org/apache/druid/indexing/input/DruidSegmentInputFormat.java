@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.input;
 
+import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.BytesCountingInputEntity;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
@@ -55,14 +57,33 @@ public class DruidSegmentInputFormat implements InputFormat
       File temporaryDirectory
   )
   {
-    return new DruidSegmentReader(
-        source,
-        indexIO,
-        inputRowSchema.getTimestampSpec(),
-        inputRowSchema.getDimensionsSpec(),
-        inputRowSchema.getColumnsFilter(),
-        dimFilter,
-        temporaryDirectory
+    final InputEntity baseInputEntity;
+    if (source instanceof BytesCountingInputEntity) {
+      baseInputEntity = ((BytesCountingInputEntity) source).getBaseInputEntity();
+    } else {
+      baseInputEntity = source;
+    }
+
+    // this method handles the case when the entity comes from a tombstone or from a regular segment
+    Preconditions.checkArgument(
+        baseInputEntity instanceof DruidSegmentInputEntity,
+        DruidSegmentInputEntity.class.getName() + " required, but "
+        + baseInputEntity.getClass().getName() + " provided."
     );
+
+    final DruidSegmentInputEntity druidSegmentEntity = (DruidSegmentInputEntity) baseInputEntity;
+    if (druidSegmentEntity.isFromTombstone()) {
+      return new DruidTombstoneSegmentReader(druidSegmentEntity);
+    } else {
+      return new DruidSegmentReader(
+          source,
+          indexIO,
+          inputRowSchema.getTimestampSpec(),
+          inputRowSchema.getDimensionsSpec(),
+          inputRowSchema.getColumnsFilter(),
+          dimFilter,
+          temporaryDirectory
+      );
+    }
   }
 }

@@ -29,8 +29,8 @@ import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregat
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -108,15 +108,27 @@ public class TimestampMinMaxAggregatorFactoryTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
+                    .add("count", ColumnType.LONG)
                     .add("timeMax", null)
                     .add("timeMin", null)
-                    .add("timeMax-access", ValueType.LONG)
-                    .add("timeMax-finalize", ValueType.COMPLEX)
-                    .add("timeMin-access", ValueType.LONG)
-                    .add("timeMin-finalize", ValueType.COMPLEX)
+                    .add("timeMax-access", ColumnType.LONG)
+                    .add("timeMax-finalize", TimestampAggregatorFactory.FINALIZED_TYPE)
+                    .add("timeMin-access", ColumnType.LONG)
+                    .add("timeMin-finalize", TimestampAggregatorFactory.FINALIZED_TYPE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
+  }
+
+  @Test
+  public void testWithName()
+  {
+    TimestampMaxAggregatorFactory maxAgg = new TimestampMaxAggregatorFactory("timeMax", "__time", null);
+    Assert.assertEquals(maxAgg, maxAgg.withName("timeMax"));
+    Assert.assertEquals("newTest", maxAgg.withName("newTest").getName());
+
+    TimestampMinAggregatorFactory minAgg = new TimestampMinAggregatorFactory("timeMin", "__time", null);
+    Assert.assertEquals(minAgg, minAgg.withName("timeMin"));
+    Assert.assertEquals("newTest", minAgg.withName("newTest").getName());
   }
 }

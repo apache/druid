@@ -48,7 +48,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -61,6 +61,8 @@ import java.util.stream.Collectors;
 
 public class CardinalityAggregatorFactory extends AggregatorFactory
 {
+  public static final ColumnType TYPE = ColumnType.ofComplex("hyperUnique");
+
   private static List<String> makeRequiredFieldNamesFromFields(List<DimensionSpec> fields)
   {
     return ImmutableList.copyOf(
@@ -315,31 +317,31 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
         .build();
   }
 
-  @Override
-  public String getComplexTypeName()
-  {
-    return "hyperUnique";
-  }
-
   /**
    * actual type is {@link HyperLogLogCollector}
    */
   @Override
-  public ValueType getType()
+  public ColumnType getIntermediateType()
   {
-    return ValueType.COMPLEX;
+    return TYPE;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getResultType()
   {
-    return round ? ValueType.LONG : ValueType.DOUBLE;
+    return round ? ColumnType.LONG : ColumnType.DOUBLE;
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
     return HyperLogLogCollector.getLatestNumBytesForDenseStorage();
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new CardinalityAggregatorFactory(newName, null, getFields(), byRow, round);
   }
 
   @Override

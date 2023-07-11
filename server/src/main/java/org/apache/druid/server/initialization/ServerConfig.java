@@ -21,11 +21,14 @@ package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
+import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -61,7 +64,11 @@ public class ServerConfig
       int inflateBufferSize,
       int compressionLevel,
       boolean enableForwardedRequestCustomizer,
-      @NotNull List<String> allowedHttpMethods
+      @NotNull List<String> allowedHttpMethods,
+      boolean showDetailedJettyErrors,
+      @NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy,
+      @Nullable String contentSecurityPolicy,
+      boolean enableHSTS
   )
   {
     this.numThreads = numThreads;
@@ -79,6 +86,10 @@ public class ServerConfig
     this.compressionLevel = compressionLevel;
     this.enableForwardedRequestCustomizer = enableForwardedRequestCustomizer;
     this.allowedHttpMethods = allowedHttpMethods;
+    this.showDetailedJettyErrors = showDetailedJettyErrors;
+    this.errorResponseTransformStrategy = errorResponseTransformStrategy;
+    this.contentSecurityPolicy = contentSecurityPolicy;
+    this.enableHSTS = enableHSTS;
   }
 
   public ServerConfig()
@@ -144,6 +155,19 @@ public class ServerConfig
   @JsonProperty
   @NotNull
   private List<String> allowedHttpMethods = ImmutableList.of();
+
+  @JsonProperty("errorResponseTransform")
+  @NotNull
+  private ErrorResponseTransformStrategy errorResponseTransformStrategy = NoErrorResponseTransformStrategy.INSTANCE;
+
+  @JsonProperty("contentSecurityPolicy")
+  private String contentSecurityPolicy;
+
+  @JsonProperty
+  private boolean enableHSTS = false;
+
+  @JsonProperty
+  private boolean showDetailedJettyErrors = true;
 
   public int getNumThreads()
   {
@@ -215,10 +239,30 @@ public class ServerConfig
     return enableForwardedRequestCustomizer;
   }
 
+  public boolean isShowDetailedJettyErrors()
+  {
+    return showDetailedJettyErrors;
+  }
+
+  public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
+  {
+    return errorResponseTransformStrategy;
+  }
+
   @NotNull
   public List<String> getAllowedHttpMethods()
   {
     return allowedHttpMethods;
+  }
+
+  public String getContentSecurityPolicy()
+  {
+    return contentSecurityPolicy;
+  }
+
+  public boolean isEnableHSTS()
+  {
+    return enableHSTS;
   }
 
   @Override
@@ -235,17 +279,21 @@ public class ServerConfig
            queueSize == that.queueSize &&
            enableRequestLimit == that.enableRequestLimit &&
            defaultQueryTimeout == that.defaultQueryTimeout &&
-           maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            maxSubqueryRows == that.maxSubqueryRows &&
            maxQueryTimeout == that.maxQueryTimeout &&
            maxRequestHeaderSize == that.maxRequestHeaderSize &&
            inflateBufferSize == that.inflateBufferSize &&
            compressionLevel == that.compressionLevel &&
            enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
+           showDetailedJettyErrors == that.showDetailedJettyErrors &&
            maxIdleTime.equals(that.maxIdleTime) &&
+           maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
            unannouncePropagationDelay.equals(that.unannouncePropagationDelay) &&
-           allowedHttpMethods.equals(that.allowedHttpMethods);
+           allowedHttpMethods.equals(that.allowedHttpMethods) &&
+           errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy) &&
+           Objects.equals(contentSecurityPolicy, that.getContentSecurityPolicy()) &&
+           enableHSTS == that.enableHSTS;
   }
 
   @Override
@@ -266,7 +314,11 @@ public class ServerConfig
         inflateBufferSize,
         compressionLevel,
         enableForwardedRequestCustomizer,
-        allowedHttpMethods
+        allowedHttpMethods,
+        errorResponseTransformStrategy,
+        showDetailedJettyErrors,
+        contentSecurityPolicy,
+        enableHSTS
     );
   }
 
@@ -288,7 +340,11 @@ public class ServerConfig
            ", inflateBufferSize=" + inflateBufferSize +
            ", compressionLevel=" + compressionLevel +
            ", enableForwardedRequestCustomizer=" + enableForwardedRequestCustomizer +
-           ", allowedMethods=" + allowedHttpMethods +
+           ", allowedHttpMethods=" + allowedHttpMethods +
+           ", errorResponseTransformStrategy=" + errorResponseTransformStrategy +
+           ", showDetailedJettyErrors=" + showDetailedJettyErrors +
+           ", contentSecurityPolicy=" + contentSecurityPolicy +
+           ", enableHSTS=" + enableHSTS +
            '}';
   }
 

@@ -360,9 +360,26 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           Collections.singletonList(Intervals.of("2013-08-31/2013-09-02"))
       );
 
-      waitForAllTasksToCompleteForDataSource(datasourceName);
+      ITRetryUtil.retryUntilTrue(
+          () -> coordinator.areSegmentsLoaded(datasourceName),
+          "Segment Load"
+      );
     }
-
   }
 
+  @Test
+  public void testJsonFunctions() throws Exception
+  {
+    final String taskSpec = getResourceAsString("/indexer/json_path_index_task.json");
+
+    submitTaskAndWait(
+        taskSpec,
+        "json_path_index_test",
+        false,
+        true,
+        new Pair<>(false, false)
+    );
+
+    doTestQuery("json_path_index_test", "/indexer/json_path_index_queries.json");
+  }
 }

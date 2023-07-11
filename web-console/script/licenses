@@ -90,7 +90,7 @@ checker.init(
 
     Object.assign(packages, extraPackages);
 
-    const seen = {};
+    const seen = new Map();
     const mapped = Object.keys(packages)
       .sort()
       .map(p => {
@@ -98,8 +98,8 @@ checker.init(
         if (!m) throw new Error(`Malformed name@version`);
         const name = m[1];
         if (name === 'web-console') return; // This is me!
-        if (seen[name]) return; // Dedupe
-        seen[name] = true;
+        if (seen.has(name)) return; // Dedupe
+        seen.set(name, true);
 
         const version = m[2];
         const meta = packages[p];
@@ -114,9 +114,19 @@ checker.init(
             licenseExt = 'MIT';
             break;
 
+          case 'ISC':
+            properLicenseName = 'ISC License';
+            licenseExt = 'ISC';
+            break;
+
           case 'Apache-2.0':
             properLicenseName = 'Apache License version 2.0';
             licenseExt = 'A2';
+            break;
+
+          case 'BSD-2-Clause':
+            properLicenseName = 'BSD-2-Clause License';
+            licenseExt = 'BSD2';
             break;
 
           case 'BSD-3-Clause':
@@ -153,6 +163,7 @@ checker.init(
               hasLicense = true;
             } catch (e) {
               console.log(`Could not find license for '${p}': ${JSON.stringify(meta)}`);
+              console.log(`Find and copy the package's license file to '../${licenseDest}'`);
             }
           }
         }
@@ -175,6 +186,7 @@ checker.init(
           // Hand coded copyrights
           if (name === 'asap') publisher = 'Contributors';
           if (name === 'diff-match-patch') publisher = 'Google';
+          if (name === 'esutils') publisher = 'Yusuke Suzuki'; // https://github.com/estools/esutils#license
         }
 
         if (!publisher) {

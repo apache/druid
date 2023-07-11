@@ -19,64 +19,56 @@
 
 package org.apache.druid.indexer;
 
-import org.easymock.Capture;
-import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.powermock.api.easymock.PowerMock;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.core.classloader.annotations.SuppressStaticInitializationFor;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 import java.util.List;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({
-    JobHelper.class,
-    IndexGeneratorJob.class
-})
-@PowerMockIgnore({"javax.net.ssl.*", "org.apache.logging.log4j.*"})
-@SuppressStaticInitializationFor({
-    "org.apache.druid.indexer.HadoopDruidIndexerConfig",
-    "org.apache.druid.indexer.JobHelper",
-    "org.apache.druid.indexer.IndexGeneratorJob"
-})
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+
 public class HadoopDruidIndexerJobTest
 {
-  private HadoopDruidIndexerConfig config;
-  private MetadataStorageUpdaterJobHandler handler;
-  private HadoopDruidIndexerJob target;
-
   @Test
   public void test_run()
   {
-    config = PowerMock.createMock(HadoopDruidIndexerConfig.class);
-    handler = PowerMock.createMock(MetadataStorageUpdaterJobHandler.class);
-    PowerMock.mockStaticNice(JobHelper.class);
-    PowerMock.mockStaticNice(IndexGeneratorJob.class);
-    config.verify();
-    EasyMock.expectLastCall();
-    EasyMock.expect(config.isUpdaterJobSpecSet()).andReturn(false).anyTimes();
-    config.setHadoopJobIdFileName(EasyMock.anyString());
-    EasyMock.expectLastCall();
-    JobHelper.ensurePaths(config);
-    EasyMock.expectLastCall();
-    Capture<List<Jobby>> capturedJobs = Capture.newInstance();
-    EasyMock.expect(JobHelper.runJobs(EasyMock.capture(capturedJobs))).andReturn(true);
-    EasyMock.expect(IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(EasyMock.anyObject())).andReturn(null);
+    HadoopDruidIndexerConfig config = mock(HadoopDruidIndexerConfig.class);
+    MetadataStorageUpdaterJobHandler handler = mock(MetadataStorageUpdaterJobHandler.class);
+    try (MockedStatic<JobHelper> jobHelperMock = Mockito.mockStatic(JobHelper.class)) {
+      try (final MockedStatic<IndexGeneratorJob> indexGeneratorJobMock = Mockito.mockStatic(IndexGeneratorJob.class)) {
+        when(config.isUpdaterJobSpecSet()).thenReturn(false);
 
+        jobHelperMock.when(() -> JobHelper.runJobs(any())).thenReturn(true);
+        indexGeneratorJobMock.when(() -> IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(any())).thenReturn(null);
 
-    PowerMock.replayAll();
+        HadoopDruidIndexerJob target = new HadoopDruidIndexerJob(config, handler);
+        target.run();
 
-    target = new HadoopDruidIndexerJob(config, handler);
-    target.run();
+        ArgumentCaptor<List<Jobby>> capturedJobs = ArgumentCaptor.forClass(List.class);
+        jobHelperMock.verify(() -> JobHelper.runJobs(capturedJobs.capture()));
 
-    List<Jobby> jobs = capturedJobs.getValue();
-    Assert.assertEquals(2, jobs.size());
-    jobs.stream().filter(job -> !(job instanceof IndexGeneratorJob)).forEach(job -> Assert.assertTrue(job.run()));
+        List<Jobby> jobs = capturedJobs.getValue();
+        Assert.assertEquals(2, jobs.size());
+        jobs.stream().filter(job -> !(job instanceof IndexGeneratorJob)).forEach(job -> Assert.assertTrue(job.run()));
 
-    PowerMock.verifyAll();
+        jobHelperMock.verify(() -> JobHelper.ensurePaths(config));
+        jobHelperMock.verifyNoMoreInteractions();
+
+        indexGeneratorJobMock.verify(() -> IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(any()));
+        indexGeneratorJobMock.verifyNoMoreInteractions();
+
+        verify(config).verify();
+        verify(config, atLeastOnce()).isUpdaterJobSpecSet();
+        verify(config).setHadoopJobIdFileName(null);
+        verifyNoMoreInteractions(config);
+      }
+    }
   }
 }

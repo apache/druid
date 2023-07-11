@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
@@ -122,9 +121,10 @@ public class DataSourceOptimizer
       List<Interval> remainingQueryIntervals = (List<Interval>) query.getIntervals();
 
       for (DerivativeDataSource derivativeDataSource : ImmutableSortedSet.copyOf(derivativesWithRequiredFields)) {
+        TableDataSource tableDataSource = new TableDataSource(derivativeDataSource.getName());
         final List<Interval> derivativeIntervals = remainingQueryIntervals.stream()
             .flatMap(interval -> serverView
-                .getTimeline(DataSourceAnalysis.forDataSource(new TableDataSource(derivativeDataSource.getName())))
+                .getTimeline(tableDataSource.getAnalysis())
                 .orElseThrow(() -> new ISE("No timeline for dataSource: %s", derivativeDataSource.getName()))
                 .lookup(interval)
                 .stream()

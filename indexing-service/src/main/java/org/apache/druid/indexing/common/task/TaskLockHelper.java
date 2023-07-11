@@ -57,6 +57,7 @@ public class TaskLockHelper
   private final Map<Interval, OverwritingRootGenerationPartitions> overwritingRootGenPartitions = new HashMap<>();
   private final Set<DataSegment> lockedExistingSegments = new HashSet<>();
   private final boolean useSegmentLock;
+  private final boolean useSharedLock;
 
   @Nullable
   private Granularity knownSegmentGranularity;
@@ -90,9 +91,10 @@ public class TaskLockHelper
     }
   }
 
-  public TaskLockHelper(boolean useSegmentLock)
+  public TaskLockHelper(boolean useSegmentLock, boolean useSharedLock)
   {
     this.useSegmentLock = useSegmentLock;
+    this.useSharedLock = useSharedLock;
   }
 
   public boolean isUseSegmentLock()
@@ -103,6 +105,16 @@ public class TaskLockHelper
   public LockGranularity getLockGranularityToUse()
   {
     return useSegmentLock ? LockGranularity.SEGMENT : LockGranularity.TIME_CHUNK;
+  }
+
+  public boolean isUseSharedLock()
+  {
+    return useSharedLock;
+  }
+
+  public TaskLockType getLockTypeToUse()
+  {
+    return useSharedLock ? TaskLockType.SHARED : TaskLockType.EXCLUSIVE;
   }
 
   public boolean hasLockedExistingSegments()

@@ -102,6 +102,42 @@ public class JSONFlatDataParserTest
   }
 
   @Test
+  public void testSimpleParseWithByteLimit_limitNotReached() throws Exception
+  {
+    final UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
+        MAPPER,
+        "key",
+        "val"
+    );
+    final Map<String, String> map = new HashMap<>();
+    new MapPopulator<>(parser.getParser()).populateAndWarnAtByteLimit(
+        Files.asByteSource(tmpFile),
+        map,
+        100_000L,
+        "namespace");
+    Assert.assertEquals(VAL1, map.get(KEY1));
+    Assert.assertEquals(VAL2, map.get(KEY2));
+  }
+
+  @Test
+  public void testSimpleParseWithByteLimit_limitReached() throws Exception
+  {
+    final UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
+        MAPPER,
+        "key",
+        "val"
+    );
+    final Map<String, String> map = new HashMap<>();
+    new MapPopulator<>(parser.getParser()).populateAndWarnAtByteLimit(
+        Files.asByteSource(tmpFile),
+        map,
+        1L,
+        "namespace");
+    Assert.assertEquals(VAL1, map.get(KEY1));
+    Assert.assertEquals(VAL2, map.get(KEY2));
+  }
+
+  @Test
   public void testParseWithNullValues() throws Exception
   {
     final UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(

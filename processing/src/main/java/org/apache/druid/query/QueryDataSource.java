@@ -25,16 +25,20 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.SegmentReference;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
 @JsonTypeName("query")
 public class QueryDataSource implements DataSource
 {
   @JsonProperty
-  private final Query query;
+  private final Query<?> query;
 
   @JsonCreator
   public QueryDataSource(@JsonProperty("query") Query query)
@@ -86,6 +90,42 @@ public class QueryDataSource implements DataSource
   public boolean isConcrete()
   {
     return false;
+  }
+
+  @Override
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
+      Query query,
+      AtomicLong cpuTime
+  )
+  {
+    final Query<?> subQuery = this.getQuery();
+    return subQuery.getDataSource().createSegmentMapFunction(subQuery, cpuTime);
+  }
+
+  @Override
+  public DataSource withUpdatedDataSource(DataSource newSource)
+  {
+    return new QueryDataSource(query.withDataSource(query.getDataSource().withUpdatedDataSource(newSource)));
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return null;
+  }
+
+  @Override
+  public DataSourceAnalysis getAnalysis()
+  {
+    final Query<?> subQuery = this.getQuery();
+    if (!(subQuery instanceof BaseQuery)) {
+      // We must verify that the subQuery is a BaseQuery, because it is required to make
+      // "DataSourceAnalysis.getBaseQuerySegmentSpec" work properly.
+      // All built-in query types are BaseQuery, so we only expect this with funky extension queries.
+      throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
+    }
+    final DataSource current = subQuery.getDataSource();
+    return current.getAnalysis().maybeWithBaseQuery(subQuery);
   }
 
   @Override

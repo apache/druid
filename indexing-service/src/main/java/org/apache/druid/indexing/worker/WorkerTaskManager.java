@@ -98,13 +98,12 @@ public class WorkerTaskManager
   //synchronizes access to "running", "completed" and "changeHistory"
   protected final Object lock = new Object();
 
-  private final TaskConfig taskConfig;
-
   private final ScheduledExecutorService completedTasksCleanupExecutor;
 
   private final AtomicBoolean disabled = new AtomicBoolean(false);
 
   private final DruidLeaderClient overlordClient;
+  private final File storageDir;
 
   @Inject
   public WorkerTaskManager(
@@ -116,10 +115,11 @@ public class WorkerTaskManager
   {
     this.jsonMapper = jsonMapper;
     this.taskRunner = taskRunner;
-    this.taskConfig = taskConfig;
     this.exec = Execs.singleThreaded("WorkerTaskManager-NoticeHandler");
     this.completedTasksCleanupExecutor = Execs.scheduledSingleThreaded("WorkerTaskManager-CompletedTasksCleaner");
     this.overlordClient = overlordClient;
+
+    storageDir = taskConfig.getBaseTaskDir();
   }
 
   @LifecycleStart
@@ -309,13 +309,13 @@ public class WorkerTaskManager
 
   private File getTmpTaskDir()
   {
-    return new File(taskConfig.getBaseTaskDir(), "workerTaskManagerTmp");
+    return new File(storageDir, "workerTaskManagerTmp");
   }
 
-  private void cleanupAndMakeTmpTaskDir()
+  private void cleanupAndMakeTmpTaskDir() throws IOException
   {
     File tmpDir = getTmpTaskDir();
-    tmpDir.mkdirs();
+    FileUtils.mkdirp(tmpDir);
     if (!tmpDir.isDirectory()) {
       throw new ISE("Tmp Tasks Dir [%s] does not exist/not-a-directory.", tmpDir);
     }
@@ -331,20 +331,16 @@ public class WorkerTaskManager
 
   public File getAssignedTaskDir()
   {
-    return new File(taskConfig.getBaseTaskDir(), "assignedTasks");
+    return new File(storageDir, "assignedTasks");
   }
 
-  private void initAssignedTasks()
+  private void initAssignedTasks() throws IOException
   {
     File assignedTaskDir = getAssignedTaskDir();
 
     log.debug("Looking for any previously assigned tasks on disk[%s].", assignedTaskDir);
 
-    assignedTaskDir.mkdirs();
-
-    if (!assignedTaskDir.isDirectory()) {
-      throw new ISE("Assigned Tasks Dir [%s] does not exist/not-a-directory.", assignedTaskDir);
-    }
+    FileUtils.mkdirp(assignedTaskDir);
 
     for (File taskFile : assignedTaskDir.listFiles()) {
       try {
@@ -436,7 +432,7 @@ public class WorkerTaskManager
 
   public File getCompletedTaskDir()
   {
-    return new File(taskConfig.getBaseTaskDir(), "completedTasks");
+    return new File(storageDir, "completedTasks");
   }
 
   private void moveFromRunningToCompleted(String taskId, TaskAnnouncement taskAnnouncement)
@@ -461,16 +457,12 @@ public class WorkerTaskManager
     }
   }
 
-  private void initCompletedTasks()
+  private void initCompletedTasks() throws IOException
   {
     File completedTaskDir = getCompletedTaskDir();
     log.debug("Looking for any previously completed tasks on disk[%s].", completedTaskDir);
 
-    completedTaskDir.mkdirs();
-
-    if (!completedTaskDir.isDirectory()) {
-      throw new ISE("Completed Tasks Dir [%s] does not exist/not-a-directory.", completedTaskDir);
-    }
+    FileUtils.mkdirp(completedTaskDir);
 
     for (File taskFile : completedTaskDir.listFiles()) {
       try {

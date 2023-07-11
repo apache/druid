@@ -121,7 +121,7 @@ public class SequenceMetadataTest
   @Test
   public void testPublishAnnotatedSegmentsSucceedIfDropSegmentsAndOverwriteSegmentsNullAndEmpty() throws Exception
   {
-    Mockito.when(mockSeekableStreamIndexTaskRunner.deserializePartitionsFromMetadata(ArgumentMatchers.anyObject(), ArgumentMatchers.anyObject())).thenReturn(mockSeekableStreamEndSequenceNumbers);
+    Mockito.when(mockSeekableStreamIndexTaskRunner.deserializePartitionsFromMetadata(ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(mockSeekableStreamEndSequenceNumbers);
     Mockito.when(mockSeekableStreamEndSequenceNumbers.getPartitionSequenceNumberMap()).thenReturn(ImmutableMap.of());
     Mockito.when(mockTaskToolbox.getTaskActionClient()).thenReturn(mockTaskActionClient);
     DataSegment dataSegment = DataSegment.builder()

@@ -47,6 +47,7 @@ public abstract class ByteBufferWriteOutBytes extends WriteOutBytes
   ByteBuffer headBuffer;
   long size;
   long capacity;
+  boolean open = true;
 
   ByteBufferWriteOutBytes()
   {
@@ -253,7 +254,17 @@ public abstract class ByteBufferWriteOutBytes extends WriteOutBytes
   @Override
   public boolean isOpen()
   {
-    return true;
+    return open;
+  }
+
+  public void free()
+  {
+    open = false;
+    buffers.clear();
+    headBufferIndex = -1;
+    headBuffer = null;
+    size = 0;
+    capacity = 0;
   }
 
   private void checkOpen()

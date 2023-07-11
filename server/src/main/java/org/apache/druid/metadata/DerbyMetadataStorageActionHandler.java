@@ -22,12 +22,6 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.java.util.common.StringUtils;
-import org.joda.time.DateTime;
-import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.Query;
-
-import javax.annotation.Nullable;
-import java.util.Map;
 
 public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
     extends SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
@@ -47,49 +41,9 @@ public class DerbyMetadataStorageActionHandler<EntryType, StatusType, LogType, L
   }
 
   @Override
-  protected Query<Map<String, Object>> createCompletedTaskInfoQuery(
-      Handle handle,
-      DateTime timestamp,
-      @Nullable Integer maxNumStatuses,
-      @Nullable String dataSource
-  )
+  protected String decorateSqlWithLimit(String sql)
   {
-    String sql = StringUtils.format(
-        "SELECT "
-        + "  id, "
-        + "  status_payload, "
-        + "  created_date, "
-        + "  datasource, "
-        + "  payload "
-        + "FROM "
-        + "  %s "
-        + "WHERE "
-        + getWhereClauseForInactiveStatusesSinceQuery(dataSource)
-        + "ORDER BY created_date DESC",
-        getEntryTable()
-    );
-
-    if (maxNumStatuses != null) {
-      sql += " FETCH FIRST :n ROWS ONLY";
-    }
-    Query<Map<String, Object>> query = handle.createQuery(sql).bind("start", timestamp.toString());
-
-    if (maxNumStatuses != null) {
-      query = query.bind("n", maxNumStatuses);
-    }
-    if (dataSource != null) {
-      query = query.bind("ds", dataSource);
-    }
-    return query;
-  }
-
-  private String getWhereClauseForInactiveStatusesSinceQuery(@Nullable String datasource)
-  {
-    String sql = StringUtils.format("active = FALSE AND created_date >= :start ");
-    if (datasource != null) {
-      sql += " AND datasource = :ds ";
-    }
-    return sql;
+    return sql + " FETCH FIRST :n ROWS ONLY";
   }
 
   @Deprecated

@@ -20,13 +20,13 @@
 package org.apache.druid.indexing.common.tasklogs;
 
 import com.google.common.base.Optional;
-import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
 */
@@ -41,7 +41,7 @@ public class TaskRunnerTaskLogStreamer implements TaskLogStreamer
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(String taskid, long offset) throws IOException
+  public Optional<InputStream> streamTaskLog(String taskid, long offset) throws IOException
   {
     final TaskRunner runner = taskMaster.getTaskRunner().orNull();
     if (runner instanceof TaskLogStreamer) {
@@ -52,7 +52,7 @@ public class TaskRunnerTaskLogStreamer implements TaskLogStreamer
   }
 
   @Override
-  public Optional<ByteSource> streamTaskReports(String taskId) throws IOException
+  public Optional<InputStream> streamTaskReports(String taskId) throws IOException
   {
     final TaskRunner runner = taskMaster.getTaskRunner().orNull();
     if (runner instanceof TaskLogStreamer) {

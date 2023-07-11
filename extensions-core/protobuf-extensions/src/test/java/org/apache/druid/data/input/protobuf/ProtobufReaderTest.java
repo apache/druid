@@ -31,17 +31,12 @@ import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.nio.ByteBuffer;
 
 public class ProtobufReaderTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private InputRowSchema inputRowSchema;
   private InputRowSchema inputRowSchemaWithComplexTimestamp;
   private JSONPathSpec flattenSpec;
@@ -51,12 +46,14 @@ public class ProtobufReaderTest
   public void setUp()
   {
     TimestampSpec timestampSpec = new TimestampSpec("timestamp", "iso", null);
-    DimensionsSpec dimensionsSpec = new DimensionsSpec(Lists.newArrayList(
-        new StringDimensionSchema("event"),
-        new StringDimensionSchema("id"),
-        new StringDimensionSchema("someOtherId"),
-        new StringDimensionSchema("isValid")
-    ), null, null);
+    DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Lists.newArrayList(
+            new StringDimensionSchema("event"),
+            new StringDimensionSchema("id"),
+            new StringDimensionSchema("someOtherId"),
+            new StringDimensionSchema("isValid")
+        )
+    );
     flattenSpec = new JSONPathSpec(
         true,
         Lists.newArrayList(
@@ -104,7 +101,7 @@ public class ProtobufReaderTest
 
     InputRow row = reader.parseInputRows(decoder.parse(buffer)).get(0);
 
-    ProtobufInputRowParserTest.verifyFlatData(row, dateTime);
+    ProtobufInputRowParserTest.verifyFlatData(row, dateTime, false);
   }
 
   @Test
@@ -120,6 +117,27 @@ public class ProtobufReaderTest
 
     InputRow row = reader.parseInputRows(decoder.parse(buffer)).get(0);
 
-    ProtobufInputRowParserTest.verifyFlatDataWithComplexTimestamp(row, dateTime);
+    ProtobufInputRowParserTest.verifyFlatDataWithComplexTimestamp(row, dateTime, false);
+  }
+
+  @Test
+  public void testParseFlatDataWithComplexTimestampWithDefaultFlattenSpec() throws Exception
+  {
+    ProtobufReader reader = new ProtobufReader(
+        inputRowSchemaWithComplexTimestamp,
+        null,
+        decoder,
+        JSONPathSpec.DEFAULT
+    );
+
+    //create binary of proto test event
+    DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildFlatDataWithComplexTimestamp(dateTime);
+
+    ByteBuffer buffer = ProtobufInputRowParserTest.toByteBuffer(event);
+
+    InputRow row = reader.parseInputRows(decoder.parse(buffer)).get(0);
+
+    ProtobufInputRowParserTest.verifyFlatDataWithComplexTimestamp(row, dateTime, false);
   }
 }

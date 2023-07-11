@@ -71,6 +71,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
 
   private volatile boolean subTaskScheduleAndMonitorStopped;
   private volatile TaskMonitor<SubTaskType, SubTaskReportType> taskMonitor;
+  private volatile String stopReason;
 
   private int nextSpecId = 0;
 
@@ -119,7 +120,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     final long taskStatusCheckingPeriod = tuningConfig.getTaskStatusCheckPeriodMs();
 
     taskMonitor = new TaskMonitor<>(
-        toolbox.getIndexingServiceClient(),
+        toolbox.getOverlordClient(),
         tuningConfig.getMaxRetry(),
         estimateTotalNumSubTasks()
     );
@@ -266,9 +267,10 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
   }
 
   @Override
-  public void stopGracefully()
+  public void stopGracefully(String stopReason)
   {
     subTaskScheduleAndMonitorStopped = true;
+    this.stopReason = stopReason;
     stopInternal();
   }
 
@@ -420,6 +422,12 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     }
   }
 
+  @Override
+  public String getStopReason()
+  {
+    return stopReason;
+  }
+
   String getTaskId()
   {
     return taskId;
@@ -445,7 +453,6 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     return tuningConfig;
   }
 
-  @VisibleForTesting
   TaskToolbox getToolbox()
   {
     return toolbox;

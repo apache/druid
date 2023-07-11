@@ -26,13 +26,10 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
@@ -42,7 +39,6 @@ import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
@@ -68,6 +64,9 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
+import org.apache.druid.server.coordinator.duty.CompactionSegmentSearchPolicy;
+import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
+import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
 import org.apache.druid.server.coordinator.duty.EmitClusterStatsAndMetrics;
 import org.apache.druid.server.coordinator.duty.LogUsedSegments;
@@ -76,7 +75,6 @@ import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.duty.UnloadUnusedSegments;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
-import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
@@ -134,14 +132,10 @@ public class DruidCoordinator
 
   private final Object lock = new Object();
   private final DruidCoordinatorConfig config;
-  private final ZkPathsConfig zkPaths;
   private final JacksonConfigManager configManager;
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final ServerInventoryView serverInventoryView;
   private final MetadataRuleManager metadataRuleManager;
-
-  @Nullable // Null if zk is disabled
-  private final CuratorFramework curator;
 
   private final ServiceEmitter emitter;
   private final IndexingServiceClient indexingServiceClient;
@@ -152,10 +146,10 @@ public class DruidCoordinator
   private final DruidNode self;
   private final Set<CoordinatorDuty> indexingServiceDuties;
   private final Set<CoordinatorDuty> metadataStoreManagementDuties;
+  private final CoordinatorCustomDutyGroups customDutyGroups;
   private final BalancerStrategyFactory factory;
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
-
   private final CompactSegments compactSegments;
 
   private volatile boolean started = false;
@@ -165,7 +159,7 @@ public class DruidCoordinator
   private int cachedBalancerThreadNumber;
   private ListeningExecutorService balancerExec;
 
-  private static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
+  public static final String HISTORICAL_MANAGEMENT_DUTIES_DUTY_GROUP = "HistoricalManagementDuties";
   private static final String METADATA_STORE_MANAGEMENT_DUTIES_DUTY_GROUP = "MetadataStoreManagementDuties";
   private static final String INDEXING_SERVICE_DUTIES_DUTY_GROUP = "IndexingServiceDuties";
   private static final String COMPACT_SEGMENTS_DUTIES_DUTY_GROUP = "CompactSegmentsDuties";
@@ -173,12 +167,10 @@ public class DruidCoordinator
   @Inject
   public DruidCoordinator(
       DruidCoordinatorConfig config,
-      ZkPathsConfig zkPaths,
       JacksonConfigManager configManager,
       SegmentsMetadataManager segmentsMetadataManager,
       ServerInventoryView serverInventoryView,
       MetadataRuleManager metadataRuleManager,
-      Provider<CuratorFramework> curatorProvider,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
@@ -187,21 +179,19 @@ public class DruidCoordinator
       @Self DruidNode self,
       @CoordinatorMetadataStoreManagementDuty Set<CoordinatorDuty> metadataStoreManagementDuties,
       @CoordinatorIndexingServiceDuty Set<CoordinatorDuty> indexingServiceDuties,
+      CoordinatorCustomDutyGroups customDutyGroups,
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
-      CompactSegments compactSegments,
-      ZkEnablementConfig zkEnablementConfig
+      CompactionSegmentSearchPolicy compactionSegmentSearchPolicy
   )
   {
     this(
         config,
-        zkPaths,
         configManager,
         segmentsMetadataManager,
         serverInventoryView,
         metadataRuleManager,
-        curatorProvider,
         emitter,
         scheduledExecutorFactory,
         indexingServiceClient,
@@ -211,22 +201,20 @@ public class DruidCoordinator
         new ConcurrentHashMap<>(),
         indexingServiceDuties,
         metadataStoreManagementDuties,
+        customDutyGroups,
         factory,
         lookupCoordinatorManager,
         coordLeaderSelector,
-        compactSegments,
-        zkEnablementConfig
+        compactionSegmentSearchPolicy
     );
   }
 
   DruidCoordinator(
       DruidCoordinatorConfig config,
-      ZkPathsConfig zkPaths,
       JacksonConfigManager configManager,
       SegmentsMetadataManager segmentsMetadataManager,
       ServerInventoryView serverInventoryView,
       MetadataRuleManager metadataRuleManager,
-      Provider<CuratorFramework> curatorProvider,
       ServiceEmitter emitter,
       ScheduledExecutorFactory scheduledExecutorFactory,
       IndexingServiceClient indexingServiceClient,
@@ -236,25 +224,19 @@ public class DruidCoordinator
       ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap,
       Set<CoordinatorDuty> indexingServiceDuties,
       Set<CoordinatorDuty> metadataStoreManagementDuties,
+      CoordinatorCustomDutyGroups customDutyGroups,
       BalancerStrategyFactory factory,
       LookupCoordinatorManager lookupCoordinatorManager,
       DruidLeaderSelector coordLeaderSelector,
-      CompactSegments compactSegments,
-      ZkEnablementConfig zkEnablementConfig
+      CompactionSegmentSearchPolicy compactionSegmentSearchPolicy
   )
   {
     this.config = config;
-    this.zkPaths = zkPaths;
     this.configManager = configManager;
 
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.serverInventoryView = serverInventoryView;
     this.metadataRuleManager = metadataRuleManager;
-    if (zkEnablementConfig.isEnabled()) {
-      this.curator = curatorProvider.get();
-    } else {
-      this.curator = null;
-    }
     this.emitter = emitter;
     this.indexingServiceClient = indexingServiceClient;
     this.taskMaster = taskMaster;
@@ -262,6 +244,7 @@ public class DruidCoordinator
     this.self = self;
     this.indexingServiceDuties = indexingServiceDuties;
     this.metadataStoreManagementDuties = metadataStoreManagementDuties;
+    this.customDutyGroups = customDutyGroups;
 
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
@@ -269,8 +252,7 @@ public class DruidCoordinator
     this.factory = factory;
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
-
-    this.compactSegments = compactSegments;
+    this.compactSegments = initializeCompactSegmentsDuty(compactionSegmentSearchPolicy);
   }
 
   public boolean isLeader()
@@ -410,10 +392,17 @@ public class DruidCoordinator
     return CoordinatorCompactionConfig.current(configManager);
   }
 
+  public void markSegmentsAsUnused(String datasource, Set<SegmentId> segmentIds)
+  {
+    log.debug("Marking [%d] segments of datasource [%s] as unused: %s", segmentIds.size(), datasource, segmentIds);
+    int updatedCount = segmentsMetadataManager.markSegmentsAsUnused(segmentIds);
+    log.info("Successfully marked [%d] segments of datasource [%s] as unused", updatedCount, datasource);
+  }
+
   public void markSegmentAsUnused(DataSegment segment)
   {
     log.debug("Marking segment[%s] as unused", segment.getId());
-    segmentsMetadataManager.markSegmentAsUnused(segment.getId().toString());
+    segmentsMetadataManager.markSegmentAsUnused(segment.getId());
   }
 
   public String getCurrentLeader()
@@ -432,7 +421,7 @@ public class DruidCoordinator
     if (segment == null) {
       log.makeAlert(new IAE("Can not move null DataSegment"), "Exception moving null segment").emit();
       if (callback != null) {
-        callback.execute();
+        callback.execute(false);
       }
       throw new ISE("Cannot move null DataSegment");
     }
@@ -475,13 +464,10 @@ public class DruidCoordinator
         );
       }
 
-      final String toLoadQueueSegPath =
-          ZKPaths.makePath(zkPaths.getLoadQueuePath(), toServer.getName(), segmentId.toString());
-
-      final LoadPeonCallback loadPeonCallback = () -> {
+      final LoadPeonCallback loadPeonCallback = success -> {
         dropPeon.unmarkSegmentToDrop(segmentToLoad);
         if (callback != null) {
-          callback.execute();
+          callback.execute(success);
         }
       };
 
@@ -491,14 +477,23 @@ public class DruidCoordinator
       try {
         loadPeon.loadSegment(
             segmentToLoad,
-            () -> {
+            success -> {
+              // Drop segment only if:
+              // (1) segment load was successful on toServer
+              // AND (2) segment not already queued for drop on fromServer
+              // AND (3a) loading is http-based
+              //     OR (3b) inventory shows segment loaded on toServer
+
+              // Do not check the inventory with http loading as the HTTP
+              // response is enough to determine load success or failure
               try {
-                if (serverInventoryView.isSegmentLoadedByServer(toServer.getName(), segment) &&
-                    (curator == null || curator.checkExists().forPath(toLoadQueueSegPath) == null) &&
-                    !dropPeon.getSegmentsToDrop().contains(segment)) {
+                if (success
+                    && !dropPeon.getSegmentsToDrop().contains(segment)
+                    && (taskMaster.isHttpLoading()
+                     || serverInventoryView.isSegmentLoadedByServer(toServer.getName(), segment))) {
                   dropPeon.dropSegment(segment, loadPeonCallback);
                 } else {
-                  loadPeonCallback.execute();
+                  loadPeonCallback.execute(success);
                 }
               }
               catch (Exception e) {
@@ -515,7 +510,7 @@ public class DruidCoordinator
     catch (Exception e) {
       log.makeAlert(e, "Exception moving segment %s", segmentId).emit();
       if (callback != null) {
-        callback.execute();
+        callback.execute(false);
       }
     }
   }
@@ -679,6 +674,20 @@ public class DruidCoordinator
           )
       );
 
+      for (CoordinatorCustomDutyGroup customDutyGroup : customDutyGroups.getCoordinatorCustomDutyGroups()) {
+        dutiesRunnables.add(
+            Pair.of(
+                new DutiesRunnable(customDutyGroup.getCustomDutyList(), startingLeaderCounter, customDutyGroup.getName()),
+                customDutyGroup.getPeriod()
+            )
+        );
+        log.info(
+            "Done making custom coordinator duties %s for group %s",
+            customDutyGroup.getCustomDutyList().stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList()),
+            customDutyGroup.getName()
+        );
+      }
+
       for (final Pair<? extends DutiesRunnable, Duration> dutiesRunnable : dutiesRunnables) {
         // CompactSegmentsDuty can takes a non trival amount of time to complete.
         // Hence, we schedule at fixed rate to make sure the other tasks still run at approximately every
@@ -743,19 +752,21 @@ public class DruidCoordinator
         new RunRules(DruidCoordinator.this),
         new UnloadUnusedSegments(),
         new MarkAsUnusedOvershadowedSegments(DruidCoordinator.this),
-        new BalanceSegments(DruidCoordinator.this),
-        new EmitClusterStatsAndMetrics(DruidCoordinator.this)
+        new BalanceSegments(DruidCoordinator.this)
     );
   }
 
-  private List<CoordinatorDuty> makeIndexingServiceDuties()
+  @VisibleForTesting
+  List<CoordinatorDuty> makeIndexingServiceDuties()
   {
     List<CoordinatorDuty> duties = new ArrayList<>();
     duties.add(new LogUsedSegments());
     duties.addAll(indexingServiceDuties);
     // CompactSegmentsDuty should be the last duty as it can take a long time to complete
-    duties.addAll(makeCompactSegmentsDuty());
-
+    // We do not have to add compactSegments if it is already enabled in the custom duty group
+    if (getCompactSegmentsDutyFromCustomGroups().isEmpty()) {
+      duties.addAll(makeCompactSegmentsDuty());
+    }
     log.debug(
         "Done making indexing service duties %s",
         duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList())
@@ -776,6 +787,31 @@ public class DruidCoordinator
     return ImmutableList.copyOf(duties);
   }
 
+  @VisibleForTesting
+  CompactSegments initializeCompactSegmentsDuty(CompactionSegmentSearchPolicy compactionSegmentSearchPolicy)
+  {
+    List<CompactSegments> compactSegmentsDutyFromCustomGroups = getCompactSegmentsDutyFromCustomGroups();
+    if (compactSegmentsDutyFromCustomGroups.isEmpty()) {
+      return new CompactSegments(config, compactionSegmentSearchPolicy, indexingServiceClient);
+    } else {
+      if (compactSegmentsDutyFromCustomGroups.size() > 1) {
+        log.warn("More than one compactSegments duty is configured in the Coordinator Custom Duty Group. The first duty will be picked up.");
+      }
+      return compactSegmentsDutyFromCustomGroups.get(0);
+    }
+  }
+
+  @VisibleForTesting
+  List<CompactSegments> getCompactSegmentsDutyFromCustomGroups()
+  {
+    return customDutyGroups.getCoordinatorCustomDutyGroups()
+                           .stream()
+                           .flatMap(coordinatorCustomDutyGroup -> coordinatorCustomDutyGroup.getCustomDutyList().stream())
+                           .filter(duty -> duty instanceof CompactSegments)
+                           .map(duty -> (CompactSegments) duty)
+                           .collect(Collectors.toList());
+  }
+
   private List<CoordinatorDuty> makeCompactSegmentsDuty()
   {
     return ImmutableList.of(compactSegments);
@@ -785,13 +821,23 @@ public class DruidCoordinator
   protected class DutiesRunnable implements Runnable
   {
     private final long startTimeNanos = System.nanoTime();
-    private final List<CoordinatorDuty> duties;
+    private final List<? extends CoordinatorDuty> duties;
     private final int startingLeaderCounter;
     private final String dutiesRunnableAlias;
 
-    protected DutiesRunnable(List<CoordinatorDuty> duties, final int startingLeaderCounter, String alias)
+    protected DutiesRunnable(List<? extends CoordinatorDuty> duties, final int startingLeaderCounter, String alias)
     {
-      this.duties = duties;
+      // Automatically add EmitClusterStatsAndMetrics duty to the group if it does not already exists
+      // This is to avoid human coding error (forgetting to add the EmitClusterStatsAndMetrics duty to the group)
+      // causing metrics from the duties to not being emitted.
+      if (duties.stream().noneMatch(duty -> duty instanceof EmitClusterStatsAndMetrics)) {
+        boolean isContainCompactSegmentDuty = duties.stream().anyMatch(duty -> duty instanceof CompactSegments);
+        List<CoordinatorDuty> allDuties = new ArrayList<>(duties);
+        allDuties.add(new EmitClusterStatsAndMetrics(DruidCoordinator.this, alias, isContainCompactSegmentDuty));
+        this.duties = allDuties;
+      } else {
+        this.duties = duties;
+      }
       this.startingLeaderCounter = startingLeaderCounter;
       this.dutiesRunnableAlias = alias;
     }
@@ -908,6 +954,20 @@ public class DruidCoordinator
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
       }
     }
+
+    @VisibleForTesting
+    public List<? extends CoordinatorDuty> getDuties()
+    {
+      return duties;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "DutiesRunnable{" +
+             "dutiesRunnableAlias='" + dutiesRunnableAlias + '\'' +
+             '}';
+    }
   }
 
   /**
@@ -931,10 +991,19 @@ public class DruidCoordinator
 
       stopPeonsForDisappearedServers(currentServers);
 
+      final RoundRobinServerSelector roundRobinServerSelector;
+      if (params.getCoordinatorDynamicConfig().isUseRoundRobinSegmentAssignment()) {
+        roundRobinServerSelector = new RoundRobinServerSelector(cluster);
+        log.info("Using round-robin segment assignment.");
+      } else {
+        roundRobinServerSelector = null;
+      }
+
       return params.buildFromExisting()
                    .withDruidCluster(cluster)
                    .withLoadManagementPeons(loadManagementPeons)
                    .withSegmentReplicantLookup(segmentReplicantLookup)
+                   .withRoundRobinServerSelector(roundRobinServerSelector)
                    .build();
     }
 
@@ -982,7 +1051,8 @@ public class DruidCoordinator
             new ServerHolder(
                 server,
                 loadManagementPeons.get(server.getName()),
-                decommissioningServers.contains(server.getHost())
+                decommissioningServers.contains(server.getHost()),
+                params.getCoordinatorDynamicConfig().getMaxSegmentsInNodeLoadingQueue()
             )
         );
       }

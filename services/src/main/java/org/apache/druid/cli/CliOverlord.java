@@ -20,23 +20,23 @@
 package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rvesse.airline.annotations.Command;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
-import io.airlift.airline.Command;
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceSelectorConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
@@ -53,6 +53,8 @@ import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexing.common.RetryPolicyFactory;
+import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
@@ -60,8 +62,7 @@ import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClient;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import org.apache.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
@@ -97,6 +98,9 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorModule;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorResource;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
+import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
+import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
+import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
@@ -121,6 +125,7 @@ import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -130,6 +135,8 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
 import java.util.List;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  */
@@ -149,6 +156,12 @@ public class CliOverlord extends ServerRunnable
   public CliOverlord()
   {
     super(log);
+  }
+
+  @Override
+  protected Set<NodeRole> getNodeRoles(Properties properties)
+  {
+    return ImmutableSet.of(NodeRole.OVERLORD);
   }
 
   @Override
@@ -179,6 +192,7 @@ public class CliOverlord extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.task.default", DefaultTaskConfig.class);
             JsonConfigProvider.bind(binder, "druid.indexer.auditlog", TaskAuditLogConfig.class);
+            binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
 
             binder.bind(TaskMaster.class).in(ManageLifecycle.class);
             binder.bind(TaskCountStatsProvider.class).to(TaskMaster.class);
@@ -192,9 +206,13 @@ public class CliOverlord extends ServerRunnable
             )
                   .toProvider(
                       new ListProvider<TaskLogStreamer>()
-                          .add(TaskRunnerTaskLogStreamer.class)
                           .add(TaskLogs.class)
                   )
+                  .in(LazySingleton.class);
+
+            binder.bind(TaskLogStreamer.class)
+                  .annotatedWith(Names.named("taskstreamer"))
+                  .to(TaskRunnerTaskLogStreamer.class)
                   .in(LazySingleton.class);
 
             binder.bind(TaskActionClientFactory.class).to(LocalTaskActionClientFactory.class).in(LazySingleton.class);
@@ -204,10 +222,7 @@ public class CliOverlord extends ServerRunnable
             binder.bind(IndexerMetadataStorageAdapter.class).in(LazySingleton.class);
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
 
-            binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
-            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexSupervisorTaskClient>>()
-            {
-            }).toProvider(Providers.of(null));
+            binder.bind(ParallelIndexSupervisorTaskClientProvider.class).toProvider(Providers.of(null));
             binder.bind(ShuffleClient.class).toProvider(Providers.of(null));
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(new NoopChatHandlerProvider()));
 
@@ -226,8 +241,9 @@ public class CliOverlord extends ServerRunnable
             binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
             configureTaskStorage(binder);
+            configureIntermediaryData(binder);
             configureAutoscale(binder);
-            configureRunners(binder);
+            binder.install(runnerConfigModule());
             configureOverlordHelpers(binder);
 
             binder.bind(AuditManager.class)
@@ -253,13 +269,13 @@ public class CliOverlord extends ServerRunnable
 
             if (standalone) {
               LifecycleModule.register(binder, Server.class);
-            }
 
-            bindNodeRoleAndAnnouncer(
-                binder,
-                IndexingService.class,
-                DiscoverySideEffectsProvider.builder(NodeRole.OVERLORD).build()
-            );
+              bindAnnouncer(
+                  binder,
+                  IndexingService.class,
+                  DiscoverySideEffectsProvider.create()
+              );
+            }
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);
             LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
@@ -284,37 +300,66 @@ public class CliOverlord extends ServerRunnable
             storageBinder.addBinding("metadata").to(MetadataTaskStorage.class).in(ManageLifecycle.class);
             binder.bind(MetadataTaskStorage.class).in(LazySingleton.class);
           }
-
-          private void configureRunners(Binder binder)
+          private void configureIntermediaryData(Binder binder)
           {
-            JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
-
             PolyBind.createChoice(
                 binder,
-                "druid.indexer.runner.type",
-                Key.get(TaskRunnerFactory.class),
-                Key.get(ForkingTaskRunnerFactory.class)
+                "druid.processing.intermediaryData.storage.type",
+                Key.get(IntermediaryDataManager.class),
+                Key.get(LocalIntermediaryDataManager.class)
             );
-            final MapBinder<String, TaskRunnerFactory> biddy = PolyBind.optionBinder(
+            final MapBinder<String, IntermediaryDataManager> biddy = PolyBind.optionBinder(
                 binder,
-                Key.get(TaskRunnerFactory.class)
+                Key.get(IntermediaryDataManager.class)
             );
+            biddy.addBinding("local").to(LocalIntermediaryDataManager.class);
+            biddy.addBinding("deepstore").to(DeepStorageIntermediaryDataManager.class).in(LazySingleton.class);
+          }
 
-            IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
-            biddy.addBinding("local").to(ForkingTaskRunnerFactory.class);
-            binder.bind(ForkingTaskRunnerFactory.class).in(LazySingleton.class);
+          private Module runnerConfigModule()
+          {
+            return new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                JsonConfigProvider.bind(binder, "druid.worker", WorkerConfig.class);
 
-            biddy.addBinding(RemoteTaskRunnerFactory.TYPE_NAME)
-                 .to(RemoteTaskRunnerFactory.class)
-                 .in(LazySingleton.class);
-            binder.bind(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
+                PolyBind.createChoice(
+                    binder,
+                    "druid.indexer.runner.type",
+                    Key.get(TaskRunnerFactory.class),
+                    Key.get(HttpRemoteTaskRunnerFactory.class)
+                );
+                final MapBinder<String, TaskRunnerFactory> biddy = PolyBind.optionBinder(
+                    binder,
+                    Key.get(TaskRunnerFactory.class)
+                );
 
-            biddy.addBinding(HttpRemoteTaskRunnerFactory.TYPE_NAME)
-                 .to(HttpRemoteTaskRunnerFactory.class)
-                 .in(LazySingleton.class);
-            binder.bind(HttpRemoteTaskRunnerFactory.class).in(LazySingleton.class);
+                IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
+                biddy.addBinding("local").to(ForkingTaskRunnerFactory.class);
+                binder.bind(ForkingTaskRunnerFactory.class).in(LazySingleton.class);
 
-            JacksonConfigProvider.bind(binder, WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class, null);
+                biddy.addBinding(RemoteTaskRunnerFactory.TYPE_NAME)
+                     .to(RemoteTaskRunnerFactory.class)
+                     .in(LazySingleton.class);
+                binder.bind(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
+
+                biddy.addBinding(HttpRemoteTaskRunnerFactory.TYPE_NAME)
+                     .to(HttpRemoteTaskRunnerFactory.class)
+                     .in(LazySingleton.class);
+                binder.bind(HttpRemoteTaskRunnerFactory.class).in(LazySingleton.class);
+
+                JacksonConfigProvider.bind(binder, WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class, null);
+              }
+
+              @Provides
+              @ManageLifecycle
+              public TaskStorageDirTracker getTaskStorageDirTracker(WorkerConfig workerConfig, TaskConfig taskConfig)
+              {
+                return TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig);
+              }
+            };
           }
 
           private void configureAutoscale(Binder binder)
@@ -387,6 +432,7 @@ public class CliOverlord extends ServerRunnable
       final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
       final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
 
+      JettyServerInitUtils.addQosFilters(root, injector);
       AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
 
       // perform no-op authorization/authentication for these resources
@@ -422,10 +468,13 @@ public class CliOverlord extends ServerRunnable
 
       root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
 
+      RewriteHandler rewriteHandler = WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler();
+      JettyServerInitUtils.maybeAddHSTSPatternRule(serverConfig, rewriteHandler);
+
       HandlerList handlerList = new HandlerList();
       handlerList.setHandlers(
           new Handler[]{
-              WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler(),
+              rewriteHandler,
               JettyServerInitUtils.getJettyRequestLogHandler(),
               JettyServerInitUtils.wrapWithDefaultGzipHandler(
                   root,

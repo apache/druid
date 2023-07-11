@@ -39,15 +39,18 @@ public class UserCompactionTaskGranularityConfig
 {
   private final Granularity segmentGranularity;
   private final Granularity queryGranularity;
+  private final Boolean rollup;
 
   @JsonCreator
   public UserCompactionTaskGranularityConfig(
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
-      @JsonProperty("queryGranularity") Granularity queryGranularity
+      @JsonProperty("queryGranularity") Granularity queryGranularity,
+      @JsonProperty("rollup") Boolean rollup
   )
   {
     this.queryGranularity = queryGranularity;
     this.segmentGranularity = segmentGranularity;
+    this.rollup = rollup;
   }
 
   @JsonProperty("segmentGranularity")
@@ -62,6 +65,12 @@ public class UserCompactionTaskGranularityConfig
     return queryGranularity;
   }
 
+  @JsonProperty("rollup")
+  public Boolean isRollup()
+  {
+    return rollup;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -73,13 +82,14 @@ public class UserCompactionTaskGranularityConfig
     }
     UserCompactionTaskGranularityConfig that = (UserCompactionTaskGranularityConfig) o;
     return Objects.equals(segmentGranularity, that.segmentGranularity) &&
-           Objects.equals(queryGranularity, that.queryGranularity);
+           Objects.equals(queryGranularity, that.queryGranularity) &&
+           Objects.equals(rollup, that.rollup);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(segmentGranularity, queryGranularity);
+    return Objects.hash(segmentGranularity, queryGranularity, rollup);
   }
 
   @Override
@@ -88,6 +98,7 @@ public class UserCompactionTaskGranularityConfig
     return "UserCompactionTaskGranularityConfig{" +
            "segmentGranularity=" + segmentGranularity +
            ", queryGranularity=" + queryGranularity +
+           ", rollup=" + rollup +
            '}';
   }
 }

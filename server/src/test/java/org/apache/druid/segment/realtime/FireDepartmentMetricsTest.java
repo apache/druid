@@ -34,42 +34,36 @@ public class FireDepartmentMetricsTest
   }
 
   @Test
-  public void testSnapshotAfterProcessingOver()
+  public void testSnapshotBeforeProcessing()
   {
-    metrics.reportMessageMaxTimestamp(10);
-    metrics.markProcessingDone(30L);
-    Assert.assertEquals(20, metrics.snapshot().messageGap());
+    FireDepartmentMetrics snapshot = metrics.snapshot();
+    Assert.assertEquals(0L, snapshot.messageGap());
+    // invalid value
+    Assert.assertTrue(0 > snapshot.maxSegmentHandoffTime());
   }
 
   @Test
-  public void testSnapshotBeforeProcessingOver()
+  public void testSnapshotAfterProcessingOver()
   {
-    metrics.reportMessageMaxTimestamp(10);
-    long current = System.currentTimeMillis();
-    long messageGap = metrics.snapshot().messageGap();
-    Assert.assertTrue("Message gap: " + messageGap, messageGap >= (current - 10));
+    metrics.reportMessageMaxTimestamp(System.currentTimeMillis() - 20L);
+    metrics.reportMaxSegmentHandoffTime(7L);
+    FireDepartmentMetrics snapshot = metrics.snapshot();
+    Assert.assertTrue(snapshot.messageGap() >= 20L);
+    Assert.assertEquals(7, snapshot.maxSegmentHandoffTime());
   }
 
   @Test
   public void testProcessingOverAfterSnapshot()
   {
     metrics.reportMessageMaxTimestamp(10);
+    metrics.reportMaxSegmentHandoffTime(7L);
+    // Should reset to invalid value
     metrics.snapshot();
-    metrics.markProcessingDone(20);
-    Assert.assertEquals(10, metrics.snapshot().messageGap());
-  }
-
-  @Test
-  public void testProcessingOverWithSystemTime()
-  {
-    metrics.reportMessageMaxTimestamp(10);
-    long current = System.currentTimeMillis();
     metrics.markProcessingDone();
-    long completionTime = metrics.processingCompletionTime();
-    Assert.assertTrue(
-        "Completion time: " + completionTime,
-        completionTime >= current && completionTime < (current + 10_000)
-    );
+    FireDepartmentMetrics snapshot = metrics.snapshot();
+    // Message gap must be invalid after processing is done
+    Assert.assertTrue(0 > snapshot.messageGap());
+    // value must be invalid
+    Assert.assertTrue(0 > snapshot.maxSegmentHandoffTime());
   }
-
 }

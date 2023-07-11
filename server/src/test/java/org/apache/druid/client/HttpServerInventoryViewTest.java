@@ -29,10 +29,12 @@ import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -44,6 +46,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
@@ -54,10 +57,12 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Duration;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -70,6 +75,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class HttpServerInventoryViewTest
 {
+
+  @BeforeClass
+  public static void setup()
+  {
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
+  }
+
   @Test(timeout = 60_000L)
   public void testSimple() throws Exception
   {
@@ -182,7 +194,8 @@ public class HttpServerInventoryViewTest
         httpClient,
         druidNodeDiscoveryProvider,
         (pair) -> !pair.rhs.getDataSource().equals("non-loading-datasource"),
-        new HttpServerInventoryViewConfig(null, null, null)
+        new HttpServerInventoryViewConfig(null, null, null),
+        "test"
     );
 
     CountDownLatch initializeCallback1 = new CountDownLatch(1);
@@ -264,12 +277,81 @@ public class HttpServerInventoryViewTest
 
     druidNodeDiscovery.listener.nodesRemoved(ImmutableList.of(druidNode));
 
+    // test removal event with empty services
+    druidNodeDiscovery.listener.nodesRemoved(
+        ImmutableList.of(
+            new DiscoveryDruidNode(
+                new DruidNode("service", "host", false, 8080, null, true, false),
+                NodeRole.INDEXER,
+                Collections.emptyMap()
+            )
+        )
+    );
+
+    // test removal rogue node (announced a service as a DataNodeService but wasn't a DataNodeService at the key)
+    druidNodeDiscovery.listener.nodesRemoved(
+        ImmutableList.of(
+            new DiscoveryDruidNode(
+                new DruidNode("service", "host", false, 8080, null, true, false),
+                NodeRole.INDEXER,
+                ImmutableMap.of(
+                    DataNodeService.DISCOVERY_SERVICE_KEY,
+                    new LookupNodeService("lookyloo")
+                )
+            )
+        )
+    );
+
     serverRemovedCalled.await();
     Assert.assertNull(httpServerInventoryView.getInventoryValue("host:8080"));
 
     EasyMock.verify(druidNodeDiscoveryProvider);
 
     httpServerInventoryView.stop();
+  }
+
+  @Test(timeout = 60_000L)
+  public void testSyncMonitoring()
+  {
+    ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForService(DataNodeService.DISCOVERY_SERVICE_KEY))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+    TestHttpClient httpClient = new TestHttpClient(ImmutableList.of());
+
+    HttpServerInventoryView httpServerInventoryView = new HttpServerInventoryView(
+        jsonMapper,
+        httpClient,
+        druidNodeDiscoveryProvider,
+        (pair) -> !pair.rhs.getDataSource().equals("non-loading-datasource"),
+        new HttpServerInventoryViewConfig(null, null, null),
+        "test"
+    );
+
+    httpServerInventoryView.start();
+    httpServerInventoryView.serverAdded(makeServer("abc.com:8080"));
+    httpServerInventoryView.serverAdded(makeServer("xyz.com:8080"));
+    httpServerInventoryView.serverAdded(makeServer("lol.com:8080"));
+    Assert.assertEquals(3, httpServerInventoryView.getDebugInfo().size());
+    httpServerInventoryView.syncMonitoring();
+    Assert.assertEquals(3, httpServerInventoryView.getDebugInfo().size());
+  }
+
+  private DruidServer makeServer(String host)
+  {
+    return new DruidServer(
+        host,
+        host,
+        host,
+        100_000_000L,
+        ServerType.HISTORICAL,
+        "__default_tier",
+        50
+    );
   }
 
   private static class TestDruidNodeDiscovery implements DruidNodeDiscovery

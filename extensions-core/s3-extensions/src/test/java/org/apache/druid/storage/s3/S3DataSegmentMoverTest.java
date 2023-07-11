@@ -33,6 +33,7 @@ import com.amazonaws.services.s3.model.Permission;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.StorageClass;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
@@ -72,7 +73,10 @@ public class S3DataSegmentMoverTest
   public void testMove() throws Exception
   {
     MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
-    S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
+    S3DataSegmentMover mover = new S3DataSegmentMover(
+        Suppliers.ofInstance(mockS3Client),
+        new S3DataSegmentPusherConfig()
+    );
 
     mockS3Client.putObject(
         "main",
@@ -97,7 +101,10 @@ public class S3DataSegmentMoverTest
   public void testMoveNoop() throws Exception
   {
     MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
-    S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
+    S3DataSegmentMover mover = new S3DataSegmentMover(
+        Suppliers.ofInstance(mockS3Client),
+        new S3DataSegmentPusherConfig()
+    );
 
     mockS3Client.putObject(
         "archive",
@@ -123,19 +130,25 @@ public class S3DataSegmentMoverTest
   public void testMoveException() throws Exception
   {
     MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
-    S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
+    S3DataSegmentMover mover = new S3DataSegmentMover(
+        Suppliers.ofInstance(mockS3Client),
+        new S3DataSegmentPusherConfig()
+    );
 
     mover.move(
         SOURCE_SEGMENT,
         ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
     );
   }
-  
+
   @Test
   public void testIgnoresGoneButAlreadyMoved() throws Exception
   {
     MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
-    S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
+    S3DataSegmentMover mover = new S3DataSegmentMover(
+        Suppliers.ofInstance(mockS3Client),
+        new S3DataSegmentPusherConfig()
+    );
     mover.move(new DataSegment(
         "test",
         Intervals.of("2013-01-01/2013-01-02"),
@@ -158,7 +171,10 @@ public class S3DataSegmentMoverTest
   public void testFailsToMoveMissing() throws Exception
   {
     MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
-    S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
+    S3DataSegmentMover mover = new S3DataSegmentMover(
+        Suppliers.ofInstance(mockS3Client),
+        new S3DataSegmentPusherConfig()
+    );
     mover.move(new DataSegment(
         "test",
         Intervals.of("2013-01-01/2013-01-02"),

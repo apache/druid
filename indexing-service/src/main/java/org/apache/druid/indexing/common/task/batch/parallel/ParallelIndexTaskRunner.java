@@ -58,7 +58,9 @@ public interface ParallelIndexTaskRunner<SubTaskType extends Task, SubTaskReport
    * Stop this runner gracefully. This method is called when the task is killed.
    * See {@link org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner#stop}.
    */
-  void stopGracefully();
+  void stopGracefully(String stopReason);
+
+  String getStopReason();
 
   /**
    * {@link SubTaskReport} is the report sent by {@link SubTaskType}s. The subTasks call this method to

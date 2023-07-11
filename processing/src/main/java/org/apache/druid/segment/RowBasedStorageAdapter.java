@@ -22,10 +22,13 @@ package org.apache.druid.segment;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.SimpleSequence;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -48,19 +51,30 @@ import java.util.List;
  */
 public class RowBasedStorageAdapter<RowType> implements StorageAdapter
 {
-  private final Iterable<RowType> rowIterable;
+  private final Sequence<RowType> rowSequence;
   private final RowAdapter<RowType> rowAdapter;
   private final RowSignature rowSignature;
 
   RowBasedStorageAdapter(
-      final Iterable<RowType> rowIterable,
+      final Sequence<RowType> rowSequence,
       final RowAdapter<RowType> rowAdapter,
       final RowSignature rowSignature
   )
   {
-    this.rowIterable = Preconditions.checkNotNull(rowIterable, "rowIterable");
+    this.rowSequence = Preconditions.checkNotNull(rowSequence, "rowSequence");
     this.rowAdapter = Preconditions.checkNotNull(rowAdapter, "rowAdapter");
     this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature");
+  }
+
+  /**
+   * Whether the provided time interval and granularity combination is allowed.
+   *
+   * We restrict ETERNITY with non-ALL granularity, because allowing it would involve creating a very high number
+   * of time grains. This would cause queries to take an excessive amount of time or run out of memory.
+   */
+  public static boolean isQueryGranularityAllowed(final Interval interval, final Granularity granularity)
+  {
+    return Granularities.ALL.equals(granularity) || !Intervals.ETERNITY.equals(interval);
   }
 
   @Override
@@ -82,9 +96,15 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   }
 
   @Override
+  public RowSignature getRowSignature()
+  {
+    return rowSignature;
+  }
+
+  @Override
   public int getDimensionCardinality(String column)
   {
-    return Integer.MAX_VALUE;
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
   @Override
@@ -120,19 +140,15 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
     return RowBasedColumnSelectorFactory.getColumnCapabilities(rowSignature, column);
   }
 
-  @Nullable
-  @Override
-  public String getColumnTypeName(String column)
-  {
-    final ColumnCapabilities columnCapabilities = getColumnCapabilities(column);
-    return columnCapabilities != null ? columnCapabilities.getType().toString() : null;
-  }
-
   @Override
   public int getNumRows()
   {
-    if (rowIterable instanceof Collection) {
-      return ((Collection<RowType>) rowIterable).size();
+    if (rowSequence instanceof SimpleSequence) {
+      final Iterable<RowType> rowIterable = ((SimpleSequence<RowType>) rowSequence).getIterable();
+
+      if (rowIterable instanceof Collection) {
+        return ((Collection<RowType>) rowIterable).size();
+      }
     }
 
     // getNumRows is only used by tests and by segmentMetadataQuery (which would be odd to call on inline datasources)
@@ -168,8 +184,16 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
       return Sequences.empty();
     }
 
+    if (!isQueryGranularityAllowed(actualInterval, gran)) {
+      throw new IAE(
+          "Cannot support interval [%s] with granularity [%s]",
+          Intervals.ETERNITY.equals(actualInterval) ? "ETERNITY" : actualInterval,
+          gran
+      );
+    }
+
     final RowWalker<RowType> rowWalker = new RowWalker<>(
-        descending ? reverse(rowIterable) : rowIterable,
+        descending ? reverse(rowSequence) : rowSequence,
         rowAdapter
     );
 
@@ -179,7 +203,7 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
         Iterables.transform(
             descending ? reverse(bucketIntervals) : bucketIntervals,
             bucketInterval ->
-                new RowBasedCursor<>(
+                (Cursor) new RowBasedCursor<>(
                     rowWalker,
                     rowAdapter,
                     filter,
@@ -190,7 +214,25 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
                     rowSignature
                 )
         )
-    );
+    ).withBaggage(rowWalker::close);
+  }
+
+  /**
+   * Reverse a Sequence.
+   *
+   * If the Sequence is a {@link SimpleSequence}, this avoids materialization because its
+   * {@link SimpleSequence#toList()} method returns a view of the underlying list. Otherwise, the list will be
+   * materialized and then reversed.
+   */
+  private static <T> Sequence<T> reverse(final Sequence<T> sequence)
+  {
+    if (sequence instanceof SimpleSequence) {
+      // Extract the Iterable from the SimpleSequence, so we can reverse it without copying if it is List-backed.
+      return Sequences.simple(reverse(((SimpleSequence<T>) sequence).getIterable()));
+    } else {
+      // Materialize and reverse the objects.
+      return Sequences.simple(Lists.reverse(sequence.toList()));
+    }
   }
 
   /**
@@ -199,8 +241,7 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   private static <T> Iterable<T> reverse(final Iterable<T> iterable)
   {
     if (iterable instanceof List) {
-      //noinspection unchecked, rawtypes
-      return Lists.reverse((List) iterable);
+      return Lists.reverse((List<T>) iterable);
     } else {
       // Materialize and reverse the objects. Note that this means reversing non-List Iterables will use extra memory.
       return Lists.reverse(Lists.newArrayList(iterable));

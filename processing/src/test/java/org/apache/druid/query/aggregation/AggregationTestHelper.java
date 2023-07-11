@@ -38,10 +38,8 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -60,6 +58,7 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
@@ -85,6 +84,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.Closeable;
@@ -152,13 +152,14 @@ public class AggregationTestHelper implements Closeable
       TemporaryFolder tempFolder
   )
   {
+    final Closer closer = Closer.create();
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+    final TestGroupByBuffers groupByBuffers = closer.register(TestGroupByBuffers.createDefault());
+    final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         mapper,
-        config
+        config,
+        groupByBuffers
     );
-    final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
-    final Closer closer = factoryAndCloser.rhs;
 
     IndexIO indexIO = new IndexIO(
         mapper,
@@ -506,6 +507,7 @@ public class AggregationTestHelper implements Closeable
     }
   }
 
+
   public void createIndex(
       Iterator rows,
       InputRowParser parser,
@@ -541,7 +543,7 @@ public class AggregationTestHelper implements Closeable
         if (!index.canAppendRow()) {
           File tmp = tempFolder.newFolder();
           toMerge.add(tmp);
-          indexMerger.persist(index, tmp, new IndexSpec(), null);
+          indexMerger.persist(index, tmp, IndexSpec.DEFAULT, null);
           index.close();
           index = new OnheapIncrementalIndex.Builder()
               .setIndexSchema(
@@ -561,6 +563,7 @@ public class AggregationTestHelper implements Closeable
           //Note: this is required because StringInputRowParser is InputRowParser<ByteBuffer> as opposed to
           //InputRowsParser<String>
           index.add(((StringInputRowParser) parser).parse((String) row));
+
         } else {
           index.add(((List<InputRow>) parser.parseBatch(row)).get(0));
         }
@@ -569,19 +572,19 @@ public class AggregationTestHelper implements Closeable
       if (toMerge.size() > 0) {
         File tmp = tempFolder.newFolder();
         toMerge.add(tmp);
-        indexMerger.persist(index, tmp, new IndexSpec(), null);
+        indexMerger.persist(index, tmp, IndexSpec.DEFAULT, null);
 
         List<QueryableIndex> indexes = new ArrayList<>(toMerge.size());
         for (File file : toMerge) {
           indexes.add(indexIO.loadIndex(file));
         }
-        indexMerger.mergeQueryableIndex(indexes, rollup, metrics, outDir, new IndexSpec(), null, -1);
+        indexMerger.mergeQueryableIndex(indexes, rollup, metrics, outDir, IndexSpec.DEFAULT, null, -1);
 
         for (QueryableIndex qi : indexes) {
           qi.close();
         }
       } else {
-        indexMerger.persist(index, outDir, new IndexSpec(), null);
+        indexMerger.persist(index, outDir, IndexSpec.DEFAULT, null);
       }
     }
     finally {
@@ -618,7 +621,7 @@ public class AggregationTestHelper implements Closeable
             new IncrementalIndexSchema.Builder()
                 .withMinTimestamp(minTimestamp)
                 .withQueryGranularity(gran)
-                .withDimensionsSpec(new DimensionsSpec(dimensions, null, null))
+                .withDimensionsSpec(new DimensionsSpec(dimensions))
                 .withMetrics(metrics)
                 .withRollup(rollup)
                 .build()
@@ -676,7 +679,7 @@ public class AggregationTestHelper implements Closeable
     if (outDir == null) {
       outDir = tempFolder.newFolder();
     }
-    indexMerger.persist(index, outDir, new IndexSpec(), null);
+    indexMerger.persist(index, outDir, IndexSpec.DEFAULT, null);
 
     return new QueryableIndexSegment(indexIO.loadIndex(outDir), SegmentId.dummy(""));
   }
@@ -712,7 +715,7 @@ public class AggregationTestHelper implements Closeable
     }
     finally {
       for (Segment segment : segments) {
-        CloseQuietly.close(segment);
+        CloseableUtils.closeAndWrapExceptions(segment);
       }
     }
   }
@@ -844,6 +847,11 @@ public class AggregationTestHelper implements Closeable
     agg.relocate(0, 7574, myBuf, newBuf);
     results[1] = (T) agg.get(newBuf, 7574);
     return results;
+  }
+
+  public IndexIO getIndexIO()
+  {
+    return indexIO;
   }
 
   @Override

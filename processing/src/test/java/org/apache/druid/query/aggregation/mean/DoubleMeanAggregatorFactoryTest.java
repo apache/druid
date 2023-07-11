@@ -19,6 +19,10 @@
 
 package org.apache.druid.query.aggregation.mean;
 
+import org.apache.druid.query.aggregation.AggregatorAndSize;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -61,5 +65,19 @@ public class DoubleMeanAggregatorFactoryTest
     Assert.assertEquals("", expecterMean, actualMean, 1e-6);
 
     Assert.assertNull(factory.finalizeComputation(null));
+  }
+
+  @Test
+  public void testFactorizeWithSize()
+  {
+    ColumnSelectorFactory colSelectorFactory = EasyMock.mock(ColumnSelectorFactory.class);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector(EasyMock.anyString()))
+            .andReturn(EasyMock.createMock(ColumnValueSelector.class)).anyTimes();
+    EasyMock.replay(colSelectorFactory);
+
+    DoubleMeanAggregatorFactory factory = new DoubleMeanAggregatorFactory("name", "fieldName");
+    AggregatorAndSize aggregatorAndSize = factory.factorizeWithSize(colSelectorFactory);
+    Assert.assertEquals(DoubleMeanHolder.MAX_INTERMEDIATE_SIZE, aggregatorAndSize.getInitialSizeBytes());
+    Assert.assertTrue(aggregatorAndSize.getAggregator() instanceof DoubleMeanAggregator);
   }
 }

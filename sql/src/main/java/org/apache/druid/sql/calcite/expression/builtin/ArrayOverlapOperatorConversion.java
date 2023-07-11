@@ -19,15 +19,16 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
-import com.google.common.collect.Sets;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -39,7 +40,9 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOperatorConversion
 {
@@ -88,18 +91,22 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
     }
 
     // Converts array_overlaps() function into an OR of Selector filters if possible.
-    final boolean leftSimpleExtractionExpr = druidExpressions.get(0).isSimpleExtraction();
-    final boolean rightSimpleExtractionExpr = druidExpressions.get(1).isSimpleExtraction();
+    final DruidExpression leftExpression = druidExpressions.get(0);
+    final DruidExpression rightExpression = druidExpressions.get(1);
+    final boolean leftSimpleExtractionExpr = leftExpression.isSimpleExtraction();
+    final boolean leftArrayColumn = leftExpression.isDirectColumnAccess() && leftExpression.getDruidType() != null && leftExpression.getDruidType().isArray();
+    final boolean rightSimpleExtractionExpr = rightExpression.isSimpleExtraction();
+    final boolean rightArrayColumn = rightExpression.isDirectColumnAccess() && rightExpression.getDruidType() != null && rightExpression.getDruidType().isArray();
     final DruidExpression simpleExtractionExpr;
     final DruidExpression complexExpr;
 
-    if (leftSimpleExtractionExpr ^ rightSimpleExtractionExpr) {
+    if (leftSimpleExtractionExpr ^ rightSimpleExtractionExpr && !(leftArrayColumn || rightArrayColumn)) {
       if (leftSimpleExtractionExpr) {
-        simpleExtractionExpr = druidExpressions.get(0);
-        complexExpr = druidExpressions.get(1);
+        simpleExtractionExpr = leftExpression;
+        complexExpr = rightExpression;
       } else {
-        simpleExtractionExpr = druidExpressions.get(1);
-        complexExpr = druidExpressions.get(0);
+        simpleExtractionExpr = rightExpression;
+        complexExpr = leftExpression;
       }
     } else {
       return toExpressionFilter(plannerContext, getDruidFunctionName(), druidExpressions);
@@ -109,8 +116,8 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
     if (expr.isLiteral()) {
       // Evaluate the expression to take out the array elements.
       // We can safely pass null if the expression is literal.
-      ExprEval<?> exprEval = expr.eval(name -> null);
-      String[] arrayElements = exprEval.asStringArray();
+      ExprEval<?> exprEval = expr.eval(InputBindings.nilBindings());
+      Object[] arrayElements = exprEval.asArray();
       if (arrayElements == null || arrayElements.length == 0) {
         // If arrayElements is empty which means complexExpr is an empty array,
         // it is technically more correct to return a TrueDimFiler here.
@@ -118,11 +125,11 @@ public class ArrayOverlapOperatorConversion extends BaseExpressionDimFilterOpera
         // to create an empty array with no argument, we just return null.
         return null;
       } else if (arrayElements.length == 1) {
-        return newSelectorDimFilter(simpleExtractionExpr.getSimpleExtraction(), arrayElements[0]);
+        return newSelectorDimFilter(simpleExtractionExpr.getSimpleExtraction(), Evals.asString(arrayElements[0]));
       } else {
         return new InDimFilter(
             simpleExtractionExpr.getSimpleExtraction().getColumn(),
-            Sets.newHashSet(arrayElements),
+            new InDimFilter.ValuesSet(Arrays.stream(arrayElements).map(Evals::asString).collect(Collectors.toList())),
             simpleExtractionExpr.getSimpleExtraction().getExtractionFn(),
             null
         );

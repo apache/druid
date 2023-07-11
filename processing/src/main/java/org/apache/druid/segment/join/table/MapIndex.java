@@ -20,11 +20,11 @@
 package org.apache.druid.segment.join.table;
 
 import com.google.common.base.Preconditions;
-import it.unimi.dsi.fastutil.ints.IntList;
-import it.unimi.dsi.fastutil.ints.IntLists;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
+import it.unimi.dsi.fastutil.ints.IntSortedSets;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Map;
 
@@ -33,8 +33,8 @@ import java.util.Map;
  */
 public class MapIndex implements IndexedTable.Index
 {
-  private final ValueType keyType;
-  private final Map<Object, IntList> index;
+  private final ColumnType keyType;
+  private final Map<Object, IntSortedSet> index;
   private final boolean keysUnique;
   private final boolean isLong2ObjectMap;
 
@@ -47,7 +47,7 @@ public class MapIndex implements IndexedTable.Index
    *
    * @see RowBasedIndexBuilder#build() the main caller
    */
-  MapIndex(final ValueType keyType, final Map<Object, IntList> index, final boolean keysUnique)
+  MapIndex(final ColumnType keyType, final Map<Object, IntSortedSet> index, final boolean keysUnique)
   {
     this.keyType = Preconditions.checkNotNull(keyType, "keyType");
     this.index = Preconditions.checkNotNull(index, "index");
@@ -56,7 +56,7 @@ public class MapIndex implements IndexedTable.Index
   }
 
   @Override
-  public ValueType keyType()
+  public ColumnType keyType()
   {
     return keyType;
   }
@@ -68,19 +68,19 @@ public class MapIndex implements IndexedTable.Index
   }
 
   @Override
-  public IntList find(Object key)
+  public IntSortedSet find(Object key)
   {
     final Object convertedKey = DimensionHandlerUtils.convertObjectToType(key, keyType, false);
 
     if (convertedKey != null) {
-      final IntList found = index.get(convertedKey);
+      final IntSortedSet found = index.get(convertedKey);
       if (found != null) {
         return found;
       } else {
-        return IntLists.EMPTY_LIST;
+        return IntSortedSets.EMPTY_SET;
       }
     } else {
-      return IntLists.EMPTY_LIST;
+      return IntSortedSets.EMPTY_SET;
     }
   }
 
@@ -88,9 +88,9 @@ public class MapIndex implements IndexedTable.Index
   public int findUniqueLong(long key)
   {
     if (isLong2ObjectMap && keysUnique) {
-      final IntList rows = ((Long2ObjectMap<IntList>) (Map) index).get(key);
+      final IntSortedSet rows = ((Long2ObjectMap<IntSortedSet>) (Map) index).get(key);
       assert rows == null || rows.size() == 1;
-      return rows != null ? rows.getInt(0) : NOT_FOUND;
+      return rows != null ? rows.firstInt() : NOT_FOUND;
     } else {
       throw new UnsupportedOperationException();
     }

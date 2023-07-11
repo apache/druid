@@ -40,7 +40,7 @@ The licenses for binary packages are maintained _automatically_.
 All licenses (for both source code and binary releases) should be registered in [the `licenses.yaml` file](https://github.com/apache/druid/blob/master/licenses.yaml).
 [`generate-binary-license.py`](https://github.com/apache/druid/blob/master/distribution/bin/generate-binary-license.py)
 and [`generate-binary-notice.py`](https://github.com/apache/druid/blob/master/distribution/bin/generate-binary-notice.py)
-will generate the `LICENSE` and `NOTICE` files automatially based on the registry.
+will generate the `LICENSE` and `NOTICE` files automatically based on the registry.
 
 
 ### Adding licenses

@@ -20,11 +20,13 @@
 package org.apache.druid.indexing.kinesis.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskIOConfig;
 import org.apache.druid.indexing.kinesis.KinesisRegion;
+import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.joda.time.DateTime;
@@ -47,7 +49,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   // exception. For this reason, we recommend that you wait one second between calls to GetRecords; however, it's
   // possible that the application will get exceptions for longer than 1 second.
   private final Integer recordsPerFetch;
-  private final Integer fetchDelayMillis;
+  private final int fetchDelayMillis;
 
   private final String awsAssumedRoleArn;
   private final String awsExternalId;
@@ -90,21 +92,14 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
         autoScalerConfig,
-        lateMessageRejectionStartDateTime
+        lateMessageRejectionStartDateTime,
+        new IdleConfig(null, null)
     );
-
-    // for now dynamic Allocation Tasks is not supported here
-    // throw UnsupportedOperationException in case someone sets this on a kinesis supervisor spec.
-    if (autoScalerConfig != null) {
-      throw new UnsupportedOperationException("Tasks auto scaler for kinesis is not supported yet. Please remove autoScalerConfig or set it to null!");
-    }
 
     this.endpoint = endpoint != null
                     ? endpoint
                     : (region != null ? region.getEndpoint() : KinesisRegion.US_EAST_1.getEndpoint());
-    this.recordsPerFetch = recordsPerFetch != null
-                           ? recordsPerFetch
-                           : KinesisIndexTaskIOConfig.DEFAULT_RECORDS_PER_FETCH;
+    this.recordsPerFetch = recordsPerFetch;
     this.fetchDelayMillis = fetchDelayMillis != null
                             ? fetchDelayMillis
                             : KinesisIndexTaskIOConfig.DEFAULT_FETCH_DELAY_MILLIS;
@@ -119,31 +114,37 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     return endpoint;
   }
 
+  @Nullable
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public Integer getRecordsPerFetch()
   {
     return recordsPerFetch;
   }
 
   @JsonProperty
-  public Integer getFetchDelayMillis()
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public int getFetchDelayMillis()
   {
     return fetchDelayMillis;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getAwsAssumedRoleArn()
   {
     return awsAssumedRoleArn;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   public String getAwsExternalId()
   {
     return awsExternalId;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean isDeaggregate()
   {
     return deaggregate;
@@ -157,6 +158,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", endpoint='" + endpoint + '\'' +
            ", replicas=" + getReplicas() +
            ", taskCount=" + getTaskCount() +
+           ", autoScalerConfig=" + getAutoScalerConfig() +
            ", taskDuration=" + getTaskDuration() +
            ", startDelay=" + getStartDelay() +
            ", period=" + getPeriod() +

@@ -76,7 +76,7 @@ public abstract class BaseJettyTest
   protected int port = -1;
   protected int tlsPort = -1;
 
-  public static void setProperties()
+  protected void setProperties()
   {
     System.setProperty("druid.server.http.numThreads", "20");
     System.setProperty("druid.server.http.maxIdleTime", "PT1S");
@@ -122,7 +122,12 @@ public abstract class BaseJettyTest
 
       try {
         this.client = HttpClientInit.createClient(
-            new HttpClientConfig(maxClientConnections, SSLContext.getDefault(), Duration.ZERO),
+            HttpClientConfig.builder()
+                            .withNumConnections(maxClientConnections)
+                            .withSslContext(SSLContext.getDefault())
+                            .withReadTimeout(Duration.ZERO)
+                            .withEagerInitialization(true)
+                            .build(),
             druidLifecycle
         );
       }
@@ -145,6 +150,7 @@ public abstract class BaseJettyTest
     {
       final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
       root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
+      JettyServerInitUtils.addQosFilters(root, injector);
       JettyServerInitUtils.addExtensionFilters(root, injector);
       root.addFilter(GuiceFilter.class, "/*", null);
 

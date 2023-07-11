@@ -31,6 +31,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
@@ -40,10 +41,10 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MappedSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -91,21 +92,24 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public static final String GROUP_BY_MERGE_KEY = "groupByMerge";
 
   private final GroupByStrategySelector strategySelector;
+  private final GroupByQueryConfig queryConfig;
   private final GroupByQueryMetricsFactory queryMetricsFactory;
 
   @VisibleForTesting
   public GroupByQueryQueryToolChest(GroupByStrategySelector strategySelector)
   {
-    this(strategySelector, DefaultGroupByQueryMetricsFactory.instance());
+    this(strategySelector, GroupByQueryConfig::new, DefaultGroupByQueryMetricsFactory.instance());
   }
 
   @Inject
   public GroupByQueryQueryToolChest(
       GroupByStrategySelector strategySelector,
+      Supplier<GroupByQueryConfig> queryConfigSupplier,
       GroupByQueryMetricsFactory queryMetricsFactory
   )
   {
     this.strategySelector = strategySelector;
+    this.queryConfig = queryConfigSupplier.get();
     this.queryMetricsFactory = queryMetricsFactory;
   }
 
@@ -113,7 +117,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public QueryRunner<ResultRow> mergeResults(final QueryRunner<ResultRow> runner)
   {
     return (queryPlus, responseContext) -> {
-      if (QueryContexts.isBySegment(queryPlus.getQuery())) {
+      if (queryPlus.getQuery().context().isBySegment()) {
         return runner.run(queryPlus, responseContext);
       }
 
@@ -299,7 +303,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   private Sequence<ResultRow> finalizeSubqueryResults(Sequence<ResultRow> subqueryResult, GroupByQuery subquery)
   {
     final Sequence<ResultRow> finalizingResults;
-    if (QueryContexts.isFinalize(subquery, false)) {
+    if (subquery.context().isFinalize(false)) {
       finalizingResults = new MappedSequence<>(
           subqueryResult,
           makePreComputeManipulatorFn(
@@ -316,7 +320,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public static boolean isNestedQueryPushDown(GroupByQuery q, GroupByStrategy strategy)
   {
     return q.getDataSource() instanceof QueryDataSource
-           && q.getContextBoolean(GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, false)
+           && q.context().getBoolean(GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, false)
            && q.getSubtotalsSpec() == null
            && strategy.supportsNestedQueryPushDown();
   }
@@ -413,7 +417,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   @Override
   public ObjectMapper decorateObjectMapper(final ObjectMapper objectMapper, final GroupByQuery query)
   {
-    final boolean resultAsArray = query.getContextBoolean(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false);
+    final boolean resultAsArray = query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false);
+
+    if (resultAsArray && !queryConfig.isIntermediateResultAsMapCompat()) {
+      // We can assume ResultRow are serialized and deserialized as arrays. No need for special decoration,
+      // and we can save the overhead of making a copy of the ObjectMapper.
+      return objectMapper;
+    }
 
     // Serializer that writes array- or map-based rows as appropriate, based on the "resultAsArray" setting.
     final JsonSerializer<ResultRow> serializer = new JsonSerializer<ResultRow>()
@@ -426,9 +436,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       ) throws IOException
       {
         if (resultAsArray) {
-          jg.writeObject(resultRow.getArray());
+          JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, resultRow.getArray());
         } else {
-          jg.writeObject(resultRow.toMapBasedRow(query));
+          JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, resultRow.toMapBasedRow(query));
         }
       }
     };

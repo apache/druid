@@ -23,18 +23,18 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.logical.LogicalTableScan;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
-import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 public class DruidTableScanRule extends RelOptRule
 {
-  private final QueryMaker queryMaker;
+  private final PlannerContext plannerContext;
 
-  public DruidTableScanRule(final QueryMaker queryMaker)
+  public DruidTableScanRule(final PlannerContext plannerContext)
   {
     super(operand(LogicalTableScan.class, any()));
-    this.queryMaker = queryMaker;
+    this.plannerContext = plannerContext;
   }
 
   @Override
@@ -45,7 +45,7 @@ public class DruidTableScanRule extends RelOptRule
     final DruidTable druidTable = table.unwrap(DruidTable.class);
     if (druidTable != null) {
       call.transformTo(
-          DruidQueryRel.fullScan(scan, table, druidTable, queryMaker)
+          DruidQueryRel.scanTable(scan, table, druidTable, plannerContext)
       );
     }
   }

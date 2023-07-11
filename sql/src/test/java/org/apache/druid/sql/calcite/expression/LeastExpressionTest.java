@@ -25,8 +25,8 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.builtin.LeastOperatorConversion;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,9 +47,9 @@ public class LeastExpressionTest extends ExpressionTestBase
   private static final String STRING_VALUE = "foo";
   private static final RowSignature ROW_SIGNATURE = RowSignature
       .builder()
-      .add(DOUBLE_KEY, ValueType.DOUBLE)
-      .add(LONG_KEY, ValueType.LONG)
-      .add(STRING_KEY, ValueType.STRING)
+      .add(DOUBLE_KEY, ColumnType.DOUBLE)
+      .add(LONG_KEY, ColumnType.LONG)
+      .add(STRING_KEY, ColumnType.STRING)
       .build();
   private static final Map<String, Object> BINDINGS = ImmutableMap.of(
       DOUBLE_KEY, DOUBLE_VALUE,
@@ -247,10 +247,8 @@ public class LeastExpressionTest extends ExpressionTestBase
   }
 
   @Test
-  public void testInvalidType()
+  public void testIntervalYearMonth()
   {
-    expectException(IllegalArgumentException.class, "Argument 0 has invalid type: INTERVAL_YEAR_MONTH");
-
     testExpression(
         Collections.singletonList(
             testHelper.makeLiteral(
@@ -258,8 +256,8 @@ public class LeastExpressionTest extends ExpressionTestBase
                 new SqlIntervalQualifier(TimeUnit.YEAR, TimeUnit.MONTH, SqlParserPos.ZERO)
             )
         ),
-        null,
-        null
+        buildExpectedExpression(13),
+        13L
     );
   }
 
@@ -269,7 +267,7 @@ public class LeastExpressionTest extends ExpressionTestBase
       final Object expectedResult
   )
   {
-    testHelper.testExpression(target.calciteOperator(), exprs, expectedExpression, expectedResult);
+    testHelper.testExpressionString(target.calciteOperator(), exprs, expectedExpression, expectedResult);
   }
 
   private DruidExpression buildExpectedExpression(Object... args)

@@ -88,6 +88,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public void queryId(String queryId)
+  {
+    throw new ISE("Unsupported method in default query metrics implementation.");
+  }
+
+  @Override
   public void subQueryId(SearchQuery query)
   {
     throw new ISE("Unsupported method in default query metrics implementation.");
@@ -95,6 +101,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
 
   @Override
   public void sqlQueryId(SearchQuery query)
+  {
+    throw new ISE("Unsupported method in default query metrics implementation.");
+  }
+
+  @Override
+  public void sqlQueryId(String sqlQueryId)
   {
     throw new ISE("Unsupported method in default query metrics implementation.");
   }
@@ -289,6 +301,24 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   public QueryMetrics reportParallelMergeTotalCpuTime(long timeNs)
   {
     return delegateQueryMetrics.reportParallelMergeTotalCpuTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportParallelMergeTotalTime(long timeNs)
+  {
+    return delegateQueryMetrics.reportParallelMergeTotalTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportParallelMergeFastestPartitionTime(long timeNs)
+  {
+    return delegateQueryMetrics.reportParallelMergeFastestPartitionTime(timeNs);
+  }
+
+  @Override
+  public QueryMetrics reportParallelMergeSlowestPartitionTime(long timeNs)
+  {
+    return delegateQueryMetrics.reportParallelMergeSlowestPartitionTime(timeNs);
   }
 
   @Override

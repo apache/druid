@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import React from 'react';
 
 import './center-message.scss';
 
@@ -28,7 +29,7 @@ export const CenterMessage = React.memo(function CenterMessage(props: CenterMess
   const { children } = props;
 
   return (
-    <div className="center-message bp3-input">
+    <div className="center-message bp4-input">
       <div className="center-message-inner">{children}</div>
     </div>
   );

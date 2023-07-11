@@ -19,363 +19,145 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.indexing.common.IndexTaskClient;
-import org.apache.druid.indexing.common.TaskInfoProvider;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 
-import javax.annotation.Nullable;
-import java.io.IOException;
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType> extends IndexTaskClient
+public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType>
 {
-  private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTaskClient.class);
+  TypeReference<List<ParseExceptionReport>> TYPE_REFERENCE_LIST_PARSE_EXCEPTION_REPORT =
+      new TypeReference<List<ParseExceptionReport>>() {};
 
-  public SeekableStreamIndexTaskClient(
-      HttpClient httpClient,
-      ObjectMapper jsonMapper,
-      TaskInfoProvider taskInfoProvider,
-      String dataSource,
-      int numThreads,
-      Duration httpTimeout,
-      long numRetries
-  )
-  {
-    super(httpClient, jsonMapper, taskInfoProvider, httpTimeout, dataSource, numThreads, numRetries);
-  }
+  /**
+   * Retrieve current task checkpoints.
+   *
+   * Task-side is {@link SeekableStreamIndexTaskRunner#getCheckpointsHTTP}.
+   *
+   * @param id    task id
+   * @param retry whether to retry on failure
+   */
+  ListenableFuture<TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>> getCheckpointsAsync(
+      String id,
+      boolean retry
+  );
 
-  public boolean stop(final String id, final boolean publish)
-  {
-    log.debug("Stop task[%s] publish[%s]", id, publish);
+  /**
+   * Stop a task. Retries on failure. Returns true if the task was stopped, or false if it was not stopped, perhaps
+   * due to an error.
+   *
+   * Task-side is {@link SeekableStreamIndexTaskRunner#stop}.
+   *
+   * @param id      task id
+   * @param publish whether to publish already-processed data before stopping
+   */
+  ListenableFuture<Boolean> stopAsync(String id, boolean publish);
 
-    try {
-      final StringFullResponseHolder response = submitRequestWithEmptyContent(
-          id,
-          HttpMethod.POST,
-          "stop",
-          publish ? "publish=true" : null,
-          true
-      );
-      return isSuccess(response);
-    }
-    catch (NoTaskLocationException e) {
-      return false;
-    }
-    catch (TaskNotRunnableException e) {
-      log.info("Task [%s] couldn't be stopped because it is no longer running", id);
-      return true;
-    }
-    catch (Exception e) {
-      log.warn(e, "Exception while stopping task [%s]", id);
-      return false;
-    }
-  }
+  /**
+   * Resume a task after a call to {@link #pauseAsync}. Retries on failure. Returns true if the task was
+   * resumed, or false if it was not resumed, perhaps due to an error.
+   *
+   * Task-side is {@link SeekableStreamIndexTaskRunner#resumeHTTP}.
+   *
+   * @param id task id
+   */
+  ListenableFuture<Boolean> resumeAsync(String id);
 
-  public boolean resume(final String id)
-  {
-    log.debug("Resume task[%s]", id);
+  /**
+   * Get the time a task actually started executing. May be later than the start time reported by the task runner,
+   * since there is some delay between a task being scheduled and it actually starting to execute.
+   *
+   * Returns a future that resolves to null if the task has not yet started up.
+   *
+   * Task-side is {@link SeekableStreamIndexTaskRunner#getStartTime}.
+   *
+   * @param id task id
+   */
+  ListenableFuture<DateTime> getStartTimeAsync(String id);
 
-    try {
-      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.POST, "resume", null, true);
-      return isSuccess(response);
-    }
-    catch (NoTaskLocationException | IOException e) {
-      log.warn(e, "Exception while stopping task [%s]", id);
-      return false;
-    }
-  }
+  /**
+   * Pause a task.
+   *
+   * Calls {@link SeekableStreamIndexTaskRunner#pauseHTTP} task-side to do the initial pause, then uses
+   * {@link SeekableStreamIndexTaskRunner#getStatusHTTP} in a loop to wait for the task to pause, then uses
+   * {@link SeekableStreamIndexTaskRunner#getCurrentOffsets} to retrieve the post-pause offsets.
+   *
+   * @param id task id
+   */
+  ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseAsync(String id);
 
-  public Map<PartitionIdType, SequenceOffsetType> pause(final String id)
-  {
-    log.debug("Pause task[%s]", id);
+  /**
+   * Set end offsets for a task. Retries on failure.
+   *
+   * Task-side is {@link SeekableStreamIndexTaskRunner#setEndOffsetsHTTP}.
+   *
+   * @param id         task id
+   * @param endOffsets the end offsets
+   * @param finalize   whether these are the final offsets for a task (true) or an incremental checkpoint (false)
+   */
+  ListenableFuture<Boolean> setEndOffsetsAsync(
+      String id,
+      Map<PartitionIdType, SequenceOffsetType> endOffsets,
+      boolean finalize
+  );
 
-    try {
-      final StringFullResponseHolder response = submitRequestWithEmptyContent(
-          id,
-          HttpMethod.POST,
-          "pause",
-          null,
-          true
-      );
+  /**
+   * Retrieve current offsets for a task.
+   *
+   * Task-side is {@link SeekableStreamIndexTaskRunner#getCurrentOffsets}.
+   *
+   * @param id    task id
+   * @param retry whether to retry on failure
+   */
+  ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> getCurrentOffsetsAsync(String id, boolean retry);
 
-      final HttpResponseStatus responseStatus = response.getStatus();
-      final String responseContent = response.getContent();
+  /**
+   * Retrieve ending offsets for a task. Retries on failure.
+   *
+   * Task-side is {@link SeekableStreamIndexTaskRunner#getEndOffsetsHTTP}.
+   *
+   * @param id task id
+   */
+  ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> getEndOffsetsAsync(String id);
 
-      if (responseStatus.equals(HttpResponseStatus.OK)) {
-        log.info("Task [%s] paused successfully", id);
-        return deserializeMap(responseContent, Map.class, getPartitionType(), getSequenceType());
-      } else if (responseStatus.equals(HttpResponseStatus.ACCEPTED)) {
-        // The task received the pause request, but its status hasn't been changed yet.
-        while (true) {
-          final SeekableStreamIndexTaskRunner.Status status = getStatus(id);
-          if (status == SeekableStreamIndexTaskRunner.Status.PAUSED) {
-            return getCurrentOffsets(id, true);
-          }
+  /**
+   * Get processing statistics for a task. Retries on failure.
+   *
+   * Task-side is {@link SeekableStreamIndexTaskRunner#getRowStats}.
+   *
+   * @param id task id
+   */
+  ListenableFuture<Map<String, Object>> getMovingAveragesAsync(String id);
 
-          final Duration delay = newRetryPolicy().getAndIncrementRetryDelay();
-          if (delay == null) {
-            throw new ISE(
-                "Task [%s] failed to change its status from [%s] to [%s], aborting",
-                id,
-                status,
-                SeekableStreamIndexTaskRunner.Status.PAUSED
-            );
-          } else {
-            final long sleepTime = delay.getMillis();
-            log.info(
-                "Still waiting for task [%s] to change its status to [%s]; will try again in [%s]",
-                id,
-                SeekableStreamIndexTaskRunner.Status.PAUSED,
-                new Duration(sleepTime).toString()
-            );
-            Thread.sleep(sleepTime);
-          }
-        }
-      } else {
-        throw new ISE(
-            "Pause request for task [%s] failed with response [%s] : [%s]",
-            id,
-            responseStatus,
-            responseContent
-        );
-      }
-    }
-    catch (NoTaskLocationException e) {
-      log.error("Exception [%s] while pausing Task [%s]", e.getMessage(), id);
-      return ImmutableMap.of();
-    }
-    catch (IOException | InterruptedException e) {
-      throw new RE(e, "Exception [%s] while pausing Task [%s]", e.getMessage(), id);
-    }
-  }
+  /**
+   * Get parse errors for a task. Retries on failure.
+   *
+   * Task-side is {@link SeekableStreamIndexTaskRunner#getUnparseableEvents}.
+   *
+   * @param id task id
+   */
+  ListenableFuture<List<ParseExceptionReport>> getParseErrorsAsync(String id);
 
-  public SeekableStreamIndexTaskRunner.Status getStatus(final String id)
-  {
-    log.debug("GetStatus task[%s]", id);
+  /**
+   * Get current status for a task. Retries on failure.
+   *
+   * Returns {@link SeekableStreamIndexTaskRunner.Status#NOT_STARTED} if the task has not yet started.
+   *
+   * Task-side is {@link SeekableStreamIndexTaskRunner#getStatusHTTP}.
+   *
+   * @param id task id
+   */
+  ListenableFuture<SeekableStreamIndexTaskRunner.Status> getStatusAsync(String id);
 
-    try {
-      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "status", null, true);
-      return deserialize(response.getContent(), SeekableStreamIndexTaskRunner.Status.class);
-    }
-    catch (NoTaskLocationException e) {
-      return SeekableStreamIndexTaskRunner.Status.NOT_STARTED;
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
+  Class<PartitionIdType> getPartitionType();
 
+  Class<SequenceOffsetType> getSequenceType();
 
-  @Nullable
-  public DateTime getStartTime(final String id)
-  {
-    log.debug("GetStartTime task[%s]", id);
-
-    try {
-      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "time/start", null, true);
-      return response.getContent() == null || response.getContent().isEmpty()
-             ? null
-             : deserialize(response.getContent(), DateTime.class);
-    }
-    catch (NoTaskLocationException e) {
-      return null;
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public Map<String, Object> getMovingAverages(final String id)
-  {
-    log.debug("GetMovingAverages task[%s]", id);
-
-    try {
-      final StringFullResponseHolder response = submitRequestWithEmptyContent(
-          id,
-          HttpMethod.GET,
-          "rowStats",
-          null,
-          true
-      );
-      return response.getContent() == null || response.getContent().isEmpty()
-             ? Collections.emptyMap()
-             : deserialize(response.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
-    }
-    catch (NoTaskLocationException e) {
-      return Collections.emptyMap();
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public Map<PartitionIdType, SequenceOffsetType> getCurrentOffsets(final String id, final boolean retry)
-  {
-    log.debug("GetCurrentOffsets task[%s] retry[%s]", id, retry);
-
-    try {
-      final StringFullResponseHolder response = submitRequestWithEmptyContent(
-          id,
-          HttpMethod.GET,
-          "offsets/current",
-          null,
-          retry
-      );
-      return deserializeMap(response.getContent(), Map.class, getPartitionType(), getSequenceType());
-    }
-    catch (NoTaskLocationException e) {
-      return ImmutableMap.of();
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>> getCheckpoints(final String id, final boolean retry)
-  {
-    log.debug("GetCheckpoints task[%s] retry[%s]", id, retry);
-    try {
-      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "checkpoints", null, retry);
-      return deserializeNestedValueMap(
-          response.getContent(),
-          TreeMap.class,
-          Integer.class,
-          Map.class,
-          getPartitionType(),
-          getSequenceType()
-      );
-    }
-    catch (NoTaskLocationException e) {
-      return new TreeMap<>();
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public ListenableFuture<TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>> getCheckpointsAsync(
-      final String id,
-      final boolean retry
-  )
-  {
-    return doAsync(() -> getCheckpoints(id, retry));
-  }
-
-  public Map<PartitionIdType, SequenceOffsetType> getEndOffsets(final String id)
-  {
-    log.debug("GetEndOffsets task[%s]", id);
-
-    try {
-      final StringFullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "offsets/end", null, true);
-      return deserializeMap(response.getContent(), Map.class, getPartitionType(), getSequenceType());
-    }
-    catch (NoTaskLocationException e) {
-      return ImmutableMap.of();
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public boolean setEndOffsets(
-      final String id,
-      final Map<PartitionIdType, SequenceOffsetType> endOffsets,
-      final boolean finalize
-  ) throws IOException
-  {
-    log.debug("SetEndOffsets task[%s] endOffsets[%s] finalize[%s]", id, endOffsets, finalize);
-
-    try {
-      final StringFullResponseHolder response = submitJsonRequest(
-          id,
-          HttpMethod.POST,
-          "offsets/end",
-          StringUtils.format("finish=%s", finalize),
-          serialize(endOffsets),
-          true
-      );
-      return isSuccess(response);
-    }
-    catch (NoTaskLocationException e) {
-      return false;
-    }
-  }
-
-  public ListenableFuture<Boolean> stopAsync(final String id, final boolean publish)
-  {
-    return doAsync(() -> stop(id, publish));
-  }
-
-
-  public ListenableFuture<Boolean> resumeAsync(final String id)
-  {
-    return doAsync(() -> resume(id));
-  }
-
-
-  public ListenableFuture<DateTime> getStartTimeAsync(final String id)
-  {
-    return doAsync(() -> getStartTime(id));
-  }
-
-
-  public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseAsync(final String id)
-  {
-    return doAsync(() -> pause(id));
-  }
-
-  public ListenableFuture<Boolean> setEndOffsetsAsync(
-      final String id,
-      final Map<PartitionIdType, SequenceOffsetType> endOffsets,
-      final boolean finalize
-  )
-  {
-    return doAsync(() -> setEndOffsets(id, endOffsets, finalize));
-  }
-
-  public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> getCurrentOffsetsAsync(
-      final String id,
-      final boolean retry
-  )
-  {
-    return doAsync(() -> getCurrentOffsets(id, retry));
-  }
-
-  public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> getEndOffsetsAsync(final String id)
-  {
-    return doAsync(() -> getEndOffsets(id));
-  }
-
-
-  public ListenableFuture<Map<String, Object>> getMovingAveragesAsync(final String id)
-  {
-    return doAsync(() -> getMovingAverages(id));
-  }
-
-
-  public ListenableFuture<SeekableStreamIndexTaskRunner.Status> getStatusAsync(final String id)
-  {
-    return doAsync(() -> getStatus(id));
-  }
-
-  protected abstract Class<PartitionIdType> getPartitionType();
-
-  protected abstract Class<SequenceOffsetType> getSequenceType();
+  void close();
 }
 
 

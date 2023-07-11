@@ -19,11 +19,12 @@
 
 package org.apache.druid.cli;
 
-import io.airlift.airline.Command;
+import com.github.rvesse.airline.annotations.Command;
 import io.netty.util.SuppressForbidden;
-import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.initialization.Initialization;
+import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.server.StatusResource;
+
+import javax.inject.Inject;
 
 @Command(
     name = "version",
@@ -31,10 +32,16 @@ import org.apache.druid.server.StatusResource;
 )
 public class Version implements Runnable
 {
+  @Inject
+  private ExtensionsLoader extnLoader;
+
   @Override
   @SuppressForbidden(reason = "System#out")
   public void run()
   {
-    System.out.println(new StatusResource.Status(Initialization.getLoadedImplementations(DruidModule.class)));
+    // Since Version is a command, we don't go through the server
+    // process to load modules and they are thus not already loaded.
+    // Explicitly load them here.
+    System.out.println(new StatusResource.Status(extnLoader.getModules()));
   }
 }

@@ -20,15 +20,19 @@
 package org.apache.druid.indexing.worker.shuffle;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
-import org.apache.druid.client.indexing.TaskStatus;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.ShuffleMetrics.PerDatasourceShuffleMetrics;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
@@ -87,32 +91,23 @@ public class ShuffleResourceTest
       }
 
     };
-    final TaskConfig taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)),
-        false,
-        false
-    );
-    final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient()
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)))
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
+    final OverlordClient overlordClient = new NoopOverlordClient()
     {
       @Override
-      public Map<String, TaskStatus> getTaskStatuses(Set<String> taskIds)
+      public ListenableFuture<Map<String, TaskStatus>> taskStatuses(Set<String> taskIds)
       {
         final Map<String, TaskStatus> result = new HashMap<>();
         for (String taskId : taskIds) {
-          result.put(taskId, new TaskStatus(taskId, TaskState.SUCCESS, 10));
+          result.put(taskId, new TaskStatus(taskId, TaskState.SUCCESS, 10, null, null));
         }
-        return result;
+        return Futures.immediateFuture(result);
       }
     };
-    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
+    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
     shuffleMetrics = new ShuffleMetrics();
     shuffleResource = new ShuffleResource(intermediaryDataManager, Optional.of(shuffleMetrics));
   }
@@ -153,7 +148,7 @@ public class ShuffleResourceTest
     final Map<String, PerDatasourceShuffleMetrics> snapshot = shuffleMetrics.snapshotAndReset();
     Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
     Assert.assertEquals(1, snapshot.get(supervisorTaskId).getShuffleRequests());
-    Assert.assertEquals(134, snapshot.get(supervisorTaskId).getShuffleBytes());
+    Assert.assertEquals(254, snapshot.get(supervisorTaskId).getShuffleBytes());
   }
 
   @Test
@@ -213,6 +208,7 @@ public class ShuffleResourceTest
     // Each file size is 138 bytes after compression
     final File segmentDir = tempDir.newFolder();
     FileUtils.write(new File(segmentDir, fileName), "test data.", StandardCharsets.UTF_8);
+    FileUtils.writeByteArrayToFile(new File(segmentDir, "version.bin"), Ints.toByteArray(9));
     return segmentDir;
   }
 }

@@ -21,8 +21,8 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -83,10 +83,12 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedFloatBuffers = baseFloatBuffers.singleThreaded();
 
     int currBufferNum = -1;
+    @Nullable
     ResourceHolder<ByteBuffer> holder;
     /**
      * floatBuffer's position must be 0
      */
+    @Nullable
     FloatBuffer floatBuffer;
 
     @Override
@@ -168,7 +170,9 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
 
     protected void loadBuffer(int bufferNum)
     {
-      CloseQuietly.close(holder);
+      if (holder != null) {
+        holder.close();
+      }
       holder = singleThreadedFloatBuffers.get(bufferNum);
       // asFloatBuffer() makes the floatBuffer's position = 0
       floatBuffer = holder.get().asFloatBuffer();
@@ -179,7 +183,10 @@ public class BlockLayoutColumnarFloatsSupplier implements Supplier<ColumnarFloat
     public void close()
     {
       if (holder != null) {
+        currBufferNum = -1;
         holder.close();
+        holder = null;
+        floatBuffer = null;
       }
     }
 

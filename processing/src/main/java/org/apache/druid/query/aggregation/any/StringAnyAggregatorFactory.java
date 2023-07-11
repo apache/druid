@@ -33,7 +33,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -84,9 +84,9 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   @Override
   public StringAnyVectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
-
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
-    if (capabilities == null || capabilities.hasMultipleValues().isMaybeTrue()) {
+    // null capabilities mean the column doesn't exist, so in vector engines the selector will never be multi-value
+    if (capabilities != null && capabilities.hasMultipleValues().isMaybeTrue()) {
       return new StringAnyVectorAggregator(
           null,
           selectorFactory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
@@ -178,21 +178,27 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public ValueType getType()
+  public ColumnType getIntermediateType()
   {
-    return ValueType.STRING;
+    return ColumnType.STRING;
   }
 
   @Override
-  public ValueType getFinalizedType()
+  public ColumnType getResultType()
   {
-    return ValueType.STRING;
+    return ColumnType.STRING;
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
     return Integer.BYTES + maxStringBytes;
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new StringAnyAggregatorFactory(newName, getFieldName(), getMaxStringBytes());
   }
 
   @Override

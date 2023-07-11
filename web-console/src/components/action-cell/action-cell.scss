@@ -16,7 +16,11 @@
  * limitations under the License.
  */
 
+@import '../../variables';
+
 .action-cell {
+  padding: $table-cell-v-padding $table-cell-h-padding;
+
   & > * {
     margin-right: 10px;
 

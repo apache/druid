@@ -27,11 +27,12 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
 import com.amazonaws.services.kinesis.model.DescribeStreamRequest;
-import com.amazonaws.services.kinesis.model.DescribeStreamResult;
 import com.amazonaws.services.kinesis.model.ExpiredIteratorException;
 import com.amazonaws.services.kinesis.model.GetRecordsRequest;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
 import com.amazonaws.services.kinesis.model.InvalidArgumentException;
+import com.amazonaws.services.kinesis.model.ListShardsRequest;
+import com.amazonaws.services.kinesis.model.ListShardsResult;
 import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
@@ -52,6 +53,7 @@ import org.apache.druid.common.aws.AWSCredentialsUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisor;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -70,11 +72,11 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -227,7 +229,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
             recordsResult = null;
 
             if (!records.offer(currRecord, recordBufferOfferTimeout, TimeUnit.MILLISECONDS)) {
-              log.warn("OrderedPartitionableRecord buffer full, retrying in [%,dms]", recordBufferFullWait);
+              log.warn("Kinesis records are being processed slower than they are fetched. "
+                       + "OrderedPartitionableRecord buffer full, retrying in [%,dms].",
+                       recordBufferFullWait);
               scheduleBackgroundFetch(recordBufferFullWait);
             }
 
@@ -292,7 +296,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
             // from this message and back off for a bit to let the buffer drain before retrying.
             if (!records.offer(currRecord, recordBufferOfferTimeout, TimeUnit.MILLISECONDS)) {
               log.warn(
-                  "OrderedPartitionableRecord buffer full, storing iterator and retrying in [%,dms]",
+                  "Kinesis records are being processed slower than they are fetched. "
+                  + "OrderedPartitionableRecord buffer full, storing iterator and retrying in [%,dms].",
                   recordBufferFullWait
               );
 
@@ -400,11 +405,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   private final boolean deaggregate;
   private final int recordBufferOfferTimeout;
   private final int recordBufferFullWait;
-  private final int fetchSequenceNumberTimeout;
   private final int maxRecordsPerPoll;
   private final int fetchThreads;
   private final int recordBufferSize;
   private final boolean useEarliestSequenceNumber;
+  private final boolean useListShards;
 
   private ScheduledExecutorService scheduledExec;
 
@@ -425,9 +430,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
       int recordBufferSize,
       int recordBufferOfferTimeout,
       int recordBufferFullWait,
-      int fetchSequenceNumberTimeout,
       int maxRecordsPerPoll,
-      boolean useEarliestSequenceNumber
+      boolean useEarliestSequenceNumber,
+      boolean useListShards
   )
   {
     Preconditions.checkNotNull(amazonKinesis);
@@ -437,11 +442,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
     this.deaggregate = deaggregate;
     this.recordBufferOfferTimeout = recordBufferOfferTimeout;
     this.recordBufferFullWait = recordBufferFullWait;
-    this.fetchSequenceNumberTimeout = fetchSequenceNumberTimeout;
     this.maxRecordsPerPoll = maxRecordsPerPoll;
     this.fetchThreads = fetchThreads;
     this.recordBufferSize = recordBufferSize;
     this.useEarliestSequenceNumber = useEarliestSequenceNumber;
+    this.useListShards = useListShards;
     this.backgroundFetchEnabled = fetchThreads > 0;
 
     // the deaggregate function is implemented by the amazon-kinesis-client, whose license is not compatible with Apache.
@@ -593,7 +598,13 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   public void seek(StreamPartition<String> partition, String sequenceNumber) throws InterruptedException
   {
     filterBufferAndResetBackgroundFetch(ImmutableSet.of(partition));
-    partitionSeek(partition, sequenceNumber, ShardIteratorType.AT_SEQUENCE_NUMBER);
+    if (KinesisSequenceNumber.UNREAD_TRIM_HORIZON.equals(sequenceNumber)) {
+      partitionSeek(partition, null, ShardIteratorType.TRIM_HORIZON);
+    } else if (KinesisSequenceNumber.UNREAD_LATEST.equals(sequenceNumber)) {
+      partitionSeek(partition, null, ShardIteratorType.LATEST);
+    } else {
+      partitionSeek(partition, sequenceNumber, ShardIteratorType.AT_SEQUENCE_NUMBER);
+    }
   }
 
   @Override
@@ -664,33 +675,142 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   }
 
   @Override
+  public boolean isOffsetAvailable(StreamPartition<String> partition, OrderedSequenceNumber<String> offset)
+  {
+    return wrapExceptions(() -> {
+      KinesisSequenceNumber kinesisSequence = (KinesisSequenceNumber) offset;
+      // No records have been read from the stream and any record is valid
+      if (kinesisSequence.isUnread()) {
+        return true;
+      }
+      // Any other custom sequence number
+      if (!KinesisSequenceNumber.isValidAWSKinesisSequence(kinesisSequence.get())) {
+        return false;
+      }
+      // The first record using AT_SEQUENCE_NUMBER should match the offset
+      // Should not return empty records provided the record is present
+      // Reference: https://docs.aws.amazon.com/streams/latest/dev/troubleshooting-consumers.html
+      // Section: GetRecords Returns Empty Records Array Even When There is Data in the Stream
+      String shardIterator = RetryUtils.retry(
+          () -> kinesis.getShardIterator(partition.getStream(),
+                                         partition.getPartitionId(),
+                                         ShardIteratorType.AT_SEQUENCE_NUMBER.name(),
+                                         kinesisSequence.get())
+                       .getShardIterator(),
+          (throwable) -> {
+            if (throwable instanceof ProvisionedThroughputExceededException) {
+              log.warn(
+                  throwable,
+                  "encountered ProvisionedThroughputExceededException while fetching records, this means "
+                  + "that the request rate for the stream is too high, or the requested data is too large for "
+                  + "the available throughput. Reduce the frequency or size of your requests. Consider increasing "
+                  + "the number of shards to increase throughput."
+              );
+              return true;
+            }
+            if (throwable instanceof AmazonClientException) {
+              AmazonClientException ase = (AmazonClientException) throwable;
+              return AWSClientUtil.isClientExceptionRecoverable(ase);
+            }
+            return false;
+          },
+          GET_SEQUENCE_NUMBER_RETRY_COUNT
+      );
+      GetRecordsRequest getRecordsRequest = new GetRecordsRequest().withShardIterator(shardIterator);
+      List<Record> records = RetryUtils.retry(
+          () -> kinesis.getRecords(getRecordsRequest)
+                       .getRecords(),
+          (throwable) -> {
+            if (throwable instanceof ProvisionedThroughputExceededException) {
+              log.warn(
+                  throwable,
+                  "encountered ProvisionedThroughputExceededException while fetching records, this means "
+                  + "that the request rate for the stream is too high, or the requested data is too large for "
+                  + "the available throughput. Reduce the frequency or size of your requests. Consider increasing "
+                  + "the number of shards to increase throughput."
+              );
+              return true;
+            }
+            if (throwable instanceof AmazonClientException) {
+              AmazonClientException ase = (AmazonClientException) throwable;
+              return AWSClientUtil.isClientExceptionRecoverable(ase);
+            }
+            return false;
+          },
+          GET_SEQUENCE_NUMBER_RETRY_COUNT
+      );
+      return !records.isEmpty() && records.get(0).getSequenceNumber().equals(kinesisSequence.get());
+    });
+  }
+
+  private Set<Shard> getShards(String stream)
+  {
+    if (useListShards) {
+      return getShardsUsingListShards(stream);
+    }
+    return getShardsUsingDescribeStream(stream);
+  }
+
+  /**
+   * Default method to avoid incompatibility when user doesn't have sufficient IAM permissions on AWS
+   * Not advised. getShardsUsingListShards is recommended instead if sufficient permissions are present.
+   *
+   * @param stream name of stream
+   * @return Immutable set of shards
+   */
+  private Set<Shard> getShardsUsingDescribeStream(String stream)
+  {
+    ImmutableSet.Builder<Shard> shards = ImmutableSet.builder();
+    DescribeStreamRequest describeRequest = new DescribeStreamRequest();
+    describeRequest.setStreamName(stream);
+    while (describeRequest != null) {
+      StreamDescription description = kinesis.describeStream(describeRequest).getStreamDescription();
+      List<Shard> shardResult = description.getShards();
+      shards.addAll(shardResult);
+      if (description.isHasMoreShards()) {
+        describeRequest.setExclusiveStartShardId(Iterables.getLast(shardResult).getShardId());
+      } else {
+        describeRequest = null;
+      }
+    }
+    return shards.build();
+  }
+
+  /**
+   * If the user has the IAM policy for listShards, and useListShards is true:
+   * Use the API listShards which is the recommended way instead of describeStream
+   * listShards can return 1000 shards per call and has a limit of 100TPS
+   * This makes the method resilient to LimitExceeded exceptions (compared to 100 shards, 10 TPS of describeStream)
+   *
+   * @param stream name of stream
+   *
+   * @return Set of Shard ids
+   */
+  private Set<Shard> getShardsUsingListShards(String stream)
+  {
+    ImmutableSet.Builder<Shard> shards = ImmutableSet.builder();
+    ListShardsRequest request = new ListShardsRequest().withStreamName(stream);
+    while (true) {
+      ListShardsResult result = kinesis.listShards(request);
+      shards.addAll(result.getShards());
+      String nextToken = result.getNextToken();
+      if (nextToken == null) {
+        return shards.build();
+      }
+      request = new ListShardsRequest().withNextToken(nextToken);
+    }
+  }
+
+  @Override
   public Set<String> getPartitionIds(String stream)
   {
-    return wrapExceptions(
-        () -> {
-          final Set<String> retVal = new HashSet<>();
-          DescribeStreamRequest request = new DescribeStreamRequest();
-          request.setStreamName(stream);
-
-          while (request != null) {
-            final DescribeStreamResult result = kinesis.describeStream(request);
-            final StreamDescription streamDescription = result.getStreamDescription();
-            final List<Shard> shards = streamDescription.getShards();
-
-            for (Shard shard : shards) {
-              retVal.add(shard.getShardId());
-            }
-
-            if (streamDescription.isHasMoreShards()) {
-              request.setExclusiveStartShardId(Iterables.getLast(shards).getShardId());
-            } else {
-              request = null;
-            }
-          }
-
-          return retVal;
-        }
-    );
+    return wrapExceptions(() -> {
+      Set<String> partitionIds = new TreeSet<>();
+      for (Shard shard : getShards(stream)) {
+        partitionIds.add(shard.getShardId());
+      }
+      return partitionIds;
+    });
   }
 
   /**
@@ -701,11 +821,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
   {
     Map<String, Long> partitionLag = Maps.newHashMapWithExpectedSize(currentOffsets.size());
     for (Map.Entry<String, String> partitionOffset : currentOffsets.entrySet()) {
+      StreamPartition<String> partition = new StreamPartition<>(stream, partitionOffset.getKey());
+      long currentLag = 0L;
       if (KinesisSequenceNumber.isValidAWSKinesisSequence(partitionOffset.getValue())) {
-        StreamPartition<String> partition = new StreamPartition<>(stream, partitionOffset.getKey());
-        long currentLag = getPartitionTimeLag(partition, partitionOffset.getValue());
-        partitionLag.put(partitionOffset.getKey(), currentLag);
+        currentLag = getPartitionTimeLag(partition, partitionOffset.getValue());
       }
+      partitionLag.put(partitionOffset.getKey(), currentLag);
     }
     return partitionLag;
   }
@@ -771,6 +892,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
    * {@link #GET_SEQUENCE_NUMBER_RECORD_COUNT} records and return the first sequence number from the result set.
    * This method is thread safe as it does not depend on the internal state of the supplier (it doesn't use the
    * {@link PartitionResource} which have been assigned to the supplier), and the Kinesis client is thread safe.
+   *
+   * When there are no records at the offset corresponding to the ShardIteratorType,
+   *    If shard is closed, return custom EOS sequence marker
+   *    While getting the earliest sequence number, return a custom marker corresponding to TRIM_HORIZON
+   *    While getting the most recent sequence number, return a custom marker corresponding to LATEST
    */
   @Nullable
   private String getSequenceNumber(StreamPartition<String> partition, ShardIteratorType iteratorEnum)
@@ -779,62 +905,60 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Byt
       String shardIterator =
           kinesis.getShardIterator(partition.getStream(), partition.getPartitionId(), iteratorEnum.toString())
                  .getShardIterator();
-      long timeoutMillis = System.currentTimeMillis() + fetchSequenceNumberTimeout;
-      GetRecordsResult recordsResult = null;
 
-      while (shardIterator != null && System.currentTimeMillis() < timeoutMillis) {
+      if (closed) {
+        log.info("KinesisRecordSupplier closed while fetching sequenceNumber");
+        return null;
+      }
+      final GetRecordsRequest request = new GetRecordsRequest().withShardIterator(shardIterator)
+                                                               .withLimit(GET_SEQUENCE_NUMBER_RECORD_COUNT);
+      GetRecordsResult recordsResult = RetryUtils.retry(
+          () -> kinesis.getRecords(request),
+          (throwable) -> {
+            if (throwable instanceof ProvisionedThroughputExceededException) {
+              log.warn(
+                  throwable,
+                  "encountered ProvisionedThroughputExceededException while fetching records, this means "
+                  + "that the request rate for the stream is too high, or the requested data is too large for "
+                  + "the available throughput. Reduce the frequency or size of your requests. Consider increasing "
+                  + "the number of shards to increase throughput."
+              );
+              return true;
+            }
+            if (throwable instanceof AmazonClientException) {
+              AmazonClientException ase = (AmazonClientException) throwable;
+              return AWSClientUtil.isClientExceptionRecoverable(ase);
+            }
+            return false;
+          },
+          GET_SEQUENCE_NUMBER_RETRY_COUNT
+      );
 
-        if (closed) {
-          log.info("KinesisRecordSupplier closed while fetching sequenceNumber");
-          return null;
-        }
-        final String currentShardIterator = shardIterator;
-        final GetRecordsRequest request = new GetRecordsRequest().withShardIterator(currentShardIterator)
-                                                                 .withLimit(GET_SEQUENCE_NUMBER_RECORD_COUNT);
-        recordsResult = RetryUtils.retry(
-            () -> kinesis.getRecords(request),
-            (throwable) -> {
-              if (throwable instanceof ProvisionedThroughputExceededException) {
-                log.warn(
-                    throwable,
-                    "encountered ProvisionedThroughputExceededException while fetching records, this means "
-                    + "that the request rate for the stream is too high, or the requested data is too large for "
-                    + "the available throughput. Reduce the frequency or size of your requests. Consider increasing "
-                    + "the number of shards to increase throughput."
-                );
-                return true;
-              }
-              if (throwable instanceof AmazonClientException) {
-                AmazonClientException ase = (AmazonClientException) throwable;
-                return AWSClientUtil.isClientExceptionRecoverable(ase);
-              }
-              return false;
-            },
-            GET_SEQUENCE_NUMBER_RETRY_COUNT
-        );
+      List<Record> records = recordsResult.getRecords();
 
-        List<Record> records = recordsResult.getRecords();
-
-        if (!records.isEmpty()) {
-          return records.get(0).getSequenceNumber();
-        }
-
-        shardIterator = recordsResult.getNextShardIterator();
+      if (!records.isEmpty()) {
+        return records.get(0).getSequenceNumber();
       }
 
-      if (shardIterator == null) {
-        log.info("Partition[%s] returned a null shard iterator, is the shard closed?", partition.getPartitionId());
+      if (recordsResult.getNextShardIterator() == null) {
+        log.info("Partition[%s] is closed and empty", partition.getPartitionId());
         return KinesisSequenceNumber.END_OF_SHARD_MARKER;
       }
 
+      if (iteratorEnum.equals(ShardIteratorType.LATEST)) {
+        log.info("Partition[%s] has no records at LATEST offset", partition.getPartitionId());
+        return KinesisSequenceNumber.UNREAD_LATEST;
+      }
 
-      // if we reach here, it usually means either the shard has no more records, or records have not been
-      // added to this shard
-      log.warn(
-          "timed out while trying to fetch position for shard[%s], millisBehindLatest is [%s], likely no more records in shard",
-          partition.getPartitionId(),
-          recordsResult != null ? recordsResult.getMillisBehindLatest() : "UNKNOWN"
-      );
+      // Even if there are records in the shard, they may not be returned on the first call to getRecords with TRIM_HORIZON
+      // Reference: https://docs.aws.amazon.com/streams/latest/dev/troubleshooting-consumers.html
+      // Section: GetRecords Returns Empty Records Array Even When There is Data in the Stream
+      if (iteratorEnum.equals(ShardIteratorType.TRIM_HORIZON)) {
+        log.info("Partition[%s] has no records at TRIM_HORIZON offset", partition.getPartitionId());
+        return KinesisSequenceNumber.UNREAD_TRIM_HORIZON;
+      }
+
+      log.warn("Could not fetch sequence number for Partition[%s]", partition.getPartitionId());
       return null;
     });
   }

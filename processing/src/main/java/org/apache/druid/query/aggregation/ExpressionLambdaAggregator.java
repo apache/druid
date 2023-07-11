@@ -19,36 +19,55 @@
 
 package org.apache.druid.query.aggregation;
 
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 public class ExpressionLambdaAggregator implements Aggregator
 {
   private final Expr lambda;
+  private final List<String> inputColumns;
   private final ExpressionLambdaAggregatorInputBindings bindings;
   private final int maxSizeBytes;
+  private final boolean aggregateNullInputs;
   private boolean hasValue;
 
   public ExpressionLambdaAggregator(
-      final Expr lambda,
-      final ExpressionLambdaAggregatorInputBindings bindings,
-      final boolean isNullUnlessAggregated,
+      final ExpressionLambdaAggregatorFactory.FactorizePlan thePlan,
       final int maxSizeBytes
   )
   {
-    this.lambda = lambda;
-    this.bindings = bindings;
+    this.lambda = thePlan.getExpression();
+    this.bindings = thePlan.getBindings();
+    this.hasValue = !thePlan.isNullUnlessAggregated();
+    this.aggregateNullInputs = thePlan.shouldAggregateNullInputs();
+    this.inputColumns = thePlan.getInputs();
     this.maxSizeBytes = maxSizeBytes;
-    this.hasValue = !isNullUnlessAggregated;
   }
 
   @Override
   public void aggregate()
   {
+    if (!aggregateNullInputs) {
+      for (String column : inputColumns) {
+        if (bindings.get(column) == null) {
+          return;
+        }
+      }
+    }
     final ExprEval<?> eval = lambda.eval(bindings);
-    ExprEval.estimateAndCheckMaxBytes(eval, maxSizeBytes);
+    final int estimatedSize = eval.type().getNullableStrategy().estimateSizeBytes(eval.valueOrDefault());
+    if (estimatedSize > maxSizeBytes) {
+      throw new ISE(
+          "Exceeded memory usage when aggregating type [%s], size [%s] is larger than max [%s]",
+          eval.type().asTypeString(),
+          estimatedSize,
+          maxSizeBytes
+      );
+    }
     bindings.accumulate(eval);
     hasValue = true;
   }
@@ -57,7 +76,7 @@ public class ExpressionLambdaAggregator implements Aggregator
   @Override
   public Object get()
   {
-    return hasValue ? bindings.getAccumulator().value() : null;
+    return hasValue ? bindings.getAccumulator().valueOrDefault() : null;
   }
 
   @Override

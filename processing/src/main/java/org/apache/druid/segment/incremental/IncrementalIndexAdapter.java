@@ -22,12 +22,15 @@ package org.apache.druid.segment.incremental;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
+import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.NestedDataColumnIndexer;
 import org.apache.druid.segment.TransformableRowIterator;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.joda.time.Interval;
@@ -42,29 +45,10 @@ import java.util.stream.Collectors;
 public class IncrementalIndexAdapter implements IndexableAdapter
 {
   private final Interval dataInterval;
-  private final IncrementalIndex<?> index;
+  private final IncrementalIndex index;
   private final Map<String, DimensionAccessor> accessors;
 
-  private static class DimensionAccessor
-  {
-    private final IncrementalIndex.DimensionDesc dimensionDesc;
-    @Nullable
-    private final MutableBitmap[] invertedIndexes;
-    private final DimensionIndexer indexer;
-
-    public DimensionAccessor(IncrementalIndex.DimensionDesc dimensionDesc)
-    {
-      this.dimensionDesc = dimensionDesc;
-      this.indexer = dimensionDesc.getIndexer();
-      if (dimensionDesc.getCapabilities().hasBitmapIndexes()) {
-        this.invertedIndexes = new MutableBitmap[indexer.getCardinality() + 1];
-      } else {
-        this.invertedIndexes = null;
-      }
-    }
-  }
-
-  public IncrementalIndexAdapter(Interval dataInterval, IncrementalIndex<?> index, BitmapFactory bitmapFactory)
+  public IncrementalIndexAdapter(Interval dataInterval, IncrementalIndex index, BitmapFactory bitmapFactory)
   {
     this.dataInterval = dataInterval;
     this.index = index;
@@ -88,7 +72,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
    * a null value.
    */
   private void processRows(
-      IncrementalIndex<?> index,
+      IncrementalIndex index,
       BitmapFactory bitmapFactory,
       List<IncrementalIndex.DimensionDesc> dimensions
   )
@@ -156,6 +140,34 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     return indexer.getSortedIndexedValues();
   }
 
+  @Nullable
+  @Override
+  public NestedColumnMergable getNestedColumnMergeables(String column)
+  {
+    final DimensionAccessor accessor = accessors.get(column);
+    if (accessor == null) {
+      return null;
+    }
+
+    final DimensionIndexer indexer = accessor.dimensionDesc.getIndexer();
+    if (indexer instanceof NestedDataColumnIndexer) {
+      NestedDataColumnIndexer nestedDataColumnIndexer = (NestedDataColumnIndexer) indexer;
+
+      return new NestedColumnMergable(
+          nestedDataColumnIndexer.getSortedValueLookups(),
+          nestedDataColumnIndexer.getFieldTypeInfo()
+      );
+    }
+    if (indexer instanceof AutoTypeColumnIndexer) {
+      AutoTypeColumnIndexer standardIndexer = (AutoTypeColumnIndexer) indexer;
+      return new NestedColumnMergable(
+          standardIndexer.getSortedValueLookups(),
+          standardIndexer.getFieldTypeInfo()
+      );
+    }
+    return null;
+  }
+
   @Override
   public TransformableRowIterator getRows()
   {
@@ -190,6 +202,24 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     return new MutableBitmapValues(bitmapIndex);
   }
 
+  @Override
+  public ColumnCapabilities getCapabilities(String column)
+  {
+    return index.getColumnCapabilities(column);
+  }
+
+  @Override
+  public ColumnFormat getFormat(String column)
+  {
+    return index.getColumnFormat(column);
+  }
+
+  @Override
+  public Metadata getMetadata()
+  {
+    return index.getMetadata();
+  }
+
   static class MutableBitmapValues implements BitmapValues
   {
     private final MutableBitmap bitmapIndex;
@@ -212,21 +242,22 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     }
   }
 
-  @Override
-  public String getMetricType(String metric)
+  private static class DimensionAccessor
   {
-    return index.getMetricType(metric);
-  }
+    private final IncrementalIndex.DimensionDesc dimensionDesc;
+    @Nullable
+    private final MutableBitmap[] invertedIndexes;
+    private final DimensionIndexer indexer;
 
-  @Override
-  public ColumnCapabilities getCapabilities(String column)
-  {
-    return index.getCapabilities(column);
-  }
-
-  @Override
-  public Metadata getMetadata()
-  {
-    return index.getMetadata();
+    public DimensionAccessor(IncrementalIndex.DimensionDesc dimensionDesc)
+    {
+      this.dimensionDesc = dimensionDesc;
+      this.indexer = dimensionDesc.getIndexer();
+      if (dimensionDesc.getCapabilities().hasBitmapIndexes()) {
+        this.invertedIndexes = new MutableBitmap[indexer.getCardinality() + 1];
+      } else {
+        this.invertedIndexes = null;
+      }
+    }
   }
 }

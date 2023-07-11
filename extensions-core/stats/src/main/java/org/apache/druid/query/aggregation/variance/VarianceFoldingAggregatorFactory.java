@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.variance;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import javax.annotation.Nullable;
 
@@ -36,5 +37,11 @@ public class VarianceFoldingAggregatorFactory extends VarianceAggregatorFactory
   )
   {
     super(name, fieldName, estimator, "variance");
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new VarianceFoldingAggregatorFactory(newName, getFieldName(), getEstimator());
   }
 }

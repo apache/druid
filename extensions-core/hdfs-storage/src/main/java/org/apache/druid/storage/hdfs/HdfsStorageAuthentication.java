@@ -48,7 +48,7 @@ public class HdfsStorageAuthentication
   }
 
   /**
-   * Dose authenticate against a secured hadoop cluster
+   * Does authenticate against a secured hadoop cluster
    * In case of any bug fix make sure to fix the code in JobHelper#authenticate as well.
    */
   @LifecycleStart

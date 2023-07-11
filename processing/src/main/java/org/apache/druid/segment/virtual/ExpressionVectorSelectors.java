@@ -22,12 +22,16 @@ package org.apache.druid.segment.virtual;
 import com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.InputBindings;
+import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.expression.ExprUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.ConstantVectorSelectors;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -52,10 +56,10 @@ public class ExpressionVectorSelectors
     // only constant expressions are currently supported, nothing else should get here
 
     if (plan.isConstant()) {
-      String constant = plan.getExpression().eval(ExprUtils.nilBindings()).asString();
+      String constant = plan.getExpression().eval(InputBindings.nilBindings()).asString();
       return ConstantVectorSelectors.singleValueDimensionVectorSelector(factory.getReadableVectorInspector(), constant);
     }
-    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR) && ExprType.STRING == plan.getOutputType()) {
+    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR) && (plan.getOutputType() != null && plan.getOutputType().is(ExprType.STRING))) {
       return new SingleStringInputDeferredEvaluationExpressionDimensionVectorSelector(
           factory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(plan.getSingleInputName())),
           plan.getExpression()
@@ -75,11 +79,11 @@ public class ExpressionVectorSelectors
     if (plan.isConstant()) {
       return ConstantVectorSelectors.vectorValueSelector(
           factory.getReadableVectorInspector(),
-          (Number) plan.getExpression().eval(ExprUtils.nilBindings()).value()
+          (Number) plan.getExpression().eval(InputBindings.nilBindings()).valueOrDefault()
       );
     }
     final Expr.VectorInputBinding bindings = createVectorBindings(plan.getAnalysis(), factory);
-    final ExprVectorProcessor<?> processor = plan.getExpression().buildVectorized(bindings);
+    final ExprVectorProcessor<?> processor = plan.getExpression().asVectorProcessor(bindings);
     return new ExpressionVectorValueSelector(processor, bindings);
   }
 
@@ -94,13 +98,52 @@ public class ExpressionVectorSelectors
     if (plan.isConstant()) {
       return ConstantVectorSelectors.vectorObjectSelector(
           factory.getReadableVectorInspector(),
-          plan.getExpression().eval(ExprUtils.nilBindings()).value()
+          plan.getExpression().eval(InputBindings.nilBindings()).valueOrDefault()
       );
     }
 
     final Expr.VectorInputBinding bindings = createVectorBindings(plan.getAnalysis(), factory);
-    final ExprVectorProcessor<?> processor = plan.getExpression().buildVectorized(bindings);
+    final ExprVectorProcessor<?> processor = plan.getExpression().asVectorProcessor(bindings);
     return new ExpressionVectorObjectSelector(processor, bindings);
+  }
+
+  public static VectorObjectSelector castValueSelectorToObject(
+      ReadableVectorInspector inspector,
+      String columnName,
+      VectorValueSelector selector,
+      ColumnType selectorType,
+      ColumnType castTo
+  )
+  {
+    ExpressionVectorInputBinding binding = new ExpressionVectorInputBinding(inspector);
+    binding.addNumeric(columnName, ExpressionType.fromColumnType(selectorType), selector);
+    return new ExpressionVectorObjectSelector(
+        CastToTypeVectorProcessor.cast(
+            VectorProcessors.identifier(binding, columnName),
+            ExpressionType.fromColumnType(castTo)
+        ),
+        binding
+    );
+  }
+
+  public static VectorValueSelector castObjectSelectorToNumeric(
+      ReadableVectorInspector inspector,
+      String columnName,
+      VectorObjectSelector selector,
+      ColumnType selectorType,
+      ColumnType castTo
+  )
+  {
+    Preconditions.checkArgument(castTo.isNumeric(), "Must cast to a numeric type to make a value selector");
+    ExpressionVectorInputBinding binding = new ExpressionVectorInputBinding(inspector);
+    binding.addObjectSelector(columnName, ExpressionType.fromColumnType(selectorType), selector);
+    return new ExpressionVectorValueSelector(
+        CastToTypeVectorProcessor.cast(
+            VectorProcessors.identifier(binding, columnName),
+            ExpressionType.fromColumnType(castTo)
+        ),
+        binding
+    );
   }
 
   private static Expr.VectorInputBinding createVectorBindings(
@@ -114,22 +157,21 @@ public class ExpressionVectorSelectors
     final List<String> columns = bindingAnalysis.getRequiredBindingsList();
     for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = vectorColumnSelectorFactory.getColumnCapabilities(columnName);
-      final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
 
       // null capabilities should be backed by a nil vector selector since it means the column effectively doesnt exist
-      if (nativeType != null) {
-        switch (nativeType) {
+      if (columnCapabilities != null) {
+        switch (columnCapabilities.getType()) {
           case FLOAT:
           case DOUBLE:
-            binding.addNumeric(columnName, ExprType.DOUBLE, vectorColumnSelectorFactory.makeValueSelector(columnName));
+            binding.addNumeric(columnName, ExpressionType.DOUBLE, vectorColumnSelectorFactory.makeValueSelector(columnName));
             break;
           case LONG:
-            binding.addNumeric(columnName, ExprType.LONG, vectorColumnSelectorFactory.makeValueSelector(columnName));
+            binding.addNumeric(columnName, ExpressionType.LONG, vectorColumnSelectorFactory.makeValueSelector(columnName));
             break;
           default:
             binding.addObjectSelector(
                 columnName,
-                ExprType.STRING,
+                ExpressionType.STRING,
                 vectorColumnSelectorFactory.makeObjectSelector(columnName)
             );
         }

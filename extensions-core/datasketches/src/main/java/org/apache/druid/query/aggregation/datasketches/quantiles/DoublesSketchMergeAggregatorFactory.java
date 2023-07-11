@@ -21,13 +21,17 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
+
+import javax.annotation.Nullable;
 
 public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregatorFactory
 {
@@ -35,9 +39,21 @@ public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregator
   @JsonCreator
   public DoublesSketchMergeAggregatorFactory(
       @JsonProperty("name") final String name,
-      @JsonProperty("k") final Integer k)
+      @JsonProperty("k") @Nullable final Integer k,
+      @JsonProperty("maxStreamLength") @Nullable final Long maxStreamLength,
+      @JsonProperty("shouldFinalize") @Nullable final Boolean shouldFinalize
+  )
   {
-    super(name, name, k, AggregatorUtil.QUANTILES_DOUBLES_SKETCH_MERGE_CACHE_TYPE_ID);
+    super(name, name, k, maxStreamLength, shouldFinalize, AggregatorUtil.QUANTILES_DOUBLES_SKETCH_MERGE_CACHE_TYPE_ID);
+  }
+
+  @VisibleForTesting
+  DoublesSketchMergeAggregatorFactory(
+      final String name,
+      @Nullable final Integer k
+  )
+  {
+    this(name, k, null, null);
   }
 
   @Override
@@ -60,4 +76,9 @@ public class DoublesSketchMergeAggregatorFactory extends DoublesSketchAggregator
     return new DoublesSketchMergeBufferAggregator(selector, getK(), getMaxIntermediateSizeWithNulls());
   }
 
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new DoublesSketchMergeAggregatorFactory(newName, getK(), getMaxStreamLength(), isShouldFinalize());
+  }
 }

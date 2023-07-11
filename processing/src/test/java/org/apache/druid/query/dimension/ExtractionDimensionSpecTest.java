@@ -24,7 +24,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.MatchingDimExtractionFn;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.extraction.StrlenExtractionFn;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -50,7 +50,7 @@ public class ExtractionDimensionSpecTest
     Assert.assertEquals("first3Letters", extractionDimensionSpec.getOutputName());
     Assert.assertEquals("myDim", extractionDimensionSpec.getDimension());
     Assert.assertNotNull(extractionDimensionSpec.getExtractionFn());
-    Assert.assertEquals(ValueType.STRING, extractionDimensionSpec.getOutputType());
+    Assert.assertEquals(ColumnType.STRING, extractionDimensionSpec.getOutputType());
     Assert.assertTrue(extractionDimensionSpec.getExtractionFn() instanceof RegexDimExtractionFn);
 
     Assert.assertEquals(
@@ -83,7 +83,7 @@ public class ExtractionDimensionSpecTest
     Assert.assertEquals("first3Letters", extractionDimensionSpec.getOutputName());
     Assert.assertEquals("myDim", extractionDimensionSpec.getDimension());
     Assert.assertNotNull(extractionDimensionSpec.getExtractionFn());
-    Assert.assertEquals(ValueType.LONG, extractionDimensionSpec.getOutputType());
+    Assert.assertEquals(ColumnType.LONG, extractionDimensionSpec.getOutputType());
     Assert.assertTrue(extractionDimensionSpec.getExtractionFn() instanceof RegexDimExtractionFn);
 
     Assert.assertEquals(
@@ -152,7 +152,7 @@ public class ExtractionDimensionSpecTest
     final ExtractionDimensionSpec dimensionSpec = new ExtractionDimensionSpec(
         "foo",
         "len",
-        ValueType.LONG,
+        ColumnType.LONG,
         StrlenExtractionFn.instance()
     );
     final byte[] expected = new byte[]{1, 7, 102, 111, 111, 9, 14, 7, 76, 79, 78, 71};

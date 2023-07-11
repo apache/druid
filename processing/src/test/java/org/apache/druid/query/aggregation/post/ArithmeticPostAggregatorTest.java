@@ -32,8 +32,8 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -183,7 +183,36 @@ public class ArithmeticPostAggregatorTest extends InitializedNullHandlingTest
     Assert.assertEquals(Double.POSITIVE_INFINITY, agg.compute(ImmutableMap.of("value", 1)));
     Assert.assertEquals(Double.NEGATIVE_INFINITY, agg.compute(ImmutableMap.of("value", -1)));
   }
+  @Test
+  public void testPow()
+  {
+    ArithmeticPostAggregator agg = new ArithmeticPostAggregator(
+            null,
+            "pow",
+            ImmutableList.of(
+                    new ConstantPostAggregator("value", 4),
+                    new ConstantPostAggregator("power", .5)
+            ),
+            "numericFirst"
+    );
+    Assert.assertEquals(2.0, agg.compute(ImmutableMap.of("value", 0)));
 
+    agg = new ArithmeticPostAggregator(
+            null,
+            "pow",
+            ImmutableList.of(
+                    new FieldAccessPostAggregator("base", "value"),
+                    new ConstantPostAggregator("zero", 0)
+            ),
+            "numericFirst"
+    );
+
+    Assert.assertEquals(1.0, agg.compute(ImmutableMap.of("value", 0)));
+    Assert.assertEquals(1.0, agg.compute(ImmutableMap.of("value", Double.NaN)));
+    Assert.assertEquals(1.0, agg.compute(ImmutableMap.of("value", 1)));
+    Assert.assertEquals(1.0, agg.compute(ImmutableMap.of("value", -1)));
+    Assert.assertEquals(1.0, agg.compute(ImmutableMap.of("value", .5)));
+  }
   @Test
   public void testDiv()
   {
@@ -257,9 +286,9 @@ public class ArithmeticPostAggregatorTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("sum", ValueType.LONG)
-                    .add("count", ValueType.LONG)
-                    .add("avg", ValueType.DOUBLE)
+                    .add("sum", ColumnType.LONG)
+                    .add("count", ColumnType.LONG)
+                    .add("avg", ColumnType.DOUBLE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );

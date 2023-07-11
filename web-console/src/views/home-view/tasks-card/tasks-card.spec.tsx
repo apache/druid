@@ -19,11 +19,11 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { Capabilities } from '../../../utils';
+import { Capabilities } from '../../../helpers';
 
 import { TasksCard } from './tasks-card';
 
-describe('tasks card', () => {
+describe('TasksCard', () => {
   it('matches snapshot', () => {
     const tasksCard = <TasksCard capabilities={Capabilities.FULL} />;
 

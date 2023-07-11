@@ -28,7 +28,6 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.RegexDimFilter;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -64,11 +63,11 @@ public class RegexpLikeOperatorConversion implements SqlOperatorConversion
       final RexNode rexNode
   )
   {
-    return OperatorConversions.convertCall(
+    return OperatorConversions.convertDirectCall(
         plannerContext,
         rowSignature,
         rexNode,
-        operands -> DruidExpression.fromFunctionCall("regexp_like", operands)
+        "regexp_like"
     );
   }
 
@@ -102,13 +101,12 @@ public class RegexpLikeOperatorConversion implements SqlOperatorConversion
           null
       );
     } else if (virtualColumnRegistry != null) {
-      VirtualColumn v = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-          plannerContext,
+      String v = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           druidExpression,
           operands.get(0).getType()
       );
 
-      return new RegexDimFilter(v.getOutputName(), pattern, null, null);
+      return new RegexDimFilter(v, pattern, null, null);
     } else {
       return null;
     }

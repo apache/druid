@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.sampler;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
@@ -29,6 +30,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -104,7 +106,7 @@ public class IndexTaskSamplerSpecTest extends EasyMockSupport
         EasyMock.capture(capturedInputFormat),
         EasyMock.capture(capturedDataSchema),
         EasyMock.capture(capturedSamplerConfig)
-    )).andReturn(new SamplerResponse(0, 0, null));
+    )).andReturn(new SamplerResponse(0, 0, ImmutableList.of(), ImmutableList.of(), RowSignature.empty(), null));
 
     replayAll();
 

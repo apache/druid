@@ -44,9 +44,10 @@ import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
+import org.apache.druid.java.util.emitter.core.NoopEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.topn.TopNQuery;
@@ -148,7 +149,7 @@ public class QuerySchedulerTest
       try {
         Query<?> scheduledReport = scheduler.prioritizeAndLaneQuery(QueryPlus.wrap(report), ImmutableSet.of());
         Assert.assertNotNull(scheduledReport);
-        Assert.assertEquals(HiLoQueryLaningStrategy.LOW, QueryContexts.getLane(scheduledReport));
+        Assert.assertEquals(HiLoQueryLaningStrategy.LOW, scheduledReport.context().getLane());
 
         Sequence<Integer> underlyingSequence = makeSequence(10);
         underlyingSequence = Sequences.wrap(underlyingSequence, new SequenceWrapper()
@@ -410,8 +411,8 @@ public class QuerySchedulerTest
             EasyMock.createMock(SegmentServerSelector.class)
         )
     );
-    Assert.assertEquals(-5, QueryContexts.getPriority(query));
-    Assert.assertEquals(HiLoQueryLaningStrategy.LOW, QueryContexts.getLane(query));
+    Assert.assertEquals(-5, query.context().getPriority());
+    Assert.assertEquals(HiLoQueryLaningStrategy.LOW, query.context().getLane());
   }
 
   @Test
@@ -697,13 +698,16 @@ public class QuerySchedulerTest
         ImmutableList.of(
             binder -> {
               binder.bind(ServerConfig.class).toInstance(new ServerConfig());
+              binder.bind(ServiceEmitter.class).toInstance(new ServiceEmitter("test", "localhost", new NoopEmitter()));
               JsonConfigProvider.bind(binder, "druid.query.scheduler", QuerySchedulerProvider.class, Global.class);
             }
         )
     );
     ObjectMapper mapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     mapper.setInjectableValues(
-        new InjectableValues.Std().addValue(ServerConfig.class, injector.getInstance(ServerConfig.class))
+        new InjectableValues.Std()
+            .addValue(ServerConfig.class, injector.getInstance(ServerConfig.class))
+            .addValue(ServiceEmitter.class, injector.getInstance(ServiceEmitter.class))
     );
     return injector;
   }

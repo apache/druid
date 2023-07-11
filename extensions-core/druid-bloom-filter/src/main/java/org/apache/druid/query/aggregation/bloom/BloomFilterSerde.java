@@ -28,6 +28,8 @@ import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -37,6 +39,8 @@ import java.nio.ByteBuffer;
  */
 public class BloomFilterSerde extends ComplexMetricSerde
 {
+  private static final BloomFilterObjectStrategy STRATEGY = new BloomFilterObjectStrategy();
+
   @Override
   public String getTypeName()
   {
@@ -64,6 +68,45 @@ public class BloomFilterSerde extends ComplexMetricSerde
   @Override
   public ObjectStrategy<BloomKFilter> getObjectStrategy()
   {
-    throw new UnsupportedOperationException("Bloom filter aggregators are query-time only");
+    return STRATEGY;
+  }
+
+  private static class BloomFilterObjectStrategy implements ObjectStrategy<BloomKFilter>
+  {
+    @Override
+    public Class<? extends BloomKFilter> getClazz()
+    {
+      return BloomKFilter.class;
+    }
+
+    @Nullable
+    @Override
+    public BloomKFilter fromByteBuffer(ByteBuffer buffer, int numBytes)
+    {
+      try {
+        return BloomKFilter.deserialize(buffer, buffer.position());
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    @Nullable
+    @Override
+    public byte[] toBytes(@Nullable BloomKFilter val)
+    {
+      try {
+        return BloomFilterSerializersModule.bloomKFilterToBytes(val);
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    @Override
+    public int compare(BloomKFilter o1, BloomKFilter o2)
+    {
+      return BloomFilterAggregatorFactory.COMPARATOR.compare(o1, o2);
+    }
   }
 }

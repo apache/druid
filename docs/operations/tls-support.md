@@ -2,7 +2,6 @@
 id: tls-support
 title: "TLS support"
 ---
-
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -37,12 +36,12 @@ and `druid.tlsPort` properties on each process. Please see `Configuration` secti
 Apache Druid uses Jetty as its embedded web server. 
 
 To get familiar with TLS/SSL, along with related concepts like keys and certificates,
-read [Configuring SSL/TLS](https://www.eclipse.org/jetty/documentation/current/configuring-ssl.html) in the Jetty documentation.
+read [Configuring Secure Protocols](https://www.eclipse.org/jetty/documentation/jetty-12/operations-guide/index.html#og-protocols-ssl) in the Jetty documentation.
 To get more in-depth knowledge of TLS/SSL support in Java in general, refer to the [Java Secure Socket Extension (JSSE) Reference Guide](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html).
-The [Configuring the Jetty SslContextFactory](https://www.eclipse.org/jetty/documentation/current/configuring-ssl.html#configuring-sslcontextfactory)
-section can help in understanding TLS/SSL configurations listed below. Finally, [Java Cryptography Architecture
+The [Class SslContextFactory](https://www.eclipse.org/jetty/javadoc/jetty-11/org/eclipse/jetty/util/ssl/SslContextFactory.html)
+reference doc can help in understanding TLS/SSL configurations listed below. Finally, [Java Cryptography Architecture
 Standard Algorithm Name Documentation for JDK 8](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all possible
-values for the configs belong, among others provided by Java implementation.
+values for the configs below, among others provided by Java implementation.
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
@@ -50,6 +49,8 @@ values for the configs belong, among others provided by Java implementation.
 |`druid.server.https.keyStoreType`|The type of the key store.|none|yes|
 |`druid.server.https.certAlias`|Alias of TLS/SSL certificate for the connector.|none|yes|
 |`druid.server.https.keyStorePassword`|The [Password Provider](../operations/password-provider.md) or String password for the Key Store.|none|yes|
+|`druid.server.https.reloadSslContext`| Should Druid server detect Key Store file change and reload.|false|no|
+|`druid.server.https.reloadSslContextSeconds`| How frequently should Druid server scan for Key Store file change.|60|yes|
 
 The following table contains configuration options related to client certificate authentication.
 
@@ -78,7 +79,7 @@ The following table contains non-mandatory advanced configuration options, use c
 ## Internal communication over TLS
 
 Whenever possible Druid processes will use HTTPS to talk to each other. To enable this communication Druid's HttpClient needs to
-be configured with a proper [SSLContext](http://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext) that is able
+be configured with a proper [SSLContext](http://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext.html) that is able
 to validate the Server Certificates, otherwise communication will fail.
 
 Since, there are various ways to configure SSLContext, by default, Druid looks for an instance of SSLContext Guice binding

@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
 import React from 'react';
 
-import { Capabilities } from '../../utils';
+import { Capabilities } from '../../helpers';
+import { shallow } from '../../utils/shallow-renderer';
 
 import { HomeView } from './home-view';
 
-describe('home view', () => {
+describe('HomeView', () => {
   it('matches snapshot (full)', () => {
     const homeView = shallow(<HomeView capabilities={Capabilities.FULL} />);
     expect(homeView).toMatchSnapshot();

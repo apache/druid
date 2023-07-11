@@ -19,12 +19,13 @@
 
 package org.apache.druid.cli;
 
+import com.github.rvesse.airline.annotations.Command;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-import io.airlift.airline.Command;
 import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;
@@ -58,13 +59,15 @@ import org.apache.druid.server.router.TieredBrokerSelectorStrategy;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  */
 @Command(
     name = "router",
-    description = "Experimental! Understands tiers and routes things to different brokers, "
-                  + "see https://druid.apache.org/docs/latest/development/router.html for a description"
+    description = "Understands tiers and routes requests to Druid nodes. "
+                  + "See https://druid.apache.org/docs/latest/design/router.html"
 )
 public class CliRouter extends ServerRunnable
 {
@@ -73,6 +76,12 @@ public class CliRouter extends ServerRunnable
   public CliRouter()
   {
     super(log);
+  }
+
+  @Override
+  protected Set<NodeRole> getNodeRoles(Properties properties)
+  {
+    return ImmutableSet.of(NodeRole.ROUTER);
   }
 
   @Override
@@ -113,7 +122,7 @@ public class CliRouter extends ServerRunnable
           LifecycleModule.register(binder, Server.class);
           DiscoveryModule.register(binder, Self.class);
 
-          bindNodeRoleAndAnnouncer(binder, DiscoverySideEffectsProvider.builder(NodeRole.ROUTER).build());
+          bindAnnouncer(binder, DiscoverySideEffectsProvider.create());
 
           Jerseys.addResource(binder, SelfDiscoveryResource.class);
           LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));

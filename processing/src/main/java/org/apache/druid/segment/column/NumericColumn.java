@@ -26,6 +26,13 @@ import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
  */
 public interface NumericColumn extends BaseColumn, HotLoopCallee
 {
+  /**
+   * Returns the row count of this column.
+   *
+   * Note that this method currently counts only non-null values. Using this method to get the length of a column
+   * that contains nulls will not work as expected. This method should be used only for non-nullable numeric columns
+   * such as the "__time" column.
+   */
   int length();
 
   @CalledFromHotLoop

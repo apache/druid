@@ -21,6 +21,7 @@ package org.apache.druid.segment.virtual;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.CountVectorAggregator;
@@ -83,12 +84,19 @@ public class AlwaysTwoCounterAggregatorFactory extends CountAggregatorFactory
             return new AlwaysTwoCounterVectorAggregator(selectorFactory.makeMultiValueDimensionSelector(
                 DefaultDimensionSpec.of(fieldName)));
           }
-          return new AlwaysTwoCounterVectorAggregator(selectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(fieldName)));
+          return new AlwaysTwoCounterVectorAggregator(selectorFactory.makeSingleValueDimensionSelector(
+              DefaultDimensionSpec.of(fieldName)));
         }
         return new AlwaysTwoCounterVectorAggregator(selectorFactory.makeObjectSelector(fieldName));
       default:
         throw new IllegalStateException("how did this happen");
     }
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new AlwaysTwoCounterAggregatorFactory(newName, fieldName);
   }
 
   public static class AlwaysTwoCounterVectorAggregator extends CountVectorAggregator

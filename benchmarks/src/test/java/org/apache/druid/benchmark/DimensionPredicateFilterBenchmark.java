@@ -19,7 +19,6 @@
 
 package org.apache.druid.benchmark;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
@@ -27,21 +26,19 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
-import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.query.filter.BitmapIndexSelector;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
-import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
-import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.DimensionPredicateFilter;
-import org.apache.druid.segment.serde.BitmapIndexColumnPartSupplier;
+import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.serde.DictionaryEncodedStringIndexSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -54,6 +51,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -116,92 +114,39 @@ public class DimensionPredicateFilterBenchmark
   int cardinality;
 
   // selector will contain a cardinality number of bitmaps; each one contains a single int: 0
-  BitmapIndexSelector selector;
+  ColumnIndexSelector selector;
 
   @Setup
   public void setup()
   {
     final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
-    final BitmapSerdeFactory serdeFactory = new RoaringBitmapSerdeFactory(null);
+    final BitmapSerdeFactory serdeFactory = RoaringBitmapSerdeFactory.getInstance();
     final List<Integer> ints = generateInts();
     final GenericIndexed<String> dictionary = GenericIndexed.fromIterable(
         FluentIterable.from(ints)
-                      .transform(
-                          new Function<Integer, String>()
-                          {
-                            @Override
-                            public String apply(Integer i)
-                            {
-                              return i.toString();
-                            }
-                          }
-                      ),
+                      .transform(Object::toString),
         GenericIndexed.STRING_STRATEGY
     );
-    final BitmapIndex bitmapIndex = new BitmapIndexColumnPartSupplier(
+    final GenericIndexed<ByteBuffer> dictionaryUtf8 = GenericIndexed.fromIterable(
+        FluentIterable.from(ints)
+                      .transform(i -> ByteBuffer.wrap(StringUtils.toUtf8(String.valueOf(i)))),
+        GenericIndexed.UTF8_STRATEGY
+    );
+    final GenericIndexed<ImmutableBitmap> bitmaps = GenericIndexed.fromIterable(
+        FluentIterable.from(ints)
+                      .transform(
+                          i -> {
+                            final MutableBitmap mutableBitmap = bitmapFactory.makeEmptyMutableBitmap();
+                            mutableBitmap.add(i - START_INT);
+                            return bitmapFactory.makeImmutableBitmap(mutableBitmap);
+                          }
+                      ),
+        serdeFactory.getObjectStrategy()
+    );
+    selector = new MockColumnIndexSelector(
         bitmapFactory,
-        GenericIndexed.fromIterable(
-            FluentIterable.from(ints)
-                          .transform(
-                              new Function<Integer, ImmutableBitmap>()
-                              {
-                                @Override
-                                public ImmutableBitmap apply(Integer i)
-                                {
-                                  final MutableBitmap mutableBitmap = bitmapFactory.makeEmptyMutableBitmap();
-                                  mutableBitmap.add(i - START_INT);
-                                  return bitmapFactory.makeImmutableBitmap(mutableBitmap);
-                                }
-                              }
-                          ),
-            serdeFactory.getObjectStrategy()
-        ),
-        dictionary
-    ).get();
-    selector = new BitmapIndexSelector()
-    {
-      @Override
-      public CloseableIndexed<String> getDimensionValues(String dimension)
-      {
-        return dictionary;
-      }
-
-      @Override
-      public ColumnCapabilities.Capable hasMultipleValues(final String dimension)
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public int getNumRows()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public BitmapFactory getBitmapFactory()
-      {
-        return bitmapFactory;
-      }
-
-      @Override
-      public ImmutableBitmap getBitmapIndex(String dimension, String value)
-      {
-        return bitmapIndex.getBitmap(bitmapIndex.getIndex(value));
-      }
-
-      @Override
-      public BitmapIndex getBitmapIndex(String dimension)
-      {
-        return bitmapIndex;
-      }
-
-      @Override
-      public ImmutableRTree getSpatialIndex(String dimension)
-      {
-        throw new UnsupportedOperationException();
-      }
-    };
+        new DictionaryEncodedStringIndexSupplier(bitmapFactory, dictionary, dictionaryUtf8, bitmaps, null)
+    );
   }
 
   @Benchmark
@@ -209,7 +154,7 @@ public class DimensionPredicateFilterBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void matchIsEven()
   {
-    final ImmutableBitmap bitmapIndex = IS_EVEN.getBitmapIndex(selector);
+    final ImmutableBitmap bitmapIndex = Filters.computeDefaultBitmapResults(IS_EVEN, selector);
     Preconditions.checkState(bitmapIndex.size() == cardinality / 2);
   }
 

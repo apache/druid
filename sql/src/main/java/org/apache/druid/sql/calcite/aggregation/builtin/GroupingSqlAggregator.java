@@ -21,13 +21,13 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.GroupingAggregatorFactory;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -70,6 +70,7 @@ public class GroupingSqlAggregator implements SqlAggregator
                                               rowSignature,
                                               project,
                                               virtualColumnRegistry,
+                                              rexBuilder.getTypeFactory(),
                                               i
                                           ))
                                           .filter(Objects::nonNull)
@@ -101,10 +102,11 @@ public class GroupingSqlAggregator implements SqlAggregator
       RowSignature rowSignature,
       Project project,
       VirtualColumnRegistry virtualColumnRegistry,
+      RelDataTypeFactory typeFactory,
       int fieldNumber
   )
   {
-    RexNode node = Expressions.fromFieldAccess(rowSignature, project, fieldNumber);
+    RexNode node = Expressions.fromFieldAccess(typeFactory, rowSignature, project, fieldNumber);
     if (null == node) {
       return null;
     }
@@ -116,11 +118,10 @@ public class GroupingSqlAggregator implements SqlAggregator
       return expression.getDirectColumn();
     }
 
-    VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-        plannerContext,
+    String virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
         expression,
         node.getType()
     );
-    return virtualColumn.getOutputName();
+    return virtualColumn;
   }
 }

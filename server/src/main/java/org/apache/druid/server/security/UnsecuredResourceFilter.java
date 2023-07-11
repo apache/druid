@@ -50,7 +50,9 @@ public class UnsecuredResourceFilter implements Filter
         new AuthenticationResult(
             AuthConfig.ALLOW_ALL_NAME,
             AuthConfig.ALLOW_ALL_NAME,
-            AuthConfig.ALLOW_ALL_NAME,
+            // adding null so that the router doesn't try to decorate the request. It is ok since we're already bypassing
+            // authentication for unsecure paths.
+            null,
             null
         )
     );

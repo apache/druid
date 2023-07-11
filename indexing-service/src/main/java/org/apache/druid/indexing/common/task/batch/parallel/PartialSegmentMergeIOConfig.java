@@ -19,17 +19,21 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.segment.indexing.IOConfig;
 
 import java.util.List;
 
-abstract class PartialSegmentMergeIOConfig<T extends PartitionLocation> implements IOConfig
+@JsonTypeName(PartialGenericSegmentMergeTask.TYPE)
+public class PartialSegmentMergeIOConfig implements IOConfig
 {
-  private final List<T> partitionLocations;
+  private final List<PartitionLocation> partitionLocations;
 
-  PartialSegmentMergeIOConfig(List<T> partitionLocations)
+  @JsonCreator
+  PartialSegmentMergeIOConfig(@JsonProperty("partitionLocations") List<PartitionLocation> partitionLocations)
   {
     Preconditions.checkState(
         partitionLocations != null && !partitionLocations.isEmpty(),
@@ -39,7 +43,7 @@ abstract class PartialSegmentMergeIOConfig<T extends PartitionLocation> implemen
   }
 
   @JsonProperty
-  public List<T> getPartitionLocations()
+  public List<PartitionLocation> getPartitionLocations()
   {
     return partitionLocations;
   }

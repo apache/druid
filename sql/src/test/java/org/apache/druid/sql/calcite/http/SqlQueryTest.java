@@ -42,6 +42,8 @@ public class SqlQueryTest extends CalciteTestBase
         "SELECT ?",
         ResultFormat.ARRAY,
         true,
+        true,
+        true,
         ImmutableMap.of("useCache", false),
         ImmutableList.of(new SqlParameter(SqlType.INTEGER, 1))
     );

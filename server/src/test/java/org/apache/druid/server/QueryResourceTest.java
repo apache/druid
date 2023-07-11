@@ -59,6 +59,9 @@ import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.mocks.ExceptionalInputStream;
+import org.apache.druid.server.mocks.MockHttpServletRequest;
+import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
@@ -73,15 +76,14 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.http.HttpStatus;
-import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import javax.servlet.http.HttpServletRequest;
+import javax.annotation.Nonnull;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
@@ -95,6 +97,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 public class QueryResourceTest
@@ -103,7 +106,7 @@ public class QueryResourceTest
   private static final AuthenticationResult AUTHENTICATION_RESULT =
       new AuthenticationResult("druid", "druid", null, null);
 
-  private final HttpServletRequest testServletRequest = EasyMock.createMock(HttpServletRequest.class);
+  private final MockHttpServletRequest testServletRequest = new MockHttpServletRequest();
 
   private static final QuerySegmentWalker TEST_SEGMENT_WALKER = new QuerySegmentWalker()
   {
@@ -200,10 +203,10 @@ public class QueryResourceTest
     jsonMapper = injector.getInstance(ObjectMapper.class);
     smileMapper = injector.getInstance(Key.get(ObjectMapper.class, Smile.class));
 
-    EasyMock.expect(testServletRequest.getContentType()).andReturn(MediaType.APPLICATION_JSON).anyTimes();
-    EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(MediaType.APPLICATION_JSON).anyTimes();
-    EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
-    EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
+    testServletRequest.contentType = MediaType.APPLICATION_JSON;
+    testServletRequest.headers.put("Accept", MediaType.APPLICATION_JSON);
+    testServletRequest.remoteAddr = "localhost";
+
     queryScheduler = QueryStackTests.DEFAULT_NOOP_SCHEDULER;
     testRequestLogger = new TestRequestLogger();
     queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
@@ -232,23 +235,12 @@ public class QueryResourceTest
     );
   }
 
-  @After
-  public void tearDown()
-  {
-    EasyMock.verify(testServletRequest);
-  }
-
   @Test
   public void testGoodQuery() throws IOException
   {
     expectPermissiveHappyPathAuth();
 
-    Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-        null /*pretty*/,
-        testServletRequest
-    );
-    Assert.assertNotNull(response);
+    Assert.assertEquals(200, expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY).getStatus());
   }
 
   @Test
@@ -279,28 +271,29 @@ public class QueryResourceTest
 
     expectPermissiveHappyPathAuth();
 
-    Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-        null /*pretty*/,
-        testServletRequest
-    );
-    Assert.assertNotNull(response);
-
-    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ((StreamingOutput) response.getEntity()).write(baos);
-    final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
-        baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>() {}
-    );
-
-    Assert.assertNotNull(response);
+    final MockHttpServletResponse response = expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY);
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+
+    final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
+        response.baos.toByteArray(),
+        new TypeReference<List<Result<TimeBoundaryResultValue>>>()
+        {
+        }
+    );
+
     Assert.assertEquals(0, responses.size());
     Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
     Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery());
     Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext());
-    Assert.assertTrue(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().containsKey(overrideConfigKey));
-    Assert.assertEquals(overrideConfigValue, testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey));
+    Assert.assertTrue(testRequestLogger.getNativeQuerylogs()
+                                       .get(0)
+                                       .getQuery()
+                                       .getContext()
+                                       .containsKey(overrideConfigKey));
+    Assert.assertEquals(
+        overrideConfigValue,
+        testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey)
+    );
   }
 
   @Test
@@ -331,19 +324,13 @@ public class QueryResourceTest
 
     expectPermissiveHappyPathAuth();
 
-    Response response = queryResource.doPost(
-        // SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY context has overrideConfigKey with value of -1
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY.getBytes(StandardCharsets.UTF_8)),
-        null /*pretty*/,
-        testServletRequest
-    );
-    Assert.assertNotNull(response);
+    final MockHttpServletResponse response = expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY);
 
-    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ((StreamingOutput) response.getEntity()).write(baos);
     final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
-        baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>() {}
+        response.baos.toByteArray(),
+        new TypeReference<List<Result<TimeBoundaryResultValue>>>()
+        {
+        }
     );
 
     Assert.assertNotNull(response);
@@ -352,23 +339,30 @@ public class QueryResourceTest
     Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
     Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery());
     Assert.assertNotNull(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext());
-    Assert.assertTrue(testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().containsKey(overrideConfigKey));
-    Assert.assertEquals(-1, testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey));
+    Assert.assertTrue(testRequestLogger.getNativeQuerylogs()
+                                       .get(0)
+                                       .getQuery()
+                                       .getContext()
+                                       .containsKey(overrideConfigKey));
+    Assert.assertEquals(
+        -1,
+        testRequestLogger.getNativeQuerylogs().get(0).getQuery().getContext().get(overrideConfigKey)
+    );
   }
 
   @Test
   public void testTruncatedResponseContextShouldFail() throws IOException
   {
     expectPermissiveHappyPathAuth();
+
     final QueryResource queryResource = createQueryResource(ResponseContextConfig.forTest(true, 0));
 
-    Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-        null /*pretty*/,
-        testServletRequest
+    MockHttpServletResponse response = expectAsyncRequestFlow(
+        testServletRequest,
+        SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8),
+        queryResource
     );
     Assert.assertEquals(1, queryResource.getInterruptedQueryCount());
-    Assert.assertNotNull(response);
     Assert.assertEquals(HttpStatus.SC_INTERNAL_SERVER_ERROR, response.getStatus());
     final String expectedException = new QueryInterruptedException(
         new TruncatedResponseContextException("Serialized response context exceeds the max size[0]"),
@@ -376,7 +370,7 @@ public class QueryResourceTest
     ).toString();
     Assert.assertEquals(
         expectedException,
-        jsonMapper.readValue((byte[]) response.getEntity(), QueryInterruptedException.class).toString()
+        jsonMapper.readValue(response.baos.toByteArray(), QueryInterruptedException.class).toString()
     );
   }
 
@@ -386,223 +380,96 @@ public class QueryResourceTest
     expectPermissiveHappyPathAuth();
     final QueryResource queryResource = createQueryResource(ResponseContextConfig.forTest(false, 0));
 
-    Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-        null /*pretty*/,
-        testServletRequest
+    final MockHttpServletResponse response = expectAsyncRequestFlow(
+        testServletRequest,
+        SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8),
+        queryResource
     );
-    Assert.assertNotNull(response);
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
   }
 
   @Test
   public void testGoodQueryWithNullAcceptHeader() throws IOException
   {
-    final String acceptHeader = null;
-    final String contentTypeHeader = MediaType.APPLICATION_JSON;
-    EasyMock.reset(testServletRequest);
+    testServletRequest.headers.remove("Accept");
+    expectPermissiveHappyPathAuth();
 
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-        .andReturn(null)
-        .anyTimes();
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-        .andReturn(AUTHENTICATION_RESULT)
-        .anyTimes();
-
-    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-
-    EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(acceptHeader).anyTimes();
-    EasyMock.expect(testServletRequest.getContentType()).andReturn(contentTypeHeader).anyTimes();
-    EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
-    EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
-
-    EasyMock.replay(testServletRequest);
-    Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-        null /*pretty*/,
-        testServletRequest
-    );
+    final MockHttpServletResponse response = expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY);
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
     //since accept header is null, the response content type should be same as the value of 'Content-Type' header
-    Assert.assertEquals(contentTypeHeader, (response.getMetadata().get("Content-Type").get(0)).toString());
-    Assert.assertNotNull(response);
+    Assert.assertEquals(MediaType.APPLICATION_JSON, response.getContentType());
   }
 
   @Test
   public void testGoodQueryWithEmptyAcceptHeader() throws IOException
   {
-    final String acceptHeader = "";
-    final String contentTypeHeader = MediaType.APPLICATION_JSON;
-    EasyMock.reset(testServletRequest);
+    expectPermissiveHappyPathAuth();
+    testServletRequest.headers.put("Accept", "");
 
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-        .andReturn(null)
-        .anyTimes();
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
+    final MockHttpServletResponse response = expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY);
 
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-        .andReturn(AUTHENTICATION_RESULT)
-        .anyTimes();
-
-    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-
-    EasyMock.expect(testServletRequest.getHeader("Accept")).andReturn(acceptHeader).anyTimes();
-    EasyMock.expect(testServletRequest.getContentType()).andReturn(contentTypeHeader).anyTimes();
-    EasyMock.expect(testServletRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
-    EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
-
-    EasyMock.replay(testServletRequest);
-    Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-        null /*pretty*/,
-        testServletRequest
-    );
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
     //since accept header is empty, the response content type should be same as the value of 'Content-Type' header
-    Assert.assertEquals(contentTypeHeader, (response.getMetadata().get("Content-Type").get(0)).toString());
-    Assert.assertNotNull(response);
+    Assert.assertEquals(MediaType.APPLICATION_JSON, response.getContentType());
   }
 
   @Test
   public void testGoodQueryWithJsonRequestAndSmileAcceptHeader() throws IOException
   {
-    //Doing a replay of testServletRequest for teardown to succeed.
-    //We dont use testServletRequest in this testcase
-    EasyMock.replay(testServletRequest);
-
-    //Creating our own Smile Servlet request, as to not disturb the remaining tests.
-    // else refactoring required for this class. i know this kinda makes the class somewhat Dirty.
-    final HttpServletRequest smileRequest = EasyMock.createMock(HttpServletRequest.class);
-
-    // Set Content-Type to JSON
-    EasyMock.expect(smileRequest.getContentType()).andReturn(MediaType.APPLICATION_JSON).anyTimes();
-
-    EasyMock.expect(smileRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-        .andReturn(null)
-        .anyTimes();
-    EasyMock.expect(smileRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-
-    EasyMock.expect(smileRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-        .andReturn(AUTHENTICATION_RESULT)
-        .anyTimes();
-
-    smileRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    expectPermissiveHappyPathAuth();
 
     // Set Accept to Smile
-    EasyMock.expect(smileRequest.getHeader("Accept")).andReturn(SmileMediaTypes.APPLICATION_JACKSON_SMILE).anyTimes();
-    EasyMock.expect(smileRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
-    EasyMock.expect(smileRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
+    testServletRequest.headers.put("Accept", SmileMediaTypes.APPLICATION_JACKSON_SMILE);
 
-    EasyMock.replay(smileRequest);
-    Response response = queryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-        null /*pretty*/,
-        smileRequest
-    );
+    final MockHttpServletResponse response = expectAsyncRequestFlow(SIMPLE_TIMESERIES_QUERY);
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
 
     // Content-Type in response should be Smile
-    Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, (response.getMetadata().get("Content-Type").get(0)).toString());
-    Assert.assertNotNull(response);
-    EasyMock.verify(smileRequest);
+    Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, response.getContentType());
   }
 
   @Test
   public void testGoodQueryWithSmileRequestAndSmileAcceptHeader() throws IOException
   {
-    //Doing a replay of testServletRequest for teardown to succeed.
-    //We dont use testServletRequest in this testcase
-    EasyMock.replay(testServletRequest);
-
-    //Creating our own Smile Servlet request, as to not disturb the remaining tests.
-    // else refactoring required for this class. i know this kinda makes the class somewhat Dirty.
-    final HttpServletRequest smileRequest = EasyMock.createMock(HttpServletRequest.class);
-
-    // Set Content-Type to Smile
-    EasyMock.expect(smileRequest.getContentType()).andReturn(SmileMediaTypes.APPLICATION_JACKSON_SMILE).anyTimes();
-
-    EasyMock.expect(smileRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-    EasyMock.expect(smileRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-
-    EasyMock.expect(smileRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(AUTHENTICATION_RESULT)
-            .anyTimes();
-
-    smileRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    testServletRequest.contentType = SmileMediaTypes.APPLICATION_JACKSON_SMILE;
+    expectPermissiveHappyPathAuth();
 
     // Set Accept to Smile
-    EasyMock.expect(smileRequest.getHeader("Accept")).andReturn(SmileMediaTypes.APPLICATION_JACKSON_SMILE).anyTimes();
-    EasyMock.expect(smileRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
-    EasyMock.expect(smileRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
+    testServletRequest.headers.put("Accept", SmileMediaTypes.APPLICATION_JACKSON_SMILE);
 
-    EasyMock.replay(smileRequest);
-    Response response = queryResource.doPost(
-        // Write input in Smile encoding
-        new ByteArrayInputStream(smileMapper.writeValueAsBytes(jsonMapper.readTree(SIMPLE_TIMESERIES_QUERY))),
-        null /*pretty*/,
-        smileRequest
+    final MockHttpServletResponse response = expectAsyncRequestFlow(
+        testServletRequest,
+        smileMapper.writeValueAsBytes(jsonMapper.readTree(
+            SIMPLE_TIMESERIES_QUERY))
     );
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
 
     // Content-Type in response should be Smile
-    Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, (response.getMetadata().get("Content-Type").get(0)).toString());
-    Assert.assertNotNull(response);
-    EasyMock.verify(smileRequest);
+    Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, response.getContentType());
   }
 
   @Test
   public void testGoodQueryWithSmileRequestNoSmileAcceptHeader() throws IOException
   {
-    //Doing a replay of testServletRequest for teardown to succeed.
-    //We dont use testServletRequest in this testcase
-    EasyMock.replay(testServletRequest);
-
-    //Creating our own Smile Servlet request, as to not disturb the remaining tests.
-    // else refactoring required for this class. i know this kinda makes the class somewhat Dirty.
-    final HttpServletRequest smileRequest = EasyMock.createMock(HttpServletRequest.class);
-
-    // Set Content-Type to Smile
-    EasyMock.expect(smileRequest.getContentType()).andReturn(SmileMediaTypes.APPLICATION_JACKSON_SMILE).anyTimes();
-
-    EasyMock.expect(smileRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-    EasyMock.expect(smileRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-
-    EasyMock.expect(smileRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(AUTHENTICATION_RESULT)
-            .anyTimes();
-
-    smileRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
+    testServletRequest.contentType = SmileMediaTypes.APPLICATION_JACKSON_SMILE;
+    expectPermissiveHappyPathAuth();
 
     // DO NOT set Accept to Smile, Content-Type in response will be default to Content-Type in request
-    EasyMock.expect(smileRequest.getHeader("Accept")).andReturn(null).anyTimes();
-    EasyMock.expect(smileRequest.getHeader(QueryResource.HEADER_IF_NONE_MATCH)).andReturn(null).anyTimes();
-    EasyMock.expect(smileRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
+    testServletRequest.headers.remove("Accept");
 
-    EasyMock.replay(smileRequest);
-    Response response = queryResource.doPost(
-        // Write input in Smile encoding
-        new ByteArrayInputStream(smileMapper.writeValueAsBytes(jsonMapper.readTree(SIMPLE_TIMESERIES_QUERY))),
-        null /*pretty*/,
-        smileRequest
+    final MockHttpServletResponse response = expectAsyncRequestFlow(
+        testServletRequest,
+        smileMapper.writeValueAsBytes(jsonMapper.readTree(SIMPLE_TIMESERIES_QUERY))
     );
     Assert.assertEquals(HttpStatus.SC_OK, response.getStatus());
 
-    // Content-Type in response will be default to Content-Type in request
-    Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, (response.getMetadata().get("Content-Type").get(0)).toString());
-    Assert.assertNotNull(response);
-    EasyMock.verify(smileRequest);
+    // Content-Type in response should default to Content-Type from request
+    Assert.assertEquals(SmileMediaTypes.APPLICATION_JACKSON_SMILE, response.getContentType());
   }
 
   @Test
   public void testBadQuery() throws IOException
   {
-    EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
         new ByteArrayInputStream("Meka Leka Hi Meka Hiney Ho".getBytes(StandardCharsets.UTF_8)),
         null /*pretty*/,
@@ -611,26 +478,22 @@ public class QueryResourceTest
     Assert.assertNotNull(response);
     Assert.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
     QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
-    Assert.assertEquals(BadJsonQueryException.ERROR_CODE, e.getErrorCode());
+    Assert.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, e.getErrorCode());
     Assert.assertEquals(BadJsonQueryException.ERROR_CLASS, e.getErrorClass());
   }
 
   @Test
   public void testResourceLimitExceeded() throws IOException
   {
-    ByteArrayInputStream badQuery = EasyMock.createMock(ByteArrayInputStream.class);
-    EasyMock.expect(badQuery.read(EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt()))
-            .andThrow(new ResourceLimitExceededException("You require too much of something"));
-    EasyMock.replay(badQuery, testServletRequest);
     Response response = queryResource.doPost(
-        badQuery,
+        new ExceptionalInputStream(() -> new ResourceLimitExceededException("You require too much of something")),
         null /*pretty*/,
         testServletRequest
     );
     Assert.assertNotNull(response);
     Assert.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
     QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
-    Assert.assertEquals(ResourceLimitExceededException.ERROR_CODE, e.getErrorCode());
+    Assert.assertEquals(QueryException.RESOURCE_LIMIT_EXCEEDED_ERROR_CODE, e.getErrorCode());
     Assert.assertEquals(ResourceLimitExceededException.class.getName(), e.getErrorClass());
   }
 
@@ -638,13 +501,8 @@ public class QueryResourceTest
   public void testUnsupportedQueryThrowsException() throws IOException
   {
     String errorMessage = "This will be support in Druid 9999";
-    ByteArrayInputStream badQuery = EasyMock.createMock(ByteArrayInputStream.class);
-    EasyMock.expect(badQuery.read(EasyMock.anyObject(), EasyMock.anyInt(), EasyMock.anyInt())).andThrow(
-        new QueryUnsupportedException(errorMessage));
-    EasyMock.replay(badQuery);
-    EasyMock.replay(testServletRequest);
     Response response = queryResource.doPost(
-        badQuery,
+        new ExceptionalInputStream(() -> new QueryUnsupportedException(errorMessage)),
         null /*pretty*/,
         testServletRequest
     );
@@ -652,28 +510,13 @@ public class QueryResourceTest
     Assert.assertEquals(QueryUnsupportedException.STATUS_CODE, response.getStatus());
     QueryException ex = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
     Assert.assertEquals(errorMessage, ex.getMessage());
-    Assert.assertEquals(QueryUnsupportedException.ERROR_CODE, ex.getErrorCode());
+    Assert.assertEquals(QueryException.QUERY_UNSUPPORTED_ERROR_CODE, ex.getErrorCode());
   }
 
   @Test
   public void testSecuredQuery() throws Exception
   {
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(AUTHENTICATION_RESULT)
-            .anyTimes();
-
-    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
-    EasyMock.expectLastCall().times(1);
-
-    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    EasyMock.expectLastCall().times(1);
-
-    EasyMock.replay(testServletRequest);
+    expectPermissiveHappyPathAuth();
 
     AuthorizerMapper authMapper = new AuthorizerMapper(null)
     {
@@ -721,27 +564,26 @@ public class QueryResourceTest
       queryResource.doPost(
           new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
           null /*pretty*/,
-          testServletRequest
+          testServletRequest.mimic()
       );
       Assert.fail("doPost did not throw ForbiddenException for an unauthorized query");
     }
     catch (ForbiddenException e) {
     }
 
-    Response response = queryResource.doPost(
-        new ByteArrayInputStream("{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\"}".getBytes(StandardCharsets.UTF_8)),
-        null /*pretty*/,
-        testServletRequest
+    final MockHttpServletResponse response = expectAsyncRequestFlow(
+        "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\"}",
+        testServletRequest.mimic()
     );
-
-    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ((StreamingOutput) response.getEntity()).write(baos);
-    final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
-        baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>() {}
-    );
-
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+
+    final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
+        response.baos.toByteArray(),
+        new TypeReference<List<Result<TimeBoundaryResultValue>>>()
+        {
+        }
+    );
+
     Assert.assertEquals(0, responses.size());
     Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
     Assert.assertEquals(
@@ -792,22 +634,20 @@ public class QueryResourceTest
         DRUID_NODE
     );
     expectPermissiveHappyPathAuth();
-    Response response = timeoutQueryResource.doPost(
-        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
-        null /*pretty*/,
-        testServletRequest
+
+    final Response response = expectSynchronousRequestFlow(
+        testServletRequest,
+        SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8),
+        timeoutQueryResource
     );
-    Assert.assertNotNull(response);
     Assert.assertEquals(QueryTimeoutException.STATUS_CODE, response.getStatus());
-    QueryTimeoutException ex;
-    try {
-      ex = jsonMapper.readValue((byte[]) response.getEntity(), QueryTimeoutException.class);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    Assert.assertEquals("Query Timed Out!", ex.getMessage());
-    Assert.assertEquals(QueryTimeoutException.ERROR_CODE, ex.getErrorCode());
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ((StreamingOutput) response.getEntity()).write(baos);
+    QueryTimeoutException ex = jsonMapper.readValue(baos.toByteArray(), QueryTimeoutException.class);
+    Assert.assertEquals("Query did not complete within configured timeout period. You can " +
+        "increase query timeout or tune the performance of query.", ex.getMessage());
+    Assert.assertEquals(QueryException.QUERY_TIMEOUT_ERROR_CODE, ex.getErrorCode());
     Assert.assertEquals(1, timeoutQueryResource.getTimedOutQueryCount());
 
   }
@@ -820,19 +660,7 @@ public class QueryResourceTest
     final CountDownLatch startAwaitLatch = new CountDownLatch(1);
     final CountDownLatch cancelledCountDownLatch = new CountDownLatch(1);
 
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(AUTHENTICATION_RESULT)
-            .anyTimes();
-
-    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    EasyMock.expectLastCall().times(1);
-
-    EasyMock.replay(testServletRequest);
+    expectPermissiveHappyPathAuth();
 
     AuthorizerMapper authMapper = new AuthorizerMapper(null)
     {
@@ -858,7 +686,7 @@ public class QueryResourceTest
                 // When the query is cancelled the control will reach here,
                 // countdown the latch and rethrow the exception so that error response is returned for the query
                 cancelledCountDownLatch.countDown();
-                throw new RuntimeException(e);
+                throw new QueryInterruptedException(e);
               }
               return new Access(true);
             } else {
@@ -893,28 +721,27 @@ public class QueryResourceTest
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
                                + "\"context\":{\"queryId\":\"id_1\"}}";
     ObjectMapper mapper = new DefaultObjectMapper();
-    Query query = mapper.readValue(queryString, Query.class);
+    Query<?> query = mapper.readValue(queryString, Query.class);
 
-    ListenableFuture future = MoreExecutors.listeningDecorator(
+    AtomicReference<Response> responseFromEndpoint = new AtomicReference<>();
+
+    // We expect this future to get canceled so we have to grab the exception somewhere else.
+    ListenableFuture<Response> future = MoreExecutors.listeningDecorator(
         Execs.singleThreaded("test_query_resource_%s")
     ).submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            try {
-              Response response = queryResource.doPost(
-                  new ByteArrayInputStream(queryString.getBytes(StandardCharsets.UTF_8)),
-                  null,
-                  testServletRequest
-              );
-
-              Assert.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
-            }
-            catch (IOException e) {
-              throw new RuntimeException(e);
-            }
+        () -> {
+          try {
+            responseFromEndpoint.set(queryResource.doPost(
+                new ByteArrayInputStream(queryString.getBytes(StandardCharsets.UTF_8)),
+                null,
+                testServletRequest
+            ));
+            return null;
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+          finally {
             waitFinishLatch.countDown();
           }
         }
@@ -924,19 +751,19 @@ public class QueryResourceTest
     startAwaitLatch.await();
 
     Executors.newSingleThreadExecutor().submit(
-        new Runnable() {
-          @Override
-          public void run()
-          {
-            Response response = queryResource.cancelQuery("id_1", testServletRequest);
-            Assert.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
-            waitForCancellationLatch.countDown();
-            waitFinishLatch.countDown();
-          }
+        () -> {
+          Response response = queryResource.cancelQuery("id_1", testServletRequest);
+          Assert.assertEquals(Status.ACCEPTED.getStatusCode(), response.getStatus());
+          waitForCancellationLatch.countDown();
+          waitFinishLatch.countDown();
         }
     );
     waitFinishLatch.await();
     cancelledCountDownLatch.await();
+
+    Assert.assertTrue(future.isCancelled());
+    final Response response = responseFromEndpoint.get();
+    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
   }
 
   @Test(timeout = 60_000L)
@@ -946,23 +773,7 @@ public class QueryResourceTest
     final CountDownLatch waitFinishLatch = new CountDownLatch(2);
     final CountDownLatch startAwaitLatch = new CountDownLatch(1);
 
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-        .andReturn(AUTHENTICATION_RESULT)
-            .anyTimes();
-
-    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    EasyMock.expectLastCall().times(1);
-
-    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
-    EasyMock.expectLastCall().times(1);
-
-    EasyMock.replay(testServletRequest);
+    expectPermissiveHappyPathAuth();
 
     AuthorizerMapper authMapper = new AuthorizerMapper(null)
     {
@@ -1017,28 +828,27 @@ public class QueryResourceTest
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
                                + "\"context\":{\"queryId\":\"id_1\"}}";
     ObjectMapper mapper = new DefaultObjectMapper();
-    Query query = mapper.readValue(queryString, Query.class);
+    Query<?> query = mapper.readValue(queryString, Query.class);
 
-    ListenableFuture future = MoreExecutors.listeningDecorator(
+    ListenableFuture<HttpServletResponse> future = MoreExecutors.listeningDecorator(
         Execs.singleThreaded("test_query_resource_%s")
     ).submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            try {
-              startAwaitLatch.countDown();
-              Response response = queryResource.doPost(
-                  new ByteArrayInputStream(queryString.getBytes(StandardCharsets.UTF_8)),
-                  null,
-                  testServletRequest
-              );
-              Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-            }
-            catch (IOException e) {
-              throw new RuntimeException(e);
-            }
+        () -> {
+          try {
+            startAwaitLatch.countDown();
+            final MockHttpServletRequest localRequest = testServletRequest.mimic();
+            final MockHttpServletResponse retVal = MockHttpServletResponse.forRequest(localRequest);
+            queryResource.doPost(
+                new ByteArrayInputStream(queryString.getBytes(StandardCharsets.UTF_8)),
+                null,
+                localRequest
+            );
+            return retVal;
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+          finally {
             waitFinishLatch.countDown();
           }
         }
@@ -1048,22 +858,19 @@ public class QueryResourceTest
     startAwaitLatch.await();
 
     Executors.newSingleThreadExecutor().submit(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            try {
-              queryResource.cancelQuery("id_1", testServletRequest);
-            }
-            catch (ForbiddenException e) {
-              waitForCancellationLatch.countDown();
-              waitFinishLatch.countDown();
-            }
+        () -> {
+          try {
+            queryResource.cancelQuery("id_1", testServletRequest.mimic());
+          }
+          catch (ForbiddenException e) {
+            waitForCancellationLatch.countDown();
+            waitFinishLatch.countDown();
           }
         }
     );
     waitFinishLatch.await();
+
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), future.get().getStatus());
   }
 
   @Test(timeout = 10_000L)
@@ -1081,31 +888,34 @@ public class QueryResourceTest
     );
 
     createScheduledQueryResource(laningScheduler, Collections.emptyList(), ImmutableList.of(waitTwoScheduled));
-    assertResponseAndCountdownOrBlockForever(
+    assertAsyncResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
         waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
     );
-    assertResponseAndCountdownOrBlockForever(
+    assertAsyncResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
         waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
     );
     waitTwoScheduled.await();
-    assertResponseAndCountdownOrBlockForever(
+    assertSynchronousResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
         waitAllFinished,
         response -> {
           Assert.assertEquals(QueryCapacityExceededException.STATUS_CODE, response.getStatus());
           QueryCapacityExceededException ex;
+
           try {
-            ex = jsonMapper.readValue((byte[]) response.getEntity(), QueryCapacityExceededException.class);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ((StreamingOutput) response.getEntity()).write(baos);
+            ex = jsonMapper.readValue(baos.toByteArray(), QueryCapacityExceededException.class);
           }
           catch (IOException e) {
             throw new RuntimeException(e);
           }
           Assert.assertEquals(QueryCapacityExceededException.makeTotalErrorMessage(2), ex.getMessage());
-          Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, ex.getErrorCode());
+          Assert.assertEquals(QueryException.QUERY_CAPACITY_EXCEEDED_ERROR_CODE, ex.getErrorCode());
         }
     );
     waitAllFinished.await();
@@ -1127,20 +937,22 @@ public class QueryResourceTest
 
     createScheduledQueryResource(scheduler, ImmutableList.of(waitTwoStarted), ImmutableList.of(waitOneScheduled));
 
-    assertResponseAndCountdownOrBlockForever(
+    assertAsyncResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY,
         waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
     );
     waitOneScheduled.await();
-    assertResponseAndCountdownOrBlockForever(
+    assertSynchronousResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY_LOW_PRIORITY,
         waitAllFinished,
         response -> {
           Assert.assertEquals(QueryCapacityExceededException.STATUS_CODE, response.getStatus());
           QueryCapacityExceededException ex;
           try {
-            ex = jsonMapper.readValue((byte[]) response.getEntity(), QueryCapacityExceededException.class);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ((StreamingOutput) response.getEntity()).write(baos);
+            ex = jsonMapper.readValue(baos.toByteArray(), QueryCapacityExceededException.class);
           }
           catch (IOException e) {
             throw new RuntimeException(e);
@@ -1149,12 +961,12 @@ public class QueryResourceTest
               QueryCapacityExceededException.makeLaneErrorMessage(HiLoQueryLaningStrategy.LOW, 1),
               ex.getMessage()
           );
-          Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, ex.getErrorCode());
+          Assert.assertEquals(QueryException.QUERY_CAPACITY_EXCEEDED_ERROR_CODE, ex.getErrorCode());
 
         }
     );
     waitTwoStarted.await();
-    assertResponseAndCountdownOrBlockForever(
+    assertAsyncResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
         waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
@@ -1179,20 +991,22 @@ public class QueryResourceTest
 
     createScheduledQueryResource(scheduler, ImmutableList.of(waitTwoStarted), ImmutableList.of(waitOneScheduled));
 
-    assertResponseAndCountdownOrBlockForever(
+    assertAsyncResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
         waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
     );
     waitOneScheduled.await();
-    assertResponseAndCountdownOrBlockForever(
+    assertSynchronousResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY,
         waitAllFinished,
         response -> {
           Assert.assertEquals(QueryCapacityExceededException.STATUS_CODE, response.getStatus());
           QueryCapacityExceededException ex;
           try {
-            ex = jsonMapper.readValue((byte[]) response.getEntity(), QueryCapacityExceededException.class);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ((StreamingOutput) response.getEntity()).write(baos);
+            ex = jsonMapper.readValue(baos.toByteArray(), QueryCapacityExceededException.class);
           }
           catch (IOException e) {
             throw new RuntimeException(e);
@@ -1201,11 +1015,11 @@ public class QueryResourceTest
               QueryCapacityExceededException.makeLaneErrorMessage(HiLoQueryLaningStrategy.LOW, 1),
               ex.getMessage()
           );
-          Assert.assertEquals(QueryCapacityExceededException.ERROR_CODE, ex.getErrorCode());
+          Assert.assertEquals(QueryException.QUERY_CAPACITY_EXCEEDED_ERROR_CODE, ex.getErrorCode());
         }
     );
     waitTwoStarted.await();
-    assertResponseAndCountdownOrBlockForever(
+    assertAsyncResponseAndCountdownOrBlockForever(
         SIMPLE_TIMESERIES_QUERY_SMALLISH_INTERVAL,
         waitAllFinished,
         response -> Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus())
@@ -1274,16 +1088,15 @@ public class QueryResourceTest
     );
   }
 
-  private void assertResponseAndCountdownOrBlockForever(String query, CountDownLatch done, Consumer<Response> asserts)
+  private void assertAsyncResponseAndCountdownOrBlockForever(
+      String query,
+      CountDownLatch done,
+      Consumer<MockHttpServletResponse> asserts
+  )
   {
     Executors.newSingleThreadExecutor().submit(() -> {
       try {
-        Response response = queryResource.doPost(
-            new ByteArrayInputStream(query.getBytes(StandardCharsets.UTF_8)),
-            null,
-            testServletRequest
-        );
-        asserts.accept(response);
+        asserts.accept(expectAsyncRequestFlow(query, testServletRequest.mimic()));
       }
       catch (IOException e) {
         throw new RuntimeException(e);
@@ -1294,18 +1107,78 @@ public class QueryResourceTest
 
   private void expectPermissiveHappyPathAuth()
   {
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
+    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, AUTHENTICATION_RESULT);
+  }
 
-    EasyMock.expect(testServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(AUTHENTICATION_RESULT)
-            .anyTimes();
+  @Nonnull
+  private MockHttpServletResponse expectAsyncRequestFlow(String simpleTimeseriesQuery) throws IOException
+  {
+    return expectAsyncRequestFlow(
+        simpleTimeseriesQuery,
+        testServletRequest
+    );
+  }
 
-    testServletRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
-    EasyMock.expectLastCall().anyTimes();
+  @Nonnull
+  private MockHttpServletResponse expectAsyncRequestFlow(String query, MockHttpServletRequest req) throws IOException
+  {
+    return expectAsyncRequestFlow(req, query.getBytes(StandardCharsets.UTF_8));
+  }
 
-    EasyMock.replay(testServletRequest);
+  @Nonnull
+  private MockHttpServletResponse expectAsyncRequestFlow(
+      MockHttpServletRequest req,
+      byte[] queryBytes
+  ) throws IOException
+  {
+    return expectAsyncRequestFlow(req, queryBytes, queryResource);
+  }
+
+  @Nonnull
+  private MockHttpServletResponse expectAsyncRequestFlow(
+      MockHttpServletRequest req,
+      byte[] queryBytes, QueryResource queryResource
+  ) throws IOException
+  {
+    final MockHttpServletResponse response = MockHttpServletResponse.forRequest(req);
+
+    Assert.assertNull(queryResource.doPost(
+        new ByteArrayInputStream(queryBytes),
+        null /*pretty*/,
+        req
+    ));
+    return response;
+  }
+
+  private void assertSynchronousResponseAndCountdownOrBlockForever(
+      String query,
+      CountDownLatch done,
+      Consumer<Response> asserts
+  )
+  {
+    Executors.newSingleThreadExecutor().submit(() -> {
+      try {
+        asserts.accept(
+            expectSynchronousRequestFlow(
+                testServletRequest.mimic(),
+                query.getBytes(StandardCharsets.UTF_8),
+                queryResource
+            )
+        );
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+      done.countDown();
+    });
+  }
+
+  private Response expectSynchronousRequestFlow(
+      MockHttpServletRequest req,
+      byte[] bytes,
+      QueryResource queryResource
+  ) throws IOException
+  {
+    return queryResource.doPost(new ByteArrayInputStream(bytes), null, req);
   }
 }

@@ -111,4 +111,9 @@ public class KinesisEventWriter implements StreamEventWriter
         "Waiting for all Kinesis writes to be flushed"
     );
   }
+
+  protected KinesisProducer getKinesisProducer()
+  {
+    return kinesisProducer;
+  }
 }

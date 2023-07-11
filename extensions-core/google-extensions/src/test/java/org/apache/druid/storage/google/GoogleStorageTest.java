@@ -27,6 +27,7 @@ import com.google.api.client.testing.http.MockHttpTransport;
 import com.google.api.client.testing.http.MockLowLevelHttpRequest;
 import com.google.api.client.testing.http.MockLowLevelHttpResponse;
 import com.google.api.services.storage.Storage;
+import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -85,6 +86,6 @@ public class GoogleStorageTest
   {
     HttpRequestInitializer initializer = new MockGoogleCredential.Builder().build();
     Storage storage = new Storage(transport, JacksonFactory.getDefaultInstance(), initializer);
-    return new GoogleStorage(storage);
+    return new GoogleStorage(Suppliers.ofInstance(storage));
   }
 }

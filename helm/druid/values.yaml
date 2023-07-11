@@ -17,7 +17,7 @@
 
 image:
   repository: apache/druid
-  tag: 0.19.0
+  tag: 24.0.0
   pullPolicy: IfNotPresent
   pullSecrets: []
 
@@ -25,6 +25,10 @@ configMap:
   ## If false, configMap will not be applied
   ##
   enabled: true
+
+# Required if using kubernetes extensions which modify resources like 'druid-kubernetes-extensions' or 'druid-kubernetes-overlord-extensions'
+rbac:
+  create: true
 
 ## Define the key value pairs in the configmap
 configVars:
@@ -91,6 +95,18 @@ broker:
     #   cpu: 250m
     #   memory: 512Mi
 
+  serviceAccount:
+    # -- Create a service account for the broker
+    create: true
+    # -- Service Account name
+    name:
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Labels applied to created service account
+    labels: {}
+    # -- Automount API credentials for the service account
+    automountServiceAccountToken: true
+
   nodeSelector: {}
 
   tolerations: []
@@ -134,6 +150,18 @@ coordinator:
     #   cpu: 250m
     #   memory: 512Mi
 
+  serviceAccount:
+    # -- Create a service account for the coordinator
+    create: true
+    # -- Service Account name
+    name:
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Labels applied to created service account
+    labels: {}
+    # -- Automount API credentials for the service account
+    automountServiceAccountToken: true
+
   nodeSelector: {}
 
   tolerations: []
@@ -168,6 +196,18 @@ overlord:
 
   resources: {}
 
+  serviceAccount:
+    # -- Create a service account for the overlord
+    create: true
+    # -- Service Account name
+    name:
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Labels applied to created service account
+    labels: {}
+    # -- Automount API credentials for the service account
+    automountServiceAccountToken: true
+
   nodeSelector: {}
 
   tolerations: []
@@ -193,7 +233,7 @@ historical:
     druid_processing_numMergeBuffers: 2
     druid_processing_numThreads: 1
     # druid_monitoring_monitors: '["org.apache.druid.client.cache.CacheMonitor", "org.apache.druid.server.metrics.HistoricalMetricsMonitor", "org.apache.druid.server.metrics.QueryCountStatsMonitor"]'
-    # druid_segmentCache_locations: '[{"path":"/var/druid/segment-cache","maxSize":300000000000}]'
+    # druid_segmentCache_locations: '[{"path":"/opt/druid/var/druid/segment-cache","maxSize":300000000000}]'
 
   ingress:
     enabled: false
@@ -232,6 +272,21 @@ historical:
     # requests:
     #   cpu: 500m
     #   memory: 512Mi
+
+  serviceAccount:
+    # -- Create a service account for the overlord
+    create: true
+    # -- Service Account name
+    name:
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Labels applied to created service account
+    labels: {}
+    # -- Automount API credentials for the service account
+    automountServiceAccountToken: true
+
+  livenessProbeInitialDelaySeconds: 60
+  readinessProbeInitialDelaySeconds: 60
 
   ## (dict) If specified, apply these annotations to each master Pod
   podAnnotations: {}
@@ -315,6 +370,18 @@ middleManager:
     #   cpu: 250m
     #   memory: 256Mi
 
+  serviceAccount:
+    # -- Create a service account for the overlord
+    create: true
+    # -- Service Account name
+    name:
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Labels applied to created service account
+    labels: {}
+    # -- Automount API credentials for the service account
+    automountServiceAccountToken: true
+
   ## (dict) If specified, apply these annotations to each master Pod
   podAnnotations: {}
 
@@ -361,6 +428,18 @@ router:
     #   cpu: 100m
     #   memory: 128Mi
 
+  serviceAccount:
+    # -- Create a service account for the overlord
+    create: true
+    # -- Service Account name
+    name:
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Labels applied to created service account
+    labels: {}
+    # -- Automount API credentials for the service account
+    automountServiceAccountToken: true
+
   nodeSelector: {}
 
   tolerations: []
@@ -373,6 +452,7 @@ router:
 # Zookeeper:
 # ------------------------------------------------------------------------------
 
+# If using a zookeeper installed outside of this chart you must uncomment and set this line
 # zkHosts: druid-zookeeper-headless:2181
 
 zookeeper:
@@ -414,3 +494,10 @@ postgresql:
     port: 5432
 
 # Secrets
+prometheus:
+  enabled: false
+  #pick the any port what you want
+  port: 9090
+  annotation:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"

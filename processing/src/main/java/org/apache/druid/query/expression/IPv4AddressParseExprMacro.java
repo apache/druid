@@ -19,15 +19,14 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.java.util.common.IAE;
+import inet.ipaddr.ipv4.IPv4Address;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.net.Inet4Address;
 import java.util.List;
 
 /**
@@ -60,9 +59,7 @@ public class IPv4AddressParseExprMacro implements ExprMacroTable.ExprMacro
   @Override
   public Expr apply(final List<Expr> args)
   {
-    if (args.size() != 1) {
-      throw new IAE(ExprUtils.createErrMsg(name(), "must have 1 argument"));
-    }
+    validationHelperCheckArgumentCount(args, 1);
 
     Expr arg = args.get(0);
 
@@ -78,7 +75,7 @@ public class IPv4AddressParseExprMacro implements ExprMacroTable.ExprMacro
       public ExprEval eval(final ObjectBinding bindings)
       {
         ExprEval eval = arg.eval(bindings);
-        switch (eval.type()) {
+        switch (eval.type().getType()) {
           case STRING:
             return evalAsString(eval);
           case LONG:
@@ -91,15 +88,14 @@ public class IPv4AddressParseExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public Expr visit(Shuttle shuttle)
       {
-        Expr newArg = arg.visit(shuttle);
-        return shuttle.visit(new IPv4AddressParseExpr(newArg));
+        return shuttle.visit(apply(shuttle.visitAll(args)));
       }
 
       @Nullable
       @Override
-      public ExprType getOutputType(InputBindingInspector inspector)
+      public ExpressionType getOutputType(InputBindingInspector inspector)
       {
-        return ExprType.LONG;
+        return ExpressionType.LONG;
       }
     }
 
@@ -108,7 +104,7 @@ public class IPv4AddressParseExprMacro implements ExprMacroTable.ExprMacro
 
   private static ExprEval evalAsString(ExprEval eval)
   {
-    Inet4Address address = IPv4AddressExprUtils.parse(eval.asString());
+    IPv4Address address = IPv4AddressExprUtils.parse(eval.asString());
     Long value = address == null ? null : IPv4AddressExprUtils.toLong(address);
     return ExprEval.ofLong(value);
   }

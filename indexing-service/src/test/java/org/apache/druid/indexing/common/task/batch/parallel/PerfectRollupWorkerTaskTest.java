@@ -164,7 +164,7 @@ public class PerfectRollupWorkerTaskTest
     @Override
     public String getType()
     {
-      throw new UnsupportedOperationException();
+      return "TestPerfectRollupWorkerTask";
     }
 
     @Override

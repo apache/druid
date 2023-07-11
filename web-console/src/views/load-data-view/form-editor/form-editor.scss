@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-@import '~@blueprintjs/core/src/common/colors';
 @import '../../../variables';
 
 .form-editor {
@@ -29,7 +28,7 @@
     position: relative;
     text-align: right;
 
-    .bp3-button {
+    .#{$bp-ns}-button {
       margin-left: 15px;
     }
 

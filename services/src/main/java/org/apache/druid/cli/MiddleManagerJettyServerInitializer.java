@@ -33,7 +33,6 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.DefaultHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -72,6 +71,7 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
     final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
 
+    JettyServerInitUtils.addQosFilters(root, injector);
     AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
 
     // perform no-op authorization/authentication for these resources
@@ -96,17 +96,18 @@ class MiddleManagerJettyServerInitializer implements JettyServerInitializer
     root.addFilter(GuiceFilter.class, "/*", null);
 
     final HandlerList handlerList = new HandlerList();
-    handlerList.setHandlers(
-        new Handler[]{
-            JettyServerInitUtils.getJettyRequestLogHandler(),
-            JettyServerInitUtils.wrapWithDefaultGzipHandler(
-                root,
-                serverConfig.getInflateBufferSize(),
-                serverConfig.getCompressionLevel()
-            ),
-            new DefaultHandler()
-        }
-    );
+    JettyServerInitUtils.maybeAddHSTSRewriteHandler(serverConfig, handlerList);
+
+    handlerList.addHandler(JettyServerInitUtils.getJettyRequestLogHandler());
+
+    handlerList.addHandler(JettyServerInitUtils.wrapWithDefaultGzipHandler(
+        root,
+        serverConfig.getInflateBufferSize(),
+        serverConfig.getCompressionLevel()
+    ));
+
+    handlerList.addHandler(new DefaultHandler());
+
     server.setHandler(handlerList);
   }
 }

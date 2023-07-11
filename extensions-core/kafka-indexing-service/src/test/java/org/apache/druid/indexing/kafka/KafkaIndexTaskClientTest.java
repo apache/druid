@@ -30,19 +30,22 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientSyncImpl;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.ObjectOrErrorResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
+import org.hamcrest.CoreMatchers;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -54,6 +57,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableCauseMatcher;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -65,6 +70,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 @RunWith(Parameterized.class)
 public class KafkaIndexTaskClientTest extends EasyMockSupport
@@ -89,7 +95,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   private StringFullResponseHolder responseHolder;
   private HttpResponse response;
   private HttpHeaders headers;
-  private KafkaIndexTaskClient client;
+  private SeekableStreamIndexTaskClient<Integer, Long> client;
 
   @Parameterized.Parameters(name = "numThreads = {0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -136,7 +142,7 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test
-  public void testNoTaskLocation() throws IOException
+  public void testNoTaskLocation() throws Exception
   {
     EasyMock.reset(taskInfoProvider);
     EasyMock.expect(taskInfoProvider.getTaskLocation(TEST_ID)).andReturn(TaskLocation.unknown()).anyTimes();
@@ -145,25 +151,27 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
             .anyTimes();
     replayAll();
 
-    Assert.assertFalse(client.stop(TEST_ID, true));
-    Assert.assertFalse(client.resume(TEST_ID));
-    Assert.assertEquals(ImmutableMap.of(), client.pause(TEST_ID));
-    Assert.assertEquals(ImmutableMap.of(), client.pause(TEST_ID));
-    Assert.assertEquals(Status.NOT_STARTED, client.getStatus(TEST_ID));
-    Assert.assertNull(client.getStartTime(TEST_ID));
-    Assert.assertEquals(ImmutableMap.of(), client.getCurrentOffsets(TEST_ID, true));
-    Assert.assertEquals(ImmutableMap.of(), client.getEndOffsets(TEST_ID));
-    Assert.assertFalse(client.setEndOffsets(TEST_ID, Collections.emptyMap(), true));
-    Assert.assertFalse(client.setEndOffsets(TEST_ID, Collections.emptyMap(), true));
+    Assert.assertFalse(client.stopAsync(TEST_ID, true).get());
+    Assert.assertFalse(client.resumeAsync(TEST_ID).get());
+    Assert.assertEquals(ImmutableMap.of(), client.pauseAsync(TEST_ID).get());
+    Assert.assertEquals(ImmutableMap.of(), client.pauseAsync(TEST_ID).get());
+    Assert.assertEquals(Status.NOT_STARTED, client.getStatusAsync(TEST_ID).get());
+    Assert.assertNull(client.getStartTimeAsync(TEST_ID).get());
+    Assert.assertEquals(ImmutableMap.of(), client.getCurrentOffsetsAsync(TEST_ID, true).get());
+    Assert.assertEquals(ImmutableMap.of(), client.getEndOffsetsAsync(TEST_ID).get());
+    Assert.assertFalse(client.setEndOffsetsAsync(TEST_ID, Collections.emptyMap(), true).get());
+    Assert.assertFalse(client.setEndOffsetsAsync(TEST_ID, Collections.emptyMap(), true).get());
 
     verifyAll();
   }
 
   @Test
-  public void testTaskNotRunnableException()
+  public void testTaskNotRunnableException() throws Exception
   {
-    expectedException.expect(IndexTaskClient.TaskNotRunnableException.class);
-    expectedException.expectMessage("Aborting request because task [test-id] is not runnable");
+    expectedException.expect(ExecutionException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(IndexTaskClient.TaskNotRunnableException.class));
+    expectedException.expectCause(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+        "Aborting request because task [test-id] is not runnable")));
 
     EasyMock.reset(taskInfoProvider);
     EasyMock.expect(taskInfoProvider.getTaskLocation(TEST_ID))
@@ -174,78 +182,82 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
             .anyTimes();
     replayAll();
 
-    client.getCurrentOffsets(TEST_ID, true);
+    client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
   }
 
   @Test
-  public void testInternalServerError()
+  public void testInternalServerError() throws Exception
   {
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("org.apache.druid.java.util.common.IOE: Received status [500] and content []");
+    expectedException.expect(ExecutionException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(RuntimeException.class));
+    expectedException.expectCause(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+        "Received server error with status [500 Internal Server Error]")));
 
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.INTERNAL_SERVER_ERROR).times(2);
     EasyMock.expect(responseHolder.getContent()).andReturn("");
     EasyMock.expect(
         httpClient.go(
             EasyMock.anyObject(Request.class),
-            EasyMock.anyObject(StringFullResponseHandler.class),
+            EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
             EasyMock.eq(TEST_HTTP_TIMEOUT)
         )
     ).andReturn(
-        Futures.immediateFuture(responseHolder)
+        errorResponseHolder()
     );
     replayAll();
 
-    client.getCurrentOffsets(TEST_ID, true);
+    client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
   }
 
   @Test
-  public void testBadRequest()
+  public void testBadRequest() throws Exception
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Received 400 Bad Request with body:");
+    expectedException.expect(ExecutionException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(IllegalArgumentException.class));
+    expectedException.expectCause(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+        "Received server error with status [400 Bad Request]")));
 
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.BAD_REQUEST).times(2);
     EasyMock.expect(responseHolder.getContent()).andReturn("");
     EasyMock.expect(
         httpClient.go(
             EasyMock.anyObject(Request.class),
-            EasyMock.anyObject(StringFullResponseHandler.class),
+            EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
             EasyMock.eq(TEST_HTTP_TIMEOUT)
         )
     ).andReturn(
-        Futures.immediateFuture(responseHolder)
+        errorResponseHolder()
     );
     replayAll();
 
-    client.getCurrentOffsets(TEST_ID, true);
+    client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
   }
 
   @Test
-  public void testTaskLocationMismatch()
+  public void testTaskLocationMismatch() throws Exception
   {
-    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(3)
-            .andReturn(HttpResponseStatus.OK);
+    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(2);
     EasyMock.expect(responseHolder.getResponse()).andReturn(response);
-    EasyMock.expect(responseHolder.getContent()).andReturn("").times(2)
-            .andReturn("{}");
+    EasyMock.expect(responseHolder.getContent()).andReturn("").andReturn("{}");
     EasyMock.expect(response.headers()).andReturn(headers);
     EasyMock.expect(headers.get("X-Druid-Task-Id")).andReturn("a-different-task-id");
     EasyMock.expect(
         httpClient.go(
             EasyMock.anyObject(Request.class),
-            EasyMock.anyObject(StringFullResponseHandler.class),
+            EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
             EasyMock.eq(TEST_HTTP_TIMEOUT)
         )
     ).andReturn(
-        Futures.immediateFuture(responseHolder)
-    ).times(2);
+        errorResponseHolder()
+    ).andReturn(
+        okResponseHolder()
+    );
     replayAll();
 
-    Map<Integer, Long> results = client.getCurrentOffsets(TEST_ID, true);
+    Map<Integer, Long> results = client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
 
     Assert.assertEquals(0, results.size());
@@ -255,18 +267,17 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   public void testGetCurrentOffsets() throws Exception
   {
     Capture<Request> captured = Capture.newInstance();
-    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
     EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":1, \"1\":10}");
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     );
     replayAll();
 
-    Map<Integer, Long> results = client.getCurrentOffsets(TEST_ID, true);
+    Map<Integer, Long> results = client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -288,9 +299,8 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     client = new TestableKafkaIndexTaskClient(httpClient, OBJECT_MAPPER, taskInfoProvider, 3);
 
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
-    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(6)
-            .andReturn(HttpResponseStatus.OK).times(1);
-    EasyMock.expect(responseHolder.getContent()).andReturn("").times(4)
+    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(4);
+    EasyMock.expect(responseHolder.getContent()).andReturn("").times(2)
             .andReturn("{\"0\":1, \"1\":10}");
     EasyMock.expect(responseHolder.getResponse()).andReturn(response).times(2);
     EasyMock.expect(response.headers()).andReturn(headers).times(2);
@@ -298,15 +308,17 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
 
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
-    ).times(3);
+        errorResponseHolder()
+    ).times(2).andReturn(
+        okResponseHolder()
+    );
 
     replayAll();
 
-    Map<Integer, Long> results = client.getCurrentOffsets(TEST_ID, true);
+    Map<Integer, Long> results = client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
 
     Assert.assertEquals(3, captured.getValues().size());
@@ -325,10 +337,13 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test
-  public void testGetCurrentOffsetsWithExhaustedRetries()
+  public void testGetCurrentOffsetsWithExhaustedRetries() throws Exception
   {
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("org.apache.druid.java.util.common.IOE: Received status [404]");
+    expectedException.expect(ExecutionException.class);
+    expectedException.expectCause(CoreMatchers.instanceOf(RuntimeException.class));
+    expectedException.expectCause(ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(IOException.class)));
+    expectedException.expectCause(ThrowableCauseMatcher.hasCause(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+        "Received server error with status [404 Not Found]"))));
 
     client = new TestableKafkaIndexTaskClient(httpClient, OBJECT_MAPPER, taskInfoProvider, 2);
 
@@ -341,13 +356,13 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(
         httpClient.go(
             EasyMock.anyObject(Request.class),
-            EasyMock.anyObject(StringFullResponseHandler.class),
+            EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
             EasyMock.eq(TEST_HTTP_TIMEOUT)
         )
-    ).andReturn(Futures.immediateFuture(responseHolder)).anyTimes();
+    ).andReturn(errorResponseHolder()).anyTimes();
     replayAll();
 
-    client.getCurrentOffsets(TEST_ID, true);
+    client.getCurrentOffsetsAsync(TEST_ID, true).get();
     verifyAll();
   }
 
@@ -355,18 +370,17 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   public void testGetEndOffsets() throws Exception
   {
     Capture<Request> captured = Capture.newInstance();
-    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
     EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":1, \"1\":10}");
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     );
     replayAll();
 
-    Map<Integer, Long> results = client.getEndOffsets(TEST_ID);
+    Map<Integer, Long> results = client.getEndOffsetsAsync(TEST_ID).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -389,22 +403,19 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     DateTime now = DateTimes.nowUtc();
 
     Capture<Request> captured = Capture.newInstance();
-    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(3)
-            .andReturn(HttpResponseStatus.OK);
+    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(2);
     EasyMock.expect(responseHolder.getResponse()).andReturn(response);
     EasyMock.expect(response.headers()).andReturn(headers);
     EasyMock.expect(headers.get("X-Druid-Task-Id")).andReturn(null);
     EasyMock.expect(responseHolder.getContent()).andReturn(String.valueOf(now.getMillis())).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
-    )).andReturn(
-        Futures.immediateFuture(responseHolder)
-    ).times(2);
+    )).andReturn(errorResponseHolder()).once().andReturn(okResponseHolder());
     replayAll();
 
-    DateTime results = client.getStartTime(TEST_ID);
+    DateTime results = client.getStartTimeAsync(TEST_ID).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -424,18 +435,17 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     Status status = Status.READING;
 
     Capture<Request> captured = Capture.newInstance();
-    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
     EasyMock.expect(responseHolder.getContent()).andReturn(StringUtils.format("\"%s\"", status.toString())).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     );
     replayAll();
 
-    Status results = client.getStatus(TEST_ID);
+    Status results = client.getStatusAsync(TEST_ID).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -453,18 +463,18 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   public void testPause() throws Exception
   {
     Capture<Request> captured = Capture.newInstance();
-    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).times(2);
+    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
     EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":1, \"1\":10}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     );
     replayAll();
 
-    Map<Integer, Long> results = client.pause(TEST_ID);
+    Map<Integer, Long> results = client.pauseAsync(TEST_ID).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -481,41 +491,72 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   }
 
   @Test
+  public void testPauseRetriesExhausted() throws Exception
+  {
+    client = new TestableKafkaIndexTaskClient(httpClient, OBJECT_MAPPER, taskInfoProvider, 2);
+    // ACCEPTED for first pause call and then OK for 3 status call
+    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.ACCEPTED);
+    EasyMock.expect(responseHolder.getContent()).andReturn(null);
+    EasyMock.expect(responseHolder.getContent()).andReturn(OBJECT_MAPPER.writeValueAsString(Status.READING)).times(3);
+    EasyMock.expect(httpClient.go(
+        EasyMock.anyObject(),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
+        EasyMock.eq(TEST_HTTP_TIMEOUT)
+    )).andReturn(
+        okResponseHolder()
+    ).times(4);
+    replayAll();
+
+    try {
+      client.pauseAsync(TEST_ID).get();
+    }
+    catch (Exception ex) {
+      Assert.assertEquals(
+          "org.apache.druid.java.util.common.ISE: "
+          + "Task [test-id] failed to change its status from [READING] to [PAUSED], aborting",
+          ex.getMessage()
+      );
+      verifyAll();
+      return;
+    }
+    Assert.fail("Expected an exception");
+  }
+
+  @Test
   public void testPauseWithSubsequentGetOffsets() throws Exception
   {
     Capture<Request> captured = Capture.newInstance();
     Capture<Request> captured2 = Capture.newInstance();
     Capture<Request> captured3 = Capture.newInstance();
     // one time in IndexTaskClient.submitRequest() and another in KafkaIndexTaskClient.pause()
-    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.ACCEPTED).times(2)
-            .andReturn(HttpResponseStatus.OK).anyTimes();
+    EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.ACCEPTED);
     EasyMock.expect(responseHolder.getContent()).andReturn("\"PAUSED\"").times(2)
             .andReturn("{\"0\":1, \"1\":10}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     );
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured2),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     );
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured3),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     );
 
     replayAll();
 
-    Map<Integer, Long> results = client.pause(TEST_ID);
+    Map<Integer, Long> results = client.pauseAsync(TEST_ID).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -552,14 +593,14 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     );
     replayAll();
 
-    client.resume(TEST_ID);
+    client.resumeAsync(TEST_ID).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -580,14 +621,14 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     );
     replayAll();
 
-    client.setEndOffsets(TEST_ID, endOffsets, true);
+    client.setEndOffsetsAsync(TEST_ID, endOffsets, true).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -609,14 +650,14 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     );
     replayAll();
 
-    client.setEndOffsets(TEST_ID, endOffsets, true);
+    client.setEndOffsetsAsync(TEST_ID, endOffsets, true).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -636,14 +677,14 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     );
     replayAll();
 
-    client.stop(TEST_ID, false);
+    client.stopAsync(TEST_ID, false).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -662,14 +703,14 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     );
     replayAll();
 
-    client.stop(TEST_ID, true);
+    client.stopAsync(TEST_ID, true).get();
     verifyAll();
 
     Request request = captured.getValue();
@@ -689,10 +730,10 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     ).times(numRequests);
     replayAll();
 
@@ -725,10 +766,10 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     ).times(numRequests);
     replayAll();
 
@@ -762,10 +803,10 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     ).times(numRequests);
     replayAll();
 
@@ -799,10 +840,10 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getContent()).andReturn("\"READING\"").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     ).times(numRequests);
     replayAll();
 
@@ -837,10 +878,10 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getContent()).andReturn(String.valueOf(now.getMillis())).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     ).times(numRequests);
     replayAll();
 
@@ -874,10 +915,10 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     ).times(numRequests);
     replayAll();
 
@@ -911,10 +952,10 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getContent()).andReturn("{\"0\":\"1\"}").anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     ).times(numRequests);
     replayAll();
 
@@ -948,10 +989,10 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     ).times(numRequests);
     replayAll();
 
@@ -991,10 +1032,10 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     EasyMock.expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK).anyTimes();
     EasyMock.expect(httpClient.go(
         EasyMock.capture(captured),
-        EasyMock.anyObject(StringFullResponseHandler.class),
+        EasyMock.anyObject(ObjectOrErrorResponseHandler.class),
         EasyMock.eq(TEST_HTTP_TIMEOUT)
     )).andReturn(
-        Futures.immediateFuture(responseHolder)
+        okResponseHolder()
     ).times(numRequests);
     replayAll();
 
@@ -1029,7 +1070,17 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     }
   }
 
-  private class TestableKafkaIndexTaskClient extends KafkaIndexTaskClient
+  private ListenableFuture<Either> okResponseHolder()
+  {
+    return Futures.immediateFuture(Either.value(responseHolder));
+  }
+
+  private ListenableFuture<Either> errorResponseHolder()
+  {
+    return Futures.immediateFuture(Either.error(responseHolder));
+  }
+
+  private class TestableKafkaIndexTaskClient extends SeekableStreamIndexTaskClientSyncImpl<Integer, Long>
   {
     TestableKafkaIndexTaskClient(
         HttpClient httpClient,
@@ -1053,6 +1104,19 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     @Override
     protected void checkConnection(String host, int port)
     {
+      // Do nothing.
+    }
+
+    @Override
+    public Class<Integer> getPartitionType()
+    {
+      return Integer.class;
+    }
+
+    @Override
+    public Class<Long> getSequenceType()
+    {
+      return Long.class;
     }
   }
 }

@@ -168,7 +168,7 @@ export class DoctorDialog extends React.PureComponent<DoctorDialogProps, DoctorD
             text="Analyze Druid cluster"
             intent={Intent.PRIMARY}
             fill
-            onClick={() => this.doChecks()}
+            onClick={() => void this.doChecks()}
           />
         </div>
       );

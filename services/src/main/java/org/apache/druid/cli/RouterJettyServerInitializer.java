@@ -41,6 +41,7 @@ import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.sql.avatica.DruidAvaticaProtobufHandler;
+import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -59,7 +60,9 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       // The router will keep the connection context in the forwarded message, and the broker is responsible for
       // performing the auth checks.
       DruidAvaticaJsonHandler.AVATICA_PATH,
-      DruidAvaticaProtobufHandler.AVATICA_PATH
+      DruidAvaticaJsonHandler.AVATICA_PATH_NO_TRAILING_SLASH,
+      DruidAvaticaProtobufHandler.AVATICA_PATH,
+      DruidAvaticaProtobufHandler.AVATICA_PATH_NO_TRAILING_SLASH
   );
 
   private final DruidHttpClientConfig routerHttpClientConfig;
@@ -116,6 +119,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
 
+    JettyServerInitUtils.addQosFilters(root, injector);
     AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
 
     // perform no-op authorization/authentication for these resources
@@ -143,10 +147,13 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     root.addFilter(GuiceFilter.class, "/druid/router/*", null);
     root.addFilter(GuiceFilter.class, "/druid-ext/*", null);
 
+    RewriteHandler rewriteHandler = WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler();
+    JettyServerInitUtils.maybeAddHSTSPatternRule(serverConfig, rewriteHandler);
+
     final HandlerList handlerList = new HandlerList();
     handlerList.setHandlers(
         new Handler[]{
-            WebConsoleJettyServerInitializer.createWebConsoleRewriteHandler(),
+            rewriteHandler,
             JettyServerInitUtils.getJettyRequestLogHandler(),
             JettyServerInitUtils.wrapWithDefaultGzipHandler(
                 root,

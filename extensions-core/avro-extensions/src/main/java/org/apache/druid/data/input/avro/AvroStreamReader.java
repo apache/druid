@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.parsers.ObjectFlattener;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 import org.apache.druid.java.util.common.parsers.ParseException;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -51,7 +52,7 @@ public class AvroStreamReader extends IntermediateRowParsingReader<GenericRecord
       InputRowSchema inputRowSchema,
       InputEntity source,
       AvroBytesDecoder avroBytesDecoder,
-      JSONPathSpec flattenSpec,
+      @Nullable JSONPathSpec flattenSpec,
       boolean binaryAsString,
       boolean extractUnionsByType
   )
@@ -59,7 +60,15 @@ public class AvroStreamReader extends IntermediateRowParsingReader<GenericRecord
     this.inputRowSchema = inputRowSchema;
     this.source = source;
     this.avroBytesDecoder = avroBytesDecoder;
-    this.recordFlattener = ObjectFlatteners.create(flattenSpec, new AvroFlattenerMaker(false, binaryAsString, extractUnionsByType));
+    this.recordFlattener = ObjectFlatteners.create(
+        flattenSpec,
+        new AvroFlattenerMaker(
+            false,
+            binaryAsString,
+            extractUnionsByType,
+            inputRowSchema.getDimensionsSpec().useSchemaDiscovery()
+        )
+    );
   }
 
   @Override
@@ -69,6 +78,13 @@ public class AvroStreamReader extends IntermediateRowParsingReader<GenericRecord
         Iterators.singletonIterator(avroBytesDecoder.parse(ByteBuffer.wrap(IOUtils.toByteArray(source.open()))))
     );
   }
+
+  @Override
+  protected InputEntity source()
+  {
+    return source;
+  }
+
 
   @Override
   protected List<InputRow> parseInputRows(GenericRecord intermediateRow) throws ParseException

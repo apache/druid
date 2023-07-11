@@ -22,11 +22,13 @@ package org.apache.druid.sql.calcite.rule;
 import org.apache.calcite.plan.Convention;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.sql.calcite.rel.DruidConvention;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 
 public class DruidRelToDruidRule extends ConverterRule
 {
+  private static final Logger log = new Logger(DruidRelToDruidRule.class);
   private static final DruidRelToDruidRule INSTANCE = new DruidRelToDruidRule();
 
   private DruidRelToDruidRule()
@@ -47,6 +49,13 @@ public class DruidRelToDruidRule extends ConverterRule
   @Override
   public RelNode convert(RelNode rel)
   {
-    return ((DruidRel) rel).asDruidConvention();
+    try {
+      final RelNode newRel = ((DruidRel<?>) rel).asDruidConvention();
+      return newRel;
+    }
+    catch (Exception e) {
+      log.error(e, "Conversion failed");
+      throw e;
+    }
   }
 }

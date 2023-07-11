@@ -22,7 +22,9 @@ package org.apache.druid.segment;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
@@ -107,27 +109,33 @@ import javax.annotation.Nullable;
  * @param <ActualType> class of a single actual value
  *
  */
-public interface DimensionIndexer
-    <EncodedType extends Comparable<EncodedType>, EncodedKeyComponentType, ActualType extends Comparable<ActualType>>
+public interface DimensionIndexer<
+    EncodedType extends Comparable<EncodedType>,
+    EncodedKeyComponentType,
+    ActualType extends Comparable<ActualType>>
 {
 
   /**
-   * Given a single row value or list of row values (for multi-valued dimensions), update any internal data structures
-   * with the ingested values and return the row values as an array to be used within a Row key.
+   * Encodes the given row value(s) of the dimension to be used within a row key.
+   * It also updates the internal state of the DimensionIndexer, e.g. the dimLookup.
+   * <p>
+   * For example, the dictionary-encoded String-type column will return an int[]
+   * containing dictionary IDs.
+   * <p>
    *
-   * For example, the dictionary-encoded String-type column will return an int[] containing a dictionary ID.
-   *
-   * The value within the returned array should be encoded if applicable, i.e. as instances of EncodedType.
-   *
-   * NOTE: This function can change the internal state of the DimensionIndexer.
-   *
-   * @param dimValues Single row val to process
-   *
-   * @param reportParseExceptions
-   * @return An array containing an encoded representation of the input row value.
+   * @param dimValues             Value(s) of the dimension in a row. This can
+   *                              either be a single value or a list of values
+   *                              (for multi-valued dimensions)
+   * @param reportParseExceptions true if parse exceptions should be reported,
+   *                              false otherwise
+   * @return Encoded dimension value(s) to be used as a component for the row key.
+   * Contains an object of the {@link EncodedKeyComponentType} and the effective
+   * size of the key component in bytes.
    */
-  @Nullable
-  EncodedKeyComponentType processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions);
+  EncodedKeyComponent<EncodedKeyComponentType> processRowValsToUnsortedEncodedKeyComponent(
+      @Nullable Object dimValues,
+      boolean reportParseExceptions
+  );
 
   /**
    * This method will be called while building an {@link IncrementalIndex} whenever a known dimension column (either
@@ -141,15 +149,6 @@ public interface DimensionIndexer
    * null or default value.
    */
   void setSparseIndexed();
-
-  /**
-   * Gives the estimated size in bytes for the given key
-   *
-   * @param key dimension value array from a TimeAndDims key
-   *
-   * @return the estimated size in bytes of the key
-   */
-  long estimateEncodedKeyComponentSize(EncodedKeyComponentType key);
 
   /**
    * Given an encoded value that was ordered by associated actual value, return the equivalent
@@ -176,7 +175,6 @@ public interface DimensionIndexer
    * @return Sorted index of actual values
    */
   CloseableIndexed<ActualType> getSortedIndexedValues();
-
 
   /**
    * Get the minimum dimension value seen by this indexer.
@@ -239,6 +237,12 @@ public interface DimensionIndexer
   );
 
   ColumnCapabilities getColumnCapabilities();
+
+  default ColumnFormat getFormat()
+  {
+    return CapabilitiesBasedFormat.forColumnIndexer(getColumnCapabilities());
+  }
+
   /**
    * Compares the row values for this DimensionIndexer's dimension from a Row key.
    *
@@ -304,6 +308,11 @@ public interface DimensionIndexer
    * is needed to be able to correctly map per-segment encoded values to global values on the next conversion step,
    * {@link DimensionMerger#convertSortedSegmentRowValuesToMergedRowValues}. The latter method requires sorted encoding
    * values on the input, because {@link DimensionMerger#writeMergedValueDictionary} takes sorted lookups as it's input.
+   *
+   * For columns which do not use the {@link DimensionMerger} to merge dictionary encoded values, this method should
+   * provide a selector which is compatible with the expectations of
+   * {@link DimensionMerger#processMergedRow(ColumnValueSelector)}, which might simply be to pass-through the 'unsorted'
+   * selector.
    */
   ColumnValueSelector convertUnsortedValuesToSorted(ColumnValueSelector selectorWithUnsortedValues);
 

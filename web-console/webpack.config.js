@@ -18,6 +18,7 @@
 
 const process = require('process');
 const path = require('path');
+const { SassString } = require('sass');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const webpack = require('webpack');
 
@@ -69,6 +70,15 @@ module.exports = env => {
     },
     target: 'web',
     resolve: {
+      alias: {
+        // ./node_modules/@blueprintjs/core/src/common/_mixins.scss imports color definitions
+        // from the "lib" folder in @blueprintjs/colors but we need to import it from the "src"
+        // folder. The "src" version includes "!default" in variable definitions, which allows
+        // us to override color variables, but the "lib" version does not.
+        //
+        // Maps './node_modules/@blueprintjs/colors/lib/scss/colors.scss' to './node_modules/@blueprintjs/colors/src/_colors.scss'
+        '@blueprintjs/colors/lib/scss/colors': '@blueprintjs/colors/src/_colors',
+      },
       extensions: ['.tsx', '.ts', '.js', '.scss', '.css'],
       fallback: {
         os: false,
@@ -124,7 +134,24 @@ module.exports = env => {
                 },
               },
             },
-            { loader: 'sass-loader' }, // compiles Sass to CSS, using Node Sass by default
+            {
+              // compiles Sass to CSS, using Dart Sass by default
+              loader: 'sass-loader',
+              options: {
+                sassOptions: {
+                  functions: {
+                    // Blueprint's usage of SCSS is dependent on 'node-sass', but we use Dart
+                    // Sass for broader compatibility across CPU architectures. Blueprint's build
+                    // process substitutes these 'svg-icon' functions with actual icons but we don't
+                    // have access to them at this point. None of the components that use svg icons
+                    // via CSS are themselves being used by the web console, so we can safely omit the icons.
+                    //
+                    // TODO: Re-evaluate after upgrading to Blueprint v5
+                    'svg-icon($_icon, $_path)': () => new SassString('transparent'),
+                  },
+                },
+              },
+            },
           ],
         },
         {

@@ -30,5 +30,5 @@ public interface LoadPeonCallback
    * is important to take extra measures to ensure that whatever side effects they expect to happen upon success
    * have happened. Coordinator will have a complete and correct view of the cluster in the next run period.
    */
-  void execute();
+  void execute(boolean success);
 }

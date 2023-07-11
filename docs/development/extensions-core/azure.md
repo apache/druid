@@ -23,7 +23,7 @@ title: "Microsoft Azure"
   -->
 
 
-To use this Apache Druid extension, make sure to [include](../../development/extensions.md#loading-extensions) `druid-azure-extensions` extension.
+To use this Apache Druid extension, [include](../../development/extensions.md#loading-extensions) `druid-azure-extensions` in the extensions load list.
 
 ## Deep Storage
 
@@ -33,7 +33,8 @@ To use this Apache Druid extension, make sure to [include](../../development/ext
 |--------|---------------|-----------|-------|
 |`druid.storage.type`|azure||Must be set.|
 |`druid.azure.account`||Azure Storage account name.|Must be set.|
-|`druid.azure.key`||Azure Storage account key.|Must be set.|
+|`druid.azure.key`||Azure Storage account key.|Optional. Either set key or sharedAccessStorageToken but not both.|
+|`druid.azure.sharedAccessStorageToken`||Azure Shared Storage access token|Optional. Either set key or sharedAccessStorageToken but not both.| 
 |`druid.azure.container`||Azure Storage container name.|Must be set.|
 |`druid.azure.prefix`|A prefix string that will be prepended to the blob names for the segments published to Azure deep storage| |""|
 |`druid.azure.protocol`|the protocol to use|http or https|https|

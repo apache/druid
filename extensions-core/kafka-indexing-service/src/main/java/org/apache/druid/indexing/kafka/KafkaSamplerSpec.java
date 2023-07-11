@@ -63,7 +63,7 @@ public class KafkaSamplerSpec extends SeekableStreamSamplerSpec
       props.put("auto.offset.reset", "none");
       props.put("request.timeout.ms", Integer.toString(samplerConfig.getTimeoutMs()));
 
-      return new KafkaRecordSupplier(props, objectMapper);
+      return new KafkaRecordSupplier(props, objectMapper, ((KafkaSupervisorIOConfig) ioConfig).getConfigOverrides());
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

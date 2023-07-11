@@ -31,7 +31,6 @@ import java.io.IOException;
  */
 public class SupervisorTaskCoordinatingSegmentAllocator implements SegmentAllocatorForBatch
 {
-  private final String supervisorTaskId;
   private final ParallelIndexSupervisorTaskClient taskClient;
   private final SequenceNameFunction sequenceNameFunction;
   private final boolean useLineageBasedSegmentAllocation;
@@ -42,7 +41,6 @@ public class SupervisorTaskCoordinatingSegmentAllocator implements SegmentAlloca
       boolean useLineageBasedSegmentAllocation
   )
   {
-    this.supervisorTaskId = supervisorTaskAccess.getSupervisorTaskId();
     this.taskClient = supervisorTaskAccess.getTaskClient();
     this.sequenceNameFunction = new LinearlyPartitionedSequenceNameFunction(taskId);
     this.useLineageBasedSegmentAllocation = useLineageBasedSegmentAllocation;
@@ -57,9 +55,9 @@ public class SupervisorTaskCoordinatingSegmentAllocator implements SegmentAlloca
   ) throws IOException
   {
     if (useLineageBasedSegmentAllocation) {
-      return taskClient.allocateSegment(supervisorTaskId, row.getTimestamp(), sequenceName, previousSegmentId);
+      return taskClient.allocateSegment(row.getTimestamp(), sequenceName, previousSegmentId);
     } else {
-      return taskClient.allocateSegment(supervisorTaskId, row.getTimestamp());
+      return taskClient.allocateSegment(row.getTimestamp());
     }
   }
 

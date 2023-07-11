@@ -19,22 +19,32 @@
 
 package org.apache.druid.segment.loading;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class OmniDataSegmentArchiver implements DataSegmentArchiver
 {
-  private final Map<String, DataSegmentArchiver> archivers;
+  private final Map<String, Supplier<DataSegmentArchiver>> archivers;
 
   @Inject
   public OmniDataSegmentArchiver(
-      Map<String, DataSegmentArchiver> archivers
+      Map<String, Provider<DataSegmentArchiver>> archivers
   )
   {
-    this.archivers = archivers;
+    this.archivers = new HashMap<>();
+    for (Map.Entry<String, Provider<DataSegmentArchiver>> entry : archivers.entrySet()) {
+      String type = entry.getKey();
+      Provider<DataSegmentArchiver> provider = entry.getValue();
+      this.archivers.put(type, Suppliers.memoize(provider::get));
+    }
   }
 
   @Override
@@ -52,12 +62,18 @@ public class OmniDataSegmentArchiver implements DataSegmentArchiver
   private DataSegmentArchiver getArchiver(DataSegment segment) throws SegmentLoadingException
   {
     String type = MapUtils.getString(segment.getLoadSpec(), "type");
-    DataSegmentArchiver archiver = archivers.get(type);
+    Supplier<DataSegmentArchiver> archiver = archivers.get(type);
 
     if (archiver == null) {
       throw new SegmentLoadingException("Unknown loader type[%s].  Known types are %s", type, archivers.keySet());
     }
 
-    return archiver;
+    return archiver.get();
+  }
+
+  @VisibleForTesting
+  public Map<String, Supplier<DataSegmentArchiver>> getArchivers()
+  {
+    return archivers;
   }
 }

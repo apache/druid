@@ -20,14 +20,15 @@
 package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rvesse.airline.annotations.Command;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
-import io.airlift.airline.Command;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Jerseys;
@@ -51,6 +52,8 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 
 import java.util.List;
+import java.util.Properties;
+import java.util.Set;
 
 @Command(
     name = CliCustomNodeRole.SERVICE_NAME,
@@ -63,10 +66,17 @@ public class CliCustomNodeRole extends ServerRunnable
   public static final String SERVICE_NAME = "custom-node-role";
   public static final int PORT = 9301;
   public static final int TLS_PORT = 9501;
+  public static final NodeRole NODE_ROLE = new NodeRole(CliCustomNodeRole.SERVICE_NAME);
 
   public CliCustomNodeRole()
   {
     super(LOG);
+  }
+
+  @Override
+  protected Set<NodeRole> getNodeRoles(Properties properties)
+  {
+    return ImmutableSet.of(NODE_ROLE);
   }
 
   @Override
@@ -84,9 +94,9 @@ public class CliCustomNodeRole extends ServerRunnable
           binder.bind(JettyServerInitializer.class).to(CustomJettyServiceInitializer.class).in(LazySingleton.class);
           LifecycleModule.register(binder, Server.class);
 
-          bindNodeRoleAndAnnouncer(
+          bindAnnouncer(
               binder,
-              DiscoverySideEffectsProvider.builder(new NodeRole(CliCustomNodeRole.SERVICE_NAME)).build()
+              DiscoverySideEffectsProvider.create()
           );
           Jerseys.addResource(binder, SelfDiscoveryResource.class);
           LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));

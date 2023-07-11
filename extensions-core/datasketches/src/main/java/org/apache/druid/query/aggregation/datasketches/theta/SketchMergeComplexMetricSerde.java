@@ -59,7 +59,7 @@ public class SketchMergeComplexMetricSerde extends ComplexMetricSerde
       public SketchHolder extractValue(InputRow inputRow, String metricName)
       {
         final Object object = inputRow.getRaw(metricName);
-        return object == null ? null : SketchHolder.deserialize(object);
+        return object == null ? null : SketchHolder.deserializeSafe(object);
       }
     };
   }

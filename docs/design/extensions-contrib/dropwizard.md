@@ -24,7 +24,7 @@ title: "Dropwizard metrics emitter"
 
 # Dropwizard Emitter
 
-To use this extension, make sure to [include](../../development/extensions.md#loading-extensions) `dropwizard-emitter` extension.
+To use this extension, make sure to [include](../../development/extensions.md#loading-extensions) `dropwizard-emitter` in the extensions load list.
 
 ## Introduction
 
@@ -628,6 +628,38 @@ Latest default metrics mapping can be found [here] (https://github.com/apache/dr
       "tier",
       "priority"
     ],
+    "type": "gauge"
+  },
+  "jetty/numOpenConnections": {
+    "dimensions": [],
+    "type": "gauge"
+  },
+  "jetty/threadPool/total": {
+    "dimensions": [],
+    "type": "gauge"
+  },
+  "jetty/threadPool/idle": {
+    "dimensions": [],
+    "type": "gauge"
+  },
+  "jetty/threadPool/busy": {
+    "dimensions": [],
+    "type": "gauge"
+  },
+  "jetty/threadPool/isLowOnThreads": {
+    "dimensions": [],
+    "type": "gauge"
+  },
+  "jetty/threadPool/min": {
+    "dimensions": [],
+    "type": "gauge"
+  },
+  "jetty/threadPool/max": {
+    "dimensions": [],
+    "type": "gauge"
+  },
+  "jetty/threadPool/queueSize": {
+    "dimensions": [],
     "type": "gauge"
   }
 }

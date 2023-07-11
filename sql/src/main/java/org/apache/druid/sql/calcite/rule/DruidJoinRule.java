@@ -43,6 +43,7 @@ import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
 import org.apache.druid.sql.calcite.rel.DruidRel;
@@ -59,12 +60,11 @@ import java.util.stream.Collectors;
 
 public class DruidJoinRule extends RelOptRule
 {
-  private static final DruidJoinRule INSTANCE = new DruidJoinRule(true);
-  private static final DruidJoinRule LEFT_SCAN_AS_QUERY = new DruidJoinRule(false);
 
   private final boolean enableLeftScanDirect;
+  private final PlannerContext plannerContext;
 
-  private DruidJoinRule(final boolean enableLeftScanDirect)
+  private DruidJoinRule(final PlannerContext plannerContext)
   {
     super(
         operand(
@@ -73,12 +73,13 @@ public class DruidJoinRule extends RelOptRule
             operand(DruidRel.class, any())
         )
     );
-    this.enableLeftScanDirect = enableLeftScanDirect;
+    this.enableLeftScanDirect = plannerContext.queryContext().getEnableJoinLeftScanDirect();
+    this.plannerContext = plannerContext;
   }
 
-  public static DruidJoinRule instance(boolean enableLeftScanDirect)
+  public static DruidJoinRule instance(PlannerContext plannerContext)
   {
-    return enableLeftScanDirect ? INSTANCE : LEFT_SCAN_AS_QUERY;
+    return new DruidJoinRule(plannerContext);
   }
 
   @Override
@@ -112,10 +113,15 @@ public class DruidJoinRule extends RelOptRule
 
     // Already verified to be present in "matches", so just call "get".
     // Can't be final, because we're going to reassign it up to a couple of times.
-    ConditionAnalysis conditionAnalysis = analyzeCondition(join.getCondition(), join.getLeft().getRowType(), right).get();
+    ConditionAnalysis conditionAnalysis = analyzeCondition(
+        join.getCondition(),
+        join.getLeft().getRowType(),
+        right
+    ).get();
     final boolean isLeftDirectAccessPossible = enableLeftScanDirect && (left instanceof DruidQueryRel);
 
-    if (left.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
+    if (!plannerContext.getJoinAlgorithm().requiresSubquery()
+        && left.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
         && (isLeftDirectAccessPossible || left.getPartialDruidQuery().getWhereFilter() == null)) {
       // Swap the left-side projection above the join, so the left side is a simple scan or mapping. This helps us
       // avoid subqueries.
@@ -137,7 +143,8 @@ public class DruidJoinRule extends RelOptRule
       leftFilter = null;
     }
 
-    if (right.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
+    if (!plannerContext.getJoinAlgorithm().requiresSubquery()
+        && right.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
         && right.getPartialDruidQuery().getWhereFilter() == null
         && !right.getPartialDruidQuery().getSelectProject().isMapping()
         && conditionAnalysis.onlyUsesMappingsFromRightProject(right.getPartialDruidQuery().getSelectProject())) {
@@ -147,10 +154,14 @@ public class DruidJoinRule extends RelOptRule
       final Project rightProject = right.getPartialDruidQuery().getSelectProject();
 
       // Right-side projection expressions rewritten to be on top of the join.
-      Iterables.addAll(
-          newProjectExprs,
-          RexUtil.shift(rightProject.getProjects(), newLeft.getRowType().getFieldCount())
-      );
+      for (final RexNode rexNode : RexUtil.shift(rightProject.getProjects(), newLeft.getRowType().getFieldCount())) {
+        if (join.getJoinType().generatesNullsOnRight()) {
+          newProjectExprs.add(makeNullableIfLiteral(rexNode, rexBuilder));
+        } else {
+          newProjectExprs.add(rexNode);
+        }
+      }
+
       newRight = right.withPartialQuery(PartialDruidQuery.create(rightScan));
       conditionAnalysis = conditionAnalysis.pushThroughRightProject(rightProject);
     } else {
@@ -178,7 +189,7 @@ public class DruidJoinRule extends RelOptRule
             join.isSemiJoinDone()
         ),
         leftFilter,
-        left.getQueryMaker()
+        left.getPlannerContext()
     );
 
     final RelBuilder relBuilder =
@@ -195,11 +206,24 @@ public class DruidJoinRule extends RelOptRule
     call.transformTo(relBuilder.build());
   }
 
+  private static RexNode makeNullableIfLiteral(final RexNode rexNode, final RexBuilder rexBuilder)
+  {
+    if (rexNode.isA(SqlKind.LITERAL)) {
+      return rexBuilder.makeLiteral(
+          RexLiteral.value(rexNode),
+          rexBuilder.getTypeFactory().createTypeWithNullability(rexNode.getType(), true),
+          false
+      );
+    } else {
+      return rexNode;
+    }
+  }
+
   /**
    * Returns whether {@link #analyzeCondition} would return something.
    */
   @VisibleForTesting
-  static boolean canHandleCondition(final RexNode condition, final RelDataType leftRowType, DruidRel<?> right)
+  boolean canHandleCondition(final RexNode condition, final RelDataType leftRowType, DruidRel<?> right)
   {
     return analyzeCondition(condition, leftRowType, right).isPresent();
   }
@@ -208,7 +232,11 @@ public class DruidJoinRule extends RelOptRule
    * If this condition is an AND of some combination of (1) literals; (2) equality conditions of the form
    * {@code f(LeftRel) = RightColumn}, then return a {@link ConditionAnalysis}.
    */
-  private static Optional<ConditionAnalysis> analyzeCondition(final RexNode condition, final RelDataType leftRowType, DruidRel<?> right)
+  private Optional<ConditionAnalysis> analyzeCondition(
+      final RexNode condition,
+      final RelDataType leftRowType,
+      final DruidRel<?> right
+  )
   {
     final List<RexNode> subConditions = decomposeAnd(condition);
     final List<Pair<RexNode, RexInputRef>> equalitySubConditions = new ArrayList<>();
@@ -240,6 +268,10 @@ public class DruidJoinRule extends RelOptRule
 
       if (!subCondition.isA(SqlKind.EQUALS)) {
         // If it's not EQUALS, it's not supported.
+        plannerContext.setPlanningError(
+            "SQL requires a join with '%s' condition that is not supported.",
+            subCondition.getKind()
+        );
         return Optional.empty();
       }
 
@@ -255,13 +287,15 @@ public class DruidJoinRule extends RelOptRule
         rightColumns.add((RexInputRef) operands.get(0));
       } else {
         // Cannot handle this condition.
+        plannerContext.setPlanningError("SQL is resulting in a join that has unsupported operand types.");
         return Optional.empty();
       }
     }
 
-    // if the the right side requires a subquery, then even lookup will transformed to a QueryDataSource
+    // if the right side requires a subquery, then even lookup will be transformed to a QueryDataSource
     // thereby allowing join conditions on both k and v columns of the lookup
-    if (right != null && !DruidJoinQueryRel.computeRightRequiresSubquery(DruidJoinQueryRel.getSomeDruidChild(right))
+    if (right != null
+        && !DruidJoinQueryRel.computeRightRequiresSubquery(plannerContext, DruidJoinQueryRel.getSomeDruidChild(right))
         && right instanceof DruidQueryRel) {
       DruidQueryRel druidQueryRel = (DruidQueryRel) right;
       if (druidQueryRel.getDruidTable().getDataSource() instanceof LookupDataSource) {
@@ -269,6 +303,8 @@ public class DruidJoinRule extends RelOptRule
         if (distinctRightColumns > 1) {
           // it means that the join's right side is lookup and the join condition contains both key and value columns of lookup.
           // currently, the lookup datasource in the native engine doesn't support using value column in the join condition.
+          plannerContext.setPlanningError(
+              "SQL is resulting in a join involving lookup where value column is used in the condition.");
           return Optional.empty();
         }
       }
@@ -303,8 +339,15 @@ public class DruidJoinRule extends RelOptRule
     return retVal;
   }
 
-  private static boolean isLeftExpression(final RexNode rexNode, final int numLeftFields)
+  private boolean isLeftExpression(final RexNode rexNode, final int numLeftFields)
   {
+    if (!plannerContext.getJoinAlgorithm().canHandleLeftExpressions()) {
+      // Must be INPUT_REF.
+      if (!rexNode.isA(SqlKind.INPUT_REF)) {
+        return false;
+      }
+    }
+
     return ImmutableBitSet.range(numLeftFields).contains(RelOptUtil.InputFinder.bits(rexNode));
   }
 

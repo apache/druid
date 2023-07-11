@@ -16,15 +16,9 @@
  * limitations under the License.
  */
 
-import { sane } from 'druid-query-toolkit/build/test-utils';
+import { sane } from 'druid-query-toolkit';
 
-import {
-  DruidError,
-  getDruidErrorMessage,
-  parseHtmlError,
-  parseQueryPlan,
-  trimSemicolon,
-} from './druid-query';
+import { DruidError, getDruidErrorMessage } from './druid-query';
 
 describe('DruidQuery', () => {
   describe('DruidError.parsePosition', () => {
@@ -157,31 +151,16 @@ describe('DruidQuery', () => {
     });
 
     it('works for incorrectly quoted AS alias', () => {
-      const sql = sane`
-        SELECT
-          channel,
-          COUNT(*) AS 'Count'
-        FROM wikipedia
-        GROUP BY 1
-        ORDER BY 2 DESC
-      `;
-      const suggestion = DruidError.getSuggestion(
-        `Encountered "\\'Count\\'" at line 3, column 15...`,
+      const suggestion = DruidError.getSuggestion(`Encountered "AS \\'c\\'" at line 1, column 16.`);
+      expect(suggestion!.label).toEqual(`Replace 'c' with "c"`);
+      expect(suggestion!.fn(`SELECT channel AS 'c' FROM wikipedia`)).toEqual(
+        `SELECT channel AS "c" FROM wikipedia`,
       );
-      expect(suggestion!.label).toEqual(`Replace 'Count' with "Count"`);
-      expect(suggestion!.fn(sql)).toEqual(sane`
-        SELECT
-          channel,
-          COUNT(*) AS "Count"
-        FROM wikipedia
-        GROUP BY 1
-        ORDER BY 2 DESC
-      `);
     });
 
     it('removes comma (,) before FROM', () => {
       const suggestion = DruidError.getSuggestion(
-        `Encountered "FROM" at line 1, column 14. Was expecting one of: "ABS" ...`,
+        `Encountered ", FROM" at line 1, column 12. Was expecting one of: "ABS" ...`,
       );
       expect(suggestion!.label).toEqual(`Remove , before FROM`);
       expect(suggestion!.fn(`SELECT page, FROM wikipedia WHERE channel = '#ar.wikipedia'`)).toEqual(
@@ -203,7 +182,7 @@ describe('DruidQuery', () => {
 
     it('removes trailing semicolon (;)', () => {
       const suggestion = DruidError.getSuggestion(
-        `Encountered ";" at line 1, column 14. Was expecting one of: "ABS" ...`,
+        `Encountered ";" at line 1, column 59. Was expecting one of: "ABS" ...`,
       );
       expect(suggestion!.label).toEqual(`Remove trailing ;`);
       expect(suggestion!.fn(`SELECT page FROM wikipedia WHERE channel = '#ar.wikipedia';`)).toEqual(
@@ -219,25 +198,41 @@ describe('DruidQuery', () => {
     });
   });
 
-  describe('misc', () => {
-    it('parseHtmlError', () => {
-      expect(parseHtmlError('<div></div>')).toMatchInlineSnapshot(`undefined`);
+  describe('getDruidErrorMessage', () => {
+    it('works with regular error response', () => {
+      expect(
+        getDruidErrorMessage({
+          response: {
+            data: {
+              error: 'SQL parse failed',
+              errorMessage: 'Encountered "<EOF>" at line 1, column 26.\nWas expecting one of:...',
+              errorClass: 'org.apache.calcite.sql.parser.SqlParseException',
+              host: null,
+            },
+          },
+        }),
+      ).toEqual(`SQL parse failed / Encountered "<EOF>" at line 1, column 26.
+Was expecting one of:... / org.apache.calcite.sql.parser.SqlParseException`);
     });
 
-    it('parseHtmlError', () => {
-      expect(getDruidErrorMessage({})).toMatchInlineSnapshot(`undefined`);
-    });
-
-    it('parseQueryPlan', () => {
-      expect(parseQueryPlan('start')).toMatchInlineSnapshot(`"start"`);
-    });
-  });
-
-  describe('.trimSemicolon', () => {
-    it('works', () => {
-      expect(trimSemicolon('SELECT * FROM tbl;')).toEqual('SELECT * FROM tbl');
-      expect(trimSemicolon('SELECT * FROM tbl;   ')).toEqual('SELECT * FROM tbl   ');
-      expect(trimSemicolon('SELECT * FROM tbl; --hello  ')).toEqual('SELECT * FROM tbl --hello  ');
+    it('works with task error response', () => {
+      expect(
+        getDruidErrorMessage({
+          response: {
+            data: {
+              taskId: '60a761ee-1ef5-437f-ae4c-adcc78c8a94c',
+              state: 'FAILED',
+              error: {
+                error: 'SQL parse failed',
+                errorMessage: 'Encountered "<EOF>" at line 1, column 26.\nWas expecting one of:...',
+                errorClass: 'org.apache.calcite.sql.parser.SqlParseException',
+                host: null,
+              },
+            },
+          },
+        }),
+      ).toEqual(`SQL parse failed / Encountered "<EOF>" at line 1, column 26.
+Was expecting one of:... / org.apache.calcite.sql.parser.SqlParseException`);
     });
   });
 });

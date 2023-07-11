@@ -60,7 +60,7 @@ public class ArrayOfDoublesSketchMergeComplexMetricSerde extends ComplexMetricSe
         if (object == null || object instanceof ArrayOfDoublesSketch) {
           return object;
         }
-        return ArrayOfDoublesSketchOperations.deserialize(object);
+        return ArrayOfDoublesSketchOperations.deserializeSafe(object);
       }
     };
   }

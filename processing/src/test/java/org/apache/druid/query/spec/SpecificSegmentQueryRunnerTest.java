@@ -21,6 +21,7 @@ package org.apache.druid.query.spec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -181,6 +182,8 @@ public class SpecificSegmentQueryRunnerTest
                                           new CountAggregatorFactory("rows")
                                       )
                                   )
+                                  // Do one test with CTX_SET_THREAD_NAME = false.
+                                  .context(ImmutableMap.of(SpecificSegmentQueryRunner.CTX_SET_THREAD_NAME, false))
                                   .build();
     Sequence results = queryRunner.run(QueryPlus.wrap(query), responseContext);
     List<Result<TimeseriesResultValue>> res = results.toList();
@@ -197,17 +200,11 @@ public class SpecificSegmentQueryRunnerTest
   private void validate(ObjectMapper mapper, SegmentDescriptor descriptor, ResponseContext responseContext)
       throws IOException
   {
-    Object missingSegments = responseContext.get(ResponseContext.Key.MISSING_SEGMENTS);
-
+    List<SegmentDescriptor> missingSegments = responseContext.getMissingSegments();
     Assert.assertTrue(missingSegments != null);
-    Assert.assertTrue(missingSegments instanceof List);
 
-    Object segmentDesc = ((List) missingSegments).get(0);
-
-    Assert.assertTrue(segmentDesc instanceof SegmentDescriptor);
-
+    SegmentDescriptor segmentDesc = missingSegments.get(0);
     SegmentDescriptor newDesc = mapper.readValue(mapper.writeValueAsString(segmentDesc), SegmentDescriptor.class);
-
     Assert.assertEquals(descriptor, newDesc);
   }
 }

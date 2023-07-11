@@ -19,11 +19,11 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { Capabilities } from '../../../utils';
+import { Capabilities } from '../../../helpers';
 
 import { LookupsCard } from './lookups-card';
 
-describe('lookups card', () => {
+describe('LookupsCard', () => {
   it('matches snapshot', () => {
     const lookupsCard = <LookupsCard capabilities={Capabilities.FULL} />;
 

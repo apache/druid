@@ -51,6 +51,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
@@ -59,6 +60,7 @@ import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataActi
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
+import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.input.InputRowSchemas;
@@ -72,6 +74,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
@@ -265,7 +268,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     catch (Exception e) {
       log.error(e, "Encountered exception while running task.");
       final String errorMsg = Throwables.getStackTraceAsString(e);
-      toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(errorMsg));
+      toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(errorMsg, 0L));
       return TaskStatus.failure(
           task.getId(),
           errorMsg
@@ -391,7 +394,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         null
     );
     this.fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
-    toolbox.addMonitor(TaskRealtimeMetricsMonitorBuilder.build(task, fireDepartmentForMetrics, rowIngestionMeters));
+    TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(task, fireDepartmentForMetrics, rowIngestionMeters);
+    toolbox.addMonitor(metricsMonitor);
 
     final String lookupTier = task.getContextValue(RealtimeIndexTask.CTX_KEY_LOOKUP_TIER);
     final LookupNodeService lookupNodeService = lookupTier == null ?
@@ -408,6 +412,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     );
 
     Throwable caughtExceptionOuter = null;
+
+    //milliseconds waited for created segments to be handed off
+    long handoffWaitMs = 0L;
+
     try (final RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier = task.newTaskRecordSupplier()) {
 
       if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
@@ -432,13 +440,20 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                     )
                 ).isOk();
               } else {
-                return toolbox.getTaskActionClient().submit(
+                final TaskLock lock = toolbox.getTaskActionClient().submit(
                     new TimeChunkLockAcquireAction(
                         TaskLockType.EXCLUSIVE,
                         segmentId.getInterval(),
                         1000L
                     )
-                ) != null;
+                );
+                if (lock == null) {
+                  return false;
+                }
+                if (lock.isRevoked()) {
+                  throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", segmentId.getInterval()));
+                }
+                return true;
               }
             }
             catch (IOException e) {
@@ -754,6 +769,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
       finally {
         try {
+          // To handle cases where tasks stop reading due to stop request or exceptions
+          fireDepartmentMetrics.markProcessingDone();
           driver.persist(committerSupplier.get()); // persist pending data
         }
         catch (Exception e) {
@@ -811,6 +828,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       if (tuningConfig.getHandoffConditionTimeout() == 0) {
         handedOffList = Futures.allAsList(handOffWaitList).get();
       } else {
+        final long start = System.nanoTime();
         try {
           handedOffList = Futures.allAsList(handOffWaitList)
                                  .get(tuningConfig.getHandoffConditionTimeout(), TimeUnit.MILLISECONDS);
@@ -822,6 +840,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
              .addData("taskId", task.getId())
              .addData("handoffConditionTimeout", tuningConfig.getHandoffConditionTimeout())
              .emit();
+        }
+        finally {
+          handoffWaitMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
         }
       }
 
@@ -878,12 +899,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     }
     finally {
       try {
-
         if (driver != null) {
           driver.close();
         }
         toolbox.getChatHandlerProvider().unregister(task.getId());
-
+        toolbox.removeMonitor(metricsMonitor);
         if (toolbox.getAppenderatorsManager().shouldTaskMakeNodeAnnouncements()) {
           toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
           toolbox.getDataSegmentServerAnnouncer().unannounce();
@@ -898,7 +918,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
     }
 
-    toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null));
+    toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null, handoffWaitMs));
     return TaskStatus.success(task.getId());
   }
 
@@ -1008,6 +1028,17 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                   }
                 }
             );
+            // emit segment count metric:
+            int segmentCount = 0;
+            if (publishedSegmentsAndCommitMetadata != null
+                && publishedSegmentsAndCommitMetadata.getSegments() != null) {
+              segmentCount = publishedSegmentsAndCommitMetadata.getSegments().size();
+            }
+            task.emitMetric(
+                toolbox.getEmitter(),
+                "ingest/segments/count",
+                segmentCount
+            );
           }
 
           @Override
@@ -1060,9 +1091,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * was not successful.
    *
    * @param errorMsg Nullable error message for the task. null if task succeeded.
+   * @param handoffWaitMs Milliseconds waited for segments to be handed off.
    * @return Map of reports for the task.
    */
-  private Map<String, TaskReport> getTaskCompletionReports(@Nullable String errorMsg)
+  private Map<String, TaskReport> getTaskCompletionReports(@Nullable String errorMsg, long handoffWaitMs)
   {
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
@@ -1072,7 +1104,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 getTaskCompletionUnparseableEvents(),
                 getTaskCompletionRowStats(),
                 errorMsg,
-                errorMsg == null
+                errorMsg == null,
+                handoffWaitMs
             )
         )
     );
@@ -1081,8 +1114,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
-    List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptions()
+    List<ParseExceptionReport> buildSegmentsParseExceptionMessages = IndexTaskUtils.getReportListFromSavedParseExceptions(
+        parseExceptionHandler.getSavedParseExceptionReports()
     );
     if (buildSegmentsParseExceptionMessages != null) {
       unparseableEventsMap.put(RowIngestionMeters.BUILD_SEGMENTS, buildSegmentsParseExceptionMessages);
@@ -1189,7 +1222,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     sequences.add(sequenceMetadata);
   }
 
-  private SequenceMetadata<PartitionIdType, SequenceOffsetType> getLastSequenceMetadata()
+  @VisibleForTesting
+  public SequenceMetadata<PartitionIdType, SequenceOffsetType> getLastSequenceMetadata()
   {
     Preconditions.checkState(!sequences.isEmpty(), "Empty sequences");
     return sequences.get(sequences.size() - 1);
@@ -1221,10 +1255,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       final SequenceOffsetType endSequenceNumber
   )
   {
-    final int compareToEnd = createSequenceNumber(recordSequenceNumber)
-        .compareTo(createSequenceNumber(endSequenceNumber));
-
-    return isEndOffsetExclusive() ? compareToEnd < 0 : compareToEnd <= 0;
+    return createSequenceNumber(recordSequenceNumber).isMoreToReadBeforeReadingRecord(
+        createSequenceNumber(endSequenceNumber),
+        isEndOffsetExclusive()
+    );
   }
 
   /**
@@ -1279,14 +1313,16 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         status = Status.PAUSED;
         hasPaused.signalAll();
 
-        log.debug("Received pause command, pausing ingestion until resumed.");
+        long pauseTime = System.currentTimeMillis();
+        log.info("Received pause command, pausing ingestion until resumed.");
         while (pauseRequested) {
           shouldResume.await();
         }
 
         status = Status.READING;
         shouldResume.signalAll();
-        log.debug("Received resume command, resuming ingestion.");
+        log.info("Received resume command, resuming ingestion.");
+        task.emitMetric(toolbox.getEmitter(), "ingest/pause/time", System.currentTimeMillis() - pauseTime);
         return true;
       }
     }
@@ -1566,8 +1602,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   )
   {
     authorizationCheck(req, Action.READ);
-    List<String> events = IndexTaskUtils.getMessagesFromSavedParseExceptions(
-        parseExceptionHandler.getSavedParseExceptions()
+    List<ParseExceptionReport> events = IndexTaskUtils.getReportListFromSavedParseExceptions(
+        parseExceptionHandler.getSavedParseExceptionReports()
     );
     return Response.ok(events).build();
   }
@@ -1616,10 +1652,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
              && !finish)
             || (latestSequence.getEndOffsets().equals(sequenceNumbers) && finish)) {
           log.warn("Ignoring duplicate request, end offsets already set for sequences [%s]", sequenceNumbers);
+          resetNextCheckpointTime();
           resume();
           return Response.ok(sequenceNumbers).build();
         } else if (latestSequence.isCheckpointed()) {
           return Response.status(Response.Status.BAD_REQUEST)
+                         .type(MediaType.TEXT_PLAIN)
                          .entity(StringUtils.format(
                              "Sequence [%s] has already endOffsets set, cannot set to [%s]",
                              latestSequence,
@@ -1732,7 +1770,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   /**
    * Signals the ingestion loop to pause.
    *
-   * @return one of the following Responses: 400 Bad Request if the task has started publishing; 202 Accepted if the
+   * @return one of the following Responses: 409 Bad Request if the task has started publishing; 202 Accepted if the
    * method has timed out and returned before the task has paused; 200 OK with a map of the current partition sequences
    * in the response body if the task successfully paused
    */
@@ -1751,7 +1789,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   public Response pause() throws InterruptedException
   {
     if (!(status == Status.PAUSED || status == Status.READING)) {
-      return Response.status(Response.Status.BAD_REQUEST)
+      return Response.status(Response.Status.CONFLICT)
+                     .type(MediaType.TEXT_PLAIN)
                      .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
                      .build();
     }
@@ -1833,6 +1872,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     authorizationCheck(req, Action.WRITE);
     return startTime;
+  }
+
+  @VisibleForTesting
+  public long getNextCheckpointTime()
+  {
+    return nextCheckpointTime;
   }
 
   /**

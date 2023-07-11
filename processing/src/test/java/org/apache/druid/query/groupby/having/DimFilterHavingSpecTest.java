@@ -20,13 +20,15 @@
 package org.apache.druid.query.groupby.having;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -39,7 +41,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class DimFilterHavingSpecTest
@@ -73,7 +74,7 @@ public class DimFilterHavingSpecTest
                     .setDataSource("dummy")
                     .setInterval("1000/3000")
                     .setGranularity(Granularities.ALL)
-                    .setDimensions(new DefaultDimensionSpec("foo", "foo", ValueType.LONG))
+                    .setDimensions(new DefaultDimensionSpec("foo", "foo", ColumnType.LONG))
                     .build()
     );
 
@@ -85,7 +86,7 @@ public class DimFilterHavingSpecTest
   @Ignore // Doesn't always pass. The check in "eval" is best effort and not guaranteed to detect concurrent usage.
   public void testConcurrentUsage() throws Exception
   {
-    final ExecutorService exec = Executors.newFixedThreadPool(2);
+    final ExecutorService exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(2, "DimFilterHavingSpecTest-%d"));
     final DimFilterHavingSpec havingSpec = new DimFilterHavingSpec(new SelectorDimFilter("foo", "1", null), null);
     final List<Future<?>> futures = new ArrayList<>();
 

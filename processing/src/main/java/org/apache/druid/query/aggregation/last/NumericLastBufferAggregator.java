@@ -89,6 +89,9 @@ public abstract class NumericLastBufferAggregator<TSelector extends BaseNullable
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
+    if (timeSelector.isNull()) {
+      return;
+    }
     long time = timeSelector.getLong();
     long lastTime = buf.getLong(position);
     if (time >= lastTime) {

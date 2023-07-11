@@ -19,8 +19,6 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -72,20 +70,19 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   private final boolean suspended;
   protected final SupervisorStateManagerConfig supervisorStateManagerConfig;
 
-  @JsonCreator
   public SeekableStreamSupervisorSpec(
-      @JsonProperty("spec") final SeekableStreamSupervisorIngestionSpec ingestionSchema,
-      @JsonProperty("context") @Nullable Map<String, Object> context,
-      @JsonProperty("suspended") Boolean suspended,
-      @JacksonInject TaskStorage taskStorage,
-      @JacksonInject TaskMaster taskMaster,
-      @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
-      @JacksonInject SeekableStreamIndexTaskClientFactory indexTaskClientFactory,
-      @JacksonInject @Json ObjectMapper mapper,
-      @JacksonInject ServiceEmitter emitter,
-      @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      @JacksonInject SupervisorStateManagerConfig supervisorStateManagerConfig
+      final SeekableStreamSupervisorIngestionSpec ingestionSchema,
+      @Nullable Map<String, Object> context,
+      Boolean suspended,
+      TaskStorage taskStorage,
+      TaskMaster taskMaster,
+      IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
+      SeekableStreamIndexTaskClientFactory indexTaskClientFactory,
+      @Json ObjectMapper mapper,
+      ServiceEmitter emitter,
+      DruidMonitorSchedulerConfig monitorSchedulerConfig,
+      RowIngestionMetersFactory rowIngestionMetersFactory,
+      SupervisorStateManagerConfig supervisorStateManagerConfig
   )
   {
     this.ingestionSchema = checkIngestionSchema(ingestionSchema);
@@ -135,6 +132,12 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     return context;
   }
 
+  @Nullable
+  public <ContextValueType> ContextValueType getContextValue(String key)
+  {
+    return context == null ? null : (ContextValueType) context.get(key);
+  }
+
   public ServiceEmitter getEmitter()
   {
     return emitter;
@@ -162,7 +165,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   @Override
   public SupervisorTaskAutoScaler createAutoscaler(Supervisor supervisor)
   {
-    AutoScalerConfig autoScalerConfig = ingestionSchema.getIOConfig().getAutoscalerConfig();
+    AutoScalerConfig autoScalerConfig = ingestionSchema.getIOConfig().getAutoScalerConfig();
     if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler() && supervisor instanceof SeekableStreamSupervisor) {
       return autoScalerConfig.createAutoScaler(supervisor, this);
     }

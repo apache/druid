@@ -22,15 +22,16 @@ package org.apache.druid.sql.calcite.aggregation.builtin;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.UnsupportedSQLQueryException;
 
 public class MaxSqlAggregator extends SimpleSqlAggregator
 {
@@ -45,31 +46,32 @@ public class MaxSqlAggregator extends SimpleSqlAggregator
       final String name,
       final AggregateCall aggregateCall,
       final ExprMacroTable macroTable,
-      final String fieldName,
-      final String expression
+      final String fieldName
   )
   {
-    final ValueType valueType = Calcites.getValueTypeForRelDataType(aggregateCall.getType());
-    return Aggregation.create(createMaxAggregatorFactory(valueType, name, fieldName, expression, macroTable));
+    final ColumnType valueType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());
+    if (valueType == null) {
+      return null;
+    }
+    return Aggregation.create(createMaxAggregatorFactory(valueType.getType(), name, fieldName, macroTable));
   }
 
   private static AggregatorFactory createMaxAggregatorFactory(
       final ValueType aggregationType,
       final String name,
       final String fieldName,
-      final String expression,
       final ExprMacroTable macroTable
   )
   {
     switch (aggregationType) {
       case LONG:
-        return new LongMaxAggregatorFactory(name, fieldName, expression, macroTable);
+        return new LongMaxAggregatorFactory(name, fieldName, null, macroTable);
       case FLOAT:
-        return new FloatMaxAggregatorFactory(name, fieldName, expression, macroTable);
+        return new FloatMaxAggregatorFactory(name, fieldName, null, macroTable);
       case DOUBLE:
-        return new DoubleMaxAggregatorFactory(name, fieldName, expression, macroTable);
+        return new DoubleMaxAggregatorFactory(name, fieldName, null, macroTable);
       default:
-        throw new ISE("Cannot create aggregator factory for type[%s]", aggregationType);
+        throw new UnsupportedSQLQueryException("Max aggregation is not supported for '%s' type", aggregationType);
     }
   }
 }

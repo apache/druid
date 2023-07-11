@@ -21,13 +21,15 @@ package org.apache.druid.indexing.worker.shuffle;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteSource;
+import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
@@ -67,26 +69,17 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
     final WorkerConfig workerConfig = new WorkerConfig();
     intermediarySegmentsLocation = tempDir.newFolder();
     siblingLocation = tempDir.newFolder();
-    final TaskConfig taskConfig = new TaskConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        false,
-        null,
-        null,
-        ImmutableList.of(new StorageLocationConfig(intermediarySegmentsLocation, 600L, null)),
-        false,
-        false
-    );
-    final IndexingServiceClient indexingServiceClient = new NoopIndexingServiceClient();
-    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, indexingServiceClient);
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(intermediarySegmentsLocation, 1200L, null)))
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
+    final OverlordClient overlordClient = new NoopOverlordClient();
+    intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
     intermediaryDataManager.start();
   }
 
   @After
-  public void teardown() throws InterruptedException
+  public void teardown()
   {
     intermediaryDataManager.stop();
   }
@@ -232,6 +225,7 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
     // Each file size is 138 bytes after compression
     final File segmentDir = tempDir.newFolder();
     FileUtils.write(new File(segmentDir, fileName), "test data.", StandardCharsets.UTF_8);
+    FileUtils.writeByteArrayToFile(new File(segmentDir, "version.bin"), Ints.toByteArray(9));
     return segmentDir;
   }
 

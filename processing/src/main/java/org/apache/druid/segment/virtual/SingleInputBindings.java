@@ -20,6 +20,7 @@
 package org.apache.druid.segment.virtual;
 
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 
@@ -27,6 +28,13 @@ public class SingleInputBindings implements Expr.ObjectBinding
 {
   @Nullable
   private Object value;
+
+  private final ExpressionType type;
+
+  public SingleInputBindings(ExpressionType type)
+  {
+    this.type = type;
+  }
 
   @Override
   public Object get(final String name)
@@ -37,5 +45,12 @@ public class SingleInputBindings implements Expr.ObjectBinding
   public void set(@Nullable final Object value)
   {
     this.value = value;
+  }
+
+  @Nullable
+  @Override
+  public ExpressionType getType(String name)
+  {
+    return type;
   }
 }

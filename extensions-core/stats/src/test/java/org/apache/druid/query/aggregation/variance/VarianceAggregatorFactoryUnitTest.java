@@ -26,7 +26,7 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -101,7 +101,7 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
   @Test
   public void factorizeVectorForComplexShouldReturnObjectVectorAggregator()
   {
-    mockType(ValueType.COMPLEX);
+    mockType(VarianceAggregatorFactory.TYPE);
     VectorAggregator agg = target.factorizeVector(selectorFactory);
     Assert.assertNotNull(agg);
     Assert.assertEquals(VarianceObjectVectorAggregator.class, agg.getClass());
@@ -110,7 +110,7 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
   @Test
   public void factorizeBufferedForComplexShouldReturnObjectVectorAggregator()
   {
-    mockType(ValueType.COMPLEX);
+    mockType(VarianceAggregatorFactory.TYPE);
     BufferAggregator agg = target.factorizeBuffered(metricFactory);
     Assert.assertNotNull(agg);
     Assert.assertEquals(VarianceBufferAggregator.ObjectVarianceAggregator.class, agg.getClass());
@@ -119,7 +119,7 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
   @Test
   public void factorizeForComplexShouldReturnObjectVectorAggregator()
   {
-    mockType(ValueType.COMPLEX);
+    mockType(VarianceAggregatorFactory.TYPE);
     Aggregator agg = target.factorize(metricFactory);
     Assert.assertNotNull(agg);
     Assert.assertEquals(VarianceAggregator.ObjectVarianceAggregator.class, agg.getClass());
@@ -147,10 +147,10 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
                   .verify();
   }
 
-  private void mockType(ValueType type)
+  private void mockType(ColumnType type)
   {
     Mockito.doReturn(capabilities).when(selectorFactory).getColumnCapabilities(FIELD_NAME);
     Mockito.doReturn(capabilities).when(metricFactory).getColumnCapabilities(FIELD_NAME);
-    Mockito.doReturn(type).when(capabilities).getType();
+    Mockito.doReturn(type.getType()).when(capabilities).getType();
   }
 }

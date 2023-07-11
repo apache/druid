@@ -26,19 +26,20 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
-import org.apache.druid.client.indexing.NoopIndexingServiceClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.common.IndexingServiceCondition;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
-import org.apache.druid.indexing.common.TestRealtimeTask;
+import org.apache.druid.indexing.common.TestIndexTask;
 import org.apache.druid.indexing.common.TestTasks;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
+import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
@@ -48,7 +49,7 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
@@ -88,14 +89,14 @@ public class WorkerTaskMonitorTest
   private Worker worker;
   private final TestUtils testUtils;
   private ObjectMapper jsonMapper;
-  private IndexMergerV9 indexMergerV9;
+  private IndexMergerV9Factory indexMergerV9Factory;
   private IndexIO indexIO;
 
   public WorkerTaskMonitorTest()
   {
     testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
-    indexMergerV9 = testUtils.getTestIndexMergerV9();
+    indexMergerV9Factory = testUtils.getIndexMergerV9Factory();
     indexIO = testUtils.getTestIndexIO();
   }
 
@@ -145,7 +146,7 @@ public class WorkerTaskMonitorTest
     // Start a task monitor
     workerTaskMonitor = createTaskMonitor();
     TestTasks.registerSubtypes(jsonMapper);
-    jsonMapper.registerSubtypes(new NamedType(TestRealtimeTask.class, "test_realtime"));
+    jsonMapper.registerSubtypes(new NamedType(TestIndexTask.class, "test_index"));
     workerTaskMonitor.start();
 
     task = TestTasks.immediateSuccess("test");
@@ -153,19 +154,12 @@ public class WorkerTaskMonitorTest
 
   private WorkerTaskMonitor createTaskMonitor()
   {
-    final TaskConfig taskConfig = new TaskConfig(
-        FileUtils.createTempDir().toString(),
-        null,
-        null,
-        0,
-        null,
-        false,
-        null,
-        null,
-        null,
-        false,
-        false
-    );
+    final TaskConfig taskConfig = new TaskConfigBuilder()
+        .setBaseDir(FileUtils.createTempDir().toString())
+        .setDefaultRowFlushBoundary(0)
+        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
+        .build();
+
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
     EasyMock.expect(taskActionClientFactory.create(EasyMock.anyObject())).andReturn(taskActionClient).anyTimes();
@@ -196,7 +190,7 @@ public class WorkerTaskMonitorTest
                 null,
                 null,
                 null,
-                indexMergerV9,
+                indexMergerV9Factory,
                 null,
                 null,
                 null,
@@ -207,10 +201,12 @@ public class WorkerTaskMonitorTest
                 new NoopChatHandlerProvider(),
                 testUtils.getRowIngestionMetersFactory(),
                 new TestAppenderatorsManager(),
-                new NoopIndexingServiceClient(),
+                new NoopOverlordClient(),
                 null,
                 null,
-                null
+                null,
+                null,
+                "1"
             ),
             taskConfig,
             new NoopServiceEmitter(),

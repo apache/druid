@@ -37,7 +37,7 @@ public interface SegmentAllocator
    *                                When skipSegmentLineageCheck is false, this can be null if it is the first call
    *                                for the same sequenceName.
    *                                When skipSegmentLineageCheck is true, this will be ignored.
-   * @param skipSegmentLineageCheck if true, perform lineage validation using previousSegmentId for this sequence.
+   * @param skipSegmentLineageCheck if false, perform lineage validation using previousSegmentId for this sequence.
    *                                Should be set to false if replica tasks would index events in same order
    *
    * @return the pending segment identifier, or null if it was impossible to allocate a new segment

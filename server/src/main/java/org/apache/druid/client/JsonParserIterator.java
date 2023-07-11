@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
@@ -35,6 +34,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -75,7 +75,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     this.future = future;
     this.url = url;
     if (query != null) {
-      this.timeoutAt = query.<Long>getContextValue(DirectDruidClient.QUERY_FAIL_TIME, -1L);
+      this.timeoutAt = query.context().getLong(DirectDruidClient.QUERY_FAIL_TIME, -1L);
       this.queryId = query.getId();
     } else {
       this.timeoutAt = -1;
@@ -96,7 +96,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
       return false;
     }
     if (jp.getCurrentToken() == JsonToken.END_ARRAY) {
-      CloseQuietly.close(jp);
+      CloseableUtils.closeAndWrapExceptions(jp);
       return false;
     }
 
@@ -168,7 +168,11 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
         } else if (checkTimeout()) {
           throw timeoutQuery();
         } else {
-          // TODO: NettyHttpClient should check the actual cause of the failure and set it in the future properly.
+          // The InputStream is null and we have not timed out, there might be multiple reasons why we could hit this
+          // condition, guess that we are hitting it because of scatter-gather bytes.  It would be better to be more
+          // explicit about why errors are happening than guessing, but this comment is being rewritten from a T-O-D-O,
+          // so the intent is just to document this better rather than do all of the logic to fix it.  If/when we get
+          // this exception thrown for other reasons, it would be great to document what other reasons this can happen.
           throw ResourceLimitExceededException.withMessage(
               "Possibly max scatter-gather bytes limit reached while reading from url[%s].",
               url
@@ -207,11 +211,11 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
   /**
    * Converts the given exception to a proper type of {@link QueryException}.
    * The use cases of this method are:
-   *
+   * <p>
    * - All non-QueryExceptions are wrapped with {@link QueryInterruptedException}.
    * - The QueryException from {@link DirectDruidClient} is converted to a more specific type of QueryException
-   *   based on {@link QueryException#getErrorCode()}. During conversion, {@link QueryException#host} is overridden
-   *   by {@link #host}.
+   * based on {@link QueryException#getErrorCode()}. During conversion, {@link QueryException#host} is overridden
+   * by {@link #host}.
    */
   private QueryException convertException(Throwable cause)
   {
@@ -219,9 +223,9 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
     if (cause instanceof QueryException) {
       final QueryException queryException = (QueryException) cause;
       if (queryException.getErrorCode() == null) {
-        // errorCode should not be null now, but maybe could be null in the past..
+        // errorCode should not be null now, but maybe could be null in the past...
         return new QueryInterruptedException(
-            queryException.getErrorCode(),
+            QueryException.UNKNOWN_EXCEPTION_ERROR_CODE,
             queryException.getMessage(),
             queryException.getErrorClass(),
             host
@@ -229,32 +233,37 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
       }
 
       // Note: this switch clause is to restore the 'type' information of QueryExceptions which is lost during
-      // JSON serialization. This is not a good way to restore the correct exception type. Rather, QueryException
-      // should store its type when it is serialized, so that we can know the exact type when it is deserialized.
+      // JSON serialization. As documented on the QueryException class, the errorCode of QueryException is the only
+      // way to differentiate the cause of the exception.  This code does not cover all possible exceptions that
+      // could come up and so, likely, doesn't produce exceptions reliably.  The only safe way to catch and interact
+      // with a QueryException is to catch QueryException and check its errorCode.  In some future code change, we
+      // should likely remove this switch entirely, but when we do that, we need to make sure to also adjust any
+      // points in the code that are catching the specific child Exceptions to instead catch QueryException and
+      // check the errorCode.
       switch (queryException.getErrorCode()) {
         // The below is the list of exceptions that can be thrown in historicals and propagated to the broker.
-        case QueryTimeoutException.ERROR_CODE:
+        case QueryException.QUERY_TIMEOUT_ERROR_CODE:
           return new QueryTimeoutException(
               queryException.getErrorCode(),
               queryException.getMessage(),
               queryException.getErrorClass(),
               host
           );
-        case QueryCapacityExceededException.ERROR_CODE:
+        case QueryException.QUERY_CAPACITY_EXCEEDED_ERROR_CODE:
           return new QueryCapacityExceededException(
               queryException.getErrorCode(),
               queryException.getMessage(),
               queryException.getErrorClass(),
               host
           );
-        case QueryUnsupportedException.ERROR_CODE:
+        case QueryException.QUERY_UNSUPPORTED_ERROR_CODE:
           return new QueryUnsupportedException(
               queryException.getErrorCode(),
               queryException.getMessage(),
               queryException.getErrorClass(),
               host
           );
-        case ResourceLimitExceededException.ERROR_CODE:
+        case QueryException.RESOURCE_LIMIT_EXCEEDED_ERROR_CODE:
           return new ResourceLimitExceededException(
               queryException.getErrorCode(),
               queryException.getMessage(),

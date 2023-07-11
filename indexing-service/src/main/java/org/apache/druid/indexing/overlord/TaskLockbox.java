@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ComparisonChain;
@@ -34,9 +33,13 @@ import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TimeChunkLock;
+import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.SegmentAllocateRequest;
+import org.apache.druid.indexing.common.actions.SegmentAllocateResult;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -108,17 +111,19 @@ public class TaskLockbox
 
   /**
    * Wipe out our current in-memory state and resync it from our bundled {@link TaskStorage}.
+   *
+   * @return SyncResult which needs to be processed by the caller
    */
-  public void syncFromStorage()
+  public TaskLockboxSyncResult syncFromStorage()
   {
     giant.lock();
 
     try {
       // Load stuff from taskStorage first. If this fails, we don't want to lose all our locks.
-      final Set<String> storedActiveTasks = new HashSet<>();
+      final Set<Task> storedActiveTasks = new HashSet<>();
       final List<Pair<Task, TaskLock>> storedLocks = new ArrayList<>();
       for (final Task task : taskStorage.getActiveTasks()) {
-        storedActiveTasks.add(task.getId());
+        storedActiveTasks.add(task);
         for (final TaskLock taskLock : taskStorage.getLocks(task.getId())) {
           storedLocks.add(Pair.of(task, taskLock));
         }
@@ -138,7 +143,12 @@ public class TaskLockbox
       };
       running.clear();
       activeTasks.clear();
-      activeTasks.addAll(storedActiveTasks);
+      activeTasks.addAll(storedActiveTasks.stream()
+                                          .map(Task::getId)
+                                          .collect(Collectors.toSet())
+      );
+      // Set of task groups in which at least one task failed to re-acquire a lock
+      final Set<String> failedToReacquireLockTaskGroups = new HashSet<>();
       // Bookkeeping for a log message at the end
       int taskLockCount = 0;
       for (final Pair<Task, TaskLock> taskAndLock : byVersionOrdering.sortedCopy(storedLocks)) {
@@ -183,20 +193,38 @@ public class TaskLockbox
             );
           }
         } else {
-          throw new ISE(
-              "Could not reacquire lock on interval[%s] version[%s] for task: %s",
+          failedToReacquireLockTaskGroups.add(task.getGroupId());
+          log.error(
+              "Could not reacquire lock on interval[%s] version[%s] for task: %s from group %s.",
               savedTaskLockWithPriority.getInterval(),
               savedTaskLockWithPriority.getVersion(),
-              task.getId()
+              task.getId(),
+              task.getGroupId()
           );
         }
       }
+
+      Set<Task> tasksToFail = new HashSet<>();
+      for (Task task : storedActiveTasks) {
+        if (failedToReacquireLockTaskGroups.contains(task.getGroupId())) {
+          tasksToFail.add(task);
+          activeTasks.remove(task.getId());
+        }
+      }
+
       log.info(
           "Synced %,d locks for %,d activeTasks from storage (%,d locks ignored).",
           taskLockCount,
           activeTasks.size(),
           storedLocks.size() - taskLockCount
       );
+
+      if (!failedToReacquireLockTaskGroups.isEmpty()) {
+        log.warn("Marking all tasks from task groups[%s] to be failed "
+                 + "as they failed to reacquire at least one lock.", failedToReacquireLockTaskGroups);
+      }
+
+      return new TaskLockboxSyncResult(tasksToFail);
     }
     finally {
       giant.unlock();
@@ -207,7 +235,9 @@ public class TaskLockbox
    * This method is called only in {@link #syncFromStorage()} and verifies the given task and the taskLock have the same
    * groupId, dataSource, and priority.
    */
-  private TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
+  @VisibleForTesting
+  @Nullable
+  protected TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
   {
     giant.lock();
 
@@ -266,6 +296,12 @@ public class TaskLockbox
       }
 
       return createOrFindLockPosse(request);
+    }
+    catch (Exception e) {
+      log.error(e,
+                "Could not reacquire lock for task: %s from metadata store", task.getId()
+      );
+      return null;
     }
     finally {
       giant.unlock();
@@ -351,7 +387,7 @@ public class TaskLockbox
         if (lockRequestForNewSegment.getGranularity() == LockGranularity.SEGMENT) {
           newSegmentId = allocateSegmentId(lockRequestForNewSegment, request.getVersion());
           if (newSegmentId == null) {
-            return LockResult.fail(false);
+            return LockResult.fail();
           }
           convertedRequest = new SpecificSegmentLockRequest(lockRequestForNewSegment, newSegmentId);
         } else {
@@ -400,7 +436,7 @@ public class TaskLockbox
                 ? ((SegmentLock) posseToUse.taskLock).getPartitionId()
                 : null
             );
-            return LockResult.fail(false);
+            return LockResult.fail();
           }
         } else {
           log.info("Task[%s] already present in TaskLock[%s]", task.getId(), posseToUse.getTaskLock().getGroupId());
@@ -408,11 +444,148 @@ public class TaskLockbox
         }
       } else {
         final boolean lockRevoked = posseToUse != null && posseToUse.getTaskLock().isRevoked();
-        return LockResult.fail(lockRevoked);
+        if (lockRevoked) {
+          return LockResult.revoked(posseToUse.getTaskLock());
+        }
+        return LockResult.fail();
       }
     }
     finally {
       giant.unlock();
+    }
+  }
+
+  /**
+   * Attempts to allocate segments for the given requests. Each request contains
+   * a {@link Task} and a {@link SegmentAllocateAction}. This method tries to
+   * acquire the task locks on the required intervals/segments and then performs
+   * a batch allocation of segments. It is possible that some requests succeed
+   * successfully and others failed. In that case, only the failed ones should be
+   * retried.
+   *
+   * @param requests                List of allocation requests
+   * @param dataSource              Datasource for which segment is to be allocated.
+   * @param interval                Interval for which segment is to be allocated.
+   * @param skipSegmentLineageCheck Whether lineage check is to be skipped
+   *                                (this is true for streaming ingestion)
+   * @param lockGranularity         Granularity of task lock
+   * @return List of allocation results in the same order as the requests.
+   */
+  public List<SegmentAllocateResult> allocateSegments(
+      List<SegmentAllocateRequest> requests,
+      String dataSource,
+      Interval interval,
+      boolean skipSegmentLineageCheck,
+      LockGranularity lockGranularity
+  )
+  {
+    log.info("Allocating [%d] segments for datasource [%s], interval [%s]", requests.size(), dataSource, interval);
+    final boolean isTimeChunkLock = lockGranularity == LockGranularity.TIME_CHUNK;
+
+    final AllocationHolderList holderList = new AllocationHolderList(requests, interval);
+    holderList.getPending().forEach(this::verifyTaskIsActive);
+
+    giant.lock();
+    try {
+      if (isTimeChunkLock) {
+        // For time-chunk locking, segment must be allocated only after acquiring the lock
+        holderList.getPending().forEach(holder -> acquireTaskLock(holder, true));
+        allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending());
+      } else {
+        allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending());
+        holderList.getPending().forEach(holder -> acquireTaskLock(holder, false));
+      }
+
+      holderList.getPending().forEach(holder -> addTaskAndPersistLocks(holder, isTimeChunkLock));
+    }
+    finally {
+      giant.unlock();
+    }
+
+    return holderList.getResults();
+  }
+
+  /**
+   * Marks the segment allocation as failed if the underlying task is not active.
+   */
+  private void verifyTaskIsActive(SegmentAllocationHolder holder)
+  {
+    final String taskId = holder.task.getId();
+    if (!activeTasks.contains(taskId)) {
+      holder.markFailed("Unable to grant lock to inactive Task [%s]", taskId);
+    }
+  }
+
+  /**
+   * Creates a task lock request and creates or finds the lock for that request.
+   * Marks the segment allocation as failed if the lock could not be acquired or
+   * was revoked.
+   */
+  private void acquireTaskLock(SegmentAllocationHolder holder, boolean isTimeChunkLock)
+  {
+    final LockRequest lockRequest;
+    if (isTimeChunkLock) {
+      lockRequest = new TimeChunkLockRequest(holder.lockRequest);
+    } else {
+      lockRequest = new SpecificSegmentLockRequest(holder.lockRequest, holder.allocatedSegment);
+    }
+
+    // Create or find the task lock for the created lock request
+    final TaskLockPosse posseToUse = createOrFindLockPosse(lockRequest);
+    final TaskLock acquiredLock = posseToUse == null ? null : posseToUse.getTaskLock();
+    if (posseToUse == null) {
+      holder.markFailed("Could not find or create lock posse.");
+    } else if (acquiredLock.isRevoked()) {
+      holder.markFailed("Lock was revoked.");
+    } else {
+      holder.setAcquiredLock(posseToUse, lockRequest.getInterval());
+    }
+  }
+
+  /**
+   * Adds the task to the found lock posse if not already added and updates
+   * in the metadata store. Marks the segment allocation as failed if the update
+   * did not succeed.
+   */
+  private void addTaskAndPersistLocks(SegmentAllocationHolder holder, boolean isTimeChunkLock)
+  {
+    final Task task = holder.task;
+    final TaskLock acquiredLock = holder.acquiredLock;
+
+    if (holder.taskLockPosse.addTask(task)) {
+      log.info("Added task [%s] to TaskLock [%s]", task.getId(), acquiredLock);
+
+      // This can also be batched later
+      boolean success = updateLockInStorage(task, acquiredLock);
+      if (success) {
+        holder.markSucceeded();
+      } else {
+        final Integer partitionId = isTimeChunkLock
+                                    ? null : ((SegmentLock) acquiredLock).getPartitionId();
+        unlock(task, holder.lockRequestInterval, partitionId);
+        holder.markFailed("Could not update task lock in metadata store.");
+      }
+    } else {
+      log.info("Task [%s] already present in TaskLock [%s]", task.getId(), acquiredLock.getGroupId());
+      holder.markSucceeded();
+    }
+  }
+
+  private boolean updateLockInStorage(Task task, TaskLock taskLock)
+  {
+    try {
+      taskStorage.addLock(task.getId(), taskLock);
+      return true;
+    }
+    catch (Exception e) {
+      log.makeAlert("Failed to persist lock in storage")
+         .addData("task", task.getId())
+         .addData("dataSource", taskLock.getDataSource())
+         .addData("interval", taskLock.getInterval())
+         .addData("version", taskLock.getVersion())
+         .emit();
+
+      return false;
     }
   }
 
@@ -444,8 +617,12 @@ public class TaskLockbox
         if (reusablePosses.size() == 0) {
           // case 1) this task doesn't have any lock, but others do
 
-          if (request.getType().equals(TaskLockType.SHARED) && isAllSharedLocks(conflictPosses)) {
-            // Any number of shared locks can be acquired for the same dataSource and interval.
+          if (request.getType().equals(TaskLockType.SHARED)
+              && areAllEqualOrHigherPriorityLocksSharedOrRevoked(conflictPosses, request.getPriority())) {
+            // Any number of shared locks can be acquired for the same dataSource and interval
+            // Exclusive locks of equal or greater priority, if present, must already be revoked
+            // Exclusive locks of lower priority can be revoked
+            revokeAllLowerPriorityNonSharedLocks(conflictPosses, request.getPriority());
             return createNewTaskLockPosse(request);
           } else {
             // During a rolling update, tasks of mixed versions can be run at the same time. Old tasks would request
@@ -507,7 +684,6 @@ public class TaskLockbox
    * monotonicity and that callers specifying {@code preferredVersion} are doing the right thing.
    *
    * @param request request to lock
-   *
    * @return a new {@link TaskLockPosse}
    */
   private TaskLockPosse createNewTaskLockPosse(LockRequest request)
@@ -516,7 +692,10 @@ public class TaskLockbox
     try {
       final TaskLockPosse posseToUse = new TaskLockPosse(request.toLock());
       running.computeIfAbsent(request.getDataSource(), k -> new TreeMap<>())
-             .computeIfAbsent(request.getInterval().getStart(), k -> new TreeMap<>(Comparators.intervalsByStartThenEnd()))
+             .computeIfAbsent(
+                 request.getInterval().getStart(),
+                 k -> new TreeMap<>(Comparators.intervalsByStartThenEnd())
+             )
              .computeIfAbsent(request.getInterval(), k -> new ArrayList<>())
              .add(posseToUse);
 
@@ -524,6 +703,45 @@ public class TaskLockbox
     }
     finally {
       giant.unlock();
+    }
+  }
+
+  /**
+   * Makes a call to the {@link #metadataStorageCoordinator} to allocate segments
+   * for the given requests. Updates the holder with the allocated segment if
+   * the allocation succeeds, otherwise marks it as failed.
+   */
+  private void allocateSegmentIds(
+      String dataSource,
+      Interval interval,
+      boolean skipSegmentLineageCheck,
+      Collection<SegmentAllocationHolder> holders
+  )
+  {
+    if (holders.isEmpty()) {
+      return;
+    }
+
+    final List<SegmentCreateRequest> createRequests =
+        holders.stream()
+               .map(SegmentAllocationHolder::getSegmentRequest)
+               .collect(Collectors.toList());
+
+    Map<SegmentCreateRequest, SegmentIdWithShardSpec> allocatedSegments =
+        metadataStorageCoordinator.allocatePendingSegments(
+            dataSource,
+            interval,
+            skipSegmentLineageCheck,
+            createRequests
+        );
+
+    for (SegmentAllocationHolder holder : holders) {
+      SegmentIdWithShardSpec segmentId = allocatedSegments.get(holder.getSegmentRequest());
+      if (segmentId == null) {
+        holder.markFailed("Storage coordinator could not allocate segment.");
+      } else {
+        holder.setAllocatedSegment(segmentId);
+      }
     }
   }
 
@@ -543,7 +761,7 @@ public class TaskLockbox
   /**
    * Perform the given action with a guarantee that the locks of the task are not revoked in the middle of action.  This
    * method first checks that all locks for the given task and intervals are valid and perform the right action.
-   *
+   * <p>
    * The given action should be finished as soon as possible because all other methods in this class are blocked until
    * this method is finished.
    *
@@ -576,9 +794,8 @@ public class TaskLockbox
           .stream()
           .allMatch(interval -> {
             final List<TaskLockPosse> lockPosses = getOnlyTaskLockPosseContainingInterval(task, interval);
-            // Tasks cannot enter the critical section with a shared lock
-            return lockPosses.stream().map(TaskLockPosse::getTaskLock).allMatch(
-                lock -> !lock.isRevoked() && lock.getType() != TaskLockType.SHARED
+            return lockPosses.stream().map(TaskLockPosse::getTaskLock).noneMatch(
+                TaskLock::isRevoked
             );
           });
     }
@@ -608,7 +825,8 @@ public class TaskLockbox
    * @param taskId an id of the task holding the lock
    * @param lock   lock to be revoked
    */
-  private void revokeLock(String taskId, TaskLock lock)
+  @VisibleForTesting
+  protected void revokeLock(String taskId, TaskLock lock)
   {
     giant.lock();
 
@@ -630,7 +848,9 @@ public class TaskLockbox
         final TaskLock revokedLock = lock.revokedCopy();
         taskStorage.replaceLock(taskId, lock, revokedLock);
 
-        final List<TaskLockPosse> possesHolder = running.get(task.getDataSource()).get(lock.getInterval().getStart()).get(lock.getInterval());
+        final List<TaskLockPosse> possesHolder = running.get(task.getDataSource())
+                                                        .get(lock.getInterval().getStart())
+                                                        .get(lock.getInterval());
         final TaskLockPosse foundPosse = possesHolder.stream()
                                                      .filter(posse -> posse.getTaskLock().equals(lock))
                                                      .findFirst()
@@ -658,16 +878,7 @@ public class TaskLockbox
     giant.lock();
 
     try {
-      return Lists.transform(
-          findLockPossesForTask(task), new Function<TaskLockPosse, TaskLock>()
-          {
-            @Override
-            public TaskLock apply(TaskLockPosse taskLockPosse)
-            {
-              return taskLockPosse.getTaskLock();
-            }
-          }
-      );
+      return Lists.transform(findLockPossesForTask(task), TaskLockPosse::getTaskLock);
     }
     finally {
       giant.unlock();
@@ -744,7 +955,7 @@ public class TaskLockbox
    * Release lock held for a task on a particular interval. Does nothing if the task does not currently
    * hold the mentioned lock.
    *
-   * @param task task to unlock
+   * @param task     task to unlock
    * @param interval interval to unlock
    */
   public void unlock(final Task task, final Interval interval, @Nullable Integer partitionId)
@@ -1040,10 +1251,33 @@ public class TaskLockbox
     return running;
   }
 
-  private static boolean isAllSharedLocks(List<TaskLockPosse> lockPosses)
+  /**
+   * Check if all lockPosses are either shared
+   * OR of lower priority
+   * OR are revoked non-shared locks if their priorities are greater than or equal to the provided priority
+   * @param lockPosses conflicting task lock posses to be checked
+   * @param priority priority of the lock to be acquired
+   * @return true if the condititons are met
+   */
+  private static boolean areAllEqualOrHigherPriorityLocksSharedOrRevoked(List<TaskLockPosse> lockPosses, int priority)
   {
     return lockPosses.stream()
-                     .allMatch(taskLockPosse -> taskLockPosse.getTaskLock().getType().equals(TaskLockType.SHARED));
+                     .filter(taskLockPosse -> taskLockPosse.getTaskLock().getNonNullPriority() >= priority)
+                     .allMatch(taskLockPosse -> taskLockPosse.getTaskLock().getType().equals(TaskLockType.SHARED)
+                                                || taskLockPosse.getTaskLock().isRevoked());
+  }
+
+  /**
+   * Revokes all non-shared locks with priorities lower than the provided priority
+   * @param lockPosses conflicting task lock posses which may be revoked
+   * @param priority priority of the lock to be acquired
+   */
+  private void revokeAllLowerPriorityNonSharedLocks(List<TaskLockPosse> lockPosses, int priority)
+  {
+    lockPosses.stream()
+              .filter(taskLockPosse -> !TaskLockType.SHARED.equals(taskLockPosse.getTaskLock().getType()))
+              .filter(taskLockPosse -> taskLockPosse.getTaskLock().getNonNullPriority() < priority)
+              .forEach(this::revokeLock);
   }
 
   private static boolean isAllRevocable(List<TaskLockPosse> lockPosses, int tryLockPriority)
@@ -1130,8 +1364,10 @@ public class TaskLockbox
       if (taskLock.getType() == request.getType() && taskLock.getGranularity() == request.getGranularity()) {
         switch (taskLock.getType()) {
           case SHARED:
-            // All shared lock is not reusable. Instead, a new lock posse is created for each lock request.
-            // See createOrFindLockPosse().
+            if (request instanceof TimeChunkLockRequest) {
+              return taskLock.getInterval().contains(request.getInterval())
+                     && taskLock.getGroupId().equals(request.getGroupId());
+            }
             return false;
           case EXCLUSIVE:
             if (request instanceof TimeChunkLockRequest) {
@@ -1174,7 +1410,7 @@ public class TaskLockbox
 
       TaskLockPosse that = (TaskLockPosse) o;
       return java.util.Objects.equals(taskLock, that.taskLock) &&
-              java.util.Objects.equals(taskIds, that.taskIds);
+             java.util.Objects.equals(taskIds, that.taskIds);
     }
 
     @Override
@@ -1190,6 +1426,123 @@ public class TaskLockbox
                     .add("taskLock", taskLock)
                     .add("taskIds", taskIds)
                     .toString();
+    }
+  }
+
+  /**
+   * Maintains a list of pending allocation holders.
+   */
+  private static class AllocationHolderList
+  {
+    final List<SegmentAllocationHolder> all = new ArrayList<>();
+    final Set<SegmentAllocationHolder> pending = new HashSet<>();
+    final Set<SegmentAllocationHolder> recentlyCompleted = new HashSet<>();
+
+    AllocationHolderList(List<SegmentAllocateRequest> requests, Interval interval)
+    {
+      for (SegmentAllocateRequest request : requests) {
+        SegmentAllocationHolder holder = new SegmentAllocationHolder(request, interval, this);
+        all.add(holder);
+        pending.add(holder);
+      }
+    }
+
+    void markCompleted(SegmentAllocationHolder holder)
+    {
+      recentlyCompleted.add(holder);
+    }
+
+    Set<SegmentAllocationHolder> getPending()
+    {
+      pending.removeAll(recentlyCompleted);
+      recentlyCompleted.clear();
+      return pending;
+    }
+
+
+    List<SegmentAllocateResult> getResults()
+    {
+      return all.stream().map(holder -> holder.result).collect(Collectors.toList());
+    }
+  }
+
+  /**
+   * Contains the task, request, lock and final result for a segment allocation.
+   */
+  private static class SegmentAllocationHolder
+  {
+    final AllocationHolderList list;
+
+    final Task task;
+    final Interval allocateInterval;
+    final SegmentAllocateAction action;
+    final LockRequestForNewSegment lockRequest;
+    SegmentCreateRequest segmentRequest;
+
+    TaskLock acquiredLock;
+    TaskLockPosse taskLockPosse;
+    Interval lockRequestInterval;
+    SegmentIdWithShardSpec allocatedSegment;
+    SegmentAllocateResult result;
+
+    SegmentAllocationHolder(SegmentAllocateRequest request, Interval allocateInterval, AllocationHolderList list)
+    {
+      this.list = list;
+      this.allocateInterval = allocateInterval;
+      this.task = request.getTask();
+      this.action = request.getAction();
+
+      this.lockRequest = new LockRequestForNewSegment(
+          action.getLockGranularity(),
+          action.getTaskLockType(),
+          task.getGroupId(),
+          action.getDataSource(),
+          allocateInterval,
+          action.getPartialShardSpec(),
+          task.getPriority(),
+          action.getSequenceName(),
+          action.getPreviousSegmentId(),
+          action.isSkipSegmentLineageCheck()
+      );
+    }
+
+    SegmentCreateRequest getSegmentRequest()
+    {
+      // Initialize the first time this is requested
+      if (segmentRequest == null) {
+        segmentRequest = new SegmentCreateRequest(
+            action.getSequenceName(),
+            action.getPreviousSegmentId(),
+            acquiredLock == null ? lockRequest.getVersion() : acquiredLock.getVersion(),
+            action.getPartialShardSpec()
+        );
+      }
+
+      return segmentRequest;
+    }
+
+    void markFailed(String msgFormat, Object... args)
+    {
+      list.markCompleted(this);
+      result = new SegmentAllocateResult(null, StringUtils.format(msgFormat, args));
+    }
+
+    void markSucceeded()
+    {
+      list.markCompleted(this);
+      result = new SegmentAllocateResult(allocatedSegment, null);
+    }
+
+    void setAllocatedSegment(SegmentIdWithShardSpec segmentId)
+    {
+      this.allocatedSegment = segmentId;
+    }
+
+    void setAcquiredLock(TaskLockPosse lockPosse, Interval lockRequestInterval)
+    {
+      this.taskLockPosse = lockPosse;
+      this.acquiredLock = lockPosse == null ? null : lockPosse.getTaskLock();
+      this.lockRequestInterval = lockRequestInterval;
     }
   }
 }

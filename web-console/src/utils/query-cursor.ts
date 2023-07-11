@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
-import { SqlBase, SqlLiteral, SqlQuery } from 'druid-query-toolkit';
+import type { SqlBase, SqlQuery } from 'druid-query-toolkit';
+import { L } from 'druid-query-toolkit';
 
-export const EMPTY_LITERAL = SqlLiteral.create('');
+export const EMPTY_LITERAL = L('');
 
 const CRAZY_STRING = '$.X.@.X.$';
-const DOT_DOT_DOT_LITERAL = SqlLiteral.create('...');
+const DOT_DOT_DOT_LITERAL = L('...');
 
 export function prettyPrintSql(b: SqlBase): string {
   return b
@@ -44,19 +45,12 @@ export interface RowColumn {
 }
 
 export function findEmptyLiteralPosition(query: SqlQuery): RowColumn | undefined {
-  const subQueryString = query
-    .walk(b => {
-      if (b === EMPTY_LITERAL) {
-        return SqlLiteral.create(CRAZY_STRING);
-      }
-      return b;
-    })
-    .toString();
+  const subQueryString = query.walk(b => (b === EMPTY_LITERAL ? L(CRAZY_STRING) : b)).toString();
 
   const crazyIndex = subQueryString.indexOf(CRAZY_STRING);
   if (crazyIndex < 0) return;
 
-  const prefix = subQueryString.substr(0, crazyIndex);
+  const prefix = subQueryString.slice(0, crazyIndex);
   const lines = prefix.split(/\n/g);
   const row = lines.length - 1;
   const lastLine = lines[row];

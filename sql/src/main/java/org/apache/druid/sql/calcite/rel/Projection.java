@@ -27,11 +27,10 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
-import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -64,13 +63,13 @@ public class Projection
   private final List<PostAggregator> postAggregators;
 
   @Nullable
-  private final List<VirtualColumn> virtualColumns;
+  private final List<String> virtualColumns;
 
   private final RowSignature outputRowSignature;
 
   private Projection(
       @Nullable final List<PostAggregator> postAggregators,
-      @Nullable final List<VirtualColumn> virtualColumns,
+      @Nullable final List<String> virtualColumns,
       final RowSignature outputRowSignature
   )
   {
@@ -128,7 +127,8 @@ public class Projection
         plannerContext,
         inputRowSignature,
         postAggregatorRexNode,
-        postAggregatorVisitor
+        postAggregatorVisitor,
+        false
     );
 
     if (pagg != null) {
@@ -166,16 +166,7 @@ public class Projection
       final DruidExpression postAggregatorExpression
   )
   {
-    if (postAggregatorComplexDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
-      // Direct column access on a COMPLEX column, expressions cannot operate on complex columns, only postaggs
-      // Wrap the column access in a field access postagg so that other postaggs can use it
-      final PostAggregator postAggregator = new FieldAccessPostAggregator(
-          postAggregatorVisitor.getOutputNamePrefix() + postAggregatorVisitor.getAndIncrementCounter(),
-          postAggregatorExpression.getDirectColumn()
-      );
-      postAggregatorVisitor.addPostAgg(postAggregator);
-      rowOrder.add(postAggregator.getName());
-    } else if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
+    if (postAggregatorDirectColumnIsOk(inputRowSignature, postAggregatorExpression, postAggregatorRexNode)) {
       // Direct column access, without any type cast as far as Druid's runtime is concerned.
       // (There might be a SQL-level type cast that we don't care about)
       rowOrder.add(postAggregatorExpression.getDirectColumn());
@@ -254,26 +245,28 @@ public class Projection
       }
     }
 
-    final Set<VirtualColumn> virtualColumns = new HashSet<>();
+    final Set<String> virtualColumns = new HashSet<>();
     final List<String> rowOrder = new ArrayList<>();
 
     for (int i = 0; i < expressions.size(); i++) {
       final DruidExpression expression = expressions.get(i);
 
       final RelDataType dataType = project.getRowType().getFieldList().get(i).getType();
-      if (expression.isDirectColumnAccess()
-          && inputRowSignature.getColumnType(expression.getDirectColumn()).orElse(null)
-             == Calcites.getValueTypeForRelDataType(dataType)) {
+      if (expression.isDirectColumnAccess() &&
+          Objects.equals(
+              inputRowSignature.getColumnType(expression.getDirectColumn()).orElse(null),
+              Calcites.getColumnTypeForRelDataType(dataType)
+          )
+      ) {
         // Refer to column directly when it's a direct access with matching type.
         rowOrder.add(expression.getDirectColumn());
       } else {
-        final VirtualColumn virtualColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
-            plannerContext,
+        String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
             expression,
             project.getChildExps().get(i).getType()
         );
-        virtualColumns.add(virtualColumn);
-        rowOrder.add(virtualColumn.getOutputName());
+        virtualColumns.add(virtualColumnName);
+        rowOrder.add(virtualColumnName);
       }
     }
 
@@ -305,55 +298,23 @@ public class Projection
     }
 
     // We don't really have a way to cast complex type. So might as well not do anything and return.
-    final ValueType columnValueType =
+    final ColumnType columnValueType =
         aggregateRowSignature.getColumnType(expression.getDirectColumn())
                              .orElseThrow(
                                  () -> new ISE("Encountered null type for column[%s]", expression.getDirectColumn())
                              );
 
-    if (columnValueType == ValueType.COMPLEX) {
+    if (columnValueType.is(ValueType.COMPLEX)) {
       return true;
     }
 
     // Check if a cast is necessary.
-    final ExprType toExprType = ExprType.fromValueTypeStrict(columnValueType);
-    final ExprType fromExprType = ExprType.fromValueTypeStrict(
-        Calcites.getValueTypeForRelDataType(rexNode.getType())
+    final ExpressionType toExprType = ExpressionType.fromColumnTypeStrict(columnValueType);
+    final ExpressionType fromExprType = ExpressionType.fromColumnTypeStrict(
+        Calcites.getColumnTypeForRelDataType(rexNode.getType())
     );
 
     return toExprType.equals(fromExprType);
-  }
-
-  /**
-   * Returns true if a post-aggregation "expression" can be realized as a direct field access. This is true if it's
-   * a direct column access that doesn't require an implicit cast.
-   *
-   * @param aggregateRowSignature signature of the aggregation
-   * @param expression            post-aggregation expression
-   * @param rexNode               RexNode for the post-aggregation expression
-   *
-   * @return yes or no
-   */
-  private static boolean postAggregatorComplexDirectColumnIsOk(
-      final RowSignature aggregateRowSignature,
-      final DruidExpression expression,
-      final RexNode rexNode
-  )
-  {
-    if (!expression.isDirectColumnAccess()) {
-      return false;
-    }
-
-    // Check if a cast is necessary.
-    final ValueType toValueType =
-        aggregateRowSignature.getColumnType(expression.getDirectColumn())
-                             .orElseThrow(
-                                 () -> new ISE("Encountered null type for column[%s]", expression.getDirectColumn())
-                             );
-
-    final ValueType fromValueType = Calcites.getValueTypeForRelDataType(rexNode.getType());
-
-    return toValueType == ValueType.COMPLEX && fromValueType == ValueType.COMPLEX;
   }
 
   public List<PostAggregator> getPostAggregators()
@@ -363,7 +324,7 @@ public class Projection
     return Preconditions.checkNotNull(postAggregators, "postAggregators");
   }
 
-  public List<VirtualColumn> getVirtualColumns()
+  public List<String> getVirtualColumns()
   {
     // If you ever see this error, it probably means a Projection was created in post-aggregation mode, but then
     // used in a pre-aggregation context. This is likely a bug somewhere in DruidQuery. See class-level Javadocs.

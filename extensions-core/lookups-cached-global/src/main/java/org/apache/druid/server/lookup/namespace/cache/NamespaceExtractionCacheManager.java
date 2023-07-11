@@ -61,24 +61,20 @@ public abstract class NamespaceExtractionCacheManager
     );
     ExecutorServices.manageLifecycle(lifecycle, scheduledExecutorService);
     scheduledExecutorService.scheduleAtFixedRate(
-        new Runnable()
-        {
-          @Override
-          public void run()
-          {
-            try {
-              monitor(serviceEmitter);
-            }
-            catch (Exception e) {
-              log.error(e, "Error emitting namespace stats");
-              if (Thread.currentThread().isInterrupted()) {
-                throw new RuntimeException(e);
-              }
+        () -> {
+          try {
+            monitor(serviceEmitter);
+          }
+          catch (Exception e) {
+            log.error(e, "Error emitting namespace stats");
+            if (Thread.currentThread().isInterrupted()) {
+              throw new RuntimeException(e);
             }
           }
         },
         1,
-        10, TimeUnit.MINUTES
+        10,
+        TimeUnit.MINUTES
     );
   }
 
@@ -99,7 +95,22 @@ public abstract class NamespaceExtractionCacheManager
     return scheduledExecutorService.awaitTermination(time, unit);
   }
 
+  /**
+   * Creates a thread-safe, permanently mutable cache. Use this method if you need a cache which can be incrementally
+   * updated, indefinitely, at the cost of the overhead of synchronization
+   */
   public abstract CacheHandler createCache();
+
+  /**
+   * Create a cache that is intended to be populated before use, and then passed to {@link #attachCache(CacheHandler)}.
+   */
+  public abstract CacheHandler allocateCache();
+
+  /**
+   * Attach a cache created with {@link #allocateCache()} to the cache manager. The cache return from this method
+   * should be treated as read-only (though some implmentations may still allow modification, it is not safe to do so).
+   */
+  public abstract CacheHandler attachCache(CacheHandler cache);
 
   abstract void disposeCache(CacheHandler cacheHandler);
 

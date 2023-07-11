@@ -35,9 +35,9 @@ public class CostEstimates
   static final double COST_BASE = 1;
 
   /**
-   * Cost to read a value out of a column directly.
+   * Cost to include a column in query output.
    */
-  static final double COST_COLUMN_READ = 0.05;
+  static final double COST_OUTPUT_COLUMN = 0.05;
 
   /**
    * Cost to compute and read an expression.
@@ -77,14 +77,14 @@ public class CostEstimates
   static final double MULTIPLIER_OUTER_QUERY = .1;
 
   /**
-   * Cost to add to a join when either side is a subquery. Strongly encourages avoiding subqueries, since they must be
-   * inlined and then the join must run on the Broker.
+   * Cost to add to a subquery. Strongly encourages avoiding subqueries, since they must be inlined and then the join
+   * must run on the Broker.
    */
-  static final double COST_JOIN_SUBQUERY = 1e5;
+  static final double COST_SUBQUERY = 1e5;
 
   /**
    * Cost to perform a cross join. Strongly encourages pushing down filters into join conditions, even if it means
-   * we need to add a subquery (this is higher than {@link #COST_JOIN_SUBQUERY}).
+   * we need to add a subquery (this is higher than {@link #COST_SUBQUERY}).
    */
   static final double COST_JOIN_CROSS = 1e8;
 

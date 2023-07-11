@@ -19,16 +19,17 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.Collections;
 
 /**
- * A {@link JoinableFactory} for {@link InlineDataSource}.
+ * A {@link SegmentWrangler} for {@link InlineDataSource}.
  *
  * It is not valid to pass any other DataSource type to the "getSegmentsForIntervals" method.
  */
@@ -37,14 +38,26 @@ public class InlineSegmentWrangler implements SegmentWrangler
   private static final String SEGMENT_ID = "inline";
 
   @Override
+  @SuppressWarnings("unchecked")
   public Iterable<Segment> getSegmentsForIntervals(final DataSource dataSource, final Iterable<Interval> intervals)
   {
     final InlineDataSource inlineDataSource = (InlineDataSource) dataSource;
 
+    if (inlineDataSource.rowsAreArrayList()) {
+      return Collections.singletonList(
+          new ArrayListSegment<>(
+              SegmentId.dummy(SEGMENT_ID),
+              (ArrayList<Object[]>) inlineDataSource.getRowsAsList(),
+              inlineDataSource.rowAdapter(),
+              inlineDataSource.getRowSignature()
+          )
+      );
+    }
+
     return Collections.singletonList(
         new RowBasedSegment<>(
             SegmentId.dummy(SEGMENT_ID),
-            inlineDataSource.getRows(),
+            Sequences.simple(inlineDataSource.getRows()),
             inlineDataSource.rowAdapter(),
             inlineDataSource.getRowSignature()
         )

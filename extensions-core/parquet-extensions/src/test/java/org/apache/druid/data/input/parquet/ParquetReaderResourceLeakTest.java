@@ -39,7 +39,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Objects;
 
 public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
@@ -84,16 +83,14 @@ public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
       // Copied from InputEntity
       try {
         final File tempFile = File.createTempFile("druid-input-entity", ".tmp", temporaryDirectory);
-        try (InputStream is = open()) {
-          FileUtils.copyLarge(
-              is,
-              tempFile,
-              fetchBuffer,
-              getRetryCondition(),
-              DEFAULT_MAX_NUM_FETCH_TRIES,
-              StringUtils.format("Failed to fetch into [%s]", tempFile.getAbsolutePath())
-          );
-        }
+        FileUtils.copyLarge(
+            this::open,
+            tempFile,
+            fetchBuffer,
+            getRetryCondition(),
+            DEFAULT_MAX_NUM_FETCH_TRIES,
+            StringUtils.format("Failed to fetch into [%s]", tempFile.getAbsolutePath())
+        );
 
         return new CleanableFile()
         {

@@ -52,7 +52,7 @@ abstract class PerfectRollupWorkerTask extends AbstractBatchSubtask
       @Nullable Map<String, Object> context
   )
   {
-    super(id, groupId, taskResource, dataSchema.getDataSource(), context);
+    super(id, groupId, taskResource, dataSchema.getDataSource(), context, IngestionMode.NONE);
 
     Preconditions.checkArgument(
         tuningConfig.isForceGuaranteedRollup(),

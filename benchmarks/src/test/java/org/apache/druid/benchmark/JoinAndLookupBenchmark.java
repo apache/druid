@@ -42,7 +42,7 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.join.HashJoinSegment;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -319,13 +319,13 @@ public class JoinAndLookupBenchmark
             new ExpressionVirtualColumn(
                 LOOKUP_COUNTRY_CODE_TO_NAME,
                 "lookup(countryIsoCode, '" + LOOKUP_COUNTRY_CODE_TO_NAME + "')",
-                ValueType.STRING,
+                ColumnType.STRING,
                 exprMacroTable
             ),
             new ExpressionVirtualColumn(
                 LOOKUP_COUNTRY_NUMBER_TO_NAME,
                 "lookup(countryNumber, '" + LOOKUP_COUNTRY_NUMBER_TO_NAME + "')",
-                ValueType.STRING,
+                ColumnType.STRING,
                 exprMacroTable
             )
         )

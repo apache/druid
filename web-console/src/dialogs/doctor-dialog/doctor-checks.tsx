@@ -90,13 +90,14 @@ export const DOCTOR_CHECKS: DoctorCheck[] = [
         );
       }
 
-      // Check that the underlying Java is Java 8 the only officially supported Java version at the moment.
+      // Check for Java 8 or 11
       if (
         properties['java.specification.version'] &&
-        properties['java.specification.version'] !== '1.8'
+        properties['java.specification.version'] !== '1.8' &&
+        properties['java.specification.version'] !== '11'
       ) {
         controls.addSuggestion(
-          `It looks like are running Java ${properties['java.runtime.version']}. Druid only officially supports Java 1.8.x`,
+          `It looks like are running Java ${properties['java.runtime.version']}. Druid officially supports Java 8 or 11`,
         );
       }
 
@@ -372,7 +373,7 @@ FROM (
   WHERE is_published = 1 AND "start" < '${dayAgo}'
   GROUP BY 1, 2, 3
   HAVING "num_segments" > 1 AND "total_size" > 1 AND "avg_segment_size_in_time_chunk" < 100000000
-) 
+)
 GROUP BY 1
 ORDER BY "num_bad_time_chunks"`,
         });

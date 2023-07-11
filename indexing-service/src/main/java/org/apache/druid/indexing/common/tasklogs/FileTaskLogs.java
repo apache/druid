@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.tasklogs;
 
 import com.google.common.base.Optional;
-import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
@@ -51,62 +50,58 @@ public class FileTaskLogs implements TaskLogs
   @Override
   public void pushTaskLog(final String taskid, File file) throws IOException
   {
-    if (config.getDirectory().exists() || config.getDirectory().mkdirs()) {
-      final File outputFile = fileForTask(taskid, file.getName());
-      Files.copy(file, outputFile);
-      log.info("Wrote task log to: %s", outputFile);
-    } else {
-      throw new IOE("Unable to create task log dir[%s]", config.getDirectory());
-    }
+    FileUtils.mkdirp(config.getDirectory());
+    final File outputFile = fileForTask(taskid, file.getName());
+    Files.copy(file, outputFile);
+    log.info("Wrote task log to: %s", outputFile);
   }
 
   @Override
   public void pushTaskReports(String taskid, File reportFile) throws IOException
   {
-    if (config.getDirectory().exists() || config.getDirectory().mkdirs()) {
-      final File outputFile = fileForTask(taskid, reportFile.getName());
-      Files.copy(reportFile, outputFile);
-      log.info("Wrote task report to: %s", outputFile);
-    } else {
-      throw new IOE("Unable to create task report dir[%s]", config.getDirectory());
-    }
+    FileUtils.mkdirp(config.getDirectory());
+    final File outputFile = fileForTask(taskid, reportFile.getName());
+    Files.copy(reportFile, outputFile);
+    log.info("Wrote task report to: %s", outputFile);
   }
 
   @Override
-  public Optional<ByteSource> streamTaskLog(final String taskid, final long offset)
+  public void pushTaskStatus(String taskid, File statusFile) throws IOException
+  {
+    FileUtils.mkdirp(config.getDirectory());
+    final File outputFile = fileForTask(taskid, statusFile.getName());
+    Files.copy(statusFile, outputFile);
+    log.info("Wrote task status to: %s", outputFile);
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final File file = fileForTask(taskid, "log");
     if (file.exists()) {
-      return Optional.of(
-          new ByteSource()
-          {
-            @Override
-            public InputStream openStream() throws IOException
-            {
-              return LogUtils.streamFile(file, offset);
-            }
-          }
-      );
+      return Optional.of(LogUtils.streamFile(file, offset));
     } else {
       return Optional.absent();
     }
   }
 
   @Override
-  public Optional<ByteSource> streamTaskReports(final String taskid)
+  public Optional<InputStream> streamTaskReports(final String taskid) throws IOException
   {
     final File file = fileForTask(taskid, "report.json");
     if (file.exists()) {
-      return Optional.of(
-          new ByteSource()
-          {
-            @Override
-            public InputStream openStream() throws IOException
-            {
-              return LogUtils.streamFile(file, 0);
-            }
-          }
-      );
+      return Optional.of(LogUtils.streamFile(file, 0));
+    } else {
+      return Optional.absent();
+    }
+  }
+
+  @Override
+  public Optional<InputStream> streamTaskStatus(final String taskid) throws IOException
+  {
+    final File file = fileForTask(taskid, "status.json");
+    if (file.exists()) {
+      return Optional.of(LogUtils.streamFile(file, 0));
     } else {
       return Optional.absent();
     }

@@ -132,7 +132,7 @@ final class SketchBufferAggregatorHelper
   {
     WritableMemory mem = memCache.get(buffer);
     if (mem == null) {
-      mem = WritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN);
+      mem = WritableMemory.writableWrap(buffer, ByteOrder.LITTLE_ENDIAN);
       memCache.put(buffer, mem);
     }
     return mem;

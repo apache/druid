@@ -44,6 +44,7 @@ class IndexTaskInputRowIteratorBuilderTestingFactory
 {
   static final DateTime TIMESTAMP = DateTimes.utc(0);
   static final String DIMENSION = "dimension";
+  static final List<String> DIMENSIONS = Collections.singletonList(DIMENSION);
   static final Optional<Interval> PRESENT_BUCKET_INTERVAL_OPT = Optional.of(Intervals.ETERNITY);
 
   static InputRow createInputRow(DateTime timestamp)

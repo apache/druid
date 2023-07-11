@@ -105,6 +105,14 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
   @Nullable
   SequenceOffsetType getEarliestSequenceNumber(StreamPartition<PartitionIdType> partition);
 
+  /**
+   * Checks if a provided offset is still available for a given partition in the stream
+   * @param partition stream partition to check in
+   * @param offset offset to be checked
+   * @return availability of offset
+   */
+  boolean isOffsetAvailable(StreamPartition<PartitionIdType> partition,
+                            OrderedSequenceNumber<SequenceOffsetType> offset);
 
   /**
    * returns the sequence number of the next record

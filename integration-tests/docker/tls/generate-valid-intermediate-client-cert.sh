@@ -45,7 +45,7 @@ IP.1 = 9.9.9.9
 EOT
 
 # Generate an intermediate certificate
-openssl genrsa -out ca_intermediate.key 1024
+openssl genrsa -out ca_intermediate.key 4096
 openssl req -new -out ca_intermediate.csr -key ca_intermediate.key -reqexts req_ext -config ca_intermediate.conf
 openssl x509 -req -days 3650 -in ca_intermediate.csr -CA root.pem -CAkey root.key -set_serial 0x33333332 -out ca_intermediate.pem -sha256 -extfile ca_intermediate.conf -extensions req_ext
 
@@ -81,7 +81,7 @@ DNS.2 = localhost
 EOT
 
 # Generate a client certificate for this machine
-openssl genrsa -out intermediate_ca_client.key 1024
+openssl genrsa -out intermediate_ca_client.key 4096
 openssl req -new -out intermediate_ca_client.csr -key intermediate_ca_client.key -reqexts req_ext -config intermediate_ca_client.conf
 openssl x509 -req -days 3650 -in intermediate_ca_client.csr -CA ca_intermediate.pem -CAkey ca_intermediate.key -set_serial 0x33333333 -out intermediate_ca_client.pem -sha256 -extfile intermediate_ca_client.conf -extensions req_ext
 
@@ -91,4 +91,4 @@ cat ca_intermediate.pem >> intermediate_ca_client.pem
 
 # Create a Java keystore containing the generated certificate
 openssl pkcs12 -export -in intermediate_ca_client.pem -inkey intermediate_ca_client.key -out intermediate_ca_client.p12 -name intermediate_ca_client -CAfile ca_intermediate.pem -caname druid-it-root -password pass:druid123
-keytool -importkeystore -srckeystore intermediate_ca_client.p12 -srcstoretype PKCS12 -destkeystore intermediate_ca_client.jks -deststoretype JKS -srcstorepass druid123 -deststorepass druid123
+keytool -importkeystore -srckeystore intermediate_ca_client.p12 -srcstoretype PKCS12 -destkeystore intermediate_ca_client.jks -deststoretype pkcs12 -srcstorepass druid123 -deststorepass druid123

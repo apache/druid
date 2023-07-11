@@ -29,9 +29,10 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.groupby.epinephelinae.BufferHashGrouper;
+import org.apache.druid.query.groupby.epinephelinae.GroupByTestColumnSelectorFactory;
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.groupby.epinephelinae.GrouperTestUtil;
-import org.apache.druid.query.groupby.epinephelinae.TestColumnSelectorFactory;
+import org.apache.druid.query.groupby.epinephelinae.IntKey;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -39,13 +40,13 @@ import java.nio.ByteBuffer;
 
 public class BufferHashGrouperUsingSketchMergeAggregatorFactoryTest
 {
-  private static BufferHashGrouper<Integer> makeGrouper(
-      TestColumnSelectorFactory columnSelectorFactory,
+  private static BufferHashGrouper<IntKey> makeGrouper(
+      GroupByTestColumnSelectorFactory columnSelectorFactory,
       int bufferSize,
       int initialBuckets
   )
   {
-    final BufferHashGrouper<Integer> grouper = new BufferHashGrouper<>(
+    final BufferHashGrouper<IntKey> grouper = new BufferHashGrouper<>(
         Suppliers.ofInstance(ByteBuffer.allocate(bufferSize)),
         GrouperTestUtil.intKeySerde(),
         AggregatorAdapters.factorizeBuffered(
@@ -67,8 +68,8 @@ public class BufferHashGrouperUsingSketchMergeAggregatorFactoryTest
   @Test
   public void testGrowingBufferGrouper()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 100000, 2);
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final Grouper<IntKey> grouper = makeGrouper(columnSelectorFactory, 100000, 2);
     try {
       final int expectedMaxSize = 5;
 
@@ -79,14 +80,14 @@ public class BufferHashGrouperUsingSketchMergeAggregatorFactoryTest
       columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("sketch", sketchHolder)));
 
       for (int i = 0; i < expectedMaxSize; i++) {
-        Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
+        Assert.assertTrue(String.valueOf(i), grouper.aggregate(new IntKey(i)).isOk());
       }
 
       updateSketch.update(3);
       columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("sketch", sketchHolder)));
 
       for (int i = 0; i < expectedMaxSize; i++) {
-        Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
+        Assert.assertTrue(String.valueOf(i), grouper.aggregate(new IntKey(i)).isOk());
       }
 
       Object[] holders = Lists.newArrayList(grouper.iterator(true)).get(0).getValues();

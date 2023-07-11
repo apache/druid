@@ -32,11 +32,11 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.io.Closeable;
 import java.net.SocketTimeoutException;
@@ -267,7 +267,7 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
           try {
             while (iter.hasNext()) {
               Watch.Response<DiscoveryDruidNodeAndResourceVersion> item = iter.next();
-              if (item != null && item.type != null) {
+              if (item != null && item.type != null && item.object != null) {
                 switch (item.type) {
                   case WatchResult.ADDED:
                     baseNodeRoleWatcher.childAdded(item.object.getNode());
@@ -282,7 +282,10 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
                 nextResourceVersion = item.object.getResourceVersion();
 
               } else {
-                LOGGER.error("WTH! item or item.type is NULL");
+                // Try again by starting the watch from the beginning. This can happen if the
+                // watch goes bad.
+                LOGGER.debug("Received NULL item while watching node type [%s]. Restarting watch.", this.nodeRole);
+                return;
               }
             }
           }
@@ -340,7 +343,8 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
 
       try {
         LOGGER.info("Stopping NodeRoleWatcher for [%s]...", nodeRole);
-        CloseQuietly.close(watchRef.getAndSet(STOP_MARKER));
+        // STOP_MARKER cannot throw exceptions on close(), so this is OK.
+        CloseableUtils.closeAndSuppressExceptions(STOP_MARKER, e -> {});
         watchExecutor.shutdownNow();
 
         if (!watchExecutor.awaitTermination(15, TimeUnit.SECONDS)) {

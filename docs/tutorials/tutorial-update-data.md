@@ -24,33 +24,39 @@ sidebar_label: "Updating existing data"
   -->
 
 
-This tutorial demonstrates how to update existing data, showing both overwrites and appends.
+This tutorial shows you how to update data in a datasource by overwriting existing data and adding new data to the datasource.
 
-For this tutorial, we'll assume you've already downloaded Apache Druid as described in
-the [single-machine quickstart](index.md) and have it running on your local machine.
+## Prerequisites
 
-It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md), [Tutorial: Querying data](../tutorials/tutorial-query.md), and [Tutorial: Rollup](../tutorials/tutorial-rollup.md).
+Before starting this tutorial, download and run Apache Druid on your local machine as described in
+the [single-machine quickstart](index.md).
 
-## Overwrite
+You should also be familiar with the material in the following tutorials:
+* [Tutorial: Loading a file](../tutorials/tutorial-batch.md)
+* [Tutorial: Querying data](../tutorials/tutorial-query.md)
+* [Tutorial: Roll-up](../tutorials/tutorial-rollup.md)
 
-This section of the tutorial will cover how to overwrite an existing interval of data.
+## Load initial data
 
-### Load initial data
+Load an initial data set to which you will overwrite and append data.
 
-Let's load an initial data set which we will overwrite and append to.
+The ingestion spec is located at `quickstart/tutorial/updates-init-index.json`. This spec creates a datasource called `updates-tutorial` and ingests data from `quickstart/tutorial/updates-data.json`.
 
-The spec we'll use for this tutorial is located at `quickstart/tutorial/updates-init-index.json`. This spec creates a datasource called `updates-tutorial` from the `quickstart/tutorial/updates-data.json` input file.
-
-Let's submit that task:
+Submit the ingestion task:
 
 ```bash
 bin/post-index-task --file quickstart/tutorial/updates-init-index.json --url http://localhost:8081
 ```
 
-We have three initial rows containing an "animal" dimension and "number" metric:
+Start the SQL command-line client:
+```bash
+bin/dsql
+```
+
+Run the following SQL query to retrieve data from `updates-tutorial`:
 
 ```bash
-dsql> select * from "updates-tutorial";
+dsql> SELECT * FROM "updates-tutorial";
 ┌──────────────────────────┬──────────┬───────┬────────┐
 │ __time                   │ animal   │ count │ number │
 ├──────────────────────────┼──────────┼───────┼────────┤
@@ -61,24 +67,30 @@ dsql> select * from "updates-tutorial";
 Retrieved 3 rows in 1.42s.
 ```
 
-### Overwrite the initial data
+The datasource contains three rows of data with an `animal` dimension and a `number` metric.
 
-To overwrite this data, we can submit another task for the same interval, but with different input data.
+## Overwrite data
 
-The `quickstart/tutorial/updates-overwrite-index.json` spec will perform an overwrite on the `updates-tutorial` datasource.
+To overwrite the data, submit another task for the same interval but with different input data.
 
-Note that this task reads input from `quickstart/tutorial/updates-data2.json`, and `appendToExisting` is set to `false` (indicating this is an overwrite).
+The `quickstart/tutorial/updates-overwrite-index.json` spec performs an overwrite on the `updates-tutorial` datasource.
 
-Let's submit that task:
+In the overwrite ingestion spec, notice the following:
+* The `intervals` field remains the same: `"intervals" : ["2018-01-01/2018-01-03"]`
+* New data is loaded from the local file, `quickstart/tutorial/updates-data2.json`
+* `appendToExisting` is set to `false`, indicating an overwrite task
+
+Submit the ingestion task to overwrite the data:
 
 ```bash
 bin/post-index-task --file quickstart/tutorial/updates-overwrite-index.json --url http://localhost:8081
 ```
 
-When Druid finishes loading the new segment from this overwrite task, the "tiger" row now has the value "lion", the "aardvark" row has a different number, and the "giraffe" row has been replaced. It may take a couple of minutes for the changes to take effect:
+When Druid finishes loading the new segment from this overwrite task, run the SELECT query again.
+In the new results, the `tiger` row now has the value `lion`, the `aardvark` row has a different number, and the `giraffe` row has been replaced with a `bear` row.
 
 ```bash
-dsql> select * from "updates-tutorial";
+dsql> SELECT * FROM "updates-tutorial";
 ┌──────────────────────────┬──────────┬───────┬────────┐
 │ __time                   │ animal   │ count │ number │
 ├──────────────────────────┼──────────┼───────┼────────┤
@@ -89,22 +101,23 @@ dsql> select * from "updates-tutorial";
 Retrieved 3 rows in 0.02s.
 ```
 
-## Combine old data with new data and overwrite
+## Combine existing data with new data and overwrite
 
-Let's try appending some new data to the `updates-tutorial` datasource now. We will add the data from `quickstart/tutorial/updates-data3.json`.
+Now append new data to the `updates-tutorial` datasource from `quickstart/tutorial/updates-data3.json` using the ingestion spec `quickstart/tutorial/updates-append-index.json`.
 
-The `quickstart/tutorial/updates-append-index.json` task spec has been configured to read from the existing `updates-tutorial` datasource and the `quickstart/tutorial/updates-data3.json` file. The task will combine data from the two input sources, and then overwrite the original data with the new combined data.
+The spec directs Druid to read from the existing `updates-tutorial` datasource as well as the `quickstart/tutorial/updates-data3.json` file. The task combines data from the two input sources, then overwrites the original data with the new combined data.
 
-Let's submit that task:
+Submit that task:
 
 ```bash
 bin/post-index-task --file quickstart/tutorial/updates-append-index.json --url http://localhost:8081
 ```
 
-When Druid finishes loading the new segment from this overwrite task, the new rows will have been added to the datasource. Note that roll-up occurred for the "lion" row:
+When Druid finishes loading the new segment from this overwrite task, it adds the new rows to the datasource.
+Run the SELECT query again. Druid automatically rolls up the data at ingestion time, aggregating the data in the `lion` row:
 
 ```bash
-dsql> select * from "updates-tutorial";
+dsql> SELECT * FROM "updates-tutorial";
 ┌──────────────────────────┬──────────┬───────┬────────┐
 │ __time                   │ animal   │ count │ number │
 ├──────────────────────────┼──────────┼───────┼────────┤
@@ -118,22 +131,24 @@ dsql> select * from "updates-tutorial";
 Retrieved 6 rows in 0.02s.
 ```
 
-## Append to the data
+## Append data
 
-Let's try another way of appending data.
+Now you append data to the datasource without changing the existing data.
+Use the ingestion spec located at `quickstart/tutorial/updates-append-index2.json`.
 
-The `quickstart/tutorial/updates-append-index2.json` task spec reads input from `quickstart/tutorial/updates-data4.json` and will append its data to the `updates-tutorial` datasource. Note that `appendToExisting` is set to `true` in this spec.
+The spec directs Druid to ingest data from `quickstart/tutorial/updates-data4.json` and append it to the `updates-tutorial` datasource. The property `appendToExisting` is set to `true` in this spec.
 
-Let's submit that task:
+Submit the task:
 
 ```bash
 bin/post-index-task --file quickstart/tutorial/updates-append-index2.json --url http://localhost:8081
 ```
 
-When the new data is loaded, we can see two additional rows after "octopus". Note that the new "bear" row with number 222 has not been rolled up with the existing bear-111 row, because the new data is held in a separate segment.
+Druid adds two additional rows after `octopus`. When the task completes, query the data again to see them.
+Druid doesn't roll up the new `bear` row with the existing `bear` row because it stored the new data in a separate segment.
 
 ```bash
-dsql> select * from "updates-tutorial";
+dsql> SELECT * FROM "updates-tutorial";
 ┌──────────────────────────┬──────────┬───────┬────────┐
 │ __time                   │ animal   │ count │ number │
 ├──────────────────────────┼──────────┼───────┼────────┤
@@ -147,13 +162,12 @@ dsql> select * from "updates-tutorial";
 │ 2018-01-01T09:01:00.000Z │ falcon   │     1 │   1241 │
 └──────────────────────────┴──────────┴───────┴────────┘
 Retrieved 8 rows in 0.02s.
-
 ```
 
-If we run a GroupBy query instead of a `select *`, we can see that the "bear" rows will group together at query time:
+Run the following groupBy query to see that the `bear` rows group together at query time:
 
 ```bash
-dsql> select __time, animal, SUM("count"), SUM("number") from "updates-tutorial" group by __time, animal;
+dsql> SELECT __time, animal, SUM("count"), SUM("number") FROM "updates-tutorial" GROUP BY __time, animal;
 ┌──────────────────────────┬──────────┬────────┬────────┐
 │ __time                   │ animal   │ EXPR$2 │ EXPR$3 │
 ├──────────────────────────┼──────────┼────────┼────────┤

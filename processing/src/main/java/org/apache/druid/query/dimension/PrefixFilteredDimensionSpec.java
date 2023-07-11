@@ -21,15 +21,12 @@ package org.apache.druid.query.dimension;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import it.unimi.dsi.fastutil.ints.Int2IntMap;
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.IdMapping;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 /**
@@ -68,33 +65,22 @@ public class PrefixFilteredDimensionSpec extends BaseFilteredDimensionSpec
     if (selectorCardinality < 0 || !selector.nameLookupPossibleInAdvance()) {
       return new PredicateFilteredDimensionSelector(
           selector,
-          new Predicate<String>()
-          {
-            @Override
-            public boolean apply(@Nullable String input)
-            {
-              String val = NullHandling.nullToEmptyIfNeeded(input);
-              return val == null ? false : val.startsWith(prefix);
-            }
+          input -> {
+            String val = NullHandling.nullToEmptyIfNeeded(input);
+            return val != null && val.startsWith(prefix);
           }
       );
     }
 
-    int count = 0;
-    final Int2IntOpenHashMap forwardMapping = new Int2IntOpenHashMap();
-    forwardMapping.defaultReturnValue(-1);
+    final IdMapping.Builder builder = IdMapping.Builder.ofUnknownCardinality();
     for (int i = 0; i < selectorCardinality; i++) {
       String val = NullHandling.nullToEmptyIfNeeded(selector.lookupName(i));
       if (val != null && val.startsWith(prefix)) {
-        forwardMapping.put(i, count++);
+        builder.addForwardMapping(i);
       }
     }
 
-    final int[] reverseMapping = new int[forwardMapping.size()];
-    for (Int2IntMap.Entry e : forwardMapping.int2IntEntrySet()) {
-      reverseMapping[e.getIntValue()] = e.getIntKey();
-    }
-    return new ForwardingFilteredDimensionSelector(selector, forwardMapping, reverseMapping);
+    return new ForwardingFilteredDimensionSelector(selector, builder.build());
   }
 
   @Override

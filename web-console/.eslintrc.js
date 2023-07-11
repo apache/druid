@@ -30,10 +30,12 @@ module.exports = {
     },
   },
   rules: {
+    '@typescript-eslint/consistent-type-imports': ['warn', { prefer: 'type-imports' }],
     'header/header': [
       2,
       'block',
       { pattern: 'Licensed to the Apache Software Foundation \\(ASF\\).+' },
     ],
+    'react/jsx-no-bind': [2, { allowArrowFunctions: true, allowFunctions: true }],
   },
 };

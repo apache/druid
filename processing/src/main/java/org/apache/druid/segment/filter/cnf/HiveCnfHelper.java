@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.filter.cnf;
 
+import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.filter.AndFilter;
@@ -37,6 +38,8 @@ import java.util.List;
  */
 public class HiveCnfHelper
 {
+  private static final int CNF_MAX_FILTER_THRESHOLD = 10_000;
+
   public static Filter pushDownNot(Filter current)
   {
     if (current instanceof NotFilter) {
@@ -78,17 +81,37 @@ public class HiveCnfHelper
     return current;
   }
 
-  public static Filter convertToCnf(Filter current)
+  public static Filter convertToCnf(Filter current) throws CNFFilterExplosionException
+  {
+    return convertToCnfWithLimit(current, CNF_MAX_FILTER_THRESHOLD).lhs;
+  }
+
+  /**
+   * Converts a filter to CNF form with a limit on filter count
+   * @param maxCNFFilterLimit the maximum number of filters allowed in CNF conversion
+   * @return a pair of the CNF converted filter and the new remaining filter limit
+   * @throws CNFFilterExplosionException is thrown if the filters in CNF representation go beyond maxCNFFilterLimit
+   */
+  private static NonnullPair<Filter, Integer> convertToCnfWithLimit(
+      Filter current,
+      int maxCNFFilterLimit
+  ) throws CNFFilterExplosionException
   {
     if (current instanceof NotFilter) {
-      return new NotFilter(convertToCnf(((NotFilter) current).getBaseFilter()));
+      NonnullPair<Filter, Integer> result = convertToCnfWithLimit(((NotFilter) current).getBaseFilter(), maxCNFFilterLimit);
+      return new NonnullPair<>(new NotFilter(result.lhs), result.rhs);
     }
     if (current instanceof AndFilter) {
       List<Filter> children = new ArrayList<>();
       for (Filter child : ((AndFilter) current).getFilters()) {
-        children.add(convertToCnf(child));
+        NonnullPair<Filter, Integer> result = convertToCnfWithLimit(child, maxCNFFilterLimit);
+        children.add(result.lhs);
+        maxCNFFilterLimit = result.rhs;
+        if (maxCNFFilterLimit < 0) {
+          throw new CNFFilterExplosionException("Exceeded maximum allowed filters for CNF (conjunctive normal form) conversion");
+        }
       }
-      return Filters.and(children);
+      return new NonnullPair<>(Filters.and(children), maxCNFFilterLimit);
     }
     if (current instanceof OrFilter) {
       // a list of leaves that weren't under AND expressions
@@ -107,11 +130,11 @@ public class HiveCnfHelper
       }
       if (!andList.isEmpty()) {
         List<Filter> result = new ArrayList<>();
-        generateAllCombinations(result, andList, nonAndList);
-        return Filters.and(result);
+        generateAllCombinations(result, andList, nonAndList, maxCNFFilterLimit);
+        return new NonnullPair<>(Filters.and(result), maxCNFFilterLimit - result.size());
       }
     }
-    return current;
+    return new NonnullPair<>(current, maxCNFFilterLimit);
   }
 
   public static Filter flatten(Filter root)
@@ -158,8 +181,9 @@ public class HiveCnfHelper
   private static void generateAllCombinations(
       List<Filter> result,
       List<Filter> andList,
-      List<Filter> nonAndList
-  )
+      List<Filter> nonAndList,
+      int maxAllowedFilters
+  ) throws CNFFilterExplosionException
   {
     List<Filter> children = new ArrayList<>(((AndFilter) andList.get(0)).getFilters());
     if (result.isEmpty()) {
@@ -168,6 +192,9 @@ public class HiveCnfHelper
         a.add(child);
         // Result must receive an actual OrFilter, so wrap if Filters.or managed to un-OR it.
         result.add(idempotentOr(Filters.or(a)));
+        if (result.size() > maxAllowedFilters) {
+          throw new CNFFilterExplosionException("Exceeded maximum allowed filters for CNF (conjunctive normal form) conversion");
+        }
       }
     } else {
       List<Filter> work = new ArrayList<>(result);
@@ -178,11 +205,14 @@ public class HiveCnfHelper
           a.add(child);
           // Result must receive an actual OrFilter.
           result.add(idempotentOr(Filters.or(a)));
+          if (result.size() > maxAllowedFilters) {
+            throw new CNFFilterExplosionException("Exceeded maximum allowed filters for CNF (conjunctive normal form) conversion");
+          }
         }
       }
     }
     if (andList.size() > 1) {
-      generateAllCombinations(result, andList.subList(1, andList.size()), nonAndList);
+      generateAllCombinations(result, andList.subList(1, andList.size()), nonAndList, maxAllowedFilters);
     }
   }
 

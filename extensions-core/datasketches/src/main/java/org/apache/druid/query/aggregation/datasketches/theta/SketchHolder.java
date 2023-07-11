@@ -34,6 +34,7 @@ import org.apache.datasketches.theta.Union;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.data.SafeWritableMemory;
 
 import javax.annotation.Nullable;
 
@@ -132,9 +133,9 @@ public class SketchHolder
   public void updateUnion(Union union)
   {
     if (obj instanceof Memory) {
-      union.update((Memory) obj);
+      union.union((Memory) obj);
     } else {
-      union.update(getSketch());
+      union.union(getSketch());
     }
   }
 
@@ -224,6 +225,17 @@ public class SketchHolder
     );
   }
 
+  public static SketchHolder deserializeSafe(Object serializedSketch)
+  {
+    if (serializedSketch instanceof String) {
+      return SketchHolder.of(deserializeFromBase64EncodedStringSafe((String) serializedSketch));
+    } else if (serializedSketch instanceof byte[]) {
+      return SketchHolder.of(deserializeFromByteArraySafe((byte[]) serializedSketch));
+    }
+
+    return deserialize(serializedSketch);
+  }
+
   private static Sketch deserializeFromBase64EncodedString(String str)
   {
     return deserializeFromByteArray(StringUtils.decodeBase64(StringUtils.toUtf8(str)));
@@ -232,6 +244,16 @@ public class SketchHolder
   private static Sketch deserializeFromByteArray(byte[] data)
   {
     return deserializeFromMemory(Memory.wrap(data));
+  }
+
+  private static Sketch deserializeFromBase64EncodedStringSafe(String str)
+  {
+    return deserializeFromByteArraySafe(StringUtils.decodeBase64(StringUtils.toUtf8(str)));
+  }
+
+  private static Sketch deserializeFromByteArraySafe(byte[] data)
+  {
+    return deserializeFromMemory(SafeWritableMemory.wrap(data));
   }
 
   private static Sketch deserializeFromMemory(Memory mem)
@@ -267,12 +289,12 @@ public class SketchHolder
       case INTERSECT:
         Intersection intersection = (Intersection) SetOperation.builder().setNominalEntries(sketchSize).build(Family.INTERSECTION);
         for (Object o : holders) {
-          intersection.update(((SketchHolder) o).getSketch());
+          intersection.intersect(((SketchHolder) o).getSketch());
         }
         return SketchHolder.of(intersection.getResult(false, null));
       case NOT:
         if (holders.length < 1) {
-          throw new IllegalArgumentException("A-Not-B requires atleast 1 sketch");
+          throw new IllegalArgumentException("A-Not-B requires at least 1 sketch");
         }
 
         if (holders.length == 1) {
@@ -282,8 +304,7 @@ public class SketchHolder
         Sketch result = ((SketchHolder) holders[0]).getSketch();
         for (int i = 1; i < holders.length; i++) {
           AnotB anotb = (AnotB) SetOperation.builder().setNominalEntries(sketchSize).build(Family.A_NOT_B);
-          anotb.update(result, ((SketchHolder) holders[i]).getSketch());
-          result = anotb.getResult(false, null);
+          result = anotb.aNotB(result, ((SketchHolder) holders[i]).getSketch());
         }
         return SketchHolder.of(result);
       default:

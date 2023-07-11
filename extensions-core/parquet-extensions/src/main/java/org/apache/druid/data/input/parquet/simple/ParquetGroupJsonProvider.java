@@ -19,15 +19,11 @@
 
 package org.apache.druid.data.input.parquet.simple;
 
-import com.jayway.jsonpath.InvalidJsonException;
-import com.jayway.jsonpath.spi.json.JsonProvider;
+import org.apache.druid.java.util.common.parsers.FlattenerJsonProvider;
 import org.apache.parquet.example.data.Group;
 
-import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -35,25 +31,13 @@ import java.util.stream.Collectors;
 /**
  * Provides json path for Parquet {@link Group} objects
  */
-public class ParquetGroupJsonProvider implements JsonProvider
+public class ParquetGroupJsonProvider extends FlattenerJsonProvider
 {
   private final ParquetGroupConverter converter;
 
   public ParquetGroupJsonProvider(ParquetGroupConverter converter)
   {
     this.converter = converter;
-  }
-
-  @Override
-  public Object createArray()
-  {
-    return new ArrayList<>();
-  }
-
-  @Override
-  public Object createMap()
-  {
-    return new HashMap<>();
   }
 
   @Override
@@ -83,15 +67,6 @@ public class ParquetGroupJsonProvider implements JsonProvider
   }
 
   @Override
-  public Iterable<?> toIterable(final Object o)
-  {
-    if (o instanceof List) {
-      return (List) o;
-    }
-    throw new UnsupportedOperationException(o.getClass().getName());
-  }
-
-  @Override
   public Collection<String> getPropertyKeys(final Object o)
   {
     if (o == null) {
@@ -117,81 +92,6 @@ public class ParquetGroupJsonProvider implements JsonProvider
       return converter.convertField(g, s);
     }
     throw new UnsupportedOperationException(o.getClass().getName());
-  }
-
-  @Override
-  public Object getArrayIndex(final Object o, final int i)
-  {
-    if (o instanceof List) {
-      return ((List) o).get(i);
-    }
-    throw new UnsupportedOperationException(o.getClass().getName());
-  }
-
-  @Override
-  public void setArrayIndex(final Object o, final int i, final Object o1)
-  {
-    if (o instanceof List) {
-      final List list = (List) o;
-      if (list.size() == i) {
-        list.add(o1);
-      } else {
-        list.set(i, o1);
-      }
-    } else {
-      throw new UnsupportedOperationException(o.getClass().getName());
-    }
-  }
-
-  @Override
-  public void setProperty(final Object o, final Object o1, final Object o2)
-  {
-    if (o instanceof Map) {
-      ((Map) o).put(o1, o2);
-    } else {
-      throw new UnsupportedOperationException(o.getClass().getName());
-    }
-  }
-
-  @Override
-  public void removeProperty(final Object o, final Object o1)
-  {
-    if (o instanceof Map) {
-      ((Map) o).remove(o1);
-    } else {
-      throw new UnsupportedOperationException(o.getClass().getName());
-    }
-  }
-
-  @Override
-  @Deprecated
-  public Object getArrayIndex(final Object o, final int i, final boolean b)
-  {
-    throw new UnsupportedOperationException("Deprecated");
-  }
-
-  @Override
-  public Object parse(final String s) throws InvalidJsonException
-  {
-    throw new UnsupportedOperationException("Unused");
-  }
-
-  @Override
-  public Object parse(final InputStream inputStream, final String s) throws InvalidJsonException
-  {
-    throw new UnsupportedOperationException("Unused");
-  }
-
-  @Override
-  public String toJson(final Object o)
-  {
-    throw new UnsupportedOperationException("Unused");
-  }
-
-  @Override
-  public Object unwrap(final Object o)
-  {
-    throw new UnsupportedOperationException("Unused");
   }
 }
 

@@ -375,7 +375,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
             serverId,
             segment.getId()
         );
-        callback.execute();
+        callback.execute(false);
         return;
       }
 
@@ -401,7 +401,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
             serverId,
             segment.getId()
         );
-        callback.execute();
+        callback.execute(false);
         return;
       }
       SegmentHolder holder = segmentsToDrop.get(segment);
@@ -536,7 +536,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       callBackExecutor.execute(() -> {
         for (LoadPeonCallback callback : callbacks) {
           if (callback != null) {
-            callback.execute();
+            callback.execute(true);
           }
         }
       });
@@ -557,7 +557,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       callBackExecutor.execute(() -> {
         for (LoadPeonCallback callback : callbacks) {
           if (callback != null) {
-            callback.execute();
+            callback.execute(false);
           }
         }
       });

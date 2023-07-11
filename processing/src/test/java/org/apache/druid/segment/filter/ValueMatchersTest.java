@@ -49,7 +49,7 @@ public class ValueMatchersTest extends InitializedNullHandlingTest
         GenericIndexed.fromIterable(ImmutableList.of("value"), GenericIndexed.STRING_STRATEGY),
         GenericIndexed.fromIterable(
             ImmutableList.of(ByteBuffer.wrap(StringUtils.toUtf8("value"))),
-            GenericIndexed.BYTE_BUFFER_STRATEGY
+            GenericIndexed.UTF8_STRATEGY
         ),
         () -> VSizeColumnarInts.fromArray(new int[]{0}),
         null,
@@ -62,7 +62,7 @@ public class ValueMatchersTest extends InitializedNullHandlingTest
                 ByteBuffer.wrap(StringUtils.toUtf8("value")),
                 ByteBuffer.wrap(StringUtils.toUtf8("value2"))
             ),
-            GenericIndexed.BYTE_BUFFER_STRATEGY
+            GenericIndexed.UTF8_STRATEGY
         ),
         () -> VSizeColumnarInts.fromArray(new int[]{0, 0, 1, 0, 1}),
         null,
@@ -72,7 +72,7 @@ public class ValueMatchersTest extends InitializedNullHandlingTest
         GenericIndexed.fromIterable(ImmutableList.of("value"), GenericIndexed.STRING_STRATEGY),
         GenericIndexed.fromIterable(
             ImmutableList.of(ByteBuffer.wrap(StringUtils.toUtf8("value"))),
-            GenericIndexed.BYTE_BUFFER_STRATEGY
+            GenericIndexed.UTF8_STRATEGY
         ),
         null,
         () -> VSizeColumnarMultiInts.fromIterable(

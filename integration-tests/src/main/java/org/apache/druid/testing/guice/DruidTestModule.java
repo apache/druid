@@ -24,7 +24,9 @@ import com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.curator.CuratorConfig;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.EscalatedClient;
@@ -51,7 +53,7 @@ public class DruidTestModule implements Module
     binder.bind(IntegrationTestingConfig.class)
           .toProvider(IntegrationTestingConfigProvider.class)
           .in(ManageLifecycle.class);
-    JsonConfigProvider.bind(binder, "druid.test.config", IntegrationTestingConfigProvider.class);
+    JsonConfigProvider.bind(binder, IntegrationTestingConfigProvider.PROPERTY_BASE, IntegrationTestingConfigProvider.class);
 
     binder.bind(CuratorConfig.class).to(IntegrationTestingCuratorConfig.class);
 
@@ -59,6 +61,9 @@ public class DruidTestModule implements Module
     binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(
         new DruidNode("integration-tests", "localhost", false, 9191, null, null, true, false)
     );
+
+    // Required for MSQIndexingModule
+    Multibinder.newSetBinder(binder, NodeRole.class, Self.class).addBinding().toInstance(NodeRole.PEON);
   }
 
   @Provides

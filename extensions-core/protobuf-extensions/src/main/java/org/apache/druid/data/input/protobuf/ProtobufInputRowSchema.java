@@ -40,7 +40,12 @@ public class ProtobufInputRowSchema extends InputRowSchema
 {
   public ProtobufInputRowSchema(InputRowSchema inputRowSchema)
   {
-    super(new ProtobufTimestampSpec(inputRowSchema.getTimestampSpec()), inputRowSchema.getDimensionsSpec(), inputRowSchema.getColumnsFilter());
+    super(
+        new ProtobufTimestampSpec(inputRowSchema.getTimestampSpec()),
+        inputRowSchema.getDimensionsSpec(),
+        inputRowSchema.getColumnsFilter(),
+        inputRowSchema.getMetricNames()
+    );
   }
 
   static class ProtobufTimestampSpec extends TimestampSpec
@@ -51,9 +56,9 @@ public class ProtobufInputRowSchema extends InputRowSchema
     }
 
     /**
-     * Extracts the timestamp from the record. If the timestamp column is of complex type such as {@link Timestamp}, then the timestamp
-     * is first serialized to string via {@link JsonFormat}. Directly calling {@code toString()} on {@code Timestamp}
-     * returns an unparseable string.
+     * Extracts the timestamp from the record. If the timestamp column is of complex type such as {@link Timestamp},
+     * then the timestamp is first serialized to string via {@link JsonFormat}. Directly calling {@code toString()}
+     * on {@code Timestamp} returns an unparseable string.
      */
     @Override
     @Nullable
@@ -66,7 +71,7 @@ public class ProtobufInputRowSchema extends InputRowSchema
           return parseDateTime(timestampStr);
         }
         catch (InvalidProtocolBufferException e) {
-          throw new ParseException(e, "Protobuf message could not be parsed");
+          throw new ParseException(null, e, "Protobuf message could not be parsed");
         }
       } else {
         return parseDateTime(rawTimestamp);

@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
+import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
 
@@ -131,7 +132,7 @@ public class SupervisorManager
             createAndStartSupervisorInternal(spec, false);
           }
           catch (Exception ex) {
-            log.error(ex, "Failed to start supervisor: [%s]", spec.getId());
+            log.error(ex, "Failed to start supervisor: id [%s]", spec.getId());
           }
         }
       }
@@ -166,6 +167,11 @@ public class SupervisorManager
     log.info("SupervisorManager stopped.");
   }
 
+  public List<VersionedSupervisorSpec> getSupervisorHistoryForId(String id)
+  {
+    return metadataSupervisorManager.getAllForId(id);
+  }
+
   public Map<String, List<VersionedSupervisorSpec>> getSupervisorHistory()
   {
     return metadataSupervisorManager.getAll();
@@ -181,6 +187,12 @@ public class SupervisorManager
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getStats());
+  }
+
+  public Optional<List<ParseExceptionReport>> getSupervisorParseErrors(String id)
+  {
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getParseErrors());
   }
 
   public Optional<Boolean> isSupervisorHealthy(String id)
@@ -301,10 +313,6 @@ public class SupervisorManager
       return false;
     }
 
-    if (persistSpec) {
-      metadataSupervisorManager.insert(id, spec);
-    }
-
     Supervisor supervisor;
     SupervisorTaskAutoScaler autoscaler;
     try {
@@ -314,18 +322,22 @@ public class SupervisorManager
       supervisor.start();
       if (autoscaler != null) {
         autoscaler.start();
-        autoscalers.put(id, autoscaler);
       }
     }
     catch (Exception e) {
-      // Supervisor creation or start failed write tombstone only when trying to start a new supervisor
-      if (persistSpec) {
-        metadataSupervisorManager.insert(id, new NoopSupervisorSpec(null, spec.getDataSources()));
-      }
+      log.error("Failed to create and start supervisor: [%s]", spec.getId());
       throw new RuntimeException(e);
     }
 
+    if (persistSpec) {
+      metadataSupervisorManager.insert(id, spec);
+    }
+
     supervisors.put(id, Pair.of(supervisor, spec));
+    if (autoscaler != null) {
+      autoscalers.put(id, autoscaler);
+    }
+
     return true;
   }
 }

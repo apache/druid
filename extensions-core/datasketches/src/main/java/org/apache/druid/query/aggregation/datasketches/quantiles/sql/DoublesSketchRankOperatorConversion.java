@@ -39,7 +39,7 @@ public class DoublesSketchRankOperatorConversion extends DoublesSketchSingleArgB
 
   public DoublesSketchRankOperatorConversion()
   {
-    super(SQL_FUNCTION, FUNCTION_NAME);
+    super(SQL_FUNCTION);
   }
 
   @Override

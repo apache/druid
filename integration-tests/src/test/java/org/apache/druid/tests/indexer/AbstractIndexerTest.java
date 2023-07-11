@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -31,7 +32,9 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.clients.TaskResponseObject;
+import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.ITRetryUtil;
+import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.joda.time.Interval;
 
@@ -44,7 +47,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 public abstract class AbstractIndexerTest
 {
@@ -62,6 +64,10 @@ public abstract class AbstractIndexerTest
   protected ObjectMapper smileMapper;
   @Inject
   protected TestQueryHelper queryHelper;
+  @Inject
+  protected SqlTestQueryHelper sqlQueryHelper;
+  @Inject
+  protected DataLoaderHelper dataLoaderHelper;
 
   @Inject
   protected IntegrationTestingConfig config;
@@ -103,6 +109,9 @@ public abstract class AbstractIndexerTest
 
   protected String submitIndexTask(String indexTask, final String fullDatasourceName) throws Exception
   {
+    // Wait for any existing kill tasks to complete before submitting new index task otherwise
+    // kill tasks can fail with interval lock revoked.
+    waitForAllTasksToCompleteForDataSource(fullDatasourceName);
     String taskSpec = getResourceAsString(indexTask);
     taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
     taskSpec = StringUtils.replace(
@@ -135,14 +144,8 @@ public abstract class AbstractIndexerTest
     Interval interval = Intervals.of(start + "/" + end);
     coordinator.unloadSegmentsForDataSource(dataSource);
     ITRetryUtil.retryUntilFalse(
-        new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call()
-          {
-            return coordinator.areSegmentsLoaded(dataSource);
-          }
-        }, "Segment Unloading"
+        () -> coordinator.areSegmentsLoaded(dataSource),
+        "Segment Unloading"
     );
     coordinator.deleteSegmentsDataSource(dataSource, interval);
     waitForAllTasksToCompleteForDataSource(dataSource);
@@ -159,6 +162,9 @@ public abstract class AbstractIndexerTest
   public static String getResourceAsString(String file) throws IOException
   {
     try (final InputStream inputStream = getResourceAsStream(file)) {
+      if (inputStream == null) {
+        throw new ISE("Failed to load resource: [%s]", file);
+      }
       return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
     }
   }

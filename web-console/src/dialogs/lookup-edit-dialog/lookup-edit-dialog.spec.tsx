@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { shallow } from 'enzyme';
 import React from 'react';
+
+import { shallow } from '../../utils/shallow-renderer';
 
 import { LookupEditDialog } from './lookup-edit-dialog';
 
@@ -28,7 +29,7 @@ describe('LookupEditDialog', () => {
         onClose={() => {}}
         onSubmit={() => {}}
         onChange={() => {}}
-        lookupName="test"
+        lookupId="test"
         lookupTier="test"
         lookupVersion="test"
         lookupSpec={{ type: 'map', map: { a: 1 } }}

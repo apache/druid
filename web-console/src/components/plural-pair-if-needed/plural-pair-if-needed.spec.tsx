@@ -21,7 +21,7 @@ import React from 'react';
 
 import { PluralPairIfNeeded } from './plural-pair-if-needed';
 
-describe('plural pair if needed', () => {
+describe('PluralPairIfNeeded', () => {
   it('works when both counts exist', () => {
     const pluralPairIfNeeded = (
       <PluralPairIfNeeded

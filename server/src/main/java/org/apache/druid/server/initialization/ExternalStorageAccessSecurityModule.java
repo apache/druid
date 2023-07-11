@@ -19,23 +19,12 @@
 
 package org.apache.druid.server.initialization;
 
-import com.fasterxml.jackson.databind.Module;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.initialization.DruidModule;
 
-import java.util.List;
-
 public class ExternalStorageAccessSecurityModule implements DruidModule
 {
-
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return ImmutableList.of();
-  }
-
   @Override
   public void configure(Binder binder)
   {

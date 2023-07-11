@@ -22,7 +22,12 @@ package org.apache.druid.data.input.protobuf;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.io.Files;
+import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.ByteEntity;
@@ -31,9 +36,16 @@ import org.apache.druid.data.input.impl.NestedInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.math.expr.ExpressionProcessing;
+import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.AutoTypeColumnSchema;
+import org.apache.druid.segment.transform.ExpressionTransform;
+import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.transform.TransformingInputEntityReader;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
@@ -42,7 +54,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 
 public class ProtobufInputFormatTest
 {
@@ -53,19 +67,23 @@ public class ProtobufInputFormatTest
   private DimensionsSpec dimensionsSpec;
   private JSONPathSpec flattenSpec;
   private FileBasedProtobufBytesDecoder decoder;
+  private InlineDescriptorProtobufBytesDecoder inlineSchemaDecoder;
 
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Before
-  public void setUp()
+  public void setUp() throws Exception
   {
+    NullHandling.initializeForTests();
+    ExpressionProcessing.initializeForTests();
     timestampSpec = new TimestampSpec("timestamp", "iso", null);
     dimensionsSpec = new DimensionsSpec(Lists.newArrayList(
         new StringDimensionSchema("event"),
         new StringDimensionSchema("id"),
         new StringDimensionSchema("someOtherId"),
-        new StringDimensionSchema("isValid")
-    ), null, null);
+        new StringDimensionSchema("isValid"),
+        new StringDimensionSchema("someBytesColumn")
+    ));
     flattenSpec = new JSONPathSpec(
         true,
         Lists.newArrayList(
@@ -75,6 +93,14 @@ public class ProtobufInputFormatTest
         )
     );
     decoder = new FileBasedProtobufBytesDecoder("prototest.desc", "ProtoTestEvent");
+
+    File descFile = new File(this.getClass()
+                                 .getClassLoader()
+                                 .getResource("prototest.desc")
+                                 .toURI());
+    String descString = StringUtils.encodeBase64String(Files.toByteArray(descFile));
+    inlineSchemaDecoder = new InlineDescriptorProtobufBytesDecoder(descString, "ProtoTestEvent");
+
     for (Module jacksonModule : new ProtobufExtensionsModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
@@ -113,7 +139,7 @@ public class ProtobufInputFormatTest
   }
 
   @Test
-  public void testParseNestedData() throws Exception
+  public void testParseFlattenData() throws Exception
   {
     //configure parser with desc file
     ProtobufInputFormat protobufInputFormat = new ProtobufInputFormat(flattenSpec, decoder);
@@ -124,9 +150,301 @@ public class ProtobufInputFormatTest
 
     final ByteEntity entity = new ByteEntity(ProtobufInputRowParserTest.toByteBuffer(event));
 
-    InputRow row = protobufInputFormat.createReader(new InputRowSchema(timestampSpec, dimensionsSpec, null), entity, null).read().next();
+    InputRow row = protobufInputFormat.createReader(
+        new InputRowSchema(timestampSpec, dimensionsSpec, null),
+        entity,
+        null
+    ).read().next();
+
+    Assert.assertEquals(
+        ImmutableList.builder()
+                     .add("event")
+                     .add("id")
+                     .add("someOtherId")
+                     .add("isValid")
+                     .add("someBytesColumn")
+                     .build(),
+        row.getDimensions()
+    );
 
     ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
+  }
+
+  @Test
+  public void testParseFlattenDataJq() throws Exception
+  {
+    //configure parser with desc file
+    ProtobufInputFormat protobufInputFormat = new ProtobufInputFormat(
+        new JSONPathSpec(
+            true,
+            Lists.newArrayList(
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "eventType", "eventType"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "foobar", ".foo.bar"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "bar0", ".bar[0].bar")
+            )
+        ),
+        decoder
+    );
+
+    //create binary of proto test event
+    DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildNestedData(dateTime);
+
+    final ByteEntity entity = new ByteEntity(ProtobufInputRowParserTest.toByteBuffer(event));
+
+    InputRow row = protobufInputFormat.createReader(
+        new InputRowSchema(timestampSpec, dimensionsSpec, null),
+        entity,
+        null
+    ).read().next();
+
+    Assert.assertEquals(
+        ImmutableList.builder()
+                     .add("event")
+                     .add("id")
+                     .add("someOtherId")
+                     .add("isValid")
+                     .add("someBytesColumn")
+                     .build(),
+        row.getDimensions()
+    );
+
+    ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
+  }
+
+  @Test
+  public void testParseFlattenDataDiscover() throws Exception
+  {
+    //configure parser with desc file
+    ProtobufInputFormat protobufInputFormat = new ProtobufInputFormat(flattenSpec, decoder);
+
+    //create binary of proto test event
+    DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildNestedData(dateTime);
+
+    final ByteEntity entity = new ByteEntity(ProtobufInputRowParserTest.toByteBuffer(event));
+
+    InputRow row = protobufInputFormat.createReader(
+        new InputRowSchema(timestampSpec, new DimensionsSpec(Collections.emptyList()), null),
+        entity,
+        null
+    ).read().next();
+
+    Assert.assertEquals(
+        ImmutableList.builder()
+                     .add("eventType")
+                     .add("foobar")
+                     .add("bar0")
+                     .add("someOtherId")
+                     .add("someIntColumn")
+                     .add("isValid")
+                     .add("description")
+                     .add("someLongColumn")
+                     .add("someFloatColumn")
+                     .add("id")
+                     .add("someBytesColumn")
+                     .build(),
+        row.getDimensions()
+    );
+
+    ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
+  }
+
+  @Test
+  public void testParseNestedData() throws Exception
+  {
+    ProtobufInputFormat protobufInputFormat = new ProtobufInputFormat(
+        JSONPathSpec.DEFAULT,
+        decoder
+    );
+
+    //create binary of proto test event
+    DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildNestedData(dateTime);
+
+    final ByteEntity entity = new ByteEntity(ProtobufInputRowParserTest.toByteBuffer(event));
+
+    InputEntityReader reader = protobufInputFormat.createReader(
+        new InputRowSchema(
+            timestampSpec,
+            new DimensionsSpec(
+                Lists.newArrayList(
+                    new AutoTypeColumnSchema("event"),
+                    new AutoTypeColumnSchema("id"),
+                    new AutoTypeColumnSchema("someOtherId"),
+                    new AutoTypeColumnSchema("isValid"),
+                    new AutoTypeColumnSchema("eventType"),
+                    new AutoTypeColumnSchema("foo"),
+                    new AutoTypeColumnSchema("bar"),
+                    new AutoTypeColumnSchema("someBytesColumn")
+                )
+            ),
+            null
+        ),
+        entity,
+        null
+    );
+
+    TransformSpec transformSpec = new TransformSpec(
+        null,
+        Lists.newArrayList(
+            new ExpressionTransform("foobar", "JSON_VALUE(foo, '$.bar')", TestExprMacroTable.INSTANCE),
+            new ExpressionTransform("bar0", "JSON_VALUE(bar, '$[0].bar')", TestExprMacroTable.INSTANCE)
+        )
+    );
+    TransformingInputEntityReader transformingReader = new TransformingInputEntityReader(
+        reader,
+        transformSpec.toTransformer()
+    );
+
+
+    InputRow row = transformingReader.read().next();
+
+    Assert.assertEquals(
+        ImmutableList.builder()
+                     .add("event")
+                     .add("id")
+                     .add("someOtherId")
+                     .add("isValid")
+                     .add("eventType")
+                     .add("foo")
+                     .add("bar")
+                     .add("someBytesColumn")
+                     .build(),
+        row.getDimensions()
+    );
+
+    Assert.assertEquals(ImmutableMap.of("bar", "baz"), row.getRaw("foo"));
+    Assert.assertEquals(
+        ImmutableList.of(ImmutableMap.of("bar", "bar0"), ImmutableMap.of("bar", "bar1")),
+        row.getRaw("bar")
+    );
+    Assert.assertArrayEquals(
+        new byte[]{0x01, 0x02, 0x03, 0x04},
+        (byte[]) row.getRaw("someBytesColumn")
+    );
+    ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
+
+  }
+
+  @Test
+  public void testParseNestedDataSchemaless() throws Exception
+  {
+    ProtobufInputFormat protobufInputFormat = new ProtobufInputFormat(
+        JSONPathSpec.DEFAULT,
+        decoder
+    );
+
+    //create binary of proto test event
+    DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildNestedData(dateTime);
+
+    final ByteEntity entity = new ByteEntity(ProtobufInputRowParserTest.toByteBuffer(event));
+
+    InputEntityReader reader = protobufInputFormat.createReader(
+        new InputRowSchema(
+            timestampSpec,
+            DimensionsSpec.builder().useSchemaDiscovery(true).build(),
+            null,
+            null
+        ),
+        entity,
+        null
+    );
+
+    TransformSpec transformSpec = new TransformSpec(
+        null,
+        Lists.newArrayList(
+            new ExpressionTransform("foobar", "JSON_VALUE(foo, '$.bar')", TestExprMacroTable.INSTANCE),
+            new ExpressionTransform("bar0", "JSON_VALUE(bar, '$[0].bar')", TestExprMacroTable.INSTANCE)
+        )
+    );
+    TransformingInputEntityReader transformingReader = new TransformingInputEntityReader(
+        reader,
+        transformSpec.toTransformer()
+    );
+
+
+    InputRow row = transformingReader.read().next();
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            "someOtherId",
+            "bar",
+            "someIntColumn",
+            "isValid",
+            "foo",
+            "description",
+            "someLongColumn",
+            "someFloatColumn",
+            "eventType",
+            "id",
+            "someBytesColumn"
+        ),
+        row.getDimensions()
+    );
+
+    Assert.assertEquals(ImmutableMap.of("bar", "baz"), row.getRaw("foo"));
+    Assert.assertEquals(
+        ImmutableList.of(ImmutableMap.of("bar", "bar0"), ImmutableMap.of("bar", "bar1")),
+        row.getRaw("bar")
+    );
+    Assert.assertArrayEquals(
+        new byte[]{0x01, 0x02, 0x03, 0x04},
+        (byte[]) row.getRaw("someBytesColumn")
+    );
+    ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
+
+  }
+
+  @Test
+  public void testParseNestedDataTransformsOnly() throws Exception
+  {
+    ProtobufInputFormat protobufInputFormat = new ProtobufInputFormat(
+        JSONPathSpec.DEFAULT,
+        decoder
+    );
+
+    //create binary of proto test event
+    DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildNestedData(dateTime);
+
+    final ByteEntity entity = new ByteEntity(ProtobufInputRowParserTest.toByteBuffer(event));
+
+    InputEntityReader reader = protobufInputFormat.createReader(
+        new InputRowSchema(
+            timestampSpec,
+            new DimensionsSpec(
+                Lists.newArrayList(
+                    new StringDimensionSchema("event"),
+                    new StringDimensionSchema("id"),
+                    new StringDimensionSchema("someOtherId"),
+                    new StringDimensionSchema("isValid"),
+                    new StringDimensionSchema("eventType")
+                )
+            ),
+            null
+        ),
+        entity,
+        null
+    );
+
+    TransformSpec transformSpec = new TransformSpec(
+        null,
+        Lists.newArrayList(
+            new ExpressionTransform("foobar", "JSON_VALUE(foo, '$.bar')", TestExprMacroTable.INSTANCE),
+            new ExpressionTransform("bar0", "JSON_VALUE(bar, '$[0].bar')", TestExprMacroTable.INSTANCE)
+        )
+    );
+    TransformingInputEntityReader transformingReader = new TransformingInputEntityReader(
+        reader,
+        transformSpec.toTransformer()
+    );
+
+
+    InputRow row = transformingReader.read().next();
+    ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
+
   }
 
   @Test
@@ -141,8 +459,33 @@ public class ProtobufInputFormatTest
 
     final ByteEntity entity = new ByteEntity(ProtobufInputRowParserTest.toByteBuffer(event));
 
-    InputRow row = protobufInputFormat.createReader(new InputRowSchema(timestampSpec, dimensionsSpec, null), entity, null).read().next();
+    InputRow row = protobufInputFormat.createReader(
+        new InputRowSchema(timestampSpec, dimensionsSpec, null),
+        entity,
+        null
+    ).read().next();
 
-    ProtobufInputRowParserTest.verifyFlatData(row, dateTime);
+    ProtobufInputRowParserTest.verifyFlatData(row, dateTime, false);
+  }
+
+  @Test
+  public void testParseNestedDataWithInlineSchema() throws Exception
+  {
+    //configure parser with inline schema decoder
+    ProtobufInputFormat protobufInputFormat = new ProtobufInputFormat(flattenSpec, inlineSchemaDecoder);
+
+    //create binary of proto test event
+    DateTime dateTime = new DateTime(2012, 7, 12, 9, 30, ISOChronology.getInstanceUTC());
+    ProtoTestEventWrapper.ProtoTestEvent event = ProtobufInputRowParserTest.buildNestedData(dateTime);
+
+    final ByteEntity entity = new ByteEntity(ProtobufInputRowParserTest.toByteBuffer(event));
+
+    InputRow row = protobufInputFormat.createReader(
+        new InputRowSchema(timestampSpec, dimensionsSpec, null),
+        entity,
+        null
+    ).read().next();
+
+    ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
   }
 }

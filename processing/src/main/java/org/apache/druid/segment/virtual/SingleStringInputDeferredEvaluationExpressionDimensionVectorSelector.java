@@ -20,8 +20,9 @@
 package org.apache.druid.segment.virtual;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.IdLookup;
@@ -43,7 +44,7 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
     implements SingleValueDimensionVectorSelector
 {
   private final SingleValueDimensionVectorSelector selector;
-  private final ExprVectorProcessor<String[]> stringProcessor;
+  private final ExprVectorProcessor<Object[]> stringProcessor;
   private final StringLookupVectorInputBindings inputBinding;
 
   public SingleStringInputDeferredEvaluationExpressionDimensionVectorSelector(
@@ -61,7 +62,7 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
     }
     this.selector = selector;
     this.inputBinding = new StringLookupVectorInputBindings();
-    this.stringProcessor = expression.buildVectorized(inputBinding);
+    this.stringProcessor = expression.asVectorProcessor(inputBinding);
   }
 
   @Override
@@ -75,7 +76,7 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
   public String lookupName(int id)
   {
     inputBinding.currentValue[0] = selector.lookupName(id);
-    return stringProcessor.evalVector(inputBinding).values()[0];
+    return Evals.asString(stringProcessor.evalVector(inputBinding).values()[0]);
   }
 
   @Override
@@ -118,13 +119,13 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
    */
   private static final class StringLookupVectorInputBindings implements Expr.VectorInputBinding
   {
-    private final String[] currentValue = new String[1];
+    private final Object[] currentValue = new Object[1];
 
     @Nullable
     @Override
-    public ExprType getType(String name)
+    public ExpressionType getType(String name)
     {
-      return ExprType.STRING;
+      return ExpressionType.STRING;
     }
 
     @Override

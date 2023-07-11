@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.datasketches.theta;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.oldapi.OldSketchBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.oldapi.OldSketchMergeAggregatorFactory;
@@ -29,13 +30,56 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class SketchAggregatorFactoryTest
 {
+  private static final SketchMergeAggregatorFactory AGGREGATOR_16384 =
+      new SketchMergeAggregatorFactory("x", "x", 16384, null, false, null);
+
+  private static final SketchMergeAggregatorFactory AGGREGATOR_32768 =
+      new SketchMergeAggregatorFactory("x", "x", 32768, null, false, null);
+
+  @Test
+  public void testGuessAggregatorHeapFootprint()
+  {
+    Assert.assertEquals(288, AGGREGATOR_16384.guessAggregatorHeapFootprint(1));
+    Assert.assertEquals(1056, AGGREGATOR_16384.guessAggregatorHeapFootprint(100));
+    Assert.assertEquals(262176, AGGREGATOR_16384.guessAggregatorHeapFootprint(1_000_000_000_000L));
+
+    Assert.assertEquals(288, AGGREGATOR_32768.guessAggregatorHeapFootprint(1));
+    Assert.assertEquals(1056, AGGREGATOR_32768.guessAggregatorHeapFootprint(100));
+    Assert.assertEquals(524320, AGGREGATOR_32768.guessAggregatorHeapFootprint(1_000_000_000_000L));
+  }
+
+  @Test
+  public void testMaxIntermediateSize()
+  {
+    Assert.assertEquals(262176, AGGREGATOR_16384.getMaxIntermediateSize());
+    Assert.assertEquals(524320, AGGREGATOR_32768.getMaxIntermediateSize());
+  }
+
+  @Test
+  public void testFactorizeSized()
+  {
+    ColumnSelectorFactory colSelectorFactory = EasyMock.mock(ColumnSelectorFactory.class);
+    EasyMock.expect(colSelectorFactory.makeColumnValueSelector(EasyMock.anyString()))
+            .andReturn(EasyMock.createMock(ColumnValueSelector.class)).anyTimes();
+    EasyMock.replay(colSelectorFactory);
+
+    AggregatorAndSize aggregatorAndSize = AGGREGATOR_16384.factorizeWithSize(colSelectorFactory);
+    Assert.assertEquals(48, aggregatorAndSize.getInitialSizeBytes());
+
+    aggregatorAndSize = AGGREGATOR_32768.factorizeWithSize(colSelectorFactory);
+    Assert.assertEquals(48, aggregatorAndSize.getInitialSizeBytes());
+  }
+
   @Test
   public void testResultArraySignature()
   {
@@ -92,28 +136,35 @@ public class SketchAggregatorFactoryTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
+                    .add("count", ColumnType.LONG)
                     .add("oldBuild", null)
-                    .add("oldMerge", ValueType.COMPLEX)
+                    .add("oldMerge", SketchModule.MERGE_TYPE)
                     .add("oldMergeFinalize", null)
-                    .add("merge", ValueType.COMPLEX)
+                    .add("merge", SketchModule.BUILD_TYPE)
                     .add("mergeFinalize", null)
-                    .add("oldBuild-access", ValueType.COMPLEX)
-                    .add("oldBuild-finalize", ValueType.DOUBLE)
-                    .add("oldMerge-access", ValueType.COMPLEX)
-                    .add("oldMerge-finalize", ValueType.COMPLEX)
-                    .add("oldMergeFinalize-access", ValueType.COMPLEX)
-                    .add("oldMergeFinalize-finalize", ValueType.DOUBLE)
-                    .add("merge-access", ValueType.COMPLEX)
-                    .add("merge-finalize", ValueType.COMPLEX)
-                    .add("mergeFinalize-access", ValueType.COMPLEX)
-                    .add("mergeFinalize-finalize", ValueType.DOUBLE)
-                    .add("sketchEstimate", ValueType.DOUBLE)
-                    .add("sketchEstimateStdDev", ValueType.COMPLEX)
-                    .add("sketchSet", ValueType.COMPLEX)
-                    .add("sketchString", ValueType.STRING)
+                    .add("oldBuild-access", SketchModule.BUILD_TYPE)
+                    .add("oldBuild-finalize", ColumnType.DOUBLE)
+                    .add("oldMerge-access", SketchModule.MERGE_TYPE)
+                    .add("oldMerge-finalize", SketchModule.MERGE_TYPE)
+                    .add("oldMergeFinalize-access", SketchModule.MERGE_TYPE)
+                    .add("oldMergeFinalize-finalize", ColumnType.DOUBLE)
+                    .add("merge-access", SketchModule.BUILD_TYPE)
+                    .add("merge-finalize", SketchModule.BUILD_TYPE)
+                    .add("mergeFinalize-access", SketchModule.BUILD_TYPE)
+                    .add("mergeFinalize-finalize", ColumnType.DOUBLE)
+                    .add("sketchEstimate", ColumnType.DOUBLE)
+                    .add("sketchEstimateStdDev", SketchModule.MERGE_TYPE)
+                    .add("sketchSet", SketchModule.MERGE_TYPE)
+                    .add("sketchString", ColumnType.STRING)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
+  }
+
+  @Test
+  public void testWithName()
+  {
+    Assert.assertEquals(AGGREGATOR_16384, AGGREGATOR_16384.withName("x"));
+    Assert.assertEquals("newTest", AGGREGATOR_16384.withName("newTest").getName());
   }
 }

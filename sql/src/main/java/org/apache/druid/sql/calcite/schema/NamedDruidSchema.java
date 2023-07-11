@@ -21,17 +21,18 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.google.inject.Inject;
 import org.apache.calcite.schema.Schema;
+import org.apache.druid.server.security.ResourceType;
 
 /**
  * The schema for Druid tables to be accessible via SQL.
  */
-class NamedDruidSchema implements NamedSchema
+public class NamedDruidSchema implements NamedSchema
 {
   private final DruidSchema druidSchema;
   private final String druidSchemaName;
 
   @Inject
-  NamedDruidSchema(DruidSchema druidSchema, @DruidSchemaName String druidSchemaName)
+  public NamedDruidSchema(DruidSchema druidSchema, @DruidSchemaName String druidSchemaName)
   {
     this.druidSchema = druidSchema;
     this.druidSchemaName = druidSchemaName;
@@ -41,6 +42,12 @@ class NamedDruidSchema implements NamedSchema
   public String getSchemaName()
   {
     return druidSchemaName;
+  }
+
+  @Override
+  public String getSchemaResourceType(String resourceName)
+  {
+    return ResourceType.DATASOURCE;
   }
 
   @Override

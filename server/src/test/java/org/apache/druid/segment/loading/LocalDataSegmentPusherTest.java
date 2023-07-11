@@ -22,7 +22,7 @@ package org.apache.druid.segment.loading;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
-import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
@@ -48,7 +48,9 @@ public class LocalDataSegmentPusherTest
   public ExpectedException exception = ExpectedException.none();
 
   LocalDataSegmentPusher localDataSegmentPusher;
+  LocalDataSegmentPusher localDataSegmentPusherZip;
   LocalDataSegmentPusherConfig config;
+  LocalDataSegmentPusherConfig configZip;
   File dataSegmentFiles;
   DataSegment dataSegment = new DataSegment(
       "ds",
@@ -77,14 +79,53 @@ public class LocalDataSegmentPusherTest
   public void setUp() throws IOException
   {
     config = new LocalDataSegmentPusherConfig();
+    config.zip = false;
     config.storageDirectory = temporaryFolder.newFolder();
     localDataSegmentPusher = new LocalDataSegmentPusher(config);
+
+    configZip = new LocalDataSegmentPusherConfig();
+    configZip.zip = true;
+    configZip.storageDirectory = temporaryFolder.newFolder();
+    localDataSegmentPusherZip = new LocalDataSegmentPusher(configZip);
+
     dataSegmentFiles = temporaryFolder.newFolder();
     Files.asByteSink(new File(dataSegmentFiles, "version.bin")).write(Ints.toByteArray(0x9));
   }
 
   @Test
-  public void testPush() throws IOException
+  public void testPushZip() throws IOException
+  {
+    /* DataSegment - Used to create LoadSpec and Create outDir (Local Deep Storage location in this case)
+       File dataSegmentFile - Used to get location of segment files like version.bin, meta.smoosh and xxxxx.smoosh
+      */
+    final DataSegment dataSegment2 = dataSegment.withVersion("v2");
+
+    DataSegment returnSegment1 = localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment, false);
+    DataSegment returnSegment2 = localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment2, false);
+
+    Assert.assertNotNull(returnSegment1);
+    Assert.assertEquals(dataSegment, returnSegment1);
+
+    Assert.assertNotNull(returnSegment2);
+    Assert.assertEquals(dataSegment2, returnSegment2);
+
+    Assert.assertNotEquals(
+        localDataSegmentPusherZip.getStorageDir(dataSegment, false),
+        localDataSegmentPusherZip.getStorageDir(dataSegment2, false)
+    );
+
+    for (DataSegment returnSegment : ImmutableList.of(returnSegment1, returnSegment2)) {
+      File outDir = new File(
+          configZip.getStorageDirectory(),
+          localDataSegmentPusherZip.getStorageDir(returnSegment, false)
+      );
+      File versionFile = new File(outDir, "index.zip");
+      Assert.assertTrue(versionFile.exists());
+    }
+  }
+
+  @Test
+  public void testPushNoZip() throws IOException
   {
     /* DataSegment - Used to create LoadSpec and Create outDir (Local Deep Storage location in this case)
        File dataSegmentFile - Used to get location of segment files like version.bin, meta.smoosh and xxxxx.smoosh
@@ -107,18 +148,42 @@ public class LocalDataSegmentPusherTest
 
     for (DataSegment returnSegment : ImmutableList.of(returnSegment1, returnSegment2)) {
       File outDir = new File(
-          config.getStorageDirectory(),
-          localDataSegmentPusher.getStorageDir(returnSegment, false)
+          new File(
+              config.getStorageDirectory(),
+              localDataSegmentPusher.getStorageDir(returnSegment, false)
+          ),
+          "index"
       );
-      File versionFile = new File(outDir, "index.zip");
+
+      // Check against loadSpec.
+      Assert.assertEquals(
+          outDir.toURI().getPath(),
+          returnSegment.getLoadSpec().get("path")
+      );
+
+      // Check for version.bin.
+      File versionFile = new File(outDir, "version.bin");
       Assert.assertTrue(versionFile.exists());
     }
   }
 
   @Test
-  public void testPushUseUniquePath() throws IOException
+  public void testPushNoZipUseUniquePath() throws IOException
   {
     DataSegment segment = localDataSegmentPusher.push(dataSegmentFiles, dataSegment, true);
+
+    String path = segment.getLoadSpec().get("path").toString();
+    Pattern pattern = Pattern.compile(
+        ".*/ds/1970-01-01T00:00:00\\.000Z_1970-01-01T00:00:00\\.001Z/v1/0/[A-Za-z0-9-]{36}/index/$"
+    );
+    Assert.assertTrue(path, pattern.matcher(path).matches());
+    Assert.assertTrue(new File(path).exists());
+  }
+
+  @Test
+  public void testPushZipUseUniquePath() throws IOException
+  {
+    DataSegment segment = localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment, true);
 
     String path = segment.getLoadSpec().get("path").toString();
     Pattern pattern = Pattern.compile(
@@ -129,8 +194,12 @@ public class LocalDataSegmentPusherTest
   }
 
   @Test
-  public void testLastPushWinsForConcurrentPushes() throws IOException
+  public void testLastPushWinsForConcurrentNoZipPushes() throws IOException
   {
+    // Behavioral difference between zip and no-zip pushes when the same segment identifier is pushed twice:
+    // Later zip pushes overwrite earlier ones. Later no-zip pushes throw errors. In situations where the same
+    // segment may be pushed twice, we expect "useUniquePath" to be set on the pusher.
+
     File replicatedDataSegmentFiles = temporaryFolder.newFolder();
     Files.asByteSink(new File(replicatedDataSegmentFiles, "version.bin")).write(Ints.toByteArray(0x8));
     DataSegment returnSegment1 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment, false);
@@ -139,10 +208,38 @@ public class LocalDataSegmentPusherTest
     Assert.assertEquals(dataSegment.getDimensions(), returnSegment1.getDimensions());
     Assert.assertEquals(dataSegment2.getDimensions(), returnSegment2.getDimensions());
 
-    File unzipDir = new File(config.storageDirectory, "unzip");
-    FileUtils.forceMkdir(unzipDir);
+    final String expectedPath = StringUtils.format(
+        "%s/%s",
+        config.storageDirectory,
+        "ds/1970-01-01T00:00:00.000Z_1970-01-01T00:00:00.001Z/v1/0/index/"
+    );
+
+    Assert.assertEquals(expectedPath, returnSegment1.getLoadSpec().get("path"));
+    Assert.assertEquals(expectedPath, returnSegment2.getLoadSpec().get("path"));
+
+    final File versionFile = new File(expectedPath, "version.bin");
+    Assert.assertEquals(0x8, Ints.fromByteArray(Files.toByteArray(versionFile)));
+  }
+
+  @Test
+  public void testLastPushWinsForConcurrentZipPushes() throws IOException
+  {
+    // Behavioral difference between zip and no-zip pushes when the same segment identifier is pushed twice:
+    // Later zip pushes overwrite earlier ones. Later no-zip pushes throw errors. In situations where the same
+    // segment may be pushed twice, we expect "useUniquePath" to be set on the pusher.
+
+    File replicatedDataSegmentFiles = temporaryFolder.newFolder();
+    Files.asByteSink(new File(replicatedDataSegmentFiles, "version.bin")).write(Ints.toByteArray(0x8));
+    DataSegment returnSegment1 = localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment, false);
+    DataSegment returnSegment2 = localDataSegmentPusherZip.push(replicatedDataSegmentFiles, dataSegment2, false);
+
+    Assert.assertEquals(dataSegment.getDimensions(), returnSegment1.getDimensions());
+    Assert.assertEquals(dataSegment2.getDimensions(), returnSegment2.getDimensions());
+
+    File unzipDir = new File(configZip.storageDirectory, "unzip");
+    FileUtils.mkdirp(unzipDir);
     CompressionUtils.unzip(
-        new File(config.storageDirectory, "/ds/1970-01-01T00:00:00.000Z_1970-01-01T00:00:00.001Z/v1/0/index.zip"),
+        new File(configZip.storageDirectory, "/ds/1970-01-01T00:00:00.000Z_1970-01-01T00:00:00.001Z/v1/0/index.zip"),
         unzipDir
     );
 
@@ -161,26 +258,37 @@ public class LocalDataSegmentPusherTest
   }
 
   @Test
+  public void testPushZipCannotCreateDirectory() throws IOException
+  {
+    exception.expect(IOException.class);
+    exception.expectMessage("Cannot create directory");
+    configZip.storageDirectory = new File(configZip.storageDirectory, "xxx");
+    Assert.assertTrue(configZip.storageDirectory.mkdir());
+    configZip.storageDirectory.setWritable(false);
+    localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment, false);
+  }
+
+  @Test
   public void testPathForHadoopAbsolute()
   {
-    config.storageDirectory = new File("/druid");
+    configZip.storageDirectory = new File("/druid");
 
     // If this test fails because the path is returned as "file:/druid/", this can happen
     // when a /druid directory exists on the local filesystem.
     Assert.assertEquals(
         "file:/druid",
-        new LocalDataSegmentPusher(config).getPathForHadoop()
+        new LocalDataSegmentPusher(configZip).getPathForHadoop()
     );
   }
 
   @Test
   public void testPathForHadoopRelative()
   {
-    config.storageDirectory = new File("druid");
+    configZip.storageDirectory = new File("druid");
 
     Assert.assertEquals(
         StringUtils.format("file:%s/druid", System.getProperty("user.dir")),
-        new LocalDataSegmentPusher(config).getPathForHadoop()
+        new LocalDataSegmentPusher(configZip).getPathForHadoop()
     );
   }
 }

@@ -34,8 +34,8 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -102,12 +102,20 @@ public class ArrayOfDoublesSketchAggregatorFactoryTest
     Assert.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
-                    .add("count", ValueType.LONG)
+                    .add("count", ColumnType.LONG)
                     .add("arrayOfDoublesSketch", null)
-                    .add("a", ValueType.COMPLEX)
-                    .add("b", ValueType.DOUBLE)
+                    .add("a", ArrayOfDoublesSketchModule.BUILD_TYPE)
+                    .add("b", ColumnType.DOUBLE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
+  }
+
+  @Test
+  public void testWithName()
+  {
+    AggregatorFactory factory = new ArrayOfDoublesSketchAggregatorFactory("name", "", null, null, null);
+    Assert.assertEquals(factory, factory.withName("name"));
+    Assert.assertEquals("newTest", factory.withName("newTest").getName());
   }
 }
