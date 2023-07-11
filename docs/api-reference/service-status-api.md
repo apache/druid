@@ -365,13 +365,10 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 #### URL
 <code class="getAPI">GET</code> `/status/selfDiscovered/status`
 
-Retrieves a JSON map of the form `{"selfDiscovered": true/false}`, indicating whether the node has received a confirmation from the central node discovery mechanism (currently ZooKeeper) of the Druid cluster that the node has been added to the
-cluster. 
+Retrieves a JSON map of the form `{"selfDiscovered": true/false}`, indicating whether the node has received a confirmation from the central node discovery mechanism (currently ZooKeeper) of the Druid cluster that the node has been added to the cluster. 
 
 Only consider a Druid node "healthy" or "ready" in automated deployment/container management systems when this endpoint returns `{"selfDiscovered": true}`. Nodes experiencing network issues may become isolated and are not healthy.
 For nodes that use Zookeeper segment discovery, a response of `{"selfDiscovered": true}` indicates that the node's Zookeeper client has started receiving data from the Zookeeper cluster, enabling timely discovery of segments and other nodes.
-
-To retrieve the discovery status of other services, query the individual port of each service. On a local configuration, refer to this [table](#common) for the port numbers.
 
 #### Responses
 
@@ -417,8 +414,6 @@ Host: {router_domain}
 Returns an HTTP status code to indicate node discovery within the Druid cluster. This endpoint is similar to the `status/selfDiscovered/status` endpoint, but relies on HTTP status codes alone.
 Use this endpoint for monitoring checks that are unable to examine the response body. For example, AWS load balancer health checks.
 
-To retrieve the self-discovery status of other services, query the individual port of each service. On a local configuration, refer to this [table](#common) for the port numbers.
-
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -459,7 +454,7 @@ A successful response to this endpoint results in an empty response body.
 
 <code class="getAPI">GET</code> `/druid/coordinator/v1/leader`
 
-Retrieves the address of the current leader Coordinator of the cluster.
+Retrieves the address of the current leader Coordinator of the cluster. If any request is sent to a non-leader Coordinator, the request is automatically redirected to the leader Coordinator. 
 
 #### Responses
 
@@ -501,7 +496,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 Retrieves a JSON object with a `leader` key. Returns `true` if this server is the current leader Coordinator of the cluster. To get the individual address of the leader Coordinator node, see the [leader endpoint](#get-coordinator-leader-address).
 
-Use this endpoint as a load balancer status check when you only want the active leader to be considered in-service at the load balancer.
+Use this endpoint as a load balancer status check when you only want the active leader to be considered in-service at the load balancer. 
 
 #### Responses
 
@@ -597,7 +592,9 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/isLeader`
 
-Retrieves a JSON object with a `leader` property. The value can be `true` or `false`, indicating if this server is the current leader Overlord of the cluster. This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service at the load balancer.
+Retrieves a JSON object with a `leader` property. The value can be `true` or `false`, indicating if this server is the current leader Overlord of the cluster. 
+
+Use this endpoint as a load balancer status check when you only want the active leader to be considered in-service at the load balancer.
 
 To get the individual address of the leader Overlord node, see the [leader endpoint](#get-overlord-leader-address).
 
@@ -644,7 +641,7 @@ Host: http://<OVERLORD_IP>:<OVERLORD_PORT>
 
 ## MiddleManager
 
-### Get state status
+### Get MiddleManager state status
 
 #### URL
 
@@ -694,7 +691,7 @@ Host: http://<MIDDLEMANAGER_IP>:<MIDDLEMANAGER_PORT>
 #### URL 
 <code class="getAPI">GET</code> `/druid/worker/v1/tasks`
 
-Retrieves a list of active tasks being run on MiddleManager. Returns JSON list of task ID strings. Normal usage should prefer to use the `/druid/indexer/v1/tasks` [Tasks API](./tasks-api.md) or one of it's task state specific variants instead.
+Retrieves a list of active tasks being run on MiddleManager. Returns JSON list of task ID strings. Note that for normal usage, you should use the `/druid/indexer/v1/tasks` [Tasks API](./tasks-api.md) endpoint or one of the task state specific variants instead.
 
 #### Responses
 
@@ -737,16 +734,16 @@ Host: http://<MIDDLEMANAGER_IP>:<MIDDLEMANAGER_PORT>
 #### URL
 <code class="getAPI">GET</code> `/druid/worker/v1/task/{taskid}/log`
 
-Retrieves task log output stream by task ID. It is strongly advised that, for normal usage, you should use the `/druid/indexer/v1/task/{taskId}/log`
-[Tasks API](./tasks-api.md) instead.
+Retrieves task log output stream by task ID. For normal usage, you should use the `/druid/indexer/v1/task/{taskId}/log`
+[Tasks API](./tasks-api.md) endpoint instead.
 
 ### Shut down running task
 
 #### URL
 <code class="postAPI">POST</code> `/druid/worker/v1/task/{taskid}/shutdown`
 
-Shuts down a running task by ID. For normal usage, you should prefer to use the `/druid/indexer/v1/task/{taskId}/shutdown`
-[Tasks API](./tasks-api.md) instead.
+Shuts down a running task by ID. For normal usage, you should use the `/druid/indexer/v1/task/{taskId}/shutdown`
+[Tasks API](./tasks-api.md) endpoint instead.
 
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
@@ -880,7 +877,9 @@ Host: http://<MIDDLEMANAGER_IP>:<MIDDLEMANAGER_PORT>
 
 <code class="getAPI">GET</code> `/druid/historical/v1/loadstatus`
 
-Retrieves a JSON object of the form `{"cacheInitialized":<value>}`, where value is either `true` or `false` indicating if all segments in the local cache have been loaded. This can be used to know when a Historical process is ready to be queried after a restart.
+Retrieves a JSON object of the form `{"cacheInitialized":<value>}`, where value is either `true` or `false` indicating if all segments in the local cache have been loaded. 
+
+Use this endpoint to know when a Historical process is ready to be queried after a restart.
 
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
@@ -960,7 +959,9 @@ A successful response to this endpoint results in an empty response body.
 
 <code class="getAPI">GET</code> `/druid/broker/v1/loadstatus`
 
-Retrieves a flag indicating if the Broker knows about all segments in the cluster. This can be used to know when a Broker service is ready to be queried after a restart.
+Retrieves a flag indicating if the Broker knows about all segments in the cluster. 
+
+Use this endpoint to know when a Broker service is ready to be queried after a restart.
 
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
