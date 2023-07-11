@@ -665,9 +665,9 @@ public class SqlStatementResource
     if (msqControllerTask.getQuerySpec().getDestination() instanceof TaskReportMSQDestination) {
       // Results from task report are only present as one page.
       if (page != null && page > 0) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                            .build("Page number is out of range of the results.");
+        throw InvalidInput.exception(
+            "Page number [%d] is out of the range of results", page
+        );
       }
 
       MSQTaskReportPayload msqTaskReportPayload = jsonMapper.convertValue(SqlStatementResourceHelper.getPayload(
@@ -755,9 +755,7 @@ public class SqlStatementResource
         return pageInfo;
       }
     }
-    throw DruidException.forPersona(DruidException.Persona.USER)
-                        .ofCategory(DruidException.Category.INVALID_INPUT)
-                        .build("Invalid page id [%d] passed.", pageId);
+    throw InvalidInput.exception("Invalid page id [%d] passed.", pageId);
   }
 
   private void resultPusher(
@@ -828,22 +826,9 @@ public class SqlStatementResource
 
   private void contextChecks(QueryContext queryContext)
   {
-    ExecutionMode executionMode = queryContext.getEnum(
-        QueryContexts.CTX_EXECUTION_MODE,
-        ExecutionMode.class,
-        null
-    );
+    ExecutionMode executionMode = queryContext.getEnum(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.class, null);
     if (ExecutionMode.ASYNC != executionMode) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              StringUtils.format(
-                                  "The statement sql api only supports sync mode[%s]. Please set context parameter [%s=%s] in the context payload",
-                                  ExecutionMode.ASYNC,
-                                  QueryContexts.CTX_EXECUTION_MODE,
-                                  ExecutionMode.ASYNC
-                              )
-                          );
+      throw DruidException.defensive("[%s] is not supported. It should not be set", QueryContexts.CTX_EXECUTION_MODE);
     }
 
     MSQSelectDestination selectDestination = MultiStageQueryContext.getSelectDestination(queryContext);

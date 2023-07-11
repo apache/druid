@@ -48,7 +48,6 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
@@ -76,10 +75,6 @@ import java.util.stream.Collectors;
 
 public class MSQTaskQueryMaker implements QueryMaker
 {
-
-  private static final String DESTINATION_DATASOURCE = "dataSource";
-  private static final String DESTINATION_REPORT = "taskReport";
-
   public static final String USER_KEY = "__user";
 
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
@@ -127,9 +122,6 @@ public class MSQTaskQueryMaker implements QueryMaker
     if (msqMode != null) {
       MSQMode.populateDefaultQueryContext(msqMode, nativeQueryContext);
     }
-
-    final String ctxDestination =
-        DimensionHandlerUtils.convertObjectToString(MultiStageQueryContext.getDestination(sqlQueryContext));
 
     Object segmentGranularity;
     try {
@@ -211,12 +203,6 @@ public class MSQTaskQueryMaker implements QueryMaker
     final MSQDestination destination;
 
     if (targetDataSource != null) {
-      if (ctxDestination != null && !DESTINATION_DATASOURCE.equals(ctxDestination)) {
-        throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
-                            .ofCategory(DruidException.Category.DEFENSIVE)
-                            .build("Cannot INSERT with destination [%s]", ctxDestination);
-      }
-
       Granularity segmentGranularityObject;
       try {
         segmentGranularityObject = jsonMapper.readValue((String) segmentGranularity, Granularity.class);
@@ -246,18 +232,17 @@ public class MSQTaskQueryMaker implements QueryMaker
           replaceTimeChunks
       );
     } else {
-      if (ctxDestination != null && !DESTINATION_REPORT.equals(ctxDestination)) {
-        throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
-                            .ofCategory(DruidException.Category.DEFENSIVE)
-                            .build("Cannot SELECT with destination [%s]", ctxDestination);
-      }
       final MSQSelectDestination msqSelectDestination = MultiStageQueryContext.getSelectDestination(sqlQueryContext);
       if (msqSelectDestination.equals(MSQSelectDestination.TASK_REPORT)) {
         destination = TaskReportMSQDestination.instance();
       } else if (msqSelectDestination.equals(MSQSelectDestination.DURABLE_STORAGE)) {
         destination = DurableStorageMSQDestination.instance();
       } else {
-        throw new IAE("Cannot SELECT with destination [%s]", msqSelectDestination.name());
+        throw InvalidInput.exception(
+            "Unsupported select destination [%s] provided in the query context. MSQ can currently write the select results to "
+            + "\"taskReport\" and \"durableStorage\"",
+            msqSelectDestination.name()
+        );
       }
     }
 

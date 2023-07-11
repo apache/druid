@@ -103,8 +103,6 @@ public class MultiStageQueryContext
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.SEQUENTIAL.toString();
 
-  public static final String CTX_DESTINATION = "destination";
-
   public static final String CTX_ROWS_PER_SEGMENT = "rowsPerSegment";
   static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
 
@@ -193,11 +191,6 @@ public class MultiStageQueryContext
         CTX_MAX_NUM_TASKS,
         DEFAULT_MAX_NUM_TASKS
     );
-  }
-
-  public static Object getDestination(final QueryContext queryContext)
-  {
-    return queryContext.get(CTX_DESTINATION);
   }
 
   public static int getRowsPerSegment(final QueryContext queryContext)

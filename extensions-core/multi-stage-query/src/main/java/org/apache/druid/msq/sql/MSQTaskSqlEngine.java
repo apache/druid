@@ -37,7 +37,6 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.querykit.QueryKitUtils;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -59,7 +58,6 @@ public class MSQTaskSqlEngine implements SqlEngine
   public static final Set<String> SYSTEM_CONTEXT_PARAMETERS =
       ImmutableSet.<String>builder()
                   .addAll(NativeSqlEngine.SYSTEM_CONTEXT_PARAMETERS)
-                  .add(MultiStageQueryContext.CTX_DESTINATION)
                   .add(QueryKitUtils.CTX_TIME_COLUMN_NAME)
                   .add(MSQTaskQueryMaker.USER_KEY)
                   .build();
