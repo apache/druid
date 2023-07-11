@@ -58,6 +58,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.http.client.Request;
@@ -1240,6 +1241,33 @@ public class SystemSchemaTest extends CalciteTestBase
 
     // Verify value types.
     verifyTypes(rows, SystemSchema.TASKS_SIGNATURE);
+  }
+
+  @Test(expected = RE.class)
+  public void testTasksTable_fail() throws Exception
+  {
+    SystemSchema.TasksTable tasksTable = EasyMock.createMockBuilder(SystemSchema.TasksTable.class)
+                                                 .withConstructor(client, mapper, authMapper)
+                                                 .createMock();
+
+    EasyMock.replay(tasksTable);
+    EasyMock.expect(client.makeRequest(HttpMethod.GET, "/druid/indexer/v1/tasks")).andReturn(request).anyTimes();
+
+
+    HttpResponse httpResp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+
+    InputStreamFullResponseHolder responseHolder = new InputStreamFullResponseHolder(httpResp);
+
+    EasyMock.expect(client.go(EasyMock.eq(request), EasyMock.anyObject(InputStreamFullResponseHandler.class))).andReturn(responseHolder).once();
+    EasyMock.expect(request.getUrl()).andReturn(new URL("http://test-host:1234/druid/indexer/v1/tasks")).anyTimes();
+
+    byte[] bytesToWrite = "".getBytes(StandardCharsets.UTF_8);
+    responseHolder.addChunk(bytesToWrite);
+    responseHolder.done();
+
+    EasyMock.replay(client, request, responseHandler);
+    DataContext dataContext = createDataContext(Users.SUPER);
+    tasksTable.scan(dataContext);
   }
 
   @Test

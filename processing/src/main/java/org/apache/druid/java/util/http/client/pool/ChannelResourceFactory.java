@@ -215,7 +215,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
                 ));
                 return;
               }
-              handshakePromise.setFailure(cause);
+              handshakePromise.tryFailure(cause);
               if (channel.isOpen()) {
                 channel.close();
               }
