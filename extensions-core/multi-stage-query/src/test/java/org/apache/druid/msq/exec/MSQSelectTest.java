@@ -2019,6 +2019,15 @@ public class MSQSelectTest extends MSQTestBase
   @Test
   public void testJoinUsesDifferentAlgorithm()
   {
+
+    // This test asserts that the join algorithnm used is a different one from that supplied. In sqlCompatible() mode
+    // the query gets planned differently, therefore we do use the sortMerge processor. Instead of having separate
+    // handling, a similar test has been described in CalciteJoinQueryMSQTest, therefore we don't want to repeat that
+    // here, hence ignoring in sqlCompatible() mode
+    if (NullHandling.sqlCompatible()) {
+      return;
+    }
+
     RowSignature rowSignature = RowSignature.builder().add("cnt", ColumnType.LONG).build();
 
     Map<String, Object> queryContext = new HashMap<>(context);
@@ -2096,7 +2105,10 @@ public class MSQSelectTest extends MSQTestBase
         .setQueryContext(queryContext)
         .addAdhocReportAssertions(
             msqTaskReportPayload -> msqTaskReportPayload.getStages().getStages().stream().noneMatch(
-                stage -> stage.getStageDefinition().getProcessorFactory().getClass().equals(SortMergeJoinFrameProcessorFactory.class)
+                stage -> stage.getStageDefinition()
+                              .getProcessorFactory()
+                              .getClass()
+                              .equals(SortMergeJoinFrameProcessorFactory.class)
             ),
             "assert the query didn't use sort merge"
         )
