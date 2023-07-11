@@ -185,9 +185,11 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 <code class="getAPI">GET</code> `/status/health`
 
-Retrieves the health of the individual Druid service. If online, it will always return a boolean `true` value, indicating that the service can receive API calls. This endpoint is suitable for automated health checks.
+Retrieves the online status of the individual Druid service. It is a simple health check to determine if the service is running and accessible. If online, it will always return a boolean `true` value, indicating that the service can receive API calls. This endpoint is suitable for automated health checks.
 
 To retrieve the service health of other services, query the individual port of each service. On a local configuration, refer to this [table](#common) for the port numbers.
+
+Additional checks for readiness should use the [Historical segment readiness](#get-segment-readiness) and [Broker query readiness](#get-broker-query-readiness) endpoints. 
 
 #### Responses
 
@@ -496,7 +498,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 Retrieves a JSON object with a `leader` key. Returns `true` if this server is the current leader Coordinator of the cluster. To get the individual address of the leader Coordinator node, see the [leader endpoint](#get-coordinator-leader-address).
 
-Use this endpoint as a load balancer status check when you only want the active leader to be considered in-service at the load balancer. 
+Use this endpoint as a load balancer status check when you only want the active leader to be considered in-service at the load balancer. /coo
 
 #### Responses
 
@@ -592,11 +594,9 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/isLeader`
 
-Retrieves a JSON object with a `leader` property. The value can be `true` or `false`, indicating if this server is the current leader Overlord of the cluster. 
+Retrieves a JSON object with a `leader` property. The value can be `true` or `false`, indicating if this server is the current leader Overlord of the cluster. To get the individual address of the leader Overlord node, see the [leader endpoint](#get-overlord-leader-address).
 
 Use this endpoint as a load balancer status check when you only want the active leader to be considered in-service at the load balancer.
-
-To get the individual address of the leader Overlord node, see the [leader endpoint](#get-overlord-leader-address).
 
 #### Responses
 
