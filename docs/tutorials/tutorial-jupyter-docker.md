@@ -56,7 +56,7 @@ access the files in `druid/examples/quickstart/jupyter-notebooks/docker-jupyter`
 
 ### Start only the Jupyter container
 
-If you already have Druid running locally, you can run the Docker containers for Jupyter only.
+If you already have Druid running locally or on another machine, you can run the Docker containers for Jupyter only.
 In the same directory as `docker-compose.yaml`, start the application:
 
 ```bash
