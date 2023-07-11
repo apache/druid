@@ -64,7 +64,10 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
    *
    * @return true if the query is cacheable, otherwise false.
    */
-  boolean isCacheable(QueryType query, boolean willMergeRunners, boolean bySegment);
+  default boolean isCacheable(QueryType query, boolean willMergeRunners, boolean bySegment)
+  {
+    return isCacheable(query, willMergeRunners);
+  }
 
   /**
    * Computes the per-segment cache key for the given query. Because this is a per-segment cache key, it should only
