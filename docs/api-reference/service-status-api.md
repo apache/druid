@@ -26,7 +26,7 @@ sidebar_label: Service status
 
 This document describes the API endpoints to retrieve service status, cluster information for Apache Druid.
 
-In this document, `{domain}` is a placeholder for the server address of deployment. For example, on the quickstart configuration, replace `{domain}` with `http://localhost:8888`.
+In this document, `http://<SERVICE_IP>:<SERVICE_PORT>` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://<ROUTER_IP>:<ROUTER_PORT>` with `http://localhost:8888`.
 
 ## Common
 
@@ -50,6 +50,8 @@ Each endpoint can be used with the ports for each type of service.  The followin
 
 Retrieves the Druid version, loaded extensions, memory used, total memory, and other useful information about the individual service. 
 
+To retrieve the service information of other services, query the individual port of each service. On a local configuration, refer to this [table](#common) for the port numbers.
+
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -67,12 +69,12 @@ Retrieves the Druid version, loaded extensions, memory used, total memory, and o
 
 <!--cURL-->
 ```shell
-curl "{coordinator_domain}/status"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/status"
 ```
 <!--HTTP-->
 ```http
 GET /status HTTP/1.1
-Host: {coordinator_domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -185,6 +187,8 @@ Host: {coordinator_domain}
 
 Retrieves the health of the individual Druid service. If online, it will always return a boolean `true` value, indicating that the service can receive API calls. This endpoint is suitable for automated health checks.
 
+To retrieve the service health of other services, query the individual port of each service. On a local configuration, refer to this [table](#common) for the port numbers.
+
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -200,12 +204,12 @@ Retrieves the health of the individual Druid service. If online, it will always 
 
 <!--cURL-->
 ```shell
-curl "{router_domain}/status/health"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/status/health"
 ```
 <!--HTTP-->
 ```http
 GET /status/health HTTP/1.1
-Host: {router_domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -226,6 +230,8 @@ Host: {router_domain}
 
 Retrieves the current configuration properties of the individual service queried. 
 
+To retrieve the service configuration property of other services, query the individual port of each service. On a local configuration, refer to this [table](#common) for the port numbers.
+
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -241,12 +247,12 @@ Retrieves the current configuration properties of the individual service queried
 
 <!--cURL-->
 ```shell
-curl "{coordinator_domain}/status/properties"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/status/properties"
 ```
 <!--HTTP-->
 ```http
 GET /status/properties HTTP/1.1
-Host: {coordinator_domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -257,6 +263,7 @@ Host: {coordinator_domain}
 
   ```json
   {
+{
     "gopherProxySet": "false",
     "awt.toolkit": "sun.lwawt.macosx.LWCToolkit",
     "druid.monitoring.monitors": "[\"org.apache.druid.java.util.metrics.JvmMonitor\"]",
@@ -266,7 +273,7 @@ Host: {coordinator_domain}
     "sun.jnu.encoding": "UTF-8",
     "druid.indexing.doubleStorage": "double",
     "druid.metadata.storage.connector.port": "1527",
-    "java.class.path": "genericJavaClassPath",
+    "java.class.path": "/Users/genericUserPath",
     "log4j.shutdownHookEnabled": "true",
     "java.vm.vendor": "Homebrew",
     "sun.arch.data.model": "64",
@@ -299,7 +306,7 @@ Host: {coordinator_domain}
     "java.vm.compressedOopsMode": "Zero based",
     "druid.metadata.storage.type": "derby",
     "line.separator": "\n",
-    "druid.log.path": "/Users/genericUser/downloads/apache-druid-26.0.0/bin/../log",
+    "druid.log.path": "/Users/genericUserPath",
     "java.vm.specification.vendor": "Oracle Corporation",
     "java.specification.name": "Java Platform API Specification",
     "druid.indexer.logs.directory": "var/druid/indexing-logs",
@@ -309,7 +316,7 @@ Host: {coordinator_domain}
     "sun.management.compiler": "HotSpot 64-Bit Tiered Compilers",
     "ftp.nonProxyHosts": "local|*.local|169.254/16|*.169.254/16",
     "java.runtime.version": "11.0.19+0",
-    "user.name": "user",
+    "user.name": "genericUser",
     "druid.indexer.logs.type": "file",
     "druid.host": "localhost",
     "log4j2.is.webapp": "false",
@@ -337,7 +344,7 @@ Host: {coordinator_domain}
     "java.awt.printerjob": "sun.lwawt.macosx.CPrinterJob",
     "sun.os.patch.level": "unknown",
     "java.util.logging.manager": "org.apache.logging.log4j.jul.LogManager",
-    "java.library.path": "/Users/genericUser/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:.",
+    "java.library.path": "/Users/genericUserPath",
     "java.vendor": "Homebrew",
     "java.vm.info": "mixed mode",
     "java.vm.version": "11.0.19+0",
@@ -363,6 +370,8 @@ cluster.
 
 Only consider a Druid node "healthy" or "ready" in automated deployment/container management systems when this endpoint returns `{"selfDiscovered": true}`. Nodes experiencing network issues may become isolated and are not healthy.
 For nodes that use Zookeeper segment discovery, a response of `{"selfDiscovered": true}` indicates that the node's Zookeeper client has started receiving data from the Zookeeper cluster, enabling timely discovery of segments and other nodes.
+
+To retrieve the discovery status of other services, query the individual port of each service. On a local configuration, refer to this [table](#common) for the port numbers.
 
 #### Responses
 
@@ -408,6 +417,8 @@ Host: {router_domain}
 Returns an HTTP status code to indicate node discovery within the Druid cluster. This endpoint is similar to the `status/selfDiscovered/status` endpoint, but relies on HTTP status codes alone.
 Use this endpoint for monitoring checks that are unable to examine the response body. For example, AWS load balancer health checks.
 
+To retrieve the self-discovery status of other services, query the individual port of each service. On a local configuration, refer to this [table](#common) for the port numbers.
+
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -442,7 +453,7 @@ A successful response to this endpoint results in an empty response body.
 
 ## Coordinator
 
-### Get leader address
+### Get Coordinator leader address
 
 #### URL
 
@@ -466,12 +477,12 @@ Retrieves the address of the current leader Coordinator of the cluster.
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "{domain}/druid/coordinator/v1/leader"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/coordinator/v1/leader"
 ```
 <!--HTTP-->
 ```http
 GET /druid/coordinator/v1/leader HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -483,12 +494,12 @@ Host: {domain}
   ```
 </details>
 
-### Get leader status
+### Get Coordinator leader status
 
 #### URL
 <code class="getAPI">GET</code> `/druid/coordinator/v1/isLeader`
 
-Retrieves a JSON object with a `leader` key. Returns `true` if this server is the current leader Coordinator of the cluster. To get the individual address of the leader Coordinator node, see the [leader endpoint](#get-leader-address).
+Retrieves a JSON object with a `leader` key. Returns `true` if this server is the current leader Coordinator of the cluster. To get the individual address of the leader Coordinator node, see the [leader endpoint](#get-coordinator-leader-address).
 
 Use this endpoint as a load balancer status check when you only want the active leader to be considered in-service at the load balancer.
 
@@ -513,12 +524,12 @@ Use this endpoint as a load balancer status check when you only want the active 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "{domain}/druid/coordinator/v1/isLeader"
+curl "http://<COORDINATOR_IP>:<COORDINATOR_IP>/druid/coordinator/v1/isLeader"
 ```
 <!--HTTP-->
 ```http
 GET /druid/coordinator/v1/isLeader HTTP/1.1
-Host: {domain}
+Host: http://<COORDINATOR_IP>:<COORDINATOR_IP>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -537,7 +548,7 @@ Host: {domain}
 
 ## Overlord
 
-### Get leader address
+### Get Overlord leader address
 
 #### URL
 
@@ -561,12 +572,12 @@ Retrieves the address of the current leader Overlord of the cluster. In a cluste
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/leader"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/leader"
 ```
 <!--HTTP-->
 ```http
 GET /druid/indexer/v1/leader HTTP/1.1
-Host: {domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -581,12 +592,14 @@ Host: {domain}
 </details>
 
 
-### Get leader status
+### Get Overlord leader status
 
 #### URL
 <code class="getAPI">GET</code> `/druid/indexer/v1/isLeader`
 
 Retrieves a JSON object with a `leader` property. The value can be `true` or `false`, indicating if this server is the current leader Overlord of the cluster. This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service at the load balancer.
+
+To get the individual address of the leader Overlord node, see the [leader endpoint](#get-overlord-leader-address).
 
 #### Responses
 
@@ -608,12 +621,12 @@ Retrieves a JSON object with a `leader` property. The value can be `true` or `fa
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "{domain}/druid/indexer/v1/isLeader"
+curl "http://<OVERLORD_IP>:<OVERLORD_PORT>/druid/indexer/v1/isLeader"
 ```
 <!--HTTP-->
 ```http
 GET /druid/indexer/v1/isLeader HTTP/1.1
-Host: {domain}
+Host: http://<OVERLORD_IP>:<OVERLORD_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -639,8 +652,6 @@ Host: {domain}
 
 Retrieves the enabled state of the MiddleManager. Returns JSON object keyed by the combined `druid.host` and `druid.port` with a boolean `true` or `false` state as the value.
 
-To use this endpoint, `{domain}` should be the address of the MiddleManager service. For example, on the quickstart configuration, `{domain}` should be replaced with `http://localhost:8091`. 
-
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -658,12 +669,12 @@ To use this endpoint, `{domain}` should be the address of the MiddleManager serv
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "{domain}/druid/worker/v1/enabled"
+curl "http://<MIDDLEMANAGER_IP>:<MIDDLEMANAGER_PORT>/druid/worker/v1/enabled"
 ```
 <!--HTTP-->
 ```http
 GET /druid/worker/v1/enabled HTTP/1.1
-Host: {domain}
+Host: http://<MIDDLEMANAGER_IP>:<MIDDLEMANAGER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -685,8 +696,6 @@ Host: {domain}
 
 Retrieves a list of active tasks being run on MiddleManager. Returns JSON list of task ID strings. Normal usage should prefer to use the `/druid/indexer/v1/tasks` [Tasks API](./tasks-api.md) or one of it's task state specific variants instead.
 
-To use this endpoint, `{domain}` should be the address of the MiddleManager service. For example, on the quickstart configuration, `{domain}` should be replaced with `http://localhost:8091`. 
-
 #### Responses
 
 <!--DOCUSAURUS_CODE_TABS-->
@@ -703,12 +712,12 @@ To use this endpoint, `{domain}` should be the address of the MiddleManager serv
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "{domain}/druid/worker/v1/tasks"
+curl "http://<MIDDLEMANAGER_IP>:<MIDDLEMANAGER_PORT>/druid/worker/v1/tasks"
 ```
 <!--HTTP-->
 ```http
 GET /druid/worker/v1/tasks HTTP/1.1
-Host: {domain}
+Host: http://<MIDDLEMANAGER_IP>:<MIDDLEMANAGER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -755,12 +764,12 @@ Shuts down a running task by ID. For normal usage, you should prefer to use the 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "{domain}/druid/worker/v1/task/index_kafka_wikiticker_f7011f8ffba384b_fpeclode/shutdown"
+curl "http://<MIDDLEMANAGER_IP>:<MIDDLEMANAGER_PORT>/druid/worker/v1/task/index_kafka_wikiticker_f7011f8ffba384b_fpeclode/shutdown"
 ```
 <!--HTTP-->
 ```http
 POST /druid/worker/v1/task/index_kafka_wikiticker_f7011f8ffba384b_fpeclode/shutdown HTTP/1.1
-Host: {domain}
+Host: http://<MIDDLEMANAGER_IP>:<MIDDLEMANAGER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -784,8 +793,6 @@ Host: {domain}
 Disables a MiddleManager, causing it to stop accepting new tasks but complete all existing tasks. Returns a JSON  object
 keyed by the combined `druid.host` and `druid.port`.
 
-To use this endpoint, `{domain}` should be the address of the MiddleManager service. For example, on the quickstart configuration, `{domain}` should be replaced with `http://localhost:8091`. 
-
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -800,12 +807,12 @@ To use this endpoint, `{domain}` should be the address of the MiddleManager serv
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "{domain}/druid/worker/v1/disable"
+curl "http://<MIDDLEMANAGER_IP>:<MIDDLEMANAGER_PORT>/druid/worker/v1/disable"
 ```
 <!--HTTP-->
 ```http
 POST /druid/worker/v1/disable HTTP/1.1
-Host: {domain}
+Host: http://<MIDDLEMANAGER_IP>:<MIDDLEMANAGER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -830,8 +837,6 @@ Host: {domain}
 Enables a MiddleManager, allowing it to accept new tasks again if it was previously disabled. Returns a JSON  object
 keyed by the combined `druid.host` and `druid.port`.
 
-To use this endpoint, `{domain}` should be the address of the MiddleManager service. For example, on the quickstart configuration, `{domain}` should be replaced with `http://localhost:8091`. 
-
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -846,12 +851,12 @@ To use this endpoint, `{domain}` should be the address of the MiddleManager serv
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "{domain}/druid/worker/v1/enable"
+curl "http://<MIDDLEMANAGER_IP>:<MIDDLEMANAGER_PORT>/druid/worker/v1/enable"
 ```
 <!--HTTP-->
 ```http
 POST /druid/worker/v1/enable HTTP/1.1
-Host: {domain}
+Host: http://<MIDDLEMANAGER_IP>:<MIDDLEMANAGER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -877,8 +882,6 @@ Host: {domain}
 
 Retrieves a JSON object of the form `{"cacheInitialized":<value>}`, where value is either `true` or `false` indicating if all segments in the local cache have been loaded. This can be used to know when a Historical process is ready to be queried after a restart.
 
-To use this endpoint, `{domain}` should be the address of the Historical service. For example, on the quickstart configuration, `{domain}` should be replaced with `http://localhost:8093`.
-
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -893,12 +896,12 @@ To use this endpoint, `{domain}` should be the address of the Historical service
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "{domain}/druid/historical/v1/loadstatus"
+curl "http://<HISTORICAL_IP>:<HISTORICAL_PORT>/druid/historical/v1/loadstatus"
 ```
 <!--HTTP-->
 ```http
 GET /druid/historical/v1/loadstatus HTTP/1.1
-Host: {domain}
+Host: http://<HISTORICAL_IP>:<HISTORICAL_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -920,8 +923,6 @@ Host: {domain}
 
 Retrieves a status code to indicate if all segments in the local cache have been loaded. Similar to `/druid/historical/v1/loadstatus`, but instead of returning JSON with a flag, it returns status codes.
 
-To use this endpoint, `{domain}` should be the address of the Historical service. For example, on the quickstart configuration, `{domain}` should be replaced with `http://localhost:8093`.
-
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -939,12 +940,12 @@ To use this endpoint, `{domain}` should be the address of the Historical service
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "{domain}/druid/historical/v1/readiness"
+curl "http://<HISTORICAL_IP>:<HISTORICAL_PORT>/druid/historical/v1/readiness"
 ```
 <!--HTTP-->
 ```http
 GET /druid/historical/v1/readiness HTTP/1.1
-Host: {domain}
+Host: http://<HISTORICAL_IP>:<HISTORICAL_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -961,8 +962,6 @@ A successful response to this endpoint results in an empty response body.
 
 Retrieves a flag indicating if the Broker knows about all segments in the cluster. This can be used to know when a Broker service is ready to be queried after a restart.
 
-To use this endpoint, `{domain}` should be the address of the Historical service. For example, on the quickstart configuration, `{domain}` should be replaced with `http://localhost:8092`.
-
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -977,12 +976,12 @@ To use this endpoint, `{domain}` should be the address of the Historical service
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "{domain}/druid/broker/v1/loadstatus"
+curl "http://<BROKER_IP>:<BROKER_PORT>/druid/broker/v1/loadstatus"
 ```
 <!--HTTP-->
 ```http
 GET /druid/broker/v1/loadstatus HTTP/1.1
-Host: {domain}
+Host: http://<BROKER_IP>:<BROKER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -1004,8 +1003,6 @@ Host: {domain}
 
 Retrieves a status code indicating if the Broker knows about all segments in the cluster and is ready to be queried after a restart. Similar to `/druid/broker/v1/loadstatus`, but instead of returning a JSON, it returns status codes.
 
-To use this endpoint, `{domain}` should be the address of the Historical service. For example, on the quickstart configuration, `{domain}` should be replaced with `http://localhost:8092`.
-
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -1024,12 +1021,12 @@ To use this endpoint, `{domain}` should be the address of the Historical service
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "{domain}/druid/broker/v1/readiness"
+curl "http://<BROKER_IP>:<BROKER_PORT>/druid/broker/v1/readiness"
 ```
 <!--HTTP-->
 ```http
 GET /druid/broker/v1/readiness HTTP/1.1
-Host: {domain}
+Host: http://<BROKER_IP>:<BROKER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
