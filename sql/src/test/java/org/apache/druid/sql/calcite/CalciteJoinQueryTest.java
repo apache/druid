@@ -5765,7 +5765,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                       new CountAggregatorFactory("a0"),
                                                       new FilteredAggregatorFactory(
                                                           new CountAggregatorFactory("a1"),
-                                                          not(selector("m1", null, null)),
+                                                          not(isNull("m1")),
                                                           "a1"
                                                       )
                                                   )
