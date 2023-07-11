@@ -131,9 +131,9 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
                     if (msg instanceof HttpResponse) {
                       HttpResponse httpResponse = (HttpResponse) msg;
                       if (HttpResponseStatus.OK.equals(httpResponse.status())) {
-                        connectPromise.setSuccess();
+                        connectPromise.trySuccess();
                       } else {
-                        connectPromise.setFailure(
+                        connectPromise.tryFailure(
                             new ChannelException(
                                 StringUtils.format(
                                     "Got status[%s] from CONNECT request to proxy[%s]",
@@ -144,7 +144,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
                         );
                       }
                     } else {
-                      connectPromise.setFailure(new ChannelException(StringUtils.format(
+                      connectPromise.tryFailure(new ChannelException(StringUtils.format(
                           "Got message of type[%s], don't know what to do.", msg.getClass()
                       )));
                     }
@@ -167,7 +167,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
                 if (f2.isSuccess()) {
                   channel.read();
                 } else {
-                  connectPromise.setFailure(
+                  connectPromise.tryFailure(
                       new ChannelException(
                           StringUtils.format("Problem with CONNECT request to proxy[%s]", proxyUri), f2.cause()
                       )
@@ -176,7 +176,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
               }
           );
         } else {
-          connectPromise.setFailure(
+          connectPromise.tryFailure(
               new ChannelException(
                   StringUtils.format("Problem connecting to proxy[%s]", proxyUri), f1.cause()
               )
@@ -210,7 +210,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
               final Channel channel = ctx.channel();
               if (channel == null) {
                 // For the case where this pipeline is not attached yet.
-                handshakePromise.setFailure(new ChannelException(
+                handshakePromise.tryFailure(new ChannelException(
                     StringUtils.format("Channel is null. The context name is [%s]", ctx.name())
                 ));
                 return;
@@ -229,9 +229,9 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
               pipeline.addFirst("ssl", sslHandler);
               sslHandler.handshakeFuture().addListener(f2 -> {
                     if (f2.isSuccess()) {
-                      handshakePromise.setSuccess();
+                      handshakePromise.trySuccess();
                     } else {
-                      handshakePromise.setFailure(
+                      handshakePromise.tryFailure(
                           new ChannelException(
                               StringUtils.format("Failed to handshake with host[%s]", hostname),
                               f2.cause()
@@ -244,7 +244,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
                   }
               );
             } else {
-              handshakePromise.setFailure(
+              handshakePromise.tryFailure(
                   new ChannelException(
                       StringUtils.format("Failed to connect to host[%s]", hostname),
                       f.cause()
