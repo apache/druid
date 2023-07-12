@@ -24,6 +24,7 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.balancer.TierSegmentBalancer;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 
 /**
  *
@@ -56,6 +57,11 @@ public class BalanceSegments implements CoordinatorDuty
     cluster.getHistoricals().forEach(
         (tier, servers) -> new TierSegmentBalancer(tier, servers, params).run()
     );
+
+    CoordinatorRunStats runStats = params.getCoordinatorStats();
+    params.getBalancerStrategy()
+          .getAndResetStats()
+          .forEachStat(runStats::add);
 
     return params;
   }

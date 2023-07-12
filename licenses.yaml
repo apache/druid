@@ -13,7 +13,7 @@
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
-# under the License. 
+# under the License.
 
 name: conjunctive normal form conversion code, a variance aggregator algorithm, and Bloom filter adapted from Apache Hive
 version:
@@ -174,11 +174,22 @@ source_paths:
 
 ---
 
+name: Test Framework for Apache Drill
+version:
+url: https://github.com/apache/drill-test-framework
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+source_paths:
+  - sql/src/test/resources/drill/window
+
+---
+
 name: AWS SDK for Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.12.317
+version: 1.12.497
 libraries:
   - com.amazonaws: aws-java-sdk-core
   - com.amazonaws: aws-java-sdk-ec2
@@ -343,7 +354,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.11.0
+version: 2.20.0
 libraries:
   - com.google.errorprone: error_prone_annotations
 
@@ -590,7 +601,7 @@ name: Apache Commons Net
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.6
+version: 3.9.0
 libraries:
   - commons-net: commons-net
 
@@ -871,7 +882,7 @@ name: kubernetes official java client
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 11.0.1
+version: 11.0.4
 libraries:
   - io.kubernetes: client-java
 
@@ -881,7 +892,7 @@ name: kubernetes official java client api
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 11.0.1
+version: 11.0.4
 libraries:
   - io.kubernetes: client-java-api
 
@@ -891,7 +902,7 @@ name: kubernetes official java client extended
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 11.0.1
+version: 11.0.4
 libraries:
   - io.kubernetes: client-java-extended
 
@@ -901,7 +912,7 @@ name: kubernetes fabric java client
 license_category: binary
 module: extensions-contrib/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 6.4.1
+version: 6.7.2
 libraries:
   - io.fabric8: kubernetes-client
 
@@ -1031,7 +1042,7 @@ name: io.kubernetes client-java-proto
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 11.0.1
+version: 11.0.4
 libraries:
   - io.kubernetes: client-java-proto
 
@@ -1041,7 +1052,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.27
+version: 1.33
 libraries:
   - org.yaml: snakeyaml
 
@@ -1054,16 +1065,6 @@ license_name: Apache License version 2.0
 version: 0.4.11
 libraries:
   - com.flipkart.zjsonpatch: zjsonpatch
-
----
-
-name: org.bouncycastle bcprov-jdk15on
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: MIT License
-version: 1.68
-libraries:
-  - org.bouncycastle: bcprov-jdk15on
 
 ---
 
@@ -1087,13 +1088,43 @@ libraries:
 
 ---
 
+name: org.bouncycastle bcprov-jdk15on
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: MIT License
+version: "1.70"
+libraries:
+  - org.bouncycastle: bcprov-jdk15on
+
+---
+
 name: org.bouncycastle bcprov-ext-jdk15on
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: MIT License
-version: 1.68
+version: "1.70"
 libraries:
   - org.bouncycastle: bcprov-ext-jdk15on
+
+---
+
+name: org.bouncycastle bcpkix-jdk15on
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: MIT License
+version: "1.70"
+libraries:
+  - org.bouncycastle: bcpkix-jdk15on
+
+---
+
+name: org.bouncycastle bcutil-jdk15on
+license_category: binary
+module: extensions/druid-kubernetes-extensions
+license_name: MIT License
+version: "1.70"
+libraries:
+  - org.bouncycastle: bcutil-jdk15on
 
 ---
 
@@ -1114,16 +1145,6 @@ license_name: Apache License version 2.0
 version: 3.14.9
 libraries:
   - com.squareup.okhttp3: logging-interceptor
-
----
-
-name: org.bouncycastle bcpkix-jdk15on
-license_category: binary
-module: extensions/druid-kubernetes-extensions
-license_name: MIT License
-version: 1.66
-libraries:
-  - org.bouncycastle: bcpkix-jdk15on
 
 ---
 
@@ -1269,7 +1290,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.86.Final
+version: 4.1.94.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -1611,7 +1632,7 @@ name: JSON Small and Fast Parser
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.3
+version: 2.4.11
 libraries:
   - net.minidev: json-smart
 
@@ -2040,7 +2061,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.48.v20220622
+version: 9.4.51.v20230217
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -2924,7 +2945,7 @@ name: Apache Hadoop
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 3.3.5
+version: 3.3.6
 libraries:
   - org.apache.hadoop: hadoop-auth
   - org.apache.hadoop: hadoop-common
@@ -3089,7 +3110,7 @@ name: Apache Commons Net
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 3.1
+version: 3.9
 libraries:
   - commons-net: commons-net
 notices:
@@ -3302,9 +3323,26 @@ notices:
 
 name: JSON Small and Fast Parser
 license_category: binary
+module: druid-pac4j
+license_name: Apache License version 2.0
+version: 2.4.11
+libraries:
+  - net.minidev: json-smart
+---
+
+name: JSON Small and Fast Parser
+license_category: binary
+module: druid-pac4j
+license_name: Apache License version 2.0
+version: 2.4.11
+libraries:
+  - net.minidev: accessors-smart
+---
+name: JSON Small and Fast Parser
+license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 1.1.1
+version: 2.4.11
 libraries:
   - net.minidev: json-smart
 
@@ -3521,8 +3559,17 @@ libraries:
 
 ---
 
-name: Kafka Schema Registry Client
-version: 5.5.1
+name: Kafka clients
+version: 5.5.12-ccs
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.kafka: kafka-clients
+
+---
+name: Kafka-schema-registry-client
+version: 5.5.12
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3530,6 +3577,27 @@ libraries:
   - io.confluent: kafka-schema-registry-client
   - io.confluent: common-config
   - io.confluent: common-utils
+
+---
+
+name: Swagger
+version: 1.6.2
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+libraries:
+  - io.swagger: swagger-core
+  - io.swagger: swagger-models
+
+---
+
+name: Jackson Dataformat Yaml
+version: 2.10.5
+license_category: binary
+module: extensions/druid-avro-extensions
+license_name: Apache License version 2.0
+libraries:
+  - com.fasterxml.jackson.dataformat: jackson-dataformat-yaml
 
 ---
 
@@ -3590,7 +3658,7 @@ module: extensions/druid-avro-extensions
 license_name: Eclipse Public License 2.0
 libraries:
   - org.glassfish.hk2.external: jakarta.inject
-  
+
 ---
 
 name: jakarta.annotation
@@ -3600,7 +3668,7 @@ module: extensions/druid-avro-extensions
 license_name: Eclipse Public License 2.0
 libraries:
   - jakarta.annotation: jakarta.annotation-api
-    
+
 ---
 
 name: javax.ws.rs-api
@@ -3610,7 +3678,7 @@ module: extensions/druid-avro-extensions
 license_name: Eclipse Public License 2.0
 libraries:
   - javax.ws.rs: javax.ws.rs-api
-  
+
 ---
 
 name: jakarta.ws.rs-api
@@ -3620,7 +3688,7 @@ module: extensions/druid-avro-extensions
 license_name: Eclipse Public License 2.0
 libraries:
   - jakarta.ws.rs: jakarta.ws.rs-api
-        
+
 ---
 
 name: Kafka Schema Registry Client 6.0.1
@@ -3645,7 +3713,7 @@ libraries:
 ---
 
 name: Apache Velocity Engine
-version: 2.2
+version: 2.3
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3663,7 +3731,7 @@ name: Apache Avro
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 1.9.2
+version: 1.11.1
 libraries:
   - org.apache.avro: avro
   - org.apache.avro: avro-mapred
@@ -3826,7 +3894,7 @@ name: Hadoop Client API
 license_category: binary
 module: extensions/druid-hdfs-storage
 license_name: Apache License version 2.0
-version: 3.3.5
+version: 3.3.6
 libraries:
   - org.apache.hadoop: hadoop-client-api
 
@@ -3855,25 +3923,25 @@ notices:
   - kafka-clients: |
       Apache Kafka
       Copyright 2023 The Apache Software Foundation.
-      
+
       This product includes software developed at
       The Apache Software Foundation (https://www.apache.org/).
-      
+
       This distribution has a binary dependency on jersey, which is available under the CDDL
       License. The source code of jersey can be found at https://github.com/jersey/jersey/.
-      
+
       This distribution has a binary test dependency on jqwik, which is available under
       the Eclipse Public License 2.0. The source code can be found at
       https://github.com/jlink/jqwik.
-    
+
       The streams-scala (streams/streams-scala) module was donated by Lightbend and the original code was copyrighted by them:
         Copyright (C) 2018 Lightbend Inc. <https://www.lightbend.com>
         Copyright (C) 2017-2018 Alexis Seigneurin.
-      
+
       This project contains the following code copied from Apache Hadoop:
         clients/src/main/java/org/apache/kafka/common/utils/PureJavaCrc32C.java
         Some portions of this file Copyright (c) 2004-2006 Intel Corporation and licensed under the BSD license.
-      
+
       This project contains the following code copied from Apache Hive:
         streams/src/main/java/org/apache/kafka/streams/state/internals/Murmur3.java
 
@@ -4234,7 +4302,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.4.1
+version: 42.4.3
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4246,7 +4314,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.4.1
+version: 42.4.3
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4258,7 +4326,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.4.1
+version: 42.4.3
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4729,7 +4797,7 @@ name: Google Compute Engine API
 license_category: binary
 module: extensions/gce-extensions
 license_name: Apache License version 2.0
-version: v1-rev20190607-1.26.0
+version: v1-rev20190523-1.26.0
 libraries:
   - com.google.apis: google-api-services-compute
 
@@ -4739,7 +4807,7 @@ name: Google APIs Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.26.0
+version: 1.32.1
 libraries:
   - com.google.api-client: google-api-client
 
@@ -4749,7 +4817,7 @@ name: Google HTTP Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.26.0
+version: 1.35.2
 libraries:
   - com.google.http-client: google-http-client
   - com.google.http-client: google-http-client-jackson2
@@ -4789,25 +4857,25 @@ notices:
   - kafka-clients: |
       Apache Kafka
       Copyright 2023 The Apache Software Foundation.
-      
+
       This product includes software developed at
       The Apache Software Foundation (https://www.apache.org/).
-      
+
       This distribution has a binary dependency on jersey, which is available under the CDDL
       License. The source code of jersey can be found at https://github.com/jersey/jersey/.
-      
+
       This distribution has a binary test dependency on jqwik, which is available under
       the Eclipse Public License 2.0. The source code can be found at
       https://github.com/jlink/jqwik.
-      
+
       The streams-scala (streams/streams-scala) module was donated by Lightbend and the original code was copyrighted by them:
         Copyright (C) 2018 Lightbend Inc. <https://www.lightbend.com>
         Copyright (C) 2017-2018 Alexis Seigneurin.
-      
+
       This project contains the following code copied from Apache Hadoop:
         clients/src/main/java/org/apache/kafka/common/utils/PureJavaCrc32C.java
         Some portions of this file Copyright (c) 2004-2006 Intel Corporation and licensed under the BSD license.
-      
+
       This project contains the following code copied from Apache Hive:
         streams/src/main/java/org/apache/kafka/streams/state/internals/Murmur3.java
 

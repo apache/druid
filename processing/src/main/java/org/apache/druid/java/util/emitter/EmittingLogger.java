@@ -29,17 +29,11 @@ import org.apache.druid.java.util.emitter.service.AlertBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import javax.annotation.Nullable;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 
 /**
  */
 public class EmittingLogger extends Logger
 {
-  public static final String EXCEPTION_TYPE_KEY = "exceptionType";
-  public static final String EXCEPTION_MESSAGE_KEY = "exceptionMessage";
-  public static final String EXCEPTION_STACK_TRACE_KEY = "exceptionStackTrace";
-
   private static volatile ServiceEmitter emitter = null;
 
   private final String className;
@@ -93,19 +87,8 @@ public class EmittingLogger extends Logger
       throw e;
     }
 
-    final AlertBuilder retVal = new EmittingAlertBuilder(t, StringUtils.format(message, objects), emitter)
+    return new EmittingAlertBuilder(t, StringUtils.format(message, objects), emitter)
         .addData("class", className);
-
-    if (t != null) {
-      final StringWriter trace = new StringWriter();
-      final PrintWriter pw = new PrintWriter(trace);
-      t.printStackTrace(pw);
-      retVal.addData("exceptionType", t.getClass());
-      retVal.addData("exceptionMessage", t.getMessage());
-      retVal.addData("exceptionStackTrace", trace.toString());
-    }
-
-    return retVal;
   }
 
   public class EmittingAlertBuilder extends AlertBuilder
@@ -118,6 +101,7 @@ public class EmittingLogger extends Logger
     {
       super(description, emitter);
       this.t = t;
+      addThrowable(t);
     }
 
     @Override

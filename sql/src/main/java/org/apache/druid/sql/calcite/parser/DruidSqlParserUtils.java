@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.parser;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.calcite.sql.SqlAsOperator;
 import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
@@ -30,9 +31,12 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
+import org.apache.calcite.sql.SqlNumericLiteral;
 import org.apache.calcite.sql.SqlOrderBy;
 import org.apache.calcite.sql.SqlTimestampLiteral;
+import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.tools.ValidationException;
+import org.apache.calcite.util.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
@@ -57,6 +61,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.joda.time.base.AbstractInterval;
 
+import javax.annotation.Nullable;
 import java.sql.Timestamp;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -200,7 +205,7 @@ public class DruidSqlParserUtils
   }
 
   /**
-   * This method validates and converts a {@link SqlNode} representing a query into an optmizied list of intervals to
+   * This method validates and converts a {@link SqlNode} representing a query into an optimized list of intervals to
    * be used in creating an ingestion spec. If the sqlNode is an SqlLiteral of {@link #ALL}, returns a singleton list of
    * "ALL". Otherwise, it converts and optimizes the query using {@link MoveTimeFiltersToIntervals} into a list of
    * intervals which contain all valid values of time as per the query.
@@ -303,6 +308,79 @@ public class DruidSqlParserUtils
   }
 
   /**
+   * Return resolved clustered by column output names.
+   * For example, consider the following SQL:
+   * <pre>
+   * EXPLAIN PLAN FOR
+   * INSERT INTO w000
+   * SELECT
+   *  TIME_PARSE("timestamp") AS __time,
+   *  page AS page_alias,
+   *  FLOOR("cost"),
+   *  country,
+   *  citName
+   * FROM ...
+   * PARTITIONED BY DAY
+   * CLUSTERED BY 1, 2, 3, cityName
+   * </pre>
+   *
+   * <p>
+   * The function will return the following clusteredBy columns for the above SQL: ["__time", "page_alias", "FLOOR(\"cost\")", cityName"].
+   * Any ordinal and expression specified in the CLUSTERED BY clause will resolve to the final output column name.
+   * </p>
+   * <p>
+   * This function must be called after the query is prepared when all the validations are complete, including {@link #validateClusteredByColumns},
+   * so we can safely access the arguments.
+   * </p>
+   * @param clusteredByNodes  List of {@link SqlNode}s representing columns to be clustered by.
+   * @param sourceFieldMappings The source field output mappings extracted from the validated root query rel node post prepare phase.
+   *
+   */
+  @Nullable
+  public static List<String> resolveClusteredByColumnsToOutputColumns(
+      final SqlNodeList clusteredByNodes,
+      final ImmutableList<Pair<Integer, String>> sourceFieldMappings
+  )
+  {
+    // CLUSTERED BY is an optional clause
+    if (clusteredByNodes == null) {
+      return null;
+    }
+
+    final List<String> retClusteredByNames = new ArrayList<>();
+
+    for (SqlNode clusteredByNode : clusteredByNodes) {
+
+      if (clusteredByNode instanceof SqlNumericLiteral) {
+        // The node is a literal number -- an ordinal in the CLUSTERED BY clause. Lookup the ordinal in field mappings.
+        final int ordinal = ((SqlNumericLiteral) clusteredByNode).getValueAs(Integer.class);
+        retClusteredByNames.add(sourceFieldMappings.get(ordinal - 1).right);
+      } else if (clusteredByNode instanceof SqlBasicCall) {
+        // The node is an expression/operator.
+        retClusteredByNames.add(getColumnNameFromSqlCall((SqlBasicCall) clusteredByNode));
+      } else {
+        // For everything else, just return the simple string representation of the node.
+        retClusteredByNames.add(clusteredByNode.toString());
+      }
+    }
+
+    return retClusteredByNames;
+  }
+
+  private static String getColumnNameFromSqlCall(final SqlBasicCall sqlCallNode)
+  {
+    // The node may be an alias or expression, in which case we'll get the output name
+    if (sqlCallNode.getOperator() instanceof SqlAsOperator) {
+      // Get the output name for the alias operator.
+      SqlNode sqlNode = sqlCallNode.getOperandList().get(1);
+      return sqlNode.toString();
+    } else {
+      // Return the expression as-is.
+      return sqlCallNode.toSqlString(CalciteSqlDialect.DEFAULT).toString();
+    }
+  }
+
+  /**
    * Validates the clustered by columns to ensure that it does not contain DESCENDING order columns.
    *
    * @param clusteredByNodes List of SqlNodes representing columns to be clustered by.
@@ -319,6 +397,18 @@ public class DruidSqlParserUtils
             "Invalid CLUSTERED BY clause [%s]: cannot sort in descending order.",
             clusteredByNode
         );
+      }
+
+      // Calcite already throws Ordinal out of range exception for positive non-existent ordinals. This negative ordinal check
+      // is for completeness and is fixed in later Calcite versions.
+      if (clusteredByNode instanceof SqlNumericLiteral) {
+        final int ordinal = ((SqlNumericLiteral) clusteredByNode).getValueAs(Integer.class);
+        if (ordinal < 1) {
+          throw InvalidSqlInput.exception(
+              "Ordinal [%d] specified in the CLUSTERED BY clause is invalid. It must be a positive integer.",
+              ordinal
+          );
+        }
       }
     }
   }

@@ -37,8 +37,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -58,6 +56,7 @@ import org.apache.druid.sql.calcite.filtration.BoundRefKey;
 import org.apache.druid.sql.calcite.filtration.Bounds;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.ExpressionParser;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 import org.apache.druid.sql.calcite.table.RowSignatures;
@@ -545,7 +544,7 @@ public class Expressions
                || kind == SqlKind.LESS_THAN
                || kind == SqlKind.LESS_THAN_OR_EQUAL) {
       final List<RexNode> operands = ((RexCall) rexNode).getOperands();
-      Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%,d]", operands.size());
+      Preconditions.checkState(operands.size() == 2, "Expected 2 operands, got[%s]", operands.size());
       boolean flip = false;
       RexNode lhs = operands.get(0);
       RexNode rhs = operands.get(1);
@@ -598,7 +597,8 @@ public class Expressions
       }
 
       // Special handling for filters on FLOOR(__time TO granularity).
-      final Granularity queryGranularity = toQueryGranularity(lhsExpression, plannerContext.getExprMacroTable());
+      final Granularity queryGranularity =
+          toQueryGranularity(lhsExpression, plannerContext.getExpressionParser());
       if (queryGranularity != null) {
         // lhs is FLOOR(__time TO granularity); rhs must be a timestamp
         final long rhsMillis = Calcites.calciteDateTimeLiteralToJoda(rhs, plannerContext.getTimeZone()).getMillis();
@@ -713,9 +713,16 @@ public class Expressions
   )
   {
     final DruidExpression druidExpression = toDruidExpression(plannerContext, rowSignature, rexNode);
-    return druidExpression != null
-           ? new ExpressionDimFilter(druidExpression.getExpression(), plannerContext.getExprMacroTable())
-           : null;
+
+    if (druidExpression != null) {
+      return new ExpressionDimFilter(
+          druidExpression.getExpression(),
+          plannerContext.parseExpression(druidExpression.getExpression()),
+          null
+      );
+    }
+
+    return null;
   }
 
   /**
@@ -725,9 +732,9 @@ public class Expressions
    * @return granularity or null if not possible
    */
   @Nullable
-  public static Granularity toQueryGranularity(final DruidExpression expression, final ExprMacroTable macroTable)
+  public static Granularity toQueryGranularity(final DruidExpression expression, final ExpressionParser parser)
   {
-    final TimestampFloorExprMacro.TimestampFloorExpr expr = asTimestampFloorExpr(expression, macroTable);
+    final TimestampFloorExprMacro.TimestampFloorExpr expr = asTimestampFloorExpr(expression, parser);
 
     if (expr == null) {
       return null;
@@ -746,10 +753,10 @@ public class Expressions
   @Nullable
   public static TimestampFloorExprMacro.TimestampFloorExpr asTimestampFloorExpr(
       final DruidExpression expression,
-      final ExprMacroTable macroTable
+      final ExpressionParser parser
   )
   {
-    final Expr expr = Parser.parse(expression.getExpression(), macroTable);
+    final Expr expr = parser.parse(expression.getExpression());
 
     if (expr instanceof TimestampFloorExprMacro.TimestampFloorExpr) {
       return (TimestampFloorExprMacro.TimestampFloorExpr) expr;

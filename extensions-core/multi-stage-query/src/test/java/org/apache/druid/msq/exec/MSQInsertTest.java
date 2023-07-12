@@ -81,7 +81,7 @@ public class MSQInsertTest extends MSQTestBase
         {DEFAULT, DEFAULT_MSQ_CONTEXT},
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
-        {SEQUENTIAL_MERGE, SEQUENTIAL_MERGE_MSQ_CONTEXT}
+        {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT}
     };
     return Arrays.asList(data);
   }
@@ -173,7 +173,9 @@ public class MSQInsertTest extends MSQTestBase
                              + "    '{\"type\": \"json\"}',\n"
                              + "    '[{\"name\": \"__time\", \"type\": \"long\"}, {\"name\": \"flags\", \"type\": \"string\"}]'\n"
                              + "  )\n"
-                             + ") PARTITIONED BY day")
+                             + ")\n"
+                             + "WHERE __time > TIMESTAMP '1999-01-01 00:00:00'\n"
+                             + "PARTITIONED BY day")
                      .setQueryContext(context)
                      .setExpectedResultRows(expectedRows)
                      .setExpectedDataSource("foo1")
@@ -400,6 +402,67 @@ public class MSQInsertTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedSegment(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testInsertOnFoo1WithTimeAggregator()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + "SELECT MILLIS_TO_TIMESTAMP((SUM(CAST(\"m1\" AS BIGINT)))) AS __time "
+                         + "FROM foo "
+                         + "PARTITIONED BY DAY"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegment(
+                         ImmutableSet.of(
+                             SegmentId.of("foo1", Intervals.of("1970-01-01/P1D"), "test", 0)
+                         )
+                     )
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{21L}
+                         )
+                     )
+                     .verifyResults();
+
+  }
+
+  @Test
+  public void testInsertOnFoo1WithTimePostAggregator()
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("sum_m1", ColumnType.DOUBLE)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         "INSERT INTO foo1 "
+                         + "SELECT DATE_TRUNC('DAY', TIMESTAMP '2000-01-01' - INTERVAL '1'DAY) AS __time, SUM(m1) AS sum_m1 "
+                         + "FROM foo "
+                         + "PARTITIONED BY DAY"
+                     )
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegment(
+                         ImmutableSet.of(
+                             SegmentId.of("foo1", Intervals.of("1999-12-31T/P1D"), "test", 0)
+                         )
+                     )
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946598400000L, 21.0}
+                         )
+                     )
                      .verifyResults();
 
   }

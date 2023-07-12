@@ -241,7 +241,8 @@ public class NativeQueryMaker implements QueryMaker
                     jsonMapper,
                     sqlResultsContext,
                     array[mapping[i]],
-                    newTypes.get(i).getSqlTypeName()
+                    newTypes.get(i).getSqlTypeName(),
+                    originalFields.get(mapping[i])
                 );
               }
               return newArray;

@@ -34,12 +34,14 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.exec.MSQTasks;
-import org.apache.druid.msq.indexing.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQDestination;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
-import org.apache.druid.msq.indexing.TaskReportMSQDestination;
+import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
+import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.MSQDestination;
+import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
+import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
@@ -78,6 +80,8 @@ public class MSQTaskQueryMaker implements QueryMaker
   private static final String DESTINATION_DATASOURCE = "dataSource";
   private static final String DESTINATION_REPORT = "taskReport";
 
+  public static final String USER_KEY = "__user";
+
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
 
   private final String targetDataSource;
@@ -115,6 +119,9 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     // Native query context: sqlQueryContext plus things that we add prior to creating a controller task.
     final Map<String, Object> nativeQueryContext = new HashMap<>(sqlQueryContext.asMap());
+
+    // adding user
+    nativeQueryContext.put(USER_KEY, plannerContext.getAuthenticationResult().getIdentity());
 
     final String msqMode = MultiStageQueryContext.getMSQMode(sqlQueryContext);
     if (msqMode != null) {
@@ -174,6 +181,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         finalizeAggregations ? null /* Not needed */ : buildAggregationIntermediateTypeMap(druidQuery);
 
     final List<SqlTypeName> sqlTypeNames = new ArrayList<>();
+    final List<ColumnType> columnTypeList = new ArrayList<>();
     final List<ColumnMapping> columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery);
 
     for (final Pair<Integer, String> entry : fieldMapping) {
@@ -187,8 +195,8 @@ public class MSQTaskQueryMaker implements QueryMaker
       } else {
         sqlTypeName = druidQuery.getOutputRowType().getFieldList().get(entry.getKey()).getType().getSqlTypeName();
       }
-
       sqlTypeNames.add(sqlTypeName);
+      columnTypeList.add(druidQuery.getOutputRowSignature().getColumnType(queryColumn).orElse(ColumnType.STRING));
     }
 
     final MSQDestination destination;
@@ -223,8 +231,14 @@ public class MSQTaskQueryMaker implements QueryMaker
       if (ctxDestination != null && !DESTINATION_REPORT.equals(ctxDestination)) {
         throw new IAE("Cannot SELECT with destination [%s]", ctxDestination);
       }
-
-      destination = TaskReportMSQDestination.instance();
+      final MSQSelectDestination msqSelectDestination = MultiStageQueryContext.getSelectDestination(sqlQueryContext);
+      if (msqSelectDestination.equals(MSQSelectDestination.TASK_REPORT)) {
+        destination = TaskReportMSQDestination.instance();
+      } else if (msqSelectDestination.equals(MSQSelectDestination.DURABLE_STORAGE)) {
+        destination = DurableStorageMSQDestination.instance();
+      } else {
+        throw new IAE("Cannot SELECT with destination [%s]", msqSelectDestination.name());
+      }
     }
 
     final Map<String, Object> nativeQueryContextOverrides = new HashMap<>();
@@ -248,6 +262,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         plannerContext.queryContextMap(),
         SqlResults.Context.fromPlannerContext(plannerContext),
         sqlTypeNames,
+        columnTypeList,
         null
     );
 

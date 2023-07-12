@@ -28,6 +28,8 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -100,7 +102,8 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
     final CoordinatorRunStats stats = params.getCoordinatorStats();
     datasourceToUnusedSegments.forEach(
         (datasource, unusedSegments) -> {
-          stats.addToDatasourceStat(Stats.Segments.OVERSHADOWED, datasource, unusedSegments.size());
+          RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, datasource);
+          stats.add(Stats.Segments.OVERSHADOWED, datasourceKey, unusedSegments.size());
           coordinator.markSegmentsAsUnused(datasource, unusedSegments);
         }
     );

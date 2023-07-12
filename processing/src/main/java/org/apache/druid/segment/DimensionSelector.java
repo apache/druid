@@ -148,10 +148,15 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
     }
   }
 
+  static DimensionSelector nilSelector()
+  {
+    return NullDimensionSelectorHolder.NULL_DIMENSION_SELECTOR;
+  }
+
   static DimensionSelector constant(@Nullable final String value)
   {
     if (NullHandling.isNullOrEquivalent(value)) {
-      return NullDimensionSelectorHolder.NULL_DIMENSION_SELECTOR;
+      return nilSelector();
     } else {
       return new ConstantDimensionSelector(value);
     }

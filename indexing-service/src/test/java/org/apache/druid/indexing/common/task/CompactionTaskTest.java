@@ -104,6 +104,7 @@ import org.apache.druid.segment.SimpleQueryableIndex;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
@@ -1983,7 +1984,7 @@ public class CompactionTaskTest
         Map<DataSegment, File> segmentFileMap
     )
     {
-      super(mapper, () -> 0);
+      super(mapper, ColumnConfig.DEFAULT);
 
       queryableIndexMap = Maps.newHashMapWithExpectedSize(segmentFileMap.size());
       for (Entry<DataSegment, File> entry : segmentFileMap.entrySet()) {

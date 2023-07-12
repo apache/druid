@@ -240,8 +240,12 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public Object combine(final Object lhs, final Object rhs)
   {
     final DoublesUnion union = DoublesUnion.builder().setMaxK(k).build();
-    union.union((DoublesSketch) lhs);
-    union.union((DoublesSketch) rhs);
+    if (lhs != null) {
+      union.union((DoublesSketch) lhs);
+    }
+    if (rhs != null) {
+      union.union((DoublesSketch) rhs);
+    }
     return union.getResultAndReset();
   }
 
@@ -263,7 +267,9 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
       public void fold(final ColumnValueSelector selector)
       {
         final DoublesSketch sketch = (DoublesSketch) selector.getObject();
-        union.union(sketch);
+        if (sketch != null) {
+          union.union(sketch);
+        }
       }
 
       @Nullable
