@@ -173,5 +173,7 @@
   "interval/compacted/count" : { "dimensions" : ["dataSource"], "type" : "count" },
 
   "namespace/cache/numEntries" : { "dimensions" : [], "type" : "gauge" },
-  "namespace/cache/heapSizeInBytes" : { "dimensions" : [], "type" : "gauge" }
+  "namespace/cache/heapSizeInBytes" : { "dimensions" : [], "type" : "gauge" },
+
+  "service/heartbeat" : { "dimensions" : [], "type" : "gauge" }
 }

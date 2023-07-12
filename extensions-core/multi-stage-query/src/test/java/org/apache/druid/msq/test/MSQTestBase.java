@@ -202,6 +202,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -807,6 +808,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Set<Interval> expectedTombstoneIntervals = null;
     protected List<Object[]> expectedResultRows = null;
     protected Matcher<Throwable> expectedValidationErrorMatcher = null;
+    protected List<Pair<Predicate<MSQTaskReportPayload>, String>> adhocReportAssertionAndReasons = new ArrayList<>();
     protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
     protected MSQFault expectedMSQFault = null;
     protected Class<? extends MSQFault> expectedMSQFaultClass = null;
@@ -865,6 +867,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public Builder setExpectedMSQSpec(MSQSpec expectedMSQSpec)
     {
       this.expectedMSQSpec = expectedMSQSpec;
+      return asBuilder();
+    }
+
+    public Builder addAdhocReportAssertions(Predicate<MSQTaskReportPayload> predicate, String reason)
+    {
+      this.adhocReportAssertionAndReasons.add(Pair.of(predicate, reason));
       return asBuilder();
     }
 
@@ -1230,6 +1238,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
           }
           Assert.assertEquals(expectedTombstoneSegmentIds, tombstoneSegmentIds);
         }
+
+        for (Pair<Predicate<MSQTaskReportPayload>, String> adhocReportAssertionAndReason : adhocReportAssertionAndReasons) {
+          Assert.assertTrue(adhocReportAssertionAndReason.rhs, adhocReportAssertionAndReason.lhs.test(reportPayload));
+        }
+
         // assert results
         assertResultsEquals(sql, expectedResultRows, transformedOutputRows);
       }
@@ -1340,6 +1353,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
           log.info("found row signature %s", payload.getResults().getSignature());
           log.info(rows.stream().map(Arrays::toString).collect(Collectors.joining("\n")));
 
+          for (Pair<Predicate<MSQTaskReportPayload>, String> adhocReportAssertionAndReason : adhocReportAssertionAndReasons) {
+            Assert.assertTrue(adhocReportAssertionAndReason.rhs, adhocReportAssertionAndReason.lhs.test(payload));
+          }
 
           log.info("Found spec: %s", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(spec));
           return new Pair<>(spec, Pair.of(payload.getResults().getSignature(), rows));
