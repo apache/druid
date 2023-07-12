@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.ComparableList;
@@ -171,6 +172,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
     assertCoerce(1L, true, SqlTypeName.BIGINT);
 
     assertCannotCoerce(Collections.emptyList(), SqlTypeName.BIGINT);
+    assertCannotCoerce(new byte[]{(byte) 0xe0, 0x4f}, SqlTypeName.BIGINT);
   }
 
   @Test
@@ -223,6 +225,17 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testCoerceOfArrayOfPrimitives()
+  {
+    try {
+      assertCoerce("", new byte[1], SqlTypeName.BIGINT);
+      Assert.fail("Should throw an exception");
+    }
+    catch (Exception e) {
+      Assert.assertEquals("Cannot coerce field [fieldName] from type [Byte Array] to type [BIGINT]", e.getMessage());
+    }
+  }
+  @Test
   public void testCoerceArrayFails()
   {
     assertCannotCoerce("xyz", SqlTypeName.ARRAY);
@@ -251,16 +264,16 @@ public class SqlResultsTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         StringUtils.format("Coerce [%s] to [%s]", toCoerce, typeName),
         expected,
-        SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, typeName)
+        SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, typeName, "fieldName")
     );
   }
 
   private void assertCannotCoerce(Object toCoerce, SqlTypeName typeName)
   {
-    final IllegalStateException e = Assert.assertThrows(
+    final DruidException e = Assert.assertThrows(
         StringUtils.format("Coerce [%s] to [%s]", toCoerce, typeName),
-        IllegalStateException.class,
-        () -> SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, typeName)
+        DruidException.class,
+        () -> SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, typeName, "")
     );
 
     MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Cannot coerce")));

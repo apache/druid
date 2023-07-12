@@ -1897,7 +1897,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     final SequenceOffsetType currOffset = Preconditions.checkNotNull(
         currOffsets.get(partition),
         "Current offset is null for partition[%s]",
-        recordOffset,
         partition
     );
 

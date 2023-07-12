@@ -27,6 +27,7 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.error.BroadcastTablesTooLargeFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.query.DataSource;
@@ -58,7 +59,7 @@ public class BroadcastJoinHelper
    * @param channels                         list of input channels
    * @param channelReaders                   list of input channel readers; corresponds one-to-one with "channels"
    * @param memoryReservedForBroadcastJoin   total bytes of frames we are permitted to use; derived from
-   *                                         {@link org.apache.druid.msq.exec.WorkerMemoryParameters#broadcastJoinMemory}
+   *                                         {@link WorkerMemoryParameters#getBroadcastJoinMemory()}
    */
   public BroadcastJoinHelper(
       final Int2IntMap inputNumberToProcessorChannelMap,
