@@ -240,8 +240,10 @@ public class MSQTaskQueryMaker implements QueryMaker
       } else {
         throw InvalidInput.exception(
             "Unsupported select destination [%s] provided in the query context. MSQ can currently write the select results to "
-            + "\"taskReport\" and \"durableStorage\"",
-            msqSelectDestination.name()
+            + "\"%s\" and \"%s\"",
+            msqSelectDestination.name(),
+            MSQSelectDestination.TASK_REPORT.toString(),
+            MSQSelectDestination.DURABLE_STORAGE.toString()
         );
       }
     }

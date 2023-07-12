@@ -828,7 +828,13 @@ public class SqlStatementResource
   {
     ExecutionMode executionMode = queryContext.getEnum(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.class, null);
     if (ExecutionMode.ASYNC != executionMode) {
-      throw DruidException.defensive("[%s] is not supported. It should not be set", QueryContexts.CTX_EXECUTION_MODE);
+      throw InvalidInput.exception(
+          "The SQL statement API does not support the provided execution mode [%s]. Please set the context "
+          + "parameter [%s] to [%s] in the query context",
+          executionMode,
+          QueryContexts.CTX_EXECUTION_MODE,
+          ExecutionMode.ASYNC
+      );
     }
 
     MSQSelectDestination selectDestination = MultiStageQueryContext.getSelectDestination(queryContext);

@@ -24,7 +24,7 @@ public class Forbidden extends DruidException.Failure
 
   public static DruidException exception()
   {
-    return exception("Unauthorize");
+    return exception("Unauthorized");
   }
 
   public static DruidException exception(String msg, Object... args)
