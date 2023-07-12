@@ -29,6 +29,7 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -73,11 +74,10 @@ public class NullFilter extends AbstractOptimizableDimFilter implements Filter
   )
   {
     if (column == null) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("Invalid null filter, column cannot be null");
+      throw InvalidInput.exception("Invalid null filter, column cannot be null");
     }
     this.column = column;
+    // remove once SQL planner no longer uses extractionFn
     this.extractionFn = extractionFn;
     this.filterTuning = filterTuning;
   }

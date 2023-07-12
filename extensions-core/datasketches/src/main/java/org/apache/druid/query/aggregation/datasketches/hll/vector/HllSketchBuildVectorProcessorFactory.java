@@ -26,7 +26,6 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildBufferAggregatorHelper;
 import org.apache.druid.segment.VectorColumnProcessorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -96,8 +95,7 @@ public class HllSketchBuildVectorProcessorFactory implements VectorColumnProcess
       VectorObjectSelector selector
   )
   {
-    final ExpressionType expressionType = ExpressionType.fromColumnType(capabilities);
-    final NullableTypeStrategy<Object> typeStrategy = expressionType.getNullableStrategy();
+    final ExpressionType expressionType = ExpressionType.fromColumnTypeStrict(capabilities);
     return new HllSketchBuildVectorProcessor()
     {
       @Override
@@ -108,7 +106,7 @@ public class HllSketchBuildVectorProcessorFactory implements VectorColumnProcess
 
         for (int i = startRow; i < endRow; i++) {
           if (vector[i] != null) {
-            byte[] bytes = ExprEval.toBytes(expressionType, typeStrategy, vector[i]);
+            byte[] bytes = ExprEval.toBytes(expressionType, vector[i]);
             sketch.update(bytes);
           }
         }
@@ -125,7 +123,7 @@ public class HllSketchBuildVectorProcessorFactory implements VectorColumnProcess
           final HllSketch sketch = helper.getSketchAtPosition(buf, position);
 
           if (vector[idx] != null) {
-            byte[] bytes = ExprEval.toBytes(expressionType, typeStrategy, vector[idx]);
+            byte[] bytes = ExprEval.toBytes(expressionType, vector[idx]);
             sketch.update(bytes);
           }
         }

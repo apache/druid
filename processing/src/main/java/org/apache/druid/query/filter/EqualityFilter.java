@@ -29,6 +29,7 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
@@ -89,23 +90,18 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
   )
   {
     if (column == null) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("Invalid equality filter, column cannot be null");
+      throw InvalidInput.exception("Invalid equality filter, column cannot be null");
     }
     this.column = column;
     if (matchValueType == null) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("Invalid equality filter on column [%s], matchValueType cannot be null", column);
+      throw InvalidInput.exception("Invalid equality filter on column [%s], matchValueType cannot be null", column);
     }
     this.matchValueType = matchValueType;
     if (matchValue == null) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("Invalid equality filter on column [%s], matchValue cannot be null", column);
+      throw InvalidInput.exception("Invalid equality filter on column [%s], matchValue cannot be null", column);
     }
     this.matchValue = matchValue;
+    // remove once SQL planner no longer uses extractionFn
     this.extractionFn = extractionFn;
     this.filterTuning = filterTuning;
     this.predicateFactory = new EqualityPredicateFactory(matchValue, matchValueType);
@@ -183,12 +179,10 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
   @Override
   public String toString()
   {
-    DimFilter.DimFilterToStringBuilder bob = new DimFilter.DimFilterToStringBuilder().appendDimension(
-                                                                                         column,
-                                                                                         extractionFn
-                                                                                     )
-                                                                                     .append(" = ")
-                                                                                     .append(matchValue);
+    DimFilter.DimFilterToStringBuilder bob =
+        new DimFilter.DimFilterToStringBuilder().appendDimension(column, extractionFn)
+                                                .append(" = ")
+                                                .append(matchValue);
 
     if (!ColumnType.STRING.equals(matchValueType)) {
       bob.append(" (" + matchValueType.asTypeString() + ")");
@@ -424,10 +418,6 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
         if (longPredicate != null) {
           return;
         }
-        if (matchValue == null) {
-          longPredicate = DruidLongPredicate.MATCH_NULL_ONLY;
-          return;
-        }
         final Long valueAsLong = (Long) matchValue.castTo(ExpressionType.LONG).valueOrDefault();
 
         if (valueAsLong == null) {
@@ -449,11 +439,6 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
         if (floatPredicate != null) {
           return;
         }
-
-        if (matchValue == null) {
-          floatPredicate = DruidFloatPredicate.MATCH_NULL_ONLY;
-          return;
-        }
         final Double doubleValue = (Double) matchValue.castTo(ExpressionType.DOUBLE).valueOrDefault();
 
         if (doubleValue == null) {
@@ -473,10 +458,6 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       }
       synchronized (initLock) {
         if (doublePredicate != null) {
-          return;
-        }
-        if (matchValue == null) {
-          doublePredicate = DruidDoublePredicate.MATCH_NULL_ONLY;
           return;
         }
         final Double aDouble = (Double) matchValue.castTo(ExpressionType.DOUBLE).valueOrDefault();

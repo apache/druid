@@ -33,6 +33,7 @@ import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprEval;
@@ -103,24 +104,18 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
   )
   {
     if (column == null) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("Invalid range filter, column cannot be null");
+      throw InvalidInput.exception("Invalid range filter, column cannot be null");
     }
     this.column = column;
     if (matchValueType == null) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("Invalid range filter on column [%s], matchValueType cannot be null", column);
+      throw InvalidInput.exception("Invalid range filter on column [%s], matchValueType cannot be null", column);
     }
     this.matchValueType = matchValueType;
     if (lower == null && upper == null) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build(
-                              "Invalid range filter on column [%s], lower and upper cannot be null at the same time",
-                              column
-                          );
+      throw InvalidInput.exception(
+          "Invalid range filter on column [%s], lower and upper cannot be null at the same time",
+          column
+      );
     }
     final ExpressionType expressionType = ExpressionType.fromColumnType(matchValueType);
     this.upper = upper;
@@ -129,34 +124,31 @@ public class RangeFilter extends AbstractOptimizableDimFilter implements Filter
     this.lowerEval = ExprEval.ofType(expressionType, lower);
     if (expressionType.isNumeric()) {
       if (lower != null && lowerEval.value() == null) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                            .build(
-                                "Invalid range filter on column [%s], lower bound [%s] cannot be parsed as specified match value type [%s]",
-                                column,
-                                lower,
-                                expressionType
-                            );
+        throw InvalidInput.exception(
+            "Invalid range filter on column [%s], lower bound [%s] cannot be parsed as specified match value type [%s]",
+            column,
+            lower,
+            expressionType
+        );
       }
       if (upper != null && upperEval.value() == null) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                            .build(
-                                "Invalid range filter on column [%s], upper bound [%s] cannot be parsed as specified match value type [%s]",
-                                column,
-                                upper,
-                                expressionType
-                            );
+        throw InvalidInput.exception(
+            "Invalid range filter on column [%s], upper bound [%s] cannot be parsed as specified match value type [%s]",
+            column,
+            upper,
+            expressionType
+        );
       }
     }
     this.lowerStrict = lowerStrict != null && lowerStrict;
     this.upperStrict = upperStrict != null && upperStrict;
+    // remove once SQL planner no longer uses extractionFn
     this.extractionFn = extractionFn;
+    this.filterTuning = filterTuning;
     this.stringPredicateSupplier = makeStringPredicateSupplier();
     this.longPredicateSupplier = makeLongPredicateSupplier();
     this.floatPredicateSupplier = makeFloatPredicateSupplier();
     this.doublePredicateSupplier = makeDoublePredicateSupplier();
-    this.filterTuning = filterTuning;
   }
 
   @JsonProperty

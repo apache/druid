@@ -96,7 +96,8 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
   private static final Object[] ARRAY_VALUES = new Object[]{
       new Object[]{1L, 2L},
       new Object[]{3L, 4L},
-      new Object[]{0L, 1000L}
+      new Object[]{0L, 1000L},
+      new Object[]{null, 123L}
   };
 
   private static final int MAX_NUM_VALUES = 15;
@@ -145,13 +146,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
 
       BloomKFilter arrayFilter = new BloomKFilter(MAX_NUM_VALUES);
       for (Object o : ARRAY_VALUES) {
-        arrayFilter.addBytes(
-            ExprEval.toBytes(
-                ExpressionType.LONG_ARRAY,
-                ExpressionType.LONG_ARRAY.getNullableStrategy(),
-                o
-            )
-        );
+        arrayFilter.addBytes(ExprEval.toBytes(ExpressionType.LONG_ARRAY, o));
       }
       serializedArrayFilter = filterToString(arrayFilter);
     }

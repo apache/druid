@@ -218,11 +218,7 @@ public class BloomDimFilterTest extends BaseFilterTest
         assertFilterMatches(
             new BloomDimFilter(
                 "dim2",
-                bloomKFilter(
-                    1000,
-                    ExprEval.toBytes(ExpressionType.STRING_ARRAY, ExpressionType.STRING_ARRAY.getNullableStrategy(), ImmutableList.of("a", "b")
-                    )
-                ),
+                bloomKFilter(1000, ExprEval.toBytes(ExpressionType.STRING_ARRAY, ImmutableList.of("a", "b"))),
                 null
             ),
             ImmutableList.of("0")

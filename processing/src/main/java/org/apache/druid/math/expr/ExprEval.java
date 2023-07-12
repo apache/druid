@@ -142,19 +142,20 @@ public abstract class ExprEval<T>
     }
   }
 
-  public static byte[] toBytes(ExpressionType expressionType, NullableTypeStrategy<Object> strategy, Object o)
+  public static byte[] toBytes(ExpressionType expressionType, Object o)
   {
-    // convert the array to byte[] form so that we take a hash of the whole array
     final ExprEval<?> eval = ExprEval.ofType(expressionType, o);
-    final int size = strategy.estimateSizeBytes(eval.valueOrDefault());
-    final ByteBuffer buffer = ByteBuffer.allocate(size);
-    strategy.write(buffer, eval.valueOrDefault(), size);
-    return buffer.array();
+    return toBytes(eval);
   }
 
   public static byte[] toBytesBestEffort(Object o)
   {
     final ExprEval<?> eval = ExprEval.bestEffortOf(o);
+    return toBytes(eval);
+  }
+
+  public static byte[] toBytes(ExprEval<?> eval)
+  {
     final NullableTypeStrategy<Object> strategy = eval.type().getNullableStrategy();
     final int size = strategy.estimateSizeBytes(eval.valueOrDefault());
     final ByteBuffer buffer = ByteBuffer.allocate(size);

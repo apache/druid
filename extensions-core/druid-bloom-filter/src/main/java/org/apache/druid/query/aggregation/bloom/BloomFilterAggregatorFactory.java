@@ -287,13 +287,29 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
               maxNumEntries,
               onHeap
           );
-        case COMPLEX:
-          // in an ideal world, we would check complex type, but until then assume it's a bloom filter
-          return new BloomFilterMergeAggregator(
+        case ARRAY:
+          return new ByteBloomFilterAggregator(
               columnFactory.makeColumnValueSelector(field.getDimension()),
+              capabilities,
               maxNumEntries,
               onHeap
           );
+        case COMPLEX:
+          if (BloomFilterSerializersModule.BLOOM_FILTER_TYPE_NAME.equals(capabilities.getComplexTypeName())) {
+            return new BloomFilterMergeAggregator(
+                columnFactory.makeColumnValueSelector(field.getDimension()),
+                maxNumEntries,
+                onHeap
+            );
+          } else {
+            // fall back to bytes aggregator
+            return new ByteBloomFilterAggregator(
+                columnFactory.makeColumnValueSelector(field.getDimension()),
+                capabilities,
+                maxNumEntries,
+                onHeap
+            );
+          }
         default:
           throw new IAE(
               "Cannot create bloom filter %s for invalid column type [%s]",

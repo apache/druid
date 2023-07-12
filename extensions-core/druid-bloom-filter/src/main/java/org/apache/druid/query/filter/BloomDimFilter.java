@@ -173,18 +173,27 @@ public class BloomDimFilter extends AbstractOptimizableDimFilter implements DimF
           @Override
           public Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> arrayType)
           {
-            final ExpressionType expressionType = arrayType == null || !arrayType.isArray()
+            final ExpressionType expressionType = arrayType == null
                                                   ? null
-                                                  : ExpressionType.fromColumnType(arrayType);
-            return input -> {
-              if (input == null) {
-                return bloomKFilter.testBytes(null, 0, 0);
-              }
-              final byte[] bytes = expressionType != null
-                                   ? ExprEval.toBytes(expressionType, expressionType.getNullableStrategy(), input)
-                                   : ExprEval.toBytesBestEffort(input);
-              return bloomKFilter.testBytes(bytes);
-            };
+                                                  : ExpressionType.fromColumnTypeStrict(arrayType);
+            if (expressionType != null) {
+              return input -> {
+                if (input == null) {
+                  return bloomKFilter.testBytes(null, 0, 0);
+                }
+                final byte[] bytes = ExprEval.toBytes(expressionType, input);
+                return bloomKFilter.testBytes(bytes);
+              };
+            } else {
+              // fall back to per row detection
+              return input -> {
+                if (input == null) {
+                  return bloomKFilter.testBytes(null, 0, 0);
+                }
+                final byte[] bytes = ExprEval.toBytesBestEffort(input);
+                return bloomKFilter.testBytes(bytes);
+              };
+            }
           }
         },
         extractionFn,

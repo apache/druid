@@ -687,7 +687,8 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
   @Test
   public void testArrayColumns() throws IOException
   {
-    // Write a segment with two rows in it, with columns: s (string), d (double), cnt (long), met_s (complex).
+    // make our own stuff here so that we don't pollute the shared spec, rows, and segment defined in setup and
+    // break all the other tests
     DimensionsSpec dimensionsSpec = new DimensionsSpec(
         ImmutableList.of(
             StringDimensionSchema.create("strCol"),

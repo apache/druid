@@ -43,9 +43,11 @@ public class HllSketchBuildUtil
     } else if (value instanceof String) {
       updateSketchWithString(sketch, stringEncoding, (String) value);
     } else if (value instanceof Object[]) {
+      // Object arrays are handled as ARRAY types, which count the entire array as a single value
       byte[] arrayBytes = ExprEval.toBytesBestEffort(value);
       sketch.update(arrayBytes);
     } else if (value instanceof List) {
+      // Lists are treated as multi-value strings, which count each element as a separate distinct value
       // noinspection rawtypes
       for (Object entry : (List) value) {
         if (entry != null) {

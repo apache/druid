@@ -39,7 +39,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -225,12 +224,11 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
           };
           break;
         case ARRAY:
-          final ExpressionType expressionType = ExpressionType.fromColumnType(capabilities);
-          final NullableTypeStrategy<Object> strategy = expressionType.getNullableStrategy();
+          final ExpressionType expressionType = ExpressionType.fromColumnTypeStrict(capabilities);
           updater = sketch -> {
             final Object o = selector.getObject();
             if (o != null) {
-              byte[] bytes = ExprEval.toBytes(expressionType, strategy, o);
+              byte[] bytes = ExprEval.toBytes(expressionType, o);
               sketch.get().update(bytes);
             }
           };
