@@ -203,7 +203,7 @@ Druid supports the following aggregator merge strategies:
 
 - `strict`:  If there are any segments with unknown aggregators or any conflicts of any kind, the merged aggregators
   list is `null`.
-- `lenient`:  Druid ignores segments with unknown aggregators. Conflicts between aggregators send the aggregator for that particular column to null.
+- `lenient`:  Druid ignores segments with unknown aggregators. Conflicts between aggregators set the aggregator for that particular column to null.
 - the aggregator for that particular column.
 - `latest`: In the event of conflicts between segments, the aggregator from the most recent segment will be selected
    for that particular column.
