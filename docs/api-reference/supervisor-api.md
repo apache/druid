@@ -23,19 +23,19 @@ sidebar_label: Supervisors
   ~ under the License.
   -->
 
-This document describes the API endpoints to manage and monitor supervisors for Apache Druid.
+This document describes the API endpoints to manage and monitor Supervisors for Apache Druid.
+
+In this document, `http://<SERVICE_IP>:<SERVICE_PORT>` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://<ROUTER_IP>:<ROUTER_PORT>` with `http://localhost:8888`.
 
 ## Supervisors
 
-### Get a list of active supervisors
+### Get a list of active Supervisors
 
 #### URL
 
 <code className="getAPI">GET</code> `/druid/indexer/v1/supervisor`
 
-Retrieves a list of active supervisors. The response object is a list of strings containing the names of the supervisors. 
-
-This endpoint can be queried with the Coordinator service or the Router service.
+Retrieves a list of active Supervisors. The response object is a list of strings containing the names of the Supervisors. 
 
 #### Responses
 
@@ -43,7 +43,7 @@ This endpoint can be queried with the Coordinator service or the Router service.
 
 <!--200 SUCCESS-->
 <br/>
-*Successfully retrieved list of active supervisor IDs* 
+*Successfully retrieved list of active Supervisor IDs* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -77,15 +77,13 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
   ```
 </details>
 
-### Get list of active supervisor objects
+### Get list of active Supervisor objects
 
 #### URL
 
 `GET /druid/indexer/v1/supervisor?full`
 
-Retrieves a list of active supervisor objects. Each object has properties relevant to the supervisor: `id`, `state`, `detailedState`, `healthy`, and `spec`. 
-
-This endpoint can be queried with the Coordinator service or the Router service.
+Retrieves a list of active Supervisor objects. Each object has properties relevant to the Supervisor: `id`, `state`, `detailedState`, `healthy`, and `spec`. 
 
 See the following table for details on properties within the response object:
 
@@ -93,9 +91,9 @@ See the following table for details on properties within the response object:
 |---|---|---|
 |`id`|String|Supervisor unique identifier|
 |`state`|String|The basic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-supervisor-operations.md) for details.|
-|`detailedState`|String|The supervisor specific state. See documentation of specific supervisor for details: [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md)|
-|`healthy`|Boolean|True or false indicator of overall supervisor health|
-|`spec`|SupervisorSpec|JSON specification of the supervisor|
+|`detailedState`|String|The Supervisor specific state. See documentation of specific supervisor for details: [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md)|
+|`healthy`|Boolean|True or false indicator of overall Supervisor health|
+|`spec`|SupervisorSpec|JSON specification of the Supervisor|
 
 #### Responses
 
@@ -103,7 +101,7 @@ See the following table for details on properties within the response object:
 
 <!--200 SUCCESS-->
 <br/>
-*Successfully retrieved active supervisor objects* 
+*Successfully retrieved active Supervisor objects* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -751,22 +749,20 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
   ```
 </details>
 
-### Get supervisor state 
+### Get Supervisor state 
 
 `GET /druid/indexer/v1/supervisor?state=true`
 
-Retrieves a list of objects of the currently active supervisors and their current state.
-
-This endpoint can be queried with the Coordinator service or the Router service.
+Retrieves a list of objects of the currently active Supervisors and their current state.
 
 See the following table for details on properties within the response object:
 |Field|Type|Description|
 |---|---|---|
 |`id`|String|Supervisor unique identifier|
-|`state`|String|The basic state of the supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-supervisor-operations.md) for details.|
-|`detailedState`|String|Supervisor specific state. See documentation of the specific supervisor for details: [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md)|
-|`healthy`|Boolean|True or false indicator of overall supervisor health|
-|`suspended`|Boolean|True or false indicator of whether the supervisor is in suspended state|
+|`state`|String|The basic state of the Supervisor. Available states: `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. Check [Kafka Docs](../development/extensions-core/kafka-supervisor-operations.md) for details.|
+|`detailedState`|String|Supervisor specific state. See documentation of the specific Supervisor for details: [Kafka](../development/extensions-core/kafka-ingestion.md) or [Kinesis](../development/extensions-core/kinesis-ingestion.md)|
+|`healthy`|Boolean|True or false indicator of overall Supervisor health|
+|`suspended`|Boolean|True or false indicator of whether the Supervisor is in suspended state|
 
 #### Responses
 
@@ -774,7 +770,7 @@ See the following table for details on properties within the response object:
 
 <!--200 SUCCESS-->
 <br/>
-*Successfully retrieved supervisor state objects*  
+*Successfully retrieved Supervisor state objects*  
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -821,13 +817,13 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 </details>
 
-### Get supervisor specification
+### Get Supervisor specification
 
 #### URL
 
 `GET /druid/indexer/v1/supervisor/{supervisorId}`
 
-Retrieves the current spec for the supervisor with the provided ID.
+Retrieves the current spec for the Supervisor with the provided ID.
 
 #### Responses
 
@@ -838,13 +834,15 @@ Retrieves the current spec for the supervisor with the provided ID.
 *Successfully retrieved specification* 
 <!--404 NOT FOUND-->
 <br/>
-*Invalid supervisor ID* 
+*Invalid Supervisor ID* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
 
 #### Sample request
+
+The following example shows how to retrieve the specification of the `wikipedia_stream` Supervisor.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -1170,12 +1168,16 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
   ```
 </details>
 
-### Get supervisor status
+### Get Supervisor status
 
 #### URL
 `GET /druid/indexer/v1/supervisor/{supervisorId}/status`
 
-Retrieves the current status of the supervisor with the provided ID. 
+Retrieves a current status report of the Supervisor with the provided ID. The report contains the state of the tasks managed by the Supervisor and a list of recently thrown exceptions. The possible `state` values are: [`PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`, `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`].
+
+ For additional information about the status report, refer to the following documentation for each streaming ingestion methods:
+* [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#getting-supervisor-status-report)
+* [Apache Kafka](../development/extensions-core/kafka-supervisor-operations.md#getting-supervisor-status-report)
 
 #### Responses
 
@@ -1183,17 +1185,17 @@ Retrieves the current status of the supervisor with the provided ID.
 
 <!--200 SUCCESS-->
 <br/>
-*Successfully retrieved supervisor status* 
+*Successfully retrieved Supervisor status* 
 <!--404 NOT FOUND-->
 <br/>
-*Invalid supervisor ID* 
+*Invalid Supervisor ID* 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
 ---
 
 #### Sample request
 
-The following example shows retrieving the status of the `social_media` supervisor. 
+The following example shows retrieving the status of the `social_media` Supervisor. 
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -1259,13 +1261,13 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
   ```
 </details>
 
-### Get audit history for all supervisors
+### Get audit history for all Supervisors
 
 #### URL
 
 `GET /druid/indexer/v1/supervisor/history`
 
-Retrieve an audit history of specs for all supervisors (current and past).
+Retrieve an audit history of specs for all Supervisors (current and past).
 
 #### Responses
 
@@ -1611,7 +1613,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
   ```
 </details>
 
-### Get audit history for specific supervisor
+### Get audit history for specific Supervisor
 
 #### URL
 
@@ -1635,7 +1637,7 @@ Retrieve an audit history of specs for the supervisor with the provided ID.
 
 #### Sample request
 
-The following example shows how to retrieve the audit history of the `wikipedia_stream` supervisor.
+The following example shows how to retrieve the audit history of the `wikipedia_stream` Supervisor.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -1966,17 +1968,17 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 </details>
 
 
-### Create a new supervisor or update an existing supervisor
+### Create a new Supervisor or update an existing Supervisor
 
 #### URL
 
 `POST /druid/indexer/v1/supervisor`
 
-Creates a new supervisor or updates an existing one. 
+Creates a new Supervisor or updates an existing one. 
 
-To create a supervisor spec using Kafka streaming ingestion, refer to [Apache Kafka ingestion](../development/extensions-core/kafka-ingestion.md#define-a-supervisor-spec).
+You can create a Supervisor spec using [Apache Kafka ingestion streaming](../development/extensions-core/kafka-ingestion.md#define-a-supervisor-spec) or [Amazon Kinesis ingestion](../development/extensions-core/kinesis-ingestion.md#submitting-a-supervisor-spec). 
 
-To create a supervisor spec using Kinesis ingestion, refer to [Amazon Kinesis ingestion](../development/extensions-core/kinesis-ingestion.md#submitting-a-supervisor-spec). 
+Using this endpoint on an existing Supervisor for the same datasource will result in the running Supervisor signalling its tasks to stop reading, exiting itself, and a new Supervisor being created with the provided configuration from the request body. This submits a new schema while retaining existing publishing tasks and starting new tasks at the previous task offsets. 
 
 #### Responses
 
@@ -1984,7 +1986,7 @@ To create a supervisor spec using Kinesis ingestion, refer to [Amazon Kinesis in
 
 <!--200 SUCCESS-->
 <br/>
-*Successfully created a new supervisor or updated an existing supervisor* 
+*Successfully created a new Supervisor or updated an existing Supervisor* 
 <!--415 UNSUPPORTED MEDIA TYPE-->
 <br/>
 *Request body content type is not in JSON format* 
@@ -2124,12 +2126,12 @@ Content-Length: 1359
   ```
 </details>
 
-### Suspend a running supervisor
+### Suspend a running Supervisor
 
 #### URL
 `POST /druid/indexer/v1/supervisor/{supervisorId}/suspend`
 
-Suspend the current running supervisor of the provided ID. Responds with updated SupervisorSpec.
+Suspends the current running Supervisor of the provided ID. Returns the updated Supervisor spec.
 
 #### Responses
 
@@ -2137,10 +2139,13 @@ Suspend the current running supervisor of the provided ID. Responds with updated
 
 <!--200 SUCCESS-->
 <br/>
-*Successfully shut down supervisor* 
+*Successfully shut down Supervisor* 
+<!--400 BAD REQUEST-->
+<br/>
+*Supervisor already suspended* 
 <!--404 NOT FOUND-->
 <br/>
-*Invalid supervisor ID* 
+*Invalid Supervisor ID* 
 
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -2148,7 +2153,7 @@ Suspend the current running supervisor of the provided ID. Responds with updated
 
 #### Sample request
 
-The following example shows how to suspend a running supervisor with task ID `social_media`.
+The following example shows how to suspend a running Supervisor with task ID `social_media`.
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -2163,33 +2168,915 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
+#### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+  ```json
+{
+    "type": "kafka",
+    "spec": {
+        "dataSchema": {
+            "dataSource": "social_media",
+            "timestampSpec": {
+                "column": "__time",
+                "format": "iso",
+                "missingValue": null
+            },
+            "dimensionsSpec": {
+                "dimensions": [
+                    {
+                        "type": "string",
+                        "name": "username",
+                        "multiValueHandling": "SORTED_ARRAY",
+                        "createBitmapIndex": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "post_title",
+                        "multiValueHandling": "SORTED_ARRAY",
+                        "createBitmapIndex": true
+                    },
+                    {
+                        "type": "long",
+                        "name": "views",
+                        "multiValueHandling": "SORTED_ARRAY",
+                        "createBitmapIndex": false
+                    },
+                    {
+                        "type": "long",
+                        "name": "upvotes",
+                        "multiValueHandling": "SORTED_ARRAY",
+                        "createBitmapIndex": false
+                    },
+                    {
+                        "type": "long",
+                        "name": "comments",
+                        "multiValueHandling": "SORTED_ARRAY",
+                        "createBitmapIndex": false
+                    },
+                    {
+                        "type": "string",
+                        "name": "edited",
+                        "multiValueHandling": "SORTED_ARRAY",
+                        "createBitmapIndex": true
+                    }
+                ],
+                "dimensionExclusions": [
+                    "__time"
+                ],
+                "includeAllDimensions": false,
+                "useSchemaDiscovery": false
+            },
+            "metricsSpec": [],
+            "granularitySpec": {
+                "type": "uniform",
+                "segmentGranularity": "HOUR",
+                "queryGranularity": {
+                    "type": "none"
+                },
+                "rollup": false,
+                "intervals": []
+            },
+            "transformSpec": {
+                "filter": null,
+                "transforms": []
+            }
+        },
+        "ioConfig": {
+            "topic": "social_media",
+            "inputFormat": {
+                "type": "json",
+                "keepNullColumns": false,
+                "assumeNewlineDelimited": false,
+                "useJsonNodeReader": false
+            },
+            "replicas": 1,
+            "taskCount": 1,
+            "taskDuration": "PT3600S",
+            "consumerProperties": {
+                "bootstrap.servers": "localhost:9094"
+            },
+            "autoScalerConfig": null,
+            "pollTimeout": 100,
+            "startDelay": "PT5S",
+            "period": "PT30S",
+            "useEarliestOffset": true,
+            "completionTimeout": "PT1800S",
+            "lateMessageRejectionPeriod": null,
+            "earlyMessageRejectionPeriod": null,
+            "lateMessageRejectionStartDateTime": null,
+            "configOverrides": null,
+            "idleConfig": null,
+            "stream": "social_media",
+            "useEarliestSequenceNumber": true
+        },
+        "tuningConfig": {
+            "type": "kafka",
+            "appendableIndexSpec": {
+                "type": "onheap",
+                "preserveExistingMetrics": false
+            },
+            "maxRowsInMemory": 150000,
+            "maxBytesInMemory": 0,
+            "skipBytesInMemoryOverheadCheck": false,
+            "maxRowsPerSegment": 5000000,
+            "maxTotalRows": null,
+            "intermediatePersistPeriod": "PT10M",
+            "maxPendingPersists": 0,
+            "indexSpec": {
+                "bitmap": {
+                    "type": "roaring"
+                },
+                "dimensionCompression": "lz4",
+                "stringDictionaryEncoding": {
+                    "type": "utf8"
+                },
+                "metricCompression": "lz4",
+                "longEncoding": "longs"
+            },
+            "indexSpecForIntermediatePersists": {
+                "bitmap": {
+                    "type": "roaring"
+                },
+                "dimensionCompression": "lz4",
+                "stringDictionaryEncoding": {
+                    "type": "utf8"
+                },
+                "metricCompression": "lz4",
+                "longEncoding": "longs"
+            },
+            "reportParseExceptions": false,
+            "handoffConditionTimeout": 0,
+            "resetOffsetAutomatically": false,
+            "segmentWriteOutMediumFactory": null,
+            "workerThreads": null,
+            "chatThreads": null,
+            "chatRetries": 8,
+            "httpTimeout": "PT10S",
+            "shutdownTimeout": "PT80S",
+            "offsetFetchPeriod": "PT30S",
+            "intermediateHandoffPeriod": "P2147483647D",
+            "logParseExceptions": false,
+            "maxParseExceptions": 2147483647,
+            "maxSavedParseExceptions": 0,
+            "skipSequenceNumberAvailabilityCheck": false,
+            "repartitionTransitionDuration": "PT120S"
+        }
+    },
+    "dataSchema": {
+        "dataSource": "social_media",
+        "timestampSpec": {
+            "column": "__time",
+            "format": "iso",
+            "missingValue": null
+        },
+        "dimensionsSpec": {
+            "dimensions": [
+                {
+                    "type": "string",
+                    "name": "username",
+                    "multiValueHandling": "SORTED_ARRAY",
+                    "createBitmapIndex": true
+                },
+                {
+                    "type": "string",
+                    "name": "post_title",
+                    "multiValueHandling": "SORTED_ARRAY",
+                    "createBitmapIndex": true
+                },
+                {
+                    "type": "long",
+                    "name": "views",
+                    "multiValueHandling": "SORTED_ARRAY",
+                    "createBitmapIndex": false
+                },
+                {
+                    "type": "long",
+                    "name": "upvotes",
+                    "multiValueHandling": "SORTED_ARRAY",
+                    "createBitmapIndex": false
+                },
+                {
+                    "type": "long",
+                    "name": "comments",
+                    "multiValueHandling": "SORTED_ARRAY",
+                    "createBitmapIndex": false
+                },
+                {
+                    "type": "string",
+                    "name": "edited",
+                    "multiValueHandling": "SORTED_ARRAY",
+                    "createBitmapIndex": true
+                }
+            ],
+            "dimensionExclusions": [
+                "__time"
+            ],
+            "includeAllDimensions": false,
+            "useSchemaDiscovery": false
+        },
+        "metricsSpec": [],
+        "granularitySpec": {
+            "type": "uniform",
+            "segmentGranularity": "HOUR",
+            "queryGranularity": {
+                "type": "none"
+            },
+            "rollup": false,
+            "intervals": []
+        },
+        "transformSpec": {
+            "filter": null,
+            "transforms": []
+        }
+    },
+    "tuningConfig": {
+        "type": "kafka",
+        "appendableIndexSpec": {
+            "type": "onheap",
+            "preserveExistingMetrics": false
+        },
+        "maxRowsInMemory": 150000,
+        "maxBytesInMemory": 0,
+        "skipBytesInMemoryOverheadCheck": false,
+        "maxRowsPerSegment": 5000000,
+        "maxTotalRows": null,
+        "intermediatePersistPeriod": "PT10M",
+        "maxPendingPersists": 0,
+        "indexSpec": {
+            "bitmap": {
+                "type": "roaring"
+            },
+            "dimensionCompression": "lz4",
+            "stringDictionaryEncoding": {
+                "type": "utf8"
+            },
+            "metricCompression": "lz4",
+            "longEncoding": "longs"
+        },
+        "indexSpecForIntermediatePersists": {
+            "bitmap": {
+                "type": "roaring"
+            },
+            "dimensionCompression": "lz4",
+            "stringDictionaryEncoding": {
+                "type": "utf8"
+            },
+            "metricCompression": "lz4",
+            "longEncoding": "longs"
+        },
+        "reportParseExceptions": false,
+        "handoffConditionTimeout": 0,
+        "resetOffsetAutomatically": false,
+        "segmentWriteOutMediumFactory": null,
+        "workerThreads": null,
+        "chatThreads": null,
+        "chatRetries": 8,
+        "httpTimeout": "PT10S",
+        "shutdownTimeout": "PT80S",
+        "offsetFetchPeriod": "PT30S",
+        "intermediateHandoffPeriod": "P2147483647D",
+        "logParseExceptions": false,
+        "maxParseExceptions": 2147483647,
+        "maxSavedParseExceptions": 0,
+        "skipSequenceNumberAvailabilityCheck": false,
+        "repartitionTransitionDuration": "PT120S"
+    },
+    "ioConfig": {
+        "topic": "social_media",
+        "inputFormat": {
+            "type": "json",
+            "keepNullColumns": false,
+            "assumeNewlineDelimited": false,
+            "useJsonNodeReader": false
+        },
+        "replicas": 1,
+        "taskCount": 1,
+        "taskDuration": "PT3600S",
+        "consumerProperties": {
+            "bootstrap.servers": "localhost:9094"
+        },
+        "autoScalerConfig": null,
+        "pollTimeout": 100,
+        "startDelay": "PT5S",
+        "period": "PT30S",
+        "useEarliestOffset": true,
+        "completionTimeout": "PT1800S",
+        "lateMessageRejectionPeriod": null,
+        "earlyMessageRejectionPeriod": null,
+        "lateMessageRejectionStartDateTime": null,
+        "configOverrides": null,
+        "idleConfig": null,
+        "stream": "social_media",
+        "useEarliestSequenceNumber": true
+    },
+    "context": null,
+    "suspended": true
+}
+  ```
+</details>
+
+### Suspend all Supervisors
+
+#### URL
 `POST /druid/indexer/v1/supervisor/suspendAll`
 
-Suspend all supervisors at once.
+Suspends all Supervisors at once.
 
-`POST /druid/indexer/v1/supervisor/<supervisorId>/resume`
+Note that this endpoint will return a "success" message even if there are no Supervisors or running Supervisors initially.
 
-Resume indexing tasks for a supervisor. Responds with updated SupervisorSpec.
+#### Responses
 
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully suspended all Supervisors* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl --request POST "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/supervisor/suspendAll"
+```
+<!--HTTP-->
+```HTTP
+POST /druid/indexer/v1/supervisor/suspendAll HTTP/1.1
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+  ```json
+{
+    "status": "success"
+}
+  ```
+</details>
+
+### Resume a Supervisor
+
+#### URL
+
+`POST /druid/indexer/v1/supervisor/{supervisorId}/resume`
+
+Resume indexing tasks for a Supervisor. Responds with updated Supervisor spec.
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully resumed Supervisor* 
+<!--400 BAD REQUEST-->
+<br/>
+*Supervisor already running* 
+<!--404 NOT FOUND-->
+<br/>
+*Invalid Supervisor ID* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+#### Sample request
+
+The following example resumes a previously suspended Supervisor with ID `social_media`.
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl --request POST "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/supervisor/social_media/resume"
+```
+<!--HTTP-->
+```HTTP
+POST /druid/indexer/v1/supervisor/social_media/resume HTTP/1.1
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+  ```json
+{
+    "type": "kafka",
+    "spec": {
+        "dataSchema": {
+            "dataSource": "social_media",
+            "timestampSpec": {
+                "column": "__time",
+                "format": "iso",
+                "missingValue": null
+            },
+            "dimensionsSpec": {
+                "dimensions": [
+                    {
+                        "type": "string",
+                        "name": "username",
+                        "multiValueHandling": "SORTED_ARRAY",
+                        "createBitmapIndex": true
+                    },
+                    {
+                        "type": "string",
+                        "name": "post_title",
+                        "multiValueHandling": "SORTED_ARRAY",
+                        "createBitmapIndex": true
+                    },
+                    {
+                        "type": "long",
+                        "name": "views",
+                        "multiValueHandling": "SORTED_ARRAY",
+                        "createBitmapIndex": false
+                    },
+                    {
+                        "type": "long",
+                        "name": "upvotes",
+                        "multiValueHandling": "SORTED_ARRAY",
+                        "createBitmapIndex": false
+                    },
+                    {
+                        "type": "long",
+                        "name": "comments",
+                        "multiValueHandling": "SORTED_ARRAY",
+                        "createBitmapIndex": false
+                    },
+                    {
+                        "type": "string",
+                        "name": "edited",
+                        "multiValueHandling": "SORTED_ARRAY",
+                        "createBitmapIndex": true
+                    }
+                ],
+                "dimensionExclusions": [
+                    "__time"
+                ],
+                "includeAllDimensions": false,
+                "useSchemaDiscovery": false
+            },
+            "metricsSpec": [],
+            "granularitySpec": {
+                "type": "uniform",
+                "segmentGranularity": "HOUR",
+                "queryGranularity": {
+                    "type": "none"
+                },
+                "rollup": false,
+                "intervals": []
+            },
+            "transformSpec": {
+                "filter": null,
+                "transforms": []
+            }
+        },
+        "ioConfig": {
+            "topic": "social_media",
+            "inputFormat": {
+                "type": "json",
+                "keepNullColumns": false,
+                "assumeNewlineDelimited": false,
+                "useJsonNodeReader": false
+            },
+            "replicas": 1,
+            "taskCount": 1,
+            "taskDuration": "PT3600S",
+            "consumerProperties": {
+                "bootstrap.servers": "localhost:9094"
+            },
+            "autoScalerConfig": null,
+            "pollTimeout": 100,
+            "startDelay": "PT5S",
+            "period": "PT30S",
+            "useEarliestOffset": true,
+            "completionTimeout": "PT1800S",
+            "lateMessageRejectionPeriod": null,
+            "earlyMessageRejectionPeriod": null,
+            "lateMessageRejectionStartDateTime": null,
+            "configOverrides": null,
+            "idleConfig": null,
+            "stream": "social_media",
+            "useEarliestSequenceNumber": true
+        },
+        "tuningConfig": {
+            "type": "kafka",
+            "appendableIndexSpec": {
+                "type": "onheap",
+                "preserveExistingMetrics": false
+            },
+            "maxRowsInMemory": 150000,
+            "maxBytesInMemory": 0,
+            "skipBytesInMemoryOverheadCheck": false,
+            "maxRowsPerSegment": 5000000,
+            "maxTotalRows": null,
+            "intermediatePersistPeriod": "PT10M",
+            "maxPendingPersists": 0,
+            "indexSpec": {
+                "bitmap": {
+                    "type": "roaring"
+                },
+                "dimensionCompression": "lz4",
+                "stringDictionaryEncoding": {
+                    "type": "utf8"
+                },
+                "metricCompression": "lz4",
+                "longEncoding": "longs"
+            },
+            "indexSpecForIntermediatePersists": {
+                "bitmap": {
+                    "type": "roaring"
+                },
+                "dimensionCompression": "lz4",
+                "stringDictionaryEncoding": {
+                    "type": "utf8"
+                },
+                "metricCompression": "lz4",
+                "longEncoding": "longs"
+            },
+            "reportParseExceptions": false,
+            "handoffConditionTimeout": 0,
+            "resetOffsetAutomatically": false,
+            "segmentWriteOutMediumFactory": null,
+            "workerThreads": null,
+            "chatThreads": null,
+            "chatRetries": 8,
+            "httpTimeout": "PT10S",
+            "shutdownTimeout": "PT80S",
+            "offsetFetchPeriod": "PT30S",
+            "intermediateHandoffPeriod": "P2147483647D",
+            "logParseExceptions": false,
+            "maxParseExceptions": 2147483647,
+            "maxSavedParseExceptions": 0,
+            "skipSequenceNumberAvailabilityCheck": false,
+            "repartitionTransitionDuration": "PT120S"
+        }
+    },
+    "dataSchema": {
+        "dataSource": "social_media",
+        "timestampSpec": {
+            "column": "__time",
+            "format": "iso",
+            "missingValue": null
+        },
+        "dimensionsSpec": {
+            "dimensions": [
+                {
+                    "type": "string",
+                    "name": "username",
+                    "multiValueHandling": "SORTED_ARRAY",
+                    "createBitmapIndex": true
+                },
+                {
+                    "type": "string",
+                    "name": "post_title",
+                    "multiValueHandling": "SORTED_ARRAY",
+                    "createBitmapIndex": true
+                },
+                {
+                    "type": "long",
+                    "name": "views",
+                    "multiValueHandling": "SORTED_ARRAY",
+                    "createBitmapIndex": false
+                },
+                {
+                    "type": "long",
+                    "name": "upvotes",
+                    "multiValueHandling": "SORTED_ARRAY",
+                    "createBitmapIndex": false
+                },
+                {
+                    "type": "long",
+                    "name": "comments",
+                    "multiValueHandling": "SORTED_ARRAY",
+                    "createBitmapIndex": false
+                },
+                {
+                    "type": "string",
+                    "name": "edited",
+                    "multiValueHandling": "SORTED_ARRAY",
+                    "createBitmapIndex": true
+                }
+            ],
+            "dimensionExclusions": [
+                "__time"
+            ],
+            "includeAllDimensions": false,
+            "useSchemaDiscovery": false
+        },
+        "metricsSpec": [],
+        "granularitySpec": {
+            "type": "uniform",
+            "segmentGranularity": "HOUR",
+            "queryGranularity": {
+                "type": "none"
+            },
+            "rollup": false,
+            "intervals": []
+        },
+        "transformSpec": {
+            "filter": null,
+            "transforms": []
+        }
+    },
+    "tuningConfig": {
+        "type": "kafka",
+        "appendableIndexSpec": {
+            "type": "onheap",
+            "preserveExistingMetrics": false
+        },
+        "maxRowsInMemory": 150000,
+        "maxBytesInMemory": 0,
+        "skipBytesInMemoryOverheadCheck": false,
+        "maxRowsPerSegment": 5000000,
+        "maxTotalRows": null,
+        "intermediatePersistPeriod": "PT10M",
+        "maxPendingPersists": 0,
+        "indexSpec": {
+            "bitmap": {
+                "type": "roaring"
+            },
+            "dimensionCompression": "lz4",
+            "stringDictionaryEncoding": {
+                "type": "utf8"
+            },
+            "metricCompression": "lz4",
+            "longEncoding": "longs"
+        },
+        "indexSpecForIntermediatePersists": {
+            "bitmap": {
+                "type": "roaring"
+            },
+            "dimensionCompression": "lz4",
+            "stringDictionaryEncoding": {
+                "type": "utf8"
+            },
+            "metricCompression": "lz4",
+            "longEncoding": "longs"
+        },
+        "reportParseExceptions": false,
+        "handoffConditionTimeout": 0,
+        "resetOffsetAutomatically": false,
+        "segmentWriteOutMediumFactory": null,
+        "workerThreads": null,
+        "chatThreads": null,
+        "chatRetries": 8,
+        "httpTimeout": "PT10S",
+        "shutdownTimeout": "PT80S",
+        "offsetFetchPeriod": "PT30S",
+        "intermediateHandoffPeriod": "P2147483647D",
+        "logParseExceptions": false,
+        "maxParseExceptions": 2147483647,
+        "maxSavedParseExceptions": 0,
+        "skipSequenceNumberAvailabilityCheck": false,
+        "repartitionTransitionDuration": "PT120S"
+    },
+    "ioConfig": {
+        "topic": "social_media",
+        "inputFormat": {
+            "type": "json",
+            "keepNullColumns": false,
+            "assumeNewlineDelimited": false,
+            "useJsonNodeReader": false
+        },
+        "replicas": 1,
+        "taskCount": 1,
+        "taskDuration": "PT3600S",
+        "consumerProperties": {
+            "bootstrap.servers": "localhost:9094"
+        },
+        "autoScalerConfig": null,
+        "pollTimeout": 100,
+        "startDelay": "PT5S",
+        "period": "PT30S",
+        "useEarliestOffset": true,
+        "completionTimeout": "PT1800S",
+        "lateMessageRejectionPeriod": null,
+        "earlyMessageRejectionPeriod": null,
+        "lateMessageRejectionStartDateTime": null,
+        "configOverrides": null,
+        "idleConfig": null,
+        "stream": "social_media",
+        "useEarliestSequenceNumber": true
+    },
+    "context": null,
+    "suspended": false
+}
+  ```
+</details>
+
+### Resume all Supervisors
+
+#### URL
 `POST /druid/indexer/v1/supervisor/resumeAll`
 
-Resume all supervisors at once.
+Resume all Supervisors at once. 
 
-`POST /druid/indexer/v1/supervisor/<supervisorId>/reset`
+Note that this endpoint will return a "success" message even if there are no Supervisors or suspended Supervisors initially.
 
-Reset the specified supervisor.
+#### Responses
 
-`POST /druid/indexer/v1/supervisor/<supervisorId>/terminate`
+<!--DOCUSAURUS_CODE_TABS-->
 
-Terminate a supervisor of the provided ID.
+<!--200 SUCCESS-->
+<br/>
+*Successfully resumed all Supervisors* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl --request POST "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/supervisor/resumeAll"
+```
+<!--HTTP-->
+```HTTP
+POST /druid/indexer/v1/supervisor/resumeAll HTTP/1.1
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+  ```json
+{
+    "status": "success"
+}
+  ```
+</details>
+
+### Reset a Supervisor
+
+#### URL
+`POST /druid/indexer/v1/supervisor/{supervisorId}/reset`
+
+Resets the specified supervisor. This endpoint clears stored offsets, causing the Supervisor to start reading offsets from either the earliest or the latest offsets in Kafka. It kills and recreates active tasks to read from valid offsets. 
+
+Use this endpoint for recovering when the Supervisor stops due to missing offsets. Use this endpoint with caution as it may result in skipped, resulting in data loss, or duplicate data. 
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully reset Supervisor* 
+<!--404 NOT FOUND-->
+<br/>
+*Invalid Supervisor ID* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl --request POST "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/supervisor/social_media/reset"
+```
+<!--HTTP-->
+```HTTP
+POST /druid/indexer/v1/supervisor/social_media/reset HTTP/1.1
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+  ```json
+{
+    "id": "social_media"
+}
+  ```
+</details>
+
+### Terminate a Supervisor
+
+#### URL 
+`POST /druid/indexer/v1/supervisor/{supervisorId}/terminate`
+
+Terminate a Supervisor of the provided ID and its associated indexing tasks, triggering the publication of their segments. The terminated Supervisor will still exist in the metadata store and its history can be retrieved.
+
+#### Responses
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--200 SUCCESS-->
+<br/>
+*Successfully terminated a Supervisor* 
+<!--404 NOT FOUND-->
+<br/>
+*Invalid Supervisor ID or Supervisor not running* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl --request POST "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/supervisor/social_media/terminate"
+```
+<!--HTTP-->
+```HTTP
+POST /druid/indexer/v1/supervisor/social_media/terminate HTTP/1.1
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+  ```json
+{
+    "id": "social_media"
+}
+  ```
+</details>
+
+### Terminate all Supervisors
+
+#### URL
 
 `POST /druid/indexer/v1/supervisor/terminateAll`
 
-Terminate all supervisors at once.
+Terminate all Supervisors at once.
 
-`POST /druid/indexer/v1/supervisor/<supervisorId>/shutdown`
+#### Responses
 
-> This API is deprecated and will be removed in future releases.
-> Please use the equivalent `terminate` instead.
+<!--DOCUSAURUS_CODE_TABS-->
 
-Shutdown a supervisor.
+<!--200 SUCCESS-->
+<br/>
+*Successfully terminated all Supervisors* 
+
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+---
+
+#### Sample request
+
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
+curl --request POST "http://<ROUTER_IP>:<ROUTER_PORT>/druid/indexer/v1/supervisor/terminateAll"
+```
+<!--HTTP-->
+```HTTP
+POST /druid/indexer/v1/supervisor/terminateAll HTTP/1.1
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
+```
+<!--END_DOCUSAURUS_CODE_TABS-->
+
+#### Sample response
+
+<details>
+  <summary>Click to show sample response</summary>
+
+  ```json
+{
+    "status": "success"
+}
+  ```
+</details>
+
+### Shut down a Supervisor
+
+#### URL
+
+`POST /druid/indexer/v1/supervisor/{supervisorId}/shutdown`
+
+Shuts down a supervisor. This API is depreciated and will be removed in future releases. Use the equivalent [terminate](#terminate-a-supervisor) endpoint instead. 
