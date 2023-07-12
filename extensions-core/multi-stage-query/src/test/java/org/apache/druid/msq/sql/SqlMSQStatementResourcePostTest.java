@@ -138,24 +138,36 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   @Test
   public void nonSupportedModes()
   {
-    for (ImmutableMap<?, ?> context : ImmutableList.of(ImmutableMap.of(
-        QueryContexts.CTX_EXECUTION_MODE,
-        ExecutionMode.SYNC.name()
-    ), ImmutableMap.of())) {
-      SqlStatementResourceTest.assertExceptionMessage(
-          resource.doPost(new SqlQuery(
-              "select * from foo",
-              null,
-              false,
-              false,
-              false,
-              (Map<String, Object>) context,
-              null
-          ), SqlStatementResourceTest.makeOkRequest()),
-          "The statement sql api only supports sync mode[ASYNC]. Please set context parameter [executionMode=ASYNC] in the context payload",
-          Response.Status.BAD_REQUEST
-      );
-    }
+
+    SqlStatementResourceTest.assertExceptionMessage(
+        resource.doPost(new SqlQuery(
+            "select * from foo",
+            null,
+            false,
+            false,
+            false,
+            ImmutableMap.of(),
+            null
+        ), SqlStatementResourceTest.makeOkRequest()),
+        "Execution mode is not provided to the SQL statement API. "
+        + "Please set \"executionMode\" in the query context",
+        Response.Status.BAD_REQUEST
+    );
+
+    SqlStatementResourceTest.assertExceptionMessage(
+        resource.doPost(new SqlQuery(
+            "select * from foo",
+            null,
+            false,
+            false,
+            false,
+            ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.SYNC.name()),
+            null
+        ), SqlStatementResourceTest.makeOkRequest()),
+        "The SQL statement API currently does not support the provided execution mode [SYNC]. "
+        + "Please set \"executionMode\" to [ASYNC] in the query context",
+        Response.Status.BAD_REQUEST
+    );
   }
 
 

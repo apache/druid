@@ -146,7 +146,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     if (maxNumTasks < 2) {
       throw InvalidInput.exception(
           "MSQ context maxNumTasks [%,d] cannot be less than 2, since at least 1 controller and 1 worker is necessary",
-          MultiStageQueryContext.CTX_MAX_NUM_TASKS
+          maxNumTasks
       );
     }
 
