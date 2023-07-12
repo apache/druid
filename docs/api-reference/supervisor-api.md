@@ -27,7 +27,7 @@ This document describes the API endpoints to manage and monitor Supervisors for 
 
 In this document, `http://<SERVICE_IP>:<SERVICE_PORT>` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://<ROUTER_IP>:<ROUTER_PORT>` with `http://localhost:8888`.
 
-## Supervisors
+## Supervisor information
 
 ### Get a list of active Supervisors
 
@@ -1261,6 +1261,8 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
   ```
 </details>
 
+## Audit history
+
 ### Get audit history for all Supervisors
 
 #### URL
@@ -1967,6 +1969,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
   ```
 </details>
 
+## Managing Supervisors
 
 ### Create a new Supervisor or update an existing Supervisor
 
@@ -1974,7 +1977,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 `POST /druid/indexer/v1/supervisor`
 
-Creates a new Supervisor or updates an existing one. 
+Creates a new Supervisor or updates an existing one for the same datasource. 
 
 You can create a Supervisor spec using [Apache Kafka ingestion streaming](../development/extensions-core/kafka-ingestion.md#define-a-supervisor-spec) or [Amazon Kinesis ingestion](../development/extensions-core/kinesis-ingestion.md#submitting-a-supervisor-spec). 
 
