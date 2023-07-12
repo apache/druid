@@ -31,25 +31,41 @@ To use the Kinesis indexing service, load the `druid-kinesis-indexing-service` c
 
 ## Submitting a supervisor spec
 
-To use the Kinesis indexing service, load the `druid-kinesis-indexing-service` extension on both the Overlord and the Middle Managers. Druid starts a supervisor for a datasource when you submit a supervisor spec. Submit your supervisor spec to the following endpoint:
+To use the Kinesis indexing service, load the `druid-kinesis-indexing-service` extension on the Overlord and the Middle Managers. Druid starts a supervisor for a datasource when you submit a supervisor spec. See [Supervisor API](../../api-reference/supervisor-api.md) for more information.
+
+To create a new supervisor, submit a supervisor spec to the following endpoint:
 
 `http://<OVERLORD_IP>:<OVERLORD_PORT>/druid/indexer/v1/supervisor`
 
-For example:
+The following example shows how to submit a Kinesis supervisor spec:
 
-```sh
+<!--DOCUSAURUS_CODE_TABS-->
+
+<!--cURL-->
+```shell
 curl -X POST -H 'Content-Type: application/json' -d @supervisor-spec.json http://localhost:8090/druid/indexer/v1/supervisor
+
+
+
+
+
+
+
+
+
+```
+<!--HTTP-->
+```HTTP
+GET /druid/indexer/v1/tasks/?state=complete&datasource=wikipedia_api&createdTimeInterval=2015-09-12T00%3A00%3A00Z%2F2015-09-13T23%3A59%3A59Z&max=10&type=query_worker HTTP/1.1
+Host: {domain}
 ```
 
-Where the file `supervisor-spec.json` contains a Kinesis supervisor spec.
+<!--END_DOCUSAURUS_CODE_TABS-->
 
-<details>
-    <summary>Click to view the spec</summary>
 
-```json
 {
-  "type": "kinesis",
-  "spec": {
+  \"type\": \"kinesis\",
+  \"spec\": {
     "dataSchema": {
       "dataSource": "metrics-kinesis",
       "timestampSpec": {
@@ -90,7 +106,7 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec.
         "queryGranularity": "NONE"
      }
    },
-    "ioConfig": {
+    \"ioConfig\": {
      "stream": "metrics",
      "inputFormat": {
        "type": "json"
@@ -107,8 +123,6 @@ Where the file `supervisor-spec.json` contains a Kinesis supervisor spec.
   }
 }
 ```
-
-</details>
 
 ## Supervisor spec
 
@@ -273,12 +287,12 @@ For more information, see [Data formats](../../ingestion/data-formats.md). You c
 
 ### `tuningConfig`
 
-The `tuningConfig` parameter is optional. If you don't specify `tuningConfig`, Druid uses default parameters.
+The `tuningConfig` object is optional. If you don't specify the `tuningConfig` object, Druid uses the default configurations.
 
 |**Field**|**Type**|**Description**|**Required**|**Default**|
 |---------|--------|---------------|------------|-----------|
 |`type`|String|The indexing task type. This should always be `kinesis`.|Yes||
-|`maxRowsInMemory`|Integer|The number of rows to aggregate before persisting. This number represents the post-aggregation rows, so it is not equivalent to the number of input events, but the number of aggregated rows that those events result in. Druid uses `maxRowsInMemory` to manage the required JVM heap size. The maximum heap memory usage for indexing scales is `maxRowsInMemory * (2 + maxPendingPersists)`.|No|100000|
+|`maxRowsInMemory`|Integer|The number of rows to aggregate before persisting. This number represents the post-aggregation rows. It is not equivalent to the number of input events, but the resulting number of aggregated rows. Druid uses `maxRowsInMemory` to manage the required JVM heap size. The maximum heap memory usage for indexing scales is `maxRowsInMemory * (2 + maxPendingPersists)`.|No|100000|
 |`maxBytesInMemory`|Long| The number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. Normally, this is computed internally. The maximum heap memory usage for indexing is `maxBytesInMemory * (2 + maxPendingPersists)`.|No|One-sixth of max JVM memory|
 |`maxRowsPerSegment`|Integer|The number of rows to aggregate into a segment; this number represents the post-aggregation rows. Handoff occurs when `maxRowsPerSegment` or `maxTotalRows` is reached or every `intermediateHandoffPeriod`, whichever happens first.|No|5000000|
 |`maxTotalRows`|Long|The number of rows to aggregate across all segments; this number represents the post-aggregation rows. Handoff occurs when `maxRowsPerSegment` or `maxTotalRows` is reached or every `intermediateHandoffPeriod`, whichever happens first.|No|unlimited|
