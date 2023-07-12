@@ -19,9 +19,9 @@
 import { Button, ButtonGroup, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import type { SqlQuery } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import type { SqlQuery } from 'druid-query-toolkit';
 import React from 'react';
 
 import { SpecDialog, StringInputDialog } from '../../dialogs';

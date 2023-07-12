@@ -18,9 +18,9 @@
 
 import { FormGroup, InputGroup, Intent, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { SqlQuery, T } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import { sum } from 'd3-array';
-import { SqlQuery, T } from 'druid-query-toolkit';
 import React from 'react';
 import type { Filter } from 'react-table';
 import ReactTable from 'react-table';

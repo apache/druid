@@ -18,8 +18,8 @@
 
 import { Button, ButtonGroup, Code, Intent, Label, MenuItem, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { C, L, SqlComparison, SqlExpression } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import { C, L, SqlComparison, SqlExpression } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 import type { Filter } from 'react-table';

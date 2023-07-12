@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
+import { C } from '@druid-toolkit/query';
 import type { AxiosResponse } from 'axios';
 import axios from 'axios';
-import { C } from 'druid-query-toolkit';
 
 import { Api } from '../singletons';
 

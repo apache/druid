@@ -30,8 +30,6 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
-import classNames from 'classnames';
-import { select, selectAll } from 'd3-selection';
 import {
   C,
   Column,
@@ -41,7 +39,9 @@ import {
   SqlExpression,
   SqlQuery,
   SqlType,
-} from 'druid-query-toolkit';
+} from '@druid-toolkit/query';
+import classNames from 'classnames';
+import { select, selectAll } from 'd3-selection';
 import type { JSX } from 'react';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 

@@ -5290,6 +5290,15 @@ version: 4.9.22
 
 ---
 
+name: "@druid-toolkit/query"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Imply Data
+version: 0.20.4
+
+---
+
 name: "@emotion/cache"
 license_category: binary
 module: web-console
@@ -5855,15 +5864,6 @@ license_name: MIT License
 copyright: Blake Embrey
 version: 3.0.4
 license_file_path: licenses/bin/dot-case.MIT
-
----
-
-name: "druid-query-toolkit"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Imply Data
-version: 0.18.12
 
 ---
 

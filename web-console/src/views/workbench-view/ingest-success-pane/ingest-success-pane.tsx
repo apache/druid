@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { T } from 'druid-query-toolkit';
+import { T } from '@druid-toolkit/query';
 import React from 'react';
 
 import type { Execution } from '../../../druid-models';

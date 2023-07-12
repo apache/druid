@@ -18,10 +18,10 @@
 
 import type { ResizeEntry } from '@blueprintjs/core';
 import { ResizeSensor2 } from '@blueprintjs/popover2';
+import { C, T } from '@druid-toolkit/query';
 import type { Ace } from 'ace-builds';
 import ace from 'ace-builds';
 import classNames from 'classnames';
-import { C, T } from 'druid-query-toolkit';
 import escape from 'lodash.escape';
 import React from 'react';
 import AceEditor from 'react-ace';

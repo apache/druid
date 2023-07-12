@@ -20,9 +20,9 @@ import { Button, Icon, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import { Popover2 } from '@blueprintjs/popover2';
+import { T } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import { T } from 'druid-query-toolkit';
 import React, { useCallback, useState } from 'react';
 import { useStore } from 'zustand';
 
