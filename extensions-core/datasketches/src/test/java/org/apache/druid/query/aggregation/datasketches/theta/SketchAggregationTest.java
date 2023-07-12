@@ -31,6 +31,7 @@ import org.apache.datasketches.theta.Sketches;
 import org.apache.datasketches.theta.Union;
 import org.apache.datasketches.theta.UpdateSketch;
 import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -52,9 +53,13 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByTestColumnSelectorFactory;
 import org.apache.druid.query.groupby.epinephelinae.GrouperTestUtil;
-import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.IncrementalIndexSegment;
+import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -310,10 +315,10 @@ public class SketchAggregationTest
   @Test
   public void testSketchMergeAggregatorFactorySerde() throws Exception
   {
-    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null, null));
-    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, false, true, null));
-    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, true, false, null));
-    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, true, false, 2));
+    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null, null, false));
+    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, false, true, null, false));
+    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, true, false, null, false));
+    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, true, false, 2, false));
   }
 
   @Test
@@ -321,16 +326,16 @@ public class SketchAggregationTest
   {
     SketchHolder sketch = SketchHolder.of(Sketches.updateSketchBuilder().setNominalEntries(128).build());
 
-    SketchMergeAggregatorFactory agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null, null);
+    SketchMergeAggregatorFactory agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null, null, false);
     Assert.assertEquals(0.0, ((Double) agg.finalizeComputation(sketch)).doubleValue(), 0.0001);
 
-    agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, true, null, null);
+    agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, true, null, null, false);
     Assert.assertEquals(0.0, ((Double) agg.finalizeComputation(sketch)).doubleValue(), 0.0001);
 
-    agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, false, null, null);
+    agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, false, null, null, false);
     Assert.assertEquals(sketch, agg.finalizeComputation(sketch));
 
-    agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, true, null, 2);
+    agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, true, null, 2, false);
     SketchEstimateWithErrorBounds est = (SketchEstimateWithErrorBounds) agg.finalizeComputation(sketch);
     Assert.assertEquals(0.0, est.getEstimate(), 0.0001);
     Assert.assertEquals(0.0, est.getHighBound(), 0.0001);
@@ -342,31 +347,89 @@ public class SketchAggregationTest
   @Test
   public void testArrays() throws Exception
   {
-    List<Segment> realtimeSegs = ImmutableList.of(
-        NestedDataTestUtils.createIncrementalIndex(
-            tempFolder,
-            NestedDataTestUtils.ARRAY_TYPES_DATA_FILE,
-            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
-            NestedDataTestUtils.TIMESTAMP_SPEC,
-            NestedDataTestUtils.AUTO_DISCOVERY,
-            TransformSpec.NONE,
-            new AggregatorFactory[0],
-            Granularities.NONE,
+    AggregatorFactory[] aggs = new AggregatorFactory[]{
+        new SketchMergeAggregatorFactory(
+            "sketch0",
+            "arrayString",
+            null,
+            null,
+            null,
+            null,
             true
+        ),
+        new SketchMergeAggregatorFactory(
+            "sketch1",
+            "arrayLong",
+            null,
+            null,
+            null,
+            null,
+            true
+        ),
+        new SketchMergeAggregatorFactory(
+            "sketch2",
+            "arrayDouble",
+            null,
+            null,
+            null,
+            null,
+            true
+        ),
+        new SketchMergeAggregatorFactory(
+            "sketch3",
+            "arrayString",
+            null,
+            null,
+            null,
+            null,
+            false
+        ),
+        new SketchMergeAggregatorFactory(
+            "sketch4",
+            "arrayLong",
+            null,
+            null,
+            null,
+            null,
+            false
+        ),
+        new SketchMergeAggregatorFactory(
+            "sketch5",
+            "arrayDouble",
+            null,
+            null,
+            null,
+            null,
+            false
         )
+    };
+    IndexBuilder bob = IndexBuilder.create(helper.getObjectMapper())
+                                   .tmpDir(tempFolder.newFolder())
+                                   .schema(
+                                       IncrementalIndexSchema.builder()
+                                                             .withTimestampSpec(NestedDataTestUtils.TIMESTAMP_SPEC)
+                                                             .withDimensionsSpec(NestedDataTestUtils.AUTO_DISCOVERY)
+                                                             .withMetrics(aggs)
+                                                             .withQueryGranularity(Granularities.NONE)
+                                                             .withRollup(true)
+                                                             .withMinTimestamp(0)
+                                                             .build()
+                                   )
+                                   .inputSource(
+                                       ResourceInputSource.of(
+                                           NestedDataTestUtils.class.getClassLoader(),
+                                           NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
+                                       )
+                                   )
+                                   .inputFormat(NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT)
+                                   .transform(TransformSpec.NONE)
+                                   .inputTmpDir(tempFolder.newFolder());
+
+    List<Segment> realtimeSegs = ImmutableList.of(
+        new IncrementalIndexSegment(bob.buildIncrementalIndex(), SegmentId.dummy("test_datasource"))
     );
-    List<Segment> segs = NestedDataTestUtils.createSegments(
-        tempFolder,
-        closer,
-        NestedDataTestUtils.ARRAY_TYPES_DATA_FILE,
-        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
-        NestedDataTestUtils.TIMESTAMP_SPEC,
-        NestedDataTestUtils.AUTO_DISCOVERY,
-        TransformSpec.NONE,
-        new AggregatorFactory[0],
-        Granularities.NONE,
-        true,
-        IndexSpec.DEFAULT
+    List<Segment> segs = ImmutableList.of(
+        new QueryableIndexSegment(bob.buildMMappedMergedIndex(), SegmentId.dummy("test_datasource"))
     );
 
     GroupByQuery query = GroupByQuery.builder()
@@ -380,17 +443,17 @@ public class SketchAggregationTest
                                              null,
                                              null,
                                              null,
-                                             null
-                                         )
-                                         {
-                                         },
+                                             null,
+                                             false
+                                         ),
                                          new SketchMergeAggregatorFactory(
                                              "a1",
                                              "arrayLong",
                                              null,
                                              null,
                                              null,
-                                             null
+                                             null,
+                                             false
                                          ),
                                          new SketchMergeAggregatorFactory(
                                              "a2",
@@ -398,9 +461,64 @@ public class SketchAggregationTest
                                              null,
                                              null,
                                              null,
-                                             null
+                                             null,
+                                             false
                                          ),
-                                         new CountAggregatorFactory("a3")
+                                         new SketchMergeAggregatorFactory(
+                                             "a3",
+                                             "sketch0",
+                                             null,
+                                             null,
+                                             true,
+                                             null,
+                                             false
+                                         ),
+                                         new SketchMergeAggregatorFactory(
+                                             "a4",
+                                             "sketch1",
+                                             null,
+                                             null,
+                                             true,
+                                             null,
+                                             false
+                                         ),
+                                         new SketchMergeAggregatorFactory(
+                                             "a5",
+                                             "sketch2",
+                                             null,
+                                             null,
+                                             true,
+                                             null,
+                                             false
+                                         ),
+                                         new SketchMergeAggregatorFactory(
+                                             "a6",
+                                             "sketch3",
+                                             null,
+                                             null,
+                                             true,
+                                             null,
+                                             false
+                                         ),
+                                         new SketchMergeAggregatorFactory(
+                                             "a7",
+                                             "sketch4",
+                                             null,
+                                             null,
+                                             true,
+                                             null,
+                                             false
+                                         ),
+                                         new SketchMergeAggregatorFactory(
+                                             "a8",
+                                             "sketch5",
+                                             null,
+                                             null,
+                                             true,
+                                             null,
+                                             false
+                                         ),
+                                         new CountAggregatorFactory("a9")
                                      )
                                      .setPostAggregatorSpecs(
                                          ImmutableList.of(
@@ -418,6 +536,34 @@ public class SketchAggregationTest
                                                  "p2",
                                                  new FieldAccessPostAggregator("f2", "a2"),
                                                  null
+                                             ),new SketchEstimatePostAggregator(
+                                                 "p3",
+                                                 new FieldAccessPostAggregator("f3", "a3"),
+                                                 null
+                                             ),
+                                             new SketchEstimatePostAggregator(
+                                                 "p4",
+                                                 new FieldAccessPostAggregator("f4", "a4"),
+                                                 null
+                                             ),
+                                             new SketchEstimatePostAggregator(
+                                                 "p5",
+                                                 new FieldAccessPostAggregator("f5", "a5"),
+                                                 null
+                                             ),new SketchEstimatePostAggregator(
+                                                 "p6",
+                                                 new FieldAccessPostAggregator("f6", "a6"),
+                                                 null
+                                             ),
+                                             new SketchEstimatePostAggregator(
+                                                 "p7",
+                                                 new FieldAccessPostAggregator("f7", "a7"),
+                                                 null
+                                             ),
+                                             new SketchEstimatePostAggregator(
+                                                 "p8",
+                                                 new FieldAccessPostAggregator("f8", "a8"),
+                                                 null
                                              )
                                          )
                                      )
@@ -430,15 +576,34 @@ public class SketchAggregationTest
 
     // expect 4 distinct arrays for each of these columns from 14 rows
     Assert.assertEquals(1, realtimeList.size());
-    Assert.assertEquals(14L, realtimeList.get(0).get(3));
-    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(4), 0.01);
-    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(5), 0.01);
-    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(6), 0.01);
+    Assert.assertEquals(14L, realtimeList.get(0).get(9));
+    // array column estimate counts
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(10), 0.01);
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(11), 0.01);
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(12), 0.01);
+    // pre-aggregated arrays counts
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(13), 0.01);
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(14), 0.01);
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(15), 0.01);
+    // if processAsArray is false, count is done as string mvds so it counts the total number of elements
+    Assert.assertEquals(5.0, (Double) realtimeList.get(0).get(16), 0.01);
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(17), 0.01);
+    Assert.assertEquals(6.0, (Double) realtimeList.get(0).get(18), 0.01);
+
     Assert.assertEquals(1, list.size());
-    Assert.assertEquals(14L, list.get(0).get(3));
-    Assert.assertEquals(4.0, (Double) list.get(0).get(4), 0.01);
-    Assert.assertEquals(4.0, (Double) list.get(0).get(5), 0.01);
-    Assert.assertEquals(4.0, (Double) list.get(0).get(6), 0.01);
+    Assert.assertEquals(14L, list.get(0).get(9));
+    // array column estimate counts
+    Assert.assertEquals(4.0, (Double) list.get(0).get(10), 0.01);
+    Assert.assertEquals(4.0, (Double) list.get(0).get(11), 0.01);
+    Assert.assertEquals(4.0, (Double) list.get(0).get(12), 0.01);
+    // pre-aggregated arrays counts
+    Assert.assertEquals(4.0, (Double) list.get(0).get(13), 0.01);
+    Assert.assertEquals(4.0, (Double) list.get(0).get(14), 0.01);
+    Assert.assertEquals(4.0, (Double) list.get(0).get(15), 0.01);
+    // if processAsArray is false, count is done as string mvds so it counts the total number of elements
+    Assert.assertEquals(5.0, (Double) list.get(0).get(16), 0.01);
+    Assert.assertEquals(4.0, (Double) list.get(0).get(17), 0.01);
+    Assert.assertEquals(6.0, (Double) list.get(0).get(18), 0.01);
   }
 
   private void assertAggregatorFactorySerde(AggregatorFactory agg) throws Exception
@@ -517,7 +682,8 @@ public class SketchAggregationTest
         16,
         null,
         null,
-        null
+        null,
+        false
     );
     final SketchMergeAggregatorFactory factory2 = new SketchMergeAggregatorFactory(
         "name",
@@ -525,7 +691,8 @@ public class SketchAggregationTest
         16,
         null,
         null,
-        null
+        null,
+        false
     );
     final SketchMergeAggregatorFactory factory3 = new SketchMergeAggregatorFactory(
         "name",
@@ -533,7 +700,8 @@ public class SketchAggregationTest
         32,
         null,
         null,
-        null
+        null,
+        false
     );
 
     Assert.assertTrue(Arrays.equals(factory1.getCacheKey(), factory2.getCacheKey()));
@@ -618,7 +786,7 @@ public class SketchAggregationTest
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("sketch", sketchHolder)));
     SketchHolder[] holders = helper.runRelocateVerificationTest(
-        new SketchMergeAggregatorFactory("sketch", "sketch", 16, false, true, 2),
+        new SketchMergeAggregatorFactory("sketch", "sketch", 16, false, true, 2, false),
         columnSelectorFactory,
         SketchHolder.class
     );
@@ -635,7 +803,7 @@ public class SketchAggregationTest
     value.add("bar");
     List[] columnValues = new List[]{value};
     final TestObjectColumnSelector selector = new TestObjectColumnSelector(columnValues);
-    final Aggregator agg = new SketchAggregator(selector, 4096);
+    final Aggregator agg = new SketchAggregator(selector, 4096, false);
     agg.aggregate();
     Assert.assertFalse(agg.isNull());
     Assert.assertNotNull(agg.get());
@@ -650,7 +818,7 @@ public class SketchAggregationTest
   {
     Double[] columnValues = new Double[]{2.0};
     final TestObjectColumnSelector selector = new TestObjectColumnSelector(columnValues);
-    final Aggregator agg = new SketchAggregator(selector, 4096);
+    final Aggregator agg = new SketchAggregator(selector, 4096, false);
     agg.aggregate();
     Assert.assertFalse(agg.isNull());
     Assert.assertNotNull(agg.get());
@@ -669,7 +837,7 @@ public class SketchAggregationTest
     }
 
     final TestObjectColumnSelector<String> selector = new TestObjectColumnSelector<>(columnValues);
-    final SketchAggregator agg = new SketchAggregator(selector, 128);
+    final SketchAggregator agg = new SketchAggregator(selector, 128, false);
 
     // Verify initial size of sketch
     Assert.assertEquals(48L, agg.getInitialSizeBytes());

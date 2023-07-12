@@ -129,7 +129,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                                              null,
                                                              false,
                                                              false,
-                                                             null
+                                                             null,
+                                                             false
                                                          )
                                                      )
                                                      .withRollup(false)
@@ -230,7 +231,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               null,
                               null,
-                              null
+                              null,
+                              false
                           ),
                           new FilteredAggregatorFactory(
                               new SketchMergeAggregatorFactory(
@@ -239,7 +241,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                   null,
                                   null,
                                   null,
-                                  null
+                                  null,
+                                  false
                               ),
                               not(equality("dim2", "", ColumnType.STRING))
                           ),
@@ -249,7 +252,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               null,
                               null,
-                              null
+                              null,
+                              false
                           ),
                           new SketchMergeAggregatorFactory(
                               "a4",
@@ -257,10 +261,11 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               null,
                               null,
-                              null
+                              null,
+                              false
                           ),
-                          new SketchMergeAggregatorFactory("a5", "thetasketch_dim1", 32768, null, null, null),
-                          new SketchMergeAggregatorFactory("a6", "thetasketch_dim1", null, null, null, null)
+                          new SketchMergeAggregatorFactory("a5", "thetasketch_dim1", 32768, null, null, null, false),
+                          new SketchMergeAggregatorFactory("a6", "thetasketch_dim1", null, null, null, null, false)
                       )
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -307,7 +312,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                                                   null,
                                                                   null,
                                                                   null,
-                                                                  null
+                                                                  null,
+                                                                  false
                                                               )
                                                           )
                                                       )
@@ -433,7 +439,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               false,
                               null,
-                              null
+                              null,
+                              false
                           ),
                           new SketchMergeAggregatorFactory(
                               "a2",
@@ -441,7 +448,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               false,
                               null,
-                              null
+                              null,
+                              false
                           ),
                           new SketchMergeAggregatorFactory(
                               "a3",
@@ -449,7 +457,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               false,
                               null,
-                              null
+                              null,
+                              false
                           )
                       )
                   )
@@ -610,7 +619,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               null,
                               null,
-                              null
+                              null,
+                              false
                           ),
                           new SketchMergeAggregatorFactory(
                               "a2",
@@ -618,7 +628,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               null,
                               null,
-                              null
+                              null,
+                              false
                           ),
                           new SketchMergeAggregatorFactory(
                               "a3",
@@ -626,7 +637,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               null,
                               null,
-                              null
+                              null,
+                              false
                           )
                       )
                   )
@@ -736,7 +748,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                            null,
                                            false,
                                            null,
-                                           null
+                                           null,
+                                           false
                                        )
                                    )
                                )
@@ -792,7 +805,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                            null,
                                            null,
                                            null,
-                                           null
+                                           null,
+                                           false
                                        )
                                    )
                                )
@@ -844,7 +858,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               null,
                               null,
-                              null
+                              null,
+                              false
                           ),
                           new SketchMergeAggregatorFactory(
                               "a1",
@@ -852,7 +867,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               null,
                               null,
-                              null
+                              null,
+                              false
                           ),
                           new SketchMergeAggregatorFactory(
                               "a2",
@@ -860,7 +876,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               1024,
                               false,
                               null,
-                              null
+                              null,
+                              false
                           ),
                           new SketchMergeAggregatorFactory(
                               "a3",
@@ -868,7 +885,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               1024,
                               false,
                               null,
-                              null
+                              null,
+                              false
                           )
                       )
                   )
@@ -907,7 +925,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         true,
                                         null,
-                                        null
+                                        null,
+                                        false
                                     ),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
@@ -918,7 +937,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         true,
                                         null,
-                                        null
+                                        null,
+                                        false
                                     ),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
@@ -929,7 +949,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         1024,
                                         false,
                                         null,
-                                        null
+                                        null,
+                                        false
                                     ),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
@@ -940,7 +961,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         1024,
                                         false,
                                         null,
-                                        null
+                                        null,
+                                        false
                                     ),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 )
@@ -988,7 +1010,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         true,
                                         null,
-                                        null
+                                        null,
+                                        false
                                     ),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
@@ -999,7 +1022,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         null,
                                         true,
                                         null,
-                                        null
+                                        null,
+                                        false
                                     ),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
@@ -1010,7 +1034,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         1024,
                                         true,
                                         null,
-                                        null
+                                        null,
+                                        false
                                     ),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
@@ -1021,7 +1046,8 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                         1024,
                                         true,
                                         null,
-                                        null
+                                        null,
+                                        false
                                     ),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 )

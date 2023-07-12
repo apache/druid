@@ -63,7 +63,9 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   protected final int size;
   private final byte cacheId;
 
-  public SketchAggregatorFactory(String name, String fieldName, Integer size, byte cacheId)
+  protected final boolean processAsArray;
+
+  public SketchAggregatorFactory(String name, String fieldName, Integer size, byte cacheId, boolean processAsArray)
   {
     this.name = Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     this.fieldName = Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
@@ -72,6 +74,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
     Util.checkIfIntPowerOf2(this.size, "size");
 
     this.cacheId = cacheId;
+    this.processAsArray = processAsArray;
   }
 
   @SuppressWarnings("unchecked")
@@ -79,14 +82,14 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
-    return new SketchAggregator(selector, size);
+    return new SketchAggregator(selector, size, processAsArray);
   }
 
   @Override
   public AggregatorAndSize factorizeWithSize(ColumnSelectorFactory metricFactory)
   {
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
-    final SketchAggregator aggregator = new SketchAggregator(selector, size);
+    final SketchAggregator aggregator = new SketchAggregator(selector, size, processAsArray);
     return new AggregatorAndSize(aggregator, aggregator.getInitialSizeBytes());
   }
 
@@ -95,13 +98,13 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
-    return new SketchBufferAggregator(selector, size, getMaxIntermediateSizeWithNulls());
+    return new SketchBufferAggregator(selector, size, getMaxIntermediateSizeWithNulls(), processAsArray);
   }
 
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
-    return new SketchVectorAggregator(selectorFactory, fieldName, size, getMaxIntermediateSizeWithNulls());
+    return new SketchVectorAggregator(selectorFactory, fieldName, size, getMaxIntermediateSizeWithNulls(), processAsArray);
   }
 
   @Override

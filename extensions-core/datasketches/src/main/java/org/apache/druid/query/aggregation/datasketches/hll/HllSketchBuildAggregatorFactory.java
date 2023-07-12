@@ -55,6 +55,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
 {
   public static final ColumnType TYPE = ColumnType.ofComplex(HllSketchModule.BUILD_TYPE_NAME);
 
+
   @JsonCreator
   public HllSketchBuildAggregatorFactory(
       @JsonProperty("name") final String name,
@@ -63,10 +64,11 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
       @JsonProperty("tgtHllType") @Nullable final String tgtHllType,
       @JsonProperty("stringEncoding") @Nullable final StringEncoding stringEncoding,
       @JsonProperty("shouldFinalize") final Boolean shouldFinalize,
-      @JsonProperty("round") final boolean round
+      @JsonProperty("round") final boolean round,
+      @JsonProperty("processAsArray") final boolean processAsArray
   )
   {
-    super(name, fieldName, lgK, tgtHllType, stringEncoding, shouldFinalize, round);
+    super(name, fieldName, lgK, tgtHllType, stringEncoding, shouldFinalize, round, processAsArray);
   }
 
 
@@ -145,7 +147,8 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
         getTgtHllType(),
         getStringEncoding(),
         isShouldFinalize(),
-        isRound()
+        isRound(),
+        isProcessAsArray()
     );
   }
 
@@ -237,7 +240,7 @@ public class HllSketchBuildAggregatorFactory extends HllSketchAggregatorFactory
           updater = sketch -> {
             Object obj = selector.getObject();
             if (obj != null) {
-              HllSketchBuildUtil.updateSketch(sketch.get(), getStringEncoding(), obj);
+              HllSketchBuildUtil.updateSketch(sketch.get(), getStringEncoding(), obj, isProcessAsArray());
             }
           };
       }

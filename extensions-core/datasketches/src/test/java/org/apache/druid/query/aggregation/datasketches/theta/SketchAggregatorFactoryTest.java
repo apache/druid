@@ -41,10 +41,10 @@ import org.junit.Test;
 public class SketchAggregatorFactoryTest
 {
   private static final SketchMergeAggregatorFactory AGGREGATOR_16384 =
-      new SketchMergeAggregatorFactory("x", "x", 16384, null, false, null);
+      new SketchMergeAggregatorFactory("x", "x", 16384, null, false, null, false);
 
   private static final SketchMergeAggregatorFactory AGGREGATOR_32768 =
-      new SketchMergeAggregatorFactory("x", "x", 32768, null, false, null);
+      new SketchMergeAggregatorFactory("x", "x", 32768, null, false, null, false);
 
   @Test
   public void testGuessAggregatorHeapFootprint()
@@ -93,8 +93,8 @@ public class SketchAggregatorFactoryTest
                   new OldSketchBuildAggregatorFactory("oldBuild", "col", 16),
                   new OldSketchMergeAggregatorFactory("oldMerge", "col", 16, false),
                   new OldSketchMergeAggregatorFactory("oldMergeFinalize", "col", 16, true),
-                  new SketchMergeAggregatorFactory("merge", "col", 16, false, false, null),
-                  new SketchMergeAggregatorFactory("mergeFinalize", "col", 16, true, false, null)
+                  new SketchMergeAggregatorFactory("merge", "col", 16, false, false, null, false),
+                  new SketchMergeAggregatorFactory("mergeFinalize", "col", 16, true, false, null, false)
               )
               .postAggregators(
                   new FieldAccessPostAggregator("oldBuild-access", "oldBuild"),

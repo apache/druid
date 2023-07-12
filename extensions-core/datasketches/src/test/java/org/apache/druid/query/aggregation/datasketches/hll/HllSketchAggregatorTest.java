@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -41,10 +42,14 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
-import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.IncrementalIndexSegment;
+import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -438,31 +443,42 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void testArrays() throws Exception
   {
+    AggregatorFactory[] aggs = new AggregatorFactory[]{
+            new HllSketchBuildAggregatorFactory("hll0", "arrayString", null, null, null, false, false, true),
+            new HllSketchBuildAggregatorFactory("hll1", "arrayLong", null, null, null, false, false, true),
+            new HllSketchBuildAggregatorFactory("hll2", "arrayDouble", null, null, null, false, false, true),
+            new HllSketchBuildAggregatorFactory("hll3", "arrayString", null, null, null, false, false, false),
+            new HllSketchBuildAggregatorFactory("hll4", "arrayLong", null, null, null, false, false, false),
+            new HllSketchBuildAggregatorFactory("hll5", "arrayDouble", null, null, null, false, false, false)
+    };
+
+    IndexBuilder bob = IndexBuilder.create(timeseriesHelper.getObjectMapper())
+                                   .tmpDir(groupByFolder.newFolder())
+                                   .schema(
+                                       IncrementalIndexSchema.builder()
+                                                             .withTimestampSpec(NestedDataTestUtils.TIMESTAMP_SPEC)
+                                                             .withDimensionsSpec(NestedDataTestUtils.AUTO_DISCOVERY)
+                                                             .withMetrics(aggs)
+                                                             .withQueryGranularity(Granularities.NONE)
+                                                             .withRollup(true)
+                                                             .withMinTimestamp(0)
+                                                             .build()
+                                   )
+                                   .inputSource(
+                                       ResourceInputSource.of(
+                                           NestedDataTestUtils.class.getClassLoader(),
+                                           NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
+                                       )
+                                   )
+                                   .inputFormat(NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT)
+                                   .transform(TransformSpec.NONE)
+                                   .inputTmpDir(groupByFolder.newFolder());
+
     List<Segment> realtimeSegs = ImmutableList.of(
-        NestedDataTestUtils.createIncrementalIndex(
-            groupByFolder,
-            NestedDataTestUtils.ARRAY_TYPES_DATA_FILE,
-            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
-            NestedDataTestUtils.TIMESTAMP_SPEC,
-            NestedDataTestUtils.AUTO_DISCOVERY,
-            TransformSpec.NONE,
-            new AggregatorFactory[0],
-            Granularities.NONE,
-            true
-        )
+        new IncrementalIndexSegment(bob.buildIncrementalIndex(), SegmentId.dummy("test_datasource"))
     );
-    List<Segment> segs = NestedDataTestUtils.createSegments(
-        groupByFolder,
-        closer,
-        NestedDataTestUtils.ARRAY_TYPES_DATA_FILE,
-        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
-        NestedDataTestUtils.TIMESTAMP_SPEC,
-        NestedDataTestUtils.AUTO_DISCOVERY,
-        TransformSpec.NONE,
-        new AggregatorFactory[0],
-        Granularities.NONE,
-        true,
-        IndexSpec.DEFAULT
+    List<Segment> segs = ImmutableList.of(
+        new QueryableIndexSegment(bob.buildMMappedMergedIndex(), SegmentId.dummy("test_datasource"))
     );
 
     GroupByQuery query = GroupByQuery.builder()
@@ -470,10 +486,16 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
                                      .setGranularity(Granularities.ALL)
                                      .setInterval(Intervals.ETERNITY)
                                      .setAggregatorSpecs(
-                                         new HllSketchBuildAggregatorFactory("a0", "arrayString", null, null, null, false, false),
-                                         new HllSketchBuildAggregatorFactory("a1", "arrayLong", null, null, null, false, false),
-                                         new HllSketchBuildAggregatorFactory("a2", "arrayDouble", null, null, null, false, false),
-                                         new CountAggregatorFactory("a3")
+                                         new HllSketchBuildAggregatorFactory("a0", "arrayString", null, null, null, false, false, false),
+                                         new HllSketchBuildAggregatorFactory("a1", "arrayLong", null, null, null, false, false, false),
+                                         new HllSketchBuildAggregatorFactory("a2", "arrayDouble", null, null, null, false, false, false),
+                                         new HllSketchMergeAggregatorFactory("a3", "hll0", null, null, null, false, false),
+                                         new HllSketchMergeAggregatorFactory("a4", "hll1", null, null, null, false, false),
+                                         new HllSketchMergeAggregatorFactory("a5", "hll2", null, null, null, false, false),
+                                         new HllSketchMergeAggregatorFactory("a6", "hll3", null, null, null, false, false),
+                                         new HllSketchMergeAggregatorFactory("a7", "hll4", null, null, null, false, false),
+                                         new HllSketchMergeAggregatorFactory("a8", "hll5", null, null, null, false, false),
+                                         new CountAggregatorFactory("a9")
                                      )
                                      .setPostAggregatorSpecs(
                                          ImmutableList.of(
@@ -491,6 +513,38 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
                                                  "p2",
                                                  new FieldAccessPostAggregator("f2", "a2"),
                                                  false
+                                             ),
+                                             // pre-aggregated array counts
+                                             new HllSketchToEstimatePostAggregator(
+                                                 "p3",
+                                                 new FieldAccessPostAggregator("f3", "a3"),
+                                                 false
+                                             ),
+                                             new HllSketchToEstimatePostAggregator(
+                                                 "p4",
+                                                 new FieldAccessPostAggregator("f4", "a4"),
+                                                 false
+                                             ),
+                                             new HllSketchToEstimatePostAggregator(
+                                                 "p5",
+                                                 new FieldAccessPostAggregator("f5", "a5"),
+                                                 false
+                                             ),
+                                             // array element counts
+                                             new HllSketchToEstimatePostAggregator(
+                                                 "p6",
+                                                 new FieldAccessPostAggregator("f6", "a6"),
+                                                 false
+                                             ),
+                                             new HllSketchToEstimatePostAggregator(
+                                                 "p7",
+                                                 new FieldAccessPostAggregator("f7", "a7"),
+                                                 false
+                                             ),
+                                             new HllSketchToEstimatePostAggregator(
+                                                 "p8",
+                                                 new FieldAccessPostAggregator("f8", "a8"),
+                                                 false
                                              )
                                          )
                                      )
@@ -503,15 +557,34 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 
     // expect 4 distinct arrays for each of these columns from 14 rows
     Assert.assertEquals(1, realtimeList.size());
-    Assert.assertEquals(14L, realtimeList.get(0).get(3));
-    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(4), 0.01);
-    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(5), 0.01);
-    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(6), 0.01);
+    Assert.assertEquals(14L, realtimeList.get(0).get(9));
+    // array column estimate counts
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(10), 0.01);
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(11), 0.01);
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(12), 0.01);
+    // pre-aggregated arrays counts
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(13), 0.01);
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(14), 0.01);
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(15), 0.01);
+    // if processAsArray is false, count is done as string mvds so it counts the total number of elements
+    Assert.assertEquals(5.0, (Double) realtimeList.get(0).get(16), 0.01);
+    Assert.assertEquals(4.0, (Double) realtimeList.get(0).get(17), 0.01);
+    Assert.assertEquals(6.0, (Double) realtimeList.get(0).get(18), 0.01);
+
     Assert.assertEquals(1, list.size());
-    Assert.assertEquals(14L, list.get(0).get(3));
-    Assert.assertEquals(4.0, (Double) list.get(0).get(4), 0.01);
-    Assert.assertEquals(4.0, (Double) list.get(0).get(5), 0.01);
-    Assert.assertEquals(4.0, (Double) list.get(0).get(6), 0.01);
+    Assert.assertEquals(14L, list.get(0).get(9));
+    // array column estimate counts
+    Assert.assertEquals(4.0, (Double) list.get(0).get(10), 0.01);
+    Assert.assertEquals(4.0, (Double) list.get(0).get(11), 0.01);
+    Assert.assertEquals(4.0, (Double) list.get(0).get(12), 0.01);
+    // pre-aggregated arrays counts
+    Assert.assertEquals(4.0, (Double) list.get(0).get(13), 0.01);
+    Assert.assertEquals(4.0, (Double) list.get(0).get(14), 0.01);
+    Assert.assertEquals(4.0, (Double) list.get(0).get(15), 0.01);
+    // if processAsArray is false, count is done as string mvds so it counts the total number of elements
+    Assert.assertEquals(5.0, (Double) list.get(0).get(16), 0.01);
+    Assert.assertEquals(4.0, (Double) list.get(0).get(17), 0.01);
+    Assert.assertEquals(6.0, (Double) list.get(0).get(18), 0.01);
   }
 
   private static String buildParserJson(List<String> dimensions, List<String> columns)
