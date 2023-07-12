@@ -981,17 +981,26 @@ public class RemoteTaskRunnerTest
         }
       }
 
-      final String expectedWorker = i % 2 == 0 || i > 4 ? secondWorker : firstWorker;
+      final String expectedWorker = i > 2 ? secondWorker : firstWorker;
 
-      Assert.assertTrue(rtrTestUtils.taskAssigned(expectedWorker, task.getId()));
+      Assert.assertTrue(
+          StringUtils.format("Task[%s] assigned to worker[%s]", i, expectedWorker),
+          rtrTestUtils.taskAssigned(expectedWorker, task.getId())
+      );
       rtrTestUtils.mockWorkerRunningTask(expectedWorker, task);
       rtrTestUtils.mockWorkerCompleteFailedTask(expectedWorker, task);
 
       Assert.assertTrue(taskFuture.get().isFailure());
-      Assert.assertEquals(i > 2 ? 1 : 0, remoteTaskRunner.getBlackListedWorkers().size());
       Assert.assertEquals(
-          i > 4 ? i - 2 : ((i + 1) / 2),
-          remoteTaskRunner.findWorkerRunningTask(task.getId()).getContinuouslyFailedTasksCount()
+          StringUtils.format("Blacklisted workers after task[%s]", i),
+          i >= 2 ? 1 : 0,
+          remoteTaskRunner.getBlackListedWorkers().size()
+      );
+      Assert.assertEquals(
+          StringUtils.format("Continuously failed tasks after task[%s]", i),
+          i,
+          remoteTaskRunner.findWorkerId("worker").getContinuouslyFailedTasksCount()
+          + remoteTaskRunner.findWorkerId("worker2").getContinuouslyFailedTasksCount()
       );
     }
   }
