@@ -205,10 +205,10 @@ Druid supports the following aggregator merge strategies:
   list is `null`.
 - `lenient`:  Druid ignores segments with unknown aggregators. Conflicts between aggregators set the aggregator for that particular column to null.
 - the aggregator for that particular column.
-- `latest`: In the event of conflicts between segments, the aggregator from the most recent segment will be selected
+- `latest`: In the event of conflicts between segments, Druid selects the aggregator from the most recent segment
    for that particular column.
 
 
 ### lenientAggregatorMerge (deprecated)
 
-This property is deprecated - consider using [`aggregatorMergeStrategy`](#aggregatormergestrategy) instead.
+Deprecated. Use [`aggregatorMergeStrategy`](#aggregatormergestrategy) instead.
