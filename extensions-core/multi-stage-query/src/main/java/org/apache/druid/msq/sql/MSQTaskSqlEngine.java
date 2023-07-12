@@ -59,7 +59,6 @@ public class MSQTaskSqlEngine implements SqlEngine
       ImmutableSet.<String>builder()
                   .addAll(NativeSqlEngine.SYSTEM_CONTEXT_PARAMETERS)
                   .add(QueryKitUtils.CTX_TIME_COLUMN_NAME)
-                  .add(MSQTaskQueryMaker.USER_KEY)
                   .build();
 
   public static final List<String> TASK_STRUCT_FIELD_NAMES = ImmutableList.of("TASK");
