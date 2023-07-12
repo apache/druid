@@ -19,25 +19,90 @@
 
 package org.apache.druid.storage.google.output;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 
 import java.io.File;
+import java.util.Objects;
 
 public class GoogleOutputConfig
 {
 
-  String bucket;
-  String prefix;
-  File tempDir;
-  HumanReadableBytes chunkSize;
-  Integer maxRetry;
+  @JsonProperty
+  private final String bucket;
+
+  @JsonProperty
+  private final String prefix;
+
+  @JsonProperty
+  private final File tempDir;
+
+  @JsonProperty
+  private final HumanReadableBytes chunkSize;
+
+  @JsonProperty
+  private final Integer maxRetry;
 
   public GoogleOutputConfig(
-      String bucket,
-      String prefix,
-      File tempDir,
-      HumanReadableBytes chunkSize,
-      Integer maxRetry
-  ) {
+      final String bucket,
+      final String prefix,
+      final File tempDir,
+      final HumanReadableBytes chunkSize,
+      final Integer maxRetry
+  )
+  {
+    this.bucket = bucket;
+    this.prefix = prefix;
+    this.tempDir = tempDir;
+    this.chunkSize = chunkSize;
+    this.maxRetry = maxRetry;
+  }
+
+  public String getBucket()
+  {
+    return bucket;
+  }
+
+  public String getPrefix()
+  {
+    return prefix;
+  }
+
+  public File getTempDir()
+  {
+    return tempDir;
+  }
+
+  public HumanReadableBytes getChunkSize()
+  {
+    return chunkSize;
+  }
+
+  public Integer getMaxRetry()
+  {
+    return maxRetry;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    GoogleOutputConfig that = (GoogleOutputConfig) o;
+    return Objects.equals(bucket, that.bucket)
+           && Objects.equals(prefix, that.prefix)
+           && Objects.equals(tempDir, that.tempDir)
+           && Objects.equals(chunkSize, that.chunkSize)
+           && Objects.equals(maxRetry, that.maxRetry);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(bucket, prefix, tempDir, chunkSize, maxRetry);
   }
 }
