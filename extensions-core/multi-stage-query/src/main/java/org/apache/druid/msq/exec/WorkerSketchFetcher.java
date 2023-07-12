@@ -39,6 +39,7 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
@@ -262,11 +263,13 @@ public class WorkerSketchFetcher implements AutoCloseable
       return;
     }
 
+    final Set<String> noBoundaries = new HashSet<>(tasks);
     completeKeyStatisticsInformation.getTimeSegmentVsWorkerMap().forEach((timeChunk, wks) -> {
 
       for (String taskId : tasks) {
         int workerNumber = MSQTasks.workerFromTaskId(taskId);
         if (wks.contains(workerNumber)) {
+          noBoundaries.remove(taskId);
           executorService.submit(() -> {
             fetchStatsFromWorker(
                 kernelActions,
@@ -285,10 +288,24 @@ public class WorkerSketchFetcher implements AutoCloseable
                 ),
                 retryOperation
             );
+
           });
         }
       }
     });
+
+    // if the worker did not get any records, update the state of the worker
+    for (String taskId : noBoundaries) {
+      kernelActions.accept(
+          kernel -> {
+            final int workerNumber = MSQTasks.workerFromTaskId(taskId);
+            kernel.mergeClusterByStatisticsCollectorForAllTimeChunks(
+                stageId,
+                workerNumber,
+                ClusterByStatisticsSnapshot.empty()
+            );
+          });
+    }
   }
 
 
