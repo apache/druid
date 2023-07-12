@@ -129,6 +129,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
   }
 
+  @SuppressWarnings("unused")
   @SemanticCreator
   public RowsAndColumnsDecorator toRowsAndColumnsDecorator()
   {
@@ -141,6 +142,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     }
   }
 
+  @SuppressWarnings("unused")
   @SemanticCreator
   public WireTransferable toWireTransferable()
   {
