@@ -1,0 +1,26 @@
+{
+    "testId": "window_functions_negative",
+    "type": "group",
+    "negative": true,
+    "description": "Window function tests: throwing exceptions",
+    "categories": [ "negative" ],
+    "matrices": [
+        {
+            "query-file": ".*.sql",
+            "schema": "dfs.subqueries",
+            "output-format": "tsv",
+            "expected-file": ".*.res",
+            "verification-type": [
+                "regex"
+            ]
+        }
+    ],
+    "datasources": [
+        {
+            "mode": "cp",
+            "src": "Datasources/subqueries",
+            "dest": "subqueries"
+        }
+    ]
+}
+

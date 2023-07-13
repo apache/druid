@@ -109,7 +109,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     this.filename = filename;
   }
 
-  @SuppressWarnings({"unchecked", "rawtypes"})
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
       QueryRunnerFactoryConglomerate conglomerate,
@@ -152,7 +151,13 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void windowQueryTest()
   {
+    Thread thread = null;
+    String oldName = null;
     try {
+      thread = Thread.currentThread();
+      oldName = thread.getName();
+      thread.setName("drillWindowQuery-" + filename);
+
       final String query = getQueryString();
       final String results = getExpectedResults();
 
@@ -160,13 +165,16 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
           .skipVectorize(true)
           .sql(query)
           .queryContext(ImmutableMap.of("windowsAreForClosers", true, "windowsAllTheWayDown", true))
-          .expectedResults((sql, results1) -> {
-            Assert.assertEquals(results, results1);
-          })
+          .expectedResults((sql, results1) -> Assert.assertEquals(results, String.valueOf(results1)))
           .run();
     }
     catch (Throwable e) {
       log.info(e, "Got a throwable, here it is. Ignoring for now.");
+    }
+    finally {
+      if (thread != null && oldName != null) {
+        thread.setName(oldName);
+      }
     }
   }
 
@@ -182,6 +190,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     return readStringFromResource(".e");
   }
 
+  @SuppressWarnings({"UnstableApiUsage", "ConstantConditions"})
   @Nonnull
   private String readStringFromResource(String s) throws IOException
   {
@@ -192,6 +201,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     return query;
   }
 
+  @SuppressWarnings({"rawtypes", "unchecked"})
   private void attachIndex(SpecificSegmentsQuerySegmentWalker texasRanger, String dataSource, DimensionSchema... dims)
       throws IOException
   {

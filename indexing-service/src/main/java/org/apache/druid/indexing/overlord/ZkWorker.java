@@ -229,14 +229,9 @@ public class ZkWorker implements Closeable
 
   public ImmutableWorkerInfo toImmutable()
   {
-    Map<String, TaskAnnouncement> tasks = getRunningTasks();
-
-    return new ImmutableWorkerInfo(
+    return ImmutableWorkerInfo.fromWorkerAnnouncements(
         worker.get(),
-        getCurrCapacityUsed(tasks),
-        getCurrParallelIndexCapacityUsed(tasks),
-        getAvailabilityGroups(tasks),
-        tasks.keySet(),
+        getRunningTasks(),
         lastCompletedTaskTime.get(),
         blacklistedUntil.get()
     );
