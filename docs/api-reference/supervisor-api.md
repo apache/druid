@@ -823,7 +823,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 <code className="getAPI">GET</code> `/druid/indexer/v1/supervisor/{supervisorId}`
 
-Retrieves the current spec for the Supervisor with the provided ID. The returned Supervisor spec specifies the `dataSchema`, `ioConfig`, and `tuningConfig`. 
+Retrieves the current spec for the Supervisor with the provided ID. The returned supervisor spec specifies the `dataSchema`, `ioConfig`, and `tuningConfig`. 
 
 #### Responses
 
@@ -831,7 +831,7 @@ Retrieves the current spec for the Supervisor with the provided ID. The returned
 
 <!--200 SUCCESS-->
 <br/>
-*Successfully retrieved Supervisor specification* 
+*Successfully retrieved supervisor spec* 
 <!--404 NOT FOUND-->
 <br/>
 *Invalid Supervisor ID* 
@@ -1983,7 +1983,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 Creates a new Supervisor or updates an existing one for the same datasource with a new schema and configuration. 
 
-You can create a Supervisor spec using [Apache Kafka ingestion streaming](../development/extensions-core/kafka-ingestion.md#define-a-supervisor-spec) or [Amazon Kinesis ingestion](../development/extensions-core/kinesis-ingestion.md#submitting-a-supervisor-spec). Once created, a Supervisor will persist in the metadata database.
+You can create a supervisor spec using [Apache Kafka](../development/extensions-core/kafka-ingestion.md#define-a-supervisor-spec) or [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#submitting-a-supervisor-spec). Once created, a Supervisor will persist in the metadata database.
 
 Using this endpoint on an existing Supervisor for the same datasource will result in the running Supervisor signaling its tasks to stop reading and begin publishing, exiting itself, and a new Supervisor being created with the provided configuration from the request body. This submits a new schema while retaining existing publishing tasks and starting new tasks at the previous task offsets. 
 
@@ -2003,6 +2003,8 @@ Using this endpoint on an existing Supervisor for the same datasource will resul
 ---
 
 #### Sample request
+
+The following example uses JSON input format to create a supervisor spec for Kafka with a `social_media` datasource and `social_media` topic. 
 
 <!--DOCUSAURUS_CODE_TABS-->
 
@@ -2138,7 +2140,7 @@ Content-Length: 1359
 #### URL
 <code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/suspend`
 
-Suspends the current running Supervisor of the provided ID. Returns the updated Supervisor spec where the `suspended` property is set to `true`. A suspended Supervisor will continue to emit logs and metrics.
+Suspends the current running Supervisor of the provided ID. Returns the updated supervisor spec where the `suspended` property is set to `true`. A suspended Supervisor will continue to emit logs and metrics.
 
 #### Responses
 
@@ -2538,7 +2540,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 <code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/resume`
 
-Resumes indexing tasks for a Supervisor. Returns an updated Supervisor spec with the `suspended` property set to `false`.
+Resumes indexing tasks for a Supervisor. Returns an updated supervisor spec with the `suspended` property set to `false`.
 
 #### Responses
 
@@ -2958,6 +2960,8 @@ Use this endpoint for recovering when the Supervisor stops due to missing offset
 ---
 
 #### Sample request
+
+The following example resets the `social_media` Supervisor. 
 
 <!--DOCUSAURUS_CODE_TABS-->
 
