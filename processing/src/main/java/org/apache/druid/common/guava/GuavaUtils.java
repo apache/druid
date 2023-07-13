@@ -75,12 +75,12 @@ public class GuavaUtils
    * except will not explode if both arguments are null.
    */
   @Nullable
-  public static <T> T firstNonNull(@Nullable T arg1, @Nullable T arg2)
+  public static <T> T firstNonNull(@Nullable T lhs, @Nullable T rhs)
   {
-    if (arg1 == null) {
-      return arg2;
+    if (lhs == null) {
+      return rhs;
     }
-    return arg1;
+    return lhs;
   }
 
   /**
