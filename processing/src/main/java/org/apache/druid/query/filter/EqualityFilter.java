@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprEval;
@@ -59,6 +58,7 @@ import org.apache.druid.segment.filter.PredicateValueMatcherFactory;
 import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.TypedValueIndex;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
@@ -255,12 +255,20 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
       return Filters.makeNullIndex(false, selector);
     }
 
-    final StringValueSetIndex valueSetIndex = indexSupplier.as(StringValueSetIndex.class);
-    if (valueSetIndex == null) {
-      // column exists, but has no index
-      return null;
+    final TypedValueIndex valueSetIndex = indexSupplier.as(TypedValueIndex.class);
+    if (valueSetIndex != null) {
+      return valueSetIndex.forValue(matchValue, matchValueType);
     }
-    return valueSetIndex.forValue(String.valueOf(matchValue));
+
+    if (matchValueType.isPrimitive()) {
+      final StringValueSetIndex stringValueSetIndex = indexSupplier.as(StringValueSetIndex.class);
+      if (stringValueSetIndex != null) {
+
+        return stringValueSetIndex.forValue(String.valueOf(matchValue));
+      }
+    }
+    // column exists, but has no indexes we can use
+    return null;
   }
 
   @Override

@@ -34,6 +34,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
@@ -42,6 +44,8 @@ import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ColumnarDoubles;
 import org.apache.druid.segment.data.CompressedColumnarDoublesSuppliers;
@@ -58,6 +62,7 @@ import org.apache.druid.segment.index.semantic.DruidPredicateIndex;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.NumericRangeIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.TypedValueIndex;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 import javax.annotation.Nullable;
@@ -191,15 +196,19 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         nullIndex = new SimpleImmutableBitmapIndex(nullValueBitmap);
       }
       return (T) (NullValueIndex) () -> nullIndex;
-    } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)
-               || clazz.equals(DictionaryEncodedValueIndex.class)) {
-      return (T) new DoubleDictionaryEncodedValueSetIndex();
-    } else if (clazz.equals(StringValueSetIndex.class)) {
-      return (T) new DoubleValueSetIndex();
+    } else if (clazz.equals(TypedValueIndex.class)) {
+      return (T) new DoubleValueIndex();
+    }  else if (clazz.equals(StringValueSetIndex.class)) {
+      return (T) new DoubleStringValueSetIndex();
     } else if (clazz.equals(NumericRangeIndex.class)) {
       return (T) new DoubleNumericRangeIndex();
     } else if (clazz.equals(DruidPredicateIndex.class)) {
       return (T) new DoublePredicateIndex();
+    } else if (
+        clazz.equals(DictionaryEncodedStringValueIndex.class) ||
+        clazz.equals(DictionaryEncodedValueIndex.class)
+    ) {
+      return (T) new DoubleDictionaryEncodedValueSetIndex();
     }
 
     return null;
@@ -215,7 +224,45 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
   }
 
-  private class DoubleValueSetIndex implements StringValueSetIndex
+  private class DoubleValueIndex implements TypedValueIndex
+  {
+    @Nullable
+    @Override
+    public BitmapColumnIndex forValue(Object value, TypeSignature<ValueType> valueType)
+    {
+      final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnTypeStrict(valueType), value)
+                                       .castTo(ExpressionType.DOUBLE);
+      if (eval.isNumericNull()) {
+        return null;
+      }
+      final double doubleValue = eval.asDouble();
+      return new SimpleBitmapColumnIndex()
+      {
+        final FixedIndexed<Double> dictionary = doubleDictionarySupplier.get();
+        @Override
+        public double estimateSelectivity(int totalRows)
+        {
+          final int id = dictionary.indexOf(doubleValue);
+          if (id < 0) {
+            return 0.0;
+          }
+          return (double) getBitmap(id).size() / totalRows;
+        }
+
+        @Override
+        public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+        {
+          final int id = dictionary.indexOf(doubleValue);
+          if (id < 0) {
+            return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
+          }
+          return bitmapResultFactory.wrapDimensionValue(getBitmap(id));
+        }
+      };
+    }
+  }
+
+  private class DoubleStringValueSetIndex implements StringValueSetIndex
   {
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)

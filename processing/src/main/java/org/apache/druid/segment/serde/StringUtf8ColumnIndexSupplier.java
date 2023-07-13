@@ -42,6 +42,8 @@ import org.apache.druid.segment.index.semantic.LexicographicalRangeIndex;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.SpatialIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndex;
+import org.apache.druid.segment.index.semantic.TypedValueIndex;
+import org.apache.druid.segment.index.semantic.Utf8ValueSetIndex;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -113,7 +115,11 @@ public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>>
           nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
         }
         return (T) (NullValueIndex) () -> nullIndex;
-      } else if (clazz.equals(StringValueSetIndex.class)) {
+      } else if (
+          clazz.equals(StringValueSetIndex.class) ||
+          clazz.equals(Utf8ValueSetIndex.class) ||
+          clazz.equals(TypedValueIndex.class)
+      ) {
         return (T) new IndexedUtf8ValueSetIndex<>(
             bitmapFactory,
             dict,
@@ -136,8 +142,10 @@ public class StringUtf8ColumnIndexSupplier<TIndexed extends Indexed<ByteBuffer>>
             columnConfig,
             numRows
         );
-      } else if (clazz.equals(DictionaryEncodedStringValueIndex.class)
-                 || clazz.equals(DictionaryEncodedValueIndex.class)) {
+      } else if (
+          clazz.equals(DictionaryEncodedStringValueIndex.class) ||
+          clazz.equals(DictionaryEncodedValueIndex.class)
+      ) {
         // Need string dictionary instead of UTF8 dictionary
         return (T) new IndexedStringDictionaryEncodedStringValueIndex<>(
             bitmapFactory,
