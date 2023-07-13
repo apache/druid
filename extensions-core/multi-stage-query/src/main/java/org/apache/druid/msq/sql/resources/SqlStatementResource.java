@@ -206,9 +206,9 @@ public class SqlStatementResource
     catch (AssertionError | Exception e) {
       stmt.reporter().failed(e);
       if (isDebug) {
-        log.warn(e, "Failed to handle query: %s", sqlQueryId);
+        log.warn(e, "Failed to handle query [%s]", sqlQueryId);
       } else {
-        log.noStackTrace().warn(e, "Failed to handle query: %s", sqlQueryId);
+        log.noStackTrace().warn(e, "Failed to handle query [%s]", sqlQueryId);
       }
       return buildNonOkResponse(
           DruidException.forPersona(DruidException.Persona.DEVELOPER)
@@ -261,10 +261,10 @@ public class SqlStatementResource
       return buildNonOkResponse(Forbidden.exception());
     }
     catch (Exception e) {
-      log.warn(e, "Failed to handle query: %s", queryId);
+      log.warn(e, "Failed to handle query [%s]", queryId);
       return buildNonOkResponse(DruidException.forPersona(DruidException.Persona.DEVELOPER)
                                               .ofCategory(DruidException.Category.UNCATEGORIZED)
-                                              .build(e, "Failed to handle query: [%s]", queryId));
+                                              .build(e, "Failed to handle query [%s]", queryId));
     }
   }
 
@@ -342,10 +342,10 @@ public class SqlStatementResource
       return buildNonOkResponse(Forbidden.exception());
     }
     catch (Exception e) {
-      log.warn(e, "Failed to handle query: %s", queryId);
+      log.warn(e, "Failed to handle query [%s]", queryId);
       return buildNonOkResponse(DruidException.forPersona(DruidException.Persona.DEVELOPER)
                                               .ofCategory(DruidException.Category.UNCATEGORIZED)
-                                              .build(e, "Failed to handle query: [%s]", queryId));
+                                              .build(e, "Failed to handle query [%s]", queryId));
     }
   }
 
@@ -405,10 +405,10 @@ public class SqlStatementResource
       return buildNonOkResponse(Forbidden.exception());
     }
     catch (Exception e) {
-      log.warn(e, "Failed to handle query: %s", queryId);
+      log.warn(e, "Failed to handle query [%s]", queryId);
       return buildNonOkResponse(DruidException.forPersona(DruidException.Persona.DEVELOPER)
                                               .ofCategory(DruidException.Category.UNCATEGORIZED)
-                                              .build(e, "Failed to handle query: [%s]", queryId));
+                                              .build(e, "Failed to handle query [%s]", queryId));
     }
   }
 
@@ -816,7 +816,7 @@ public class SqlStatementResource
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
-                              "Query[%s] failed. Hit status api for more details.",
+                              "Query[%s] failed. Check the status api for more details.",
                               queryId
                           );
     } else {
@@ -830,15 +830,17 @@ public class SqlStatementResource
 
     if (executionMode == null) {
       throw InvalidInput.exception(
-          "Execution mode is not provided to the SQL statement API. Please set \"%s\" in the query context",
-          QueryContexts.CTX_EXECUTION_MODE
+          "Execution mode is not provided to the SQL statement API. "
+          + "Please set [%s] to [%s] in the query context",
+          QueryContexts.CTX_EXECUTION_MODE,
+          ExecutionMode.ASYNC
       );
     }
 
     if (ExecutionMode.ASYNC != executionMode) {
       throw InvalidInput.exception(
           "The SQL statement API currently does not support the provided execution mode [%s]. "
-          + "Please set \"%s\" to [%s] in the query context",
+          + "Please set [%s] to [%s] in the query context",
           executionMode,
           QueryContexts.CTX_EXECUTION_MODE,
           ExecutionMode.ASYNC
@@ -858,11 +860,12 @@ public class SqlStatementResource
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
                               StringUtils.format(
-                                  "The statement sql api cannot read from select destination [%s=%s] since its not configured. "
-                                  + "Its recommended to configure durable storage as it allows the user to fetch big results. "
-                                  + "Please contact your cluster admin to configure durable storage.",
-                                  MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                                  MSQSelectDestination.DURABLE_STORAGE.name()
+                                  "The SQL Statement API cannot read from the select destination [%s] provided "
+                                  + "in the query context [%s] since it is not configured. It is recommended to configure the durable storage "
+                                  + "as it allows the user to fetch large result sets. Please contact your cluster admin to "
+                                  + "configure durable storage.",
+                                  MSQSelectDestination.DURABLE_STORAGE.name(),
+                                  MultiStageQueryContext.CTX_SELECT_DESTINATION
                               )
                           );
     }

@@ -94,13 +94,13 @@ public class ExternalOperatorConversion extends DruidExternTableMacroConversion
       final String sigValue = CatalogUtils.getString(args, SIGNATURE_PARAM);
       if (sigValue == null && columns == null) {
         throw InvalidInput.exception(
-            "EXTERN requires either a %s value or an EXTEND clause",
+            "EXTERN requires either a [%s] value or an EXTEND clause",
             SIGNATURE_PARAM
         );
       }
       if (sigValue != null && columns != null) {
         throw InvalidInput.exception(
-            "EXTERN requires either a %s value or an EXTEND clause, but not both",
+            "EXTERN requires either a [%s] value or an EXTEND clause, but not both",
             SIGNATURE_PARAM
         );
       }

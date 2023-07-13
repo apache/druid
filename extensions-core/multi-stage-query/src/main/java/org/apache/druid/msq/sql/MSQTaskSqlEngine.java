@@ -230,9 +230,9 @@ public class MSQTaskSqlEngine implements SqlEngine
                           .ofCategory(DruidException.Category.DEFENSIVE)
                           .build(
                               e,
-                              "Invalid %s: %s",
-                              DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY,
-                              plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
+                              "[%s] is not a valid value for [%s]",
+                              plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY),
+                              DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY
                           );
 
     }
