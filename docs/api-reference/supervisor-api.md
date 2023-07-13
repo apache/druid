@@ -35,7 +35,7 @@ In this document, `http://<SERVICE_IP>:<SERVICE_PORT>` is a placeholder for the 
 
 <code className="getAPI">GET</code> `/druid/indexer/v1/supervisor`
 
-Retrieves an array of active Supervisors. Returns a response object that includes an array of strings representing the names of the active Supervisors. An empty array will be returned if there are no active Supervisors.
+Retrieves an array of active Supervisors. Returns a response object that includes an array of strings representing the names of the active Supervisors. If there are no active Supervisors, it returns an empty array.
 
 #### Responses
 
@@ -81,7 +81,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 #### URL
 
-`GET /druid/indexer/v1/supervisor?full`
+<code className="getAPI">GET</code> `/druid/indexer/v1/supervisor?full`
 
 Retrieves an array of active Supervisor objects. Each object has properties relevant to the Supervisor: `id`, `state`, `detailedState`, `healthy`, and `spec`. 
 
@@ -751,9 +751,9 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 ### Get Supervisor state 
 
-`GET /druid/indexer/v1/supervisor?state=true`
+<code className="getAPI">GET</code> `/druid/indexer/v1/supervisor?state=true`
 
-Retrieves an array of objects of the currently active Supervisors and their current state. An empty array will be returned if there are no active Supervisors.
+Retrieves an array of objects of the currently active Supervisors and their current state. If there are no active Supervisors, it returns an empty array.
 
 See the following table for details on properties within the response object:
 |Field|Type|Description|
@@ -821,7 +821,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 #### URL
 
-`GET /druid/indexer/v1/supervisor/{supervisorId}`
+<code className="getAPI">GET</code> `/druid/indexer/v1/supervisor/{supervisorId}`
 
 Retrieves the current spec for the Supervisor with the provided ID. The returned Supervisor spec specifies the `dataSchema`, `ioConfig`, and `tuningConfig`. 
 
@@ -1171,7 +1171,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ### Get Supervisor status
 
 #### URL
-`GET /druid/indexer/v1/supervisor/{supervisorId}/status`
+<code className="getAPI">GET</code> `/druid/indexer/v1/supervisor/{supervisorId}/status`
 
 Retrieves a current status report of the Supervisor with the provided ID. The report contains the state of the tasks managed by the Supervisor and an array of recently thrown exceptions. The possible `state` values are: [`PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`, `UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`].
 
@@ -1267,9 +1267,11 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 #### URL
 
-`GET /druid/indexer/v1/supervisor/history`
+<code className="getAPI">GET</code> `/druid/indexer/v1/supervisor/history`
 
 Retrieve an audit history of specs for all Supervisors (current and past).
+
+An audit history of a Supervisor provides a comprehensive log of events, including its configuration, creation, suspension, and modification history.
 
 #### Responses
 
@@ -1619,9 +1621,11 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 #### URL
 
-`GET /druid/indexer/v1/supervisor/{supervisorId}/history`
+<code className="getAPI">GET</code> `/druid/indexer/v1/supervisor/{supervisorId}/history`
 
 Retrieve an audit history of specs for the Supervisor with the provided ID.
+
+An audit history of a Supervisor provides a comprehensive log of events, including its configuration, creation, suspension, and modification history. 
 
 #### Responses
 
@@ -1629,7 +1633,7 @@ Retrieve an audit history of specs for the Supervisor with the provided ID.
 
 <!--200 SUCCESS-->
 <br/>
-*Successfully retrieved audit history for supervisor* 
+*Successfully retrieved audit history for Supervisor* 
 <!--404 NOT FOUND-->
 <br/>
 *Invalid supervisor ID* 
@@ -1975,7 +1979,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 #### URL
 
-`POST /druid/indexer/v1/supervisor`
+<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor`
 
 Creates a new Supervisor or updates an existing one for the same datasource with a new schema and configuration. 
 
@@ -2132,7 +2136,7 @@ Content-Length: 1359
 ### Suspend a running Supervisor
 
 #### URL
-`POST /druid/indexer/v1/supervisor/{supervisorId}/suspend`
+<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/suspend`
 
 Suspends the current running Supervisor of the provided ID. Returns the updated Supervisor spec where the `suspended` property is set to `true`. A suspended Supervisor will continue to emit logs and metrics.
 
@@ -2484,7 +2488,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ### Suspend all Supervisors
 
 #### URL
-`POST /druid/indexer/v1/supervisor/suspendAll`
+<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/suspendAll`
 
 Suspends all Supervisors.
 
@@ -2532,7 +2536,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 #### URL
 
-`POST /druid/indexer/v1/supervisor/{supervisorId}/resume`
+<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/resume`
 
 Resumes indexing tasks for a Supervisor. Returns an updated Supervisor spec with the `suspended` property set to `false`.
 
@@ -2884,7 +2888,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ### Resume all Supervisors
 
 #### URL
-`POST /druid/indexer/v1/supervisor/resumeAll`
+<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/resumeAll`
 
 Resumes all Supervisors. 
 
@@ -2932,7 +2936,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ### Reset a Supervisor
 
 #### URL
-`POST /druid/indexer/v1/supervisor/{supervisorId}/reset`
+<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/reset`
 
 Resets the specified supervisor. This endpoint clears stored offsets, causing the Supervisor to start reading offsets from either the earliest or the latest offsets in Kafka. It kills and recreates active tasks to read from valid offsets. 
 
@@ -2983,7 +2987,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ### Terminate a Supervisor
 
 #### URL 
-`POST /druid/indexer/v1/supervisor/{supervisorId}/terminate`
+<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/terminate`
 
 Terminate a Supervisor of the provided ID and its associated indexing tasks, triggering the publishing of their segments. When terminated, a tombstone marker will be placed in the database to prevent reloading on restart. 
 
@@ -3035,7 +3039,7 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 #### URL
 
-`POST /druid/indexer/v1/supervisor/terminateAll`
+<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/terminateAll`
 
 Terminate all Supervisors. Terminated Supervisors will still exist in the metadata store and their history can be retrieved.
 
@@ -3084,6 +3088,6 @@ Host: http://<ROUTER_IP>:<ROUTER_PORT>
 
 #### URL
 
-`POST /druid/indexer/v1/supervisor/{supervisorId}/shutdown`
+<code className="postAPI">POST</code> `/druid/indexer/v1/supervisor/{supervisorId}/shutdown`
 
 Shuts down a supervisor. This API is depreciated and will be removed in future releases. Use the equivalent [terminate](#terminate-a-supervisor) endpoint instead. 
