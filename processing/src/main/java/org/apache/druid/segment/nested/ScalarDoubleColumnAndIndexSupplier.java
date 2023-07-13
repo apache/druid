@@ -198,7 +198,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
       return (T) (NullValueIndex) () -> nullIndex;
     } else if (clazz.equals(TypedValueIndex.class)) {
       return (T) new DoubleValueIndex();
-    }  else if (clazz.equals(StringValueSetIndex.class)) {
+    } else if (clazz.equals(StringValueSetIndex.class)) {
       return (T) new DoubleStringValueSetIndex();
     } else if (clazz.equals(NumericRangeIndex.class)) {
       return (T) new DoubleNumericRangeIndex();

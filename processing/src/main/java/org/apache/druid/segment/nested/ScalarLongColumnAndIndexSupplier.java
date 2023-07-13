@@ -198,7 +198,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
       return (T) (NullValueIndex) () -> nullIndex;
     } else if (clazz.equals(TypedValueIndex.class)) {
       return (T) new LongValueIndex();
-    }  else if (clazz.equals(StringValueSetIndex.class)) {
+    } else if (clazz.equals(StringValueSetIndex.class)) {
       return (T) new LongStringValueSetIndex();
     } else if (clazz.equals(NumericRangeIndex.class)) {
       return (T) new LongNumericRangeIndex();
