@@ -536,7 +536,8 @@ public class SketchAggregationTest
                                                  "p2",
                                                  new FieldAccessPostAggregator("f2", "a2"),
                                                  null
-                                             ),new SketchEstimatePostAggregator(
+                                             ),
+                                             new SketchEstimatePostAggregator(
                                                  "p3",
                                                  new FieldAccessPostAggregator("f3", "a3"),
                                                  null
@@ -550,7 +551,8 @@ public class SketchAggregationTest
                                                  "p5",
                                                  new FieldAccessPostAggregator("f5", "a5"),
                                                  null
-                                             ),new SketchEstimatePostAggregator(
+                                             ),
+                                             new SketchEstimatePostAggregator(
                                                  "p6",
                                                  new FieldAccessPostAggregator("f6", "a6"),
                                                  null

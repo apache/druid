@@ -19,11 +19,13 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll.sql;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.StringUtils;
@@ -32,6 +34,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -257,8 +260,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   ) throws IOException
   {
     HllSketchModule.registerSerde();
+    ObjectMapper mapper = injector.getInstance(ObjectMapper.class);
     final QueryableIndex index = IndexBuilder
-        .create()
+        .create(mapper)
         .tmpDir(temporaryFolder.newFolder())
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(
@@ -279,6 +283,36 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
         .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
         .buildMMappedIndex();
 
+    final QueryableIndex indexAllTypesAuto =
+        IndexBuilder.create(mapper)
+                    .tmpDir(temporaryFolder.newFolder())
+                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                    .schema(
+                        new IncrementalIndexSchema.Builder()
+                            .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                            .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                            .withMetrics(
+                                new HllSketchBuildAggregatorFactory("hll0", "arrayString", null, null, null, false, false, true),
+                                new HllSketchBuildAggregatorFactory("hll1", "arrayLong", null, null, null, false, false, true),
+                                new HllSketchBuildAggregatorFactory("hll2", "arrayDouble", null, null, null, false, false, true),
+                                new HllSketchBuildAggregatorFactory("hll3", "arrayString", null, null, null, false, false, false),
+                                new HllSketchBuildAggregatorFactory("hll4", "arrayLong", null, null, null, false, false, false),
+                                new HllSketchBuildAggregatorFactory("hll5", "arrayDouble", null, null, null, false, false, false),
+                                new CountAggregatorFactory("cnt")
+                            )
+                            .withRollup(false)
+                            .build()
+                    )
+                    .inputSource(
+                        ResourceInputSource.of(
+                            NestedDataTestUtils.class.getClassLoader(),
+                            NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
+                        )
+                    )
+                    .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+                    .inputTmpDir(temporaryFolder.newFolder())
+                    .buildMMappedIndex();
+
     return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
@@ -288,6 +322,15 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                    .size(0)
                    .build(),
         index
+    ).add(
+        DataSegment.builder()
+                   .dataSource("all_types")
+                   .interval(indexAllTypesAuto.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        indexAllTypesAuto
     );
   }
 
@@ -1269,6 +1312,104 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{4.0D}
+        )
+    );
+  }
+
+  @Test
+  public void testArrays()
+  {
+    testQuery(
+        "SELECT"
+        + " HLL_SKETCH_ESTIMATE(DS_HLL(arrayString)),"
+        + " HLL_SKETCH_ESTIMATE(DS_HLL(arrayLong)),"
+        + " HLL_SKETCH_ESTIMATE(DS_HLL(arrayDouble)),"
+        + " HLL_SKETCH_ESTIMATE(DS_HLL(hll0)),"
+        + " HLL_SKETCH_ESTIMATE(DS_HLL(hll1)),"
+        + " HLL_SKETCH_ESTIMATE(DS_HLL(hll2)),"
+        + " HLL_SKETCH_ESTIMATE(DS_HLL(hll3)),"
+        + " HLL_SKETCH_ESTIMATE(DS_HLL(hll4)),"
+        + " HLL_SKETCH_ESTIMATE(DS_HLL(hll5))"
+        + " FROM druid.all_types",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource("all_types")
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      new HllSketchBuildAggregatorFactory("a0", "arrayString", null, null, null, false, true, true),
+                      new HllSketchBuildAggregatorFactory("a1", "arrayLong", null, null, null, false, true, true),
+                      new HllSketchBuildAggregatorFactory("a2", "arrayDouble", null, null, null, false, true, true),
+                      new HllSketchMergeAggregatorFactory("a3", "hll0", null, null, null, false, true),
+                      new HllSketchMergeAggregatorFactory("a4", "hll1", null, null, null, false, true),
+                      new HllSketchMergeAggregatorFactory("a5", "hll2", null, null, null, false, true),
+                      new HllSketchMergeAggregatorFactory("a6", "hll3", null, null, null, false, true),
+                      new HllSketchMergeAggregatorFactory("a7", "hll4", null, null, null, false, true),
+                      new HllSketchMergeAggregatorFactory("a8", "hll5", null, null, null, false, true)
+                  )
+                  .postAggregators(
+                      new HllSketchToEstimatePostAggregator(
+                          "p1",
+                          new FieldAccessPostAggregator("p0", "a0"),
+                          false
+                      ),
+                      new HllSketchToEstimatePostAggregator(
+                          "p3",
+                          new FieldAccessPostAggregator("p2", "a1"),
+                          false
+                      ),
+                      new HllSketchToEstimatePostAggregator(
+                          "p5",
+                          new FieldAccessPostAggregator("p4", "a2"),
+                          false
+                      ),
+                      // pre-aggregated array counts
+                      new HllSketchToEstimatePostAggregator(
+                          "p7",
+                          new FieldAccessPostAggregator("p6", "a3"),
+                          false
+                      ),
+                      new HllSketchToEstimatePostAggregator(
+                          "p9",
+                          new FieldAccessPostAggregator("p8", "a4"),
+                          false
+                      ),
+                      new HllSketchToEstimatePostAggregator(
+                          "p11",
+                          new FieldAccessPostAggregator("p10", "a5"),
+                          false
+                      ),
+                      // array element counts
+                      new HllSketchToEstimatePostAggregator(
+                          "p13",
+                          new FieldAccessPostAggregator("p12", "a6"),
+                          false
+                      ),
+                      new HllSketchToEstimatePostAggregator(
+                          "p15",
+                          new FieldAccessPostAggregator("p14", "a7"),
+                          false
+                      ),
+                      new HllSketchToEstimatePostAggregator(
+                          "p17",
+                          new FieldAccessPostAggregator("p16", "a8"),
+                          false
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{
+                4.000000029802323D,
+                4.000000029802323D,
+                4.000000029802323D,
+                4.000000029802323D,
+                4.000000029802323D,
+                4.000000029802323D,
+                5.000000049670538D,
+                4.000000029802323D,
+                6.000000074505807D}
         )
     );
   }

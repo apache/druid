@@ -117,7 +117,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
           finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
           null,
           null,
-          false
+          columnArg.getDruidType() != null && columnArg.getDruidType().isArray()
       );
     } else {
       final RelDataType dataType = columnRexNode.getType();
@@ -149,7 +149,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
           finalizeSketch || SketchQueryContext.isFinalizeOuterSketches(plannerContext),
           null,
           null,
-          false
+          inputType.isArray()
       );
     }
 

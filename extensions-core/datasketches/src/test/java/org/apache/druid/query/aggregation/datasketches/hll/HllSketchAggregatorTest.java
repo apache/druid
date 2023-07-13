@@ -444,12 +444,12 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   public void testArrays() throws Exception
   {
     AggregatorFactory[] aggs = new AggregatorFactory[]{
-            new HllSketchBuildAggregatorFactory("hll0", "arrayString", null, null, null, false, false, true),
-            new HllSketchBuildAggregatorFactory("hll1", "arrayLong", null, null, null, false, false, true),
-            new HllSketchBuildAggregatorFactory("hll2", "arrayDouble", null, null, null, false, false, true),
-            new HllSketchBuildAggregatorFactory("hll3", "arrayString", null, null, null, false, false, false),
-            new HllSketchBuildAggregatorFactory("hll4", "arrayLong", null, null, null, false, false, false),
-            new HllSketchBuildAggregatorFactory("hll5", "arrayDouble", null, null, null, false, false, false)
+        new HllSketchBuildAggregatorFactory("hll0", "arrayString", null, null, null, false, false, true),
+        new HllSketchBuildAggregatorFactory("hll1", "arrayLong", null, null, null, false, false, true),
+        new HllSketchBuildAggregatorFactory("hll2", "arrayDouble", null, null, null, false, false, true),
+        new HllSketchBuildAggregatorFactory("hll3", "arrayString", null, null, null, false, false, false),
+        new HllSketchBuildAggregatorFactory("hll4", "arrayLong", null, null, null, false, false, false),
+        new HllSketchBuildAggregatorFactory("hll5", "arrayDouble", null, null, null, false, false, false)
     };
 
     IndexBuilder bob = IndexBuilder.create(timeseriesHelper.getObjectMapper())
