@@ -227,8 +227,8 @@ public class SystemSchema extends AbstractSchema
         SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper),
         SERVERS_TABLE, new ServersTable(druidNodeDiscoveryProvider, serverInventoryView, authorizerMapper, overlordClient, coordinatorDruidLeaderClient),
         SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
-        TASKS_TABLE, new TasksTable(overlordClient, jsonMapper, authorizerMapper),
-        SUPERVISOR_TABLE, new SupervisorsTable(overlordClient, jsonMapper, authorizerMapper)
+        TASKS_TABLE, new TasksTable(overlordClient, authorizerMapper),
+        SUPERVISOR_TABLE, new SupervisorsTable(overlordClient, authorizerMapper)
     );
   }
 
@@ -772,17 +772,14 @@ public class SystemSchema extends AbstractSchema
   static class TasksTable extends AbstractTable implements ScannableTable
   {
     private final OverlordClient overlordClient;
-    private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
 
     public TasksTable(
         OverlordClient overlordClient,
-        ObjectMapper jsonMapper,
         AuthorizerMapper authorizerMapper
     )
     {
       this.overlordClient = overlordClient;
-      this.jsonMapper = jsonMapper;
       this.authorizerMapper = authorizerMapper;
     }
 
@@ -918,17 +915,14 @@ public class SystemSchema extends AbstractSchema
   static class SupervisorsTable extends AbstractTable implements ScannableTable
   {
     private final OverlordClient overlordClient;
-    private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
 
     public SupervisorsTable(
         OverlordClient overlordClient,
-        ObjectMapper jsonMapper,
         AuthorizerMapper authorizerMapper
     )
     {
       this.overlordClient = overlordClient;
-      this.jsonMapper = jsonMapper;
       this.authorizerMapper = authorizerMapper;
     }
 

@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.Futures;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.client.CoordinatorServerView;
@@ -592,8 +593,8 @@ public class DataSourcesResourceTest
     Interval theInterval = Intervals.of(interval.replace('_', '/'));
 
     OverlordClient overlordClient = EasyMock.createStrictMock(OverlordClient.class);
-    overlordClient.runKillTask("api-issued", "datasource1", theInterval);
-    EasyMock.expectLastCall().once();
+    EasyMock.expect(overlordClient.runKillTask("api-issued", "datasource1", theInterval))
+            .andReturn(Futures.immediateFuture(null));
     EasyMock.replay(overlordClient, server);
 
     DataSourcesResource dataSourcesResource =
@@ -601,7 +602,7 @@ public class DataSourcesResourceTest
     Response response = dataSourcesResource.killUnusedSegmentsInInterval("datasource1", interval);
 
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(null, response.getEntity());
+    Assert.assertNull(response.getEntity());
     EasyMock.verify(overlordClient, server);
   }
 

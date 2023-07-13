@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -51,6 +50,7 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
@@ -86,7 +86,6 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
-import org.apache.druid.utils.CollectionUtils;
 import org.apache.druid.utils.Streams;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -1091,8 +1090,7 @@ public class CompactSegmentsTest
     Mockito.when(mockClient.taskStatuses(null, null, 0))
            .thenReturn(
                Futures.immediateFuture(
-                   CollectionUtils.closeableIterator(
-                       ImmutableList.of(runningConflictCompactionTask).iterator(), null)));
+                   CloseableIterators.withEmptyBaggage(ImmutableList.of(runningConflictCompactionTask).iterator())));
     Mockito.when(mockClient.findLockedIntervals(ArgumentMatchers.any()))
            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
     Mockito.when(mockClient.cancelTask(conflictTaskId))
@@ -2060,7 +2058,7 @@ public class CompactSegmentsTest
         @Nullable Integer maxCompletedTasks
     )
     {
-      return Futures.immediateFuture(CollectionUtils.closeableIterator(Collections.emptyIterator(), null));
+      return Futures.immediateFuture(CloseableIterators.withEmptyBaggage(Collections.emptyIterator()));
     }
 
     @Override
@@ -2244,7 +2242,7 @@ public class CompactSegmentsTest
   {
     final ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
     Mockito.when(mockClient.taskStatuses(null, null, 0))
-           .thenReturn(Futures.immediateFuture(CollectionUtils.closeableIterator(Collections.emptyIterator(), null)));
+           .thenReturn(Futures.immediateFuture(CloseableIterators.withEmptyBaggage(Collections.emptyIterator())));
     Mockito.when(mockClient.findLockedIntervals(ArgumentMatchers.any()))
            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
     Mockito.when(mockClient.getTotalWorkerCapacity())

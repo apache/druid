@@ -43,9 +43,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -59,9 +57,6 @@ public class OverlordClientImplTest
   private ObjectMapper jsonMapper;
   private MockServiceClient serviceClient;
   private OverlordClient overlordClient;
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Before
   public void setup()

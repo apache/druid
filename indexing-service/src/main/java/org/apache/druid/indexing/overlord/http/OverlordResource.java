@@ -185,7 +185,7 @@ public class OverlordResource
   }
 
   /**
-   * Warning, magic: {@link org.apache.druid.client.indexing.HttpIndexingServiceClient#runTask} may call this method
+   * Warning, magic: {@link org.apache.druid.rpc.indexing.OverlordClient#runTask} may call this method
    * remotely with {@link ClientTaskQuery} objects, but we deserialize {@link Task} objects. See the comment for {@link
    * ClientTaskQuery} for details.
    */
