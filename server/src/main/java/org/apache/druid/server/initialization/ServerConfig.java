@@ -179,6 +179,13 @@ public class ServerConfig
   @JsonProperty
   private boolean enableHSTS = false;
 
+  /**
+   * This is a feature flag to enable query requests queuing when admins want to reserve some threads for
+   * non-query requests. This feature flag is not documented and can be removed in the future.
+   */
+  @JsonProperty
+  private boolean enableQueryRequestsQueuing = false;
+
   @JsonProperty
   private boolean showDetailedJettyErrors = true;
 
@@ -288,6 +295,11 @@ public class ServerConfig
     return enableHSTS;
   }
 
+  public boolean isEnableQueryRequestsQueuing()
+  {
+    return enableQueryRequestsQueuing;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -318,7 +330,8 @@ public class ServerConfig
            allowedHttpMethods.equals(that.allowedHttpMethods) &&
            errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy) &&
            Objects.equals(contentSecurityPolicy, that.getContentSecurityPolicy()) &&
-           enableHSTS == that.enableHSTS;
+           enableHSTS == that.enableHSTS &&
+           enableQueryRequestsQueuing == that.enableQueryRequestsQueuing;
   }
 
   @Override
@@ -345,7 +358,8 @@ public class ServerConfig
         errorResponseTransformStrategy,
         showDetailedJettyErrors,
         contentSecurityPolicy,
-        enableHSTS
+        enableHSTS,
+        enableQueryRequestsQueuing
     );
   }
 
@@ -374,6 +388,7 @@ public class ServerConfig
            ", showDetailedJettyErrors=" + showDetailedJettyErrors +
            ", contentSecurityPolicy=" + contentSecurityPolicy +
            ", enableHSTS=" + enableHSTS +
+           ", enableQueryRequestsQueuing=" + enableQueryRequestsQueuing +
            '}';
   }
 

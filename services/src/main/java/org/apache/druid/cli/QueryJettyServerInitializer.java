@@ -52,7 +52,6 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -109,13 +108,14 @@ public class QueryJettyServerInitializer implements JettyServerInitializer
     }
 
     if (querySchedulerConfig.getNumThreads() > 0
-        && querySchedulerConfig.getNumThreads() < serverConfig.getNumThreads()) {
-      // Add QoS filter for query requests
+        && querySchedulerConfig.getNumThreads() < serverConfig.getNumThreads()
+        && serverConfig.isEnableQueryRequestsQueuing()) {
+      // Add QoS filter for query requests so they don't take up more than querySchedulerConfig#numThreads
       log.info("Enabling QoS Filter on query requests with limit [%d].", querySchedulerConfig.getNumThreads());
       JettyBindings.QosFilterHolder filterHolder = new JettyBindings.QosFilterHolder(
           new String[]{"/druid/v2/*"},
           querySchedulerConfig.getNumThreads(),
-          TimeUnit.MINUTES.toMillis(5)
+          serverConfig.getMaxQueryTimeout()
       );
       JettyServerInitUtils.addFilters(root, Collections.singleton(filterHolder));
     }
