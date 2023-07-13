@@ -163,6 +163,22 @@ public class OverlordClientImplTest
   }
 
   @Test
+  public void test_taskStatuses_null_foo_null() throws Exception
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/tasks?datasource=foo"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(STATUSES)
+    );
+
+    Assert.assertEquals(
+        STATUSES,
+        ImmutableList.copyOf(overlordClient.taskStatuses(null, "foo", null).get())
+    );
+  }
+
+  @Test
   public void test_taskStatuses_RUNNING_foo_zero() throws Exception
   {
     serviceClient.expectAndRespond(
@@ -178,6 +194,25 @@ public class OverlordClientImplTest
     Assert.assertEquals(
         STATUSES,
         ImmutableList.copyOf(overlordClient.taskStatuses("RUNNING", "foo?", 0).get())
+    );
+  }
+
+  @Test
+  public void test_taskStatuses_null_null_zero() throws Exception
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/indexer/v1/tasks?maxCompletedTasks=0"
+        ),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(STATUSES)
+    );
+
+    Assert.assertEquals(
+        STATUSES,
+        ImmutableList.copyOf(overlordClient.taskStatuses(null, null, 0).get())
     );
   }
 
