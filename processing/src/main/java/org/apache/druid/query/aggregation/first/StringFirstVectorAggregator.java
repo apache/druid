@@ -38,7 +38,7 @@ public class StringFirstVectorAggregator implements VectorAggregator
   private final BaseLongVectorValueSelector timeSelector;
   private final VectorObjectSelector valueSelector;
   private final int maxStringBytes;
-  //protected long firstTime;
+
 
   public StringFirstVectorAggregator(
       BaseLongVectorValueSelector timeSelector,

@@ -34,6 +34,7 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -41,7 +42,10 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.BaseLongVectorValueSelector;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
@@ -105,6 +109,8 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   private final String timeColumn;
   protected final int maxStringBytes;
 
+  private boolean getFirstElementFromMvd;
+
   @JsonCreator
   public StringFirstAggregatorFactory(
       @JsonProperty("name") String name,
@@ -126,7 +132,9 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     this.maxStringBytes = maxStringBytes == null
                           ? StringFirstAggregatorFactory.DEFAULT_MAX_STRING_SIZE
                           : maxStringBytes;
+    this.getFirstElementFromMvd = false;
   }
+
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
@@ -163,10 +171,30 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
-    ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
-    VectorObjectSelector vSelector = selectorFactory.makeObjectSelector(fieldName);
     BaseLongVectorValueSelector timeSelector = (BaseLongVectorValueSelector) selectorFactory.makeValueSelector(
         timeColumn);
+    ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
+    if (capabilities != null) {
+      if (capabilities.is(ValueType.STRING) && capabilities.isDictionaryEncoded().isTrue()) {
+        // Case 1: Multivalue string with dimension selector
+        if (capabilities.hasMultipleValues().isTrue()) {
+          if (isGetFirstElementFromMvd()) {
+            MultiValueDimensionVectorSelector mSelector = selectorFactory.makeMultiValueDimensionSelector(
+                DefaultDimensionSpec.of(
+                    fieldName));
+            return new MultiStringFirstDimensionVectorAggregator(timeSelector, mSelector, maxStringBytes);
+          }
+        } else {
+          // Case 2: Single string with dimension selector
+          SingleValueDimensionVectorSelector sSelector = selectorFactory.makeSingleValueDimensionSelector(
+              DefaultDimensionSpec.of(
+                  fieldName));
+          return new SingleStringFirstDimensionVectorAggregator(timeSelector, sSelector, maxStringBytes);
+        }
+      }
+    }
+    // Case 3: return vector object selector
+    VectorObjectSelector vSelector = selectorFactory.makeObjectSelector(fieldName);
     if (capabilities != null) {
       return new StringFirstVectorAggregator(timeSelector, vSelector, maxStringBytes);
     } else {
@@ -253,6 +281,16 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
   public List<String> requiredFields()
   {
     return Arrays.asList(timeColumn, fieldName);
+  }
+
+  public boolean isGetFirstElementFromMvd()
+  {
+    return getFirstElementFromMvd;
+  }
+
+  public void setGetFirstElementFromMvd(boolean getFirstElementFromMvd)
+  {
+    this.getFirstElementFromMvd = getFirstElementFromMvd;
   }
 
   @Override

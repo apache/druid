@@ -61,9 +61,10 @@ public class UnnestDataSource implements DataSource
       DimFilter unnestFilter
   )
   {
-    this.base = dataSource;
-    this.virtualColumn = virtualColumn;
-    this.unnestFilter = unnestFilter;
+    // select * from UNNEST(ARRAY[1,2,3]) as somu(d3) where somu.d3 IN ('a','b')
+    this.base = dataSource; // table
+    this.virtualColumn = virtualColumn; // MV_TO_ARRAY
+    this.unnestFilter = unnestFilter; // d3 in (a,b)
   }
 
   @JsonCreator
