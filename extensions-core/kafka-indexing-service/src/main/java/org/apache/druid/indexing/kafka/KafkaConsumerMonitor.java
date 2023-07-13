@@ -84,7 +84,7 @@ public class KafkaConsumerMonitor extends AbstractMonitor
   private static boolean isTopicMetric(final MetricName metricName)
   {
     // Certain metrics are emitted both as grand totals and broken down by topic; we want to ignore the grand total and
-    // only look at the per-topic metrics. See https://kafka.apache.org/documentation/#new_consumer_fetch_monitoring.
+    // only look at the per-topic metrics. See https://kafka.apache.org/documentation/#consumer_fetch_monitoring.
     return TOPIC_METRIC_TAGS.equals(metricName.tags().keySet())
            && !Strings.isNullOrEmpty(metricName.tags().get(TOPIC_TAG));
   }
