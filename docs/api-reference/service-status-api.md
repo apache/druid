@@ -32,7 +32,7 @@ In this document, `http://<SERVICE_IP>:<SERVICE_PORT>` is a placeholder for the 
 
 All services support the following endpoints.
 
-Each endpoint can be used with the ports for each type of service.  The following table contains port addresses for a local configuration:
+You can use each endpoint with the ports for each type of service.  The following table contains port addresses for a local configuration:
 
 |Service|Port address|
 | ----------- | ----------- |
@@ -387,12 +387,12 @@ For nodes that use Zookeeper segment discovery, a response of `{"selfDiscovered"
 
 <!--cURL-->
 ```shell
-curl "{router_domain}/status/selfDiscovered/status"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/status/selfDiscovered/status"
 ```
 <!--HTTP-->
 ```http
 GET /status/selfDiscovered/status HTTP/1.1
-Host: {router_domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -435,12 +435,12 @@ Use this endpoint for monitoring checks that are unable to examine the response 
 
 <!--cURL-->
 ```shell
-curl "{router_domain}/status/selfDiscovered"
+curl "http://<ROUTER_IP>:<ROUTER_PORT>/status/selfDiscovered"
 ```
 <!--HTTP-->
 ```http
 GET /status/selfDiscovered HTTP/1.1
-Host: {router_domain}
+Host: http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
 <!--END_DOCUSAURUS_CODE_TABS-->
@@ -521,12 +521,12 @@ Use this endpoint as a load balancer status check when you only want the active 
 <!--DOCUSAURUS_CODE_TABS-->
 <!--cURL-->
 ```shell
-curl "http://<COORDINATOR_IP>:<COORDINATOR_IP>/druid/coordinator/v1/isLeader"
+curl "http://<COORDINATOR_IP>:<COORDINATOR_PORT>/druid/coordinator/v1/isLeader"
 ```
 <!--HTTP-->
 ```http
 GET /druid/coordinator/v1/isLeader HTTP/1.1
-Host: http://<COORDINATOR_IP>:<COORDINATOR_IP>
+Host: http://<COORDINATOR_IP>:<COORDINATOR_PORT>
 ```
 <!--END_DOCUSAURUS_CODE_TABS-->
 
@@ -879,7 +879,7 @@ Host: http://<MIDDLEMANAGER_IP>:<MIDDLEMANAGER_PORT>
 
 Retrieves a JSON object of the form `{"cacheInitialized":<value>}`, where value is either `true` or `false` indicating if all segments in the local cache have been loaded. 
 
-Use this endpoint to know when a Historical process is ready to be queried after a restart.
+Use this endpoint to know when a Broker service is ready to accept queries after a restart.
 
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
@@ -961,7 +961,7 @@ A successful response to this endpoint results in an empty response body.
 
 Retrieves a flag indicating if the Broker knows about all segments in the cluster. 
 
-Use this endpoint to know when a Broker service is ready to be queried after a restart.
+Use this endpoint to know when a Broker service is ready to accept queries after a restart.
 
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
@@ -1002,7 +1002,7 @@ Host: http://<BROKER_IP>:<BROKER_PORT>
 
 <code class="getAPI">GET</code> `/druid/broker/v1/readiness`
 
-Retrieves a status code indicating if the Broker knows about all segments in the cluster and is ready to be queried after a restart. Similar to `/druid/broker/v1/loadstatus`, but instead of returning a JSON, it returns status codes.
+Retrieves a status code to indicate Broker readiness. Readiness signifies the Broker knows about all segments in the cluster and is ready to accept queries after a restart. Similar to `/druid/broker/v1/loadstatus`, but instead of returning a JSON, it returns status codes.
 
 #### Responses
 <!--DOCUSAURUS_CODE_TABS-->
