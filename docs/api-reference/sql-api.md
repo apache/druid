@@ -187,3 +187,56 @@ Druid returns an HTTP 404 response in the following cases:
   - The query completes before your cancellation request is processed.
   
 Druid returns an HTTP 403 response for authorization failure.
+
+## Query from deep storage
+
+> The `/sql/statements` endpoint used to query from deep storage is currently exprimental.
+
+### Submit a query
+
+To run a query from deep storage, send your query to the Router using the POST method:
+
+```
+POST https://ROUTER:8888/druid/v2/sql/statements
+```
+
+Submitting a query from deep storage uses the same syntax as any other Druid SQL query where the query is contained in the "query" field in the JSON object within the request payload. For example:
+
+```json
+{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}
+```  
+
+Generally, the request body fields are the same between the `sql` and `sql/statements` endpoints. For information about the available fields, see [submit a query to the `sql` endpoint](#submit-a-query).
+
+Keep the following in mind when submitting queries to the `sql/statements` endpoint:
+
+- There are additional context parameters  for `sql/statements`: 
+
+   - `mode`  determines how query results are fetched. The currently supported mode is "ASYNC". You can attempt to fetch results before the query completes to get partial results.
+   - `selectDestination` instructs Druid to write the results from SELECT queries to durable storage if you have [durable storage enabled for MSQ](../multi-stage-query/reference.md#durable-storage).
+
+- The only supported results format is JSON.
+- Only the user who submits a query can see the results
+
+### Get query status
+
+```
+GET /sql/statements/{queryID}
+```
+
+Returns the same response as the post API.
+
+
+### Get query results
+
+```
+GET /sql/statements/{queryID}/results?offset=0&numRows=1
+```
+
+Results are separated into `pages`
+
+### Cancel a query
+
+DELETE /sql/statements/{queryID}
+
+Cancels a running/accepted query.

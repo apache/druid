@@ -3,40 +3,66 @@ id: query-deep-storage
 title: "Query from deep storage"
 ---
 
-## Make data available to query from deep storage
+> Query from deep storage is an experimental feature.
 
-All data is available to be queried from deep storage, so you don't need to perform any additional configuration from that perspective. To take advantage of the space savings that querying from deep storage enables though, you need to unload data from Historical processes that you only want to query from deep storage.
+## Segments in deep storage
 
-To do this, you configure the following [load rules](../operations/rule-configuration.md#load-rules):
+Any data you ingest into Druid is available to be queried from deep storage, so you don't need to perform any additional configuration from that perspective. To take advantage of the space savings that querying from deep storage provides though, you need to make sure not all your segments get loaded onto Historical processes.
 
-- `IntervalLoadOnDemandRule`
-- `PeriodLoadOnDemandRule`
-- `ForeverLoadOnDemandRule`
+To do this, configure [load rules](../operations/rule-configuration.md#load-rules) to load only the segments you do want on Historical processes. Any segments that don't fit your load rules will not be available to be queried from the Historical processes but can be queried from deep storage.
 
-Note that some of the segments in a datasource must be loaded onto a Historical process so that Druid can plan the query.
+Note that at least one of the segments in a datasource must be loaded onto a Historical process so that Druid can plan the query. But the segment on the Historical processes does not need to be any specific segment. It can be any segment from the datasource.
+
+You can verify that a segment is not loaded on any Historical tiers by querying the Druid metadata table:
+
+```sql
+SELECT "segment_id", "replication_factor" FROM sys."segments" 
+```
+
+Segments with a `replication_factor` of `0` are not assigned to any Historical tiers and won't get loaded onto them. Queries you run against these segments are run directly against the segment in deep storage.
 
 ## Run a query from deep storage
 
 ### Submit a query
 
-You can query data from deep storage bv submitting a Druid SQL  to the the API using the `POST /sql/statements`  or the Druid console. Druid uses the multi-stage query (MSQ) task engine to perform the query.
+You can query data from deep storage bv submitting a query to the the API using `POST /sql/statements`  or the Druid console. Druid uses the multi-stage query (MSQ) task engine to perform the query.
 
-Querying from deep storage uses the same syntax as any other Druid SQL query. 
+To run a query from deep storage, send your query to the Router using the POST method:
 
+```
+POST https://ROUTER:8888/druid/v2/sql/statements
+```
 
-Additionally, there is a `mode` query context parameter that determines how query results are fetched. The currently supported mode is "ASYNC".
+Submitting a query from deep storage uses the same syntax as any other Druid SQL query where the query is contained in the "query" field in the JSON object within the request payload. For example:
 
-### Retrieve query results
+```json
+{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}
+```  
 
-When you retrieve results for a query from deep storage, you may receive partial results (status code `206`) while the query completes or full results once the query completes (status code `200`). 
+Generally, the request body fields are the same between the `sql` and `sql/statements` endpoints.
+
+The response body includes the query ID, which you use to get the results.
+
+### Get query status
+
+You can check the status of a query with the following API call:
+
+```
+/druid/v2/sql/statements/QUERYID
+```
+
+In addition to the state of the query, such as `ACCEPTED` or `RUNNING`. 
+
+Before you attempt to get results, make sure the state is `SUCCESS`. When you check the status on a successful query,  it includes useful information about your query results including a sample record and information about how the results are organized by `pages`. Each `page` in your results contains a certain number of rows. You can use this as a parameter to refine the results you retrieve.
+
+### Get query results
+
+Only the user who submitted a query can retrieve the results for the query.
 
 Use the following endpoint to retrieve results:
 
 ```
-GET /sq/statements/ID/results?offset=ROW_OFFSET,size=RESULT_SIZE,timeout=TIMEOUT_MS
+GET /druid/v2/sq/statements/QUERYID/results?page=PAGENUMBER,size=RESULT_SIZE,timeout=TIMEOUT_MS
 ```
 
-- `ID`: the query ID from the response when you submitted the query
-- `offset`:
-- `size`
-- `timeout`
+When you try to get results for a query from deep storage, you may receive an error that states the query is still running. Wait until the query completes before you try again.

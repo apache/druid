@@ -220,8 +220,7 @@ available before they are published, since they are only published when the segm
 any additional rows of data.
 2. **Deep storage:** Segment data files are pushed to deep storage once a segment is done being constructed. This
 happens immediately before publishing metadata to the metadata store.
-3. **Availability for querying:** Segments are available for querying on some Druid data server, like a realtime task
-or a Historical process.
+3. **Availability for querying:** Segments are available for querying on some Druid data server, like a realtime task, directly from deep storage, or a Historical process.
 
 You can inspect the state of currently active segments using the Druid SQL
 [`sys.segments` table](../querying/sql-metadata-tables.md#segments-table). It includes the following flags:

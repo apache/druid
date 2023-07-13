@@ -83,6 +83,6 @@ For additional deep storage options, please see our [extensions list](../configu
 
 ## Querying from deep storage
 
-Although not as performant as querying segments stored on disk for Historicals processes, you query from deep storage to access segments that you may not need frequently or with the extreme low latency Druid queries traditionally provide. You trade some performance for a total lower storage cost because you can access more of your data without the need to increase the number or capacity of your Historical processes.
+Although not as performant as querying segments stored on disk for Historicals processes, you can query from deep storage to access segments that you may not need frequently or with the extreme low latency Druid queries traditionally provide. You trade some performance for a total lower storage cost because you can access more of your data without the need to increase the number or capacity of your Historical processes.
 
 For information about how to run queries, see [Query from deep storage](../querying/query-from-deep-storage.md)
