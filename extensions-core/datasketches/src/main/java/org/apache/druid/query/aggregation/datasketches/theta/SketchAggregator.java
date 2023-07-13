@@ -151,7 +151,7 @@ public class SketchAggregator implements Aggregator
       union.update((int[]) update);
     } else if (update instanceof long[]) {
       union.update((long[]) update);
-    } else if (update instanceof Object[]) {
+    } else if (update instanceof Object[] && processAsArrays) {
       final byte[] arrayBytes = ExprEval.toBytesBestEffort(update);
       union.update(arrayBytes);
     } else if (update instanceof List) {

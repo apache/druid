@@ -444,7 +444,7 @@ public class SketchAggregationTest
                                              null,
                                              null,
                                              null,
-                                             false
+                                             true
                                          ),
                                          new SketchMergeAggregatorFactory(
                                              "a1",
@@ -453,7 +453,7 @@ public class SketchAggregationTest
                                              null,
                                              null,
                                              null,
-                                             false
+                                             true
                                          ),
                                          new SketchMergeAggregatorFactory(
                                              "a2",
@@ -462,7 +462,7 @@ public class SketchAggregationTest
                                              null,
                                              null,
                                              null,
-                                             false
+                                             true
                                          ),
                                          new SketchMergeAggregatorFactory(
                                              "a3",
