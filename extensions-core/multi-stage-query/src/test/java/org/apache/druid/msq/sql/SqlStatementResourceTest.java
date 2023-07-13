@@ -783,7 +783,7 @@ public class SqlStatementResourceTest extends MSQTestBase
       assertExceptionMessage(
           resource.doGetResults(queryID, 0L, makeOkRequest()),
           StringUtils.format(
-              "Query[%s] failed. Hit status api for more details.",
+              "Query[%s] failed. Check the status api for more details.",
               queryID
           ),
           Response.Status.BAD_REQUEST
