@@ -393,7 +393,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
     for (final Map.Entry<RowKey, BucketHolder> entry : buckets.entrySet()) {
       BucketHolder bucketHolder = entry.getValue();
       if (bucketHolder != null && bucketHolder.keyCollector.estimatedRetainedKeys() > 1) {
-        Long timeChunk = (Long) trimmedRowReader.read(entry.getKey(), 0);
+        Long timeChunk = clusterBy.getBucketByCount() == 0 ? null : (Long) trimmedRowReader.read(entry.getKey(), 0);
         sortedHolders.add(Pair.of(timeChunk, bucketHolder));
       }
     }
@@ -412,7 +412,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
 
       // Ignore false return, because we wrap all collectors in DelegateOrMinKeyCollector and can be assured that
       // it will downsample all the way to one if needed. Can't do better than that.
-      log.info("Downsampling sketch for timeChunk [%s]: [%s]", timeChunk, bucketHolder.keyCollector);
+      log.debug("Downsampling sketch for timeChunk [%s]: [%s]", timeChunk, bucketHolder.keyCollector);
       bucketHolder.keyCollector.downSample();
       newTotalRetainedBytes += bucketHolder.updateRetainedBytes();
 
