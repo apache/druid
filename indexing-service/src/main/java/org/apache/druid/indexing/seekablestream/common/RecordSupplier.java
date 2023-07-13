@@ -21,6 +21,7 @@ package org.apache.druid.indexing.seekablestream.common;
 
 import com.google.common.annotations.Beta;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.java.util.metrics.Monitor;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -131,6 +132,16 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
    * @return set of partitions
    */
   Set<PartitionIdType> getPartitionIds(String stream);
+
+  /**
+   * Returns a monitor that emits service-specific metrics for this record supplier. For example, this is used by
+   * the KafkaRecordSupplier to emit Kafka consumer metrics.
+   */
+  @Nullable
+  default Monitor monitor()
+  {
+    return null;
+  }
 
   /**
    * close the RecordSupplier

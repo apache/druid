@@ -33,6 +33,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -43,6 +44,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -60,6 +62,7 @@ import java.util.stream.Collectors;
 public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaRecordEntity>
 {
   private final KafkaConsumer<byte[], byte[]> consumer;
+  private final KafkaConsumerMonitor monitor;
   private boolean closed;
 
   public KafkaRecordSupplier(
@@ -77,6 +80,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
   )
   {
     this.consumer = consumer;
+    this.monitor = new KafkaConsumerMonitor(consumer);
   }
 
   @Override
@@ -190,6 +194,13 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
     });
   }
 
+  @Nullable
+  @Override
+  public Monitor monitor()
+  {
+    return monitor;
+  }
+
   @Override
   public void close()
   {
@@ -197,6 +208,8 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long, KafkaR
       return;
     }
     closed = true;
+
+    monitor.stopAfterNextEmit();
     consumer.close();
   }
 
