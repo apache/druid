@@ -28,7 +28,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 
-public class S3InputSourceAdapterTest
+public class S3InputSourceBuilderTest
 {
   @Test
   public void testAdapterGet()
@@ -43,7 +43,7 @@ public class S3InputSourceAdapterTest
         "s3://bar/foo/file3.txt"
     );
 
-    S3InputSourceBuilder s3Adapter = new S3InputSourceBuilder(
+    S3InputSourceBuilder s3Builder = new S3InputSourceBuilder(
         service,
         serverSides3Builder,
         dataConfig,
@@ -53,6 +53,6 @@ public class S3InputSourceAdapterTest
         null,
         null
     );
-    Assert.assertTrue(s3Adapter.generateInputSource(fileUris) instanceof S3InputSource);
+    Assert.assertTrue(s3Builder.generateInputSource(fileUris) instanceof S3InputSource);
   }
 }

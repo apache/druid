@@ -796,14 +796,14 @@ The following is an example of a Combining input source spec:
 
 ## Iceberg input source
 
-> You need to include the `druid-iceberg-extensions` as an extension to use the Iceberg input source.
+> To use the Iceberg input source, add the `druid-iceberg-extensions` extension.
 
-The Iceberg input source is used to read data stored in the Iceberg table format. For a given table, this input source scans up to the latest iceberg snapshot from the configured Hive catalog and the underlying live data files will be ingested using the existing input source formats available in Druid.
+You use the Iceberg input source to read data stored in the Iceberg table format. For a given table, the input source scans up to the latest Iceberg snapshot from the configured Hive catalog. Druid ingests the underlying live data files using the existing input source formats.
 
-The Iceberg input source cannot be independent as it relies on the existing input sources to perform the actual read from the Data files.
-For example, if the warehouse associated with an iceberg catalog is on `S3`, please ensure that the [`druid-s3-extensions`](../development/extensions-core/s3.md) extension is also loaded.
+The Iceberg input source cannot be independent as it relies on the existing input sources to read from the data files.
+For example, if the warehouse associated with an Iceberg catalog is on S3, you must also load the [`druid-s3-extensions`](../development/extensions-core/s3.md) extension.
 
-Sample specs:
+The following is a sample spec for a HDFS warehouse source:
 
 ```json
 ...
@@ -846,6 +846,8 @@ Sample specs:
 },
 ...
 ```
+
+The following is a sample spec for a S3 warehouse source:
 
 ```json
 ...
@@ -912,17 +914,17 @@ Sample specs:
 |Property|Description|Required|
 |--------|-----------|---------|
 |type|Set the value to `iceberg`.|yes|
-|tableName|The iceberg table name configured in the catalog.|yes|
-|namespace|The iceberg namespace associated with the table|yes|
-|icebergFilter|JSON Object used to filter data files within a snapshot when reading|no|
-|icebergCatalog|JSON Object used to define the catalog that manages the configured iceberg table|yes|
-|warehouseSource|JSON Object used to indicate which native input source needs to be used to read the data files from the warehouse|yes|
+|tableName|The Iceberg table name configured in the catalog.|yes|
+|namespace|The Iceberg namespace associated with the table|yes|
+|icebergFilter|The JSON Object that filters data files within a snapshot|no|
+|icebergCatalog|The JSON Object used to define the catalog that manages the configured Iceberg table|yes|
+|warehouseSource|The JSON Object that defines the native input source for reading the data files from the warehouse|yes|
 
-Catalog Object:
+###Catalog Object
 
-There are two supported catalog types: `local` and `hive`
+The catalog object supports `local` and `hive` catalog types.
 
-Local catalog:
+The following table lists the properties of a `local` catalog:
 
 |Property|Description|Required|
 |--------|-----------|---------|
@@ -930,7 +932,7 @@ Local catalog:
 |warehousePath|The location of the warehouse associated with the catalog|yes|
 |catalogProperties|Map of any additional properties that needs to be attached to the catalog|no|
 
-Hive Catalog:
+The following table lists the properties of a `hive` catalog:
 
 |Property|Description|Required|
 |--------|-----------|---------|
@@ -939,17 +941,17 @@ Hive Catalog:
 |catalogUri|The URI associated with the hive catalog|yes|
 |catalogProperties|Map of any additional properties that needs to be attached to the catalog|no|
 
-IcebergFilter Object:
+### Iceberg filter object
 
-This input source provides filters: `and` , `equals` , `interval` and `or`. These filters can be used to filter out data files from a snapshot, thereby reducing the number of files Druid has to ingest.
+This input source provides the following filters: `and`, `equals`, `interval`, and `or`. You can use these filters to filter out data files from a snapshot, reducing the number of files Druid has to ingest.
 
 `equals` Filter:
 
 |Property|Description|Required|
 |--------|-----------|---------|
 |type|Set this value to `equals`.|yes|
-|filterColumn|The column name from the iceberg table schema based on which filtering needs to happen|yes|
-|filterValue|The value to filter on|yes|
+|filterColumn|The name of the column from the Iceberg table schema to use for filtering.|yes|
+|filterValue|The value to filter on.|yes|
 
 `interval` Filter:
 
@@ -957,7 +959,7 @@ This input source provides filters: `and` , `equals` , `interval` and `or`. Thes
 |--------|-----------|---------|
 |type|Set this value to `interval`.|yes|
 |filterColumn|The column name from the iceberg table schema based on which filtering needs to happen|yes|
-|intervals|A JSON array containing ISO-8601 interval strings. This defines the time ranges to filter on. The start interval is inclusive and the end interval is exclusive. |yes|
+|intervals|A JSON array containing ISO 8601 interval strings. This defines the time ranges to filter on. The start interval is inclusive and the end interval is exclusive. |yes|
 
 `and` Filter:
 
