@@ -130,7 +130,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
 
     totalRetainedBytes += bucketHolder.updateRetainedBytes();
     if (totalRetainedBytes > maxRetainedBytes) {
-      log.info("Downsampling ClusterByStatisticsCollector as totalRetainedBytes[%s] is greater than maxRetainedBytes[%s]", totalRetainedBytes, maxRetainedBytes);
+      log.debug("Downsampling ClusterByStatisticsCollector as totalRetainedBytes[%s] is greater than maxRetainedBytes[%s]", totalRetainedBytes, maxRetainedBytes);
       downSample();
     }
 
@@ -152,7 +152,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
 
         totalRetainedBytes += bucketHolder.updateRetainedBytes();
         if (totalRetainedBytes > maxRetainedBytes) {
-          log.info("Downsampling ClusterByStatisticsCollector as totalRetainedBytes[%s] is greater than maxRetainedBytes[%s]", totalRetainedBytes, maxRetainedBytes);
+          log.debug("Downsampling ClusterByStatisticsCollector as totalRetainedBytes[%s] is greater than maxRetainedBytes[%s]", totalRetainedBytes, maxRetainedBytes);
           downSample();
         }
       }
@@ -184,7 +184,7 @@ public class ClusterByStatisticsCollectorImpl implements ClusterByStatisticsColl
 
       totalRetainedBytes += bucketHolder.updateRetainedBytes();
       if (totalRetainedBytes > maxRetainedBytes) {
-        log.info("Downsampling ClusterByStatisticsCollector as totalRetainedBytes[%s] is greater than maxRetainedBytes[%s]", totalRetainedBytes, maxRetainedBytes);
+        log.debug("Downsampling ClusterByStatisticsCollector as totalRetainedBytes[%s] is greater than maxRetainedBytes[%s]", totalRetainedBytes, maxRetainedBytes);
         downSample();
       }
     }
