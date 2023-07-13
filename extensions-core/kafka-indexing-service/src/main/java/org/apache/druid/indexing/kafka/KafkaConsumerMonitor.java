@@ -29,6 +29,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.Metric;
 import org.apache.kafka.common.MetricName;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -47,7 +48,7 @@ public class KafkaConsumerMonitor extends AbstractMonitor
   private static final Set<String> TOPIC_METRIC_TAGS = ImmutableSet.of("client-id", TOPIC_TAG);
 
   private final KafkaConsumer<?, ?> consumer;
-  private final AtomicLong currentBytesRead = new AtomicLong();
+  private final Map<String, AtomicLong> counters = new HashMap<>();
 
   public KafkaConsumerMonitor(final KafkaConsumer<?, ?> consumer)
   {
@@ -63,7 +64,9 @@ public class KafkaConsumerMonitor extends AbstractMonitor
       if (METRICS.containsKey(metricName.name()) && isTopicMetric(metricName)) {
         final String topic = metricName.tags().get(TOPIC_TAG);
         final long newValue = ((Number) entry.getValue().metricValue()).longValue();
-        final long priorValue = currentBytesRead.getAndSet(newValue);
+        final long priorValue =
+            counters.computeIfAbsent(metricName.name(), ignored -> new AtomicLong())
+                    .getAndSet(newValue);
 
         if (newValue != priorValue) {
           final ServiceMetricEvent.Builder builder =
