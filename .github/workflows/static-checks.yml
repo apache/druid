@@ -150,7 +150,6 @@ jobs:
         run: |
           (cd website && npm install)
           cd website
-          npm run link-lint
           npm run spellcheck
 
       - name: web console

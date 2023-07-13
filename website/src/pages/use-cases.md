@@ -22,4 +22,4 @@ canonical: 'https://druid.apache.org/use-cases'
 
 -->
 
-Edit this page in the [`druid-website-src`](https://github.com/apache/druid-website-src/) repo. To see your changes, navigate to them from the [Docs section](/docs/).
+Edit this page in the [`druid-website-src`](https://github.com/apache/druid-website-src/) repo. To see your changes, navigate to them from the [Docs section](/docs/latest/design).

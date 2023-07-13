@@ -20,7 +20,7 @@ module.exports={
     "disableHeaderTitle": true
   },
   "onBrokenLinks": "log",
-  "onBrokenMarkdownLinks": "log",
+  "onBrokenMarkdownLinks": "warn",
   "presets": [
     [
       "@docusaurus/preset-classic",
