@@ -186,4 +186,15 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
   {
     return averageKeyLength;
   }
+
+  @Override
+  public String toString()
+  {
+    return "QuantilesSketchKeyCollector{" +
+           "sketch=ItemsSketch{N=" + sketch.getN() +
+           ", K=" + sketch.getK() +
+           ", retainedKeys=" + sketch.getNumRetained() +
+           "}, averageKeyLength=" + averageKeyLength +
+           '}';
+  }
 }

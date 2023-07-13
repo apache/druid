@@ -177,4 +177,13 @@ public class DelegateOrMinKeyCollector<TDelegate extends KeyCollector<TDelegate>
       return ClusterByPartitions.oneUniversalPartition();
     }
   }
+
+  @Override
+  public String toString()
+  {
+    return "DelegateOrMinKeyCollector{" +
+           "delegate=" + delegate +
+           ", minKey=" + minKey +
+           '}';
+  }
 }
