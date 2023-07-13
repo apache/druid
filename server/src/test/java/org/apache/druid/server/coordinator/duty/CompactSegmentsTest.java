@@ -2060,7 +2060,7 @@ public class CompactSegmentsTest
         @Nullable Integer maxCompletedTasks
     )
     {
-      return Futures.immediateFuture(CollectionUtils.closeableIterator(Iterators.emptyIterator(), null));
+      return Futures.immediateFuture(CollectionUtils.closeableIterator(Collections.emptyIterator(), null));
     }
 
     @Override
@@ -2244,7 +2244,7 @@ public class CompactSegmentsTest
   {
     final ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
     Mockito.when(mockClient.taskStatuses(null, null, 0))
-           .thenReturn(Futures.immediateFuture(CollectionUtils.closeableIterator(Iterators.emptyIterator(), null)));
+           .thenReturn(Futures.immediateFuture(CollectionUtils.closeableIterator(Collections.emptyIterator(), null)));
     Mockito.when(mockClient.findLockedIntervals(ArgumentMatchers.any()))
            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
     Mockito.when(mockClient.getTotalWorkerCapacity())
